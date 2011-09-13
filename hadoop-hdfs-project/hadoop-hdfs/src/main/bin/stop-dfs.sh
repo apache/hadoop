@@ -27,7 +27,7 @@ NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -namenodes)
 
 echo "Stopping namenodes on [$NAMENODES]"
 
-"$HADOOP_PREFIX/bin/hadoop-daemons.sh" \
+"$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
   --config "$HADOOP_CONF_DIR" \
   --hostnames "$NAMENODES" \
   --script "$bin/hdfs" stop namenode
@@ -40,7 +40,7 @@ if [ -n "$HADOOP_SECURE_DN_USER" ]; then
     "Attempting to stop secure cluster, skipping datanodes. " \
     "Run stop-secure-dns.sh as root to complete shutdown."
 else
-  "$HADOOP_PREFIX/bin/hadoop-daemons.sh" \
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
     --config "$HADOOP_CONF_DIR" \
     --script "$bin/hdfs" stop datanode
 fi
@@ -60,7 +60,7 @@ if [ "$SECONDARY_NAMENODES" = '0.0.0.0' ] ; then
 else
   echo "Stopping secondary namenodes [$SECONDARY_NAMENODES]"
 
-  "$HADOOP_PREFIX/bin/hadoop-daemons.sh" \
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
     --config "$HADOOP_CONF_DIR" \
     --hostnames "$SECONDARY_NAMENODES" \
     --script "$bin/hdfs" stop secondarynamenode

@@ -1007,6 +1007,7 @@ Release 0.23.0 - Unreleased
 
     HDFS-2314. MRV1 test compilation broken after HDFS-2197 (todd)
 
+    HDFS-2323. start-dfs.sh script fails for tarball install (tomwhite)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 

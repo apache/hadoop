@@ -25,7 +25,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/../libexec/hdfs-config.sh
 
 if [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
-  "$HADOOP_PREFIX"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop datanode
+  "$HADOOP_PREFIX"/sbin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs stop datanode
 else
   echo $usage
 fi
