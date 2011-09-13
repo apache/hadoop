@@ -584,6 +584,8 @@ Release 0.90.5 - Unreleased
                easier (Jonathan Hsieh)
    HBASE-4272. Add -metaonly flag to hbck feature to only inspect and try
                to repair META and ROOT. (todd)
+   HBASE-4321. Add a more comprehensive region split calculator for future use
+               in hbck. (Jonathan Hsieh)
 
 Release 0.90.4 - August 10, 2011
 
