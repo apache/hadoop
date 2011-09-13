@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.Records;
@@ -235,7 +236,11 @@ public class MockJobs extends MockApps {
       @Override
       public ContainerId getAssignedContainerID() {
         ContainerId id = Records.newRecord(ContainerId.class);
-        id.setAppId(taid.getTaskId().getJobId().getAppId());
+        ApplicationAttemptId appAttemptId = 
+            Records.newRecord(ApplicationAttemptId.class);
+        appAttemptId.setApplicationId(taid.getTaskId().getJobId().getAppId());
+        appAttemptId.setAttemptId(0);
+        id.setApplicationAttemptId(appAttemptId);
         return id;
       }
 

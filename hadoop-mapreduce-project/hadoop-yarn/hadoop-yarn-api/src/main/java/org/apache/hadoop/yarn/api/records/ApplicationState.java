@@ -18,6 +18,30 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+
+/**
+ * Ennumeration of various states of an <code>Application</code>.
+ */
+@Public
+@Stable
 public enum ApplicationState {
-  NEW, SUBMITTED, RUNNING, SUCCEEDED, FAILED, KILLED
+  /** Application which was just created. */
+  NEW, 
+  
+  /** Application which has been submitted. */
+  SUBMITTED, 
+  
+  /** Application which is currently running. */
+  RUNNING, 
+  
+  /** Application which completed successfully. */
+  SUCCEEDED, 
+  
+  /** Application which failed. */
+  FAILED, 
+  
+  /** Application which was terminated by a user or admin. */
+  KILLED
 }

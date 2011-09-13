@@ -119,11 +119,7 @@ public interface AMResponse {
   @Stable
   public List<ContainerStatus> getCompletedContainersStatuses();
 
-  /**
-   * Set the list of list of <em>completed containers' statuses</em>.
-   * @param containers list of <em>completed containers' statuses</em>
-   */
-  @Public
-  @Stable
+  @Private
+  @Unstable
   public void setCompletedContainersStatuses(List<ContainerStatus> containers);
 }

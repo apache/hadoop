@@ -97,7 +97,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     // create container dirs on all disks
     String containerIdStr = ConverterUtils.toString(containerId);
     String appIdStr =
-        ConverterUtils.toString(container.getContainerID().getAppId());
+        ConverterUtils.toString(
+            container.getContainerID().getApplicationAttemptId().
+                getApplicationId());
     String[] sLocalDirs =
         getConf().getStrings(YarnConfiguration.NM_LOCAL_DIRS, YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
     for (String sLocalDir : sLocalDirs) {

@@ -68,28 +68,42 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer");
-    out.writeInt(this.containerId.getAppId().getId());
-    out.writeInt(this.containerId.getAppAttemptId().getAttemptId());
+    ApplicationAttemptId applicationAttemptId = 
+        containerId.getApplicationAttemptId();
+    ApplicationId applicationId = applicationAttemptId.getApplicationId();
+    out.writeLong(applicationId.getClusterTimestamp());
+    out.writeInt(applicationId.getId());
+    out.writeInt(applicationAttemptId.getAttemptId());
     out.writeInt(this.containerId.getId());
-    // TODO: Cluster time-stamp?
     out.writeUTF(this.nmHostName);
-    out.writeInt(this.resource.getMemory()); // TODO: more resources.
+    out.writeInt(this.resource.getMemory());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    this.containerId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ContainerId.class);
-    this.containerId.setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
-    this.containerId.setAppAttemptId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationAttemptId.class));
-    this.containerId.getAppId().setId(in.readInt());
-    this.containerId.getAppAttemptId().setApplicationId(this.containerId.getAppId());
-    this.containerId.getAppAttemptId().setAttemptId(in.readInt());
+    this.containerId = 
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            ContainerId.class);
+    ApplicationAttemptId applicationAttemptId =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            ApplicationAttemptId.class);
+    ApplicationId applicationId =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            ApplicationId.class);
+    applicationId.setClusterTimestamp(in.readLong());
+    applicationId.setId(in.readInt());
+    applicationAttemptId.setApplicationId(applicationId);
+    applicationAttemptId.setAttemptId(in.readInt());
+    this.containerId.setApplicationAttemptId(applicationAttemptId);
     this.containerId.setId(in.readInt());
     this.nmHostName = in.readUTF();
-    this.resource = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Resource.class);
-    this.resource.setMemory(in.readInt()); // TODO: more resources.
+    this.resource = 
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            Resource.class);
+    this.resource.setMemory(in.readInt());
   }
 
+  @SuppressWarnings("static-access")
   @Override
   public Text getKind() {
     return this.KIND;

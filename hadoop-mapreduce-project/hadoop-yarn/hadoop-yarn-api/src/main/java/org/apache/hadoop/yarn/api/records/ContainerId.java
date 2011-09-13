@@ -20,13 +20,42 @@ package org.apache.hadoop.yarn.api.records;
 
 import java.text.NumberFormat;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <p><code>ContainerId</code> represents a globally unique identifier
+ * for a {@link Container} in the cluster.</p>
+ */
+@Public
+@Stable
 public abstract class ContainerId implements Comparable<ContainerId>{
-  public abstract ApplicationAttemptId getAppAttemptId();
-  public abstract ApplicationId getAppId();
-  public abstract int getId();
+  /**
+   * Get the <code>ApplicationAttemptId</code> of the application to which
+   * the <code>Container</code> was assigned.
+   * @return <code>ApplicationAttemptId</code> of the application to which
+   *         the <code>Container</code> was assigned
+   */
+  @Public
+  @Stable
+  public abstract ApplicationAttemptId getApplicationAttemptId();
   
-  public abstract void setAppAttemptId(ApplicationAttemptId atId);
-  public abstract void setAppId(ApplicationId appID);
+  @Private
+  @Unstable
+  public abstract void setApplicationAttemptId(ApplicationAttemptId atId);
+
+  /**
+   * Get the identifier of the <code>ContainerId</code>.
+   * @return identifier of the <code>ContainerId</code>
+   */
+  @Public
+  @Stable
+  public abstract int getId();
+
+  @Private
+  @Unstable
   public abstract void setId(int id);
  
   
@@ -74,7 +103,7 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     int result = 1;
     result = prime * result + getId();
     result = prime * result
-        + ((getAppAttemptId() == null) ? 0 : getAppAttemptId().hashCode());
+        + ((getApplicationAttemptId() == null) ? 0 : getApplicationAttemptId().hashCode());
     return result;
   }
 
@@ -85,7 +114,8 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     }
     if (other.getClass().isAssignableFrom(this.getClass())) {
       ContainerId otherCId = (ContainerId)other;
-      if (this.getAppAttemptId().equals(otherCId.getAppAttemptId())) {
+      if (this.getApplicationAttemptId().equals(
+          otherCId.getApplicationAttemptId())) {
         return this.getId() == otherCId.getId();
       }
     }
@@ -94,10 +124,12 @@ public abstract class ContainerId implements Comparable<ContainerId>{
 
   @Override
   public int compareTo(ContainerId other) {
-    if (this.getAppAttemptId().compareTo(other.getAppAttemptId()) == 0) {
+    if (this.getApplicationAttemptId().compareTo(
+        other.getApplicationAttemptId()) == 0) {
       return this.getId() - other.getId();
     } else {
-      return this.getAppAttemptId().compareTo(other.getAppAttemptId());
+      return this.getApplicationAttemptId().compareTo(
+          other.getApplicationAttemptId());
     }
     
   }
@@ -105,10 +137,10 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    ApplicationId appId = getAppId();
+    ApplicationId appId = getApplicationAttemptId().getApplicationId();
     sb.append("container_").append(appId.getClusterTimestamp()).append("_");
     sb.append(appIdFormat.get().format(appId.getId())).append("_");
-    sb.append(appAttemptIdFormat.get().format(getAppAttemptId().
+    sb.append(appAttemptIdFormat.get().format(getApplicationAttemptId().
         getAttemptId())).append("_");
     sb.append(containerIdFormat.get().format(getId()));
     return sb.toString();

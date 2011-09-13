@@ -95,7 +95,8 @@ public class ContainerLogsPage extends NMView {
             logFile =
                 new File(this.logsSelector
                     .getLocalPathToRead(
-                        ConverterUtils.toString(containerId.getAppId())
+                        ConverterUtils.toString(
+                            containerId.getApplicationAttemptId().getApplicationId())
                             + Path.SEPARATOR + $(CONTAINER_ID)
                             + Path.SEPARATOR
                             + $(CONTAINER_LOG_TYPE), this.conf).toUri()
@@ -176,7 +177,9 @@ public class ContainerLogsPage extends NMView {
           conf.getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
       List<File> containerLogDirs = new ArrayList<File>(logDirs.length);
       for (String logDir : logDirs) {
-        String appIdStr = ConverterUtils.toString(containerId.getAppId());
+        String appIdStr = 
+            ConverterUtils.toString(
+                containerId.getApplicationAttemptId().getApplicationId());
         File appLogDir = new File(logDir, appIdStr);
         String containerIdStr = ConverterUtils.toString(containerId);
         containerLogDirs.add(new File(appLogDir, containerIdStr));

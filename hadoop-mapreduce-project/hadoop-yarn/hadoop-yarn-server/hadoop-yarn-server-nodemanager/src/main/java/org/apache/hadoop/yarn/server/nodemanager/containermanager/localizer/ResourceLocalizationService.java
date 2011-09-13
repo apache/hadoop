@@ -292,7 +292,7 @@ public class ResourceLocalizationService extends AbstractService
       for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
            rsrcs.entrySet()) {
         tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
-            c.getContainerID().getAppId());
+            c.getContainerID().getApplicationAttemptId().getApplicationId());
         for (LocalResourceRequest req : e.getValue()) {
           tracker.handle(new ResourceRequestEvent(req, e.getKey(), ctxt));
         }
@@ -316,7 +316,7 @@ public class ResourceLocalizationService extends AbstractService
       for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
            rsrcs.entrySet()) {
         tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
-            c.getContainerID().getAppId());
+            c.getContainerID().getApplicationAttemptId().getApplicationId());
         for (LocalResourceRequest req : e.getValue()) {
           tracker.handle(new ResourceReleaseEvent(req, c.getContainerID()));
         }
@@ -326,7 +326,8 @@ public class ResourceLocalizationService extends AbstractService
       userName = c.getUser();
       String containerIDStr = c.toString();
       appIDStr =
-        ConverterUtils.toString(c.getContainerID().getAppId());
+        ConverterUtils.toString(
+            c.getContainerID().getApplicationAttemptId().getApplicationId());
       for (Path localDir : localDirs) {
 
         // Delete the user-owned container-dir
@@ -789,7 +790,9 @@ public class ResourceLocalizationService extends AbstractService
         // 2) exec initApplication and wait
         exec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
             context.getUser(),
-            ConverterUtils.toString(context.getContainerId().getAppId()),
+            ConverterUtils.toString(
+                context.getContainerId().
+                    getApplicationAttemptId().getApplicationId()),
             localizerId, localDirs);
       // TODO handle ExitCodeException separately?
       } catch (Exception e) {

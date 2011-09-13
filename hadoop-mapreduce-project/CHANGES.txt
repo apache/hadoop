@@ -282,6 +282,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2675. Reformat JobHistory Server main page to be more
     useful. (Robert Joseph Evans via vinodkv).
 
+    MAPREDUCE-2896. Simplify all apis to in
+    org.apache.hadoop.yarn.api.records.* to be get/set only. Added javadocs to
+    all public records. (acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

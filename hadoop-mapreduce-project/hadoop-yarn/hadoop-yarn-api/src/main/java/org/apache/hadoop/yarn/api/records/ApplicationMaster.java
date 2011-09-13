@@ -18,26 +18,43 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-//TODO: Split separate object for register, deregister and in-RM use.
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <em>For internal use only...</em> 
+ */
+@Private
+@Unstable
 public interface ApplicationMaster {
   ApplicationId getApplicationId();
-  String getHost();
-  int getRpcPort();
-  String getTrackingUrl();
-  ApplicationStatus getStatus();
-  ApplicationState getState();
-  String getClientToken();
-  int getAMFailCount();
-  int getContainerCount();
-  String getDiagnostics();
   void setApplicationId(ApplicationId appId);
+  
+  String getHost();
   void setHost(String host);
+  
+  int getRpcPort();
   void setRpcPort(int rpcPort);
+  
+  String getTrackingUrl();
   void setTrackingUrl(String url);
+  
+  ApplicationStatus getStatus();
   void setStatus(ApplicationStatus status);
+  
+  ApplicationState getState();
   void setState(ApplicationState state);
+  
+  String getClientToken();
   void setClientToken(String clientToken);
+  
+  int getAMFailCount();
   void setAMFailCount(int amFailCount);
+  
+  int getContainerCount();
   void setContainerCount(int containerCount);
+  
+  String getDiagnostics();
   void setDiagnostics(String diagnostics);
 }
+

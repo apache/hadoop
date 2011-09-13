@@ -20,11 +20,15 @@ package org.apache.hadoop.yarn.api.records;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
+@Private
+@Unstable
 public abstract class ProtoBase <T extends Message> {
   
   public abstract T getProto();

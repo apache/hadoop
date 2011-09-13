@@ -23,10 +23,10 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 public class LogAggregatorContainerFinishedEvent extends LogAggregatorEvent {
 
   private final ContainerId containerId;
-  private final String exitCode;
+  private final int exitCode;
 
   public LogAggregatorContainerFinishedEvent(ContainerId containerId,
-      String exitCode) {
+      int exitCode) {
     super(LogAggregatorEventType.CONTAINER_FINISHED);
     this.containerId = containerId;
     this.exitCode = exitCode;
@@ -36,7 +36,7 @@ public class LogAggregatorContainerFinishedEvent extends LogAggregatorEvent {
     return this.containerId;
   }
 
-  public String getExitCode() {
+  public int getExitCode() {
     return this.exitCode;
   }
 

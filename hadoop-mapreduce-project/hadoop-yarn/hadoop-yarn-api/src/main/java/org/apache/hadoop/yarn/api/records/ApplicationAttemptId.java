@@ -20,12 +20,44 @@ package org.apache.hadoop.yarn.api.records;
 
 import java.text.NumberFormat;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <p><code>ApplicationAttemptId</code> denotes the particular <em>attempt</em>
+ * of an <code>ApplicationMaster</code> for a given {@link ApplicationId}.</p>
+ * 
+ * <p>Multiple attempts might be needed to run an application to completion due
+ * to temporal failures of the <code>ApplicationMaster</code> such as hardware
+ * failures, connectivity issues etc. on the node on which it was scheduled.</p>
+ */
+@Public
+@Stable
 public abstract class ApplicationAttemptId implements
     Comparable<ApplicationAttemptId> {
+  
+  /**
+   * Get the <code>ApplicationId</code> of the <code>ApplicationAttempId</code>. 
+   * @return <code>ApplicationId</code> of the <code>ApplicationAttempId</code>
+   */
+  @Public
+  @Stable
   public abstract ApplicationId getApplicationId();
+  
+  @Private
+  @Unstable
+  public abstract void setApplicationId(ApplicationId appID);
+  
+  /**
+   * Get the <code>attempt id</code> of the <code>Application</code>.
+   * @return <code>attempt id</code> of the <code>Application</code>
+   */
   public abstract int getAttemptId();
   
-  public abstract void setApplicationId(ApplicationId appID);
+  @Private
+  @Unstable
   public abstract void setAttemptId(int attemptId);
 
   

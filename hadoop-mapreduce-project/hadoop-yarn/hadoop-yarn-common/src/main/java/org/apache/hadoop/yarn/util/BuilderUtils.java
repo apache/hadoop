@@ -152,9 +152,8 @@ public class BuilderUtils {
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setAppId(appAttemptId.getApplicationId());
     id.setId(containerId);
-    id.setAppAttemptId(appAttemptId);
+    id.setApplicationAttemptId(appAttemptId);
     return id;
   }
 
@@ -171,9 +170,8 @@ public class BuilderUtils {
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setAppId(appId);
     id.setId(containerId);
-    id.setAppAttemptId(appAttemptId);
+    id.setApplicationAttemptId(appAttemptId);
     return id;
   }
 
@@ -181,8 +179,7 @@ public class BuilderUtils {
       ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setAppAttemptId(appAttemptId);
-    id.setAppId(appAttemptId.getApplicationId());
+    id.setApplicationAttemptId(appAttemptId);
     id.setId(containerId);
     return id;
   }

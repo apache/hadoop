@@ -198,8 +198,8 @@ public class SchedulerNode {
       }
       
       // Cannot reserve more than one application on a given node!
-      if (!this.reservedContainer.getContainer().getId().getAppAttemptId().equals(
-          reservedContainer.getContainer().getId().getAppAttemptId())) {
+      if (!this.reservedContainer.getContainer().getId().getApplicationAttemptId().equals(
+          reservedContainer.getContainer().getId().getApplicationAttemptId())) {
         throw new IllegalStateException("Trying to reserve" +
         		" container " + reservedContainer + 
             " for application " + application.getApplicationId() + 
@@ -221,7 +221,7 @@ public class SchedulerNode {
   public synchronized void unreserveResource(SchedulerApp application) {
     // Cannot unreserve for wrong application...
     ApplicationAttemptId reservedApplication = 
-        reservedContainer.getContainer().getId().getAppAttemptId(); 
+        reservedContainer.getContainer().getId().getApplicationAttemptId(); 
     if (!reservedApplication.equals(
         application.getApplicationAttemptId())) {
       throw new IllegalStateException("Trying to unreserve " +  

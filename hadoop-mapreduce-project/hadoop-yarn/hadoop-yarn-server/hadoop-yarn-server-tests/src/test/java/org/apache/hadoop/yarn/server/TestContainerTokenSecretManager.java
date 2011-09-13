@@ -224,8 +224,6 @@ public class TestContainerTokenSecretManager {
     RegisterApplicationMasterRequest request =
         recordFactory
             .newRecordInstance(RegisterApplicationMasterRequest.class);
-    ApplicationMaster applicationMaster = recordFactory
-        .newRecordInstance(ApplicationMaster.class);
     request.setApplicationAttemptId(resourceManager.getRMContext()
         .getRMApps().get(appID).getCurrentAppAttempt().getAppAttemptId());
     scheduler.registerApplicationMaster(request);
@@ -293,12 +291,13 @@ public class TestContainerTokenSecretManager {
                   .newRecordInstance(GetContainerStatusRequest.class);
           ContainerId containerID =
               recordFactory.newRecordInstance(ContainerId.class);
-          ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+          ApplicationAttemptId appAttemptId = 
+              recordFactory.newRecordInstance(ApplicationAttemptId.class);
           appAttemptId.setApplicationId(appID);
           appAttemptId.setAttemptId(1);
-          containerID.setAppId(appID);
+          appAttemptId.setApplicationId(appID);
+          containerID.setApplicationAttemptId(appAttemptId);
           containerID.setId(1);
-          containerID.setAppAttemptId(appAttemptId);
           request.setContainerId(containerID);
           client.getContainerStatus(request);
         } catch (YarnRemoteException e) {
@@ -347,9 +346,9 @@ public class TestContainerTokenSecretManager {
         ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
         appAttemptId.setApplicationId(appID);
         appAttemptId.setAttemptId(1);
-        containerID.setAppId(appID);
+        appAttemptId.setApplicationId(appID);
+        containerID.setApplicationAttemptId(appAttemptId);
         containerID.setId(1);
-        containerID.setAppAttemptId(appAttemptId);
         request.setContainerId(containerID);
         try {
           client.getContainerStatus(request);

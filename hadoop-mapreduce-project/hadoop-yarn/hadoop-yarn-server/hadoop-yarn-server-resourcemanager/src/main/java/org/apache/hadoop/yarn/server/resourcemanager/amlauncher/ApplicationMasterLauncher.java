@@ -37,7 +37,6 @@ public class ApplicationMasterLauncher extends AbstractService implements
   private static final Log LOG = LogFactory.getLog(
       ApplicationMasterLauncher.class);
   private final ThreadPoolExecutor launcherPool;
-  private final EventHandler handler;
   private LauncherThread launcherHandlingThread;
   
   private final BlockingQueue<Runnable> masterEvents
@@ -52,7 +51,6 @@ public class ApplicationMasterLauncher extends AbstractService implements
       RMContext context) {
     super(ApplicationMasterLauncher.class.getName());
     this.context = context;
-    this.handler = context.getDispatcher().getEventHandler();
     /* register to dispatcher */
     this.context.getDispatcher().register(AMLauncherEventType.class, this);
     this.launcherPool = new ThreadPoolExecutor(1, 10, 1, 
@@ -67,14 +65,16 @@ public class ApplicationMasterLauncher extends AbstractService implements
     super.start();
   }
   
-  protected Runnable createRunnableLauncher(RMAppAttempt application, AMLauncherEventType event) {
+  protected Runnable createRunnableLauncher(RMAppAttempt application, 
+      AMLauncherEventType event) {
     Runnable launcher = new AMLauncher(context, application, event,
         applicationTokenSecretManager, clientToAMSecretManager, getConfig());
     return launcher;
   }
   
   private void launch(RMAppAttempt application) {
-    Runnable launcher = createRunnableLauncher(application, AMLauncherEventType.LAUNCH);
+    Runnable launcher = createRunnableLauncher(application, 
+        AMLauncherEventType.LAUNCH);
     masterEvents.add(launcher);
   }
   

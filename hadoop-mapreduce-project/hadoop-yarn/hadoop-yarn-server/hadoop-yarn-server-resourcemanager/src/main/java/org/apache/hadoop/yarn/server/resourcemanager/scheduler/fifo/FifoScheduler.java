@@ -645,7 +645,7 @@ public class FifoScheduler implements ResourceScheduler {
 
   private void containerLaunchedOnNode(ContainerId containerId, SchedulerNode node) {
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = containerId.getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = containerId.getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
@@ -667,7 +667,7 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Get the application for the finished container
     Container container = rmContainer.getContainer();
-    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     
     // Get the node on which the container was allocated
@@ -751,7 +751,7 @@ public class FifoScheduler implements ResourceScheduler {
   
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
-        getApplication(containerId.getAppAttemptId());
+        getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
 

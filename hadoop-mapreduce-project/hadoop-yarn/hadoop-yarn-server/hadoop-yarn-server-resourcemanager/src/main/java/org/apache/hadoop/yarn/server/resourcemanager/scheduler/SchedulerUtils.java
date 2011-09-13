@@ -22,6 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -65,7 +66,8 @@ public class SchedulerUtils {
         recordFactory.newRecordInstance(ContainerStatus.class);
     containerStatus.setContainerId(containerId);
     containerStatus.setDiagnostics(diagnostics);
-    containerStatus.setExitStatus("ABORTED");
+    containerStatus.setExitStatus(
+        YarnConfiguration.ABORTED_CONTAINER_EXIT_STATUS);
     containerStatus.setState(ContainerState.COMPLETE);
     return containerStatus;
   }

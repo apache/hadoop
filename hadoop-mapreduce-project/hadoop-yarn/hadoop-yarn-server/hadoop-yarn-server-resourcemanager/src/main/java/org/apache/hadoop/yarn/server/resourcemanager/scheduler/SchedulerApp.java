@@ -215,7 +215,8 @@ public class SchedulerApp {
 
     Resources.addTo(currentConsumption, container.getResource());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("allocate: applicationId=" + container.getId().getAppId()
+      LOG.debug("allocate: applicationAttemptId=" 
+          + container.getId().getApplicationAttemptId() 
           + " container=" + container.getId() + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }

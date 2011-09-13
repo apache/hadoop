@@ -29,6 +29,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -82,12 +83,23 @@ public class CompletedTaskAttempt implements TaskAttempt {
 
   @Override
   public ContainerId getAssignedContainerID() {
-    //TODO ContainerId needs to be part of some historyEvent to be able to render the log directory.
-    ContainerId containerId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ContainerId.class);
+    //TODO ContainerId needs to be part of some historyEvent to be able to 
+    //render the log directory.
+    ContainerId containerId = 
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            ContainerId.class);
     containerId.setId(-1);
-    containerId.setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
-    containerId.getAppId().setId(-1);
-    containerId.getAppId().setClusterTimestamp(-1);
+    ApplicationAttemptId applicationAttemptId =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            ApplicationAttemptId.class);
+    applicationAttemptId.setAttemptId(-1);
+    ApplicationId applicationId =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            ApplicationId.class);
+    applicationId.setClusterTimestamp(-1);
+    applicationId.setId(-1);
+    applicationAttemptId.setApplicationId(applicationId);
+    containerId.setApplicationAttemptId(applicationAttemptId);
     return containerId;
   }
 

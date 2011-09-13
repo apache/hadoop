@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -124,12 +125,15 @@ public class MRAppBenchmark {
               try {
                 if (concurrentRunningTasks < maxConcurrentRunningTasks) {
                   event = eventQueue.take();
-                  ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-                  cId.setAppId(getContext().getApplicationID());
+                  ContainerId cId = 
+                      recordFactory.newRecordInstance(ContainerId.class);
+                  cId.setApplicationAttemptId(
+                      getContext().getApplicationAttemptId());
                   cId.setId(containerCount++);
                   //System.out.println("Allocating " + containerCount);
                   
-                  Container container = recordFactory.newRecordInstance(Container.class);
+                  Container container = 
+                      recordFactory.newRecordInstance(Container.class);
                   container.setId(cId);
                   NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
                   nodeId.setHost("dummy");

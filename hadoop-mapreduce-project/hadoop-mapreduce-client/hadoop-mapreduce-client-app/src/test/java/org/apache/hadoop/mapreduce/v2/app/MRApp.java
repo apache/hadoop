@@ -63,7 +63,6 @@ import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -324,7 +323,7 @@ public class MRApp extends MRAppMaster {
       @Override
       public void handle(ContainerAllocatorEvent event) {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-        cId.setAppId(getContext().getApplicationID());
+        cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
         cId.setId(containerCount++);
         Container container = recordFactory.newRecordInstance(Container.class);
         container.setId(cId);

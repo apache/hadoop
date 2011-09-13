@@ -18,11 +18,43 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <p><code>NodeId</code> is the unique identifier for a node.</p>
+ * 
+ * <p>It includes the <em>hostname</em> and <em>port</em> to uniquely 
+ * identify the node. Thus, it is unique across restarts of any 
+ * <code>NodeManager</code>.</p>
+ */
+@Public
+@Stable
 public interface NodeId extends Comparable<NodeId> {
 
+  /**
+   * Get the <em>hostname</em> of the node.
+   * @return <em>hostname</em> of the node
+   */ 
+  @Public
+  @Stable
   String getHost();
+  
+  @Private
+  @Unstable
   void setHost(String host);
 
+  /**
+   * Get the <em>port</em> for communicating with the node.
+   * @return <em>port</em> for communicating with the node
+   */
+  @Public
+  @Stable
   int getPort();
+  
+  @Private
+  @Unstable
   void setPort(int port);
 }

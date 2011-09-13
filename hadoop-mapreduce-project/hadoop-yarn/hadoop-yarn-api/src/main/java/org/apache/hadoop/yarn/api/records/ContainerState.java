@@ -18,6 +18,16 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+/**
+ * <p>State of a <code>Container</code>.</p>
+ */
 public enum ContainerState {
-  NEW, RUNNING, COMPLETE
+  /** New container */
+  NEW, 
+  
+  /** Running container */
+  RUNNING, 
+  
+  /** Completed container */
+  COMPLETE
 }
