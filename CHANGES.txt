@@ -6,6 +6,8 @@ Release 0.20.206.0 - unreleased
 
   BUG FIXES
 
+    HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
+
   IMPROVEMENTS
 
 Release 0.20.205.0 - unreleased

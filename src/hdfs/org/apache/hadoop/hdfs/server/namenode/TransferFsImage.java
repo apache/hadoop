@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.*;
 import java.net.*;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
@@ -29,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -42,6 +45,7 @@ class TransferFsImage implements FSConstants {
   private int remoteport;
   private String machineName;
   private CheckpointSignature token;
+  private MD5Hash newChecksum = null;
   
   /**
    * File downloader.
@@ -59,6 +63,7 @@ class TransferFsImage implements FSConstants {
     remoteport = 0;
     machineName = null;
     token = null;
+    newChecksum = null;
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -74,6 +79,8 @@ class TransferFsImage implements FSConstants {
         machineName = pmap.get("machine")[0];
       } else if (key.equals("token")) { 
         token = new CheckpointSignature(pmap.get("token")[0]);
+      } else if (key.equals("newChecksum")) { 
+        newChecksum = new MD5Hash(pmap.get("newChecksum")[0]);
       }
     }
 
@@ -98,7 +105,15 @@ class TransferFsImage implements FSConstants {
   CheckpointSignature getToken() {
     return token;
   }
-
+  
+  /**
+   * Get the MD5 digest of the new image
+   * @return the MD5 digest of the new image
+   */
+  MD5Hash getNewChecksum() {
+    return newChecksum;
+  }
+  
   String getInfoServer() throws IOException{
     if (machineName == null || remoteport == 0) {
       throw new IOException ("MachineName and port undefined");
@@ -140,9 +155,11 @@ class TransferFsImage implements FSConstants {
   /**
    * Client-side Method to fetch file from a server
    * Copies the response from the URL to a list of local files.
+   * 
+   * @Return a digest of the received file if getChecksum is true
    */
-  static void getFileClient(String fsName, String id, File[] localPath)
-    throws IOException {
+  static MD5Hash getFileClient(String fsName, String id, File[] localPath,
+      boolean getChecksum) throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
     String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
     
@@ -158,6 +175,11 @@ class TransferFsImage implements FSConstants {
     SecurityUtil.fetchServiceTicket(url);
     URLConnection connection = url.openConnection();
     InputStream stream = connection.getInputStream();
+    MessageDigest digester = null;
+    if (getChecksum) {
+      digester = MD5Hash.getDigester();
+      stream = new DigestInputStream(stream, digester);
+    }
     FileOutputStream[] output = null;
 
     try {
@@ -186,5 +208,6 @@ class TransferFsImage implements FSConstants {
         }
       }
     }
+    return digester == null ? null : new MD5Hash(digester.digest());
   }
 }

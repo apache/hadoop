@@ -37,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -48,6 +49,13 @@ import org.apache.hadoop.util.StringUtils;
 public class GetImageServlet extends HttpServlet {
   private static final long serialVersionUID = -7669068179452648952L;
   private static final Log LOG = LogFactory.getLog(GetImageServlet.class);
+
+  /**
+   * A lock object to prevent multiple 2NNs from simultaneously uploading
+   * fsimage snapshots.
+   */
+  private Object fsImageTransferLock = new Object();
+  
   @SuppressWarnings("unchecked")
   public void doGet(final HttpServletRequest request,
                     final HttpServletResponse response
@@ -80,18 +88,26 @@ public class GetImageServlet extends HttpServlet {
             TransferFsImage.getFileServer(response.getOutputStream(),
                                           nnImage.getFsEditName());
           } else if (ff.putImage()) {
-            // issue a HTTP get request to download the new fsimage 
-            nnImage.validateCheckpointUpload(ff.getToken());
-            reloginIfNecessary().doAs(new PrivilegedExceptionAction<Void>() {
-              @Override
-              public Void run() throws Exception {
-                TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
-                    nnImage.getFsImageNameCheckpoint());
-                return null;
-              }
-            });
-
-            nnImage.checkpointUploadDone();
+            synchronized (fsImageTransferLock) {
+              final MD5Hash expectedChecksum = ff.getNewChecksum();
+              // issue a HTTP get request to download the new fsimage 
+              nnImage.validateCheckpointUpload(ff.getToken());
+              reloginIfNecessary().doAs(new PrivilegedExceptionAction<Void>() {
+                @Override
+                public Void run() throws Exception {
+                  MD5Hash actualChecksum = TransferFsImage.getFileClient(ff.getInfoServer(),
+                      "getimage=1", nnImage.getFsImageNameCheckpoint(), true);
+                  LOG.info("Downloaded new fsimage with checksum: " + actualChecksum);
+                  if (!actualChecksum.equals(expectedChecksum)) {
+                    throw new IOException("Actual checksum of transferred fsimage: "
+                        + actualChecksum + " does not match expected checksum: "
+                        + expectedChecksum);
+                  }
+                  return null;
+                }
+              });
+              nnImage.checkpointUploadDone();
+            }
           }
           return null;
         }

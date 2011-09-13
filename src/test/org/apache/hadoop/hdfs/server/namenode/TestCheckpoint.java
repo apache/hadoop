@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -286,14 +287,14 @@ public class TestCheckpoint extends TestCase {
 
       try {
         secondary.doCheckpoint();  // this should fail
-        assertTrue(false);
+        fail();
       } catch (IOException e) {
       }
       ErrorSimulator.clearErrorSimulation(0);
       secondary.shutdown(); // secondary namenode crash!
 
       // start new instance of secondary and verify that 
-      // a new rollEditLog suceedes inspite of the fact that 
+      // a new rollEditLog succeeds in spite of the fact that 
       // edits.new already exists.
       //
       secondary = startSecondaryNameNode(conf);
@@ -706,6 +707,78 @@ public class TestCheckpoint extends TestCase {
       cluster.waitActive();
       fs = (DistributedFileSystem)(cluster.getFileSystem());
       checkFile(fs, file, replication);
+    } finally {
+      if(fs != null) fs.close();
+      if(cluster!= null) cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test multiple 2NNs running, where the second 2NN reports the address of the
+   * first 2NN when doing the image upload to the NN. This case will happen when
+   * multiple 2NNs are started with the default configs, which has them report
+   * their address to the NN as being "127.0.0.1".
+   */
+  public void testMultipleSecondaryNameNodes() throws IOException {
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 0, true, null);
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      
+      Path testPath1 = new Path("/tmp/foo");
+      Path testPath2 = new Path("/tmp/bar");
+
+      assertTrue(fs.mkdirs(testPath1));
+      
+      // Start up a 2NN and do a checkpoint.
+      SecondaryNameNode snn1 = startSecondaryNameNode(conf);
+      snn1.doCheckpoint();
+      
+      assertTrue(testPath1 + " should still exist after good checkpoint",
+          fs.exists(testPath1));
+      assertTrue(fs.mkdirs(testPath2));
+      assertTrue(testPath2 + " should exist", fs.exists(testPath2));
+      
+      
+      // Simulate a checkpoint by a second 2NN, but which tells the NN to grab
+      // the new merged fsimage from the original 2NN.
+      NameNode namenode = cluster.getNameNode();
+      CheckpointSignature sig = (CheckpointSignature)namenode.rollEditLog();
+      
+      String fileid = "putimage=1&port=" +
+          SecondaryNameNode.getHttpAddress(conf).getPort() +
+          "&machine=" + SecondaryNameNode.getHttpAddress(conf).getHostName() +
+          "&token=" + sig.toString() +
+          "&newChecksum=" + MD5Hash.digest("this will be a bad checksum".getBytes());
+      
+      try {
+        TransferFsImage.getFileClient(NameNode.getInfoServer(conf), fileid,
+            (File[])null, false);
+        namenode.rollFsImage();
+        fail();
+      } catch (IOException e) {
+        // This is expected.
+        System.out.println("Got expected exception " + e);
+      }
+      
+      // The in-memory NN state should still be fine. We've only messed with the
+      // HDFS metadata on the local FS.
+      assertTrue(testPath1 + " should exist after bad checkpoint, before restart",
+          fs.exists(testPath1));
+      assertTrue(testPath2 + " should exist after bad checkpoint, before restart",
+          fs.exists(testPath2));
+      
+      cluster.restartNameNode();
+      
+      // After restarting the NN, it will read the HDFS metadata from disk.
+      // Things should still be good.
+      assertTrue(testPath1 + " should exist after bad checkpoint, after restart",
+          fs.exists(testPath1));
+      assertTrue(testPath2 + " should exist after bad checkpoint, after restart",
+          fs.exists(testPath2));
     } finally {
       if(fs != null) fs.close();
       if(cluster!= null) cluster.shutdown();
