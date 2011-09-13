@@ -581,6 +581,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7328. When a serializer class is missing, return null, not throw
     an NPE. (Harsh J Chouraria via todd)
 
+    HADOOP-7626. Bugfix for a config generator (Eric Yang via ddas)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
