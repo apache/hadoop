@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.Service;
@@ -40,9 +42,6 @@ public class AuxServices extends AbstractService
 
   private static final Log LOG = LogFactory.getLog(AuxServices.class);
 
-  public static final String AUX_SERVICES = "nodemanager.auxiluary.services";
-  public static final String AUX_SERVICE_CLASS_FMT =
-    "nodemanager.aux.service.%s.class";
   public final Map<String,AuxiliaryService> serviceMap;
   public final Map<String,ByteBuffer> serviceMeta;
 
@@ -72,16 +71,24 @@ public class AuxServices extends AbstractService
    * the the name of the service as defined in the configuration.
    */
   public Map<String, ByteBuffer> getMeta() {
-    return Collections.unmodifiableMap(serviceMeta);
+    Map<String, ByteBuffer> metaClone = new HashMap<String, ByteBuffer>(
+        serviceMeta.size());
+    synchronized (serviceMeta) {
+      for (Entry<String, ByteBuffer> entry : serviceMeta.entrySet()) {
+        metaClone.put(entry.getKey(), entry.getValue().duplicate());
+      }
+    }
+    return metaClone;
   }
 
   @Override
   public void init(Configuration conf) {
-    Collection<String> auxNames = conf.getStringCollection(AUX_SERVICES);
+    Collection<String> auxNames = conf.getStringCollection(
+        YarnConfiguration.NM_AUX_SERVICES);
     for (final String sName : auxNames) {
       try {
         Class<? extends AuxiliaryService> sClass = conf.getClass(
-              String.format(AUX_SERVICE_CLASS_FMT, sName), null,
+              String.format(YarnConfiguration.NM_AUX_SERVICE_FMT, sName), null,
               AuxiliaryService.class);
         if (null == sClass) {
           throw new RuntimeException("No class defiend for " + sName);

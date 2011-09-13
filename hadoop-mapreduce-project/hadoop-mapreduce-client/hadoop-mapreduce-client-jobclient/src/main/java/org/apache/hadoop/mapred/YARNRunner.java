@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -55,11 +55,9 @@ import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.ClientConstants;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
@@ -82,7 +80,6 @@ import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 
@@ -93,10 +90,6 @@ public class YARNRunner implements ClientProtocol {
 
   private static final Log LOG = LogFactory.getLog(YARNRunner.class);
 
-  public static final String YARN_AM_VMEM_MB =
-      "yarn.am.mapreduce.resource.mb";
-  private static final int DEFAULT_YARN_AM_VMEM_MB = 2048;
-  
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private ResourceMgrDelegate resMgrDelegate;
   private ClientCache clientCache;
@@ -108,10 +101,20 @@ public class YARNRunner implements ClientProtocol {
    * yarn
    * @param conf the configuration object for the client
    */
-  public YARNRunner(Configuration conf) {
-    this.conf = new YarnConfiguration(conf);
+  public YARNRunner(YarnConfiguration conf) {
+   this(conf, new ResourceMgrDelegate(conf));
+  }
+
+  /**
+   * Similar to {@link #YARNRunner(YarnConfiguration)} but allowing injecting 
+   * {@link ResourceMgrDelegate}. Enables mocking and testing.
+   * @param conf the configuration object for the client
+   * @param resMgrDelegate the resourcemanager client handle.
+   */
+  public YARNRunner(YarnConfiguration conf, ResourceMgrDelegate resMgrDelegate) {
+    this.conf = conf;
     try {
-      this.resMgrDelegate = new ResourceMgrDelegate(this.conf);
+      this.resMgrDelegate = resMgrDelegate;
       this.clientCache = new ClientCache(this.conf,
           resMgrDelegate);
       this.defaultFileContext = FileContext.getFileContext(this.conf);
@@ -119,7 +122,7 @@ public class YARNRunner implements ClientProtocol {
       throw new RuntimeException("Error in instantiating YarnClient", ufe);
     }
   }
-
+  
   @Override
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
@@ -245,9 +248,11 @@ public class YARNRunner implements ClientProtocol {
     
     ApplicationReport appMaster = resMgrDelegate
         .getApplicationReport(applicationId);
+    String diagnostics = (appMaster == null ? "application report is null" : appMaster.getDiagnostics());
     if (appMaster == null || appMaster.getState() == ApplicationState.FAILED 
         || appMaster.getState() == ApplicationState.KILLED) {
-      throw RPCUtil.getRemoteException("failed to run job");
+      throw new IOException("Failed to run job : " + 
+        diagnostics);
     }
     return clientCache.getClient(jobId).getJobStatus(jobId);
   }
@@ -265,7 +270,7 @@ public class YARNRunner implements ClientProtocol {
     return rsrc;
   }
 
-  private ApplicationSubmissionContext createApplicationSubmissionContext(
+  public ApplicationSubmissionContext createApplicationSubmissionContext(
       Configuration jobConf,
       String jobSubmitDir, Credentials ts) throws IOException {
     ApplicationSubmissionContext appContext =
@@ -273,7 +278,8 @@ public class YARNRunner implements ClientProtocol {
     ApplicationId applicationId = resMgrDelegate.getApplicationId();
     appContext.setApplicationId(applicationId);
     Resource capability = recordFactory.newRecordInstance(Resource.class);
-    capability.setMemory(conf.getInt(YARN_AM_VMEM_MB, DEFAULT_YARN_AM_VMEM_MB));
+    capability.setMemory(conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
+        MRJobConfig.DEFAULT_MR_AM_VMEM_MB));
     LOG.info("AppMaster capability = " + capability);
     appContext.setMasterCapability(capability);
 
@@ -334,15 +340,14 @@ public class YARNRunner implements ClientProtocol {
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
     vargs.add(javaHome + "/bin/java");
     vargs.add("-Dhadoop.root.logger="
-        + conf.get(ClientConstants.MR_APPMASTER_LOG_OPTS,
-            ClientConstants.DEFAULT_MR_APPMASTER_LOG_OPTS) + ",console");
+        + conf.get(MRJobConfig.MR_AM_LOG_OPTS,
+            MRJobConfig.DEFAULT_MR_AM_LOG_OPTS) + ",console");
     
-    vargs.add(conf.get(ClientConstants.MR_APPMASTER_COMMAND_OPTS,
-        ClientConstants.DEFAULT_MR_APPMASTER_COMMAND_OPTS));
+    vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
+        MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
     // Add { job jar, MR app jar } to classpath.
     Map<String, String> environment = new HashMap<String, String>();
-//    appContext.environment = new HashMap<CharSequence, CharSequence>();
     MRApps.setInitialClasspath(environment);
     MRApps.addToClassPath(environment, MRConstants.JOB_JAR);
     MRApps.addToClassPath(environment,

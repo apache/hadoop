@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.DEFAULT_NM_BIND_ADDRESS;
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.NM_BIND_ADDRESS;
 import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
 
 import java.io.IOException;
@@ -31,7 +29,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -67,7 +64,6 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -120,7 +116,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
-      NodeManagerMetrics metrics) {
+      NodeManagerMetrics metrics, ContainerTokenSecretManager 
+      containerTokenSecretManager) {
     super(ContainerManagerImpl.class.getName());
     this.context = context;
     dispatcher = new AsyncDispatcher();
@@ -135,12 +132,7 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(containersLauncher);
 
     this.nodeStatusUpdater = nodeStatusUpdater;
-    // Create the secretManager if need be.
-    if (UserGroupInformation.isSecurityEnabled()) {
-      LOG.info("Security is enabled on NodeManager. "
-          + "Creating ContainerTokenSecretManager");
-      this.containerTokenSecretManager = new ContainerTokenSecretManager();
-    }
+    this.containerTokenSecretManager = containerTokenSecretManager;
 
     // Start configurable services
     auxiluaryServices = new AuxServices();
@@ -190,7 +182,7 @@ public class ContainerManagerImpl extends CompositeService implements
   @Override
   public void init(Configuration conf) {
     cmBindAddressStr = NetUtils.createSocketAddr(
-        conf.get(NM_BIND_ADDRESS, DEFAULT_NM_BIND_ADDRESS));
+        conf.get(YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS));
     super.init(conf);
   }
 
@@ -200,22 +192,14 @@ public class ContainerManagerImpl extends CompositeService implements
     // Enqueue user dirs in deletion context
 
     YarnRPC rpc = YarnRPC.create(getConfig());
-    if (UserGroupInformation.isSecurityEnabled()) {
-      // This is fine as status updater is started before ContainerManager and
-      // RM gives the shared secret in registration during StatusUpdter#start()
-      // itself.
-      this.containerTokenSecretManager.setSecretKey(
-          this.nodeStatusUpdater.getContainerManagerBindAddress(),
-          this.nodeStatusUpdater.getRMNMSharedSecret());
-    }
     Configuration cmConf = new Configuration(getConfig());
     cmConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
     server =
         rpc.getServer(ContainerManager.class, this, cmBindAddressStr, cmConf,
             this.containerTokenSecretManager,
-            cmConf.getInt(NMConfig.NM_CONTAINER_MGR_THREADS, 
-                NMConfig.DEFAULT_NM_CONTAINER_MGR_THREADS));
+            cmConf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
+                YarnConfiguration.DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT));
     LOG.info("ContainerManager started at " + cmBindAddressStr);
     server.start();
     super.start();
@@ -266,7 +250,8 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container =
         new ContainerImpl(this.dispatcher, launchContext, credentials, metrics);
     ContainerId containerID = launchContext.getContainerId();
-    ApplicationId applicationID = containerID.getAppId();
+    ApplicationId applicationID = 
+        containerID.getApplicationAttemptId().getApplicationId();
     if (context.getContainers().putIfAbsent(containerID, container) != null) {
       NMAuditLogger.logFailure(launchContext.getUser(), 
           AuditConstants.START_CONTAINER, "ContainerManagerImpl",
@@ -311,10 +296,18 @@ public class ContainerManagerImpl extends CompositeService implements
     Container container = this.context.getContainers().get(containerID);
     if (container == null) {
       LOG.warn("Trying to stop unknown container " + containerID);
-      NMAuditLogger.logFailure(container.getUser(),
+      String userName;
+      try {
+        userName = UserGroupInformation.getCurrentUser().getUserName();
+      } catch (IOException e) {
+        LOG.error("Error finding userName", e);
+        return response;
+      }
+      NMAuditLogger.logFailure(userName,
           AuditConstants.STOP_CONTAINER, "ContainerManagerImpl",
           "Trying to stop unknown container!",
-          containerID.getAppId(), containerID);
+          containerID.getApplicationAttemptId().getApplicationId(), 
+          containerID);
       return response; // Return immediately.
     }
     dispatcher.getEventHandler().handle(
@@ -326,7 +319,8 @@ public class ContainerManagerImpl extends CompositeService implements
     // should be the same or should be rejected by auth before here. 
     NMAuditLogger.logSuccess(container.getUser(), 
         AuditConstants.STOP_CONTAINER, "ContainerManageImpl", 
-        containerID.getAppId(), containerID);
+        containerID.getApplicationAttemptId().getApplicationId(), 
+        containerID);
 
     // TODO: Move this code to appropriate place once kill_container is
     // implemented.

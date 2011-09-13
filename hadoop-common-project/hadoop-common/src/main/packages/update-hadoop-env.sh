@@ -134,7 +134,9 @@ if [ "${UNINSTALL}" -eq "1" ]; then
     rm -rf ${HADOOP_PREFIX}/etc/hadoop
   fi
   rm -f /etc/default/hadoop-env.sh
-  rm -f /etc/profile.d/hadoop-env.sh
+  if [ -d /etc/profile.d ]; then
+    rm -f /etc/profile.d/hadoop-env.sh
+  fi
 else
   # Create symlinks
   if [ "${HADOOP_CONF_DIR}" != "${HADOOP_PREFIX}/etc/hadoop" ]; then
@@ -142,7 +144,9 @@ else
     ln -sf ${HADOOP_CONF_DIR} ${HADOOP_PREFIX}/etc/hadoop
   fi
   ln -sf ${HADOOP_CONF_DIR}/hadoop-env.sh /etc/default/hadoop-env.sh
-  ln -sf ${HADOOP_CONF_DIR}/hadoop-env.sh /etc/profile.d/hadoop-env.sh
+  if [ -d /etc/profile.d ]; then
+    ln -sf ${HADOOP_CONF_DIR}/hadoop-env.sh /etc/profile.d/hadoop-env.sh
+  fi
 
   mkdir -p ${HADOOP_LOG_DIR}
   chown root:hadoop ${HADOOP_LOG_DIR}

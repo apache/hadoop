@@ -81,7 +81,7 @@ public class TestParentQueue {
     LOG.info("Setup top-level queues a and b");
   }
 
-  private void stubQueueAllocation(final Queue queue, 
+  private void stubQueueAllocation(final CSQueue queue, 
       final Resource clusterResource, final SchedulerNode node, 
       final int allocation) {
     
@@ -121,7 +121,7 @@ public class TestParentQueue {
     when(queue).assignContainers(eq(clusterResource), eq(node));
   }
   
-  private float computeQueueUtilization(Queue queue, 
+  private float computeQueueUtilization(CSQueue queue, 
       int expectedMemory, Resource clusterResource) {
     return (expectedMemory / 
         (clusterResource.getMemory() * queue.getAbsoluteCapacity()));
@@ -132,8 +132,8 @@ public class TestParentQueue {
     // Setup queue configs
     setupSingleLevelQueues(csConf);
     
-    Map<String, Queue> queues = new HashMap<String, Queue>();
-    Queue root = 
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacityScheduler.ROOT, queues, queues, 
             CapacityScheduler.queueComparator, 
@@ -270,8 +270,8 @@ public class TestParentQueue {
     // Setup queue configs
     setupMultiLevelQueues(csConf);
     
-    Map<String, Queue> queues = new HashMap<String, Queue>();
-    Queue root = 
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacityScheduler.ROOT, queues, queues, 
             CapacityScheduler.queueComparator, 
@@ -294,17 +294,17 @@ public class TestParentQueue {
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
-    Queue a = queues.get(A);
-    Queue b = queues.get(B);
-    Queue c = queues.get(C);
-    Queue d = queues.get(D);
+    CSQueue a = queues.get(A);
+    CSQueue b = queues.get(B);
+    CSQueue c = queues.get(C);
+    CSQueue d = queues.get(D);
 
-    Queue a1 = queues.get(A1);
-    Queue a2 = queues.get(A2);
+    CSQueue a1 = queues.get(A1);
+    CSQueue a2 = queues.get(A2);
 
-    Queue b1 = queues.get(B1);
-    Queue b2 = queues.get(B2);
-    Queue b3 = queues.get(B3);
+    CSQueue b1 = queues.get(B1);
+    CSQueue b2 = queues.get(B2);
+    CSQueue b3 = queues.get(B3);
 
     final float delta = 0.0001f;
     

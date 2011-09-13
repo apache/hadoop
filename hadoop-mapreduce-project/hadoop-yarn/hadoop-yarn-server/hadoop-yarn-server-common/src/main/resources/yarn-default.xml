@@ -1,212 +1,367 @@
 <?xml version="1.0"?>
 <configuration>
+  
+  <!-- IPC Configs -->
+  <property>
+    <description>Factory to create client IPC classes.</description>
+    <name>yarn.ipc.client.factory.class</name>
+  </property>
 
- <property>
+  <property>
+    <description>Type of serialization to use.</description>
+    <name>yarn.ipc.serializer.type</name>
+    <value>protocolbuffers</value>
+  </property>
+
+  <property>
+    <description>Factory to create server IPC classes.</description>
+    <name>yarn.ipc.server.factory.class</name>
+  </property>
+
+  <property>
+    <description>Factory to create IPC exceptions.</description>
+    <name>yarn.ipc.exception.factory.class</name>
+  </property>
+
+  <property>
+    <description>Factory to create serializeable records.</description>
+    <name>yarn.ipc.record.factory.class</name>
+  </property>
+
+  <property>
+    <description>RPC class implementation</description>
+    <name>yarn.ipc.rpc.class</name>
+    <value>org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC</value>
+  </property>
+  
+  <!-- Resource Manager Configs -->
+  <property>
+    <description>The address of the applications manager interface in the RM.</description>
+    <name>yarn.resourcemanager.address</name>
+    <value>0.0.0.0:8040</value>
+  </property>
+
+  <property>
+    <description>The number of threads used to handle applications manager requests.</description>
+    <name>yarn.resourcemanager.client.thread-count</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The expiry interval for application master reporting.</description>
+    <name>yarn.resourcemanager.am.liveness-monitor.expiry-interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>The Kerberos principal for the resource manager.</description>
     <name>yarn.resourcemanager.principal</name>
     <value>rm/sightbusy-lx@LOCALHOST</value>
   </property>
 
- <property>
-    <name>yarn.nodemanager.principal</name>
-    <value>nm/sightbusy-lx@LOCALHOST</value>
-  </property>
-
-
-<!-- All resourcemanager related configuration properties -->
-
   <property>
-    <name>yarn.server.resourcemanager.address</name>
-    <value>0.0.0.0:8020</value>
-  </property>
-
- <property>
-    <name>yarn.server.resourcemanager.resourcetracker.address</name>
-    <value>0.0.0.0:8025</value>
-  </property>
-
- <property>
-    <name>yarn.server.resourcemanager.scheduler.address</name>
+    <description>The address of the scheduler interface.</description>
+    <name>yarn.resourcemanager.scheduler.address</name>
     <value>0.0.0.0:8030</value>
   </property>
 
- <property>
-    <name>yarn.server.resourcemanager.admin.address</name>
+  <property>
+    <description>Number of threads to handle scheduler interface.</description>
+    <name>yarn.resourcemanager.scheduler.client.thread-count</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The address of the RM web application.</description>
+    <name>yarn.resourcemanager.webapp.address</name>
+    <value>0.0.0.0:8088</value>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.resource-tracker.address</name>
+    <value>0.0.0.0:8025</value>
+  </property>
+
+  <property>
+    <description>Are RM acls enabled.</description>
+    <name>yarn.resourcemanager.acl.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>ACL of who can be admin of RM.</description>
+    <name>yarn.resourcemanager.admin.acl</name>
+    <value>*</value>
+  </property>
+
+  <property>
+    <description>The address of the RM admin interface.</description>
+    <name>yarn.resourcemanager.admin.address</name>
     <value>0.0.0.0:8141</value>
   </property>
 
   <property>
-    <name>yarn.server.resourcemanager.application.max.retries</name>
+    <description>Number of threads used to handle RM admin interface.</description>
+    <name>yarn.resourcemanager.admin.client.thread-count</name>
     <value>1</value>
-    <description>The number of times an application will be retried in case
-    of AM failure.</description>
   </property>
+
   <property>
-    <name>yarn.server.resourcemanager.keytab</name>
+    <description>How often should the RM check that the AM is still alive.</description>
+    <name>yarn.resourcemanager.amliveliness-monitor.interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>The maximum number of application master retries.</description>
+    <name>yarn.resourcemanager.am.max-retries</name>
+    <value>1</value>
+  </property>
+
+  <property>
+    <description>How often to check that containers are still alive. </description>
+    <name>yarn.resourcemanager.container.liveness-monitor.interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>The keytab for the resource manager.</description>
+    <name>yarn.resourcemanager.keytab</name>
     <value>/etc/krb5.keytab</value>
   </property>
 
   <property>
-    <name>yarn.server.resourcemanager.expire.applications.completed.max</name>
-    <value>10000</value>
-    <description>the maximum number of completed applications the RM 
-      keeps in memory
-    </description>
+    <description>How long to wait until a node manager is considered dead.</description>
+    <name>yarn.resourcemanager.nm.liveness-monitor.expiry-interval-ms</name>
+    <value>600000</value>
   </property>
 
-<!-- All nodemanager related configuration properties -->
+  <property>
+    <description>How often to check that node managers are still alive.</description>
+    <name>yarn.resourcemanager.nm.liveness-monitor.interval-ms</name>
+    <value>1000</value>
+  </property>
 
   <property>
-    <name>yarn.server.nodemanager.local-dir</name>
+    <description>Path to file with nodes to include.</description>
+    <name>yarn.resourcemanager.nodes.include-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Path to file with nodes to exclude.</description>
+    <name>yarn.resourcemanager.nodes.exclude-path</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Number of threads to handle resource tracker calls.</description>
+    <name>yarn.resourcemanager.resource-tracker.client.thread-count</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The class to use as the resource scheduler.</description>
+    <name>yarn.resourcemanager.scheduler.class</name>
+  </property>
+
+  <property>
+    <description>The class to use as the persistent store.</description>
+    <name>yarn.resourcemanager.store.class</name>
+  </property>
+
+  <property>
+    <description>The address of the zookeeper instance to use with ZK store.</description>
+    <name>yarn.resourcemanager.zookeeper-store.address</name>
+  </property>
+
+  <property>
+    <description>The zookeeper session timeout for the zookeeper store.</description>
+    <name>yarn.resourcemanager.zookeeper-store.session.timeout-ms</name>
+    <value>60000</value>
+  </property>
+
+  <property>
+    <description>The maximum number of completed applications RM keeps. </description>
+    <name>yarn.resourcemanager.max-completed-applications</name>
+    <value>10000</value>
+  </property>
+
+  <!-- Node Manager Configs -->
+  <property>
+    <description>address of node manager IPC.</description>
+    <name>yarn.nodemanager.address</name>
+    <value>0.0.0.0:45454</value>
+  </property>
+
+  <property>
+    <description>who will execute(launch) the containers.</description>
+    <name>yarn.nodemanager.container-executor.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor</value>
+<!--<value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>-->
+  </property>
+
+  <property>
+    <description>Number of threads container manager uses.</description>
+    <name>yarn.nodemanager.container-manager.thread-count</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>Number of threads used in cleanup.</description>
+    <name>yarn.nodemanager.delete.thread-count</name>
+    <value>4</value>
+  </property>
+
+  <property>
+    <description>Heartbeat interval to RM</description>
+    <name>yarn.nodemanager.heartbeat.interval-ms</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>Keytab for NM.</description>
+    <name>yarn.nodemanager.keytab</name>
+    <value>/etc/krb5.keytab</value>
+  </property>
+
+  <property>
+    <description>List of directories to store localized files in.</description>
+    <name>yarn.nodemanager.local-dirs</name>
     <value>/tmp/nm-local-dir</value>
   </property>
 
   <property>
-    <name>yarn.server.nodemanager.log.dir</name>
+    <description>Address where the localizer IPC is.</description>
+    <name>yarn.nodemanager.localizer.address</name>
+    <value>0.0.0.0:4344</value>
+  </property>
+
+  <property>
+    <description>Interval in between cache cleanups.</description>
+    <name>yarn.nodemanager.localizer.cache.cleanup.interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>Target size of localizer cache in MB, per local directory.</description>
+    <name>yarn.nodemanager.localizer.cache.target-size-mb</name>
+    <value>10240</value>
+  </property>
+
+  <property>
+    <description>Number of threads to handle localization requests.</description>
+    <name>yarn.nodemanager.localizer.client.thread-count</name>
+    <value>5</value>
+  </property>
+
+  <property>
+    <description>Number of threads to use for localization fetching.</description>
+    <name>yarn.nodemanager.localizer.fetch.thread-count</name>
+    <value>4</value>
+  </property>
+
+  <property>
+    <description>Where to store container logs.</description>
+    <name>yarn.nodemanager.log-dirs</name>
     <value>/tmp/logs</value>
   </property>
 
   <property>
-    <name>yarn.apps.stagingDir</name>
-    <value>/tmp/hadoop-yarn/${user.name}/staging</value>
-   </property>
-
-  <property>
-    <name>yarn.apps.history.stagingDir</name>
-    <value>/tmp/hadoop-yarn/${user.name}/staging</value>
-   </property>
-
-  <property>
-    <name>yarn.server.nodemanager.keytab</name>
-    <value>/etc/krb5.keytab</value>
+    <description>Where to aggregate logs to.</description>
+    <name>yarn.nodemanager.remote-app-log-dir</name>
+    <value>/tmp/logs</value>
   </property>
 
   <property>
-    <name>yarn.server.nodemanager.container-executor.class</name>
-    <value>org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor</value>
-    <!--<value>org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor</value>-->
-  </property>
-
-  <property><name>NM_HOSTS</name><value>0.0.0.0:45454</value></property> 
-
-  <property>
-    <name>yarn.server.nodemanager.address</name>
-    <value>0.0.0.0:45454</value>
-  </property>
-
-  <!--  HealthChecker's properties -->
-  <property>
-    <name>yarn.server.nodemanager.healthchecker.script.path</name>
-    <value></value>
-    <description>Location of the node's health-check script on the local
-    file-system.
-    </description>
+    <description>Amount of memory in GB that can be allocated for containers.</description>
+    <name>yarn.nodemanager.resource.memory-gb</name>
+    <value>8</value>
   </property>
 
   <property>
-    <name>yarn.server.nodemanager.healthchecker.interval</name>
-    <value>600000</value>
-    <description>Frequency of the health-check run by the NodeManager
-    </description>
+    <description>NM Webapp address.</description>
+    <name>yarn.nodemanager.webapp.address</name>
+    <value>0.0.0.0:9999</value>
   </property>
 
   <property>
-    <name>yarn.server.nodemanager.healthchecker.script.timeout</name>
-    <value>1200000</value>
-    <description>Timeout for the health-check run by the NodeManager
-    </description>
-  </property>
-
-  <property>
-    <name>yarn.server.nodemanager.healthchecker.script.args</name>
-    <value></value>
-    <description>Arguments to be passed to the health-check script run
-    by the NodeManager</description>
-  </property>
-
-  <property>
-    <name>yarn.server.nodemanager.healthchecker.script.path</name>
-    <value></value>
-    <description>Location of the node's health-check script on the local
-    file-system.
-    </description>
-  </property>
-
-  <property>
-    <name>yarn.server.nodemanager.healthchecker.interval</name>
-    <value>600000</value>
-    <description>Frequency of the health-check run by the NodeManager
-    </description>
-  </property>
-
-  <property>
-    <name>yarn.server.nodemanager.healthchecker.script.timeout</name>
-    <value>1200000</value>
-    <description>Timeout for the health-check run by the NodeManager
-    </description>
-  </property>
-
-  <property>
-    <name>yarn.server.nodemanager.healthchecker.script.args</name>
-    <value></value>
-    <description>Arguments to be passed to the health-check script run
-    by the NodeManager</description>
-  </property>
-  <!-- End of HealthChecker's properties -->
-
-  <!-- ContainerMonitor related properties -->
-
-  <property>
-    <name>yarn.server.nodemanager.containers-monitor.monitoring-interval</name>
+    <description>How often to monitor containers.</description>
+    <name>yarn.nodemanager.container-monitor.interval-ms</name>
     <value>3000</value>
   </property>
 
   <property>
-    <name>yarn.server.nodemanager.containers-monitor.resourcecalculatorplugin</name>
+    <description>Class that calculates containers current resource utilization.</description>
+    <name>yarn.nodemanager.container-monitor.resource-calculator.class</name>
+  </property>
+
+  <property>
+    <description>Amount of physical ram to reserve for other applications, -1 disables.</description>
+    <name>yarn.nodemanager.reserved.memory-mb</name>
+    <value>-1</value>
+  </property>
+
+  <property>
+    <description>Frequency of running node health script.</description>
+    <name>yarn.nodemanager.health-checker.interval-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>Script time out period.</description>
+    <name>yarn.nodemanager.health-checker.script.timeout-ms</name>
+    <value>1200000</value>
+  </property>
+
+  <property>
+    <description>The health check script to run.</description>
+    <name>yarn.nodemanager.health-checker.script.path</name>
     <value></value>
   </property>
 
-   <property>
-     <name>yarn.server.nodemanager.reserved-physical-memory.mb</name>
-     <value>-1</value>
-   </property>
-
-  <!-- End of ContainerMonitor related properties -->
-
-<!-- All MRAppMaster related configuration properties -->
-
   <property>
-    <name>yarn.server.mapreduce-appmanager.attempt-listener.bindAddress</name>
-    <value>0.0.0.0</value>
+    <description>The arguments to pass to the health check script.</description>
+    <name>yarn.nodemanager.health-checker.script.opts</name>
+    <value></value>
   </property>
 
   <property>
-    <name>yarn.server.mapreduce-appmanager.client-service.bindAddress</name>
-    <value>0.0.0.0</value>
+    <description>The path to the Linux container executor.</description>
+    <name>yarn.nodemanager.linux-container-executor.path</name>
   </property>
 
+  <property>
+    <description>T-file compression types used to compress aggregated logs.</description>
+    <name>yarn.nodemanager.log-aggregation.compression-type</name>
+    <value>none</value>
+  </property>
+
+  <property>
+    <description>The kerberos principal for the node manager.</description>
+    <name>yarn.nodemanager.principal</name>
+    <value>nm/sightbusy-lx@LOCALHOST</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value></value>
+    <!-- <value>mapreduce.shuffle</value> -->
+  </property>
+
+  <!--Map Reduce configuration-->
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
 
   <property>
     <name>mapreduce.job.jar</name>
-    <value></value>
-    <!--<value>~/Workspace/eclipse-workspace/yarn/yarn-mapreduce/yarn-mapreduce-app/target/yarn-mapreduce-app-0.24.0-SNAPSHOT.jar</value>-->
+    <value/>
   </property>
 
   <property>
-   <name>mapreduce.job.hdfs-servers</name>
-   <value>${fs.default.name}</value>
- </property>
-
-  <property>
-  <name>nodemanager.auxiluary.services</name>
-  <value></value>
-  <!-- <value>mapreduce.shuffle</value> -->
+    <name>mapreduce.job.hdfs-servers</name>
+    <value>${fs.default.name}</value>
   </property>
-
-<!--
-  <property>
-  <name>nodemanager.aux.service.mapreduce.shuffle.class</name>
-  <value>org.apache.hadoop.mapred.ShuffleHandler</value>
-  </property>
--->
-
 </configuration>

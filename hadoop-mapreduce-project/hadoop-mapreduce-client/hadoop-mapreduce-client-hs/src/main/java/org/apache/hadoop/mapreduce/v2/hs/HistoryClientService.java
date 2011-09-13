@@ -62,8 +62,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.hs.webapp.HSWebApp;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.security.client.ClientHSSecurityInfo;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
@@ -107,8 +107,8 @@ public class HistoryClientService extends AbstractService {
         YarnConfiguration.YARN_SECURITY_INFO,
         ClientHSSecurityInfo.class, SecurityInfo.class);
     initializeWebApp(getConfig());
-    String serviceAddr = conf.get(JHConfig.HS_BIND_ADDRESS,
-        JHConfig.DEFAULT_HS_BIND_ADDRESS);
+    String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
     InetSocketAddress address = NetUtils.createSocketAddr(serviceAddr);
     InetAddress hostNameResolved = null;
     try {
@@ -120,8 +120,8 @@ public class HistoryClientService extends AbstractService {
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,
             conf, null,
-            conf.getInt(JHConfig.HS_CLIENT_THREADS, 
-                JHConfig.DEFAULT_HS_CLIENT_THREADS));
+            conf.getInt(JHAdminConfig.MR_HISTORY_CLIENT_THREAD_COUNT, 
+                JHAdminConfig.DEFAULT_MR_HISTORY_CLIENT_THREAD_COUNT));
     server.start();
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
@@ -132,9 +132,9 @@ public class HistoryClientService extends AbstractService {
   }
 
   private void initializeWebApp(Configuration conf) {
-    webApp = new HSWebApp(history);
-    String bindAddress = conf.get(JHConfig.HS_WEBAPP_BIND_ADDRESS,
-        JHConfig.DEFAULT_HS_WEBAPP_BIND_ADDRESS);
+    webApp = new HsWebApp(history);
+    String bindAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
     WebApps.$for("yarn", this).at(bindAddress).start(webApp); 
   }
 

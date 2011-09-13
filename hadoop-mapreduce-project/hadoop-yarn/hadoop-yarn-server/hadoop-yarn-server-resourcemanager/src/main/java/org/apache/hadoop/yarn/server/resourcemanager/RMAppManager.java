@@ -18,24 +18,22 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -43,7 +41,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -52,7 +49,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
 
   private static final Log LOG = LogFactory.getLog(RMAppManager.class);
 
-  private int completedAppsMax = RMConfig.DEFAULT_EXPIRE_APPLICATIONS_COMPLETED_MAX;
+  private int completedAppsMax = YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
@@ -70,8 +67,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     this.masterService = masterService;
     this.conf = conf;
     setCompletedAppsMax(conf.getInt(
-        RMConfig.EXPIRE_APPLICATIONS_COMPLETED_MAX,
-        RMConfig.DEFAULT_EXPIRE_APPLICATIONS_COMPLETED_MAX));
+        YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS));
   }
 
   /**
@@ -154,7 +151,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     }
   }
 
-  protected void setCompletedAppsMax(int max) {
+  protected synchronized void setCompletedAppsMax(int max) {
     this.completedAppsMax = max;
   }
 
@@ -213,7 +210,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     }
   }
 
-  protected void submitApplication(ApplicationSubmissionContext submissionContext) {
+  protected synchronized void submitApplication(ApplicationSubmissionContext submissionContext) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {

@@ -41,13 +41,13 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalRMInterface;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -68,6 +68,7 @@ public abstract class BaseContainerManagerTest {
   protected static File localLogDir;
   protected static File remoteLogDir;
   protected static File tmpDir;
+  protected ContainerTokenSecretManager containerTokenSecretManager = new ContainerTokenSecretManager();
 
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
 
@@ -95,7 +96,7 @@ public abstract class BaseContainerManagerTest {
   protected String user = "nobody";
 
   protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
-      context, new AsyncDispatcher(), null, metrics) {
+      context, new AsyncDispatcher(), null, metrics, this.containerTokenSecretManager) {
     @Override
     protected ResourceTracker getRMClient() {
       return new LocalRMInterface();
@@ -129,10 +130,10 @@ public abstract class BaseContainerManagerTest {
     LOG.info("Created tmpDir in " + tmpDir.getAbsolutePath());
 
     String bindAddress = "0.0.0.0:5555";
-    conf.set(NMConfig.NM_BIND_ADDRESS, bindAddress);
-    conf.set(NMConfig.NM_LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    conf.set(NMConfig.REMOTE_USER_LOG_DIR, remoteLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_ADDRESS, bindAddress);
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteLogDir.getAbsolutePath());
 
     // Default delSrvc
     delSrvc = new DeletionService(exec) {
@@ -148,7 +149,7 @@ public abstract class BaseContainerManagerTest {
     exec = createContainerExecutor();
     containerManager =
         new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-                                 metrics);
+                                 metrics, this.containerTokenSecretManager);
     containerManager.init(conf);
   }
 

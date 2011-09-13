@@ -57,7 +57,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.Clock;
@@ -184,7 +184,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     this.appAttemptID = RecordFactoryProvider.getRecordFactory(conf)
     .newRecordInstance(ApplicationAttemptId.class);
 
-    debugMode = conf.getBoolean(JHConfig.HISTORY_DEBUG_MODE_KEY, false);
+    debugMode = conf.getBoolean(JHAdminConfig.MR_HISTORY_DEBUG_MODE, false);
     serialNumberLowDigits = debugMode ? 1 : 3;
     serialNumberFormat = ("%0"
         + (JobHistoryUtils.SERIAL_NUMBER_DIRECTORY_DIGITS + serialNumberLowDigits) + "d");
@@ -216,15 +216,15 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     
     
     
-    jobListCacheSize = conf.getInt(JHConfig.HISTORY_SERVER_JOBLIST_CACHE_SIZE_KEY, DEFAULT_JOBLIST_CACHE_SIZE);
-    loadedJobCacheSize = conf.getInt(JHConfig.HISTORY_SERVER_LOADED_JOB_CACHE_SIZE_KEY, DEFAULT_LOADEDJOB_CACHE_SIZE);
-    dateStringCacheSize = conf.getInt(JHConfig.HISTORY_SERVER_DATESTRING_CACHE_SIZE_KEY, DEFAULT_DATESTRING_CACHE_SIZE);
+    jobListCacheSize = conf.getInt(JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE, DEFAULT_JOBLIST_CACHE_SIZE);
+    loadedJobCacheSize = conf.getInt(JHAdminConfig.MR_HISTORY_LOADED_JOB_CACHE_SIZE, DEFAULT_LOADEDJOB_CACHE_SIZE);
+    dateStringCacheSize = conf.getInt(JHAdminConfig.MR_HISTORY_DATESTRING_CACHE_SIZE, DEFAULT_DATESTRING_CACHE_SIZE);
     moveThreadInterval =
-        conf.getLong(JHConfig.HISTORY_SERVER_MOVE_THREAD_INTERVAL,
+        conf.getLong(JHAdminConfig.MR_HISTORY_MOVE_INTERVAL_MS,
             DEFAULT_MOVE_THREAD_INTERVAL);
-    numMoveThreads = conf.getInt(JHConfig.HISTORY_SERVER_NUM_MOVE_THREADS, DEFAULT_MOVE_THREAD_COUNT);
+    numMoveThreads = conf.getInt(JHAdminConfig.MR_HISTORY_MOVE_THREAD_COUNT, DEFAULT_MOVE_THREAD_COUNT);
     try {
-    initExisting();
+      initExisting();
     } catch (IOException e) {
       throw new YarnException("Failed to intialize existing directories", e);
     }
@@ -260,12 +260,12 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     moveIntermediateToDoneThread.start();
     
     //Start historyCleaner
-    boolean startCleanerService = conf.getBoolean(JHConfig.RUN_HISTORY_CLEANER_KEY, true);
+    boolean startCleanerService = conf.getBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, true);
     if (startCleanerService) {
-      long maxAgeOfHistoryFiles = conf.getLong(JHConfig.HISTORY_MAXAGE,
+      long maxAgeOfHistoryFiles = conf.getLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS,
           DEFAULT_HISTORY_MAX_AGE);
     cleanerScheduledExecutor = new ScheduledThreadPoolExecutor(1);
-      long runInterval = conf.getLong(JHConfig.HISTORY_CLEANER_RUN_INTERVAL,
+      long runInterval = conf.getLong(JHAdminConfig.MR_HISTORY_CLEANER_INTERVAL_MS,
           DEFAULT_RUN_INTERVAL);
       cleanerScheduledExecutor
           .scheduleAtFixedRate(new HistoryCleaner(maxAgeOfHistoryFiles),
@@ -319,6 +319,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
    */
   @SuppressWarnings("unchecked")
   private void initExisting() throws IOException {
+    LOG.info("Initializing Existing Jobs...");
     List<FileStatus> timestampedDirList = findTimestampedDirectories();
     Collections.sort(timestampedDirList);
     for (FileStatus fs : timestampedDirList) {
@@ -350,6 +351,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   }
   
   private void addDirectoryToSerialNumberIndex(Path serialDirPath) {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Adding "+serialDirPath+" to serial index");
+    }
     String serialPart = serialDirPath.getName();
     String timestampPart = JobHistoryUtils.getTimestampPartFromPath(serialDirPath.toString());
     if (timestampPart == null) {
@@ -374,9 +378,15 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   }
   
   private void addDirectoryToJobListCache(Path path) throws IOException {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Adding "+path+" to job list cache.");
+    }
     List<FileStatus> historyFileList = scanDirectoryForHistoryFiles(path,
         doneDirFc);
     for (FileStatus fs : historyFileList) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Adding in history for "+fs.getPath());
+      }
       JobIndexInfo jobIndexInfo = FileNameIndexUtils.getIndexInfo(fs.getPath()
           .getName());
       String confFileName = JobHistoryUtils
@@ -423,6 +433,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
    * Adds an entry to the job list cache. Maintains the size.
    */
   private void addToJobListCache(JobId jobId, MetaInfo metaInfo) {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Adding "+jobId+" to job list cache with "+metaInfo.getJobIndexInfo());
+    }
     jobListCache.put(jobId, metaInfo);
     if (jobListCache.size() > jobListCacheSize) {
       jobListCache.remove(jobListCache.firstKey());
@@ -432,7 +445,10 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   /**
    * Adds an entry to the loaded job cache. Maintains the size.
    */
-  private void  addToLoadedJobCache(Job job) {
+  private void addToLoadedJobCache(Job job) {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Adding "+job.getID()+" to loaded job cache");
+    }
     loadedJobCache.put(job.getID(), job);
     if (loadedJobCache.size() > loadedJobCacheSize ) {
       loadedJobCache.remove(loadedJobCache.firstKey());
@@ -967,6 +983,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
 
   @Override
   public synchronized Job getJob(JobId jobId) {
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Looking for Job "+jobId);
+    }
     Job job = null;
     try {
       job = findJob(jobId);
@@ -979,7 +998,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
 
   @Override
   public Map<JobId, Job> getAllJobs(ApplicationId appID) {
-    LOG.info("Called getAllJobs(AppId): " + appID);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Called getAllJobs(AppId): " + appID);
+    }
 //    currently there is 1 to 1 mapping between app and job id
     org.apache.hadoop.mapreduce.JobID oldJobID = TypeConverter.fromYarn(appID);
     Map<JobId, Job> jobs = new HashMap<JobId, Job>();
@@ -1002,12 +1023,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
    * This does involve a DFS oepration of scanning the intermediate directory.
    */
   public Map<JobId, Job> getAllJobs() {
+    LOG.debug("Called getAllJobs()");
     return getAllJobsInternal();
-        }
-
-  
-  
-  
+  }
   
   static class MetaInfo {
     private Path historyFile;

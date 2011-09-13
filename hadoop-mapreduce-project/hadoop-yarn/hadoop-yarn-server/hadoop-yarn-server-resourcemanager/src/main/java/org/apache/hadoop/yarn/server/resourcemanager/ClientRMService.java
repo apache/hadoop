@@ -31,7 +31,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -58,10 +57,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -74,7 +71,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -95,6 +91,7 @@ public class ClientRMService extends AbstractService implements
   final private YarnScheduler scheduler;
   final private RMContext rmContext;
   private final AMLivelinessMonitor amLivelinessMonitor;
+  private final RMAppManager rmAppManager;
 
   private String clientServiceBindAddress;
   private Server server;
@@ -104,18 +101,20 @@ public class ClientRMService extends AbstractService implements
   private  ApplicationACLsManager aclsManager;
   private Map<ApplicationACL, AccessControlList> applicationACLs;
   
-  public ClientRMService(RMContext rmContext, YarnScheduler scheduler) {
+  public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
+      RMAppManager rmAppManager) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
+    this.rmAppManager = rmAppManager;
   }
   
   @Override
   public void init(Configuration conf) {
     clientServiceBindAddress =
-      conf.get(YarnConfiguration.APPSMANAGER_ADDRESS,
-          YarnConfiguration.DEFAULT_APPSMANAGER_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS);
     clientBindAddress =
       NetUtils.createSocketAddr(clientServiceBindAddress);
 
@@ -138,8 +137,8 @@ public class ClientRMService extends AbstractService implements
       rpc.getServer(ClientRMProtocol.class, this,
             clientBindAddress,
             clientServerConf, null,
-            clientServerConf.getInt(RMConfig.RM_CLIENT_THREADS, 
-                RMConfig.DEFAULT_RM_CLIENT_THREADS));
+            clientServerConf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT, 
+                YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();
   }
@@ -205,8 +204,10 @@ public class ClientRMService extends AbstractService implements
         throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");
       }
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppManagerSubmitEvent(submissionContext));
+      // This needs to be synchronous as the client can query 
+      // immediately following the submission to get the application status.
+      // So call handle directly and do not send an event.
+      rmAppManager.handle(new RMAppManagerSubmitEvent(submissionContext));
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user + " with " + submissionContext);

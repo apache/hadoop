@@ -18,10 +18,30 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
+/**
+ * <p><code>YarnClusterMetrics</code> represents cluster metrics.</p>
+ * 
+ * <p>Currently only number of <code>NodeManager</code>s is provided.</p>
+ */
+@Public
+@Stable
 public interface YarnClusterMetrics {
   
+  /**
+   * Get the number of <code>NodeManager</code>s in the cluster.
+   * @return number of <code>NodeManager</code>s in the cluster
+   */
+  @Public
+  @Stable
   public abstract int getNumNodeManagers();
-  
+
+  @Private
+  @Unstable
   public abstract void setNumNodeManagers(int numNodeManagers);
 
 }

@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -37,9 +35,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -48,8 +46,8 @@ import org.junit.Test;
 
 public class TestEventFlow {
 
-  private static final Log LOG = LogFactory.getLog(TestEventFlow.class);
-  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private static final RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
 
   private static File localDir = new File("target",
       TestEventFlow.class.getName() + "-localDir").getAbsoluteFile();
@@ -74,9 +72,10 @@ public class TestEventFlow {
     Context context = new NMContext();
 
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(NMConfig.NM_LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(NMConfig.NM_LOG_DIR, localLogDir.getAbsolutePath());
-    conf.set(NMConfig.REMOTE_USER_LOG_DIR, remoteLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, 
+        remoteLogDir.getAbsolutePath());
 
     ContainerExecutor exec = new DefaultContainerExecutor();
     exec.setConf(conf);
@@ -84,8 +83,9 @@ public class TestEventFlow {
     Dispatcher dispatcher = new AsyncDispatcher();
     NodeHealthCheckerService healthChecker = null;
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
+    ContainerTokenSecretManager containerTokenSecretManager =  new ContainerTokenSecretManager();
     NodeStatusUpdater nodeStatusUpdater =
-        new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics) {
+        new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics, containerTokenSecretManager) {
       @Override
       protected ResourceTracker getRMClient() {
         return new LocalRMInterface();
@@ -98,27 +98,36 @@ public class TestEventFlow {
     };
 
     DummyContainerManager containerManager =
-        new DummyContainerManager(context, exec, del, nodeStatusUpdater, metrics);
+        new DummyContainerManager(context, exec, del, nodeStatusUpdater, 
+            metrics, containerTokenSecretManager);
     containerManager.init(conf);
     containerManager.start();
 
-    ContainerLaunchContext launchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext launchContext = 
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     ContainerId cID = recordFactory.newRecordInstance(ContainerId.class);
-    cID.setAppId(recordFactory.newRecordInstance(ApplicationId.class));
-    ApplicationAttemptId atId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    atId.setApplicationId(cID.getAppId());
-    cID.setAppAttemptId(atId);
+    ApplicationId applicationId =
+        recordFactory.newRecordInstance(ApplicationId.class);
+    applicationId.setClusterTimestamp(0);
+    applicationId.setId(0);
+    ApplicationAttemptId applicationAttemptId = 
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    applicationAttemptId.setApplicationId(applicationId);
+    applicationAttemptId.setAttemptId(0);
+    cID.setApplicationAttemptId(applicationAttemptId);
     launchContext.setContainerId(cID);
     launchContext.setUser("testing");
     launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
-    StartContainerRequest request = recordFactory.newRecordInstance(StartContainerRequest.class);
+    StartContainerRequest request = 
+        recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
     containerManager.startContainer(request);
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,
         ContainerState.RUNNING);
 
-    StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
+    StopContainerRequest stopRequest = 
+        recordFactory.newRecordInstance(StopContainerRequest.class);
     stopRequest.setContainerId(cID);
     containerManager.stopContainer(stopRequest);
     BaseContainerManagerTest.waitForContainerState(containerManager, cID,

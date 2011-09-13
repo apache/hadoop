@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 public class NodesListManager extends AbstractService{
@@ -48,18 +49,18 @@ public class NodesListManager extends AbstractService{
     try {
       this.hostsReader = 
         new HostsFileReader(
-            conf.get(RMConfig.RM_NODES_INCLUDE_FILE, 
-                RMConfig.DEFAULT_RM_NODES_INCLUDE_FILE),
-            conf.get(RMConfig.RM_NODES_EXCLUDE_FILE, 
-                RMConfig.DEFAULT_RM_NODES_EXCLUDE_FILE)
+            conf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, 
+                YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH),
+            conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, 
+                YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH)
                 );
       printConfiguredHosts();
     } catch (IOException ioe) {
       LOG.warn("Failed to init hostsReader, disabling", ioe);
       try {
         this.hostsReader = 
-          new HostsFileReader(RMConfig.DEFAULT_RM_NODES_INCLUDE_FILE, 
-              RMConfig.DEFAULT_RM_NODES_EXCLUDE_FILE);
+          new HostsFileReader(YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH, 
+              YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       } catch (IOException ioe2) {
         // Should *never* happen
         this.hostsReader = null;
@@ -74,10 +75,10 @@ public class NodesListManager extends AbstractService{
       return;
     }
     
-    LOG.debug("hostsReader: in=" + conf.get(RMConfig.RM_NODES_INCLUDE_FILE, 
-        RMConfig.DEFAULT_RM_NODES_INCLUDE_FILE) + " out=" +
-        conf.get(RMConfig.RM_NODES_EXCLUDE_FILE, 
-            RMConfig.DEFAULT_RM_NODES_EXCLUDE_FILE));
+    LOG.debug("hostsReader: in=" + conf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, 
+        YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH) + " out=" +
+        conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, 
+            YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
     for (String include : hostsReader.getHosts()) {
       LOG.debug("include: " + include);
     }

@@ -23,8 +23,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 
@@ -129,18 +129,15 @@ public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase
     return vectorRef.get();
   }
 
-  private static final long DEFAULT_EXPONENTIAL_SMOOTHING_LAMBDA_MILLISECONDS
-      = 1000L * 60;
-
   @Override
   public void contextualize(Configuration conf, AppContext context) {
     super.contextualize(conf, context);
 
     lambda
-        = conf.getLong(AMConstants.EXPONENTIAL_SMOOTHING_LAMBDA_MILLISECONDS,
-            DEFAULT_EXPONENTIAL_SMOOTHING_LAMBDA_MILLISECONDS);
+        = conf.getLong(MRJobConfig.MR_AM_TASK_ESTIMATOR_SMOOTH_LAMBDA_MS,
+            MRJobConfig.DEFAULT_MR_AM_TASK_ESTIMATOR_SMNOOTH_LAMBDA_MS);
     smoothedValue
-        = conf.getBoolean(AMConstants.EXPONENTIAL_SMOOTHING_SMOOTH_RATE, true)
+        = conf.getBoolean(MRJobConfig.MR_AM_TASK_EXTIMATOR_EXPONENTIAL_RATE_ENABLE, true)
             ? SmoothedValue.RATE : SmoothedValue.TIME_PER_UNIT_PROGRESS;
   }
 

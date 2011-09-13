@@ -28,12 +28,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -72,7 +72,7 @@ public class TestNMWebServer {
     };
     WebServer server = new WebServer(nmContext, resourceView);
     Configuration conf = new Configuration();
-    conf.set(NMConfig.NM_LOCAL_DIR, testRootDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     server.init(conf);
     server.start();
 
@@ -112,7 +112,9 @@ public class TestNMWebServer {
       };
       nmContext.getContainers().put(containerId, container);
       //TODO: Gross hack. Fix in code.
-      nmContext.getApplications().get(containerId.getAppId()).getContainers()
+      ApplicationId applicationId = 
+          containerId.getApplicationAttemptId().getApplicationId();
+      nmContext.getApplications().get(applicationId).getContainers()
           .put(containerId, container);
       writeContainerLogs(conf, nmContext, containerId);
 

@@ -25,6 +25,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -69,10 +70,14 @@ public class ContainerPage extends NMView implements NMWebParams {
         ConverterUtils.toContainerId(this.recordFactory, $(CONTAINER_ID));
       Container container = this.nmContext.getContainers().get(containerID);
       ContainerStatus containerData = container.cloneAndGetContainerStatus();
+      int exitCode = containerData.getExitStatus();
+      String exiStatus = 
+          (exitCode == YarnConfiguration.INVALID_CONTAINER_EXIT_STATUS) ? 
+              "N/A" : String.valueOf(exitCode);
       info("Container information")
         ._("ContainerID", $(CONTAINER_ID))
         ._("ContainerState", container.getContainerState())
-        ._("ExitStatus", containerData.getExitStatus())
+        ._("ExitStatus", exiStatus)
         ._("Diagnostics", containerData.getDiagnostics())
         ._("User", container.getUser())
         ._("TotalMemoryNeeded",

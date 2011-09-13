@@ -2,9 +2,29 @@ Hadoop MapReduce Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-2669. Add new examples for Mean, Median, and Standard Deviation.
+    (Plamen Jeliazkov via shv)
+
   IMPROVEMENTS
 
-    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols
+                   including multuple versions of the same protocol (sanjay Radia)
+
+    MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
+                    process (atm)
+
+  BUG FIXES
+
+    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
+    ResourceUsageMatcher. (amarrk)
+
+    MAPREDUCE-2978. Fixed test-patch to make Jenkins report correct number of
+    findBugs, correct links to findBugs artifacts and no links to the
+    artifacts when there are no warnings. (Tom White via vinodkv).
 
 Release 0.23.0 - Unreleased
 
@@ -247,6 +267,24 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2655. Add audit logs to ResourceManager and NodeManager. (Thomas
     Graves via acmurthy)
+
+    MAPREDUCE-2864. Normalize configuration variable names for YARN. (Robert
+    Evans via acmurthy) 
+
+    MAPREDUCE-2690. Web-page for FifoScheduler. (Eric Payne via acmurthy) 
+
+    MAPREDUCE-2711. Update TestBlockPlacementPolicyRaid for the new namesystem
+    and block management APIs.  (szetszwo)
+
+    MAPREDUCE-2933. Change allocate call to return ContainerStatus for
+    completed containers rather than Container. (acmurthy) 
+
+    MAPREDUCE-2675. Reformat JobHistory Server main page to be more
+    useful. (Robert Joseph Evans via vinodkv).
+
+    MAPREDUCE-2896. Simplify all apis to in
+    org.apache.hadoop.yarn.api.records.* to be get/set only. Added javadocs to
+    all public records. (acmurthy)
 
   OPTIMIZATIONS
 
@@ -1220,6 +1258,59 @@ Release 0.23.0 - Unreleased
    (acmurthy) 
 
    MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
+
+   MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
+
+   MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves 
+   via mahadev)
+
+   MAPREDUCE-2947. Fixed race condition in AuxiliaryServices. (vinodkv via
+   acmurthy) 
+
+   MAPREDUCE-2844. Fixed display of nodes in UI. (Ravi Teja Ch N V via
+   acmurthy) 
+
+   MAPREDUCE-2677. Fixed 404 for some links from HistoryServer. (Robert Evans
+   via acmurthy) 
+
+   MAPREDUCE-2937. Ensure reason for application failure is displayed to the
+   user. (mahadev via acmurthy) 
+
+   MAPREDUCE-2953. Fix a race condition on submission which caused client to 
+   incorrectly assume application was gone by making submission synchronous
+   for RMAppManager. (Thomas Graves via acmurthy) 
+
+   MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy) 
+
+   MAPREDUCE-2954. Fixed a deadlock in NM caused due to wrong synchronization
+   in protocol buffer records. (Siddharth Seth via vinodkv)
+
+   MAPREDUCE-2975. Fixed YARNRunner to use YarnConfiguration rather than
+   Configuration. (mahadev via acmurthy) 
+ 
+   MAPREDUCE-2971. ant build mapreduce fails protected access jc.displayJobList
+   (jobs) (Thomas Graves via mahadev)
+
+   MAPREDUCE-2691. Finishing up the cleanup of distributed cache file resources
+   and related tests. (Siddharth Seth via vinodkv)
+
+   MAPREDUCE-2749. Ensure NM registers with RM after starting all its services
+   correctly. (Thomas Graves via acmurthy)
+
+   MAPREDUCE-2979. Removed the needless ClientProtocolProvider configuration
+   from the hadoop-mapreduce-client-core module. (Siddharth Seth via vinodkv)
+
+   MAPREDUCE-2985. Fixed findbugs warnings in ResourceLocalizationService.
+   (Thomas Graves via acmurthy)
+
+   MAPREDUCE-2874. Fix formatting of ApplicationId in web-ui. (Eric Payne via
+   acmurthy)
+
+   MAPREDUCE-2995. Better handling of expired containers in MapReduce
+   ApplicationMaster. (vinodkv via acmurthy) 
+
+   MAPREDUCE-2995. Fixed race condition in ContainerLauncher. (vinodkv via 
+   acmurthy) 
 
 Release 0.22.0 - Unreleased
 

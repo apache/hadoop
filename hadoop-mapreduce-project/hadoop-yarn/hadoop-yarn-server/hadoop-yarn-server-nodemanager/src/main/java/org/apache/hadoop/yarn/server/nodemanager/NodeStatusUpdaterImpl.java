@@ -30,13 +30,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -47,7 +47,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.RMNMSecurityInfoClass;
-import org.apache.hadoop.yarn.server.YarnServerConfig;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -56,6 +55,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -69,12 +69,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final Context context;
   private final Dispatcher dispatcher;
 
+  private ContainerTokenSecretManager containerTokenSecretManager;
   private long heartBeatInterval;
   private ResourceTracker resourceTracker;
   private String rmAddress;
   private Resource totalResource;
   private String containerManagerBindAddress;
-  private String nodeHttpAddress;
   private String hostName;
   private int containerManagerPort;
   private int httpPort;
@@ -87,23 +87,25 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeManagerMetrics metrics;
 
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
-      NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
+      NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics, 
+      ContainerTokenSecretManager containerTokenSecretManager) {
     super(NodeStatusUpdaterImpl.class.getName());
     this.healthChecker = healthChecker;
     this.context = context;
     this.dispatcher = dispatcher;
     this.metrics = metrics;
+    this.containerTokenSecretManager = containerTokenSecretManager;
   }
 
   @Override
   public synchronized void init(Configuration conf) {
     this.rmAddress =
-        conf.get(YarnServerConfig.RESOURCETRACKER_ADDRESS,
-            YarnServerConfig.DEFAULT_RESOURCETRACKER_BIND_ADDRESS);
+        conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+            YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
     this.heartBeatInterval =
-        conf.getLong(NMConfig.HEARTBEAT_INTERVAL,
-            NMConfig.DEFAULT_HEARTBEAT_INTERVAL);
-    int memory = conf.getInt(NMConfig.NM_VMEM_GB, NMConfig.DEFAULT_NM_VMEM_GB);
+        conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);
+    int memory = conf.getInt(YarnConfiguration.NM_VMEM_GB, YarnConfiguration.DEFAULT_NM_VMEM_GB);
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
     this.totalResource.setMemory(memory * 1024);
     metrics.addResource(totalResource);
@@ -113,13 +115,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @Override
   public void start() {
     String cmBindAddressStr =
-        getConfig().get(NMConfig.NM_BIND_ADDRESS,
-            NMConfig.DEFAULT_NM_BIND_ADDRESS);
+        getConfig().get(YarnConfiguration.NM_ADDRESS,
+            YarnConfiguration.DEFAULT_NM_ADDRESS);
     InetSocketAddress cmBindAddress =
         NetUtils.createSocketAddr(cmBindAddressStr);
     String httpBindAddressStr =
-      getConfig().get(NMConfig.NM_HTTP_BIND_ADDRESS,
-          NMConfig.DEFAULT_NM_HTTP_BIND_ADDRESS);
+      getConfig().get(YarnConfiguration.NM_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     InetSocketAddress httpBindAddress =
       NetUtils.createSocketAddr(httpBindAddressStr);
     try {
@@ -128,7 +130,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       this.httpPort = httpBindAddress.getPort();
       this.containerManagerBindAddress =
           this.hostName + ":" + this.containerManagerPort;
-      this.nodeHttpAddress = this.hostName + ":" + this.httpPort;
       LOG.info("Configured ContainerManager Address is "
           + this.containerManagerBindAddress);
       // Registration has to be in start so that ContainerManager can get the
@@ -176,8 +177,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       this.secretKeyBytes = regResponse.getSecretKey().array();
     }
 
+    // do this now so that its set before we start heartbeating to RM
+    if (UserGroupInformation.isSecurityEnabled()) {
+      LOG.info("Security enabled - updating secret keys now");
+      // It is expected that status updater is started by this point and
+      // RM gives the shared secret in registration during StatusUpdater#start().
+      this.containerTokenSecretManager.setSecretKey(
+          this.getContainerManagerBindAddress(),
+          this.getRMNMSharedSecret());
+    }
     LOG.info("Registered with ResourceManager as " + this.containerManagerBindAddress
         + " with total resource of " + this.totalResource);
+
   }
 
   @Override
@@ -196,35 +207,28 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     nodeStatus.setNodeId(this.nodeId);
 
     int numActiveContainers = 0;
+    List<ContainerStatus> containersStatuses = new ArrayList<ContainerStatus>();
     for (Iterator<Entry<ContainerId, Container>> i =
         this.context.getContainers().entrySet().iterator(); i.hasNext();) {
       Entry<ContainerId, Container> e = i.next();
       ContainerId containerId = e.getKey();
       Container container = e.getValue();
 
-      List<org.apache.hadoop.yarn.api.records.Container> applicationContainers = nodeStatus
-          .getContainers(container.getContainerID().getAppId());
-      if (applicationContainers == null) {
-        applicationContainers = new ArrayList<org.apache.hadoop.yarn.api.records.Container>();
-        nodeStatus.setContainers(container.getContainerID().getAppId(),
-            applicationContainers);
-      }
-
       // Clone the container to send it to the RM
-      org.apache.hadoop.yarn.api.records.Container c = container.cloneAndGetContainer();
-      c.setNodeId(this.nodeId);
-      c.setNodeHttpAddress(this.nodeHttpAddress); // TODO: don't set everytime.
-      applicationContainers.add(c);
+      org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus = 
+          container.cloneAndGetContainerStatus();
+      containersStatuses.add(containerStatus);
       ++numActiveContainers;
-      LOG.info("Sending out status for container: " + c);
+      LOG.info("Sending out status for container: " + containerStatus);
 
-      if (c.getState() == ContainerState.COMPLETE) {
+      if (containerStatus.getState() == ContainerState.COMPLETE) {
         // Remove
         i.remove();
 
         LOG.info("Removed completed container " + containerId);
       }
     }
+    nodeStatus.setContainersStatuses(containersStatuses);
 
     LOG.debug(this.containerManagerBindAddress + " sending out status for " + numActiveContainers
         + " containers");

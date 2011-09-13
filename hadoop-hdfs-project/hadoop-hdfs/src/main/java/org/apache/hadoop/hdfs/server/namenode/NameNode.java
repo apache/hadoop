@@ -335,6 +335,11 @@ public class NameNode {
   }
 
   protected InetSocketAddress getHttpServerAddress(Configuration conf) {
+    return getHttpAddress(conf);
+  }
+
+  /** @return the NameNode HTTP address set in the conf. */
+  public static InetSocketAddress getHttpAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
         conf.get(DFS_NAMENODE_HTTP_ADDRESS_KEY, DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
   }

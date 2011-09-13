@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
@@ -149,8 +150,7 @@ class ClientServiceDelegate {
         LOG.info("Connecting to " + serviceAddr);
         instantiateAMProxy(serviceAddr);
         return realProxy;
-      } catch (Exception e) {
-        //possibly
+      } catch (IOException e) {
         //possibly the AM has crashed
         //there may be some time before AM is restarted
         //keep retrying by getting the address from RM
@@ -159,8 +159,13 @@ class ClientServiceDelegate {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e1) {
+          LOG.warn("getProxy() call interruped", e1);
+          throw new YarnException(e1);
         }
         application = rm.getApplicationReport(appId);
+      } catch (InterruptedException e) {
+        LOG.warn("getProxy() call interruped", e);
+        throw new YarnException(e);
       }
     }
 
@@ -193,7 +198,7 @@ class ClientServiceDelegate {
     //succeeded.
     if (application.getState() == ApplicationState.SUCCEEDED) {
       LOG.info("Application state is completed. " +
-          "Redirecting to job history server " + serviceAddr);
+          "Redirecting to job history server");
       realProxy = historyServerProxy;
     }
     return realProxy;
@@ -234,8 +239,14 @@ class ClientServiceDelegate {
         LOG.warn("Exception thrown by remote end.");
         LOG.warn(RPCUtil.toString(yre));
         throw yre;
+      } catch (InvocationTargetException e) {
+        //TODO Finite # of errors before giving up?
+        LOG.info("Failed to contact AM/History for job " + jobId
+            + "  Will retry..", e.getTargetException());
+        forceRefresh = true;
       } catch (Exception e) {
-        LOG.info("Failed to contact AM for job " + jobId + "  Will retry..");
+        LOG.info("Failed to contact AM/History for job " + jobId
+            + "  Will retry..", e);
         LOG.debug("Failing to contact application master", e);
         forceRefresh = true;
       }
@@ -302,10 +313,13 @@ class ClientServiceDelegate {
     return TypeConverter.fromYarn(report, jobFile, "");
   }
 
-  org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID jobID, TaskType taskType)
+  org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
        throws YarnRemoteException, YarnRemoteException {
-    org.apache.hadoop.mapreduce.v2.api.records.JobId nJobID = TypeConverter.toYarn(jobID);
+    org.apache.hadoop.mapreduce.v2.api.records.JobId jobId = 
+      TypeConverter.toYarn(oldJobID);
     GetTaskReportsRequest request = recordFactory.newRecordInstance(GetTaskReportsRequest.class);
+    request.setJobId(jobId);
+    request.setTaskType(TypeConverter.toYarn(taskType));
     
     List<org.apache.hadoop.mapreduce.v2.api.records.TaskReport> taskReports = 
       ((GetTaskReportsResponse) invoke("getTaskReports", GetTaskReportsRequest.class, 

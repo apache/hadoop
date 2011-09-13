@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -161,26 +162,21 @@ public class SchedulerApp {
             RMContainerEventType.LAUNCHED));
   }
 
-  public synchronized void killContainers(
-      SchedulerApp application) {
-  }
-
   synchronized public void containerCompleted(RMContainer rmContainer,
-      RMContainerEventType event) {
+      ContainerStatus containerStatus, RMContainerEventType event) {
     
     Container container = rmContainer.getContainer();
     ContainerId containerId = container.getId();
     
     // Inform the container
-    if (event.equals(RMContainerEventType.FINISHED)) {
-      // Have to send diagnostics for finished containers.
-      rmContainer.handle(new RMContainerFinishedEvent(containerId,
-          container.getContainerStatus()));
-    } else {
-      rmContainer.handle(new RMContainerEvent(containerId, event));
-    }
+    rmContainer.handle(
+        new RMContainerFinishedEvent(
+            containerId,
+            containerStatus, 
+            event)
+        );
     LOG.info("Completed container: " + rmContainer.getContainerId() + 
-        " in state: " + rmContainer.getState());
+        " in state: " + rmContainer.getState() + " event:" + event);
     
     // Remove from the list of containers
     liveContainers.remove(rmContainer.getContainerId());
@@ -219,7 +215,8 @@ public class SchedulerApp {
 
     Resources.addTo(currentConsumption, container.getResource());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("allocate: applicationId=" + container.getId().getAppId()
+      LOG.debug("allocate: applicationAttemptId=" 
+          + container.getId().getApplicationAttemptId() 
           + " container=" + container.getId() + " host="
           + container.getNodeId().getHost() + " type=" + type);
     }
@@ -278,10 +275,7 @@ public class SchedulerApp {
   }
 
   synchronized public void resetSchedulingOpportunities(Priority priority) {
-    Integer schedulingOpportunities = 
-        this.schedulingOpportunities.get(priority);
-    schedulingOpportunities = 0;
-    this.schedulingOpportunities.put(priority, schedulingOpportunities);
+    this.schedulingOpportunities.put(priority, Integer.valueOf(0));
   }
 
   synchronized public void addSchedulingOpportunity(Priority priority) {
@@ -305,9 +299,7 @@ public class SchedulerApp {
   }
 
   synchronized void resetReReservations(Priority priority) {
-    Integer reReservations = this.reReservations.get(priority);
-    reReservations = 0;
-    this.reReservations.put(priority, reReservations);
+    this.reReservations.put(priority, Integer.valueOf(0));
   }
 
   synchronized void addReReservation(Priority priority) {

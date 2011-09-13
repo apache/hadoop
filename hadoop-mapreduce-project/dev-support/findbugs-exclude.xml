@@ -138,6 +138,11 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal$DelegationTokenCancelThread" />
+       <Method name="run" />
+       <Bug pattern="DM_EXIT" />
+    </Match>
      <!--
        We need to cast objects between old and new api objects
      -->
@@ -155,7 +160,8 @@
      </Match>
      <Match>
        <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
-       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+       <Method name="commitJob" />
+       <Bug pattern="NM_WRONG_PACKAGE" />
      </Match>
      <Match>
        <Class name="org.apache.hadoop.mapred.OutputCommitter" />
@@ -165,6 +171,14 @@
        <Method name="cleanupJob" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.TaskCompletionEvent" />
+       <Or>
+       <Method name="setTaskStatus" />
+       <Method name="setTaskAttemptId" />
+       </Or>
+       <Bug pattern="NM_WRONG_PACKAGE" />
      </Match>
      <Match>
        <Class name="org.apache.hadoop.mapred.lib.db.DBInputFormat$DBRecordReader" />

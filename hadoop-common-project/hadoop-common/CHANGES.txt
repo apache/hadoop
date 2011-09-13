@@ -5,12 +5,18 @@ Trunk (unreleased changes)
   IMPROVEMENTS
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
-  HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
+    HADOOP-7524. Change RPC to allow multiple protocols including multuple
+                 versions of the same protocol (sanjay Radia)
+
+    HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
                  by Jersey (Alejandro Abdelnur via atm)
+
+    HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
 
 Release 0.23.0 - Unreleased
 
@@ -371,6 +377,12 @@ Release 0.23.0 - Unreleased
     HADOOP-7507. Allow ganglia metrics to include the metrics system tags
                  in the gmetric names. (Alejandro Abdelnur via todd)
 
+    HADOOP-7612. Change test-patch to run tests for all nested modules.
+    (tomwhite)
+
+    HADOOP-7599. Script improvements to setup a secure Hadoop cluster
+    (Eric Yang via ddas)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -562,6 +574,14 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7593. Fix AssertionError in TestHttpServer.testMaxThreads().
     (Uma Maheswara Rao G via szetszwo)
+
+    HADOOP-7598. Fix smart-apply-patch.sh to handle patching from a sub
+    directory correctly. (Robert Evans via acmurthy) 
+
+    HADOOP-7328. When a serializer class is missing, return null, not throw
+    an NPE. (Harsh J Chouraria via todd)
+
+    HADOOP-7626. Bugfix for a config generator (Eric Yang via ddas)
 
 Release 0.22.0 - Unreleased
 
@@ -1074,6 +1094,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7390. VersionInfo not generated properly in git after unsplit. (todd
     via atm)
+
+    HADOOP-7568. SequenceFile should not print into stdout.
+    (Plamen Jeliazkov via shv)
 
 Release 0.21.1 - Unreleased
 

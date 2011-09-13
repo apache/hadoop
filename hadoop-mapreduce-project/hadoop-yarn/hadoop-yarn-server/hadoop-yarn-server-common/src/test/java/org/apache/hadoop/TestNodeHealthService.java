@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.After;
@@ -66,11 +67,11 @@ public class TestNodeHealthService {
 
   private Configuration getConfForNodeHealthScript() {
     Configuration conf = new Configuration();
-    conf.set(NodeHealthCheckerService.HEALTH_CHECK_SCRIPT_PROPERTY,
+    conf.set(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH,
         nodeHealthscriptFile.getAbsolutePath());
-    conf.setLong(NodeHealthCheckerService.HEALTH_CHECK_INTERVAL_PROPERTY, 500);
+    conf.setLong(YarnConfiguration.NM_HEALTH_CHECK_INTERVAL_MS, 500);
     conf.setLong(
-        NodeHealthCheckerService.HEALTH_CHECK_FAILURE_INTERVAL_PROPERTY, 1000);
+        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS, 1000);
     return conf;
   }
 

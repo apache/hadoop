@@ -27,7 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.yarn.YarnException;
@@ -72,8 +72,8 @@ public class ClientCache {
 
   private MRClientProtocol instantiateHistoryProxy()
   throws IOException {
-	String serviceAddr = conf.get(JHConfig.HS_BIND_ADDRESS,
-	          JHConfig.DEFAULT_HS_BIND_ADDRESS);
+	String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
+	          JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
     LOG.info("Connecting to HistoryServer at: " + serviceAddr);
     Configuration myConf = new Configuration(conf);
     //TODO This should ideally be using it's own class (instead of ClientRMSecurityInfo)

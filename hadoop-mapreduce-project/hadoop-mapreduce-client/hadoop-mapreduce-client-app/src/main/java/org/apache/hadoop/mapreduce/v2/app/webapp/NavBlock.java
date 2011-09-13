@@ -45,8 +45,8 @@ public class NavBlock extends HtmlBlock {
         ul().
           li().a(url("app/info"), "About")._().
           li().a(url("app"), "Jobs")._()._();
-    if (app.job != null) {
-      String jobid = MRApps.toString(app.job.getID());
+    if (app.getJob() != null) {
+      String jobid = MRApps.toString(app.getJob().getID());
       nav.
         h3("Job").
         ul().

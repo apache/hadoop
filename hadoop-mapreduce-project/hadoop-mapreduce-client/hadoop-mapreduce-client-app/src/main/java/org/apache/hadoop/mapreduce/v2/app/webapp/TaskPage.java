@@ -98,11 +98,11 @@ public class TaskPage extends AppView {
     }
 
     protected boolean isValidRequest() {
-      return app.task != null;
+      return app.getTask() != null;
     }
 
     protected Collection<TaskAttempt> getTaskAttempts() {
-      return app.task.getAttempts().values();
+      return app.getTask().getAttempts().values();
     }
   }
 

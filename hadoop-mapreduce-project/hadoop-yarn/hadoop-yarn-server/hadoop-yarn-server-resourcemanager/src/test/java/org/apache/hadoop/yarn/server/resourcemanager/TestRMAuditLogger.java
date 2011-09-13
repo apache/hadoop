@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.Keys;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 
 import org.apache.hadoop.net.NetUtils;
 
@@ -228,7 +229,8 @@ public class TestRMAuditLogger {
   public void testRMAuditLoggerWithIP() throws Exception {
     Configuration conf = new Configuration();
     // start the IPC server
-    Server server = RPC.getServer(new MyTestRPCServer(), "0.0.0.0", 0, conf);
+    Server server = RPC.getServer(TestProtocol.class,
+        new MyTestRPCServer(), "0.0.0.0", 0, 5, true, conf, null);
     server.start();
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);

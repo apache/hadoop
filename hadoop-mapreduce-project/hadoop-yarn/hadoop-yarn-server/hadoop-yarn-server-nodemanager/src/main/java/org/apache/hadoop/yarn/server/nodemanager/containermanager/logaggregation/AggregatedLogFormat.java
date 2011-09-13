@@ -42,6 +42,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class AggregatedLogFormat {
@@ -89,8 +90,11 @@ public class AggregatedLogFormat {
     public void write(DataOutputStream out) throws IOException {
       for (String rootLogDir : this.rootLogDirs) {
         File appLogDir =
-            new File(rootLogDir, ConverterUtils.toString(this.containerId
-                .getAppId()));
+            new File(rootLogDir, 
+                ConverterUtils.toString(
+                    this.containerId.getApplicationAttemptId().
+                        getApplicationId())
+                );
         File containerLogDir =
             new File(appLogDir, ConverterUtils.toString(this.containerId));
 
@@ -148,8 +152,8 @@ public class AggregatedLogFormat {
       // 256KB minBlockSize : Expected log size for each container too
       this.writer =
           new TFile.Writer(this.fsDataOStream, 256 * 1024, conf.get(
-              LogAggregationService.LOG_COMPRESSION_TYPE,
-              LogAggregationService.DEFAULT_COMPRESSION_TYPE), null, conf);
+              YarnConfiguration.NM_LOG_AGG_COMPRESSION_TYPE,
+              YarnConfiguration.DEFAULT_NM_LOG_AGG_COMPRESSION_TYPE), null, conf);
     }
 
     public void append(LogKey logKey, LogValue logValue) throws IOException {

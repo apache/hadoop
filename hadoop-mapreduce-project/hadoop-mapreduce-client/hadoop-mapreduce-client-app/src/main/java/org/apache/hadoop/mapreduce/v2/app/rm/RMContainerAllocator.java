@@ -40,7 +40,6 @@ import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
@@ -54,6 +53,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
@@ -137,11 +137,11 @@ public class RMContainerAllocator extends RMContainerRequestor
         MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 
         DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART);
     maxReduceRampupLimit = conf.getFloat(
-        AMConstants.REDUCE_RAMPUP_UP_LIMIT, 
-        AMConstants.DEFAULT_REDUCE_RAMP_UP_LIMIT);
+        MRJobConfig.MR_AM_JOB_REDUCE_RAMPUP_UP_LIMIT, 
+        MRJobConfig.DEFAULT_MR_AM_JOB_REDUCE_RAMP_UP_LIMIT);
     maxReducePreemptionLimit = conf.getFloat(
-        AMConstants.REDUCE_PREEMPTION_LIMIT,
-        AMConstants.DEFAULT_REDUCE_PREEMPTION_LIMIT);
+        MRJobConfig.MR_AM_JOB_REDUCE_PREEMPTION_LIMIT,
+        MRJobConfig.DEFAULT_MR_AM_JOB_REDUCE_PREEMPTION_LIMIT);
     RackResolver.init(conf);
   }
 
@@ -415,8 +415,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     int headRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;//first time it would be null
     AMResponse response = makeRemoteRequest();
     int newHeadRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;
-    List<Container> newContainers = response.getNewContainerList();
-    List<Container> finishedContainers = response.getFinishedContainerList();
+    List<Container> newContainers = response.getAllocatedContainers();
+    List<ContainerStatus> finishedContainers = response.getCompletedContainersStatuses();
     if (newContainers.size() + finishedContainers.size() > 0 || headRoom != newHeadRoom) {
       //something changed
       recalculateReduceSchedule = true;
@@ -427,12 +427,12 @@ public class RMContainerAllocator extends RMContainerRequestor
         allocatedContainers.add(cont);
         LOG.debug("Received new Container :" + cont);
     }
-    for (Container cont : finishedContainers) {
+    for (ContainerStatus cont : finishedContainers) {
       LOG.info("Received completed container " + cont);
-      TaskAttemptId attemptID = assignedRequests.get(cont.getId());
+      TaskAttemptId attemptID = assignedRequests.get(cont.getContainerId());
       if (attemptID == null) {
         LOG.error("Container complete event for unknown container id "
-            + cont.getId());
+            + cont.getContainerId());
       } else {
         assignedRequests.remove(attemptID);
         if (attemptID.getTaskId().getTaskType().equals(TaskType.MAP)) {
@@ -444,7 +444,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         eventHandler.handle(new TaskAttemptEvent(attemptID,
             TaskAttemptEventType.TA_CONTAINER_COMPLETED));
         // Send the diagnostics
-        String diagnostics = cont.getContainerStatus().getDiagnostics();
+        String diagnostics = cont.getDiagnostics();
         eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(attemptID,
             diagnostics));
       }

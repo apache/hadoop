@@ -32,6 +32,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -157,6 +158,7 @@ public class MRApps extends Apps {
   public static void setInitialClasspath(
       Map<String, String> environment) throws IOException {
     InputStream classpathFileStream = null;
+    BufferedReader reader = null;
     try {
       // Get yarn mapreduce-app classpath from generated classpath
       // Works if compile time env is same as runtime. Mainly tests.
@@ -165,8 +167,7 @@ public class MRApps extends Apps {
       String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
       classpathFileStream =
           thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
-      BufferedReader reader =
-          new BufferedReader(new InputStreamReader(classpathFileStream));
+      reader = new BufferedReader(new InputStreamReader(classpathFileStream));
       String cp = reader.readLine();
       if (cp != null) {
         addToClassPath(environment, cp.trim());
@@ -198,6 +199,9 @@ public class MRApps extends Apps {
       if (classpathFileStream != null) {
         classpathFileStream.close();
       }
+      if (reader != null) {
+        reader.close();
+      }
     }
     // TODO: Remove duplicates.
   }
@@ -218,7 +222,7 @@ public class MRApps extends Apps {
   private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
     return new Path(
-        conf.get(MRConstants.APPS_STAGING_DIR_KEY) +
+        conf.get(MRJobConfig.MR_AM_STAGING_DIR) + 
         Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
   }
 

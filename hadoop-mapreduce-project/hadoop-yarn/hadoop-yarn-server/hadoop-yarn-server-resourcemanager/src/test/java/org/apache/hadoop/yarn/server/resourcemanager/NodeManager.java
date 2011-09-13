@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -53,9 +54,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -133,10 +132,19 @@ public class NodeManager implements ContainerManager {
   
   int responseID = 0;
   
+  private List<ContainerStatus> getContainerStatuses(Map<ApplicationId, List<Container>> containers) {
+    List<ContainerStatus> containerStatuses = new ArrayList<ContainerStatus>();
+    for (List<Container> appContainers : containers.values()) {
+      for (Container container : appContainers) {
+        containerStatuses.add(container.getContainerStatus());
+      }
+    }
+    return containerStatuses;
+  }
   public void heartbeat() throws IOException {
     NodeStatus nodeStatus = 
       org.apache.hadoop.yarn.server.resourcemanager.NodeManager.createNodeStatus(
-          nodeId, containers);
+          nodeId, getContainerStatuses(containers));
     nodeStatus.setResponseId(responseID);
     NodeHeartbeatRequest request = recordFactory
         .newRecordInstance(NodeHeartbeatRequest.class);
@@ -147,11 +155,15 @@ public class NodeManager implements ContainerManager {
   }
 
   @Override
-  synchronized public StartContainerResponse startContainer(StartContainerRequest request) throws YarnRemoteException {
-    ContainerLaunchContext containerLaunchContext = request.getContainerLaunchContext();
+  synchronized public StartContainerResponse startContainer(
+      StartContainerRequest request) 
+  throws YarnRemoteException {
+    ContainerLaunchContext containerLaunchContext = 
+        request.getContainerLaunchContext();
     
-    ApplicationId applicationId = containerLaunchContext.getContainerId()
-        .getAppId();
+    ApplicationId applicationId = 
+        containerLaunchContext.getContainerId().getApplicationAttemptId().
+        getApplicationId();
 
     List<Container> applicationContainers = containers.get(applicationId);
     if (applicationContainers == null) {
@@ -161,7 +173,8 @@ public class NodeManager implements ContainerManager {
     
     // Sanity check
     for (Container container : applicationContainers) {
-      if (container.getId().compareTo(containerLaunchContext.getContainerId()) == 0) {
+      if (container.getId().compareTo(containerLaunchContext.getContainerId()) 
+          == 0) {
         throw new IllegalStateException(
             "Container " + containerLaunchContext.getContainerId() + 
             " already setup on node " + containerManagerAddress);
@@ -201,7 +214,8 @@ public class NodeManager implements ContainerManager {
   synchronized public StopContainerResponse stopContainer(StopContainerRequest request) 
   throws YarnRemoteException {
     ContainerId containerID = request.getContainerId();
-    String applicationId = String.valueOf(containerID.getAppId().getId());
+    String applicationId = String.valueOf(
+        containerID.getApplicationAttemptId().getApplicationId().getId());
     
     // Mark the container as COMPLETE
     List<Container> applicationContainers = containers.get(applicationId);
@@ -250,17 +264,31 @@ public class NodeManager implements ContainerManager {
 
   @Override
   synchronized public GetContainerStatusResponse getContainerStatus(GetContainerStatusRequest request) throws YarnRemoteException {
-    ContainerId containerID = request.getContainerId();
-    GetContainerStatusResponse response = recordFactory.newRecordInstance(GetContainerStatusResponse.class);
+    ContainerId containerId = request.getContainerId();
+    List<Container> appContainers = 
+        containers.get(
+            containerId.getApplicationAttemptId().getApplicationId());
+    Container container = null;
+    for (Container c : appContainers) {
+      if (c.getId().equals(containerId)) {
+        container = c;
+      }
+    }
+    GetContainerStatusResponse response = 
+        recordFactory.newRecordInstance(GetContainerStatusResponse.class);
+    if (container != null && container.getContainerStatus() != null) {
+      response.setStatus(container.getContainerStatus());
+    }
     return response;
   }
 
-  public static org.apache.hadoop.yarn.server.api.records.NodeStatus createNodeStatus(
-      NodeId nodeId, Map<ApplicationId, List<Container>> containers) {
+  public static org.apache.hadoop.yarn.server.api.records.NodeStatus 
+  createNodeStatus(NodeId nodeId, List<ContainerStatus> containers) {
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus = recordFactory.newRecordInstance(org.apache.hadoop.yarn.server.api.records.NodeStatus.class);
+    org.apache.hadoop.yarn.server.api.records.NodeStatus nodeStatus = 
+        recordFactory.newRecordInstance(org.apache.hadoop.yarn.server.api.records.NodeStatus.class);
     nodeStatus.setNodeId(nodeId);
-    nodeStatus.addAllContainers(containers);
+    nodeStatus.setContainersStatuses(containers);
     NodeHealthStatus nodeHealthStatus = 
       recordFactory.newRecordInstance(NodeHealthStatus.class);
     nodeHealthStatus.setIsNodeHealthy(true);

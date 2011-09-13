@@ -1,0 +1,109 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+package org.apache.hadoop.mapreduce.v2.hs.webapp;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+
+import com.google.inject.Inject;
+
+/**
+ * Render all of the jobs that the history server is aware of.
+ */
+public class HsJobsBlock extends HtmlBlock {
+  final AppContext appContext;
+  static final SimpleDateFormat dateFormat = 
+    new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z"); 
+
+  @Inject HsJobsBlock(AppContext appCtx) {
+    appContext = appCtx;
+  }
+
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.yarn.webapp.view.HtmlBlock#render(org.apache.hadoop.yarn.webapp.view.HtmlBlock.Block)
+   */
+  @Override protected void render(Block html) {
+    TBODY<TABLE<Hamlet>> tbody = html.
+      h2("Retired Jobs").
+      table("#jobs").
+        thead().
+          tr().
+            th("Start Time").
+            th("Finish Time").
+            th(".id", "Job ID").
+            th(".name", "Name").
+            th("User").
+            th(".state", "State").
+            th("Maps Total").
+            th("Maps Completed").
+            th("Reduces Total").
+            th("Reduces Completed")._()._().
+        tbody();
+    LOG.info("Getting list of all Jobs.");
+    for (Job job : appContext.getAllJobs().values()) {
+      String jobID = MRApps.toString(job.getID());
+      JobReport report = job.getReport();
+      String mapsTotal = String.valueOf(job.getTotalMaps());
+      String mapsCompleted = String.valueOf(job.getCompletedMaps());
+      String reduceTotal = String.valueOf(job.getTotalReduces());
+      String reduceCompleted = String.valueOf(job.getCompletedReduces());
+      long startTime = report.getStartTime();
+      long finishTime = report.getFinishTime();
+      tbody.
+        tr().
+          td(dateFormat.format(new Date(startTime))).
+          td(dateFormat.format(new Date(finishTime))).
+          td().a(url("job", jobID), jobID)._().
+          td(job.getName().toString()).
+          td(job.getUserName()).
+          td(job.getState().toString()).
+          td(mapsTotal).
+          td(mapsCompleted).
+          td(reduceTotal).
+          td(reduceCompleted)._();
+    }
+    tbody._().
+    tfoot().
+      tr().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Start Time")._()._().
+        th().input("search_init").$type(InputType.text).$name("finish_time").$value("Finish Time")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Job ID")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Name")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("User")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("State")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Maps Total")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Maps Completed")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Reduces Total")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Reduces Completed")._()._().
+        _().
+      _().
+    _();
+  }
+}

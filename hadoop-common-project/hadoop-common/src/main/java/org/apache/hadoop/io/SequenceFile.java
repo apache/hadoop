@@ -1668,7 +1668,6 @@ public class SequenceFile {
       try {
         seek(start);
         this.end = this.in.getPos() + length;
-        System.out.println("Setting end to " + end);
         // if it wrapped around, use the max
         if (end < length) {
           end = Long.MAX_VALUE;

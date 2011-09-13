@@ -39,10 +39,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -51,7 +50,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -67,7 +65,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -75,6 +72,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
@@ -84,6 +82,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.api.records.QueueState;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -91,7 +90,7 @@ public class FifoScheduler implements ResourceScheduler {
 
   private static final Log LOG = LogFactory.getLog(FifoScheduler.class);
 
-  private final RecordFactory recordFactory = 
+  private static final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
 
   Configuration conf;
@@ -105,8 +104,7 @@ public class FifoScheduler implements ResourceScheduler {
 
   private static final int MINIMUM_MEMORY = 1024;
 
-  private static final String FIFO_PREFIX = 
-    YarnConfiguration.RM_PREFIX + "fifo.";
+  private static final String FIFO_PREFIX =  "yarn.scheduler.fifo.";
   @Private
   public static final String MINIMUM_ALLOCATION = 
     FIFO_PREFIX + "minimum-allocation-mb";
@@ -147,6 +145,7 @@ public class FifoScheduler implements ResourceScheduler {
       queueInfo.setCapacity(100.0f);
       queueInfo.setMaximumCapacity(100.0f);
       queueInfo.setChildQueues(new ArrayList<QueueInfo>());
+      queueInfo.setQueueState(QueueState.RUNNING);
       return queueInfo;
     }
 
@@ -235,7 +234,11 @@ public class FifoScheduler implements ResourceScheduler {
              "Trying to release container not owned by app or with invalid id",
              application.getApplicationId(), releasedContainer);
       }
-      containerCompleted(rmContainer, RMContainerEventType.RELEASED);
+      containerCompleted(rmContainer,
+          SchedulerUtils.createAbnormalContainerStatus(
+              releasedContainer, 
+              SchedulerUtils.RELEASED_CONTAINER),
+          RMContainerEventType.RELEASED);
     }
 
     if (!ask.isEmpty()) {
@@ -313,7 +316,11 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Kill all 'live' containers
     for (RMContainer container : application.getLiveContainers()) {
-      containerCompleted(container, RMContainerEventType.KILL);
+      containerCompleted(container, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              container.getContainerId(), 
+              SchedulerUtils.COMPLETED_APPLICATION),
+          RMContainerEventType.KILL);
     }
 
     // Clean up pending requests, metrics etc.
@@ -543,25 +550,22 @@ public class FifoScheduler implements ResourceScheduler {
     return assignedContainers;
   }
 
-  private synchronized void nodeUpdate(RMNode rmNode,
-      Map<ApplicationId, List<Container>> remoteContainers) {
+  private synchronized void nodeUpdate(RMNode rmNode, 
+      List<ContainerStatus> newlyLaunchedContainers,
+      List<ContainerStatus> completedContainers) {
     SchedulerNode node = getNode(rmNode.getNodeID());
     
-    for (List<Container> appContainers : remoteContainers.values()) {
-      for (Container container : appContainers) {
-        /* make sure the scheduler hasnt already removed the applications */
-        if (getApplication(container.getId().getAppAttemptId()) != null) {
-          if (container.getState() == ContainerState.RUNNING) {
-            containerLaunchedOnNode(container, node);
-          } else { // has to COMPLETE
-            containerCompleted(getRMContainer(container.getId()), 
-                RMContainerEventType.FINISHED);
-          }
-        }
-        else {
-          LOG.warn("Scheduler not tracking application " + container.getId().getAppAttemptId());
-        }
-      }
+    // Processing the newly launched containers
+    for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
+      containerLaunchedOnNode(launchedContainer.getContainerId(), node);
+    }
+
+    // Process completed containers
+    for (ContainerStatus completedContainer : completedContainers) {
+      ContainerId containerId = completedContainer.getContainerId();
+      LOG.info("DEBUG --- Container FINISHED: " + containerId);
+      containerCompleted(getRMContainer(containerId), 
+          completedContainer, RMContainerEventType.FINISHED);
     }
 
     if (Resources.greaterThanOrEqual(node.getAvailableResource(),
@@ -599,7 +603,8 @@ public class FifoScheduler implements ResourceScheduler {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = 
       (NodeUpdateSchedulerEvent)event;
       nodeUpdate(nodeUpdatedEvent.getRMNode(), 
-          nodeUpdatedEvent.getContainers());
+          nodeUpdatedEvent.getNewlyLaunchedContainers(),
+          nodeUpdatedEvent.getCompletedContainers());
     }
     break;
     case APP_ADDED:
@@ -625,7 +630,11 @@ public class FifoScheduler implements ResourceScheduler {
     {
       ContainerExpiredSchedulerEvent containerExpiredEvent = 
           (ContainerExpiredSchedulerEvent) event;
-      containerCompleted(getRMContainer(containerExpiredEvent.getContainerId()), 
+      ContainerId containerid = containerExpiredEvent.getContainerId();
+      containerCompleted(getRMContainer(containerid), 
+          SchedulerUtils.createAbnormalContainerStatus(
+              containerid, 
+              SchedulerUtils.EXPIRED_CONTAINER),
           RMContainerEventType.EXPIRE);
     }
     break;
@@ -634,23 +643,23 @@ public class FifoScheduler implements ResourceScheduler {
     }
   }
 
-  private void containerLaunchedOnNode(Container container, SchedulerNode node) {
+  private void containerLaunchedOnNode(ContainerId containerId, SchedulerNode node) {
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = containerId.getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
-          " launched container " + container.getId() +
+          " launched container " + containerId +
           " on node: " + node);
       return;
     }
     
-    application.containerLaunchedOnNode(container.getId());
+    application.containerLaunchedOnNode(containerId);
   }
 
   @Lock(FifoScheduler.class)
   private synchronized void containerCompleted(RMContainer rmContainer,
-      RMContainerEventType event) {
+      ContainerStatus containerStatus, RMContainerEventType event) {
     if (rmContainer == null) {
       LOG.info("Null container completed...");
       return;
@@ -658,7 +667,7 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Get the application for the finished container
     Container container = rmContainer.getContainer();
-    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     
     // Get the node on which the container was allocated
@@ -673,7 +682,7 @@ public class FifoScheduler implements ResourceScheduler {
     }
 
     // Inform the application
-    application.containerCompleted(rmContainer, event);
+    application.containerCompleted(rmContainer, containerStatus, event);
 
     // Inform the node
     node.releaseContainer(container);
@@ -692,7 +701,11 @@ public class FifoScheduler implements ResourceScheduler {
     SchedulerNode node = getNode(nodeInfo.getNodeID());
     // Kill running containers
     for(RMContainer container : node.getRunningContainers()) {
-      containerCompleted(container, RMContainerEventType.KILL);
+      containerCompleted(container, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              container.getContainerId(), 
+              SchedulerUtils.LOST_CONTAINER),
+              RMContainerEventType.KILL);
     }
     
     //Remove the node
@@ -738,7 +751,7 @@ public class FifoScheduler implements ResourceScheduler {
   
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
-        getApplication(containerId.getAppAttemptId());
+        getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
 

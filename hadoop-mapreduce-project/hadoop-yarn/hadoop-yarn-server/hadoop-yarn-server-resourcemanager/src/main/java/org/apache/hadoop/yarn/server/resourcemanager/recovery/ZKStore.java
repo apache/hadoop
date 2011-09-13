@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPB
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeReportPBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationMasterProto;
@@ -48,10 +49,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -91,9 +89,9 @@ public class ZKStore implements Store {
 
   public ZKStore(Configuration conf) throws IOException {
     this.conf = conf;
-    this.ZK_ADDRESS = conf.get(RMConfig.ZK_ADDRESS);
-    this.ZK_TIMEOUT = conf.getInt(RMConfig.ZK_SESSION_TIMEOUT,
-        RMConfig.DEFAULT_ZK_TIMEOUT);
+    this.ZK_ADDRESS = conf.get(YarnConfiguration.RM_ZK_STORE_ADDRESS);
+    this.ZK_TIMEOUT = conf.getInt(YarnConfiguration.RM_ZK_STORE_TIMEOUT_MS,
+        YarnConfiguration.DEFAULT_RM_ZK_STORE_TIMEOUT_MS);
     zkClient = new ZooKeeper(this.ZK_ADDRESS, 
         this.ZK_TIMEOUT,
         createZKWatcher() 
@@ -123,10 +121,9 @@ public class ZKStore implements Store {
   public synchronized void storeNode(RMNode node) throws IOException {
     /** create a storage node and store it in zk **/
     if (!doneWithRecovery) return;
-    NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
-    // TODO FinBugs - will be fixed after the subsequent fixme
-    byte[] bytes = nodeManagerInfo.getProto().toByteArray();
     // TODO: FIXMEVinodkv
+//    NodeReportPBImpl nodeManagerInfo = createNodeManagerInfo(node);
+//    byte[] bytes = nodeManagerInfo.getProto().toByteArray();
 //    try {
 //      zkClient.create(NODES + Integer.toString(node.getNodeID().getId()), bytes, null,
 //          CreateMode.PERSISTENT);
@@ -181,7 +178,8 @@ public class ZKStore implements Store {
   }
 
   private String containerPathFromContainerId(ContainerId containerId) {
-    String appString = ConverterUtils.toString(containerId.getAppId());
+    String appString = ConverterUtils.toString(
+        containerId.getApplicationAttemptId().getApplicationId());
     return appString + "/" + containerId.getId();
   }
 
@@ -198,7 +196,10 @@ public class ZKStore implements Store {
       
       ContainerPBImpl containerPBImpl = (ContainerPBImpl) container;
       try {
-        zkClient.setData(APPS + ConverterUtils.toString(container.getId().getAppId()) +
+        zkClient.setData(APPS + 
+            ConverterUtils.toString(
+                container.getId().getApplicationAttemptId().getApplicationId()) 
+                +
             ZK_PATH_SEPARATOR + APP_MASTER_CONTAINER
             , containerPBImpl.getProto().toByteArray(), -1);
       } catch(InterruptedException ie) {
@@ -476,12 +477,12 @@ public class ZKStore implements Store {
           continue;
         }
         int httpPort = Integer.valueOf(m.group(1));
-        // TODO: FindBugs Valid. Fix
-        RMNode nm = new RMNodeImpl(node.getNodeId(), null,
-            hostName, cmPort, httpPort,
-            ResourceTrackerService.resolve(node.getNodeId().getHost()), 
-            node.getCapability());
-        nodeManagers.add(nm);
+        // TODO: FindBugs warns passing null below. Commenting this for later.
+//        RMNode nm = new RMNodeImpl(node.getNodeId(), null,
+//            hostName, cmPort, httpPort,
+//            ResourceTrackerService.resolve(node.getNodeId().getHost()), 
+//            node.getCapability());
+//        nodeManagers.add(nm);
       }
       readLastNodeId();
       /* make sure we get all the applications */

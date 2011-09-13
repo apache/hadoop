@@ -67,7 +67,6 @@ public class WebApps {
     boolean findPort = false;
     Configuration conf;
     boolean devMode = false;
-    Module[] modules;
 
     Builder(String name, Class<T> api, T application) {
       this.name = name;
@@ -96,11 +95,6 @@ public class WebApps {
 
     public Builder<T> with(Configuration conf) {
       this.conf = conf;
-      return this;
-    }
-
-    public Builder<T> with(Module... modules) {
-      this.modules = modules; // OK
       return this;
     }
 

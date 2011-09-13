@@ -25,13 +25,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class YarnClientProtocolProvider extends ClientProtocolProvider {
 
   @Override
   public ClientProtocol create(Configuration conf) throws IOException {
     if ("yarn".equals(conf.get(MRConfig.FRAMEWORK_NAME))) {
-      return new YARNRunner(conf);
+      return new YARNRunner(new YarnConfiguration(conf));
     }
     return null;
   }

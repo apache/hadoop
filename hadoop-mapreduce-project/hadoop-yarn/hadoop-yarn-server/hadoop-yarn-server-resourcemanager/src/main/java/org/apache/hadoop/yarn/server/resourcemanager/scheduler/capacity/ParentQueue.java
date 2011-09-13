@@ -37,6 +37,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -53,11 +54,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
 @Private
 @Evolving
-public class ParentQueue implements Queue {
+public class ParentQueue implements CSQueue {
 
   private static final Log LOG = LogFactory.getLog(ParentQueue.class);
 
-  private final Queue parent;
+  private final CSQueue parent;
   private final String queueName;
   
   private float capacity;
@@ -68,8 +69,8 @@ public class ParentQueue implements Queue {
   private float usedCapacity = 0.0f;
   private float utilization = 0.0f;
 
-  private final Set<Queue> childQueues;
-  private final Comparator<Queue> queueComparator;
+  private final Set<CSQueue> childQueues;
+  private final Comparator<CSQueue> queueComparator;
   
   private Resource usedResources = 
     Resources.createResource(0);
@@ -94,7 +95,7 @@ public class ParentQueue implements Queue {
     RecordFactoryProvider.getRecordFactory(null);
 
   public ParentQueue(CapacitySchedulerContext cs, 
-      String queueName, Comparator<Queue> comparator, Queue parent, Queue old) {
+      String queueName, Comparator<CSQueue> comparator, CSQueue parent, CSQueue old) {
     minimumAllocation = cs.getMinimumResourceCapability();
     
     this.parent = parent;
@@ -140,7 +141,7 @@ public class ParentQueue implements Queue {
         maximumCapacity, absoluteMaxCapacity, state, acls);
     
     this.queueComparator = comparator;
-    this.childQueues = new TreeSet<Queue>(comparator);
+    this.childQueues = new TreeSet<CSQueue>(comparator);
 
     LOG.info("Initialized parent-queue " + queueName + 
         " name=" + queueName + 
@@ -180,11 +181,11 @@ public class ParentQueue implements Queue {
   }
 
   private static float PRECISION = 0.005f; // 0.05% precision
-  void setChildQueues(Collection<Queue> childQueues) {
+  void setChildQueues(Collection<CSQueue> childQueues) {
     
     // Validate
     float childCapacities = 0;
-    for (Queue queue : childQueues) {
+    for (CSQueue queue : childQueues) {
       childCapacities += queue.getCapacity();
     }
     float delta = Math.abs(1.0f - childCapacities);  // crude way to check
@@ -200,7 +201,7 @@ public class ParentQueue implements Queue {
   }
   
   @Override
-  public Queue getParent() {
+  public CSQueue getParent() {
     return parent;
   }
 
@@ -251,8 +252,8 @@ public class ParentQueue implements Queue {
   }
 
   @Override
-  public synchronized List<Queue> getChildQueues() {
-    return new ArrayList<Queue>(childQueues);
+  public synchronized List<CSQueue> getChildQueues() {
+    return new ArrayList<CSQueue>(childQueues);
   }
 
   public synchronized int getNumContainers() {
@@ -280,7 +281,7 @@ public class ParentQueue implements Queue {
 
     List<QueueInfo> childQueuesInfo = new ArrayList<QueueInfo>();
     if (includeChildQueues) {
-      for (Queue child : childQueues) {
+      for (CSQueue child : childQueues) {
         // Get queue information recursively?
         childQueuesInfo.add(
             child.getQueueInfo(recursive, recursive));
@@ -319,7 +320,7 @@ public class ParentQueue implements Queue {
     userAcls.add(getUserAclInfo(user));
     
     // Add children queue acls
-    for (Queue child : childQueues) {
+    for (CSQueue child : childQueues) {
       userAcls.addAll(child.getQueueUserAclInfo(user));
     }
     return userAcls;
@@ -333,7 +334,7 @@ public class ParentQueue implements Queue {
   }
   
   @Override
-  public synchronized void reinitialize(Queue queue, Resource clusterResource)
+  public synchronized void reinitialize(CSQueue queue, Resource clusterResource)
   throws IOException {
     // Sanity check
     if (!(queue instanceof ParentQueue) ||
@@ -346,13 +347,13 @@ public class ParentQueue implements Queue {
 
     // Re-configure existing child queues and add new ones
     // The CS has already checked to ensure all existing child queues are present!
-    Map<String, Queue> currentChildQueues = getQueues(childQueues);
-    Map<String, Queue> newChildQueues = getQueues(parentQueue.childQueues);
-    for (Map.Entry<String, Queue> e : newChildQueues.entrySet()) {
+    Map<String, CSQueue> currentChildQueues = getQueues(childQueues);
+    Map<String, CSQueue> newChildQueues = getQueues(parentQueue.childQueues);
+    for (Map.Entry<String, CSQueue> e : newChildQueues.entrySet()) {
       String newChildQueueName = e.getKey();
-      Queue newChildQueue = e.getValue();
+      CSQueue newChildQueue = e.getValue();
 
-      Queue childQueue = currentChildQueues.get(newChildQueueName);
+      CSQueue childQueue = currentChildQueues.get(newChildQueueName);
       if (childQueue != null){
         childQueue.reinitialize(newChildQueue, clusterResource);
         LOG.info(getQueueName() + ": re-configured queue: " + childQueue);
@@ -375,9 +376,9 @@ public class ParentQueue implements Queue {
     updateResource(clusterResource);
   }
 
-  Map<String, Queue> getQueues(Set<Queue> queues) {
-    Map<String, Queue> queuesMap = new HashMap<String, Queue>();
-    for (Queue queue : queues) {
+  Map<String, CSQueue> getQueues(Set<CSQueue> queues) {
+    Map<String, CSQueue> queuesMap = new HashMap<String, CSQueue>();
+    for (CSQueue queue : queues) {
       queuesMap.put(queue.getQueueName(), queue);
     }
     return queuesMap;
@@ -568,8 +569,8 @@ public class ParentQueue implements Queue {
     printChildQueues();
 
     // Try to assign to most 'under-served' sub-queue
-    for (Iterator<Queue> iter=childQueues.iterator(); iter.hasNext();) {
-      Queue childQueue = iter.next();
+    for (Iterator<CSQueue> iter=childQueues.iterator(); iter.hasNext();) {
+      CSQueue childQueue = iter.next();
       LOG.info("DEBUG --- Trying to assign to" +
       		" queue: " + childQueue.getQueuePath() + 
       		" stats: " + childQueue);
@@ -595,7 +596,7 @@ public class ParentQueue implements Queue {
 
   String getChildQueuesToPrint() {
     StringBuilder sb = new StringBuilder();
-    for (Queue q : childQueues) {
+    for (CSQueue q : childQueues) {
       sb.append(q.getQueuePath() + "(" + q.getUtilization() + "), ");
     }
     return sb.toString();
@@ -608,7 +609,7 @@ public class ParentQueue implements Queue {
   @Override
   public void completedContainer(Resource clusterResource,
       SchedulerApp application, SchedulerNode node, 
-      RMContainer rmContainer, RMContainerEventType event) {
+      RMContainer rmContainer, ContainerStatus containerStatus, RMContainerEventType event) {
     if (application != null) {
       // Careful! Locking order is important!
       // Book keeping
@@ -626,7 +627,7 @@ public class ParentQueue implements Queue {
       // Inform the parent
       if (parent != null) {
         parent.completedContainer(clusterResource, application, 
-            node, rmContainer, event);
+            node, rmContainer, null, event);
       }    
     }
   }
@@ -648,7 +649,7 @@ public class ParentQueue implements Queue {
   @Override
   public synchronized void updateClusterResource(Resource clusterResource) {
     // Update all children
-    for (Queue childQueue : childQueues) {
+    for (CSQueue childQueue : childQueues) {
       childQueue.updateClusterResource(clusterResource);
     }
   }

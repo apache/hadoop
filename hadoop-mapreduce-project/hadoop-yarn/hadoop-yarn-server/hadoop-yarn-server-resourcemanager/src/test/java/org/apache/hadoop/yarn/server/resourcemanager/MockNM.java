@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -53,9 +54,10 @@ public class MockNM {
   }
 
   public void containerStatus(Container container) throws Exception {
-    Map<ApplicationId, List<Container>> conts = new HashMap<ApplicationId, List<Container>>();
-    conts.put(container.getId().getAppId(), Arrays
-        .asList(new Container[] { container }));
+    Map<ApplicationId, List<ContainerStatus>> conts = 
+        new HashMap<ApplicationId, List<ContainerStatus>>();
+    conts.put(container.getId().getApplicationAttemptId().getApplicationId(), 
+        Arrays.asList(new ContainerStatus[] { container.getContainerStatus() }));
     nodeHeartbeat(conts, true);
   }
 
@@ -76,16 +78,16 @@ public class MockNM {
   }
 
   public HeartbeatResponse nodeHeartbeat(boolean b) throws Exception {
-    return nodeHeartbeat(new HashMap<ApplicationId, List<Container>>(), b);
+    return nodeHeartbeat(new HashMap<ApplicationId, List<ContainerStatus>>(), b);
   }
 
   public HeartbeatResponse nodeHeartbeat(Map<ApplicationId, 
-      List<Container>> conts, boolean isHealthy) throws Exception {
+      List<ContainerStatus>> conts, boolean isHealthy) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
     status.setNodeId(nodeId);
-    for (Map.Entry<ApplicationId, List<Container>> entry : conts.entrySet()) {
-      status.setContainers(entry.getKey(), entry.getValue());
+    for (Map.Entry<ApplicationId, List<ContainerStatus>> entry : conts.entrySet()) {
+      status.setContainersStatuses(entry.getValue());
     }
     NodeHealthStatus healthStatus = Records.newRecord(NodeHealthStatus.class);
     healthStatus.setHealthReport("");

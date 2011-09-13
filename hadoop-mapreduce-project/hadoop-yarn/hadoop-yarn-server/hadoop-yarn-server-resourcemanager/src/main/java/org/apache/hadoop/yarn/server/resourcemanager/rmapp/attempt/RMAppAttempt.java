@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 
@@ -47,9 +48,9 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
 
   Set<NodeId> getRanNodes();
 
-  List<Container> pullJustFinishedContainers();
+  List<ContainerStatus> pullJustFinishedContainers();
 
-  List<Container> getJustFinishedContainers();
+  List<ContainerStatus> getJustFinishedContainers();
 
   Container getMasterContainer();
 

@@ -23,7 +23,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -36,9 +35,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -87,8 +86,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .newRecordInstance(NodeHealthStatus.class);
   
   /* set of containers that have just launched */
-  private final Map<ContainerId, Container> justLaunchedContainers = 
-    new HashMap<ContainerId, Container>();
+  private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
+    new HashMap<ContainerId, ContainerStatus>();
   
 
   /* set of containers that need to be cleaned */
@@ -355,43 +354,29 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       // Filter the map to only obtain just launched containers and finished
       // containers.
-      Map<ApplicationId, List<Container>> remoteAppContainersMap = statusEvent
-          .getContainersCollection();
-      Map<ApplicationId, List<Container>> containersMapForScheduler = new HashMap<ApplicationId, List<Container>>(
-          remoteAppContainersMap.size());
-      for (Entry<ApplicationId, List<Container>> entrySet : remoteAppContainersMap
-          .entrySet()) {
-
-        ApplicationId appId = entrySet.getKey();
-        List<Container> remoteContainerList = entrySet.getValue();
-
-        if (!containersMapForScheduler.containsKey(appId)) {
-          containersMapForScheduler.put(appId, new ArrayList<Container>(
-              remoteContainerList.size()));
-        }
-        List<Container> entryForThisApp = containersMapForScheduler
-            .get(appId);
-
-        for (Container remoteContainer : remoteContainerList) {
-
-          // Process running containers
-          ContainerId containerId = remoteContainer.getId();
-          if (remoteContainer.getState() == ContainerState.RUNNING) {
-            if (!rmNode.justLaunchedContainers.containsKey(containerId)) {
-              // Just launched container. RM knows about it the first time.
-              rmNode.justLaunchedContainers.put(containerId, remoteContainer);
-              entryForThisApp.add(remoteContainer);
-            }
-          } else {
-            // A finished container
-            rmNode.justLaunchedContainers.remove(containerId);
-            entryForThisApp.add(remoteContainer);
+      List<ContainerStatus> newlyLaunchedContainers = 
+          new ArrayList<ContainerStatus>();
+      List<ContainerStatus> completedContainers = 
+          new ArrayList<ContainerStatus>();
+      for (ContainerStatus remoteContainer : statusEvent.getContainers()) {
+        // Process running containers
+        ContainerId containerId = remoteContainer.getContainerId();
+        if (remoteContainer.getState() == ContainerState.RUNNING) {
+          if (!rmNode.justLaunchedContainers.containsKey(containerId)) {
+            // Just launched container. RM knows about it the first time.
+            rmNode.justLaunchedContainers.put(containerId, remoteContainer);
+            newlyLaunchedContainers.add(remoteContainer);
           }
+        } else {
+          // A finished container
+          rmNode.justLaunchedContainers.remove(containerId);
+          completedContainers.add(remoteContainer);
         }
       }
 
       rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodeUpdateSchedulerEvent(rmNode, containersMapForScheduler));
+          new NodeUpdateSchedulerEvent(rmNode, newlyLaunchedContainers, 
+              completedContainers));
 
       return RMNodeState.RUNNING;
     }

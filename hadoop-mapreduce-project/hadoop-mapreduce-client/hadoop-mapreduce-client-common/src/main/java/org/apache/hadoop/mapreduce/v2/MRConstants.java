@@ -25,9 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface MRConstants {
-
-  public static final String YARN_MR_PREFIX = "yarn.mapreduce.job.";
-
   // This should be the directory where splits file gets localized on the node
   // running ApplicationMaster.
   public static final String JOB_SUBMIT_DIR = "jobSubmitDir";
@@ -44,8 +41,6 @@ public interface MRConstants {
 
   public static final String YARN_MAPREDUCE_APP_JAR_PATH =
     "$YARN_HOME/modules/" + HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;
-
-  public static final String APPS_STAGING_DIR_KEY = "yarn.apps.stagingDir";
 
   // The token file for the application. Should contain tokens for access to
   // remote file system and may optionally contain application specific tokens.

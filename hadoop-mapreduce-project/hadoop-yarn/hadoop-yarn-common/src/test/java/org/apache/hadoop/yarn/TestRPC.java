@@ -32,12 +32,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -70,7 +72,7 @@ public class TestRPC {
   
   private void test(String rpcClass) throws Exception {
     Configuration conf = new Configuration();
-    conf.set(YarnRPC.RPC_CLASSNAME, rpcClass);
+    conf.set(YarnConfiguration.IPC_RPC_IMPL, rpcClass);
     YarnRPC rpc = YarnRPC.create(conf);
     String bindAddr = "localhost:0";
     InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
@@ -80,21 +82,34 @@ public class TestRPC {
     ContainerManager proxy = (ContainerManager) 
         rpc.getProxy(ContainerManager.class, 
             NetUtils.createSocketAddr("localhost:" + server.getPort()), conf);
-    ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext containerLaunchContext = 
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     containerLaunchContext.setUser("dummy-user");
-    containerLaunchContext.setContainerId(recordFactory.newRecordInstance(ContainerId.class));
-    containerLaunchContext.getContainerId().setAppId(recordFactory.newRecordInstance(ApplicationId.class));
-    containerLaunchContext.getContainerId().getAppId().setId(0);
-    containerLaunchContext.getContainerId().setId(100);
-    containerLaunchContext.setResource(recordFactory.newRecordInstance(Resource.class));
+    ContainerId containerId = 
+        recordFactory.newRecordInstance(ContainerId.class);
+    ApplicationId applicationId = 
+        recordFactory.newRecordInstance(ApplicationId.class);
+    ApplicationAttemptId applicationAttemptId =
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    applicationId.setClusterTimestamp(0);
+    applicationId.setId(0);
+    applicationAttemptId.setApplicationId(applicationId);
+    applicationAttemptId.setAttemptId(0);
+    containerId.setApplicationAttemptId(applicationAttemptId);
+    containerId.setId(100);
+    containerLaunchContext.setContainerId(containerId);
+    containerLaunchContext.setResource(
+        recordFactory.newRecordInstance(Resource.class));
 //    containerLaunchContext.env = new HashMap<CharSequence, CharSequence>();
 //    containerLaunchContext.command = new ArrayList<CharSequence>();
     
-    StartContainerRequest scRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
+    StartContainerRequest scRequest = 
+        recordFactory.newRecordInstance(StartContainerRequest.class);
     scRequest.setContainerLaunchContext(containerLaunchContext);
     proxy.startContainer(scRequest);
     
-    GetContainerStatusRequest gcsRequest = recordFactory.newRecordInstance(GetContainerStatusRequest.class);
+    GetContainerStatusRequest gcsRequest = 
+        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
     gcsRequest.setContainerId(containerLaunchContext.getContainerId());
     GetContainerStatusResponse response =  proxy.getContainerStatus(gcsRequest);
     ContainerStatus status = response.getStatus();
@@ -117,7 +132,7 @@ public class TestRPC {
     
     server.close();
     Assert.assertNotNull(status);
-    Assert.assertEquals(ContainerState.RUNNING, status.getState().RUNNING);
+    Assert.assertEquals(ContainerState.RUNNING, status.getState());
   }
 
   public class DummyContainerManager implements ContainerManager {
@@ -125,28 +140,35 @@ public class TestRPC {
     private ContainerStatus status = null;    
     
     @Override
-    public GetContainerStatusResponse getContainerStatus(GetContainerStatusRequest request) throws YarnRemoteException {
-      GetContainerStatusResponse response = recordFactory.newRecordInstance(GetContainerStatusResponse.class);
+    public GetContainerStatusResponse getContainerStatus(
+        GetContainerStatusRequest request)
+    throws YarnRemoteException {
+      GetContainerStatusResponse response = 
+          recordFactory.newRecordInstance(GetContainerStatusResponse.class);
       response.setStatus(status);
       return response;
     }
 
     @Override
-    public StartContainerResponse startContainer(StartContainerRequest request) throws YarnRemoteException {
+    public StartContainerResponse startContainer(StartContainerRequest request) 
+        throws YarnRemoteException {
       ContainerLaunchContext container = request.getContainerLaunchContext();
-      StartContainerResponse response = recordFactory.newRecordInstance(StartContainerResponse.class);
+      StartContainerResponse response = 
+          recordFactory.newRecordInstance(StartContainerResponse.class);
       status = recordFactory.newRecordInstance(ContainerStatus.class);
       status.setState(ContainerState.RUNNING);
       status.setContainerId(container.getContainerId());
-      status.setExitStatus(String.valueOf(0));
+      status.setExitStatus(0);
       return response;
     }
 
     @Override
-    public StopContainerResponse stopContainer(StopContainerRequest request) throws YarnRemoteException {
+    public StopContainerResponse stopContainer(StopContainerRequest request) 
+    throws YarnRemoteException {
       Exception e = new Exception(EXCEPTION_MSG, 
           new Exception(EXCEPTION_CAUSE));
-      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(null).createYarnRemoteException(e);
+      throw YarnRemoteExceptionFactoryProvider
+          .getYarnRemoteExceptionFactory(null).createYarnRemoteException(e);
     }
   }
 }

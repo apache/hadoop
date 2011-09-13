@@ -20,10 +20,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.crypto.SecretKey;
 
@@ -31,7 +27,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.SecurityInfo;
@@ -44,7 +39,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.RMNMSecurityInfoClass;
-import org.apache.hadoop.yarn.server.YarnServerConfig;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -102,8 +96,8 @@ public class ResourceTrackerService extends AbstractService implements
   @Override
   public synchronized void init(Configuration conf) {
     String resourceTrackerBindAddress =
-      conf.get(YarnServerConfig.RESOURCETRACKER_ADDRESS,
-          YarnServerConfig.DEFAULT_RESOURCETRACKER_BIND_ADDRESS);
+      conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+          YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
     resourceTrackerAddress = NetUtils.createSocketAddr(resourceTrackerBindAddress);
 
     RackResolver.init(conf);
@@ -123,8 +117,8 @@ public class ResourceTrackerService extends AbstractService implements
     this.server =
       rpc.getServer(ResourceTracker.class, this, resourceTrackerAddress,
           rtServerConf, null,
-          rtServerConf.getInt(RMConfig.RM_RESOURCE_TRACKER_THREADS, 
-              RMConfig.DEFAULT_RM_RESOURCE_TRACKER_THREADS));
+          rtServerConf.getInt(YarnConfiguration.RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT, 
+              YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT));
     this.server.start();
 
   }
@@ -253,7 +247,7 @@ public class ResourceTrackerService extends AbstractService implements
       // 4. Send status to RMNode, saving the latest response.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
-              remoteNodeStatus.getAllContainers(), latestResponse));
+              remoteNodeStatus.getContainersStatuses(), latestResponse));
 
       nodeHeartBeatResponse.setHeartbeatResponse(latestResponse);
       return nodeHeartBeatResponse;

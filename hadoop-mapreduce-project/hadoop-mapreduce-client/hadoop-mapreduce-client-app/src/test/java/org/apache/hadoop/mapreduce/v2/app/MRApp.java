@@ -35,7 +35,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -62,10 +61,8 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
-import org.apache.hadoop.mapreduce.v2.jobhistory.JHConfig;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -134,8 +131,8 @@ public class MRApp extends MRAppMaster {
   public Job submit(Configuration conf) throws Exception {
     String user = conf.get(MRJobConfig.USER_NAME, "mapred");
     conf.set(MRJobConfig.USER_NAME, user);
-    conf.set(MRConstants.APPS_STAGING_DIR_KEY, testAbsPath.toString());
-    conf.setBoolean(JHConfig.CREATE_HISTORY_INTERMEDIATE_BASE_DIR_KEY, true);
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, testAbsPath.toString());
+    conf.setBoolean(MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR, true);
     //TODO: fix the bug where the speculator gets events with 
     //not-fully-constructed objects. For now, disable speculative exec
     LOG.info("****DISABLING SPECULATIVE EXECUTION*****");
@@ -326,7 +323,7 @@ public class MRApp extends MRAppMaster {
       @Override
       public void handle(ContainerAllocatorEvent event) {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-        cId.setAppId(getContext().getApplicationID());
+        cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
         cId.setId(containerCount++);
         Container container = recordFactory.newRecordInstance(Container.class);
         container.setId(cId);

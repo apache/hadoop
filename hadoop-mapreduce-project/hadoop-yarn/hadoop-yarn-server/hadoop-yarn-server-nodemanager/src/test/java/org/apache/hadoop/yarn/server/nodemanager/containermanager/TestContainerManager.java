@@ -23,7 +23,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -53,6 +57,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -66,6 +71,20 @@ public class TestContainerManager extends BaseContainerManagerTest {
     LOG = LogFactory.getLog(TestContainerManager.class);
   }
 
+  private ContainerId createContainerId() {
+    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
+    appId.setClusterTimestamp(0);
+    appId.setId(0);
+    ApplicationAttemptId appAttemptId = 
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
+    ContainerId containerId = 
+        recordFactory.newRecordInstance(ContainerId.class);
+    containerId.setApplicationAttemptId(appAttemptId);
+    return containerId;
+  }
+  
   @Test
   public void testContainerManagerInitialization() throws IOException {
 
@@ -74,14 +93,9 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // Just do a query for a non-existing container.
     boolean throwsException = false;
     try {
-      GetContainerStatusRequest request = recordFactory.newRecordInstance(GetContainerStatusRequest.class);
-      ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-      ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-      appAttemptId.setApplicationId(appId);
-      appAttemptId.setAttemptId(1);
-      ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-      cId.setAppId(appId);
-      cId.setAppAttemptId(appAttemptId);
+      GetContainerStatusRequest request = 
+          recordFactory.newRecordInstance(GetContainerStatusRequest.class);
+      ContainerId cId = createContainerId();
       request.setContainerId(cId);
       containerManager.getContainerStatus(request);
     } catch (YarnRemoteException e) {
@@ -106,20 +120,14 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext container = recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     // ////// Construct the Container-id
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-    cId.setAppId(appId);
-    cId.setAppAttemptId(appAttemptId);
+    ContainerId cId = createContainerId();
     container.setContainerId(cId);
 
     container.setUser(user);
 
     // ////// Construct the container-spec.
-    ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
-//    containerLaunchContext.resources = new HashMap<CharSequence, LocalResource>();
+    ContainerLaunchContext containerLaunchContext = 
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(file.getAbsolutePath())));
@@ -130,14 +138,17 @@ public class TestContainerManager extends BaseContainerManagerTest {
     rsrc_alpha.setType(LocalResourceType.FILE);
     rsrc_alpha.setTimestamp(file.lastModified());
     String destinationFile = "dest_file";
-    containerLaunchContext.setLocalResource(destinationFile, rsrc_alpha);
+    Map<String, LocalResource> localResources = 
+        new HashMap<String, LocalResource>();
+    localResources.put(destinationFile, rsrc_alpha);
+    containerLaunchContext.setLocalResources(localResources);
     containerLaunchContext.setUser(container.getUser());
     containerLaunchContext.setContainerId(container.getContainerId());
     containerLaunchContext.setResource(recordFactory
         .newRecordInstance(Resource.class));
-//    containerLaunchContext.command = new ArrayList<CharSequence>();
 
-    StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
+    StartContainerRequest startRequest = 
+        recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     
     containerManager.startContainer(startRequest);
@@ -146,7 +157,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
         ContainerState.COMPLETE);
 
     // Now ascertain that the resources are localised correctly.
-    // TODO: Don't we need clusterStamp in localDir?
+    ApplicationId appId = cId.getApplicationAttemptId().getApplicationId();
     String appIDStr = ConverterUtils.toString(appId);
     String containerIDStr = ConverterUtils.toString(cId);
     File userCacheDir = new File(localDir, ContainerLocalizer.USERCACHE);
@@ -186,41 +197,41 @@ public class TestContainerManager extends BaseContainerManagerTest {
     PrintWriter fileWriter = new PrintWriter(scriptFile);
     File processStartFile =
         new File(tmpDir, "start_file.txt").getAbsoluteFile();
-    fileWriter.write("\numask 0"); // So that start file is readable by the test.
+    fileWriter.write("\numask 0"); // So that start file is readable by the test
     fileWriter.write("\necho Hello World! > " + processStartFile);
     fileWriter.write("\necho $$ >> " + processStartFile);
     fileWriter.write("\nexec sleep 100");
     fileWriter.close();
 
-    ContainerLaunchContext containerLaunchContext = recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    ContainerLaunchContext containerLaunchContext = 
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     // ////// Construct the Container-id
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-    cId.setAppId(appId);
-    cId.setAppAttemptId(appAttemptId);
+    ContainerId cId = createContainerId();
     containerLaunchContext.setContainerId(cId);
 
     containerLaunchContext.setUser(user);
 
-//    containerLaunchContext.resources =new HashMap<CharSequence, LocalResource>();
     URL resource_alpha =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
-    LocalResource rsrc_alpha = recordFactory.newRecordInstance(LocalResource.class);
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
     rsrc_alpha.setResource(resource_alpha);
     rsrc_alpha.setSize(-1);
     rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
     rsrc_alpha.setType(LocalResourceType.FILE);
     rsrc_alpha.setTimestamp(scriptFile.lastModified());
     String destinationFile = "dest_file";
-    containerLaunchContext.setLocalResource(destinationFile, rsrc_alpha);
+    Map<String, LocalResource> localResources = 
+        new HashMap<String, LocalResource>();
+    localResources.put(destinationFile, rsrc_alpha);
+    containerLaunchContext.setLocalResources(localResources);
     containerLaunchContext.setUser(containerLaunchContext.getUser());
-    containerLaunchContext.addCommand("/bin/bash");
-    containerLaunchContext.addCommand(scriptFile.getAbsolutePath());
+    List<String> commands = new ArrayList<String>();
+    commands.add("/bin/bash");
+    commands.add(scriptFile.getAbsolutePath());
+    containerLaunchContext.setCommands(commands);
     containerLaunchContext.setResource(recordFactory
         .newRecordInstance(Resource.class));
     containerLaunchContext.getResource().setMemory(100 * 1024 * 1024);
@@ -263,10 +274,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE);
     
-    GetContainerStatusRequest gcsRequest = recordFactory.newRecordInstance(GetContainerStatusRequest.class);
+    GetContainerStatusRequest gcsRequest = 
+        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
     gcsRequest.setContainerId(cId);
-    ContainerStatus containerStatus = containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(String.valueOf(ExitCode.KILLED.getExitCode()),
+    ContainerStatus containerStatus = 
+        containerManager.getContainerStatus(gcsRequest).getStatus();
+    Assert.assertEquals(ExitCode.KILLED.getExitCode(),
         containerStatus.getExitStatus());
 
     // Assert that the process is not alive anymore
@@ -281,8 +294,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);
+    ContainerTokenSecretManager containerTokenSecretManager = new 
+        ContainerTokenSecretManager();
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics);
+        nodeStatusUpdater, metrics, containerTokenSecretManager);
     containerManager.init(conf);
     containerManager.start();
 
@@ -297,13 +312,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerLaunchContext container = recordFactory.newRecordInstance(ContainerLaunchContext.class);
 
     // ////// Construct the Container-id
-    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
-    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
-    ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-    cId.setAppId(appId);
-    cId.setAppAttemptId(appAttemptId);
+    ContainerId cId = createContainerId();
+    ApplicationId appId = cId.getApplicationAttemptId().getApplicationId();
     container.setContainerId(cId);
 
     container.setUser(user);
@@ -322,7 +332,10 @@ public class TestContainerManager extends BaseContainerManagerTest {
     rsrc_alpha.setType(LocalResourceType.FILE);
     rsrc_alpha.setTimestamp(file.lastModified());
     String destinationFile = "dest_file";
-    containerLaunchContext.setLocalResource(destinationFile, rsrc_alpha);
+    Map<String, LocalResource> localResources = 
+        new HashMap<String, LocalResource>();
+    localResources.put(destinationFile, rsrc_alpha);
+    containerLaunchContext.setLocalResources(localResources);
     containerLaunchContext.setUser(container.getUser());
     containerLaunchContext.setContainerId(container.getContainerId());
     containerLaunchContext.setResource(recordFactory
@@ -337,7 +350,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE);
 
-    BaseContainerManagerTest.waitForApplicationState(containerManager, cId.getAppId(),
+    BaseContainerManagerTest.waitForApplicationState(containerManager, 
+        cId.getApplicationAttemptId().getApplicationId(),
         ApplicationState.RUNNING);
 
     // Now ascertain that the resources are localised correctly.
@@ -369,7 +383,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     containerManager.handle(new CMgrCompletedAppsEvent(Arrays
         .asList(new ApplicationId[] { appId })));
 
-    BaseContainerManagerTest.waitForApplicationState(containerManager, cId.getAppId(),
+    BaseContainerManagerTest.waitForApplicationState(containerManager, 
+        cId.getApplicationAttemptId().getApplicationId(),
         ApplicationState.FINISHED);
 
     // Now ascertain that the resources are localised correctly.

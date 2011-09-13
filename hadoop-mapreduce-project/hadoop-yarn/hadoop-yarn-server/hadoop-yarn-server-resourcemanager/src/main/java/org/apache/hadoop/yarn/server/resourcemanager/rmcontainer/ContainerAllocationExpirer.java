@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 
@@ -40,10 +40,10 @@ public class ContainerAllocationExpirer extends
   public void init(Configuration conf) {
     super.init(conf);
     setExpireInterval(conf.getInt(
-        RMConfig.CONTAINER_LIVELINESS_MONITORING_INTERVAL,
-        RMConfig.DEFAULT_CONTAINER_LIVELINESS_MONITORING_INTERVAL));
-    setMonitorInterval(conf.getInt(RMConfig.AMLIVELINESS_MONITORING_INTERVAL,
-        RMConfig.DEFAULT_AMLIVELINESS_MONITORING_INTERVAL));
+        YarnConfiguration.RM_CONTAINER_LIVENESS_MONITOR_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_CONTAINER_LIVENESS_MONITOR_INTERVAL_MS));
+    setMonitorInterval(conf.getInt(YarnConfiguration.RM_AM_LIVENESS_MONITOR_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_AM_LIVENESS_MONITOR_INTERVAL_MS));
   }
 
   @Override

@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -86,17 +87,23 @@ public class BuilderUtils {
     }
   }
 
-  public static LocalResource newLocalResource(RecordFactory recordFactory,
-      URI uri, LocalResourceType type, LocalResourceVisibility visibility,
-      long size, long timestamp) {
+  public static LocalResource newLocalResource(URL url, LocalResourceType type,
+      LocalResourceVisibility visibility, long size, long timestamp) {
     LocalResource resource =
-        recordFactory.newRecordInstance(LocalResource.class);
-    resource.setResource(ConverterUtils.getYarnUrlFromURI(uri));
+      recordFactory.newRecordInstance(LocalResource.class);
+    resource.setResource(url);
     resource.setType(type);
     resource.setVisibility(visibility);
     resource.setSize(size);
     resource.setTimestamp(timestamp);
     return resource;
+  }
+
+  public static LocalResource newLocalResource(URI uri,
+      LocalResourceType type, LocalResourceVisibility visibility, long size,
+      long timestamp) {
+    return newLocalResource(ConverterUtils.getYarnUrlFromURI(uri), type,
+        visibility, size, timestamp);
   }
 
   public static ApplicationId newApplicationId(RecordFactory recordFactory,
@@ -125,6 +132,15 @@ public class BuilderUtils {
     return applicationId;
   }
 
+  public static ApplicationAttemptId newApplicationAttemptId(
+      ApplicationId appId, int attemptId) {
+    ApplicationAttemptId appAttemptId =
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(attemptId);
+    return appAttemptId;
+  }
+
   public static ApplicationId convert(long clustertimestamp, CharSequence id) {
     ApplicationId applicationId =
         recordFactory.newRecordInstance(ApplicationId.class);
@@ -133,13 +149,29 @@ public class BuilderUtils {
     return applicationId;
   }
 
+  public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
+      int containerId) {
+    ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
+    id.setId(containerId);
+    id.setApplicationAttemptId(appAttemptId);
+    return id;
+  }
+
+  public static ContainerId newContainerId(int appId, int appAttemptId,
+      long timestamp, int id) {
+    ApplicationId applicationId = newApplicationId(timestamp, appId);
+    ApplicationAttemptId applicationAttemptId = newApplicationAttemptId(
+        applicationId, appAttemptId);
+    ContainerId cId = newContainerId(applicationAttemptId, id);
+    return cId;
+  }
+
   public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setAppId(appId);
     id.setId(containerId);
-    id.setAppAttemptId(appAttemptId);
+    id.setApplicationAttemptId(appAttemptId);
     return id;
   }
 
@@ -147,8 +179,7 @@ public class BuilderUtils {
       ApplicationAttemptId appAttemptId,
       int containerId) {
     ContainerId id = recordFactory.newRecordInstance(ContainerId.class);
-    id.setAppAttemptId(appAttemptId);
-    id.setAppId(appAttemptId.getApplicationId());
+    id.setApplicationAttemptId(appAttemptId);
     id.setId(containerId);
     return id;
   }
@@ -227,4 +258,20 @@ public class BuilderUtils {
     report.setStartTime(startTime);
     return report;
   }
+  
+  public static Resource newResource(int memory) {
+    Resource resource = recordFactory.newRecordInstance(Resource.class);
+    resource.setMemory(memory);
+    return resource;
+  }
+  
+  public static URL newURL(String scheme, String host, int port, String file) {
+    URL url = recordFactory.newRecordInstance(URL.class);
+    url.setScheme(scheme);
+    url.setHost(host);
+    url.setPort(port);
+    url.setFile(file);
+    return url;
+  }
+  
 }

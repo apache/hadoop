@@ -43,12 +43,12 @@ public class RMNMSecurityInfoClass extends SecurityInfo {
 
       @Override
       public String serverPrincipal() {
-        return YarnConfiguration.RM_SERVER_PRINCIPAL_KEY;
+        return YarnConfiguration.RM_PRINCIPAL;
       }
 
       @Override
       public String clientPrincipal() {
-        return YarnServerConfig.NM_SERVER_PRINCIPAL_KEY;
+        return YarnConfiguration.NM_PRINCIPAL;
       }
     };
   }

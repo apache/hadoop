@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -35,18 +36,18 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
 /**
- * Queue represents a node in the tree of 
+ * <code>CSQueue</code> represents a node in the tree of 
  * hierarchical queues in the {@link CapacityScheduler}.
  */
 @Stable
 @Private
-public interface Queue 
+public interface CSQueue 
 extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   /**
    * Get the parent <code>Queue</code>.
    * @return the parent queue
    */
-  public Queue getParent();
+  public CSQueue getParent();
 
   /**
    * Get the queue name.
@@ -122,7 +123,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * Get child queues
    * @return child queues
    */
-  public List<Queue> getChildQueues();
+  public List<CSQueue> getChildQueues();
   
   /**
    * Check if the <code>user</code> has permission to perform the operation
@@ -165,11 +166,14 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param node node on which the container completed
    * @param container completed container, 
    *                  <code>null</code> if it was just a reservation
+   * @param containerStatus <code>ContainerStatus</code> for the completed 
+   *                        container
    * @param event event to be sent to the container
    */
   public void completedContainer(Resource clusterResource,
       SchedulerApp application, SchedulerNode node, 
-      RMContainer container, RMContainerEventType event);
+      RMContainer container, ContainerStatus containerStatus, 
+      RMContainerEventType event);
 
   /**
    * Get the number of applications in the queue.
@@ -183,7 +187,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param queue new queue to re-initalize from
    * @param clusterResource resources in the cluster
    */
-  public void reinitialize(Queue queue, Resource clusterResource) 
+  public void reinitialize(CSQueue queue, Resource clusterResource) 
   throws IOException;
 
    /**

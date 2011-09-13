@@ -36,10 +36,9 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
@@ -59,11 +58,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
@@ -80,14 +79,14 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
 
-  private Queue root;
+  private CSQueue root;
 
   private final static List<Container> EMPTY_CONTAINER_LIST = 
     new ArrayList<Container>();
 
-  static final Comparator<Queue> queueComparator = new Comparator<Queue>() {
+  static final Comparator<CSQueue> queueComparator = new Comparator<CSQueue>() {
     @Override
-    public int compare(Queue q1, Queue q2) {
+    public int compare(CSQueue q1, CSQueue q2) {
       if (q1.getUtilization() < q2.getUtilization()) {
         return -1;
       } else if (q1.getUtilization() > q2.getUtilization()) {
@@ -110,7 +109,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private ContainerTokenSecretManager containerTokenSecretManager;
   private RMContext rmContext;
 
-  private Map<String, Queue> queues = new ConcurrentHashMap<String, Queue>();
+  private Map<String, CSQueue> queues = new ConcurrentHashMap<String, CSQueue>();
 
   private Map<NodeId, SchedulerNode> nodes = 
       new ConcurrentHashMap<NodeId, SchedulerNode>();
@@ -127,7 +126,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   private boolean initialized = false;
 
-  public Queue getRootQueue() {
+  public CapacityScheduler() {}
+
+  public CSQueue getRootQueue() {
     return root;
   }
 
@@ -207,7 +208,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     CapacitySchedulerConfiguration.PREFIX + ROOT;
 
   static class QueueHook {
-    public Queue hook(Queue queue) {
+    public CSQueue hook(CSQueue queue) {
       return queue;
     }
   }
@@ -225,8 +226,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private void reinitializeQueues(CapacitySchedulerConfiguration conf) 
   throws IOException {
     // Parse new queues
-    Map<String, Queue> newQueues = new HashMap<String, Queue>();
-    Queue newRoot = 
+    Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
+    CSQueue newRoot = 
         parseQueue(this, conf, null, ROOT, newQueues, queues, 
             queueComparator, applicationComparator, noop);
     
@@ -247,7 +248,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
    */
   @Lock(CapacityScheduler.class)
   private void validateExistingQueues(
-      Map<String, Queue> queues, Map<String, Queue> newQueues) 
+      Map<String, CSQueue> queues, Map<String, CSQueue> newQueues) 
   throws IOException {
     for (String queue : queues.keySet()) {
       if (!newQueues.containsKey(queue)) {
@@ -264,11 +265,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
    */
   @Lock(CapacityScheduler.class)
   private void addNewQueues(
-      Map<String, Queue> queues, Map<String, Queue> newQueues) 
+      Map<String, CSQueue> queues, Map<String, CSQueue> newQueues) 
   {
-    for (Map.Entry<String, Queue> e : newQueues.entrySet()) {
+    for (Map.Entry<String, CSQueue> e : newQueues.entrySet()) {
       String queueName = e.getKey();
-      Queue queue = e.getValue();
+      CSQueue queue = e.getValue();
       if (!queues.containsKey(queueName)) {
         queues.put(queueName, queue);
       }
@@ -276,15 +277,15 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
   
   @Lock(CapacityScheduler.class)
-  static Queue parseQueue(
+  static CSQueue parseQueue(
       CapacitySchedulerContext csContext, 
       CapacitySchedulerConfiguration conf, 
-      Queue parent, String queueName, Map<String, Queue> queues,
-      Map<String, Queue> oldQueues, 
-      Comparator<Queue> queueComparator,
+      CSQueue parent, String queueName, Map<String, CSQueue> queues,
+      Map<String, CSQueue> oldQueues, 
+      Comparator<CSQueue> queueComparator,
       Comparator<SchedulerApp> applicationComparator,
       QueueHook hook) {
-    Queue queue;
+    CSQueue queue;
     String[] childQueueNames = 
       conf.getQueues((parent == null) ? 
           queueName : (parent.getQueuePath()+"."+queueName));
@@ -306,9 +307,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
       // Used only for unit tests
       queue = hook.hook(parentQueue);
       
-      List<Queue> childQueues = new ArrayList<Queue>();
+      List<CSQueue> childQueues = new ArrayList<CSQueue>();
       for (String childQueueName : childQueueNames) {
-        Queue childQueue = 
+        CSQueue childQueue = 
           parseQueue(csContext, conf, queue, childQueueName, 
               queues, oldQueues, queueComparator, applicationComparator, hook);
         childQueues.add(childQueue);
@@ -322,7 +323,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     return queue;
   }
 
-  synchronized Queue getQueue(String queueName) {
+  synchronized CSQueue getQueue(String queueName) {
     return queues.get(queueName);
   }
   
@@ -331,7 +332,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
           String queueName, String user) {
 
     // Sanity checks
-    Queue queue = getQueue(queueName);
+    CSQueue queue = getQueue(queueName);
     if (queue == null) {
       String message = "Application " + applicationAttemptId + 
       " submitted by user " + user + " to unknown queue: " + queueName;
@@ -392,12 +393,20 @@ implements ResourceScheduler, CapacitySchedulerContext {
     
     // Release all the running containers 
     for (RMContainer rmContainer : application.getLiveContainers()) {
-      completedContainer(rmContainer, RMContainerEventType.KILL);
+      completedContainer(rmContainer, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              rmContainer.getContainerId(), 
+              SchedulerUtils.COMPLETED_APPLICATION), 
+          RMContainerEventType.KILL);
     }
     
      // Release all reserved containers
     for (RMContainer rmContainer : application.getAllReservedContainers()) {
-      completedContainer(rmContainer, RMContainerEventType.KILL);
+      completedContainer(rmContainer, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              rmContainer.getContainerId(), 
+              "Application Complete"), 
+          RMContainerEventType.KILL);
     }
     
     // Clean up pending requests, metrics etc.
@@ -405,7 +414,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     
     // Inform the queue
     String queueName = application.getQueue().getQueueName();
-    Queue queue = queues.get(queueName);
+    CSQueue queue = queues.get(queueName);
     if (!(queue instanceof LeafQueue)) {
       LOG.error("Cannot finish application " + "from non-leaf queue: "
           + queueName);
@@ -445,7 +454,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
              "Trying to release container not owned by app or with invalid id",
              application.getApplicationId(), releasedContainerId);
       }
-      completedContainer(rmContainer, RMContainerEventType.RELEASED);
+      completedContainer(rmContainer,
+          SchedulerUtils.createAbnormalContainerStatus(
+              releasedContainerId, 
+              SchedulerUtils.RELEASED_CONTAINER),
+          RMContainerEventType.RELEASED);
     }
 
     synchronized (application) {
@@ -479,7 +492,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   public QueueInfo getQueueInfo(String queueName, 
       boolean includeChildQueues, boolean recursive) 
   throws IOException {
-    Queue queue = null;
+    CSQueue queue = null;
 
     synchronized (this) {
       queue = this.queues.get(queueName); 
@@ -521,22 +534,23 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
 
   private synchronized void nodeUpdate(RMNode nm, 
-      Map<ApplicationId, List<Container>> containers ) {
+      List<ContainerStatus> newlyLaunchedContainers,
+      List<ContainerStatus> completedContainers) {
     LOG.info("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
     
     SchedulerNode node = getNode(nm.getNodeID());
 
-    // Processing the current containers running/finished on node
-    for (List<Container> appContainers : containers.values()) {
-      for (Container container : appContainers) {
-        if (container.getState() == ContainerState.RUNNING) {
-          containerLaunchedOnNode(container, node);
-        } else { // has to be 'COMPLETE'
-          LOG.info("DEBUG --- Container FINISHED: " + container.getId());
-          completedContainer(getRMContainer(container.getId()), 
-              RMContainerEventType.FINISHED);
-        }
-      }
+    // Processing the newly launched containers
+    for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
+      containerLaunchedOnNode(launchedContainer.getContainerId(), node);
+    }
+
+    // Process completed containers
+    for (ContainerStatus completedContainer : completedContainers) {
+      ContainerId containerId = completedContainer.getContainerId();
+      LOG.info("DEBUG --- Container FINISHED: " + containerId);
+      completedContainer(getRMContainer(containerId), 
+          completedContainer, RMContainerEventType.FINISHED);
     }
 
     // Now node data structures are upto date and ready for scheduling.
@@ -566,23 +580,24 @@ implements ResourceScheduler, CapacitySchedulerContext {
     } else {
       LOG.info("Skipping scheduling since node " + nm + 
           " is reserved by application " + 
-          node.getReservedContainer().getContainerId().getAppId());
+          node.getReservedContainer().getContainerId().getApplicationAttemptId()
+          );
     }
 
   }
 
-  private void containerLaunchedOnNode(Container container, SchedulerNode node) {
+  private void containerLaunchedOnNode(ContainerId containerId, SchedulerNode node) {
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = containerId.getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
-          " launched container " + container.getId() +
+          " launched container " + containerId +
           " on node: " + node);
       return;
     }
     
-    application.containerLaunchedOnNode(container.getId());
+    application.containerLaunchedOnNode(containerId);
   }
 
   @Override
@@ -604,7 +619,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
     {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
       nodeUpdate(nodeUpdatedEvent.getRMNode(), 
-          nodeUpdatedEvent.getContainers());
+          nodeUpdatedEvent.getNewlyLaunchedContainers(),
+          nodeUpdatedEvent.getCompletedContainers());
     }
     break;
     case APP_ADDED:
@@ -625,7 +641,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
     {
       ContainerExpiredSchedulerEvent containerExpiredEvent = 
           (ContainerExpiredSchedulerEvent) event;
-      completedContainer(getRMContainer(containerExpiredEvent.getContainerId()), 
+      ContainerId containerId = containerExpiredEvent.getContainerId();
+      completedContainer(getRMContainer(containerId), 
+          SchedulerUtils.createAbnormalContainerStatus(
+              containerId, 
+              SchedulerUtils.EXPIRED_CONTAINER), 
           RMContainerEventType.EXPIRE);
     }
     break;
@@ -652,13 +672,21 @@ implements ResourceScheduler, CapacitySchedulerContext {
     // Remove running containers
     List<RMContainer> runningContainers = node.getRunningContainers();
     for (RMContainer container : runningContainers) {
-      completedContainer(container, RMContainerEventType.KILL);
+      completedContainer(container, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              container.getContainerId(), 
+              SchedulerUtils.LOST_CONTAINER), 
+          RMContainerEventType.KILL);
     }
     
     // Remove reservations, if any
     RMContainer reservedContainer = node.getReservedContainer();
     if (reservedContainer != null) {
-      completedContainer(reservedContainer, RMContainerEventType.KILL);
+      completedContainer(reservedContainer, 
+          SchedulerUtils.createAbnormalContainerStatus(
+              reservedContainer.getContainerId(), 
+              SchedulerUtils.LOST_CONTAINER), 
+          RMContainerEventType.KILL);
     }
 
     this.nodes.remove(nodeInfo.getNodeID());
@@ -667,8 +695,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
   }
   
   @Lock(CapacityScheduler.class)
-  private synchronized void completedContainer(RMContainer rmContainer, 
-      RMContainerEventType event) {
+  private synchronized void completedContainer(RMContainer rmContainer,
+      ContainerStatus containerStatus, RMContainerEventType event) {
     if (rmContainer == null) {
       LOG.info("Null container completed...");
       return;
@@ -677,7 +705,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     Container container = rmContainer.getContainer();
     
     // Get the application for the finished container
-    ApplicationAttemptId applicationAttemptId = container.getId().getAppAttemptId();
+    ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
     SchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Container " + container + " of" +
@@ -692,7 +720,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     // Inform the queue
     LeafQueue queue = (LeafQueue)application.getQueue();
     queue.completedContainer(clusterResource, application, node, 
-        rmContainer, event);
+        rmContainer, containerStatus, event);
 
     LOG.info("Application " + applicationAttemptId + 
         " released container " + container.getId() +
@@ -712,7 +740,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
-        getApplication(containerId.getAppAttemptId());
+        getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
 

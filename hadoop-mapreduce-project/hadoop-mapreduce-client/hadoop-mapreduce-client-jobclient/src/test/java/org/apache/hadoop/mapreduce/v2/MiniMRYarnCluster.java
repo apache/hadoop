@@ -29,11 +29,10 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.Service;
 
@@ -62,19 +61,21 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   public void init(Configuration conf) {
     conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
     conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));
-    conf.set(MRConstants.APPS_STAGING_DIR_KEY, new File(getTestWorkDir(),
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
         "apps_staging_dir/${user.name}/").getAbsolutePath());
     conf.set(MRConfig.MASTER_ADDRESS, "test"); // The default is local because of
                                              // which shuffle doesn't happen
     //configure the shuffle service in NM
-    conf.setStrings(AuxServices.AUX_SERVICES,
+    conf.setStrings(YarnConfiguration.NM_AUX_SERVICES,
         new String[] { ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID });
-    conf.setClass(String.format(AuxServices.AUX_SERVICE_CLASS_FMT,
+    conf.setClass(String.format(YarnConfiguration.NM_AUX_SERVICE_FMT,
         ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID), ShuffleHandler.class,
         Service.class);
+
     // Non-standard shuffle port
     conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 8083);
-    conf.setClass(NMConfig.NM_CONTAINER_EXECUTOR_CLASS,
+
+    conf.setClass(YarnConfiguration.NM_CONTAINER_EXECUTOR,
         DefaultContainerExecutor.class, ContainerExecutor.class);
 
     // TestMRJobs is for testing non-uberized operation only; see TestUberAM

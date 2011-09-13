@@ -26,6 +26,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import junit.framework.Assert;
@@ -47,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
@@ -70,7 +75,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
   @Before
   public void setup() throws IOException {
     conf.setClass(
-        ContainersMonitorImpl.RESOURCE_CALCULATOR_PLUGIN_CONFIG_KEY,
+        YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class, ResourceCalculatorPlugin.class);
     super.setup();
   }
@@ -191,13 +196,15 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     // ////// Construct the Container-id
     ApplicationId appId =
         recordFactory.newRecordInstance(ApplicationId.class);
-    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appId.setClusterTimestamp(0);
+    appId.setId(0);
+    ApplicationAttemptId appAttemptId = 
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);
     appAttemptId.setAttemptId(1);
     ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
-    cId.setAppId(appId);
     cId.setId(0);
-    cId.setAppAttemptId(appAttemptId);
+    cId.setApplicationAttemptId(appAttemptId);
     containerLaunchContext.setContainerId(cId);
 
     containerLaunchContext.setUser(user);
@@ -213,10 +220,15 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     rsrc_alpha.setType(LocalResourceType.FILE);
     rsrc_alpha.setTimestamp(scriptFile.lastModified());
     String destinationFile = "dest_file";
-    containerLaunchContext.setLocalResource(destinationFile, rsrc_alpha);
+    Map<String, LocalResource> localResources = 
+        new HashMap<String, LocalResource>();
+    localResources.put(destinationFile, rsrc_alpha);
+    containerLaunchContext.setLocalResources(localResources);
     containerLaunchContext.setUser(containerLaunchContext.getUser());
-    containerLaunchContext.addCommand("/bin/bash");
-    containerLaunchContext.addCommand(scriptFile.getAbsolutePath());
+    List<String> commands = new ArrayList<String>();
+    commands.add("/bin/bash");
+    commands.add(scriptFile.getAbsolutePath());
+    containerLaunchContext.setCommands(commands);
     containerLaunchContext.setResource(recordFactory
         .newRecordInstance(Resource.class));
     containerLaunchContext.getResource().setMemory(8 * 1024 * 1024);
@@ -250,7 +262,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     gcsRequest.setContainerId(cId);
     ContainerStatus containerStatus =
         containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(String.valueOf(ExitCode.KILLED.getExitCode()),
+    Assert.assertEquals(ExitCode.KILLED.getExitCode(),
         containerStatus.getExitStatus());
     String expectedMsgPattern =
         "Container \\[pid=" + pid + ",containerID=" + cId

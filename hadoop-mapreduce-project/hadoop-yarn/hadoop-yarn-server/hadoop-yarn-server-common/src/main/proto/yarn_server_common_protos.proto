@@ -26,7 +26,7 @@ import "yarn_protos.proto";
 message NodeStatusProto {
   optional NodeIdProto node_id = 1;
   optional int32 response_id = 2;
-  repeated ApplicationIdContainerListMapProto containers = 3;
+  repeated ContainerStatusProto containersStatuses = 3;
   optional NodeHealthStatusProto nodeHealthStatus = 4;
 }
 
@@ -39,14 +39,5 @@ message HeartbeatResponseProto {
   optional bool reboot = 2;
   repeated ContainerIdProto containers_to_cleanup = 3;
   repeated ApplicationIdProto applications_to_cleanup = 4;
-}
-
-message ContainerListProto {
-  repeated ContainerProto container = 1;
-}
-
-message ApplicationIdContainerListMapProto {
-  optional ApplicationIdProto application_id = 1;
-  optional ContainerListProto value = 2;
 }
 

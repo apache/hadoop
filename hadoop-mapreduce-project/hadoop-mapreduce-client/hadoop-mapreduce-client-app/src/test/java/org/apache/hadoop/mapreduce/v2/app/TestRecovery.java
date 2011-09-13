@@ -131,7 +131,7 @@ public class TestRecovery {
     //in rerun the 1st map will be recovered from previous run
     app = new MRAppWithHistory(2, 1, false, this.getClass().getName(), false, ++runCount);
     conf = new Configuration();
-    conf.setBoolean(AMConstants.RECOVERY_ENABLE, true);
+    conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
     job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);

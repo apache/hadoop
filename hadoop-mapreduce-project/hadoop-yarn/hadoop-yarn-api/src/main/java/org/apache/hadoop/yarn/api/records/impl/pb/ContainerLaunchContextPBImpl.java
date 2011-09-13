@@ -41,8 +41,11 @@ import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 
 
     
-public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchContextProto> implements ContainerLaunchContext {
-  ContainerLaunchContextProto proto = ContainerLaunchContextProto.getDefaultInstance();
+public class ContainerLaunchContextPBImpl 
+extends ProtoBase<ContainerLaunchContextProto> 
+implements ContainerLaunchContext {
+  ContainerLaunchContextProto proto = 
+      ContainerLaunchContextProto.getDefaultInstance();
   ContainerLaunchContextProto.Builder builder = null;
   boolean viaProto = false;
   
@@ -72,10 +75,14 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
   }
   
   private void mergeLocalToBuilder() {
-    if (this.containerId != null && !((ContainerIdPBImpl)containerId).getProto().equals(builder.getContainerId())) {
+    if (this.containerId != null && 
+        !((ContainerIdPBImpl)containerId).getProto().equals(
+            builder.getContainerId())) {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
-    if (this.resource != null && !((ResourcePBImpl)this.resource).getProto().equals(builder.getResource())) {
+    if (this.resource != null && 
+        !((ResourcePBImpl)this.resource).getProto().equals(
+            builder.getResource())) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
     if (this.localResources != null) {
@@ -131,22 +138,13 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
       builder.clearResource();
     this.resource = resource;
   }
+  
   @Override
-  public List<String> getCommandList() {
+  public List<String> getCommands() {
     initCommands();
     return this.commands;
   }
-  @Override
-  public String getCommand(int index) {
-    initCommands();
-    return this.commands.get(index);
-  }
-  @Override
-  public int getCommandCount() {
-    initCommands();
-    return this.commands.size();
-  }
-  
+
   private void initCommands() {
     if (this.commands != null) {
       return;
@@ -161,11 +159,12 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
   }
   
   @Override
-  public void addAllCommands(final List<String> command) {
-    if (command == null)
+  public void setCommands(final List<String> commands) {
+    if (commands == null)
       return;
     initCommands();
-    this.commands.addAll(command);
+    this.commands.clear();
+    this.commands.addAll(commands);
   }
   
   private void addCommandsToProto() {
@@ -175,21 +174,7 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
       return;
     builder.addAllCommand(this.commands);
   }
-  @Override
-  public void addCommand(String command) {
-    initCommands();
-    this.commands.add(command);
-  }
-  @Override
-  public void removeCommand(int index) {
-    initCommands();
-    this.commands.remove(index);
-  }
-  @Override
-  public void clearCommands() {
-    initCommands();
-    this.commands.clear();
-  }
+  
   @Override
   public String getUser() {
     ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
@@ -228,17 +213,13 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
       builder.clearContainerId();
     this.containerId = containerId;
   }
+  
   @Override
-  public Map<String, LocalResource> getAllLocalResources() {
+  public Map<String, LocalResource> getLocalResources() {
     initLocalResources();
     return this.localResources;
   }
-  @Override
-  public LocalResource getLocalResource(String key) {
-    initLocalResources();
-    return this.localResources.get(key);
-  }
-  
+
   private void initLocalResources() {
     if (this.localResources != null) {
       return;
@@ -253,10 +234,12 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
   }
   
   @Override
-  public void addAllLocalResources(final Map<String, LocalResource> localResources) {
+  public void setLocalResources(
+      final Map<String, LocalResource> localResources) {
     if (localResources == null)
       return;
     initLocalResources();
+    this.localResources.clear();
     this.localResources.putAll(localResources);
   }
   
@@ -265,7 +248,8 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
     builder.clearLocalResources();
     if (localResources == null)
       return;
-    Iterable<StringLocalResourceMapProto> iterable = new Iterable<StringLocalResourceMapProto>() {
+    Iterable<StringLocalResourceMapProto> iterable = 
+        new Iterable<StringLocalResourceMapProto>() {
       
       @Override
       public Iterator<StringLocalResourceMapProto> iterator() {
@@ -281,7 +265,8 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
           @Override
           public StringLocalResourceMapProto next() {
             String key = keyIter.next();
-            return StringLocalResourceMapProto.newBuilder().setKey(key).setValue(convertToProtoFormat(localResources.get(key))).build();
+            return StringLocalResourceMapProto.newBuilder().setKey(key).
+                setValue(convertToProtoFormat(localResources.get(key))).build();
           }
           
           @Override
@@ -293,21 +278,7 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
     };
     builder.addAllLocalResources(iterable);
   }
-  @Override
-  public void setLocalResource(String key, LocalResource val) {
-    initLocalResources();
-    this.localResources.put(key, val);
-  }
-  @Override
-  public void removeLocalResource(String key) {
-    initLocalResources();
-    this.localResources.remove(key);
-  }
-  @Override
-  public void clearLocalResources() {
-    initLocalResources();
-    this.localResources.clear();
-  }
+  
   @Override
   public ByteBuffer getContainerTokens() {
     ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
@@ -328,15 +299,11 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
       builder.clearContainerTokens();
     this.containerTokens = containerTokens;
   }
+  
   @Override
-  public Map<String, ByteBuffer> getAllServiceData() {
+  public Map<String, ByteBuffer> getServiceData() {
     initServiceData();
     return this.serviceData;
-  }
-  @Override
-  public ByteBuffer getServiceData(String key) {
-    initServiceData();
-    return this.serviceData.get(key);
   }
   
   private void initServiceData() {
@@ -353,7 +320,7 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
   }
   
   @Override
-  public void addAllServiceData(final Map<String, ByteBuffer> serviceData) {
+  public void setServiceData(final Map<String, ByteBuffer> serviceData) {
     if (serviceData == null)
       return;
     initServiceData();
@@ -365,7 +332,8 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
     builder.clearServiceData();
     if (serviceData == null)
       return;
-    Iterable<StringBytesMapProto> iterable = new Iterable<StringBytesMapProto>() {
+    Iterable<StringBytesMapProto> iterable = 
+        new Iterable<StringBytesMapProto>() {
       
       @Override
       public Iterator<StringBytesMapProto> iterator() {
@@ -381,7 +349,8 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
           @Override
           public StringBytesMapProto next() {
             String key = keyIter.next();
-            return StringBytesMapProto.newBuilder().setKey(key).setValue(convertToProtoFormat(serviceData.get(key))).build();
+            return StringBytesMapProto.newBuilder().setKey(key).setValue(
+                convertToProtoFormat(serviceData.get(key))).build();
           }
           
           @Override
@@ -393,30 +362,11 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
     };
     builder.addAllServiceData(iterable);
   }
+  
   @Override
-  public void setServiceData(String key, ByteBuffer val) {
-    initServiceData();
-    this.serviceData.put(key, val);
-  }
-  @Override
-  public void removeServiceData(String key) {
-    initServiceData();
-    this.serviceData.remove(key);
-  }
-  @Override
-  public void clearServiceData() {
-    initServiceData();
-    this.serviceData.clear();
-  }
-  @Override
-  public Map<String, String> getAllEnv() {
+  public Map<String, String> getEnv() {
     initEnv();
     return this.env;
-  }
-  @Override
-  public String getEnv(String key) {
-    initEnv();
-    return this.env.get(key);
   }
   
   private void initEnv() {
@@ -433,10 +383,11 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
   }
   
   @Override
-  public void addAllEnv(final Map<String, String> env) {
+  public void setEnv(final Map<String, String> env) {
     if (env == null)
       return;
     initEnv();
+    this.env.clear();
     this.env.putAll(env);
   }
   
@@ -445,7 +396,8 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
     builder.clearEnv();
     if (env == null)
       return;
-    Iterable<StringStringMapProto> iterable = new Iterable<StringStringMapProto>() {
+    Iterable<StringStringMapProto> iterable = 
+        new Iterable<StringStringMapProto>() {
       
       @Override
       public Iterator<StringStringMapProto> iterator() {
@@ -461,7 +413,8 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
           @Override
           public StringStringMapProto next() {
             String key = keyIter.next();
-            return StringStringMapProto.newBuilder().setKey(key).setValue((env.get(key))).build();
+            return StringStringMapProto.newBuilder().setKey(key).setValue(
+                (env.get(key))).build();
           }
           
           @Override
@@ -472,21 +425,6 @@ public class ContainerLaunchContextPBImpl extends ProtoBase<ContainerLaunchConte
       }
     };
     builder.addAllEnv(iterable);
-  }
-  @Override
-  public void setEnv(String key, String val) {
-    initEnv();
-    this.env.put(key, val);
-  }
-  @Override
-  public void removeEnv(String key) {
-    initEnv();
-    this.env.remove(key);
-  }
-  @Override
-  public void clearEnv() {
-    initEnv();
-    this.env.clear();
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {

@@ -5,6 +5,11 @@ Trunk (unreleased changes)
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+    HDFS-2284. Add a new FileSystem, webhdfs://, for supporting write Http
+    access to HDFS.  (szetszwo)
+
+    HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
@@ -1029,7 +1034,9 @@ Release 0.23.0 - Unreleased
     (todd)
 
     HDFS-2289. Ensure jsvc is bundled with the HDFS distribution artifact.
-    (Alejandro Abdelnur via acmurthy) 
+    (Alejandro Abdelnur via acmurthy)
+
+    HDFS-2323. start-dfs.sh script fails for tarball install (tomwhite)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 

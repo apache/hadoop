@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 public class TestContainerTokenSecretManager {
@@ -94,6 +95,7 @@ public class TestContainerTokenSecretManager {
   private static final File localDir = new File("target",
       TestContainerTokenSecretManager.class.getName() + "-localDir")
       .getAbsoluteFile();
+  private static MiniYARNCluster yarnCluster;
 
   @BeforeClass
   public static void setup() throws AccessControlException,
@@ -102,6 +104,12 @@ public class TestContainerTokenSecretManager {
     localFS.delete(new Path(localDir.getAbsolutePath()), true);
     localDir.mkdir();
   }
+
+  @AfterClass
+  public static void teardown() { 
+    yarnCluster.stop();
+  }
+
 
   @Test
   public void test() throws IOException, InterruptedException {
@@ -114,9 +122,9 @@ public class TestContainerTokenSecretManager {
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     // Set AM expiry interval to be very long.
-    conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 100000L);
+    conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
     UserGroupInformation.setConfiguration(conf);
-    MiniYARNCluster yarnCluster =
+    yarnCluster =
         new MiniYARNCluster(TestContainerTokenSecretManager.class.getName());
     yarnCluster.init(conf);
     yarnCluster.start();
@@ -183,8 +191,8 @@ public class TestContainerTokenSecretManager {
 
     // Ask for a container from the RM
     String schedulerAddressString =
-        conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
+        conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
     final InetSocketAddress schedulerAddr =
         NetUtils.createSocketAddr(schedulerAddressString);
     ApplicationTokenIdentifier appTokenIdentifier =
@@ -216,8 +224,6 @@ public class TestContainerTokenSecretManager {
     RegisterApplicationMasterRequest request =
         recordFactory
             .newRecordInstance(RegisterApplicationMasterRequest.class);
-    ApplicationMaster applicationMaster = recordFactory
-        .newRecordInstance(ApplicationMaster.class);
     request.setApplicationAttemptId(resourceManager.getRMContext()
         .getRMApps().get(appID).getCurrentAppAttempt().getAppAttemptId());
     scheduler.registerApplicationMaster(request);
@@ -241,7 +247,7 @@ public class TestContainerTokenSecretManager {
     allocateRequest.addAllAsks(ask);
     allocateRequest.addAllReleases(release);
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
-        .getAMResponse().getNewContainerList();
+        .getAMResponse().getAllocatedContainers();
 
     waitCounter = 0;
     while ((allocatedContainers == null || allocatedContainers.size() == 0)
@@ -251,7 +257,7 @@ public class TestContainerTokenSecretManager {
       allocateRequest.setResponseId(allocateRequest.getResponseId() + 1);
       allocatedContainers =
           scheduler.allocate(allocateRequest).getAMResponse()
-              .getNewContainerList();
+              .getAllocatedContainers();
     }
 
     Assert.assertNotNull("Container is not allocted!", allocatedContainers);
@@ -285,12 +291,13 @@ public class TestContainerTokenSecretManager {
                   .newRecordInstance(GetContainerStatusRequest.class);
           ContainerId containerID =
               recordFactory.newRecordInstance(ContainerId.class);
-          ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
+          ApplicationAttemptId appAttemptId = 
+              recordFactory.newRecordInstance(ApplicationAttemptId.class);
           appAttemptId.setApplicationId(appID);
           appAttemptId.setAttemptId(1);
-          containerID.setAppId(appID);
+          appAttemptId.setApplicationId(appID);
+          containerID.setApplicationAttemptId(appAttemptId);
           containerID.setId(1);
-          containerID.setAppAttemptId(appAttemptId);
           request.setContainerId(containerID);
           client.getContainerStatus(request);
         } catch (YarnRemoteException e) {
@@ -339,9 +346,9 @@ public class TestContainerTokenSecretManager {
         ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
         appAttemptId.setApplicationId(appID);
         appAttemptId.setAttemptId(1);
-        containerID.setAppId(appID);
+        appAttemptId.setApplicationId(appID);
+        containerID.setApplicationAttemptId(appAttemptId);
         containerID.setId(1);
-        containerID.setAppAttemptId(appAttemptId);
         request.setContainerId(containerID);
         try {
           client.getContainerStatus(request);

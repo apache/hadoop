@@ -42,7 +42,7 @@ public class TasksBlock extends HtmlBlock {
   }
 
   @Override protected void render(Block html) {
-    if (app.job == null) {
+    if (app.getJob() == null) {
       html.
         h2($(TITLE));
       return;
@@ -63,7 +63,7 @@ public class TasksBlock extends HtmlBlock {
             th("Finish Time").
             th("Elapsed Time")._()._().
         tbody();
-    for (Task task : app.job.getTasks().values()) {
+    for (Task task : app.getJob().getTasks().values()) {
       if (type != null && task.getType() != type) {
         continue;
       }

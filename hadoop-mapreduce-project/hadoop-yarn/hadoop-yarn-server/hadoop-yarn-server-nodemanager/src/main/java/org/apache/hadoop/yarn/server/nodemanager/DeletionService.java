@@ -28,21 +28,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.service.AbstractService;
-
-import static org.apache.hadoop.yarn.server.nodemanager.NMConfig.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class DeletionService extends AbstractService {
-
   static final Log LOG = LogFactory.getLog(DeletionService.class);
-  /** Delay before deleting resource to ease debugging of NM issues */
-  static final String DEBUG_DELAY_SEC =
-    NMConfig.NM_PREFIX + "debug.delete.delay";
-
   private int debugDelay;
   private final ContainerExecutor exec;
   private ScheduledThreadPoolExecutor sched;
@@ -79,10 +73,10 @@ public class DeletionService extends AbstractService {
   public void init(Configuration conf) {
     if (conf != null) {
       sched = new ScheduledThreadPoolExecutor(
-          conf.getInt(NM_MAX_DELETE_THREADS, DEFAULT_MAX_DELETE_THREADS));
-      debugDelay = conf.getInt(DEBUG_DELAY_SEC, 0);
+          conf.getInt(YarnConfiguration.NM_DELETE_THREAD_COUNT, YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT));
+      debugDelay = conf.getInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 0);
     } else {
-      sched = new ScheduledThreadPoolExecutor(DEFAULT_MAX_DELETE_THREADS);
+      sched = new ScheduledThreadPoolExecutor(YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT);
     }
     sched.setKeepAliveTime(60L, SECONDS);
     super.init(conf);

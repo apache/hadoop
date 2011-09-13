@@ -51,7 +51,7 @@ NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -namenodes)
 
 echo "Starting namenodes on [$NAMENODES]"
 
-"$HADOOP_PREFIX/bin/hadoop-daemons.sh" \
+"$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
   --config "$HADOOP_CONF_DIR" \
   --hostnames "$NAMENODES" \
   --script "$bin/hdfs" start namenode $nameStartOpt
@@ -64,7 +64,7 @@ if [ -n "$HADOOP_SECURE_DN_USER" ]; then
     "Attempting to start secure cluster, skipping datanodes. " \
     "Run start-secure-dns.sh as root to complete startup."
 else
-  "$HADOOP_PREFIX/bin/hadoop-daemons.sh" \
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
     --config "$HADOOP_CONF_DIR" \
     --script "$bin/hdfs" start datanode $dataStartOpt
 fi
@@ -84,7 +84,7 @@ if [ "$SECONDARY_NAMENODES" = '0.0.0.0' ] ; then
 else
   echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
 
-  "$HADOOP_PREFIX/bin/hadoop-daemons.sh" \
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
     --config "$HADOOP_CONF_DIR" \
     --hostnames "$SECONDARY_NAMENODES" \
     --script "$bin/hdfs" start secondarynamenode

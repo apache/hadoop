@@ -67,7 +67,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.server.nodemanager.NMConfig;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -263,10 +263,6 @@ public class ShuffleHandler extends AbstractService
     }
   }
 
-  Shuffle createShuffle() {
-    return new Shuffle(getConfig());
-  }
-
   class HttpPipelineFactory implements ChannelPipelineFactory {
 
     final Shuffle SHUFFLE;
@@ -295,11 +291,13 @@ public class ShuffleHandler extends AbstractService
     private final Configuration conf;
     private final IndexCache indexCache;
     private final LocalDirAllocator lDirAlloc =
-      new LocalDirAllocator(NMConfig.NM_LOCAL_DIR);
+      new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
+    private final int port;
 
     public Shuffle(Configuration conf) {
       this.conf = conf;
       indexCache = new IndexCache(new JobConf(conf));
+      this.port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
     }
 
     private List<String> splitMaps(List<String> mapq) {
@@ -362,7 +360,7 @@ public class ShuffleHandler extends AbstractService
       HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
       try {
         verifyRequest(jobId, ctx, request, response,
-            new URL("http", "", port, reqUri));
+            new URL("http", "", this.port, reqUri));
       } catch (IOException e) {
         LOG.warn("Shuffle failure ", e);
         sendError(ctx, e.getMessage(), UNAUTHORIZED);

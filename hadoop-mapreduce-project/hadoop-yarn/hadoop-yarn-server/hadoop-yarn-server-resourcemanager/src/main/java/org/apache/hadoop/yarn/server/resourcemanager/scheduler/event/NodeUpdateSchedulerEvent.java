@@ -23,26 +23,33 @@ import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 public class NodeUpdateSchedulerEvent extends SchedulerEvent {
 
   private final RMNode rmNode;
-  private final Map<ApplicationId, List<Container>> containers;
+  private final List<ContainerStatus> newlyLaunchedContainers;
+  private final List<ContainerStatus> completedContainersStatuses;
 
   public NodeUpdateSchedulerEvent(RMNode rmNode,
-      Map<ApplicationId, List<Container>> containers) {
+      List<ContainerStatus> newlyLaunchedContainers,
+      List<ContainerStatus> completedContainers) {
     super(SchedulerEventType.NODE_UPDATE);
     this.rmNode = rmNode;
-    this.containers = containers;
+    this.newlyLaunchedContainers = newlyLaunchedContainers;
+    this.completedContainersStatuses = completedContainers;
   }
 
   public RMNode getRMNode() {
     return rmNode;
   }
 
-  public Map<ApplicationId, List<Container>> getContainers() {
-    return containers;
+  public List<ContainerStatus> getNewlyLaunchedContainers() {
+    return newlyLaunchedContainers;
   }
 
+  public List<ContainerStatus> getCompletedContainers() {
+    return completedContainersStatuses;
+  }
 }

@@ -25,12 +25,11 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
-import org.apache.hadoop.mapreduce.v2.app.AMConstants;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -98,8 +97,8 @@ public class RMCommunicator extends AbstractService  {
   public void init(Configuration conf) {
     super.init(conf);
     rmPollInterval =
-        conf.getInt(AMConstants.AM_RM_SCHEDULE_INTERVAL,
-            AMConstants.DEFAULT_AM_RM_SCHEDULE_INTERVAL);
+        conf.getInt(MRJobConfig.MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS,
+            MRJobConfig.DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS);
   }
 
   @Override
@@ -226,8 +225,8 @@ public class RMCommunicator extends AbstractService  {
     final YarnRPC rpc = YarnRPC.create(getConfig());
     final Configuration conf = new Configuration(getConfig());
     final String serviceAddr = conf.get(
-        YarnConfiguration.SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
+        YarnConfiguration.RM_SCHEDULER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
 
     UserGroupInformation currentUser;
     try {

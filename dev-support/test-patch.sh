@@ -64,6 +64,7 @@ printUsage() {
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--forrest-home=<path>  Forrest home directory (default FORREST_HOME environment variable)"
   echo "--dirty-workspace      Allow the local SVN workspace to have uncommitted changes"
+  echo "--run-tests            Run all tests below the base directory"
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
@@ -129,6 +130,9 @@ parseArgs() {
       ;;
     --dirty-workspace)
       DIRTY_WORKSPACE=true
+      ;;
+    --run-tests)
+      RUN_TESTS=true
       ;;
     *)
       PATCH_OR_DEFECT=$i
@@ -249,6 +253,18 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
+  if [[ ! -d hadoop-common-project ]]; then
+    cd $bindir/..
+    echo "Compiling $(pwd)"
+    echo "$MVN clean test -DskipTests > $PATCH_DIR/trunkCompile.txt 2>&1"
+    $MVN clean test -DskipTests > $PATCH_DIR/trunkCompile.txt 2>&1
+    if [[ $? != 0 ]] ; then
+      echo "Top-level trunk compilation is broken?"
+      cleanupAndExit 1
+    fi
+    cd -
+  fi
+  echo "Compiling $(pwd)"
   echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
@@ -550,8 +566,10 @@ checkFindbugsWarnings () {
     $FINDBUGS_HOME/bin/convertXmlToText -html \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml \
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
-    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
+    if [[ $newFindbugsWarnings > 0 ]] ; then
+      JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/$(basename $BASEDIR)/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
 $JIRA_COMMENT_FOOTER"
+    fi
   done
 
   ### if current warnings greater than OK_FINDBUGS_WARNINGS
@@ -580,26 +598,12 @@ runTests () {
   echo ""
   echo ""
   
-  failed_tests=""
-  modules=$(findModules)
-  for module in $modules;
-  do
-    pushd $module
-      echo "    Running tests in $module"
-      ### Kill any rogue build processes from the last attempt
-      $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
-
-      echo "$MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess"
-      $MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess
-      if [[ $? != 0 ]] ; then
-        ### Find and format names of failed tests
-        module_failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
-        failed_tests="${failed_tests}
-${module_failed_tests}"
-      fi
-    popd
-  done
-  echo $failed_tests
+  echo "$MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess"
+  $MVN clean test -Pnative -D${PROJECT_NAME}PatchProcess
+  if [[ $? != 0 ]] ; then
+    ### Find and format names of failed tests
+    failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
+  fi
   
   if [[ -n "$failed_tests" ]] ; then
   
@@ -613,36 +617,6 @@ $failed_tests"
 
     +1 core tests.  The patch passed unit tests in $modules."
   return 0
-}
-
-###############################################################################
-### Find the modules changed by the patch
-
-findModules () {
-  # Come up with a list of changed files into $TMP
-  TMP=/tmp/tmp.paths.$$
-  $GREP '^+++\|^---' $PATCH_DIR/patch | cut -c '5-' | $GREP -v /dev/null | sort | uniq > $TMP
-
-  # if all of the lines start with a/ or b/, then this is a git patch that
-  # was generated without --no-prefix
-  if ! $GREP -qv '^a/\|^b/' $TMP ; then
-    sed -i -e 's,^[ab]/,,' $TMP
-  fi
-
-  PREFIX_DIRS=$(cut -d '/' -f 1 $TMP | sort | uniq)
-
-  # if all of the lines start with hadoop-common-project/, hadoop-hdfs-project/, or hadoop-mapreduce-project/, this is
-  # relative to the hadoop root instead of the subproject root
-  if [[ "$PREFIX_DIRS" =~ ^(hadoop-common-project|hadoop-hdfs-project|hadoop-mapreduce-project)$ ]]; then
-    echo $PREFIX_DIRS
-    return 0
-  elif ! echo "$PREFIX_DIRS" | grep -vxq 'hadoop-common-project\|hadoop-hdfs-project\|hadoop-mapreduce-project' ; then
-    echo $PREFIX_DIRS
-    return 0
-  fi
-  
-  # No modules found. Running from current directory.
-  echo .
 }
 
 ###############################################################################
@@ -820,8 +794,8 @@ checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
 (( RESULT = RESULT + $? ))
-### Do not call these when run by a developer 
-if [[ $JENKINS == "true" ]] ; then
+### Run tests for Jenkins or if explictly asked for by a developer
+if [[ $JENKINS == "true" || $RUN_TESTS == "true" ]] ; then
   runTests
   (( RESULT = RESULT + $? ))
   runContribTests

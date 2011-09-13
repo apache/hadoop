@@ -32,6 +32,7 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
@@ -62,27 +63,8 @@ public class NodeHealthCheckerService extends AbstractService {
   /** Pattern used for searching in the output of the node health script */
   static private final String ERROR_PATTERN = "ERROR";
 
-  /* Configuration keys */
-  public static final String HEALTH_CHECK_SCRIPT_PROPERTY = 
-    "yarn.server.nodemanager.healthchecker.script.path";
-
-  public static final String HEALTH_CHECK_INTERVAL_PROPERTY = 
-    "yarn.server.nodemanager.healthchecker.interval";
-
-  public static final String HEALTH_CHECK_FAILURE_INTERVAL_PROPERTY = 
-    "yarn.server.nodemanager.healthchecker.script.timeout";
-
-  public static final String HEALTH_CHECK_SCRIPT_ARGUMENTS_PROPERTY = 
-    "yarn.server.nodemanager.healthchecker.script.args";
-  
-  /* end of configuration keys */
   /** Time out error message */
   static final String NODE_HEALTH_SCRIPT_TIMED_OUT_MSG = "Node health script timed out";
-
-  /** Default frequency of running node health script */
-  private static final long DEFAULT_HEALTH_CHECK_INTERVAL = 10 * 60 * 1000;
-  /** Default script time out period */
-  private static final long DEFAULT_HEALTH_SCRIPT_FAILURE_INTERVAL = 2 * DEFAULT_HEALTH_CHECK_INTERVAL;
 
   private boolean isHealthy;
 
@@ -224,13 +206,13 @@ public class NodeHealthCheckerService extends AbstractService {
   public void init(Configuration conf) {
     this.conf = conf;
     this.nodeHealthScript = 
-        conf.get(HEALTH_CHECK_SCRIPT_PROPERTY);
-    this.intervalTime = conf.getLong(HEALTH_CHECK_INTERVAL_PROPERTY,
-        DEFAULT_HEALTH_CHECK_INTERVAL);
+        conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
+    this.intervalTime = conf.getLong(YarnConfiguration.NM_HEALTH_CHECK_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS);
     this.scriptTimeout = conf.getLong(
-        HEALTH_CHECK_FAILURE_INTERVAL_PROPERTY,
-        DEFAULT_HEALTH_SCRIPT_FAILURE_INTERVAL);
-    String[] args = conf.getStrings(HEALTH_CHECK_SCRIPT_ARGUMENTS_PROPERTY,
+        YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS,
+        YarnConfiguration.DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS);
+    String[] args = conf.getStrings(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_OPTS,
         new String[] {});
     timer = new NodeHealthMonitorExecutor(args);
   }
@@ -340,7 +322,7 @@ public class NodeHealthCheckerService extends AbstractService {
    */
   public static boolean shouldRun(Configuration conf) {
     String nodeHealthScript = 
-      conf.get(HEALTH_CHECK_SCRIPT_PROPERTY);
+      conf.get(YarnConfiguration.NM_HEALTH_CHECK_SCRIPT_PATH);
     if (nodeHealthScript == null || nodeHealthScript.trim().isEmpty()) {
       return false;
     }

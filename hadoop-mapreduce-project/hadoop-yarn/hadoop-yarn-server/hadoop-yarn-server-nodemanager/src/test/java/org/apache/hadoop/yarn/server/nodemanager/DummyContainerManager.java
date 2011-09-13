@@ -20,12 +20,15 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import static org.junit.Assert.fail;
 
+import java.util.Collection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -57,8 +60,8 @@ public class DummyContainerManager extends ContainerManagerImpl {
   
   public DummyContainerManager(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
-      NodeManagerMetrics metrics) {
-    super(context, exec, deletionContext, nodeStatusUpdater, metrics);
+      NodeManagerMetrics metrics, ContainerTokenSecretManager containerTokenSecretManager) {
+    super(context, exec, deletionContext, nodeStatusUpdater, metrics, containerTokenSecretManager);
   }
 
   @Override
@@ -79,14 +82,17 @@ public class DummyContainerManager extends ContainerManagerImpl {
           ContainerLocalizationRequestEvent rsrcReqs =
             (ContainerLocalizationRequestEvent) event;
           // simulate localization of all requested resources
-          for (LocalResourceRequest req : rsrcReqs.getRequestedResources()) {
-            LOG.info("DEBUG: " + req + ":" +
-                rsrcReqs.getContainer().getContainerID());
-            dispatcher.getEventHandler().handle(
-                new ContainerResourceLocalizedEvent(
-                  rsrcReqs.getContainer().getContainerID(), req,
-                  new Path("file:///local" + req.getPath().toUri().getPath())));
-          }
+            for (Collection<LocalResourceRequest> rc : rsrcReqs
+                .getRequestedResources().values()) {
+              for (LocalResourceRequest req : rc) {
+                LOG.info("DEBUG: " + req + ":"
+                    + rsrcReqs.getContainer().getContainerID());
+                dispatcher.getEventHandler().handle(
+                    new ContainerResourceLocalizedEvent(rsrcReqs.getContainer()
+                        .getContainerID(), req, new Path("file:///local"
+                        + req.getPath().toUri().getPath())));
+              }
+            }
           break;
         case CLEANUP_CONTAINER_RESOURCES:
           Container container =

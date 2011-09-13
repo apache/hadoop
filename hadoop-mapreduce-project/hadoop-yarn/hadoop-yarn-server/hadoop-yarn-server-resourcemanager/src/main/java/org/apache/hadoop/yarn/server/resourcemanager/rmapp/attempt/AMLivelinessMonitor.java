@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.RMConfig;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 
 public class AMLivelinessMonitor extends AbstractLivelinessMonitor<ApplicationAttemptId> {
@@ -38,10 +37,10 @@ public class AMLivelinessMonitor extends AbstractLivelinessMonitor<ApplicationAt
 
   public void init(Configuration conf) {
     super.init(conf);
-    setExpireInterval(conf.getInt(YarnConfiguration.AM_EXPIRY_INTERVAL,
-        RMConfig.DEFAULT_AM_EXPIRY_INTERVAL));
-    setMonitorInterval(conf.getInt(RMConfig.AMLIVELINESS_MONITORING_INTERVAL,
-        RMConfig.DEFAULT_AMLIVELINESS_MONITORING_INTERVAL));
+    setExpireInterval(conf.getInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_AM_EXPIRY_INTERVAL_MS));
+    setMonitorInterval(conf.getInt(YarnConfiguration.RM_AM_LIVENESS_MONITOR_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_RM_AM_LIVENESS_MONITOR_INTERVAL_MS));
   }
 
   @Override

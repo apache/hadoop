@@ -17,8 +17,6 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event;
 
-import java.net.URISyntaxException;
-
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 
@@ -26,8 +24,8 @@ public class ResourceReleaseEvent extends ResourceEvent {
 
   private final ContainerId container;
 
-  public ResourceReleaseEvent(LocalResourceRequest rsrc, ContainerId container)
-      throws URISyntaxException {
+  public ResourceReleaseEvent(LocalResourceRequest rsrc, 
+      ContainerId container) {
     super(rsrc, ResourceEventType.RELEASE);
     this.container = container;
   }

@@ -33,7 +33,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -80,7 +79,8 @@ public class AMLauncher implements Runnable {
 
   private final RMAppAttempt application;
   private final Configuration conf;
-  private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private final RecordFactory recordFactory = 
+      RecordFactoryProvider.getRecordFactory(null);
   private final ApplicationTokenSecretManager applicationTokenSecretManager;
   private final ClientToAMSecretManager clientToAMSecretManager;
   private final AMLauncherEventType eventType;
@@ -88,9 +88,9 @@ public class AMLauncher implements Runnable {
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
   
-  @SuppressWarnings("unchecked")
   public AMLauncher(RMContext rmContext, RMAppAttempt application,
-      AMLauncherEventType eventType,ApplicationTokenSecretManager applicationTokenSecretManager,
+      AMLauncherEventType eventType,
+      ApplicationTokenSecretManager applicationTokenSecretManager,
       ClientToAMSecretManager clientToAMSecretManager, Configuration conf) {
     this.application = application;
     this.conf = new Configuration(conf); // Just not to touch the sec-info class
@@ -107,7 +107,8 @@ public class AMLauncher implements Runnable {
     ContainerId masterContainerID = application.getMasterContainer().getId();
     
     containerMgrProxy =
-        getContainerMgrProxy(masterContainerID.getAppId());
+        getContainerMgrProxy(
+            masterContainerID.getApplicationAttemptId().getApplicationId());
   }
   
   private void launch() throws IOException {
@@ -170,12 +171,12 @@ public class AMLauncher implements Runnable {
 
     // Construct the actual Container
     ContainerLaunchContext container = recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    container.addAllCommands(applicationMasterContext.getCommandList());
+    container.setCommands(applicationMasterContext.getCommandList());
     StringBuilder mergedCommand = new StringBuilder();
     String failCount = Integer.toString(application.getAppAttemptId()
         .getAttemptId());
     List<String> commandList = new ArrayList<String>();
-    for (String str : container.getCommandList()) {
+    for (String str : container.getCommands()) {
       // This is out-right wrong. AM FAIL count should be passed via env.
       String result =
           str.replaceFirst(ApplicationConstants.AM_FAIL_COUNT_STRING,
@@ -183,21 +184,21 @@ public class AMLauncher implements Runnable {
       mergedCommand.append(result).append(" ");
       commandList.add(result);
     }
-    container.clearCommands();
-    container.addAllCommands(commandList);
+    container.setCommands(commandList);
     /** add the failed count to the app master command line */
    
     LOG.info("Command to launch container " + 
         containerID + " : " + mergedCommand);
-    container.addAllEnv(applicationMasterContext.getAllEnvironment());
-
-    container.addAllEnv(setupTokensInEnv(applicationMasterContext));
+    Map<String, String> environment = 
+        applicationMasterContext.getAllEnvironment();
+    environment.putAll(setupTokensInEnv(applicationMasterContext));
+    container.setEnv(environment);
 
     // Construct the actual Container
     container.setContainerId(containerID);
     container.setUser(applicationMasterContext.getUser());
     container.setResource(applicationMasterContext.getMasterCapability());
-    container.addAllLocalResources(applicationMasterContext.getAllResourcesTodo());
+    container.setLocalResources(applicationMasterContext.getAllResourcesTodo());
     container.setContainerTokens(applicationMasterContext.getFsTokensTodo());
     return container;
   }
@@ -225,8 +226,8 @@ public class AMLauncher implements Runnable {
           new Token<ApplicationTokenIdentifier>(id,
               this.applicationTokenSecretManager);
       String schedulerAddressStr =
-          this.conf.get(YarnConfiguration.SCHEDULER_ADDRESS,
-              YarnConfiguration.DEFAULT_SCHEDULER_BIND_ADDRESS);
+          this.conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+              YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
       InetSocketAddress unresolvedAddr =
           NetUtils.createSocketAddr(schedulerAddressStr);
       String resolvedAddr =

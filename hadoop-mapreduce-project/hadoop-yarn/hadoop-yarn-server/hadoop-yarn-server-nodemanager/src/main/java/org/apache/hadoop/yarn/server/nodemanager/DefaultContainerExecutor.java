@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
@@ -96,9 +97,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     // create container dirs on all disks
     String containerIdStr = ConverterUtils.toString(containerId);
     String appIdStr =
-        ConverterUtils.toString(container.getContainerID().getAppId());
+        ConverterUtils.toString(
+            container.getContainerID().getApplicationAttemptId().
+                getApplicationId());
     String[] sLocalDirs =
-        getConf().getStrings(NMConfig.NM_LOCAL_DIR, NMConfig.DEFAULT_NM_LOCAL_DIR);
+        getConf().getStrings(YarnConfiguration.NM_LOCAL_DIRS, YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
     for (String sLocalDir : sLocalDirs) {
       Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, userName);
@@ -358,7 +361,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       throws IOException {
     String[] rootLogDirs =
         getConf()
-            .getStrings(NMConfig.NM_LOG_DIR, NMConfig.DEFAULT_NM_LOG_DIR);
+            .getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
     
     boolean appLogDirStatus = false;
     FsPermission appLogDirPerms = new FsPermission(LOGDIR_PERM);
@@ -386,7 +389,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       throws IOException {
     String[] rootLogDirs =
         getConf()
-            .getStrings(NMConfig.NM_LOG_DIR, NMConfig.DEFAULT_NM_LOG_DIR);
+            .getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
     
     boolean containerLogDirStatus = false;
     FsPermission containerLogDirPerms = new FsPermission(LOGDIR_PERM);

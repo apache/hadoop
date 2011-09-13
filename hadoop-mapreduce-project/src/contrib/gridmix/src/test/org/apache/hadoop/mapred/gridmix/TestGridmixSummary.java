@@ -159,7 +159,7 @@ public class TestGridmixSummary {
     
     @Override
     protected Thread createReaderThread() {
-      return null;
+      return new Thread();
     }
   }
   
@@ -243,7 +243,7 @@ public class TestGridmixSummary {
                  tid, es.getInputTraceSignature());
     // test trace location
     Path qPath = fs.makeQualified(testTraceFile);
-    assertEquals("Mismatch in trace signature", 
+    assertEquals("Mismatch in trace filename", 
                  qPath.toString(), es.getInputTraceLocation());
     // test expected data size
     assertEquals("Mismatch in expected data size", 
@@ -275,7 +275,7 @@ public class TestGridmixSummary {
     es.finalize(factory, testTraceFile.toString(), 0L, resolver, dataStats, 
                 conf);
     // test missing expected data size
-    assertEquals("Mismatch in trace signature", 
+    assertEquals("Mismatch in trace data size", 
                  Summarizer.NA, es.getExpectedDataSize());
     assertFalse("Mismatch in trace signature", 
                 tid.equals(es.getInputTraceSignature()));
@@ -295,6 +295,12 @@ public class TestGridmixSummary {
     assertEquals("Mismatch in trace signature", 
                  tid, es.getInputTraceSignature());
     
+    // finalize trace identifier '-' input
+    es.finalize(factory, "-", 0L, resolver, dataStats, conf);
+    assertEquals("Mismatch in trace signature",
+                 Summarizer.NA, es.getInputTraceSignature());
+    assertEquals("Mismatch in trace file location", 
+                 Summarizer.NA, es.getInputTraceLocation());
   }
   
   // test the ExecutionSummarizer

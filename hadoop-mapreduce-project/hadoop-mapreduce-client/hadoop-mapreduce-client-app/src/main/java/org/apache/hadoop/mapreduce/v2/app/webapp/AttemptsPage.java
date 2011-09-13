@@ -57,7 +57,7 @@ public class AttemptsPage extends TaskPage {
       String attemptStateStr = $(ATTEMPT_STATE);
       TaskAttemptStateUI neededState = MRApps
           .taskAttemptState(attemptStateStr);
-      for (Task task : super.app.job.getTasks(taskType).values()) {
+      for (Task task : super.app.getJob().getTasks(taskType).values()) {
         Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
         for (TaskAttempt attempt : attempts.values()) {
           if (neededState.correspondsTo(attempt.getState())) {

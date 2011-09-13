@@ -97,7 +97,7 @@ public abstract class ResourceCalculatorPlugin extends Configured {
   @InterfaceStability.Unstable
   public abstract ProcResourceValues getProcResourceValues();
 
-  public class ProcResourceValues {
+  public static class ProcResourceValues {
     private final long cumulativeCpuTime;
     private final long physicalMemorySize;
     private final long virtualMemorySize;

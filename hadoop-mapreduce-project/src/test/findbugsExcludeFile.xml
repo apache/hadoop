@@ -388,9 +388,4 @@
        <Field name="started" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
     </Match>
-    <Match>
-       <Class name="org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal$DelegationTokenCancelThread" />
-       <Method name="run" />
-       <Bug pattern="DM_EXIT" />
-    </Match>
- </FindBugsFilter>
+  </FindBugsFilter>

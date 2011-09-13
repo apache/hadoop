@@ -85,7 +85,7 @@ public class TestUtils {
    */
   static class SpyHook extends CapacityScheduler.QueueHook {
     @Override
-    public Queue hook(Queue queue) {
+    public CSQueue hook(CSQueue queue) {
       return spy(queue);
     }
   }
@@ -154,8 +154,8 @@ public class TestUtils {
   
   public static ContainerId getMockContainerId(SchedulerApp application) {
     ContainerId containerId = mock(ContainerId.class);
-    doReturn(application.getApplicationAttemptId()).when(containerId).getAppAttemptId();
-    doReturn(application.getApplicationId()).when(containerId).getAppId();
+    doReturn(application.getApplicationAttemptId()).
+    when(containerId).getApplicationAttemptId();
     doReturn(application.getNewContainerId()).when(containerId).getId();
     return containerId;
   }
