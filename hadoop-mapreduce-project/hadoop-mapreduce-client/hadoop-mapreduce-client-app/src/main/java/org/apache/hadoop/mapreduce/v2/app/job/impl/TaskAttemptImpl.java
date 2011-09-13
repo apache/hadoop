@@ -204,6 +204,11 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.FAILED,
          TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
          new DeallocateContainerTransition(TaskAttemptState.FAILED, false))
+     .addTransition(TaskAttemptState.ASSIGNED,
+         TaskAttemptState.FAIL_CONTAINER_CLEANUP,
+         TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+         CLEANUP_CONTAINER_TRANSITION)
+      // ^ If RM kills the container due to expiry, preemption etc. 
      .addTransition(TaskAttemptState.ASSIGNED, 
          TaskAttemptState.KILL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_KILL, CLEANUP_CONTAINER_TRANSITION)
@@ -925,7 +930,8 @@ public abstract class TaskAttemptImpl implements
       try {
         stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitonException e) {
-        LOG.error("Can't handle this event at current state", e);
+        LOG.error("Can't handle this event at current state for "
+            + this.attemptId, e);
         eventHandler.handle(new JobDiagnosticsUpdateEvent(
             this.attemptId.getTaskId().getJobId(), "Invalid event " + event.getType() + 
             " on TaskAttempt " + this.attemptId));

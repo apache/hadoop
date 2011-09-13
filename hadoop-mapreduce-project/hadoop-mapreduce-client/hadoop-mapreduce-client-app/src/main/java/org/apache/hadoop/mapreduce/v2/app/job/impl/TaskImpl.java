@@ -528,7 +528,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       try {
         stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitonException e) {
-        LOG.error("Can't handle this event at current state", e);
+        LOG.error("Can't handle this event at current state for "
+            + this.taskId, e);
         internalError(event.getType());
       }
       if (oldState != getState()) {

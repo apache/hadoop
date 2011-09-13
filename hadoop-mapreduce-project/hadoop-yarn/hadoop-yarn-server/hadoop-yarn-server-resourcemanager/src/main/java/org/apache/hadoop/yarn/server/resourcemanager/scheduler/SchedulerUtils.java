@@ -46,7 +46,7 @@ public class SchedulerUtils {
       "Container of a completed application";
   
   public static final String EXPIRED_CONTAINER =
-      "Container expired since it unused";
+      "Container expired since it was unused";
   
   public static final String UNRESERVED_CONTAINER =
       "Container reservation no longer required.";
