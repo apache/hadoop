@@ -367,6 +367,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7612. Change test-patch to run tests for all nested modules.
     (tomwhite)
 
+    HADOOP-7599. Script improvements to setup a secure Hadoop cluster
+    (Eric Yang via ddas)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

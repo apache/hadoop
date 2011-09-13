@@ -17,15 +17,15 @@
 
 # Script for setup HDFS file system for single node deployment
 
-bin=`which $0`
-bin=`dirname ${bin}`
+bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-export HADOOP_PREFIX=${bin}/..
-
-if [ -e /etc/hadoop/hadoop-env.sh ]; then
-  . /etc/hadoop/hadoop-env.sh
+if [ "$HADOOP_HOME" != "" ]; then
+  echo "Warning: \$HADOOP_HOME is deprecated."
+  echo
 fi
+
+. "$bin"/../libexec/hadoop-config.sh
 
 usage() {
   echo "
@@ -38,7 +38,19 @@ usage: $0 <parameters>
   exit 1
 }
 
-# Parse script parameters
+template_generator() {
+  REGEX='(\$\{[a-zA-Z_][a-zA-Z_0-9]*\})'
+  cat $1 |
+  while read line ; do
+    while [[ "$line" =~ $REGEX ]] ; do
+      LHS=${BASH_REMATCH[1]}
+      RHS="$(eval echo "\"$LHS\"")"
+      line=${line//$LHS/$RHS}
+    done
+    echo $line >> $2
+  done
+}
+
 OPTS=$(getopt \
   -n $0 \
   -o '' \
@@ -47,6 +59,10 @@ OPTS=$(getopt \
 
 if [ $? != 0 ] ; then
     usage
+fi
+
+if [ -e /etc/hadoop/hadoop-env.sh ]; then
+  . /etc/hadoop/hadoop-env.sh
 fi
 
 eval set -- "${OPTS}"
@@ -69,7 +85,6 @@ while true ; do
   esac
 done
 
-# Interactive setup wizard
 if [ "${AUTOMATED}" != "1" ]; then
   echo "Welcome to Hadoop single node setup wizard"
   echo
@@ -119,68 +134,59 @@ SET_REBOOT=${SET_REBOOT:-y}
 /etc/init.d/hadoop-jobtracker stop 2>/dev/null >/dev/null
 /etc/init.d/hadoop-tasktracker stop 2>/dev/null >/dev/null
 
-# Default settings
-JAVA_HOME=${JAVA_HOME:-/usr/java/default}
-HADOOP_NN_HOST=${HADOOP_NN_HOST:-hdfs://localhost:9000/}
-HADOOP_NN_DIR=${HADOOP_NN_DIR:-/var/lib/hadoop/hdfs/namenode}
-HADOOP_DN_DIR=${HADOOP_DN_DIR:-/var/lib/hadoop/hdfs/datanode}
-HADOOP_JT_HOST=${HADOOP_JT_HOST:-localhost:9001}
-HADOOP_HDFS_DIR=${HADOOP_MAPRED_DIR:-/var/lib/hadoop/hdfs}
-HADOOP_MAPRED_DIR=${HADOOP_MAPRED_DIR:-/var/lib/hadoop/mapred}
-HADOOP_LOG_DIR="/var/log/hadoop"
-HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/etc/hadoop}
-HADOOP_REPLICATION=${HADOOP_RELICATION:-1}
-HADOOP_TASK_SCHEDULER=${HADOOP_TASK_SCHEDULER:-org.apache.hadoop.mapred.JobQueueTaskScheduler}
-
-# Setup config files
 if [ "${SET_CONFIG}" == "y" ]; then
+  JAVA_HOME=${JAVA_HOME:-/usr/java/default}
+  HADOOP_NN_HOST=${HADOOP_NN_HOST:-localhost}
+  HADOOP_NN_DIR=${HADOOP_NN_DIR:-/var/lib/hadoop/hdfs/namenode}
+  HADOOP_DN_DIR=${HADOOP_DN_DIR:-/var/lib/hadoop/hdfs/datanode}
+  HADOOP_JT_HOST=${HADOOP_JT_HOST:-localhost}
+  HADOOP_HDFS_DIR=${HADOOP_MAPRED_DIR:-/var/lib/hadoop/hdfs}
+  HADOOP_MAPRED_DIR=${HADOOP_MAPRED_DIR:-/var/lib/hadoop/mapred}
+  HADOOP_PID_DIR=${HADOOP_PID_DIR:-/var/run/hadoop}
+  HADOOP_LOG_DIR="/var/log/hadoop"
+  HADOOP_CONF_DIR=${HADOOP_CONF_DIR:-/etc/hadoop}
+  HADOOP_REPLICATION=${HADOOP_RELICATION:-1}
   ${HADOOP_PREFIX}/sbin/hadoop-setup-conf.sh --auto \
+    --hdfs-user=hdfs \
+    --mapreduce-user=mapred \
     --conf-dir=${HADOOP_CONF_DIR} \
     --datanode-dir=${HADOOP_DN_DIR} \
     --hdfs-dir=${HADOOP_HDFS_DIR} \
-    --jobtracker-url=${HADOOP_JT_HOST} \
+    --jobtracker-host=${HADOOP_JT_HOST} \
     --log-dir=${HADOOP_LOG_DIR} \
+    --pid-dir=${HADOOP_PID_DIR} \
     --mapred-dir=${HADOOP_MAPRED_DIR} \
     --namenode-dir=${HADOOP_NN_DIR} \
-    --namenode-url=${HADOOP_NN_HOST} \
+    --namenode-host=${HADOOP_NN_HOST} \
     --replication=${HADOOP_REPLICATION}
 fi
 
-export HADOOP_CONF_DIR
-
-# Format namenode
 if [ ! -e ${HADOOP_NN_DIR} ]; then
   rm -rf ${HADOOP_HDFS_DIR} 2>/dev/null >/dev/null
   mkdir -p ${HADOOP_HDFS_DIR}
   chmod 755 ${HADOOP_HDFS_DIR}
   chown hdfs:hadoop ${HADOOP_HDFS_DIR}
-  su -c '${HADOOP_PREFIX}/bin/hdfs --config ${HADOOP_CONF_DIR} namenode -format -clusterid hadoop' hdfs
+  /etc/init.d/hadoop-namenode format
 elif [ "${SET_FORMAT}" == "y" ]; then
   rm -rf ${HADOOP_HDFS_DIR} 2>/dev/null >/dev/null
   mkdir -p ${HADOOP_HDFS_DIR}
   chmod 755 ${HADOOP_HDFS_DIR}
   chown hdfs:hadoop ${HADOOP_HDFS_DIR}
-  rm -rf /var/lib/hadoop/hdfs/namenode
-  su -c '${HADOOP_PREFIX}/bin/hdfs --config ${HADOOP_CONF_DIR} namenode -format -clusterid hadoop' hdfs
+  rm -rf ${HADOOP_NN_DIR}
+  /etc/init.d/hadoop-namenode format
 fi
 
-# Start hdfs service
 /etc/init.d/hadoop-namenode start
 /etc/init.d/hadoop-datanode start
 
-# Initialize file system structure
-su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} fs -mkdir /user/mapred' hdfs
-su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} fs -chown mapred:mapred /user/mapred' hdfs
-su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} fs -mkdir /tmp' hdfs
-su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} fs -chmod 777 /tmp' hdfs
-su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} fs -mkdir /jobtracker' hdfs
-su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} fs -chown mapred:mapred /jobtracker' hdfs
+su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} dfs -mkdir /user/mapred' hdfs
+su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} dfs -chown mapred:mapred /user/mapred' hdfs
+su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} dfs -mkdir /tmp' hdfs
+su -c '${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} dfs -chmod 777 /tmp' hdfs
 
-# Start mapreduce service
 /etc/init.d/hadoop-jobtracker start
 /etc/init.d/hadoop-tasktracker start
 
-# Toggle service startup on reboot
 if [ "${SET_REBOOT}" == "y" ]; then
   if [ -e /etc/debian_version ]; then
     ln -sf ../init.d/hadoop-namenode /etc/rc2.d/S90hadoop-namenode
@@ -203,7 +209,6 @@ if [ "${SET_REBOOT}" == "y" ]; then
   fi
 fi
 
-# Shutdown service, if user choose to stop services after setup
 if [ "${STARTUP}" != "y" ]; then
   /etc/init.d/hadoop-namenode stop
   /etc/init.d/hadoop-datanode stop
