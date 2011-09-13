@@ -26,12 +26,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Map;
 
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.ByteRangeInputStream;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -102,12 +105,11 @@ public class WebHdfsFileSystem extends HftpFileSystem {
   }
 
   @SuppressWarnings("unchecked")
-  private static Map<String, Object> jsonParse(final InputStream in
-      ) throws IOException {
+  private static <T> T jsonParse(final InputStream in) throws IOException {
     if (in == null) {
       throw new IOException("The input stream is null.");
     }
-    return (Map<String, Object>)JSON.parse(new InputStreamReader(in));
+    return (T)JSON.parse(new InputStreamReader(in));
   }
 
   private static void validateResponse(final HttpOpParam.Op op,
@@ -118,7 +120,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
       try {
         m = jsonParse(conn.getErrorStream());
       } catch(IOException e) {
-        throw new IOException("Unexpected HTTP response: code = " + code + " != "
+        throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
             + ", message=" + conn.getResponseMessage(), e);
       }
@@ -132,14 +134,43 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     }
   }
 
-  private HttpURLConnection httpConnect(final HttpOpParam.Op op, final Path fspath,
+  /**
+   * Return a URL pointing to given path on the namenode.
+   *
+   * @param path to obtain the URL for
+   * @param query string to append to the path
+   * @return namenode URL referring to the given path
+   * @throws IOException on error constructing the URL
+   */
+  protected URL getNamenodeURL(String path, String query) throws IOException {
+    final URL url = new URL("http", nnAddr.getHostName(),
+          nnAddr.getPort(), path + '?' + query);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("url=" + url);
+    }
+    return url;
+  }
+
+  private URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
-    final String uripath = "/" + PATH_PREFIX + makeQualified(fspath).toUri().getPath();
-    final String query = op.toQueryString() + Param.toSortedString("&", parameters);
+    final String path = "/" + PATH_PREFIX
+        + makeQualified(fspath).toUri().getPath();
+    final String query = op.toQueryString()
+        + Param.toSortedString("&", parameters);
+    final URL url = getNamenodeURL(path, query);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("url=" + url);
+    }
+    return url;
+  }
+
+  private HttpURLConnection httpConnect(final HttpOpParam.Op op, final Path fspath,
+      final Param<?,?>... parameters) throws IOException {
+    final URL url = toUrl(op, fspath, parameters);
 
     //connect and get response
-    final HttpURLConnection conn = openConnection(uripath, query);
+    final HttpURLConnection conn = (HttpURLConnection)url.openConnection();
     try {
       conn.setRequestMethod(op.getType().toString());
       conn.setDoOutput(op.getDoOutput());
@@ -155,7 +186,17 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     }
   }
 
-  private Map<String, Object> run(final HttpOpParam.Op op, final Path fspath,
+  /**
+   * Run a http operation.
+   * Connect to the http server, validate response, and obtain the JSON output.
+   * 
+   * @param op http operation
+   * @param fspath file system path
+   * @param parameters parameters for the operation
+   * @return a JSON object, e.g. Object[], Map<String, Object>, etc.
+   * @throws IOException
+   */
+  private <T> T run(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     final HttpURLConnection conn = httpConnect(op, fspath, parameters);
     validateResponse(op, conn);
@@ -300,5 +341,31 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETE;
     final Map<String, Object> json = run(op, f, new RecursiveParam(recursive));
     return (Boolean)json.get(op.toString());
+  }
+
+  @Override
+  public FSDataInputStream open(final Path f, final int buffersize
+      ) throws IOException {
+    statistics.incrementReadOps(1);
+    final HttpOpParam.Op op = GetOpParam.Op.OPEN;
+    final URL url = toUrl(op, f, new BufferSizeParam(buffersize));
+    return new FSDataInputStream(new ByteRangeInputStream(url));
+  }
+
+  @Override
+  public FileStatus[] listStatus(final Path f) throws IOException {
+    statistics.incrementReadOps(1);
+
+    final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
+    final Object[] array = run(op, f);
+
+    //convert FileStatus
+    final FileStatus[] statuses = new FileStatus[array.length];
+    for(int i = 0; i < array.length; i++) {
+      @SuppressWarnings("unchecked")
+      final Map<String, Object> m = (Map<String, Object>)array[i];
+      statuses[i] = makeQualified(JsonUtil.toFileStatus(m), f);
+    }
+    return statuses;
   }
 }

@@ -100,6 +100,44 @@ public class IOUtils {
     copyBytes(in, out, conf.getInt("io.file.buffer.size", 4096),  close);
   }
   
+  /**
+   * Copies the specified length of bytes from in to out.
+   *
+   * @param in InputStream to read from
+   * @param out OutputStream to write to
+   * @param length number of bytes to copy
+   * @param bufferSize the size of the buffer 
+   * @param close whether to close the streams
+   * @throws IOException if bytes can not be read or written
+   */
+  public static void copyBytes(InputStream in, OutputStream out,
+      final long length, final int bufferSize, final boolean close
+      ) throws IOException {
+    final byte buf[] = new byte[bufferSize];
+    try {
+      int n = 0;
+      for(long remaining = length; remaining > 0 && n != -1; remaining -= n) {
+        final int toRead = remaining < buf.length? (int)remaining : buf.length;
+        n = in.read(buf, 0, toRead);
+        if (n > 0) {
+          out.write(buf, 0, n);
+        }
+      }
+
+      if (close) {
+        out.close();
+        out = null;
+        in.close();
+        in = null;
+      }
+    } finally {
+      if (close) {
+        closeStream(out);
+        closeStream(in);
+      }
+    }
+  }
+
   /** Reads len bytes in a loop.
    * @param in The InputStream to read from
    * @param buf The buffer to fill

@@ -42,6 +42,8 @@ Release 0.20.205.0 - unreleased
     HDFS-2284. Add a new FileSystem, webhdfs://, for supporting write Http
     access to HDFS.  (szetszwo)
 
+    HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken
