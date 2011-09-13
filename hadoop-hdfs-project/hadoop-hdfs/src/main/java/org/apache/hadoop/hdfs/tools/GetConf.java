@@ -227,7 +227,10 @@ public class GetConf extends Configured implements Tool {
   void printList(List<InetSocketAddress> list) {
     StringBuilder buffer = new StringBuilder();
     for (InetSocketAddress address : list) {
-      buffer.append(address.getHostName()).append(" ");
+      if (buffer.length() > 0) {
+        buffer.append(" ");
+      }
+      buffer.append(address.getHostName());
     }
     printOut(buffer.toString());
   }

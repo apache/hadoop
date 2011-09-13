@@ -1034,7 +1034,9 @@ Release 0.23.0 - Unreleased
     (todd)
 
     HDFS-2289. Ensure jsvc is bundled with the HDFS distribution artifact.
-    (Alejandro Abdelnur via acmurthy) 
+    (Alejandro Abdelnur via acmurthy)
+
+    HDFS-2323. start-dfs.sh script fails for tarball install (tomwhite)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
