@@ -582,6 +582,8 @@ Release 0.90.5 - Unreleased
                for a region (todd)
    HBASE-4313  Refactor TestHBaseFsck to make adding individual hbck tests
                easier (Jonathan Hsieh)
+   HBASE-4272. Add -metaonly flag to hbck feature to only inspect and try
+               to repair META and ROOT. (todd)
 
 Release 0.90.4 - August 10, 2011
 
