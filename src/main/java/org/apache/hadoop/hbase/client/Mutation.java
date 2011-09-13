@@ -32,6 +32,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public abstract class Mutation extends OperationWithAttributes {
+  // Attribute used in Mutations to indicate the originating cluster.
+  private static final String CLUSTER_ID_ATTR = "_c.id_";
+
   protected byte [] row = null;
   protected long ts = HConstants.LATEST_TIMESTAMP;
   protected long lockId = -1L;
@@ -179,14 +182,14 @@ public abstract class Mutation extends OperationWithAttributes {
     byte[] val = new byte[2*Bytes.SIZEOF_LONG];
     Bytes.putLong(val, 0, clusterId.getMostSignificantBits());
     Bytes.putLong(val, Bytes.SIZEOF_LONG, clusterId.getLeastSignificantBits());
-    setAttribute(HConstants.CLUSTER_ID_ATTR, val);
+    setAttribute(CLUSTER_ID_ATTR, val);
   }
 
   /**
    * @return The replication cluster id.
    */
   public UUID getClusterId() {
-    byte[] attr = getAttribute(HConstants.CLUSTER_ID_ATTR);
+    byte[] attr = getAttribute(CLUSTER_ID_ATTR);
     if (attr == null) {
       return HConstants.DEFAULT_CLUSTER_ID;
     }
