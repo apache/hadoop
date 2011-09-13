@@ -1306,6 +1306,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2874. Fix formatting of ApplicationId in web-ui. (Eric Payne via
    acmurthy)
 
+   MAPREDUCE-2995. Better handling of expired containers in MapReduce
+   ApplicationMaster. (vinodkv via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
