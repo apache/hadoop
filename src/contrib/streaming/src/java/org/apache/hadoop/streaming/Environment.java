@@ -22,6 +22,8 @@ import java.io.*;
 import java.net.InetAddress;
 import java.util.*;
 
+import org.apache.hadoop.io.IOUtils;
+
 /**
  * This is a class used to get the current environment
  * on the host machines running the map/reduce. This class
@@ -57,17 +59,23 @@ public class Environment extends Properties {
 
     Process pid = Runtime.getRuntime().exec(command);
     BufferedReader in = new BufferedReader(new InputStreamReader(pid.getInputStream()));
-    while (true) {
-      String line = in.readLine();
-      if (line == null) break;
-      int p = line.indexOf("=");
-      if (p != -1) {
-        String name = line.substring(0, p);
-        String value = line.substring(p + 1);
-        setProperty(name, value);
+    try {
+      while (true) {
+        String line = in.readLine();
+        if (line == null)
+          break;
+        int p = line.indexOf("=");
+        if (p != -1) {
+          String name = line.substring(0, p);
+          String value = line.substring(p + 1);
+          setProperty(name, value);
+        }
       }
+      in.close();
+      in = null;
+    } finally {
+      IOUtils.closeStream(in);
     }
-    in.close();
     try {
       pid.waitFor();
     } catch (InterruptedException e) {

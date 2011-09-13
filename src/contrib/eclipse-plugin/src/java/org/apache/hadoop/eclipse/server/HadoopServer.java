@@ -36,6 +36,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.eclipse.Activator;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
@@ -420,8 +421,13 @@ public class HadoopServer {
    */
   public void storeSettingsToFile(File file) throws IOException {
     FileOutputStream fos = new FileOutputStream(file);
-    this.conf.writeXml(fos);
-    fos.close();
+    try {
+      this.conf.writeXml(fos);
+      fos.close();
+      fos = null;
+    } finally {
+      IOUtils.closeStream(fos);
+    }
   }
 
   /* @inheritDoc */
