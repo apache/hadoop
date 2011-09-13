@@ -177,11 +177,12 @@ public class AppController extends Controller implements AMParams {
         }
         setTitle(join(attemptState, " ",
             MRApps.taskType(taskType).toString(), " attempts in ", $(JOB_ID)));
+
+        render(attemptsPage());
       } catch (Exception e) {
         badRequest(e.getMessage());
       }
     }
-    render(attemptsPage());
   }
 
   /**
@@ -205,7 +206,7 @@ public class AppController extends Controller implements AMParams {
   /**
    * Ensure that a JOB_ID was passed into the page.
    */
-  void requireJob() {
+  public void requireJob() {
     try {
       if ($(JOB_ID).isEmpty()) {
         throw new RuntimeException("missing job ID");
@@ -216,14 +217,15 @@ public class AppController extends Controller implements AMParams {
         notFound($(JOB_ID));
       }
     } catch (Exception e) {
-      badRequest(e.getMessage() == null ? e.getClass().getName() : e.getMessage());
+      badRequest(e.getMessage() == null ? 
+          e.getClass().getName() : e.getMessage());
     }
   }
 
   /**
    * Ensure that a TASK_ID was passed into the page.
    */
-  void requireTask() {
+  public void requireTask() {
     try {
       if ($(TASK_ID).isEmpty()) {
         throw new RuntimeException("missing task ID");

@@ -70,15 +70,17 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   private final Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
   private final Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
   private final String user;
+  private final Path confFile;
   
   private List<TaskAttemptCompletionEvent> completionEvents = null;
   private JobInfo jobInfo;
 
   public CompletedJob(Configuration conf, JobId jobId, Path historyFile, 
-      boolean loadTasks, String userName) throws IOException {
+      boolean loadTasks, String userName, Path confFile) throws IOException {
     LOG.info("Loading job: " + jobId + " from file: " + historyFile);
     this.conf = conf;
     this.jobId = jobId;
+    this.confFile = confFile;
     
     loadFullHistoryData(loadTasks, historyFile);
 
@@ -304,8 +306,26 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
         jobInfo.getUsername(), jobACL);
   }
   
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getJobACLs()
+   */
+  @Override
+  public  Map<JobACL, AccessControlList> getJobACLs() {
+    return jobInfo.getJobACLs();
+  }
+  
   @Override
   public String getUserName() {
     return user;
+  }
+
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getConfFile()
+   */
+  @Override
+  public Path getConfFile() {
+    return confFile;
   }
 }

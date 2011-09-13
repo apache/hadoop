@@ -772,6 +772,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return userName;
   }
   
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getConfFile()
+   */
+  @Override
+  public Path getConfFile() {
+    return remoteJobConfFile;
+  }
+  
   @Override
   public String getName() {
     return jobName;
@@ -786,6 +795,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public int getTotalReduces() {
     return reduceTasks.size();  //FIXME: why indirection? return numReduceTasks
+  }
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getJobACLs()
+   */
+  @Override
+  public Map<JobACL, AccessControlList> getJobACLs() {
+    return Collections.unmodifiableMap(jobACLs);
   }
 
   public static class InitTransition 
