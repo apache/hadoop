@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.percent;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
@@ -73,7 +72,6 @@ public class HsTaskPage extends HsView {
         thead().
           tr().
             th(".id", "Attempt").
-            th(".progress", "Progress").
             th(".state", "State").
             th(".node", "node").
             th(".tsh", "Started").
@@ -83,7 +81,6 @@ public class HsTaskPage extends HsView {
         tbody();
       for (TaskAttempt ta : getTaskAttempts()) {
         String taid = MRApps.toString(ta.getID());
-        String progress = percent(ta.getProgress());
         ContainerId containerId = ta.getAssignedContainerID();
 
         String nodeHttpAddr = ta.getNodeHttpAddress();
@@ -93,7 +90,6 @@ public class HsTaskPage extends HsView {
         TD<TR<TBODY<TABLE<Hamlet>>>> nodeTd = tbody.
           tr().
             td(".id", taid).
-            td(".progress", progress).
             td(".state", ta.getState().toString()).
             td().
               a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);

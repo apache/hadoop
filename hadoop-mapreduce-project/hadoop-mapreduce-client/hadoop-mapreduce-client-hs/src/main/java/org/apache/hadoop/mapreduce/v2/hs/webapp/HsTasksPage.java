@@ -24,7 +24,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.TasksBlock;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
@@ -46,10 +45,10 @@ public class HsTasksPage extends HsView {
 
   /**
    * The content of this page is the TasksBlock
-   * @return TasksBlock.class
+   * @return HsTasksBlock.class
    */
   @Override protected Class<? extends SubView> content() {
-    return TasksBlock.class;
+    return HsTasksBlock.class;
   }
 
   /**

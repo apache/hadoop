@@ -19,10 +19,16 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.APP_ID;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.ATTEMPT_STATE;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
 import static org.junit.Assert.assertEquals;
 
+import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
@@ -31,13 +37,13 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 
 import com.google.inject.Injector;
 
 public class TestHSWebApp {
+  private static final Log LOG = LogFactory.getLog(TestHSWebApp.class);
 
   static class TestAppContext implements AppContext {
     final ApplicationAttemptId appAttemptID;
@@ -111,16 +117,43 @@ public class TestHSWebApp {
   }
 
   @Test public void testJobView() {
+    LOG.info("HsJobPage");
     WebAppTests.testPage(HsJobPage.class, AppContext.class, new TestAppContext());
   }
 
   @Test public void testTasksView() {
+    LOG.info("HsTasksPage");
     WebAppTests.testPage(HsTasksPage.class, AppContext.class,
                          new TestAppContext());
   }
 
   @Test public void testTaskView() {
+    LOG.info("HsTaskPage");
     WebAppTests.testPage(HsTaskPage.class, AppContext.class,
+                         new TestAppContext());
+  }
+
+  @Test public void testAttemptsWithJobView() {
+    LOG.info("HsAttemptsPage with data");
+    TestAppContext ctx = new TestAppContext();
+    JobId id = ctx.getAllJobs().keySet().iterator().next();
+    Map<String, String> params = new HashMap<String,String>();
+    params.put(JOB_ID, id.toString());
+    params.put(TASK_TYPE, "m");
+    params.put(ATTEMPT_STATE, "SUCCESSFUL");
+    WebAppTests.testPage(HsAttemptsPage.class, AppContext.class,
+        ctx, params);
+  }
+  
+  @Test public void testAttemptsView() {
+    LOG.info("HsAttemptsPage");
+    WebAppTests.testPage(HsAttemptsPage.class, AppContext.class,
+                         new TestAppContext());
+  }
+  
+  @Test public void testConfView() {
+    LOG.info("HsConfPage");
+    WebAppTests.testPage(HsConfPage.class, AppContext.class,
                          new TestAppContext());
   }
 }

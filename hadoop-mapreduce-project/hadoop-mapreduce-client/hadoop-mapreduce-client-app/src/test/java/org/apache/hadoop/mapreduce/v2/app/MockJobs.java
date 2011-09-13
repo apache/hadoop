@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -50,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -463,6 +465,16 @@ public class MockJobs extends MockApps {
 
       @Override
       public String getUserName() {
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
+
+      @Override
+      public Path getConfFile() {
+        throw new UnsupportedOperationException("Not supported yet.");
+      }
+
+      @Override
+      public Map<JobACL, AccessControlList> getJobACLs() {
         throw new UnsupportedOperationException("Not supported yet.");
       }
     };

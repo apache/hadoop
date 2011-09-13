@@ -52,6 +52,7 @@ public class HsNavBlock extends HtmlBlock {
         ul().
           li().a(url("job", jobid), "Overview")._().
           li().a(url("jobcounters", jobid), "Counters")._().
+          li().a(url("conf", jobid), "Configuration")._().
           li().a(url("tasks", jobid, "m"), "Map tasks")._().
           li().a(url("tasks", jobid, "r"), "Reduce tasks")._()._();
     }

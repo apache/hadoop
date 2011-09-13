@@ -286,6 +286,9 @@ Release 0.23.0 - Unreleased
     org.apache.hadoop.yarn.api.records.* to be get/set only. Added javadocs to
     all public records. (acmurthy)
 
+    MAPREDUCE-2676. MR-279: JobHistory Job page needs reformatted. (Robert Evans via 
+    mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
