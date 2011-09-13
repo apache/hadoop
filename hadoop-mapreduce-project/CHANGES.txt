@@ -1280,6 +1280,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2995. Better handling of expired containers in MapReduce
    ApplicationMaster. (vinodkv via acmurthy) 
 
+   MAPREDUCE-2995. Fixed race condition in ContainerLauncher. (vinodkv via 
+   acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
