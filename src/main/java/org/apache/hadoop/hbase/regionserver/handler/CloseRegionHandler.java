@@ -186,7 +186,7 @@ public class CloseRegionHandler extends EventHandler {
       }
     } catch (KeeperException e) {
       LOG.warn("Error creating node in CLOSING state, aborting close of " +
-        regionInfo.getRegionNameAsString());
+        regionInfo.getRegionNameAsString(), e);
     }
     return expectedVersion;
   }

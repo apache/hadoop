@@ -588,6 +588,8 @@ Release 0.90.5 - Unreleased
                to repair META and ROOT. (todd)
    HBASE-4321. Add a more comprehensive region split calculator for future use
                in hbck. (Jonathan Hsieh)
+   HBASE-4384  Hard to tell what causes failure in CloseRegionHandler#getCurrentVersion
+               (Harsh J)
 
 Release 0.90.4 - August 10, 2011
 
