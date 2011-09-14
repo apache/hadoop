@@ -474,6 +474,8 @@ Release 0.91.0 - Unreleased
                (ramkrishna.s.vasudevan)
    HBASE-4347  Remove duplicated code from Put, Delete, Get, Scan, MultiPut
                (Lars Hofhansl)
+   HBASE-4359  Show dead RegionServer names in the HMaster info page
+               (Harsh J)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

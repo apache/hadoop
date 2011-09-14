@@ -24,6 +24,7 @@ Map<String, Integer> frags = null;
 ServerName rootLocation = null;
 ServerName metaLocation = null;
 List<ServerName> servers = null;
+Set<ServerName> deadServers = null;
 boolean showAppendWarning = false;
 String filter = "general";
 String format = "html";
@@ -110,6 +111,9 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </%if>
 <%if (servers != null) %>
 <& regionServers &>
+</%if>
+<%if (deadServers != null) %>
+<& deadRegionServers &>
 </%if>
 
 <& AssignmentManagerStatusTmpl; assignmentManager=master.getAssignmentManager()&>
@@ -213,5 +217,28 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </table>
 
 <p>Load is requests per second and count of regions loaded</p>
+</%if>
+</%def>
+
+<%def deadRegionServers>
+<h2>Dead Region Servers</h2>
+<%if (deadServers != null && deadServers.size() > 0)%>
+
+<table>
+<tr><th rowspan="<% deadServers.size() + 1%>"></th><th>Address</th><th>Start Code</th></tr>
+<%java>
+   ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
+     Arrays.sort(deadServerNames);
+     for (ServerName deadServerName: deadServerNames) {
+       int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
+       String hostname = deadServerName.getHostname() + ":" + infoPort;
+       long startcode = deadServerName.getStartcode();
+</%java>
+<tr><td><% hostname %></td><td><% startcode %></tr>
+<%java>
+    }
+</%java>
+<tr><th>Total: </th><td>servers: <% deadServers.size() %></td></tr>
+</table>
 </%if>
 </%def>

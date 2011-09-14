@@ -23,8 +23,10 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -134,11 +136,17 @@ public class TestMasterStatusServlet {
     List<ServerName> servers = Lists.newArrayList(
         new ServerName("rootserver:123,12345"),
         new ServerName("metaserver:123,12345"));
-                  
+    Set<ServerName> deadServers = new HashSet<ServerName>(
+        Lists.newArrayList(
+        new ServerName("badserver:123,12345"),
+        new ServerName("uglyserver:123,12345"))
+    );
+
     new MasterStatusTmpl()
       .setRootLocation(new ServerName("rootserver:123,12345"))
       .setMetaLocation(new ServerName("metaserver:123,12345"))
       .setServers(servers)
+      .setDeadServers(deadServers)
       .render(new StringWriter(),
         master, admin);
   }
