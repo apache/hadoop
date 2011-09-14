@@ -1324,6 +1324,9 @@ Release 0.23.0 - Unreleased
    MAPREDUCE-2949. Fixed NodeManager to shut-down correctly if a service
    startup fails. (Ravi Teja via vinodkv)
 
+   MAPREDUCE-3005. Fix both FifoScheduler and CapacityScheduler to correctly
+   enforce locality constraints. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

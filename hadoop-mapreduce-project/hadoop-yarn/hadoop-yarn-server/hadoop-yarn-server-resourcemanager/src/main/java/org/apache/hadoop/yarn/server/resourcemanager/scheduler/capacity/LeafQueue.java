@@ -1023,21 +1023,17 @@ public class LeafQueue implements CSQueue {
     // Check if we need containers on this rack 
     ResourceRequest rackLocalRequest = 
       application.getResourceRequest(priority, node.getRackName());
+    if (rackLocalRequest == null || rackLocalRequest.getNumContainers() <= 0) {
+      return false;
+    }
+      
+    // If we are here, we do need containers on this rack for RACK_LOCAL req
     if (type == NodeType.RACK_LOCAL) {
-      if (rackLocalRequest == null) {
-        return false;
-      } else {
-        return rackLocalRequest.getNumContainers() > 0;      
-      }
+      return true;
     }
 
     // Check if we need containers on this host
     if (type == NodeType.NODE_LOCAL) {
-      // First: Do we need containers on this rack?
-      if (rackLocalRequest != null && rackLocalRequest.getNumContainers() == 0) {
-        return false;
-      }
-      
       // Now check if we need containers on this host...
       ResourceRequest nodeLocalRequest = 
         application.getResourceRequest(priority, node.getHostName());
