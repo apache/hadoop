@@ -260,6 +260,7 @@ Release 0.91.0 - Unreleased
                HTable client (Lars Hofhansl via garyh)
    HBASE-4340  Hbase can't balance if ServerShutdownHandler encountered
                exception (Jinchao Gao)
+   HBASE-4394  Add support for seeking hints to FilterList
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
