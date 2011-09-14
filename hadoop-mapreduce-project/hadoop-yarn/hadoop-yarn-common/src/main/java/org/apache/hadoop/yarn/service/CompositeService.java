@@ -67,28 +67,59 @@ public class CompositeService extends AbstractService {
         Service service = serviceList.get(i);
         service.start();
       }
-    } catch(Throwable e) {
+      super.start();
+    } catch (Throwable e) {
       LOG.error("Error starting services " + getName(), e);
-      for (int j = i-1; j >= 0; j--) {
-        Service service = serviceList.get(j);
-        try {
-          service.stop();
-        } catch(Throwable t) {
-          LOG.info("Error stopping " + service.getName(), t);
-        }
-      }
+      // Note that the state of the failed service is still INITED and not
+      // STARTED. Even though the last service is not started completely, still
+      // call stop() on all services including failed service to make sure cleanup
+      // happens.
+      stop(i);
       throw new YarnException("Failed to Start " + getName(), e);
     }
-    super.start();
+
   }
 
   public synchronized void stop() {
-    //stop in reserve order of start
-    for (int i = serviceList.size() - 1; i >= 0; i--) {
-      Service service = serviceList.get(i);
-      service.stop();
+    if (serviceList.size() > 0) {
+      stop(serviceList.size() - 1);
     }
     super.stop();
   }
 
+  private synchronized void stop(int numOfServicesStarted) {
+    // stop in reserve order of start
+    for (int i = numOfServicesStarted; i >= 0; i--) {
+      Service service = serviceList.get(i);
+      try {
+        service.stop();
+      } catch (Throwable t) {
+        LOG.info("Error stopping " + service.getName(), t);
+      }
+    }
+  }
+
+  /**
+   * JVM Shutdown hook for CompositeService which will stop the give
+   * CompositeService gracefully in case of JVM shutdown.
+   */
+  public static class CompositeServiceShutdownHook extends Thread {
+
+    private CompositeService compositeService;
+
+    public CompositeServiceShutdownHook(CompositeService compositeService) {
+      this.compositeService = compositeService;
+    }
+
+    @Override
+    public void run() {
+      try {
+        // Stop the Composite Service
+        compositeService.stop();
+      } catch (Throwable t) {
+        LOG.info("Error stopping " + compositeService.getName(), t);
+      }
+    }
+  }
+  
 }
