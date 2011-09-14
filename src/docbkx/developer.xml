@@ -88,6 +88,12 @@ Access restriction: The method arrayIndexScale(Class) from the type Unsafe is no
 Access restriction: The method getLong(Object, long) from the type Unsafe is not accessible due to restriction on required library /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Classes/classes.jar	Bytes.java	/hbase/src/main/java/org/apache/hadoop/hbase/util	line 1111	Java Problem
              </programlisting>   
              </section>
+             <section xml:id="eclipse.more">
+             <title>Eclipse - More Information</title>
+             <para>For additional information on setting up Eclipse for HBase development on Windows, see 
+             <link xlink:href="http://michaelmorello.blogspot.com/2011/09/hbase-subversion-eclipse-windows.html">Michael Morello's blog</link> on the topic.
+             </para>
+             </section>
         </section>
     </section> 
     <section xml:id="maven.build.commands"> 
