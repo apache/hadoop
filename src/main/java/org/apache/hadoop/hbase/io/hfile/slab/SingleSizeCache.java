@@ -19,12 +19,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile.slab;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -94,24 +92,9 @@ public class SingleSizeCache implements BlockCache {
     MapEvictionListener<String, CacheablePair> listener = new MapEvictionListener<String, CacheablePair>() {
       @Override
       public void onEviction(String key, CacheablePair value) {
-        try {
-          value.evictionLock.writeLock().lock();
-          timeSinceLastAccess.set(System.nanoTime()
-              - value.recentlyAccessed.get());
-          backingStore.free(value.serializedData);
-          stats.evict();
-          /**
-           * We may choose to run this cache alone, without the SlabCache on
-           * top, no evictionWatcher in that case
-           */
-          if (evictionWatcher != null) {
-            evictionWatcher.onEviction(key, false);
-          }
-          size.addAndGet(-1 * value.heapSize());
-          stats.evicted();
-        } finally {
-          value.evictionLock.writeLock().unlock();
-        }
+        timeSinceLastAccess.set(System.nanoTime()
+            - value.recentlyAccessed.get());
+        doEviction(key, value);
       }
     };
 
@@ -121,7 +104,7 @@ public class SingleSizeCache implements BlockCache {
   }
 
   @Override
-  public synchronized void cacheBlock(String blockName, Cacheable toBeCached) {
+  public void cacheBlock(String blockName, Cacheable toBeCached) {
     ByteBuffer storedBlock;
 
     /*
@@ -129,12 +112,18 @@ public class SingleSizeCache implements BlockCache {
      * items than the memory we have allocated, but the Slab Allocator may still
      * be empty if we have not yet completed eviction
      */
-    do {
+
+    try {
       storedBlock = backingStore.alloc(toBeCached.getSerializedLength());
-    } while (storedBlock == null);
+    } catch (InterruptedException e) {
+      LOG.warn("SlabAllocator was interrupted while waiting for block to become available");
+      LOG.warn(e);
+      return;
+    }
 
     CacheablePair newEntry = new CacheablePair(toBeCached.getDeserializer(),
         storedBlock);
+    toBeCached.serialize(storedBlock);
 
     CacheablePair alreadyCached = backingMap.putIfAbsent(blockName, newEntry);
 
@@ -142,7 +131,6 @@ public class SingleSizeCache implements BlockCache {
       backingStore.free(storedBlock);
       throw new RuntimeException("already cached " + blockName);
     }
-    toBeCached.serialize(storedBlock);
     newEntry.recentlyAccessed.set(System.nanoTime());
     this.size.addAndGet(newEntry.heapSize());
   }
@@ -157,20 +145,21 @@ public class SingleSizeCache implements BlockCache {
 
     stats.hit(caching);
     // If lock cannot be obtained, that means we're undergoing eviction.
-    if (contentBlock.evictionLock.readLock().tryLock()) {
-      try {
-        contentBlock.recentlyAccessed.set(System.nanoTime());
+    try {
+      contentBlock.recentlyAccessed.set(System.nanoTime());
+      synchronized (contentBlock) {
+        if (contentBlock.serializedData == null) {
+          // concurrently evicted
+          LOG.warn("Concurrent eviction of " + key);
+          return null;
+        }
         return contentBlock.deserializer
-            .deserialize(contentBlock.serializedData);
-      } catch (IOException e) {
-        e.printStackTrace();
-        LOG.warn("Deserializer throwing ioexception, possibly deserializing wrong object buffer");
-        return null;
-      } finally {
-        contentBlock.evictionLock.readLock().unlock();
+            .deserialize(contentBlock.serializedData.asReadOnlyBuffer());
       }
+    } catch (Throwable t) {
+      LOG.error("Deserializer threw an exception. This may indicate a bug.", t);
+      return null;
     }
-    return null;
   }
 
   /**
@@ -183,23 +172,45 @@ public class SingleSizeCache implements BlockCache {
     stats.evict();
     CacheablePair evictedBlock = backingMap.remove(key);
     if (evictedBlock != null) {
-      try {
-        evictedBlock.evictionLock.writeLock().lock();
-        backingStore.free(evictedBlock.serializedData);
-        evictionWatcher.onEviction(key, false);
-        stats.evicted();
-        size.addAndGet(-1 * evictedBlock.heapSize());
-      } finally {
-        evictedBlock.evictionLock.writeLock().unlock();
-      }
+      doEviction(key, evictedBlock);
     }
     return evictedBlock != null;
 
   }
 
+  private void doEviction(String key, CacheablePair evictedBlock) {
+    long evictedHeap = 0;
+    synchronized (evictedBlock) {
+      if (evictedBlock.serializedData == null) {
+        // someone else already freed
+        return;
+      }
+      evictedHeap = evictedBlock.heapSize();
+      ByteBuffer bb = evictedBlock.serializedData;
+      evictedBlock.serializedData = null;
+      backingStore.free(bb);
+
+      // We have to do this callback inside the synchronization here.
+      // Otherwise we can have the following interleaving:
+      // Thread A calls getBlock():
+      // SlabCache directs call to this SingleSizeCache
+      // It gets the CacheablePair object
+      // Thread B runs eviction
+      // doEviction() is called and sets serializedData = null, here.
+      // Thread A sees the null serializedData, and returns null
+      // Thread A calls cacheBlock on the same block, and gets
+      // "already cached" since the block is still in backingStore
+      if (evictionWatcher != null) {
+        evictionWatcher.onEviction(key, false);
+      }
+    }
+    stats.evicted();
+    size.addAndGet(-1 * evictedHeap);
+  }
+
   public void logStats() {
 
-    long milliseconds = (long)this.timeSinceLastAccess.get() / 1000000;
+    long milliseconds = (long) this.timeSinceLastAccess.get() / 1000000;
 
     LOG.info("For Slab of size " + this.blockSize + ": "
         + this.getOccupiedSize() / this.blockSize
@@ -299,8 +310,7 @@ public class SingleSizeCache implements BlockCache {
   /* Just a pair class, holds a reference to the parent cacheable */
   private class CacheablePair implements HeapSize {
     final CacheableDeserializer<Cacheable> deserializer;
-    final ByteBuffer serializedData;
-    final ReentrantReadWriteLock evictionLock;
+    ByteBuffer serializedData;
     AtomicLong recentlyAccessed;
 
     private CacheablePair(CacheableDeserializer<Cacheable> deserializer,
@@ -308,7 +318,6 @@ public class SingleSizeCache implements BlockCache {
       this.recentlyAccessed = new AtomicLong();
       this.deserializer = deserializer;
       this.serializedData = serializedData;
-      evictionLock = new ReentrantReadWriteLock();
     }
 
     /*

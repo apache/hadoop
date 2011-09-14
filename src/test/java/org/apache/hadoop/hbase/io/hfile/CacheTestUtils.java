@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -57,8 +58,8 @@ public class CacheTestUtils {
         public void doAnAction() throws Exception {
           if (!blocksToTest.isEmpty()) {
             HFileBlockPair ourBlock = blocksToTest.poll();
-            //if we run out of blocks to test, then we should stop the tests.
-            if(ourBlock == null){
+            // if we run out of blocks to test, then we should stop the tests.
+            if (ourBlock == null) {
               ctx.stop();
               return;
             }
@@ -67,7 +68,9 @@ public class CacheTestUtils {
                 false);
             if (retrievedBlock != null) {
               assertEquals(ourBlock.block, retrievedBlock);
+              toBeTested.evictBlock(ourBlock.blockName);
               hits.incrementAndGet();
+              assertNull(toBeTested.getBlock(ourBlock.blockName, false));
             } else {
               miss.incrementAndGet();
             }
@@ -75,6 +78,7 @@ public class CacheTestUtils {
           }
         }
       };
+      t.setDaemon(true);
       ctx.addThread(t);
     }
     ctx.startThreads();
@@ -82,8 +86,9 @@ public class CacheTestUtils {
       Thread.sleep(10);
     }
     ctx.stop();
-    if((double) hits.get() / ((double) hits.get() +  (double) miss.get()) < passingScore){
-      fail("Too many nulls returned. Hits: " + hits.get() + " Misses: " + miss.get());
+    if ((double) hits.get() / ((double) hits.get() + (double) miss.get()) < passingScore) {
+      fail("Too many nulls returned. Hits: " + hits.get() + " Misses: "
+          + miss.get());
     }
   }
 
@@ -130,19 +135,25 @@ public class CacheTestUtils {
 
   public static void hammerSingleKey(final BlockCache toBeTested,
       int BlockSize, int numThreads, int numQueries) throws Exception {
-    final HFileBlockPair kv = generateHFileBlocks(BlockSize, 1)[0];
+    final String key = "key";
+    final byte[] buf = new byte[5 * 1024];
+    Arrays.fill(buf, (byte) 5);
+
+    final ByteArrayCacheable bac = new ByteArrayCacheable(buf);
     Configuration conf = new Configuration();
     MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(
         conf);
 
     final AtomicInteger totalQueries = new AtomicInteger();
-    toBeTested.cacheBlock(kv.blockName, kv.block);
+    toBeTested.cacheBlock(key, bac);
 
     for (int i = 0; i < numThreads; i++) {
       TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
         @Override
         public void doAnAction() throws Exception {
-          assertEquals(kv.block, toBeTested.getBlock(kv.blockName, false));
+          ByteArrayCacheable returned = (ByteArrayCacheable) toBeTested
+              .getBlock(key, false);
+          assertArrayEquals(buf, returned.buf);
           totalQueries.incrementAndGet();
         }
       };
@@ -155,6 +166,94 @@ public class CacheTestUtils {
       Thread.sleep(10);
     }
     ctx.stop();
+  }
+
+  public static void hammerEviction(final BlockCache toBeTested, int BlockSize,
+      int numThreads, int numQueries) throws Exception {
+
+    Configuration conf = new Configuration();
+    MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(
+        conf);
+
+    final AtomicInteger totalQueries = new AtomicInteger();
+
+    for (int i = 0; i < numThreads; i++) {
+      final int finalI = i;
+
+      final byte[] buf = new byte[5 * 1024];
+      TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
+        @Override
+        public void doAnAction() throws Exception {
+          for (int j = 0; j < 10; j++) {
+            String key = "key_" + finalI + "_" + j;
+            Arrays.fill(buf, (byte) (finalI * j));
+            final ByteArrayCacheable bac = new ByteArrayCacheable(buf);
+
+            ByteArrayCacheable gotBack = (ByteArrayCacheable) toBeTested
+                .getBlock(key, true);
+            if (gotBack != null) {
+              assertArrayEquals(gotBack.buf, bac.buf);
+            } else {
+              toBeTested.cacheBlock(key, bac);
+            }
+          }
+          totalQueries.incrementAndGet();
+        }
+      };
+
+      ctx.addThread(t);
+    }
+
+    ctx.startThreads();
+    while (totalQueries.get() < numQueries && ctx.shouldRun()) {
+      Thread.sleep(10);
+    }
+    ctx.stop();
+
+    assertTrue(toBeTested.getStats().getEvictedCount() > 0);
+  }
+
+  private static class ByteArrayCacheable implements Cacheable {
+
+    final byte[] buf;
+
+    public ByteArrayCacheable(byte[] buf) {
+      this.buf = buf;
+    }
+
+    @Override
+    public long heapSize() {
+      return 4 + buf.length;
+    }
+
+    @Override
+    public int getSerializedLength() {
+      return 4 + buf.length;
+    }
+
+    @Override
+    public void serialize(ByteBuffer destination) {
+      destination.putInt(buf.length);
+      Thread.yield();
+      destination.put(buf);
+      destination.rewind();
+    }
+
+    @Override
+    public CacheableDeserializer<Cacheable> getDeserializer() {
+      return new CacheableDeserializer<Cacheable>() {
+
+        @Override
+        public Cacheable deserialize(ByteBuffer b) throws IOException {
+          int len = b.getInt();
+          Thread.yield();
+          byte buf[] = new byte[len];
+          b.get(buf);
+          return new ByteArrayCacheable(buf);
+        }
+      };
+    }
+
   }
 
   private static HFileBlockPair[] generateHFileBlocks(int blockSize,

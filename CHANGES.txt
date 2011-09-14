@@ -235,7 +235,6 @@ Release 0.91.0 - Unreleased
    HBASE-4315  RPC logging too verbose (todd)
    HBASE-4273  java.lang.NullPointerException when a table is being disabled and
                HMaster restarts (Ming Ma)
-   HBASE-4310  SlabCache metrics bugfix (Li Pi)
    HBASE-4027  Off Heap Cache never creates Slabs (Li Pi)
    HBASE-4265  zookeeper.KeeperException$NodeExistsException if HMaster restarts
                while table is being disabled (Ming Ma)
@@ -262,6 +261,7 @@ Release 0.91.0 - Unreleased
                exception (Jinchao Gao)
    HBASE-4394  Add support for seeking hints to FilterList
    HBASE-4406  TestOpenRegionHandler failing after HBASE-4287 (todd)
+   HBASE-4330  Fix races in slab cache (Li Pi & Todd)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

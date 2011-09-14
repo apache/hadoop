@@ -42,7 +42,7 @@ public class TestSlab {
   }
 
   @Test
-  public void testBasicFunctionality() {
+  public void testBasicFunctionality() throws InterruptedException {
     for (int i = 0; i < NUMBLOCKS; i++) {
       buffers[i] = testSlab.alloc(BLOCKSIZE);
       assertEquals(BLOCKSIZE, buffers[i].limit());

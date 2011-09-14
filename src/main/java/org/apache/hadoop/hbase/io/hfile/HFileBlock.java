@@ -91,18 +91,17 @@ public class HFileBlock implements Cacheable {
   private static final CacheableDeserializer<Cacheable> blockDeserializer =
   new CacheableDeserializer<Cacheable>() {
     public HFileBlock deserialize(ByteBuffer buf) throws IOException{
-      ByteBuffer tempCopy = buf.duplicate();
-      ByteBuffer newByteBuffer = ByteBuffer.allocate(tempCopy.limit()
+      ByteBuffer newByteBuffer = ByteBuffer.allocate(buf.limit()
           - HFileBlock.EXTRA_SERIALIZATION_SPACE);
-      tempCopy.limit(tempCopy.limit()
+      buf.limit(buf.limit()
           - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
-      newByteBuffer.put(tempCopy);
+      newByteBuffer.put(buf);
       HFileBlock ourBuffer = new HFileBlock(newByteBuffer);
 
-      tempCopy.position(tempCopy.limit());
-      tempCopy.limit(tempCopy.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
-      ourBuffer.offset = tempCopy.getLong();
-      ourBuffer.nextBlockOnDiskSizeWithHeader = tempCopy.getInt();
+      buf.position(buf.limit());
+      buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
+      ourBuffer.offset = buf.getLong();
+      ourBuffer.nextBlockOnDiskSizeWithHeader = buf.getInt();
       return ourBuffer;
     }
   };

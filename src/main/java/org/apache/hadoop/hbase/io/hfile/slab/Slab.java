@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.io.hfile.slab;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -37,7 +39,7 @@ class Slab implements org.apache.hadoop.hbase.io.HeapSize {
   static final Log LOG = LogFactory.getLog(Slab.class);
 
   /** This is where our items, or blocks of the slab, are stored. */
-  private ConcurrentLinkedQueue<ByteBuffer> buffers;
+  private LinkedBlockingQueue<ByteBuffer> buffers;
 
   /** This is where our Slabs are stored */
   private ConcurrentLinkedQueue<ByteBuffer> slabs;
@@ -47,7 +49,7 @@ class Slab implements org.apache.hadoop.hbase.io.HeapSize {
   private long heapSize;
 
   Slab(int blockSize, int numBlocks) {
-    buffers = new ConcurrentLinkedQueue<ByteBuffer>();
+    buffers = new LinkedBlockingQueue<ByteBuffer>();
     slabs = new ConcurrentLinkedQueue<ByteBuffer>();
 
     this.blockSize = blockSize;
@@ -108,16 +110,13 @@ class Slab implements org.apache.hadoop.hbase.io.HeapSize {
   }
 
   /*
-   * This returns null if empty. Throws an exception if you try to allocate a
-   * bigger size than the allocator can handle.
+   * Throws an exception if you try to allocate a
+   * bigger size than the allocator can handle. Alloc will block until a buffer is available.
    */
-  ByteBuffer alloc(int bufferSize) {
+  ByteBuffer alloc(int bufferSize) throws InterruptedException {
     int newCapacity = Preconditions.checkPositionIndex(bufferSize, blockSize);
 
-    ByteBuffer returnedBuffer = buffers.poll();
-    if (returnedBuffer == null) {
-      return null;
-    }
+    ByteBuffer returnedBuffer = buffers.take();
 
     returnedBuffer.clear().limit(newCapacity);
     return returnedBuffer;
