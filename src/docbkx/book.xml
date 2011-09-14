@@ -429,6 +429,11 @@ admin.enableTable(table);
     "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
     </para>
     </section>
+    <section xml:id="rowkey.scope">
+    <title>Rowkeys and ColumnFamilies</title>
+    <para>Rowkeys are scoped to ColumnFamilies.  Thus, the same rowkey could exist in each ColumnFamily that exists in a table without collision.
+    </para>
+    </section>
     <section xml:id="changing.rowkeys"><title>Immutability of Rowkeys</title>
     <para>Rowkeys cannot be changed.  The only way they can be "changed" in a table is if the row is deleted and then re-inserted.
     This is a fairly common question on the HBase dist-list so it pays to get the rowkeys right the first time (and/or before you've 
