@@ -233,6 +233,12 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return - the block report - the full list of blocks stored
    */
   public Block[] getBlockReport();
+  
+  /**
+   * Returns the blocks being written report 
+   * @return - the blocks being written report
+   */
+  public Block[] getBlocksBeingWrittenReport();
 
   /**
    * Is the block valid?

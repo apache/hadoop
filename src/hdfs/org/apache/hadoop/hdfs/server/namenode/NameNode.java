@@ -745,6 +745,21 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       return DatanodeCommand.FINALIZE;
     return null;
   }
+  
+  /**
+   * add new replica blocks to the Inode to target mapping
+   * also add the Inode file to DataNodeDesc
+   */
+  public void blocksBeingWrittenReport(DatanodeRegistration nodeReg,
+      long[] blocks) throws IOException {
+    verifyRequest(nodeReg);
+    BlockListAsLongs blist = new BlockListAsLongs(blocks);
+    namesystem.processBlocksBeingWrittenReport(nodeReg, blist);
+    
+    stateChangeLog.info("*BLOCK* NameNode.blocksBeingWrittenReport: "
+           +"from "+nodeReg.getName()+" "+blocks.length +" blocks");
+    
+  }
 
   public void blockReceived(DatanodeRegistration nodeReg, 
                             Block blocks[],

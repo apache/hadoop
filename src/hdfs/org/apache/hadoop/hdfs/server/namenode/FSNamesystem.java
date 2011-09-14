@@ -3018,7 +3018,89 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       allAlive = !foundDead;
     }
   }
-    
+  
+  /**
+   * Log a rejection of an addStoredBlock RPC, invalidate the reported block,
+   * and return it.
+   */
+  private Block rejectAddStoredBlock(Block block, DatanodeDescriptor node,
+      String msg) {
+    NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
+        + "addStoredBlock request received for " + block + " on "
+        + node.getName() + " size " + block.getNumBytes()
+        + " but was rejected: " + msg);
+    addToInvalidates(block, node);
+    return block;
+  }
+
+  /**
+   * It will update the targets for INodeFileUnderConstruction
+   * 
+   * @param nodeID
+   *          - DataNode ID
+   * @param blocksBeingWritten
+   *          - list of blocks which are still inprogress.
+   * @throws IOException
+   */
+  public synchronized void processBlocksBeingWrittenReport(DatanodeID nodeID,
+      BlockListAsLongs blocksBeingWritten) throws IOException {
+    DatanodeDescriptor dataNode = getDatanode(nodeID);
+    if (dataNode == null) {
+      throw new IOException("ProcessReport from unregistered node: "
+          + nodeID.getName());
+    }
+
+    // Check if this datanode should actually be shutdown instead.
+    if (shouldNodeShutdown(dataNode)) {
+      setDatanodeDead(dataNode);
+      throw new DisallowedDatanodeException(dataNode);
+    }
+
+    Block block = new Block();
+
+    for (int i = 0; i < blocksBeingWritten.getNumberOfBlocks(); i++) {
+      block.set(blocksBeingWritten.getBlockId(i), blocksBeingWritten
+          .getBlockLen(i), blocksBeingWritten.getBlockGenStamp(i));
+
+      BlockInfo storedBlock = blocksMap.getStoredBlockWithoutMatchingGS(block);
+
+      if (storedBlock == null) {
+        rejectAddStoredBlock(new Block(block), dataNode,
+            "Block not in blockMap with any generation stamp");
+        continue;
+      }
+
+      INodeFile inode = storedBlock.getINode();
+      if (inode == null) {
+        rejectAddStoredBlock(new Block(block), dataNode,
+            "Block does not correspond to any file");
+        continue;
+      }
+
+      boolean underConstruction = inode.isUnderConstruction();
+      boolean isLastBlock = inode.getLastBlock() != null
+          && inode.getLastBlock().getBlockId() == block.getBlockId();
+
+      // Must be the last block of a file under construction,
+      if (!underConstruction) {
+        rejectAddStoredBlock(new Block(block), dataNode,
+            "Reported as block being written but is a block of closed file.");
+        continue;
+      }
+
+      if (!isLastBlock) {
+        rejectAddStoredBlock(new Block(block), dataNode,
+            "Reported as block being written but not the last block of "
+                + "an under-construction file.");
+        continue;
+      }
+
+      INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) inode;
+      pendingFile.addTarget(dataNode);
+      incrementSafeBlockCount(pendingFile.getTargets().length);
+    }
+  }
+  
   /**
    * The given node is reporting all its blocks.  Use this info to 
    * update the (machine-->blocklist) and (block-->machinelist) tables.

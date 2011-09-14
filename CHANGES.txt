@@ -96,6 +96,9 @@ Release 0.20-append - Unreleased
 
     HDFS-1554. New semantics for recoverLease. (hairong)
 
+    HDFS-1779. After NameNode restart , Clients can not read partial files even
+    after client invokes Sync. (Uma Maheswara Rao G via jitendra)	
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

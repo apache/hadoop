@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -616,6 +617,48 @@ public class MiniDFSCluster {
     dn.shutdown();
     numDataNodes--;
     return dnprop;
+  }
+  
+  /**
+   * Shutdown namenode.
+   */
+  public synchronized void shutdownNameNode() {
+    if (nameNode != null) {
+      System.out.println("Shutting down the namenode");
+      nameNode.stop();
+      nameNode.join();
+      nameNode = null;
+    }
+  }
+  
+  /**
+   * Restart namenode.
+   */
+  public synchronized void restartNameNode(boolean waitActive)
+      throws IOException {
+    shutdownNameNode();
+    nameNode = NameNode.createNameNode(new String[] {}, conf);
+    System.out.println("Restarted the namenode");
+    if (waitActive) {
+      waitClusterUp();
+      int failedCount = 0;
+      while (true) {
+        try {
+          waitActive();
+          break;
+        } catch (IOException e) {
+          failedCount++;
+          // Cached RPC connection to namenode, if any, is expected to fail once
+          if (failedCount > 1) {
+            System.out.println("Tried waitActive() " + failedCount
+                + " time(s) and failed, giving up.  "
+                + StringUtils.stringifyException(e));
+            throw e;
+          }
+        }
+      }
+      System.out.println("Cluster is active");
+    }
   }
 
   /**

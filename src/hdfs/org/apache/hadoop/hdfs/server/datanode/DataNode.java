@@ -186,6 +186,7 @@ public class DataNode extends Configured
   int socketWriteTimeout = 0;  
   boolean transferToAllowed = true;
   int writePacketSize = 0;
+  private boolean supportAppends;
   
   public DataBlockScanner blockScanner = null;
   public Daemon blockScannerThread = null;
@@ -211,7 +212,7 @@ public class DataNode extends Configured
            AbstractList<File> dataDirs) throws IOException {
     super(conf);
     datanodeObject = this;
-
+    supportAppends = conf.getBoolean("dfs.support.append", false);
     try {
       startDataNode(conf, dataDirs);
     } catch (IOException ie) {
@@ -553,6 +554,12 @@ public class DataNode extends Configured
           + ". Expecting " + storage.getStorageID());
     }
     
+    if (supportAppends) {
+      Block[] bbwReport = data.getBlocksBeingWrittenReport();
+      long[] blocksBeingWritten = BlockListAsLongs
+          .convertToArrayLongs(bbwReport);
+      namenode.blocksBeingWrittenReport(dnRegistration, blocksBeingWritten);
+    }
     // random short delay - helps scatter the BR from all DNs
     scheduleBlockReport(initialBlockReportDelay);
   }

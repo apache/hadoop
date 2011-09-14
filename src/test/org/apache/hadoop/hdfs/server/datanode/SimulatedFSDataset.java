@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -682,5 +681,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   public boolean hasEnoughResource() {
     return true;
+  }
+
+  @Override
+  public Block[] getBlocksBeingWrittenReport() {
+    return null;
   }
 }
