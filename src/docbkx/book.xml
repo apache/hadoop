@@ -1703,6 +1703,23 @@ hbase> describe 't1'</programlisting>
     <qandaset defaultlabel='faq'>
         <qandadiv><title>General</title>
         <qandaentry>
+                <question><para>When should I use HBase?</para></question>
+            <answer>
+                <para>
+              Anybody can download and give HBase a spin, even on a laptop.  The scope of this answer is when 
+              would it be best to use HBase in a <emphasis>real</emphasis> deployment.
+                </para>
+                <para>First, make sure you have enough hardware.  Even HDFS doesn't do well with anything less than
+                5 DataNodes (due to things such as HDFS block replication which has a default of 3), plus a NameNode.
+                Second, make sure you have enough data.  HBase isn't suitable for every problem.  If you have 
+                hundreds of millions or billions of rows, then HBase is a good candidate.  If you only have a few 
+                thousand/million rows, then using a traditional RDBMS might be a better choice due to the 
+                fact that all of your data might wind up on a single node (or two) and the rest of the cluster may
+                be sitting idle.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
                 <question><para>Are there other HBase FAQs?</para></question>
             <answer>
                 <para>
@@ -1735,18 +1752,6 @@ hbase> describe 't1'</programlisting>
             <answer>
                 <para>
                     No.  See <xref linkend="changing.rowkeys" />.
-                </para>
-            </answer>
-        </qandaentry>
-        <qandaentry xml:id="brand.new.compressor">
-            <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
-            brand-new compressor' messages?</para></question>
-            <answer>
-                <para>
-                    Because we are not using the native versions of compression
-                    libraries.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1900">HBASE-1900 Put back native support when hadoop 0.21 is released</link>.
-                    Copy the native libs from hadoop under hbase lib dir or
-                    symlink them into place and the message should go away.
                 </para>
             </answer>
         </qandaentry>
@@ -1793,6 +1798,18 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             <answer>
                 <para>
                 See <xref linkend="performance" />.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry xml:id="brand.new.compressor">
+            <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
+            brand-new compressor' messages?</para></question>
+            <answer>
+                <para>
+                    Because we are not using the native versions of compression
+                    libraries.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1900">HBASE-1900 Put back native support when hadoop 0.21 is released</link>.
+                    Copy the native libs from hadoop under hbase lib dir or
+                    symlink them into place and the message should go away.
                 </para>
             </answer>
         </qandaentry>
