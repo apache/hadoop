@@ -37,12 +37,14 @@ import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -57,9 +59,9 @@ public class TestOpenRegionHandler {
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor("TestOpenRegionHandler.java");
-  private static final HRegionInfo TEST_HRI = 
-    new HRegionInfo(TEST_HTD.getName(), HConstants.EMPTY_END_ROW,
-          HConstants.EMPTY_END_ROW);
+  private HRegionInfo TEST_HRI;
+
+  private int testIndex = 0;
 
   @BeforeClass public static void before() throws Exception {
     HTU.startMiniZKCluster();
@@ -67,6 +69,19 @@ public class TestOpenRegionHandler {
 
   @AfterClass public static void after() throws IOException {
     HTU.shutdownMiniZKCluster();
+  }
+
+  /**
+   * Before each test, use a different HRI, so the different tests
+   * don't interfere with each other. This allows us to use just
+   * a single ZK cluster for the whole suite.
+   */
+  @Before
+  public void setupHRI() {
+    TEST_HRI = new HRegionInfo(TEST_HTD.getName(),
+      Bytes.toBytes(testIndex),
+      Bytes.toBytes(testIndex + 1));
+    testIndex++;
   }
 
   /**
