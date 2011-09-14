@@ -266,6 +266,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2899. Replace major parts of ApplicationSubmissionContext with a 
     ContainerLaunchContext (Arun Murthy via mahadev)
 
+    MAPREDUCE-2966. Added ShutDown hooks for MRV2 processes so that they can
+    gracefully exit. (Abhijit Suresh Shingate via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

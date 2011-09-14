@@ -559,12 +559,14 @@ public class MRAppMaster extends CompositeService {
   public static void main(String[] args) {
     try {
       //Configuration.addDefaultResource("job.xml");
-      ApplicationId applicationId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
-      
+      ApplicationId applicationId = RecordFactoryProvider
+          .getRecordFactory(null).newRecordInstance(ApplicationId.class);
       applicationId.setClusterTimestamp(Long.valueOf(args[0]));
       applicationId.setId(Integer.valueOf(args[1]));
       int failCount = Integer.valueOf(args[2]);
       MRAppMaster appMaster = new MRAppMaster(applicationId, failCount);
+      Runtime.getRuntime().addShutdownHook(
+          new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
       conf.addResource(new Path(MRConstants.JOB_CONF_FILE));
       conf.set(MRJobConfig.USER_NAME, 
@@ -573,7 +575,7 @@ public class MRAppMaster extends CompositeService {
       appMaster.init(conf);
       appMaster.start();
     } catch (Throwable t) {
-      LOG.error("Caught throwable. Exiting:", t);
+      LOG.fatal("Error starting MRAppMaster", t);
       System.exit(1);
     }
   } 
