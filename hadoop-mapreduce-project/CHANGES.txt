@@ -289,6 +289,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2676. MR-279: JobHistory Job page needs reformatted. (Robert Evans via 
     mahadev)
 
+    MAPREDUCE-2899. Replace major parts of ApplicationSubmissionContext with a 
+    ContainerLaunchContext (Arun Murthy via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

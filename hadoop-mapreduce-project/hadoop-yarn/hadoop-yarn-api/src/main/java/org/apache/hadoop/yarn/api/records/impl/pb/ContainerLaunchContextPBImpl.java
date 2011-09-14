@@ -39,8 +39,6 @@ import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
 
-
-    
 public class ContainerLaunchContextPBImpl 
 extends ProtoBase<ContainerLaunchContextProto> 
 implements ContainerLaunchContext {
@@ -54,9 +52,8 @@ implements ContainerLaunchContext {
   private Map<String, LocalResource> localResources = null;
   private ByteBuffer containerTokens = null;
   private Map<String, ByteBuffer> serviceData = null;
-  private Map<String, String> env = null;
+  private Map<String, String> environment = null;
   private List<String> commands = null;
-  
   
   public ContainerLaunchContextPBImpl() {
     builder = ContainerLaunchContextProto.newBuilder();
@@ -94,7 +91,7 @@ implements ContainerLaunchContext {
     if (this.serviceData != null) {
       addServiceDataToProto();
     }
-    if (this.env != null) {
+    if (this.environment != null) {
       addEnvToProto();
     }
     if (this.commands != null) {
@@ -364,37 +361,37 @@ implements ContainerLaunchContext {
   }
   
   @Override
-  public Map<String, String> getEnv() {
+  public Map<String, String> getEnvironment() {
     initEnv();
-    return this.env;
+    return this.environment;
   }
   
   private void initEnv() {
-    if (this.env != null) {
+    if (this.environment != null) {
       return;
     }
     ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
-    List<StringStringMapProto> list = p.getEnvList();
-    this.env = new HashMap<String, String>();
+    List<StringStringMapProto> list = p.getEnvironmentList();
+    this.environment = new HashMap<String, String>();
 
     for (StringStringMapProto c : list) {
-      this.env.put(c.getKey(), c.getValue());
+      this.environment.put(c.getKey(), c.getValue());
     }
   }
   
   @Override
-  public void setEnv(final Map<String, String> env) {
+  public void setEnvironment(final Map<String, String> env) {
     if (env == null)
       return;
     initEnv();
-    this.env.clear();
-    this.env.putAll(env);
+    this.environment.clear();
+    this.environment.putAll(env);
   }
   
   private void addEnvToProto() {
     maybeInitBuilder();
-    builder.clearEnv();
-    if (env == null)
+    builder.clearEnvironment();
+    if (environment == null)
       return;
     Iterable<StringStringMapProto> iterable = 
         new Iterable<StringStringMapProto>() {
@@ -403,7 +400,7 @@ implements ContainerLaunchContext {
       public Iterator<StringStringMapProto> iterator() {
         return new Iterator<StringStringMapProto>() {
           
-          Iterator<String> keyIter = env.keySet().iterator();
+          Iterator<String> keyIter = environment.keySet().iterator();
           
           @Override
           public void remove() {
@@ -414,7 +411,7 @@ implements ContainerLaunchContext {
           public StringStringMapProto next() {
             String key = keyIter.next();
             return StringStringMapProto.newBuilder().setKey(key).setValue(
-                (env.get(key))).build();
+                (environment.get(key))).build();
           }
           
           @Override
@@ -424,7 +421,7 @@ implements ContainerLaunchContext {
         };
       }
     };
-    builder.addAllEnv(iterable);
+    builder.addAllEnvironment(iterable);
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {

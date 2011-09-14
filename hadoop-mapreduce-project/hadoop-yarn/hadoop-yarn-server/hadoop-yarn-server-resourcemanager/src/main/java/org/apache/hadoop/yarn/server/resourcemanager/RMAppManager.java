@@ -210,7 +210,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     }
   }
 
-  protected synchronized void submitApplication(ApplicationSubmissionContext submissionContext) {
+  @SuppressWarnings("unchecked")
+  protected synchronized void submitApplication(
+      ApplicationSubmissionContext submissionContext) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
@@ -224,27 +226,37 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
         clientTokenStr = clientToken.encodeToUrlString();
         LOG.debug("Sending client token as " + clientTokenStr);
       }
-      submissionContext.setQueue(submissionContext.getQueue() == null
-          ? "default" : submissionContext.getQueue());
-      submissionContext.setApplicationName(submissionContext
-          .getApplicationName() == null ? "N/A" : submissionContext
-          .getApplicationName());
+      
+      // Sanity checks
+      if (submissionContext.getQueue() == null) {
+        submissionContext.setQueue(YarnConfiguration.DEFAULT_QUEUE_NAME);
+      }
+      if (submissionContext.getApplicationName() == null) {
+        submissionContext.setApplicationName(
+            YarnConfiguration.DEFAULT_APPLICATION_NAME);
+      }
+
+      // Store application for recovery
       ApplicationStore appStore = rmContext.getApplicationsStore()
           .createApplicationStore(submissionContext.getApplicationId(),
           submissionContext);
+      
+      // Create RMApp
       application = new RMAppImpl(applicationId, rmContext,
           this.conf, submissionContext.getApplicationName(), user,
           submissionContext.getQueue(), submissionContext, clientTokenStr,
-          appStore, rmContext.getAMLivelinessMonitor(), this.scheduler,
+          appStore, this.scheduler,
           this.masterService);
 
-      if (rmContext.getRMApps().putIfAbsent(applicationId, application) != null) {
+      if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 
+          null) {
         LOG.info("Application with id " + applicationId + 
             " is already present! Cannot add a duplicate!");
-        // don't send event through dispatcher as it will be handled by app already
-        // present with this id.
+        // don't send event through dispatcher as it will be handled by app 
+        // already present with this id.
         application.handle(new RMAppRejectedEvent(applicationId,
-            "Application with this id is already present! Cannot add a duplicate!"));
+            "Application with this id is already present! " +
+            "Cannot add a duplicate!"));
       } else {
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.START));

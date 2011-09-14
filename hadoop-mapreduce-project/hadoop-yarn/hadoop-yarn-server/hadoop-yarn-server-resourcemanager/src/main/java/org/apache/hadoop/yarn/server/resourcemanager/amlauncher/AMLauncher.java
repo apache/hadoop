@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -120,7 +119,8 @@ public class AMLauncher implements Runnable {
         + " for AM " + application.getAppAttemptId());  
     ContainerLaunchContext launchContext =
         createAMContainerLaunchContext(applicationContext, masterContainerID);
-    StartContainerRequest request = recordFactory.newRecordInstance(StartContainerRequest.class);
+    StartContainerRequest request = 
+        recordFactory.newRecordInstance(StartContainerRequest.class);
     request.setContainerLaunchContext(launchContext);
     containerMgrProxy.startContainer(request);
     LOG.info("Done launching container " + application.getMasterContainer() 
@@ -130,7 +130,8 @@ public class AMLauncher implements Runnable {
   private void cleanup() throws IOException {
     connect();
     ContainerId containerId = application.getMasterContainer().getId();
-    StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
+    StopContainerRequest stopRequest = 
+        recordFactory.newRecordInstance(StopContainerRequest.class);
     stopRequest.setContainerId(containerId);
     containerMgrProxy.stopContainer(stopRequest);
   }
@@ -145,7 +146,7 @@ public class AMLauncher implements Runnable {
     final YarnRPC rpc = YarnRPC.create(conf); // TODO: Don't create again and again.
 
     UserGroupInformation currentUser =
-        UserGroupInformation.createRemoteUser("TODO"); // TODO
+        UserGroupInformation.createRemoteUser("yarn"); // TODO
     if (UserGroupInformation.isSecurityEnabled()) {
       ContainerToken containerToken = container.getContainerToken();
       Token<ContainerTokenIdentifier> token =
@@ -170,8 +171,8 @@ public class AMLauncher implements Runnable {
       ContainerId containerID) throws IOException {
 
     // Construct the actual Container
-    ContainerLaunchContext container = recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    container.setCommands(applicationMasterContext.getCommandList());
+    ContainerLaunchContext container = 
+        applicationMasterContext.getAMContainerSpec();
     StringBuilder mergedCommand = new StringBuilder();
     String failCount = Integer.toString(application.getAppAttemptId()
         .getAttemptId());
@@ -189,34 +190,28 @@ public class AMLauncher implements Runnable {
    
     LOG.info("Command to launch container " + 
         containerID + " : " + mergedCommand);
-    Map<String, String> environment = 
-        applicationMasterContext.getAllEnvironment();
-    environment.putAll(setupTokensInEnv(applicationMasterContext));
-    container.setEnv(environment);
-
-    // Construct the actual Container
+    
+    // Finalize the container
     container.setContainerId(containerID);
     container.setUser(applicationMasterContext.getUser());
-    container.setResource(applicationMasterContext.getMasterCapability());
-    container.setLocalResources(applicationMasterContext.getAllResourcesTodo());
-    container.setContainerTokens(applicationMasterContext.getFsTokensTodo());
+    setupTokensAndEnv(container);
+    
     return container;
   }
 
-  private Map<String, String> setupTokensInEnv(
-      ApplicationSubmissionContext asc)
+  private void setupTokensAndEnv(
+      ContainerLaunchContext container)
       throws IOException {
-    Map<String, String> env =
-      new HashMap<String, String>();
+    Map<String, String> environment = container.getEnvironment();
     if (UserGroupInformation.isSecurityEnabled()) {
       // TODO: Security enabled/disabled info should come from RM.
 
       Credentials credentials = new Credentials();
 
       DataInputByteBuffer dibb = new DataInputByteBuffer();
-      if (asc.getFsTokensTodo() != null) {
+      if (container.getContainerTokens() != null) {
         // TODO: Don't do this kind of checks everywhere.
-        dibb.reset(asc.getFsTokensTodo());
+        dibb.reset(container.getContainerTokens());
         credentials.readTokenStorageStream(dibb);
       }
 
@@ -236,14 +231,16 @@ public class AMLauncher implements Runnable {
       token.setService(new Text(resolvedAddr));
       String appMasterTokenEncoded = token.encodeToUrlString();
       LOG.debug("Putting appMaster token in env : " + appMasterTokenEncoded);
-      env.put(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME,
+      environment.put(
+          ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME,
           appMasterTokenEncoded);
 
       // Add the RM token
       credentials.addToken(new Text(resolvedAddr), token);
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
-      asc.setFsTokensTodo(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+      container.setContainerTokens(
+          ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
 
       ApplicationTokenIdentifier identifier = new ApplicationTokenIdentifier(
           application.getAppAttemptId().getApplicationId());
@@ -252,9 +249,10 @@ public class AMLauncher implements Runnable {
       String encoded =
           Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
       LOG.debug("The encoded client secret-key to be put in env : " + encoded);
-      env.put(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME, encoded);
+      environment.put(
+          ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME, 
+          encoded);
     }
-    return env;
   }
   
   @SuppressWarnings("unchecked")

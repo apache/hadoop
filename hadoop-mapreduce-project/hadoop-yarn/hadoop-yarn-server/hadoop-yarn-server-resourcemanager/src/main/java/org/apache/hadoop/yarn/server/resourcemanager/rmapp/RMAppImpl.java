@@ -86,7 +86,6 @@ public class RMAppImpl implements RMApp {
   // Mutable fields
   private long startTime;
   private long finishTime;
-  private AMLivelinessMonitor amLivelinessMonitor;
   private RMAppAttempt currentAttempt;
 
   private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
@@ -163,7 +162,7 @@ public class RMAppImpl implements RMApp {
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
-      ApplicationStore appStore, AMLivelinessMonitor amLivelinessMonitor,
+      ApplicationStore appStore, 
       YarnScheduler scheduler, ApplicationMasterService masterService) {
 
     this.applicationId = applicationId;
@@ -176,7 +175,6 @@ public class RMAppImpl implements RMApp {
     this.submissionContext = submissionContext;
     this.clientTokenStr = clientTokenStr;
     this.appStore = appStore;
-    this.amLivelinessMonitor = amLivelinessMonitor;
     this.scheduler = scheduler;
     this.masterService = masterService;
     this.startTime = System.currentTimeMillis();
@@ -380,6 +378,7 @@ public class RMAppImpl implements RMApp {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void createNewAttempt() {
     ApplicationAttemptId appAttemptId = Records
         .newRecord(ApplicationAttemptId.class);
@@ -434,6 +433,7 @@ public class RMAppImpl implements RMApp {
       return nodes;
     }
 
+    @SuppressWarnings("unchecked")
     public void transition(RMAppImpl app, RMAppEvent event) {
       Set<NodeId> nodes = getNodesOnWhichAttemptRan(app);
       for (NodeId nodeId : nodes) {
