@@ -118,6 +118,7 @@ public class ExecutorService {
       // Master executor services
 
       case RS_ZK_REGION_CLOSED:
+      case RS_ZK_REGION_FAILED_OPEN:
         return ExecutorType.MASTER_CLOSE_REGION;
 
       case RS_ZK_REGION_OPENED:

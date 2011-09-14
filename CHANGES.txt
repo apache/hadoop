@@ -477,6 +477,8 @@ Release 0.91.0 - Unreleased
                (Lars Hofhansl)
    HBASE-4359  Show dead RegionServer names in the HMaster info page
                (Harsh J)
+   HBASE-4287  If region opening fails, change region in transition into
+               a FAILED_OPEN state so that it can be retried quickly. (todd)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

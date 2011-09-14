@@ -465,6 +465,7 @@ public class AssignmentManager extends ZooKeeperListener {
         break;
 
       case RS_ZK_REGION_CLOSED:
+      case RS_ZK_REGION_FAILED_OPEN:
         // Region is closed, insert into RIT and handle it
         addToRITandCallClose(regionInfo, RegionState.State.CLOSED, data);
         break;
@@ -702,6 +703,21 @@ public class AssignmentManager extends ZooKeeperListener {
           regionState.update(RegionState.State.CLOSED,
               data.getStamp(), data.getOrigin());
 	  removeClosedRegion(regionState.getRegion());
+          this.executorService.submit(new ClosedRegionHandler(master,
+            this, regionState.getRegion()));
+          break;
+          
+        case RS_ZK_REGION_FAILED_OPEN:
+          if (regionState == null ||
+              (!regionState.isPendingOpen() && !regionState.isOpening())) {
+            LOG.warn("Received FAILED_OPEN for region " + prettyPrintedRegionName +
+                " from server " + data.getOrigin() + " but region was in " +
+                " the state " + regionState + " and not in PENDING_OPEN or OPENING");
+            return;
+          }
+          // Handle this the same as if it were opened and then closed.
+          regionState.update(RegionState.State.CLOSED,
+              data.getStamp(), data.getOrigin());
           this.executorService.submit(new ClosedRegionHandler(master,
             this, regionState.getRegion()));
           break;

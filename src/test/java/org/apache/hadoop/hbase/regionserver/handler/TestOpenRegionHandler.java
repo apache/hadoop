@@ -25,11 +25,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -40,6 +45,9 @@ import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * Test of the {@link OpenRegionHandler}.
@@ -47,6 +55,11 @@ import org.junit.Test;
 public class TestOpenRegionHandler {
   static final Log LOG = LogFactory.getLog(TestOpenRegionHandler.class);
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
+  private static final HTableDescriptor TEST_HTD =
+    new HTableDescriptor("TestOpenRegionHandler.java");
+  private static final HRegionInfo TEST_HRI = 
+    new HRegionInfo(TEST_HTD.getName(), HConstants.EMPTY_END_ROW,
+          HConstants.EMPTY_END_ROW);
 
   @BeforeClass public static void before() throws Exception {
     HTU.startMiniZKCluster();
@@ -69,10 +82,8 @@ public class TestOpenRegionHandler {
     final Server server = new MockServer(HTU);
     final RegionServerServices rss = new MockRegionServerServices();
 
-    HTableDescriptor htd = new HTableDescriptor("TestOpenRegionHandler.java");
-    final HRegionInfo hri =
-      new HRegionInfo(htd.getName(), HConstants.EMPTY_END_ROW,
-          HConstants.EMPTY_END_ROW);
+    HTableDescriptor htd = TEST_HTD;
+    final HRegionInfo hri = TEST_HRI;
     HRegion region =
          HRegion.createHRegion(hri, HBaseTestingUtility.getTestDir(), HTU
             .getConfiguration(), htd);
@@ -80,9 +91,8 @@ public class TestOpenRegionHandler {
     OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
       HRegion openRegion() {
         // Open region first, then remove znode as though it'd been hijacked.
-        //HRegion region = super.openRegion();
-        HRegion region = super.openRegion(HBaseTestingUtility.getTestDir());
-
+        HRegion region = super.openRegion();
+        
         // Don't actually open region BUT remove the znode as though it'd
         // been hijacked on us.
         ZooKeeperWatcher zkw = this.server.getZooKeeper();
@@ -103,4 +113,55 @@ public class TestOpenRegionHandler {
     // post OPENING; again will expect it to come back w/o NPE or exception.
     handler.process();
   }
+  
+  @Test
+  public void testFailedOpenRegion() throws Exception {
+    Server server = new MockServer(HTU);
+    RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
+
+    // Create it OFFLINE, which is what it expects
+    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
+
+    // Create the handler
+    OpenRegionHandler handler =
+      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+        @Override
+        HRegion openRegion() {
+          // Fake failure of opening a region due to an IOE, which is caught
+          return null;
+        }
+    };
+    handler.process();
+
+    // Handler should have transitioned it to FAILED_OPEN
+    RegionTransitionData data =
+      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
+  }
+  
+  @Test
+  public void testFailedUpdateMeta() throws Exception {
+    Server server = new MockServer(HTU);
+    RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
+
+    // Create it OFFLINE, which is what it expects
+    ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
+
+    // Create the handler
+    OpenRegionHandler handler =
+      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+        @Override
+        boolean updateMeta(final HRegion r) {
+          // Fake failure of updating META
+          return false;
+        }
+    };
+    handler.process();
+
+    // Handler should have transitioned it to FAILED_OPEN
+    RegionTransitionData data =
+      ZKAssign.getData(server.getZooKeeper(), TEST_HRI.getEncodedName());
+    assertEquals(EventType.RS_ZK_REGION_FAILED_OPEN, data.getEventType());
+  }
+  
 }
