@@ -602,7 +602,14 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
         <section xml:id="trouble.rs.runtime.filehandles">
            <title>java.io.IOException...(Too many open files)</title>
            <para>
-           See the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.
+           If you see log messages like this...
+<programlisting>
+2010-09-13 01:24:17,336 WARN org.apache.hadoop.hdfs.server.datanode.DataNode: 
+Disk-related IOException in BlockReceiver constructor. Cause is java.io.IOException: Too many open files
+        at java.io.UnixFileSystem.createFileExclusively(Native Method)
+        at java.io.File.createNewFile(File.java:883)
+</programlisting>
+           ... see the Getting Started section on <link linkend="ulimit">ulimit and nproc configuration</link>.
            </para>
         </section>
         <section xml:id="trouble.rs.runtime.xceivers">

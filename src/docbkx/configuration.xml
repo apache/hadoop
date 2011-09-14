@@ -104,14 +104,19 @@ to ensure well-formedness of your document after an edit session.
         <para>HBase is a database.  It uses a lot of files all at the same time.
         The default ulimit -n -- i.e. user file limit -- of 1024 on most *nix systems
         is insufficient (On mac os x its 256). Any significant amount of loading will
-        lead you to <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I
-        see "java.io.IOException...(Too many open files)" in my logs?</link>.
-        You may also notice errors such as <programlisting>
+        lead you to <xref linkend="trouble.rs.runtime.filehandles"/>.
+        You may also notice errors such as... <programlisting>
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
       </programlisting> Do yourself a favor and change the upper bound on the
-        number of file descriptors. Set it to north of 10k. See the above
-        referenced FAQ for how.  You should also up the hbase users'
+        number of file descriptors. Set it to north of 10k.  The math runs roughly as follows:  per ColumnFamily
+        there is at least one StoreFile and possibly up to 5 or 6 if the region is under load.  Multiply the 
+        average number of StoreFiles per ColumnFamily times the number of regions per RegionServer.  For example, assuming
+        that a schema had 3 ColumnFamilies per region with an average of 3 StoreFiles per ColumnFamily, 
+        and there are 100 regions per RegionServer, the JVM will open 3 * 3 * 100 = 900 file descriptors
+        (not counting open jar files, config files, etc.)
+        </para>
+        <para>You should also up the hbase users'
         <varname>nproc</varname> setting; under load, a low-nproc
         setting could manifest as <classname>OutOfMemoryError</classname>
         <footnote><para>See Jack Levin's <link xlink:href="">major hdfs issues</link>
