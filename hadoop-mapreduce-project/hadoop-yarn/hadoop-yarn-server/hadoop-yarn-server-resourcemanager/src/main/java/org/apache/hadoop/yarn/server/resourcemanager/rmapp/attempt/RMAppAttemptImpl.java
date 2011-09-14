@@ -84,6 +84,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
                              RMAppAttemptEvent> stateMachine;
 
   private final RMContext rmContext;
+  @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
@@ -459,7 +460,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // Request a container for the AM.
       ResourceRequest request = BuilderUtils.newResourceRequest(
           AM_CONTAINER_PRIORITY, "*", appAttempt.submissionContext
-              .getMasterCapability(), 1);
+              .getAMContainerSpec().getResource(), 1);
       LOG.debug("About to request resources for AM of "
           + appAttempt.applicationAttemptId + " required " + request);
 

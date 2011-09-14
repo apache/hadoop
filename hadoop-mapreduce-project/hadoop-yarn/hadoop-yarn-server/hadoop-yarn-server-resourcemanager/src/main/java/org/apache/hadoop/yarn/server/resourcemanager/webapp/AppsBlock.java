@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -59,7 +58,8 @@ class AppsBlock extends HtmlBlock {
       String appId = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
       String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
-          (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
+          (app.getFinishTime() == 0 ? 
+              "ApplicationMaster URL" : "JobHistory URL");
       String percent = String.format("%.1f", app.getProgress() * 100);
       tbody.
         tr().

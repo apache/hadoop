@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -54,10 +56,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -77,6 +79,7 @@ import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -137,15 +140,11 @@ public class TestContainerTokenSecretManager {
     ApplicationSubmissionContext appSubmissionContext =
         recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     appSubmissionContext.setApplicationId(appID);
-    appSubmissionContext.setMasterCapability(recordFactory
-        .newRecordInstance(Resource.class));
-    appSubmissionContext.getMasterCapability().setMemory(1024);
-//    appSubmissionContext.resources = new HashMap<String, URL>();
+    ContainerLaunchContext amContainer =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    amContainer.setResource(Resources.createResource(1024));
+    amContainer.setCommands(Arrays.asList("sleep", "100"));
     appSubmissionContext.setUser("testUser");
-//    appSubmissionContext.environment = new HashMap<String, String>();
-//    appSubmissionContext.command = new ArrayList<String>();
-    appSubmissionContext.addCommand("sleep");
-    appSubmissionContext.addCommand("100");
 
     // TODO: Use a resource to work around bugs. Today NM doesn't create local
     // app-dirs if there are no file to download!!
@@ -162,10 +161,11 @@ public class TestContainerTokenSecretManager {
     rsrc.setTimestamp(file.lastModified());
     rsrc.setType(LocalResourceType.FILE);
     rsrc.setVisibility(LocalResourceVisibility.PRIVATE);
-    appSubmissionContext.setResourceTodo("testFile", rsrc);
+    amContainer.setLocalResources(Collections.singletonMap("testFile", rsrc));
     SubmitApplicationRequest submitRequest = recordFactory
         .newRecordInstance(SubmitApplicationRequest.class);
     submitRequest.setApplicationSubmissionContext(appSubmissionContext);
+    appSubmissionContext.setAMContainerSpec(amContainer);
     resourceManager.getClientRMService().submitApplication(submitRequest);
 
     // Wait till container gets allocated for AM

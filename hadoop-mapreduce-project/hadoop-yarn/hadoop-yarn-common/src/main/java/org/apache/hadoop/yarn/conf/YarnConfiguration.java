@@ -219,6 +219,12 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "max-completed-applications";
   public static final int DEFAULT_RM_MAX_COMPLETED_APPLICATIONS = 10000;
   
+  /** Default application name */
+  public static final String DEFAULT_APPLICATION_NAME = "N/A";
+
+  /** Default queue name */
+  public static final String DEFAULT_QUEUE_NAME = "default";
+  
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////

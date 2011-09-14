@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -55,7 +53,6 @@ import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.MRConstants;
@@ -72,6 +69,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -237,7 +235,6 @@ public class YARNRunner implements ClientProtocol {
     // Construct necessary information to start the MR AM
     ApplicationSubmissionContext appContext = 
       createApplicationSubmissionContext(conf, jobSubmitDir, ts);
-    setupDistributedCache(conf, appContext);
     
     // XXX Remove
     in.close();
@@ -273,16 +270,18 @@ public class YARNRunner implements ClientProtocol {
   public ApplicationSubmissionContext createApplicationSubmissionContext(
       Configuration jobConf,
       String jobSubmitDir, Credentials ts) throws IOException {
-    ApplicationSubmissionContext appContext =
-        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     ApplicationId applicationId = resMgrDelegate.getApplicationId();
-    appContext.setApplicationId(applicationId);
+    
+    // Setup resource requirements
     Resource capability = recordFactory.newRecordInstance(Resource.class);
     capability.setMemory(conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
         MRJobConfig.DEFAULT_MR_AM_VMEM_MB));
     LOG.info("AppMaster capability = " + capability);
-    appContext.setMasterCapability(capability);
 
+    // Setup LocalResources
+    Map<String, LocalResource> localResources =
+        new HashMap<String, LocalResource>();
+    
     Path jobConfPath = new Path(jobSubmitDir, MRConstants.JOB_CONF_FILE);
     
     URL yarnUrlForJobSubmitDir = ConverterUtils
@@ -292,14 +291,11 @@ public class YARNRunner implements ClientProtocol {
     LOG.debug("Creating setup context, jobSubmitDir url is "
         + yarnUrlForJobSubmitDir);
 
-    appContext.setResource(MRConstants.JOB_SUBMIT_DIR,
-        yarnUrlForJobSubmitDir);
-
-    appContext.setResourceTodo(MRConstants.JOB_CONF_FILE,
+    localResources.put(MRConstants.JOB_CONF_FILE,
         createApplicationResource(defaultFileContext,
             jobConfPath));
     if (jobConf.get(MRJobConfig.JAR) != null) {
-      appContext.setResourceTodo(MRConstants.JOB_JAR,
+      localResources.put(MRConstants.JOB_JAR,
           createApplicationResource(defaultFileContext,
               new Path(jobSubmitDir, MRConstants.JOB_JAR)));
     } else {
@@ -312,30 +308,21 @@ public class YARNRunner implements ClientProtocol {
     // TODO gross hack
     for (String s : new String[] { "job.split", "job.splitmetainfo",
         MRConstants.APPLICATION_TOKENS_FILE }) {
-      appContext.setResourceTodo(
+      localResources.put(
           MRConstants.JOB_SUBMIT_DIR + "/" + s,
-          createApplicationResource(defaultFileContext, new Path(jobSubmitDir, s)));
-    }
-
-    // TODO: Only if security is on.
-    List<String> fsTokens = new ArrayList<String>();
-    for (Token<? extends TokenIdentifier> token : ts.getAllTokens()) {
-      fsTokens.add(token.encodeToUrlString());
+          createApplicationResource(defaultFileContext, 
+              new Path(jobSubmitDir, s)));
     }
     
-    // TODO - Remove this!
-    appContext.addAllFsTokens(fsTokens);
-    DataOutputBuffer dob = new DataOutputBuffer();
-    ts.writeTokenStorageToStream(dob);
-    appContext.setFsTokensTodo(ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
+    // Setup security tokens
+    ByteBuffer securityTokens = null;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      DataOutputBuffer dob = new DataOutputBuffer();
+      ts.writeTokenStorageToStream(dob);
+      securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+    }
 
-    // Add queue information
-    appContext.setQueue(jobConf.get(JobContext.QUEUE_NAME, JobConf.DEFAULT_QUEUE_NAME));
-    
-    // Add job name
-    appContext.setApplicationName(jobConf.get(JobContext.JOB_NAME, "N/A"));
-    
-    // Add the command line
+    // Setup the command to run the AM
     String javaHome = "$JAVA_HOME";
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
     vargs.add(javaHome + "/bin/java");
@@ -346,13 +333,6 @@ public class YARNRunner implements ClientProtocol {
     vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
-    // Add { job jar, MR app jar } to classpath.
-    Map<String, String> environment = new HashMap<String, String>();
-    MRApps.setInitialClasspath(environment);
-    MRApps.addToClassPath(environment, MRConstants.JOB_JAR);
-    MRApps.addToClassPath(environment,
-        MRConstants.YARN_MAPREDUCE_APP_JAR_PATH);
-    appContext.addAllEnvironment(environment);
     vargs.add("org.apache.hadoop.mapreduce.v2.app.MRAppMaster");
     vargs.add(String.valueOf(applicationId.getClusterTimestamp()));
     vargs.add(String.valueOf(applicationId.getId()));
@@ -370,140 +350,43 @@ public class YARNRunner implements ClientProtocol {
 
     LOG.info("Command to launch container for ApplicationMaster is : "
         + mergedCommand);
+    
+    // Setup the environment - Add { job jar, MR app jar } to classpath.
+    Map<String, String> environment = new HashMap<String, String>();
+    MRApps.setInitialClasspath(environment);
+    MRApps.addToClassPath(environment, MRConstants.JOB_JAR);
+    MRApps.addToClassPath(environment,
+        MRConstants.YARN_MAPREDUCE_APP_JAR_PATH);
 
-    appContext.addAllCommands(vargsFinal);
-    // TODO: RM should get this from RPC.
-    appContext.setUser(UserGroupInformation.getCurrentUser().getShortUserName());
+    // Parse distributed cache
+    MRApps.setupDistributedCache(jobConf, localResources, environment);
+
+    // Setup ContainerLaunchContext for AM container
+    ContainerLaunchContext amContainer =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+    amContainer.setResource(capability);             // Resource (mem) required
+    amContainer.setLocalResources(localResources);   // Local resources
+    amContainer.setEnvironment(environment);         // Environment
+    amContainer.setCommands(vargsFinal);             // Command for AM
+    amContainer.setContainerTokens(securityTokens);  // Security tokens
+
+    // Set up the ApplicationSubmissionContext
+    ApplicationSubmissionContext appContext =
+        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    appContext.setApplicationId(applicationId);                // ApplicationId
+    appContext.setUser(                                        // User name
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    appContext.setQueue(                                       // Queue name
+        jobConf.get(JobContext.QUEUE_NAME,     
+        YarnConfiguration.DEFAULT_QUEUE_NAME));
+    appContext.setApplicationName(                             // Job name
+        jobConf.get(JobContext.JOB_NAME, 
+        YarnConfiguration.DEFAULT_APPLICATION_NAME));              
+    appContext.setAMContainerSpec(amContainer);         // AM Container 
+
     return appContext;
   }
 
-  /**
-   *    * TODO: Copied for now from TaskAttemptImpl.java ... fixme
-   * @param strs
-   * @return
-   */
-  private static long[] parseTimeStamps(String[] strs) {
-    if (null == strs) {
-      return null;
-    }
-    long[] result = new long[strs.length];
-    for(int i=0; i < strs.length; ++i) {
-      result[i] = Long.parseLong(strs[i]);
-    }
-    return result;
-  }
-
-  /**
-   * TODO: Copied for now from TaskAttemptImpl.java ... fixme
-   * 
-   * TODO: This is currently needed in YarnRunner as user code like setupJob,
-   * cleanupJob may need access to dist-cache. Once we separate distcache for
-   * maps, reduces, setup etc, this can include only a subset of artificats.
-   * This is also needed for uberAM case where we run everything inside AM.
-   */
-  private void setupDistributedCache(Configuration conf, 
-      ApplicationSubmissionContext container) throws IOException {
-    
-    // Cache archives
-    parseDistributedCacheArtifacts(conf, container, LocalResourceType.ARCHIVE, 
-        DistributedCache.getCacheArchives(conf), 
-        parseTimeStamps(DistributedCache.getArchiveTimestamps(conf)), 
-        getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES), 
-        DistributedCache.getArchiveVisibilities(conf), 
-        DistributedCache.getArchiveClassPaths(conf));
-    
-    // Cache files
-    parseDistributedCacheArtifacts(conf, container, LocalResourceType.FILE, 
-        DistributedCache.getCacheFiles(conf),
-        parseTimeStamps(DistributedCache.getFileTimestamps(conf)),
-        getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES),
-        DistributedCache.getFileVisibilities(conf),
-        DistributedCache.getFileClassPaths(conf));
-  }
-
-  // TODO - Move this to MR!
-  // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], long[], boolean[], Path[], FileType)
-  private void parseDistributedCacheArtifacts(Configuration conf,
-      ApplicationSubmissionContext container, LocalResourceType type,
-      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[], 
-      Path[] pathsToPutOnClasspath) throws IOException {
-
-    if (uris != null) {
-      // Sanity check
-      if ((uris.length != timestamps.length) || (uris.length != sizes.length) ||
-          (uris.length != visibilities.length)) {
-        throw new IllegalArgumentException("Invalid specification for " +
-            "distributed-cache artifacts of type " + type + " :" +
-            " #uris=" + uris.length +
-            " #timestamps=" + timestamps.length +
-            " #visibilities=" + visibilities.length
-            );
-      }
-      
-      Map<String, Path> classPaths = new HashMap<String, Path>();
-      if (pathsToPutOnClasspath != null) {
-        for (Path p : pathsToPutOnClasspath) {
-          FileSystem fs = p.getFileSystem(conf);
-          p = p.makeQualified(fs.getUri(), fs.getWorkingDirectory());
-          classPaths.put(p.toUri().getPath().toString(), p);
-        }
-      }
-      for (int i = 0; i < uris.length; ++i) {
-        URI u = uris[i];
-        Path p = new Path(u);
-        FileSystem fs = p.getFileSystem(conf);
-        p = fs.resolvePath(
-            p.makeQualified(fs.getUri(), fs.getWorkingDirectory()));
-        // Add URI fragment or just the filename
-        Path name = new Path((null == u.getFragment())
-          ? p.getName()
-          : u.getFragment());
-        if (name.isAbsolute()) {
-          throw new IllegalArgumentException("Resource name must be relative");
-        }
-        String linkName = name.toUri().getPath();
-        container.setResourceTodo(
-            linkName,
-            createLocalResource(
-                p.toUri(), type, 
-                visibilities[i]
-                  ? LocalResourceVisibility.PUBLIC
-                  : LocalResourceVisibility.PRIVATE,
-                sizes[i], timestamps[i])
-        );
-        if (classPaths.containsKey(u.getPath())) {
-          Map<String, String> environment = container.getAllEnvironment();
-          MRApps.addToClassPath(environment, linkName);
-        }
-      }
-    }
-  }
-
-  // TODO - Move this to MR!
-  private static long[] getFileSizes(Configuration conf, String key) {
-    String[] strs = conf.getStrings(key);
-    if (strs == null) {
-      return null;
-    }
-    long[] result = new long[strs.length];
-    for(int i=0; i < strs.length; ++i) {
-      result[i] = Long.parseLong(strs[i]);
-    }
-    return result;
-  }
-  
-  private LocalResource createLocalResource(URI uri, 
-      LocalResourceType type, LocalResourceVisibility visibility, 
-      long size, long timestamp) throws IOException {
-    LocalResource resource = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(LocalResource.class);
-    resource.setResource(ConverterUtils.getYarnUrlFromURI(uri));
-    resource.setType(type);
-    resource.setVisibility(visibility);
-    resource.setSize(size);
-    resource.setTimestamp(timestamp);
-    return resource;
-  }
-  
   @Override
   public void setJobPriority(JobID arg0, String arg1) throws IOException,
       InterruptedException {

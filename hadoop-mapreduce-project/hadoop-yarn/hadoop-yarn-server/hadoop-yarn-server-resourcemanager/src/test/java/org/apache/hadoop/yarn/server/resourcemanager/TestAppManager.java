@@ -18,19 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.mockito.Mockito.*;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.LinkedList;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -44,7 +37,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
@@ -63,8 +55,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.service.Service;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Lists;
@@ -75,7 +65,6 @@ import com.google.common.collect.Lists;
  */
 
 public class TestAppManager{
-  private static final Log LOG = LogFactory.getLog(TestAppManager.class);
   private static RMAppEventType appEventType = RMAppEventType.KILL; 
 
   public synchronized RMAppEventType getAppEventType() {
@@ -117,10 +106,8 @@ public class TestAppManager{
   public class TestAppManagerDispatcher implements
       EventHandler<RMAppManagerEvent> {
 
-    private final RMContext rmContext;
 
-    public TestAppManagerDispatcher(RMContext rmContext) {
-      this.rmContext = rmContext;
+    public TestAppManagerDispatcher() {
     }
 
     @Override
@@ -132,15 +119,11 @@ public class TestAppManager{
   public class TestDispatcher implements
       EventHandler<RMAppEvent> {
 
-    private final RMContext rmContext;
-
-    public TestDispatcher(RMContext rmContext) {
-      this.rmContext = rmContext;
+    public TestDispatcher() {
     }
 
     @Override
     public void handle(RMAppEvent event) {
-      ApplicationId appID = event.getApplicationId();
       //RMApp rmApp = this.rmContext.getRMApps().get(appID);
       setAppEventType(event.getType());
       System.out.println("in handle routine " + getAppEventType().toString());
@@ -178,7 +161,8 @@ public class TestAppManager{
     public void setCompletedAppsMax(int max) {
       super.setCompletedAppsMax(max);
     }
-    public void submitApplication(ApplicationSubmissionContext submissionContext) {
+    public void submitApplication(
+        ApplicationSubmissionContext submissionContext) {
       super.submitApplication(submissionContext);
     }
   }
@@ -336,8 +320,9 @@ public class TestAppManager{
   }
 
   protected void setupDispatcher(RMContext rmContext, Configuration conf) {
-    TestDispatcher testDispatcher = new TestDispatcher(rmContext);
-    TestAppManagerDispatcher testAppManagerDispatcher = new TestAppManagerDispatcher(rmContext);
+    TestDispatcher testDispatcher = new TestDispatcher();
+    TestAppManagerDispatcher testAppManagerDispatcher = 
+        new TestAppManagerDispatcher();
     rmContext.getDispatcher().register(RMAppEventType.class, testDispatcher);
     rmContext.getDispatcher().register(RMAppManagerEventType.class, testAppManagerDispatcher);
     ((Service)rmContext.getDispatcher()).init(conf);
@@ -359,7 +344,8 @@ public class TestAppManager{
 
     ApplicationId appID = MockApps.newAppID(1);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    ApplicationSubmissionContext context = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
+    ApplicationSubmissionContext context = 
+        recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(appID);
     setupDispatcher(rmContext, conf);
 
@@ -367,8 +353,12 @@ public class TestAppManager{
     RMApp app = rmContext.getRMApps().get(appID);
     Assert.assertNotNull("app is null", app);
     Assert.assertEquals("app id doesn't match", appID, app.getApplicationId());
-    Assert.assertEquals("app name doesn't match", "N/A", app.getName());
-    Assert.assertEquals("app queue doesn't match", "default", app.getQueue());
+    Assert.assertEquals("app name doesn't match", 
+        YarnConfiguration.DEFAULT_APPLICATION_NAME, 
+        app.getName());
+    Assert.assertEquals("app queue doesn't match", 
+        YarnConfiguration.DEFAULT_QUEUE_NAME, 
+        app.getQueue());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
     Assert.assertNotNull("app store is null", app.getApplicationStore());
 

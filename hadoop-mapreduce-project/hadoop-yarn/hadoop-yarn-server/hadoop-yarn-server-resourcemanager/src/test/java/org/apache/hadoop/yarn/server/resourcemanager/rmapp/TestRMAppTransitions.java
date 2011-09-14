@@ -128,7 +128,7 @@ public class TestRMAppTransitions {
     RMApp application = new RMAppImpl(applicationId, rmContext,
           conf, name, user,
           queue, submissionContext, clientTokenStr,
-          appStore, rmContext.getAMLivelinessMonitor(), scheduler,
+          appStore, scheduler,
           masterService);
 
     testAppStartState(applicationId, user, name, queue, application);

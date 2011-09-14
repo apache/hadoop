@@ -89,7 +89,7 @@ public class ContainerLaunch implements Callable<Integer> {
     final Map<Path,String> localResources = container.getLocalizedResources();
     String containerIdStr = ConverterUtils.toString(container.getContainerID());
     final String user = launchContext.getUser();
-    final Map<String,String> env = launchContext.getEnv();
+    final Map<String,String> env = launchContext.getEnvironment();
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
@@ -109,7 +109,7 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       launchContext.setCommands(newCmds);
 
-      Map<String, String> envs = launchContext.getEnv();
+      Map<String, String> envs = launchContext.getEnvironment();
       Map<String, String> newEnvs = new HashMap<String, String>(envs.size());
       for (Entry<String, String> entry : envs.entrySet()) {
         newEnvs.put(
@@ -118,7 +118,7 @@ public class ContainerLaunch implements Callable<Integer> {
                 ApplicationConstants.LOG_DIR_EXPANSION_VAR,
                 containerLogDir.toUri().getPath()));
       }
-      launchContext.setEnv(newEnvs);
+      launchContext.setEnvironment(newEnvs);
       // /////////////////////////// End of variable expansion
 
       FileContext lfs = FileContext.getLocalFSFileContext();
