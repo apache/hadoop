@@ -180,9 +180,12 @@ public class HftpFileSystem extends FileSystem {
       
       //since we don't already have a token, go get one over https
       if (delegationToken == null) {
-        setDelegationToken(getDelegationToken(null));
-        renewer.addTokenToRenew(this);
-        LOG.debug("Created new DT for " + delegationToken.getService());
+        Token<?> newToken = getDelegationToken(null);
+        if (newToken != null) {
+          setDelegationToken(newToken);
+          renewer.addTokenToRenew(this);
+          LOG.debug("Created new DT for " + delegationToken.getService());
+        }
       } else {
         LOG.debug("Found existing DT for " + delegationToken.getService());        
       }
