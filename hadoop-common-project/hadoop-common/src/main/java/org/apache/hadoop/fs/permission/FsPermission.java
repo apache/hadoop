@@ -44,18 +44,12 @@ public class FsPermission implements Writable {
   };
   static {                                      // register a ctor
     WritableFactories.setFactory(FsPermission.class, FACTORY);
+    WritableFactories.setFactory(ImmutableFsPermission.class, FACTORY);
   }
 
   /** Create an immutable {@link FsPermission} object. */
   public static FsPermission createImmutable(short permission) {
-    return new FsPermission(permission) {
-      public FsPermission applyUMask(FsPermission umask) {
-        throw new UnsupportedOperationException();
-      }
-      public void readFields(DataInput in) throws IOException {
-        throw new UnsupportedOperationException();
-      }
-    };
+    return new ImmutableFsPermission(permission);
   }
 
   //POSIX permission style
@@ -300,5 +294,17 @@ public class FsPermission implements Writable {
       n += 01000;
 
     return new FsPermission((short)n);
+  }
+  
+  private static class ImmutableFsPermission extends FsPermission {
+    public ImmutableFsPermission(short permission) {
+      super(permission);
+    }
+    public FsPermission applyUMask(FsPermission umask) {
+      throw new UnsupportedOperationException();
+    }
+    public void readFields(DataInput in) throws IOException {
+      throw new UnsupportedOperationException();
+    }    
   }
 }

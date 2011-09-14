@@ -583,6 +583,9 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7626. Bugfix for a config generator (Eric Yang via ddas)
 
+    HADOOP-7629. Allow immutable FsPermission objects to be used as IPC
+    parameters. (todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
