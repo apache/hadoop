@@ -110,7 +110,6 @@ public class Store implements HeapSize {
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
-  private final long desiredMaxFileSize;
   private final int blockingStoreFileCount;
   private volatile long storeSize = 0L;
   private volatile long totalUncompressedBytes = 0L;
@@ -200,18 +199,6 @@ public class Store implements HeapSize {
     this.inMemory = family.isInMemory();
     long maxFileSize = 0L;
     HTableDescriptor hTableDescriptor = region.getTableDesc();
-    if (hTableDescriptor != null) {
-      maxFileSize = hTableDescriptor.getMaxFileSize();
-    } else {
-      maxFileSize = HConstants.DEFAULT_MAX_FILE_SIZE;
-    }
-
-    // By default we split region if a file > HConstants.DEFAULT_MAX_FILE_SIZE.
-    if (maxFileSize == HConstants.DEFAULT_MAX_FILE_SIZE) {
-      maxFileSize = conf.getLong("hbase.hregion.max.filesize",
-        HConstants.DEFAULT_MAX_FILE_SIZE);
-    }
-    this.desiredMaxFileSize = maxFileSize;
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", 7);
 
@@ -1471,49 +1458,54 @@ public class Store implements HeapSize {
     return foundCandidate;
   }
 
+  public boolean canSplit() {
+    this.lock.readLock().lock();
+    try {
+      // Not splitable if we find a reference store file present in the store.
+      for (StoreFile sf : storefiles) {
+        if (sf.isReference()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(sf + " is not splittable");
+          }
+          return false;
+        }
+      }
+      
+      return true;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
   /**
    * Determines if Store should be split
    * @return byte[] if store should be split, null otherwise.
    */
-  public byte[] checkSplit() {
+  public byte[] getSplitPoint() {
     this.lock.readLock().lock();
     try {
-      boolean force = this.region.shouldForceSplit();
       // sanity checks
       if (this.storefiles.isEmpty()) {
         return null;
       }
-      if (!force && storeSize < this.desiredMaxFileSize) {
-        return null;
-      }
-
-      if (this.region.getRegionInfo().isMetaRegion()) {
-        if (force) {
-          LOG.warn("Cannot split meta regions in HBase 0.20");
-        }
-        return null;
-      }
+      // Should already be enforced by the split policy!
+      assert !this.region.getRegionInfo().isMetaRegion();
 
       // Not splitable if we find a reference store file present in the store.
-      boolean splitable = true;
       long maxSize = 0L;
       StoreFile largestSf = null;
       for (StoreFile sf : storefiles) {
-        if (splitable) {
-          splitable = !sf.isReference();
-          if (!splitable) {
-            // RETURN IN MIDDLE OF FUNCTION!!! If not splitable, just return.
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(sf +  " is not splittable");
-            }
-            return null;
-          }
+        if (sf.isReference()) {
+          // Should already be enforced since we return false in this case
+          assert false : "getSplitPoint() called on a region that can't split!";
+          return null;
         }
+
         StoreFile.Reader r = sf.getReader();
         if (r == null) {
           LOG.warn("Storefile " + sf + " Reader is null");
           continue;
         }
+        
         long size = r.length();
         if (size > maxSize) {
           // This is the largest one so far
@@ -1521,10 +1513,7 @@ public class Store implements HeapSize {
           largestSf = sf;
         }
       }
-      // if the user explicit set a split point, use that
-      if (this.region.getSplitPoint() != null) {
-        return this.region.getSplitPoint();
-      }
+
       StoreFile.Reader r = largestSf.getReader();
       if (r == null) {
         LOG.warn("Storefile " + largestSf + " Reader is null");

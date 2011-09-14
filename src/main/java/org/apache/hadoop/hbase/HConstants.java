@@ -488,7 +488,10 @@ public final class HConstants {
   public static final String HBASE_MASTER_LOGCLEANER_PLUGINS =
       "hbase.master.logcleaner.plugins";
 
-   /*
+  public static final String HBASE_REGION_SPLIT_POLICY_KEY =
+    "hbase.regionserver.region.split.policy";
+
+  /*
     * Minimum percentage of free heap necessary for a successful cluster startup.
     */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;

@@ -700,9 +700,9 @@ public class TestStore extends TestCase {
    */
   public void testSplitWithEmptyColFam() throws IOException {
     init(this.getName());
-    assertNull(store.checkSplit());
+    assertNull(store.getSplitPoint());
     store.getHRegion().forceSplit(null);
-    assertNull(store.checkSplit());
+    assertNull(store.getSplitPoint());
     store.getHRegion().clearSplit_TESTS_ONLY();
   }
 }

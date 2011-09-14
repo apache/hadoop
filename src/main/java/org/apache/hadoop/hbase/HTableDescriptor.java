@@ -63,6 +63,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   public static final ImmutableBytesWritable MAX_FILESIZE_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(MAX_FILESIZE));
+
+  // The class which determines when a region should split
+  public static final String SPLIT_POLICY = "SPLIT_POLICY";
+  public static final ImmutableBytesWritable SPLIT_POLICY_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(SPLIT_POLICY));
+  
   public static final String READONLY = "READONLY";
   public static final ImmutableBytesWritable READONLY_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(READONLY));
@@ -421,6 +427,15 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     if (value != null)
       return Long.valueOf(Bytes.toString(value)).longValue();
     return HConstants.DEFAULT_MAX_FILE_SIZE;
+  }
+  
+  /**
+   * @return the class name of the region split policy for this table.
+   * If this returns null, the default constant size based split policy
+   * is used.
+   */
+  public String getRegionSplitPolicyClassName() {
+    return getValue(SPLIT_POLICY);
   }
 
   /** @param name name of table */
