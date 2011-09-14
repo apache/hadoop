@@ -289,6 +289,7 @@ public class FifoScheduler implements ResourceScheduler {
     return nodes.get(nodeId);
   }
   
+  @SuppressWarnings("unchecked")
   private synchronized void addApplication(ApplicationAttemptId appAttemptId,
       String queueName, String user) {
     // TODO: Fix store
@@ -440,6 +441,14 @@ public class FifoScheduler implements ResourceScheduler {
     ResourceRequest request = 
       application.getResourceRequest(priority, node.getRMNode().getNodeAddress());
     if (request != null) {
+      // Don't allocate on this node if we don't need containers on this rack
+      ResourceRequest rackRequest =
+          application.getResourceRequest(priority, 
+              node.getRMNode().getRackName());
+      if (rackRequest == null || rackRequest.getNumContainers() <= 0) {
+        return 0;
+      }
+      
       int assignableContainers = 
         Math.min(
             getMaxAllocatableContainers(application, priority, node, 
@@ -458,6 +467,13 @@ public class FifoScheduler implements ResourceScheduler {
     ResourceRequest request = 
       application.getResourceRequest(priority, node.getRMNode().getRackName());
     if (request != null) {
+      // Don't allocate on this rack if the application doens't need containers
+      ResourceRequest offSwitchRequest =
+          application.getResourceRequest(priority, SchedulerNode.ANY);
+      if (offSwitchRequest.getNumContainers() <= 0) {
+        return 0;
+      }
+      
       int assignableContainers = 
         Math.min(
             getMaxAllocatableContainers(application, priority, node, 
