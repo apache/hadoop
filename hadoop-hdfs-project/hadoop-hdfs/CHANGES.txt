@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
     version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
 
+    HDFS-2333. Change DFSOutputStream back to package private, otherwise,
+    there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
