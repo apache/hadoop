@@ -154,6 +154,9 @@ Release 0.20.205.0 - unreleased
     HDFS-2328. HFTP throws NPE if security is enabled locally, but not 
     remotely. (omalley)
 
+    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
+    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

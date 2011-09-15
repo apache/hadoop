@@ -201,7 +201,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final HttpURLConnection conn = httpConnect(op, fspath, parameters);
     validateResponse(op, conn);
     try {
-      return jsonParse(conn.getInputStream());
+      return WebHdfsFileSystem.<T>jsonParse(conn.getInputStream());
     } finally {
       conn.disconnect();
     }
