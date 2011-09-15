@@ -1243,89 +1243,92 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2897. Javadoc for ClientRMProtocol protocol and related records. 
     (acmurthy)
 
-   MAPREDUCE-2916. Ivy build for MRv1 fails with bad organization for 
-   common daemon. (mahadev)
+    MAPREDUCE-2916. Ivy build for MRv1 fails with bad organization for 
+    common daemon. (mahadev)
 
-   MAPREDUCE-2917. Fixed corner case in container reservation which led to
-   starvation and hung jobs. (acmurthy) 
+    MAPREDUCE-2917. Fixed corner case in container reservation which led to
+    starvation and hung jobs. (acmurthy) 
 
-   MAPREDUCE-2756. Better error handling in JobControl for failed jobs.
-   (Robert Evans via acmurthy) 
+    MAPREDUCE-2756. Better error handling in JobControl for failed jobs.
+    (Robert Evans via acmurthy) 
 
-   MAPREDUCE-2716. MRReliabilityTest job fails because of missing
-   job-file. (Jeffrey Naisbitt via vinodkv)
+    MAPREDUCE-2716. MRReliabilityTest job fails because of missing
+    job-file. (Jeffrey Naisbitt via vinodkv)
 
-   MAPREDUCE-2882. TestLineRecordReader depends on ant jars. (todd)
+    MAPREDUCE-2882. TestLineRecordReader depends on ant jars. (todd)
 
-   MAPREDUCE-2687. Fix NodeManager to use the right version of
-   LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy) 
+    MAPREDUCE-2687. Fix NodeManager to use the right version of
+    LocalDirAllocator.getLocalPathToWrite. (mahadev & acmurthy) 
 
-   MAPREDUCE-2800. Set final progress for tasks to ensure all task information
-   is correctly logged to JobHistory. (Siddharth Seth via acmurthy)
+    MAPREDUCE-2800. Set final progress for tasks to ensure all task information
+    is correctly logged to JobHistory. (Siddharth Seth via acmurthy)
 
-   MAPREDUCE-2938. Log application submission failure in CapacityScheduler.
-   (acmurthy) 
+    MAPREDUCE-2938. Log application submission failure in CapacityScheduler.
+    (acmurthy) 
 
-   MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
+    MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
 
-   MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
+    MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy) 
 
-   MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves 
-   via mahadev)
+    MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves 
+    via mahadev)
 
-   MAPREDUCE-2947. Fixed race condition in AuxiliaryServices. (vinodkv via
-   acmurthy) 
+    MAPREDUCE-2947. Fixed race condition in AuxiliaryServices. (vinodkv via
+    acmurthy) 
 
-   MAPREDUCE-2844. Fixed display of nodes in UI. (Ravi Teja Ch N V via
-   acmurthy) 
+    MAPREDUCE-2844. Fixed display of nodes in UI. (Ravi Teja Ch N V via
+    acmurthy) 
 
-   MAPREDUCE-2677. Fixed 404 for some links from HistoryServer. (Robert Evans
-   via acmurthy) 
+    MAPREDUCE-2677. Fixed 404 for some links from HistoryServer. (Robert Evans
+    via acmurthy) 
 
-   MAPREDUCE-2937. Ensure reason for application failure is displayed to the
-   user. (mahadev via acmurthy) 
+    MAPREDUCE-2937. Ensure reason for application failure is displayed to the
+    user. (mahadev via acmurthy) 
 
-   MAPREDUCE-2953. Fix a race condition on submission which caused client to 
-   incorrectly assume application was gone by making submission synchronous
-   for RMAppManager. (Thomas Graves via acmurthy) 
+    MAPREDUCE-2953. Fix a race condition on submission which caused client to 
+    incorrectly assume application was gone by making submission synchronous
+    for RMAppManager. (Thomas Graves via acmurthy) 
 
-   MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy) 
-
-   MAPREDUCE-2954. Fixed a deadlock in NM caused due to wrong synchronization
-   in protocol buffer records. (Siddharth Seth via vinodkv)
-
-   MAPREDUCE-2975. Fixed YARNRunner to use YarnConfiguration rather than
-   Configuration. (mahadev via acmurthy) 
+    MAPREDUCE-2963. Fix hang in TestMRJobs. (Siddharth Seth via acmurthy) 
  
-   MAPREDUCE-2971. ant build mapreduce fails protected access jc.displayJobList
-   (jobs) (Thomas Graves via mahadev)
+    MAPREDUCE-2954. Fixed a deadlock in NM caused due to wrong synchronization
+    in protocol buffer records. (Siddharth Seth via vinodkv)
 
-   MAPREDUCE-2691. Finishing up the cleanup of distributed cache file resources
-   and related tests. (Siddharth Seth via vinodkv)
+    MAPREDUCE-2975. Fixed YARNRunner to use YarnConfiguration rather than
+    Configuration. (mahadev via acmurthy) 
+ 
+    MAPREDUCE-2971. ant build mapreduce fails protected access jc.displayJobList
+    (jobs) (Thomas Graves via mahadev)
 
-   MAPREDUCE-2749. Ensure NM registers with RM after starting all its services
-   correctly. (Thomas Graves via acmurthy)
+    MAPREDUCE-2691. Finishing up the cleanup of distributed cache file resources
+    and related tests. (Siddharth Seth via vinodkv)
 
-   MAPREDUCE-2979. Removed the needless ClientProtocolProvider configuration
-   from the hadoop-mapreduce-client-core module. (Siddharth Seth via vinodkv)
+    MAPREDUCE-2749. Ensure NM registers with RM after starting all its services
+    correctly. (Thomas Graves via acmurthy)
 
-   MAPREDUCE-2985. Fixed findbugs warnings in ResourceLocalizationService.
-   (Thomas Graves via acmurthy)
+    MAPREDUCE-2979. Removed the needless ClientProtocolProvider configuration
+    from the hadoop-mapreduce-client-core module. (Siddharth Seth via vinodkv)
 
-   MAPREDUCE-2874. Fix formatting of ApplicationId in web-ui. (Eric Payne via
-   acmurthy)
+    MAPREDUCE-2985. Fixed findbugs warnings in ResourceLocalizationService.
+    (Thomas Graves via acmurthy)
 
-   MAPREDUCE-2995. Better handling of expired containers in MapReduce
-   ApplicationMaster. (vinodkv via acmurthy) 
+    MAPREDUCE-2874. Fix formatting of ApplicationId in web-ui. (Eric Payne via
+    acmurthy)
 
-   MAPREDUCE-2995. Fixed race condition in ContainerLauncher. (vinodkv via 
-   acmurthy) 
+    MAPREDUCE-2995. Better handling of expired containers in MapReduce
+    ApplicationMaster. (vinodkv via acmurthy) 
 
-   MAPREDUCE-2949. Fixed NodeManager to shut-down correctly if a service
-   startup fails. (Ravi Teja via vinodkv)
+    MAPREDUCE-2995. Fixed race condition in ContainerLauncher. (vinodkv via 
+    acmurthy) 
 
-   MAPREDUCE-3005. Fix both FifoScheduler and CapacityScheduler to correctly
-   enforce locality constraints. (acmurthy) 
+    MAPREDUCE-2949. Fixed NodeManager to shut-down correctly if a service
+    startup fails. (Ravi Teja via vinodkv)
+
+    MAPREDUCE-3005. Fix both FifoScheduler and CapacityScheduler to correctly
+    enforce locality constraints. (acmurthy) 
+
+    MAPREDUCE-3007. Fixed Yarn Mapreduce client to be able to connect to 
+    JobHistoryServer in secure mode. (vinodkv)
 
 Release 0.22.0 - Unreleased
 
