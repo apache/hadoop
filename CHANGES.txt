@@ -270,6 +270,7 @@ Release 0.91.0 - Unreleased
                to contact the sink (JD and Lars Hofhansl)
    HBASE-4390  [replication] ReplicationSource's UncaughtExceptionHandler
                shouldn't join
+   HBASE-4395  EnableTableHandler races with itself
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

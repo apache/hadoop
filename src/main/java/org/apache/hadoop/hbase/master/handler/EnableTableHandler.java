@@ -109,32 +109,28 @@ public class EnableTableHandler extends EventHandler {
     // Set table enabling flag up in zk.
     this.assignmentManager.getZKTable().setEnablingTable(this.tableNameStr);
     boolean done = false;
-    while (true) {
-      // Get the regions of this table. We're done when all listed
-      // tables are onlined.
-      List<HRegionInfo> regionsInMeta =
-        MetaReader.getTableRegions(this.ct, tableName, true);
-      int countOfRegionsInTable = regionsInMeta.size();
-      List<HRegionInfo> regions = regionsToAssign(regionsInMeta);
-      if (regions.size() == 0) {
+    // Get the regions of this table. We're done when all listed
+    // tables are onlined.
+    List<HRegionInfo> regionsInMeta =
+      MetaReader.getTableRegions(this.ct, tableName, true);
+    int countOfRegionsInTable = regionsInMeta.size();
+    List<HRegionInfo> regions = regionsToAssign(regionsInMeta);
+    int regionsCount = regions.size();
+    if (regionsCount == 0) {
+      done = true;
+    }
+    LOG.info("Table has " + countOfRegionsInTable + " regions of which " +
+      regionsCount + " are offline.");
+    BulkEnabler bd = new BulkEnabler(this.server, regions,
+      countOfRegionsInTable);
+    try {
+      if (bd.bulkAssign()) {
         done = true;
-        break;
       }
-      LOG.info("Table has " + countOfRegionsInTable + " regions of which " +
-        regions.size() + " are offline.");
-      BulkEnabler bd = new BulkEnabler(this.server, regions,
-        countOfRegionsInTable);
-      try {
-        if (bd.bulkAssign()) {
-          done = true;
-          break;
-        }
-      } catch (InterruptedException e) {
-        LOG.warn("Enable was interrupted");
-        // Preserve the interrupt.
-        Thread.currentThread().interrupt();
-        break;
-      }
+    } catch (InterruptedException e) {
+      LOG.warn("Enable was interrupted");
+      // Preserve the interrupt.
+      Thread.currentThread().interrupt();
     }
     // Flip the table to enabled.
     if (done) this.assignmentManager.getZKTable().setEnabledTable(
@@ -191,10 +187,17 @@ public class EnableTableHandler extends EventHandler {
       long startTime = System.currentTimeMillis();
       long remaining = timeout;
       List<HRegionInfo> regions = null;
+      int lastNumberOfRegions = this.countOfRegionsInTable;
       while (!server.isStopped() && remaining > 0) {
         Thread.sleep(waitingTimeForEvents);
         regions = assignmentManager.getRegionsOfTable(tableName);
         if (isDone(regions)) break;
+
+        // Punt on the timeout as long we make progress
+        if (regions.size() > lastNumberOfRegions) {
+          lastNumberOfRegions = regions.size();
+          timeout += waitingTimeForEvents;
+        }
         remaining = timeout - (System.currentTimeMillis() - startTime);
       }
       return isDone(regions);
