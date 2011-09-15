@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
     HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
+    HADOOP-7635. RetryInvocationHandler should release underlying resources on
+                 close (atm)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
