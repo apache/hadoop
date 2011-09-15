@@ -90,6 +90,9 @@ public class TokenCache {
     for(Path p: ps) {
       FileSystem fs = FileSystem.get(p.toUri(), conf);
       String fsName = fs.getCanonicalServiceName();
+      if (fsName == null) {
+        continue;
+      }
       if (TokenCache.getDelegationToken(credentials, fsName) == null) {
         //TODO: Need to come up with a better place to put
         //this block of code to do with reading the file

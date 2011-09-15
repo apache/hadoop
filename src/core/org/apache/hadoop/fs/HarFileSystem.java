@@ -269,6 +269,11 @@ public class HarFileSystem extends FilterFileSystem {
     return this.uri;
   }
   
+  @Override
+  public String getCanonicalServiceName() {
+    return null;
+  }
+  
   /**
    * this method returns the path 
    * inside the har filesystem.
