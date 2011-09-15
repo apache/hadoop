@@ -262,6 +262,7 @@ Release 0.91.0 - Unreleased
    HBASE-4394  Add support for seeking hints to FilterList
    HBASE-4406  TestOpenRegionHandler failing after HBASE-4287 (todd)
    HBASE-4330  Fix races in slab cache (Li Pi & Todd)
+   HBASE-4383  SlabCache reports negative heap sizes (Li Pi)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

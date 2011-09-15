@@ -97,4 +97,9 @@ public class TestSlabCache {
           test.getUpperBound(i) <= test.getLowerBound(i + 1));
     }
   }
+
+  @Test
+  public void testHeapSizeChanges(){
+    CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
+  }
 }

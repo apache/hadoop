@@ -51,7 +51,7 @@ import com.google.common.collect.MapMaker;
  * ConcurrentLinkedHashMap.
  *
  **/
-public class SingleSizeCache implements BlockCache {
+public class SingleSizeCache implements BlockCache, HeapSize {
   private final Slab backingStore;
   private final ConcurrentMap<String, CacheablePair> backingMap;
   private final int numBlocks;
@@ -219,7 +219,7 @@ public class SingleSizeCache implements BlockCache {
         + StringUtils.humanReadableInt(this.heapSize()) + " bytes." + ", "
         + "churnTime=" + StringUtils.formatTime(milliseconds));
 
-    LOG.debug("Slab Stats: " + "accesses="
+    LOG.info("Slab Stats: " + "accesses="
         + stats.getRequestCount()
         + ", "
         + "hits="
@@ -248,19 +248,19 @@ public class SingleSizeCache implements BlockCache {
   }
 
   public long heapSize() {
-    return this.size() + backingStore.heapSize();
+    return this.size.get() + backingStore.heapSize();
   }
 
   public long size() {
-    return this.blockSize * this.numBlocks;
+    return (long) this.blockSize * (long) this.numBlocks;
   }
 
   public long getFreeSize() {
-    return backingStore.getBlocksRemaining() * blockSize;
+    return (long) backingStore.getBlocksRemaining() * (long) blockSize;
   }
 
   public long getOccupiedSize() {
-    return (numBlocks - backingStore.getBlocksRemaining()) * blockSize;
+    return (long) (numBlocks - backingStore.getBlocksRemaining()) * (long) blockSize;
   }
 
   public long getEvictedCount() {
@@ -328,7 +328,7 @@ public class SingleSizeCache implements BlockCache {
     @Override
     public long heapSize() {
       return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE * 3
-          + ClassSize.REENTRANT_LOCK);
+          + ClassSize.ATOMIC_LONG);
     }
   }
 }

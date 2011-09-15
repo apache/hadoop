@@ -325,10 +325,17 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
 
     @Override
     public void run() {
+      for (SingleSizeCache s : ourcache.sizer.values()) {
+        s.logStats();
+      }
+
+      SlabCache.LOG.info("Current heap size is: "
+          + StringUtils.humanReadableInt(ourcache.heapSize()));
+
       LOG.info("Request Stats");
-      ourcache.requestStats.logStats(ourcache);
+      ourcache.requestStats.logStats();
       LOG.info("Successfully Cached Stats");
-      ourcache.successfullyCachedStats.logStats(ourcache);
+      ourcache.successfullyCachedStats.logStats();
     }
 
   }
@@ -368,13 +375,8 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
       return Math.pow(Math.E, ((double) (index - 0.5) / (double) MULTIPLIER));
     }
 
-    public void logStats(SlabCache slabCache) {
-      for (SingleSizeCache s : slabCache.sizer.values()) {
-        s.logStats();
-      }
+    public void logStats() {
       AtomicLong[] fineGrainedStats = getUsage();
-      SlabCache.LOG.info("Current heap size is: "
-          + StringUtils.humanReadableInt(slabCache.heapSize()));
       for (int i = 0; i < fineGrainedStats.length; i++) {
 
         if (fineGrainedStats[i].get() > 0) {

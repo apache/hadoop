@@ -63,10 +63,15 @@ public class TestSingleSizeCache {
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
-  
+
   @Test
   public void testCacheMultiThreadedEviction() throws Exception {
     CacheTestUtils.hammerEviction(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
+  }
+
+  @Test
+  public void testHeapSizeChanges(){
+    CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
 
 }

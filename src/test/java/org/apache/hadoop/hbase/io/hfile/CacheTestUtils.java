@@ -33,9 +33,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
+import org.apache.hadoop.hbase.io.HeapSize;
 
 public class CacheTestUtils {
 
+  /*Just checks if heapsize grows when something is cached, and gets smaller when the same object is evicted*/
+
+  public static void testHeapSizeChanges(final BlockCache toBeTested, final int blockSize){
+    HFileBlockPair[] blocks = generateHFileBlocks(blockSize, 1);
+    long heapSize = ((HeapSize) toBeTested).heapSize();
+    toBeTested.cacheBlock(blocks[0].blockName, blocks[0].block);
+
+    /*When we cache something HeapSize should always increase */
+    assertTrue(heapSize < ((HeapSize) toBeTested).heapSize());
+
+    toBeTested.evictBlock(blocks[0].blockName);
+
+    /*Post eviction, heapsize should be the same */
+    assertEquals(heapSize, ((HeapSize) toBeTested).heapSize());
+  }
   public static void testCacheMultiThreaded(final BlockCache toBeTested,
       final int blockSize, final int numThreads, final int numQueries,
       final double passingScore) throws Exception {
