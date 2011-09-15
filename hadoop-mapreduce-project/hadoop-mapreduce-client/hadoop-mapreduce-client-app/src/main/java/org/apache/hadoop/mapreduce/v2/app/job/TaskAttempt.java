@@ -38,31 +38,50 @@ public interface TaskAttempt {
   float getProgress();
   TaskAttemptState getState();
 
-  /** Has attempt reached the final state or not.
+  /** 
+   * Has attempt reached the final state or not.
+   * @return true if it has finished, else false
    */
   boolean isFinished();
 
-  /**If container Assigned then return container ID, otherwise null.
+  /**
+   * @return the container ID if a container is assigned, otherwise null.
    */
   ContainerId getAssignedContainerID();
 
-  /**If container Assigned then return container mgr address, otherwise null.
+  /**
+   * @return container mgr address if a container is assigned, otherwise null.
    */
   String getAssignedContainerMgrAddress();
   
-  /**If container Assigned then return the node's http address, otherwise null.
+  /**
+   * @return node's http address if a container is assigned, otherwise null.
    */
   String getNodeHttpAddress();
 
-  /** Returns time at which container is launched. If container is not launched
+  /** 
+   * @return time at which container is launched. If container is not launched
    * yet, returns 0.
    */
   long getLaunchTime();
 
-  /** Returns attempt's finish time. If attempt is not finished
+  /** 
+   * @return attempt's finish time. If attempt is not finished
    *  yet, returns 0.
    */
   long getFinishTime();
+  
+  /**
+   * @return The attempt's shuffle finish time if the attempt is a reduce. If
+   * attempt is not finished yet, returns 0.
+   */
+  long getShuffleFinishTime();
+
+  /**
+   * @return The attempt's sort or merge finish time if the attempt is a reduce. 
+   * If attempt is not finished yet, returns 0.
+   */
+  long getSortFinishTime();
 
   /**
    * @return the port shuffle is on.

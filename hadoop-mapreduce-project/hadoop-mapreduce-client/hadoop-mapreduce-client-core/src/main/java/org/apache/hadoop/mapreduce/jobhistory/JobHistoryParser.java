@@ -379,46 +379,46 @@ public class JobHistoryParser {
       }
     }
 
-    /** Get the job submit time */
+    /** @return the job submit time */
     public long getSubmitTime() { return submitTime; }
-    /** Get the job finish time */
+    /** @return the job finish time */
     public long getFinishTime() { return finishTime; }
-    /** Get the job id */
+    /** @return the job id */
     public JobID getJobId() { return jobid; }
-    /** Get the user name */
+    /** @return the user name */
     public String getUsername() { return username; }
-    /** Get the job name */
+    /** @return the job name */
     public String getJobname() { return jobname; }
-    /** Get the job queue name */
+    /** @return the job queue name */
     public String getJobQueueName() { return jobQueueName; }
-    /** Get the path for the job configuration file */
+    /** @return the path for the job configuration file */
     public String getJobConfPath() { return jobConfPath; }
-    /** Get the job launch time */
+    /** @return the job launch time */
     public long getLaunchTime() { return launchTime; }
-    /** Get the total number of maps */
+    /** @return the total number of maps */
     public long getTotalMaps() { return totalMaps; }
-    /** Get the total number of reduces */
+    /** @return the total number of reduces */
     public long getTotalReduces() { return totalReduces; }
-    /** Get the total number of failed maps */
+    /** @return the total number of failed maps */
     public long getFailedMaps() { return failedMaps; }
-    /** Get the number of failed reduces */
+    /** @return the number of failed reduces */
     public long getFailedReduces() { return failedReduces; }
-    /** Get the number of finished maps */
+    /** @return the number of finished maps */
     public long getFinishedMaps() { return finishedMaps; }
-    /** Get the number of finished reduces */
+    /** @return the number of finished reduces */
     public long getFinishedReduces() { return finishedReduces; }
-    /** Get the job status */
+    /** @return the job status */
     public String getJobStatus() { return jobStatus; }
     public String getErrorInfo() { return errorInfo; }
-    /** Get the counters for the job */
+    /** @return the counters for the job */
     public Counters getTotalCounters() { return totalCounters; }
-    /** Get the map counters for the job */
+    /** @return the map counters for the job */
     public Counters getMapCounters() { return mapCounters; }
-    /** Get the reduce counters for the job */
+    /** @return the reduce counters for the job */
     public Counters getReduceCounters() { return reduceCounters; }
-    /** Get the map of all tasks in this job */
+    /** @return the map of all tasks in this job */
     public Map<TaskID, TaskInfo> getAllTasks() { return tasksMap; }
-    /** Get the priority of this job */
+    /** @return the priority of this job */
     public String getPriority() { return priority.toString(); }
     public Map<JobACL, AccessControlList> getJobACLs() { return jobACLs; }
   }
@@ -458,27 +458,27 @@ public class JobHistoryParser {
       }
     }
     
-    /** Get the Task ID */
+    /** @return the Task ID */
     public TaskID getTaskId() { return taskId; }
-    /** Get the start time of this task */
+    /** @return the start time of this task */
     public long getStartTime() { return startTime; }
-    /** Get the finish time of this task */
+    /** @return the finish time of this task */
     public long getFinishTime() { return finishTime; }
-    /** Get the task type */
+    /** @return the task type */
     public TaskType getTaskType() { return taskType; }
-    /** Get the split locations */
+    /** @return the split locations */
     public String getSplitLocations() { return splitLocations; }
-    /** Get the counters for this task */
+    /** @return the counters for this task */
     public Counters getCounters() { return counters; }
-    /** Get the task status */
+    /** @return the task status */
     public String getTaskStatus() { return status; }
-    /** Get the attempt Id that caused this task to fail */
+    /** @return the attempt Id that caused this task to fail */
     public TaskAttemptID getFailedDueToAttemptId() {
       return failedDueToAttemptId;
     }
-    /** Get the error */
+    /** @return the error */
     public String getError() { return error; }
-    /** Get the map of all attempts for this task */
+    /** @return the map of all attempts for this task */
     public Map<TaskAttemptID, TaskAttemptInfo> getAllTaskAttempts() {
       return attemptsMap;
     }
@@ -530,33 +530,33 @@ public class JobHistoryParser {
       }
     }
 
-    /** Get the attempt Id */
+    /** @return the attempt Id */
     public TaskAttemptID getAttemptId() { return attemptId; }
-    /** Get the start time of the attempt */
+    /** @return the start time of the attempt */
     public long getStartTime() { return startTime; }
-    /** Get the finish time of the attempt */
+    /** @return the finish time of the attempt */
     public long getFinishTime() { return finishTime; }
-    /** Get the shuffle finish time. Applicable only for reduce attempts */
+    /** @return the shuffle finish time. Applicable only for reduce attempts */
     public long getShuffleFinishTime() { return shuffleFinishTime; }
-    /** Get the sort finish time. Applicable only for reduce attempts */
+    /** @return the sort finish time. Applicable only for reduce attempts */
     public long getSortFinishTime() { return sortFinishTime; }
-    /** Get the map finish time. Applicable only for map attempts */
+    /** @return the map finish time. Applicable only for map attempts */
     public long getMapFinishTime() { return mapFinishTime; }
-    /** Get the error string */
+    /** @return the error string */
     public String getError() { return error; }
-    /** Get the state */
+    /** @return the state */
     public String getState() { return state; }
-    /** Get the task status */
+    /** @return the task status */
     public String getTaskStatus() { return status; }
-    /** Get the task type */
+    /** @return the task type */
     public TaskType getTaskType() { return taskType; }
-    /** Get the tracker name where the attempt executed */
+    /** @return the tracker name where the attempt executed */
     public String getTrackerName() { return trackerName; }
-    /** Get the host name */
+    /** @return the host name */
     public String getHostname() { return hostname; }
-    /** Get the counters for the attempt */
+    /** @return the counters for the attempt */
     public Counters getCounters() { return counters; }
-    /** Get the HTTP port for the tracker */
+    /** @return the HTTP port for the tracker */
     public int getHttpPort() { return httpPort; }
   }
 }

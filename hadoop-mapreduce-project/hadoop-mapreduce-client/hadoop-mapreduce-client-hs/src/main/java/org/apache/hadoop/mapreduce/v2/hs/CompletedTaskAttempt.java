@@ -71,6 +71,8 @@ public class CompletedTaskAttempt implements TaskAttempt {
     report.setStartTime(attemptInfo.getStartTime());
     
     report.setFinishTime(attemptInfo.getFinishTime());
+    report.setShuffleFinishTime(attemptInfo.getShuffleFinishTime());
+    report.setSortFinishTime(attemptInfo.getSortFinishTime());
     if (localDiagMessage != null) {
       report.setDiagnosticInfo(attemptInfo.getError() + ", " + localDiagMessage);
     } else {
@@ -158,10 +160,19 @@ public class CompletedTaskAttempt implements TaskAttempt {
   public long getFinishTime() {
     return report.getFinishTime();
   }
+  
+  @Override
+  public long getShuffleFinishTime() {
+    return report.getShuffleFinishTime();
+  }
+
+  @Override
+  public long getSortFinishTime() {
+    return report.getSortFinishTime();
+  }
 
   @Override
   public int getShufflePort() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
-
 }

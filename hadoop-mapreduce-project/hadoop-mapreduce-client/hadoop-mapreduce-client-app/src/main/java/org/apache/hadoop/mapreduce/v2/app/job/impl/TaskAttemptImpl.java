@@ -695,6 +695,25 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
+  @Override
+  public long getShuffleFinishTime() {
+    readLock.lock();
+    try {
+      return this.reportedStatus.shuffleFinishTime;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public long getSortFinishTime() {
+    readLock.lock();
+    try {
+      return this.reportedStatus.sortFinishTime;
+    } finally {
+      readLock.unlock();
+    }
+  }
 
   @Override
   public int getShufflePort() {
@@ -751,6 +770,7 @@ public abstract class TaskAttemptImpl implements
       result.setProgress(reportedStatus.progress);
       result.setStartTime(launchTime);
       result.setFinishTime(finishTime);
+      result.setShuffleFinishTime(this.reportedStatus.shuffleFinishTime);
       result.setDiagnosticInfo(reportedStatus.diagnosticInfo);
       result.setPhase(reportedStatus.phase);
       result.setStateString(reportedStatus.stateString);
