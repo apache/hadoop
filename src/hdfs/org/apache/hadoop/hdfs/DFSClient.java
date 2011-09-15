@@ -641,12 +641,20 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * 
    * @param src file name
    * @param buffersize buffer size
-   * @param progress for reporting write-progress
+   * @param progress for reporting write-progress; null is acceptable.
+   * @param statistics file system statistics; null is acceptable.
    * @return an output stream for writing into the file
-   * @throws IOException
-   * @see ClientProtocol#append(String, String)
+   * 
+   * @see ClientProtocol#append(String, String) 
    */
-  public DFSOutputStream append(String src, int buffersize, Progressable progress
+  public FSDataOutputStream append(final String src, final int buffersize,
+      final Progressable progress, final FileSystem.Statistics statistics
+      ) throws IOException {
+    final DFSOutputStream out = append(src, buffersize, progress);
+    return new FSDataOutputStream(out, statistics, out.getInitialLen());
+  }
+
+  private DFSOutputStream append(String src, int buffersize, Progressable progress
       ) throws IOException {
     checkOpen();
     HdfsFileStatus stat = null;
@@ -2415,7 +2423,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * datanode from the original pipeline. The DataStreamer now
    * starts sending packets from the dataQueue.
   ****************************************************************/
-  public class DFSOutputStream extends FSOutputSummer implements Syncable {
+  class DFSOutputStream extends FSOutputSummer implements Syncable {
     private Socket s;
     boolean closed = false;
   
@@ -3581,7 +3589,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * block is not yet allocated, then this API will return 0 because there are
      * no replicas in the pipeline.
      */
-    public int getNumCurrentReplicas() throws IOException {
+    int getNumCurrentReplicas() throws IOException {
       synchronized(dataQueue) {
         if (nodes == null) {
           return blockReplication;
@@ -3754,7 +3762,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     /**
      * Returns the size of a file as it was when this stream was opened
      */
-    public long getInitialLen() {
+    long getInitialLen() {
       return initialFileSize;
     }
   }
