@@ -18,6 +18,8 @@ Trunk (unreleased changes)
 
     HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
 
+    HADOOP-7641. Add Apache License to template config files (Eric Yang via atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
