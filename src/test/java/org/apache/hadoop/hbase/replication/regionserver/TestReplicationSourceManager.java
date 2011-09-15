@@ -81,6 +81,8 @@ public class TestReplicationSourceManager {
 
   private static final byte[] test = Bytes.toBytes("test");
 
+  private static final String slaveId = "1";
+
   private static FileSystem fs;
 
   private static Path oldLogDir;
@@ -115,7 +117,7 @@ public class TestReplicationSourceManager {
     logDir = new Path(utility.getTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
 
-    manager.addSource("1");
+    manager.addSource(slaveId);
 
     htd = new HTableDescriptor(test);
     HColumnDescriptor col = new HColumnDescriptor("f1");
@@ -188,7 +190,7 @@ public class TestReplicationSourceManager {
       hlog.append(hri, key, edit, htd);
     }
 
-    assertEquals(6, manager.getHLogs().size());
+    assertEquals(6, manager.getHLogs().get(slaveId).size());
 
     hlog.rollWriter();
 

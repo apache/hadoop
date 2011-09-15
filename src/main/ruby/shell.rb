@@ -276,6 +276,7 @@ Shell.load_command_group(
   :commands => %w[
     add_peer
     remove_peer
+    list_peers
     enable_peer
     disable_peer
     start_replication

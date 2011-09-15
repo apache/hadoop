@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -96,7 +95,7 @@ public class ReplicationSource extends Thread
   // Should we stop everything?
   private Stoppable stopper;
   // List of chosen sinks (region servers)
-  private List<HServerAddress> currentPeers;
+  private List<ServerName> currentPeers;
   // How long should we sleep for each retry
   private long sleepForRetries;
   // Max size in bytes of entriesArray
@@ -173,7 +172,7 @@ public class ReplicationSource extends Thread
     this.conn = HConnectionManager.getConnection(conf);
     this.zkHelper = manager.getRepZkWrapper();
     this.ratio = this.conf.getFloat("replication.source.ratio", 0.1f);
-    this.currentPeers = new ArrayList<HServerAddress>();
+    this.currentPeers = new ArrayList<ServerName>();
     this.random = new Random();
     this.replicating = replicating;
     this.manager = manager;
@@ -215,19 +214,18 @@ public class ReplicationSource extends Thread
     this.currentPeers.clear();
     List<ServerName> addresses =
         this.zkHelper.getSlavesAddresses(peerId);
-    Set<HServerAddress> setOfAddr = new HashSet<HServerAddress>();
+    Set<ServerName> setOfAddr = new HashSet<ServerName>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
     LOG.info("Getting " + nbPeers +
         " rs from peer cluster # " + peerId);
     for (int i = 0; i < nbPeers; i++) {
-      HServerAddress address;
+      ServerName sn;
       // Make sure we get one address that we don't already have
       do {
-        ServerName sn = addresses.get(this.random.nextInt(addresses.size()));
-        address = new HServerAddress(sn.getHostname(), sn.getPort());
-      } while (setOfAddr.contains(address));
-      LOG.info("Choosing peer " + address);
-      setOfAddr.add(address);
+        sn = addresses.get(this.random.nextInt(addresses.size()));
+      } while (setOfAddr.contains(sn));
+      LOG.info("Choosing peer " + sn);
+      setOfAddr.add(sn);
     }
     this.currentPeers.addAll(setOfAddr);
   }
@@ -694,9 +692,9 @@ public class ReplicationSource extends Thread
     if (this.currentPeers.size() == 0) {
       throw new IOException(this.peerClusterZnode + " has 0 region servers");
     }
-    HServerAddress address =
+    ServerName address =
         currentPeers.get(random.nextInt(this.currentPeers.size()));
-    return this.conn.getHRegionConnection(address);
+    return this.conn.getHRegionConnection(address.getHostname(), address.getPort());
   }
 
   /**

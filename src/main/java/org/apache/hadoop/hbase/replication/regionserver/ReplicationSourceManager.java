@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -70,7 +72,7 @@ public class ReplicationSourceManager {
   // All about stopping
   private final Stoppable stopper;
   // All logs we are currently trackign
-  private final SortedSet<String> hlogs;
+  private final Map<String, SortedSet<String>> hlogsById;
   private final Configuration conf;
   private final FileSystem fs;
   // The path to the latest log we saw, for new coming sources
@@ -108,7 +110,7 @@ public class ReplicationSourceManager {
     this.replicating = replicating;
     this.zkHelper = zkHelper;
     this.stopper = stopper;
-    this.hlogs = new TreeSet<String>();
+    this.hlogsById = new HashMap<String, SortedSet<String>>();
     this.oldsources = new ArrayList<ReplicationSourceInterface>();
     this.conf = conf;
     this.fs = fs;
@@ -149,14 +151,15 @@ public class ReplicationSourceManager {
   public void logPositionAndCleanOldLogs(Path log, String id, long position, boolean queueRecovered) {
     String key = log.getName();
     LOG.info("Going to report log #" + key + " for position " + position + " in " + log);
-    this.zkHelper.writeReplicationStatus(key.toString(), id, position);
-    synchronized (this.hlogs) {
-      if (!queueRecovered && this.hlogs.first() != key) {
-        SortedSet<String> hlogSet = this.hlogs.headSet(key);
+    this.zkHelper.writeReplicationStatus(key, id, position);
+    synchronized (this.hlogsById) {
+      SortedSet<String> hlogs = this.hlogsById.get(id);
+      if (!queueRecovered && hlogs.first() != key) {
+        SortedSet<String> hlogSet = hlogs.headSet(key);
         LOG.info("Removing " + hlogSet.size() +
             " logs in the list: " + hlogSet);
         for (String hlog : hlogSet) {
-          this.zkHelper.removeLogFromList(hlog.toString(), id);
+          this.zkHelper.removeLogFromList(hlog, id);
         }
         hlogSet.clear();
       }
@@ -200,12 +203,14 @@ public class ReplicationSourceManager {
         getReplicationSource(this.conf, this.fs, this, stopper, replicating, id);
     // TODO set it to what's in ZK
     src.setSourceEnabled(true);
-    synchronized (this.hlogs) {
+    synchronized (this.hlogsById) {
       this.sources.add(src);
-      if (this.hlogs.size() > 0) {
-        // Add the latest hlog to that source's queue
-        this.zkHelper.addLogToList(this.hlogs.last(),
-            this.sources.get(0).getPeerClusterZnode());
+      this.hlogsById.put(id, new TreeSet<String>());
+      // Add the latest hlog to that source's queue
+      if (this.latestPath != null) {
+        String name = this.latestPath.getName();
+        this.hlogsById.get(id).add(name);
+        this.zkHelper.addLogToList(name, src.getPeerClusterZnode());
         src.enqueueLog(this.latestPath);
       }
     }
@@ -230,8 +235,8 @@ public class ReplicationSourceManager {
    * Get a copy of the hlogs of the first source on this rs
    * @return a sorted set of hlog names
    */
-  protected SortedSet<String> getHLogs() {
-    return new TreeSet<String>(this.hlogs);
+  protected Map<String, SortedSet<String>> getHLogs() {
+    return Collections.unmodifiableMap(hlogsById);
   }
 
   /**
@@ -248,21 +253,25 @@ public class ReplicationSourceManager {
       return;
     }
 
-    synchronized (this.hlogs) {
-      if (this.sources.size() > 0) {
-        this.zkHelper.addLogToList(newLog.getName(),
-            this.sources.get(0).getPeerClusterZnode());
-      } else {
-        // If there's no slaves, don't need to keep the old hlogs since
-        // we only consider the last one when a new slave comes in
-        this.hlogs.clear();
+    synchronized (this.hlogsById) {
+      String name = newLog.getName();
+      for (ReplicationSourceInterface source : this.sources) {
+        this.zkHelper.addLogToList(name, source.getPeerClusterZnode());
       }
-      this.hlogs.add(newLog.getName());
+      for (SortedSet<String> hlogs : this.hlogsById.values()) {
+        if (this.sources.isEmpty()) {
+          // If there's no slaves, don't need to keep the old hlogs since
+          // we only consider the last one when a new slave comes in
+          hlogs.clear();
+        }
+        hlogs.add(name);
+      }
     }
+
     this.latestPath = newLog;
-    // This only update the sources we own, not the recovered ones
+    // This only updates the sources we own, not the recovered ones
     for (ReplicationSourceInterface source : this.sources) {
-      source.enqueueLog(newLog);
+      source.enqueueLog(newLog);    
     }
   }
 
@@ -281,7 +290,7 @@ public class ReplicationSourceManager {
    * @param manager the manager to use
    * @param stopper the stopper object for this region server
    * @param replicating the status of the replication on this cluster
-   * @param peerClusterId the id of the peer cluster
+   * @param peerId the id of the peer cluster
    * @return the created source
    * @throws IOException
    */
@@ -291,7 +300,7 @@ public class ReplicationSourceManager {
       final ReplicationSourceManager manager,
       final Stoppable stopper,
       final AtomicBoolean replicating,
-      final String peerClusterId) throws IOException {
+      final String peerId) throws IOException {
     ReplicationSourceInterface src;
     try {
       @SuppressWarnings("rawtypes")
@@ -299,12 +308,12 @@ public class ReplicationSourceManager {
           ReplicationSource.class.getCanonicalName()));
       src = (ReplicationSourceInterface) c.newInstance();
     } catch (Exception e) {
-      LOG.warn("Passed replication source implemention throws errors, " +
+      LOG.warn("Passed replication source implementation throws errors, " +
           "defaulting to ReplicationSource", e);
       src = new ReplicationSource();
 
     }
-    src.init(conf, fs, manager, stopper, replicating, peerClusterId);
+    src.init(conf, fs, manager, stopper, replicating, peerId);
     return src;
   }
 
@@ -410,7 +419,7 @@ public class ReplicationSourceManager {
         return;
       }
       LOG.info(path + " znode expired, trying to lock it");
-      transferQueues(zkHelper.getZNodeName(path));
+      transferQueues(ReplicationZookeeper.getZNodeName(path));
     }
 
     /**
@@ -462,7 +471,7 @@ public class ReplicationSourceManager {
       if (peers == null) {
         return;
       }
-      String id = zkHelper.getZNodeName(path);
+      String id = ReplicationZookeeper.getZNodeName(path);
       removePeer(id);
     }
 

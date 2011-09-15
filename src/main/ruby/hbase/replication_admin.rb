@@ -44,6 +44,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # List all peer clusters
+    def list_peers
+      @replication_admin.listPeers
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Restart the replication stream to the specified peer
     def enable_peer(id)
       @replication_admin.enablePeer(id)

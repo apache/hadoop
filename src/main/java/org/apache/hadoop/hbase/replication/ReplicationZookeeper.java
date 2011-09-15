@@ -187,6 +187,24 @@ public class ReplicationZookeeper {
   }
 
   /**
+   * Map of this cluster's peers for display.
+   * @return A map of peer ids to peer cluster keys
+   */
+  public Map<String,String> listPeers() {
+    Map<String,String> peers = new TreeMap<String,String>();
+    List<String> ids = null;
+    try {
+      ids = ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
+      for (String id : ids) {
+        peers.put(id, Bytes.toString(ZKUtil.getData(this.zookeeper,
+            ZKUtil.joinZNode(this.peersZNode, id))));
+      }
+    } catch (KeeperException e) {
+      this.abortable.abort("Cannot get the list of peers ", e);
+    }
+    return peers;
+  }
+  /**
    * Returns all region servers from given peer
    *
    * @param peerClusterId (byte) the cluster to interrogate
@@ -263,10 +281,6 @@ public class ReplicationZookeeper {
       return false;
     }
     if (this.peerClusters.containsKey(peerId)) {
-      return false;
-      // TODO remove when we support it
-    } else if (this.peerClusters.size() > 0) {
-      LOG.warn("Multiple slaves feature not supported");
       return false;
     }
     ReplicationPeer peer = getPeer(peerId);
@@ -351,8 +365,6 @@ public class ReplicationZookeeper {
     try {
       if (peerExists(id)) {
         throw new IllegalArgumentException("Cannot add existing peer");
-      } else if (countPeers() > 0) {
-        throw new IllegalStateException("Multi-slave isn't supported yet");
       }
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
       ZKUtil.createAndWatch(this.zookeeper,
@@ -365,12 +377,6 @@ public class ReplicationZookeeper {
   private boolean peerExists(String id) throws KeeperException {
     return ZKUtil.checkExists(this.zookeeper,
           ZKUtil.joinZNode(this.peersZNode, id)) >= 0;
-  }
-
-  private int countPeers() throws KeeperException {
-    List<String> peers =
-        ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
-    return peers == null ? 0 : peers.size();
   }
 
   /**
@@ -408,11 +414,11 @@ public class ReplicationZookeeper {
   /**
    * Add a new log to the list of hlogs in zookeeper
    * @param filename name of the hlog's znode
-   * @param clusterId name of the cluster's znode
+   * @param peerId name of the cluster's znode
    */
-  public void addLogToList(String filename, String clusterId) {
+  public void addLogToList(String filename, String peerId) {
     try {
-      String znode = ZKUtil.joinZNode(this.rsServerNameZnode, clusterId);
+      String znode = ZKUtil.joinZNode(this.rsServerNameZnode, peerId);
       znode = ZKUtil.joinZNode(znode, filename);
       ZKUtil.createWithParents(this.zookeeper, znode);
     } catch (KeeperException e) {
