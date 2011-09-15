@@ -1874,6 +1874,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2767. Remove Linux task-controller. (Milind Bhandarkar via shv) 
 
+    MAPREDUCE-2991. queueinfo.jsp fails to show queue status for Capacity 
+    scheduler if queue names contain special symbols. (Priyo Mustafi via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
