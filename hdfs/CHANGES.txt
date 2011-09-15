@@ -623,6 +623,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-2285. BackupNode should reject requests to modify namespace. (shv)
 
+    HDFS-2271. startJournalSpool should invoke processIOError.
+    (Uma Maheswara Rao G via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

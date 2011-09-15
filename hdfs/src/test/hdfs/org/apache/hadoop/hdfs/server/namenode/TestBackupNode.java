@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,20 +36,24 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestHDFSServerPorts;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.CheckpointStates;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import junit.framework.TestCase;
 
-public class TestBackupNode extends TestCase {
+public class TestBackupNode {
   public static final Log LOG = LogFactory.getLog(TestBackupNode.class);
 
   // reset default 0.0.0.0 addresses in order to avoid IPv6 problem
   static final String THIS_HOST = TestHDFSServerPorts.getFullHostName();
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
 
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     File baseDir = new File(BASE_DIR);
     if(baseDir.exists())
       if(!(FileUtil.fullyDelete(baseDir)))
@@ -56,9 +65,8 @@ public class TestBackupNode extends TestCase {
     dirB = new File(getBackupNodeDir(StartupOption.BACKUP, 2));
     dirB.mkdirs();
   }
-
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  @After
+  public void tearDown() throws Exception {
     File baseDir = new File(BASE_DIR);
     if(!(FileUtil.fullyDelete(baseDir)))
       throw new IOException("Cannot remove directory: " + baseDir);
@@ -101,7 +109,8 @@ public class TestBackupNode extends TestCase {
       } catch (Exception e) {}
     } while(backup.getCheckpointState() != CheckpointStates.START);
   }
-
+  
+  @Test
   public void testCheckpoint() throws IOException {
     testCheckpoint(StartupOption.CHECKPOINT);
     testCheckpoint(StartupOption.BACKUP);
@@ -238,6 +247,7 @@ public class TestBackupNode extends TestCase {
    * Test that only one backup node can register.
    * @throws IOException
    */
+  @Test
   public void testBackupRegistration() throws IOException {
     Configuration conf1 = new HdfsConfiguration();
     Configuration conf2 = null;
@@ -284,5 +294,63 @@ public class TestBackupNode extends TestCase {
       if(backup2 != null) backup2.stop();
       if(cluster != null) cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testStartJournalSpoolHandlesIOExceptions() throws Exception {
+    // Check IOException handled correctly in startJournalSpool;
+    BackupStorage image = new BackupStorage();
+    ArrayList<URI> fsImageDirs = new ArrayList<URI>();
+    ArrayList<URI> editsDirs = new ArrayList<URI>();
+    File filePath1 = new File(BASE_DIR, "storageDirToCheck1/current");
+    File filePath2 = new File(BASE_DIR, "storageDirToCheck2/current");
+    FSEditLog editLog = new FSEditLog(image) {
+      @Override
+      synchronized void divertFileStreams(String dest) throws IOException {
+      }
+    };
+    image.editLog = editLog;
+    assertTrue("Couldn't create directory storageDirToCheck1", filePath1
+        .exists()
+        || filePath1.mkdirs());
+    assertTrue("Couldn't create directory storageDirToCheck2", filePath2
+        .exists()
+        || filePath2.mkdirs());
+    File storageDir1 = filePath1.getParentFile();
+    File storageDir2 = filePath2.getParentFile();
+    try {
+      URI uri1 = storageDir1.toURI();
+      URI uri2 = storageDir2.toURI();
+      fsImageDirs.add(uri1);
+      fsImageDirs.add(uri2);
+      editsDirs.add(uri1);
+      editsDirs.add(uri2);
+      image.setStorageDirectories(fsImageDirs, editsDirs);
+      assertTrue("List of removed storage directories wasn't empty", image
+          .getRemovedStorageDirs().isEmpty());
+      editLog = image.getEditLog();
+      editLog.open();
+    } finally {
+      ArrayList<EditLogOutputStream> editStreams = image.editLog
+          .getEditStreams();
+      // Closing the opened streams
+      for (EditLogOutputStream outStream : editStreams) {
+        outStream.close();
+      }
+      // Delete storage directory to cause IOException in
+      // createEditLogFile
+      FileUtil.fullyDelete(storageDir1);
+    }
+    image.editLog = editLog;
+    image.startJournalSpool(new NamenodeRegistration());
+    List<StorageDirectory> listRsd = image.getRemovedStorageDirs();
+    assertTrue("Removed directory wasn't what was expected", listRsd.size() > 0
+        && listRsd.get(listRsd.size() - 1).getRoot().toString().indexOf(
+            "storageDirToCheck") != -1);
+    // Delete storage directory to cause IOException in
+    // startJournalSpool
+    FileUtil.fullyDelete(storageDir2);
+    // Successfully checked IOException is handled correctly by
+    // startJournalSpool
   }
 }

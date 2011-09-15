@@ -21,8 +21,10 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -263,7 +265,8 @@ public class BackupStorage extends FSImage {
       case WAIT:
         waitSpoolEnd();
     }
-
+    
+    List<StorageDirectory> errorSDs = new ArrayList<StorageDirectory>();
     // create journal spool directories
     for(Iterator<StorageDirectory> it = 
                           dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
@@ -276,10 +279,18 @@ public class BackupStorage extends FSImage {
       // create edit file if missing
       File eFile = getEditFile(sd);
       if(!eFile.exists()) {
-        editLog.createEditLogFile(eFile);
+        try {
+          editLog.createEditLogFile(eFile);
+        } catch (IOException ie) {
+          LOG.error("Unable to save edits for " + sd.getRoot(), ie);
+          errorSDs.add(sd);
+        }
       }
     }
-
+    
+    if (errorSDs.size() > 0)
+      processIOError(errorSDs, true);
+    
     if(!editLog.isOpen())
       editLog.open();
 
