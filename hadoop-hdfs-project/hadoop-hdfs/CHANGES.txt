@@ -35,6 +35,9 @@ Trunk (unreleased changes)
 
     HDFS-2314. MRV1 test compilation broken after HDFS-2197 (todd)
 
+    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
+    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
