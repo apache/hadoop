@@ -240,7 +240,7 @@ public class ReplicationSource extends Thread
   public void run() {
     connectToPeers();
     // We were stopped while looping to connect to sinks, just abort
-    if (this.stopper.isStopped()) {
+    if (!this.isActive()) {
       return;
     }
     // delay this until we are in an asynchronous thread
@@ -265,7 +265,7 @@ public class ReplicationSource extends Thread
     }
     int sleepMultiplier = 1;
     // Loop until we close down
-    while (!stopper.isStopped() && this.running) {
+    while (isActive()) {
       // Sleep until replication is enabled again
       if (!this.replicating.get() || !this.sourceEnabled.get()) {
         if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
@@ -348,7 +348,7 @@ public class ReplicationSource extends Thread
       // If we didn't get anything to replicate, or if we hit a IOE,
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
-      if (!stopper.isStopped() && (gotIOE || currentNbEntries == 0)) {
+      if (this.isActive() && (gotIOE || currentNbEntries == 0)) {
         this.manager.logPositionAndCleanOldLogs(this.currentPath,
             this.peerClusterZnode, this.position, queueRecovered);
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
@@ -428,7 +428,8 @@ public class ReplicationSource extends Thread
 
   private void connectToPeers() {
     // Connect to peer cluster first, unless we have to stop
-    while (!this.stopper.isStopped() && this.currentPeers.size() == 0) {
+    while (this.isActive() && this.currentPeers.size() == 0) {
+
       try {
         chooseSinks();
         Thread.sleep(this.sleepForRetries);
@@ -586,7 +587,7 @@ public class ReplicationSource extends Thread
       LOG.warn("Was given 0 edits to ship");
       return;
     }
-    while (!this.stopper.isStopped()) {
+    while (this.isActive()) {
       try {
         HRegionInterface rrs = getRS();
         LOG.debug("Replicating " + currentNbEntries);
@@ -613,6 +614,7 @@ public class ReplicationSource extends Thread
         }
         try {
           boolean down;
+          // Spin while the slave is down and we're not asked to shutdown/close
           do {
             down = isSlaveDown();
             if (down) {
@@ -622,7 +624,7 @@ public class ReplicationSource extends Thread
                 chooseSinks();
               }
             }
-          } while (!this.stopper.isStopped() && down);
+          } while (this.isActive() && down );
         } catch (InterruptedException e) {
           LOG.debug("Interrupted while trying to contact the peer cluster");
         } catch (KeeperException e) {
@@ -740,6 +742,10 @@ public class ReplicationSource extends Thread
 
   public void setSourceEnabled(boolean status) {
     this.sourceEnabled.set(status);
+  }
+
+  private boolean isActive() {
+    return !this.stopper.isStopped() && this.running;
   }
 
   /**

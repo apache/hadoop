@@ -266,6 +266,8 @@ Release 0.91.0 - Unreleased
    HBASE-4351  If from Admin we try to unassign a region forcefully,
                though a valid region name is given the master is not able
                to identify the region to unassign (Ramkrishna)
+   HBASE-4363  [replication] ReplicationSource won't close if failing
+               to contact the sink (JD and Lars Hofhansl)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
