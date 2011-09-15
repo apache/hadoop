@@ -576,7 +576,6 @@ public class DistributedFileSystem extends FileSystem {
                                                       ) throws IOException {
     Token<DelegationTokenIdentifier> result =
       dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
-    result.setService(new Text(getCanonicalServiceName()));
     return result;
   }
 
@@ -596,7 +595,7 @@ public class DistributedFileSystem extends FileSystem {
   @Deprecated
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    return dfs.getDelegationToken(renewer);
+    return getDelegationToken(renewer.toString());
   }
 
   /**

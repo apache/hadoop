@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -76,6 +77,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   public final ClientProtocol namenode;
   private final ClientProtocol rpcNamenode;
+  private final InetSocketAddress nnAddress;
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
@@ -194,6 +196,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     throws IOException {
     this.conf = conf;
     this.stats = stats;
+    this.nnAddress = nameNodeAddr;
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
                                      HdfsConstants.READ_TIMEOUT);
     this.datanodeWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
@@ -296,6 +299,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throws IOException {
     Token<DelegationTokenIdentifier> result =
       namenode.getDelegationToken(renewer);
+    SecurityUtil.setTokenService(result, nnAddress);
     LOG.info("Created " + stringifyToken(result));
     return result;
   }

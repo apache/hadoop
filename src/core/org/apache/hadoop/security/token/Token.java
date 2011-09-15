@@ -126,8 +126,11 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * @param newKind
    */
   @InterfaceAudience.Private
-  public void setKind(Text newKind) {
+  public synchronized void setKind(Text newKind) {
     kind = newKind;
+    // removed the cached renewer so that it will be looked up with the new
+    // kind.
+    renewer = null;
   }
 
   /**

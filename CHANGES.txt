@@ -163,6 +163,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7602. wordcount, sort etc on har files fails with NPE.
     (John George via jitendra)
 
+    HADOOP-7625. Fix TestDelegationToken by having DFSClient set the service
+    correctly and having the test cases use the common jar. (omalley)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
