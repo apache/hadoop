@@ -427,7 +427,7 @@ public class ReplicationSourceManager {
      * @param path full path of the node whose children have changed
      */
     public void nodeChildrenChanged(String path) {
-      if (stopper.isStopped()) {
+      if (stopper == null || stopper.isStopped()) {
         return;
       }
       refreshRegionServersList(path);

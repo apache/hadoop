@@ -77,16 +77,16 @@ public class TestReplicationAdmin {
       // OK!
     }
     assertEquals(1, admin.getPeersCount());
-    // Add a second, returns illegal since multi-slave isn't supported
+    // Add a second since multi-slave is supported
     try {
       admin.addPeer(ID_SECOND, KEY_SECOND);
-      fail();
     } catch (IllegalStateException iae) {
+      fail();
       // OK!
     }
-    assertEquals(1, admin.getPeersCount());
+    assertEquals(2, admin.getPeersCount());
     // Remove the first peer we added
     admin.removePeer(ID_ONE);
-    assertEquals(0, admin.getPeersCount());
+    assertEquals(1, admin.getPeersCount());
   }
 }
