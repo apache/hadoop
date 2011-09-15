@@ -193,7 +193,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * if one found.
    * @param force If true, force unassign (Will remove region from
    * regions-in-transition too if present as well as from assigned regions --
-   * radical!).
+   * radical!.If results in double assignment use hbck -fix to resolve.
    * @throws IOException
    */
   public void unassign(final byte [] regionName, final boolean force)

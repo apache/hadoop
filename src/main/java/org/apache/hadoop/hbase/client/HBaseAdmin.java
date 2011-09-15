@@ -1322,7 +1322,8 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @param regionName Region to unassign. Will clear any existing RegionPlan
    * if one found.
    * @param force If true, force unassign (Will remove region from
-   * regions-in-transition too if present).
+   * regions-in-transition too if present. If results in double assignment
+   * use hbck -fix to resolve. To be used by experts).
    * @throws MasterNotRunningException
    * @throws ZooKeeperConnectionException
    * @throws IOException

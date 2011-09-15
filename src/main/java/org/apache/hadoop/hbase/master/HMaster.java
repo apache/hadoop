@@ -1364,8 +1364,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         return;
       }
     }
-    if (force) this.assignmentManager.clearRegionFromTransition(hri);
-    this.assignmentManager.unassign(hri, force);
+    if (force) {
+      this.assignmentManager.clearRegionFromTransition(hri);
+      assignRegion(hri);
+    } else {
+      this.assignmentManager.unassign(hri, force);
+    }
     if (cpHost != null) {
       cpHost.postUnassign(hri, force);
     }

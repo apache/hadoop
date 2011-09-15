@@ -263,6 +263,9 @@ Release 0.91.0 - Unreleased
    HBASE-4406  TestOpenRegionHandler failing after HBASE-4287 (todd)
    HBASE-4330  Fix races in slab cache (Li Pi & Todd)
    HBASE-4383  SlabCache reports negative heap sizes (Li Pi)
+   HBASE-4351  If from Admin we try to unassign a region forcefully,
+               though a valid region name is given the master is not able
+               to identify the region to unassign (Ramkrishna)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
