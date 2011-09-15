@@ -9,6 +9,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,8 +49,15 @@ public class TestReplicationAdmin {
         HConstants.HREGION_OLDLOGDIR_NAME);
     Path logDir = new Path(TEST_UTIL.getTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
-    manager = new ReplicationSourceManager(admin.getReplicationZk(),
-        conf, null, FileSystem.get(conf), replicating, logDir, oldLogDir);
+    manager = new ReplicationSourceManager(admin.getReplicationZk(), conf,
+        // The following stopper never stops so that we can respond
+        // to zk notification
+        new Stoppable() {
+          @Override
+          public void stop(String why) {}
+          @Override
+          public boolean isStopped() {return false;}
+        }, FileSystem.get(conf), replicating, logDir, oldLogDir);
   }
 
   /**
