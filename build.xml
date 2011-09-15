@@ -328,6 +328,7 @@
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
     <path refid="test.lib.classpath"/>
+    <pathelement location="${hadoop-core.jar}"/>
     <path refid="classpath"/>
   </path>
 
@@ -864,7 +865,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar-test" depends="compile-core-test" description="Make hadoop-test.jar">
+  <target name="jar-test" depends="jar,compile-core-test" description="Make hadoop-test.jar">
     <jar jarfile="${build.dir}/${test.final.name}.jar"
          basedir="${test.build.classes}">
          <manifest>

@@ -27,6 +27,8 @@ import java.security.PrivilegedExceptionAction;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -42,9 +44,9 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 public class TestDelegationToken {
+  private static final Log LOG = LogFactory.getLog(TestDelegationToken.class);
   private MiniDFSCluster cluster;
   Configuration config;
   
@@ -99,7 +101,7 @@ public class TestDelegationToken {
     identifier.readFields(new DataInputStream(
              new ByteArrayInputStream(tokenId)));
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
-    Log.info("Sleep to expire the token");
+    LOG.info("Sleep to expire the token");
 	  Thread.sleep(6000);
 	  //Token should be expired
 	  try {
@@ -110,7 +112,7 @@ public class TestDelegationToken {
 	    //Success
 	  }
 	  dtSecretManager.renewToken(token, "JobTracker");
-	  Log.info("Sleep beyond the max lifetime");
+	  LOG.info("Sleep beyond the max lifetime");
 	  Thread.sleep(5000);
 	  try {
   	  dtSecretManager.renewToken(token, "JobTracker");
@@ -152,7 +154,7 @@ public class TestDelegationToken {
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
              new ByteArrayInputStream(tokenId)));
-    Log.info("A valid token should have non-null password, and should be renewed successfully");
+    LOG.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     dtSecretManager.renewToken(token, "JobTracker");
   }
@@ -166,6 +168,8 @@ public class TestDelegationToken {
         .createRemoteUser("JobTracker/foo.com@FOO.COM");
     final UserGroupInformation shortUgi = UserGroupInformation
         .createRemoteUser("JobTracker");
+    LOG.info("cluster at: " + dfs.getUri() + 
+             " token for: " + token.getService());
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
@@ -174,6 +178,7 @@ public class TestDelegationToken {
           //try renew with long name
           dfs.renewDelegationToken(token);
         } catch (IOException e) {
+          LOG.error("caught unexpected exception out of renew", e);
           Assert.fail("Could not renew delegation token for user "+longUgi);
         }
         return null;
