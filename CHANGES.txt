@@ -268,6 +268,8 @@ Release 0.91.0 - Unreleased
                to identify the region to unassign (Ramkrishna)
    HBASE-4363  [replication] ReplicationSource won't close if failing
                to contact the sink (JD and Lars Hofhansl)
+   HBASE-4390  [replication] ReplicationSource's UncaughtExceptionHandler
+               shouldn't join
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

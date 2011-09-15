@@ -661,7 +661,8 @@ public class ReplicationSource extends Thread
     Thread.UncaughtExceptionHandler handler =
         new Thread.UncaughtExceptionHandler() {
           public void uncaughtException(final Thread t, final Throwable e) {
-            terminate("Uncaught exception during runtime", new Exception(e));
+            LOG.error("Unexpected exception in ReplicationSource," +
+              " currentPath=" + currentPath, e);
           }
         };
     Threads.setDaemonThreadRunning(
