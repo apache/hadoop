@@ -132,6 +132,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     maybeInitBuilder();
     builder.setStartTime((startTime));
   }
+  
   @Override
   public long getFinishTime() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -143,6 +144,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     maybeInitBuilder();
     builder.setFinishTime((finishTime));
   }
+  
   @Override
   public TaskId getTaskId() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;

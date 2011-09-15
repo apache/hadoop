@@ -30,10 +30,18 @@ public class Times {
       };
 
   public static long elapsed(long started, long finished) {
+    return Times.elapsed(started, finished, true);
+  }
+
+  public static long elapsed(long started, long finished, boolean isRunning) {
     if (finished > 0) {
       return finished - started;
     }
-    return started > 0 ? System.currentTimeMillis() - started : 0;
+    if (isRunning) {
+      return started > 0 ? System.currentTimeMillis() - started : 0;
+    } else {
+      return -1;
+    }
   }
 
   public static String format(long ts) {

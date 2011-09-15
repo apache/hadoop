@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -55,6 +56,12 @@ public class HsJobBlock extends HtmlBlock {
   int killedReduceAttempts = 0;
   int failedReduceAttempts = 0;
   int successfulReduceAttempts = 0;
+  long avgMapTime = 0;
+  long avgReduceTime = 0;
+  long avgShuffleTime = 0;
+  long avgSortTime = 0;
+  int numMaps;
+  int numReduces;
 
   @Inject HsJobBlock(AppContext appctx) {
     appContext = appctx;
@@ -96,7 +103,7 @@ public class HsJobBlock extends HtmlBlock {
         _("Started:", new Date(startTime)).
         _("Finished:", new Date(finishTime)).
         _("Elapsed:", StringUtils.formatTime(
-            Times.elapsed(startTime, finishTime)));
+            Times.elapsed(startTime, finishTime, false)));
     
     List<String> diagnostics = job.getDiagnostics();
     if(diagnostics != null && !diagnostics.isEmpty()) {
@@ -106,7 +113,16 @@ public class HsJobBlock extends HtmlBlock {
       }
       infoBlock._("Diagnostics:", b.toString());
     }
-    
+
+    if(numMaps > 0) {
+      infoBlock._("Average Map Time", StringUtils.formatTime(avgMapTime));
+    }
+    if(numReduces > 0) {
+      infoBlock._("Average Reduce Time", StringUtils.formatTime(avgReduceTime));
+      infoBlock._("Average Shuffle Time", StringUtils.formatTime(avgShuffleTime));
+      infoBlock._("Average Merge Time", StringUtils.formatTime(avgSortTime));
+    }
+
     for(Map.Entry<JobACL, AccessControlList> entry : acls.entrySet()) {
       infoBlock._("ACL "+entry.getKey().getAclName()+":",
           entry.getValue().getAclString());
@@ -174,6 +190,8 @@ public class HsJobBlock extends HtmlBlock {
    * @param job the job to get counts for.
    */
   private void countTasksAndAttempts(Job job) {
+    numReduces = 0;
+    numMaps = 0;
     Map<TaskId, Task> tasks = job.getTasks();
     for (Task task : tasks.values()) {
       // Attempts counts
@@ -203,14 +221,38 @@ public class HsJobBlock extends HtmlBlock {
           successfulMapAttempts += successful;
           failedMapAttempts += failed;
           killedMapAttempts += killed;
+          if(attempt.getState() == TaskAttemptState.SUCCEEDED) {
+            numMaps++;
+            avgMapTime += (attempt.getFinishTime() -
+                attempt.getLaunchTime());
+          }
           break;
         case REDUCE:
           successfulReduceAttempts += successful;
           failedReduceAttempts += failed;
           killedReduceAttempts += killed;
+          if(attempt.getState() == TaskAttemptState.SUCCEEDED) {
+            numReduces++;
+            avgShuffleTime += (attempt.getShuffleFinishTime() - 
+                attempt.getLaunchTime());
+            avgSortTime += attempt.getSortFinishTime() - 
+                attempt.getLaunchTime();
+            avgReduceTime += (attempt.getFinishTime() -
+                attempt.getShuffleFinishTime());
+          }
           break;
         }
       }
+    }
+
+    if(numMaps > 0) {
+      avgMapTime = avgMapTime / numMaps;
+    }
+    
+    if(numReduces > 0) {
+      avgReduceTime = avgReduceTime / numReduces;
+      avgShuffleTime = avgShuffleTime / numReduces;
+      avgSortTime = avgSortTime / numReduces;
     }
   }
 }

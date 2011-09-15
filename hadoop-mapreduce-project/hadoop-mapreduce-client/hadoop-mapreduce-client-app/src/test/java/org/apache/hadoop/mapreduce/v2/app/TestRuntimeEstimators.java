@@ -694,6 +694,16 @@ public class TestRuntimeEstimators {
     }
 
     @Override
+    public long getShuffleFinishTime() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public long getSortFinishTime() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public String getAssignedContainerMgrAddress() {
       throw new UnsupportedOperationException("Not supported yet.");
     }

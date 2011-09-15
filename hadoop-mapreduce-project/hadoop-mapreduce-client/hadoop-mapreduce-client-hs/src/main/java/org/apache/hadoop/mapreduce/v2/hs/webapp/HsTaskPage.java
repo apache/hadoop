@@ -18,27 +18,32 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.postInitID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TFOOT;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
+import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.InputType;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.common.base.Joiner;
@@ -67,47 +72,162 @@ public class HsTaskPage extends HsView {
           h2($(TITLE));
         return;
       }
-      TBODY<TABLE<Hamlet>> tbody = html.
+      TaskType type = null;
+      String symbol = $(TASK_TYPE);
+      if (!symbol.isEmpty()) {
+        type = MRApps.taskType(symbol);
+      } else {
+        type = app.getTask().getType();
+      }
+      
+      TR<THEAD<TABLE<Hamlet>>> headRow = html.
       table("#attempts").
         thead().
-          tr().
+          tr();
+      
+      headRow.
             th(".id", "Attempt").
             th(".state", "State").
             th(".node", "node").
-            th(".tsh", "Started").
-            th(".tsh", "Finished").
-            th(".tsh", "Elapsed").
-            th(".note", "Note")._()._().
-        tbody();
+            th(".tsh", "Start Time");
+      
+      if(type == TaskType.REDUCE) {
+        headRow.th("Shuffle Finish Time");
+        headRow.th("Merge Finish Time");
+      }
+      
+      headRow.th("Finish Time"); //Attempt
+      
+      if(type == TaskType.REDUCE) {
+        headRow.th("Elapsed Time Shuffle"); //Attempt
+        headRow.th("Elapsed Time Merge"); //Attempt
+        headRow.th("Elapsed Time Reduce"); //Attempt
+      }
+      headRow.th("Elapsed Time").
+              th(".note", "Note");
+      
+       TBODY<TABLE<Hamlet>> tbody = headRow._()._().tbody();
       for (TaskAttempt ta : getTaskAttempts()) {
         String taid = MRApps.toString(ta.getID());
-        ContainerId containerId = ta.getAssignedContainerID();
 
         String nodeHttpAddr = ta.getNodeHttpAddress();
-        long startTime = ta.getLaunchTime();
-        long finishTime = ta.getFinishTime();
-        long elapsed = Times.elapsed(startTime, finishTime);
-        TD<TR<TBODY<TABLE<Hamlet>>>> nodeTd = tbody.
-          tr().
-            td(".id", taid).
-            td(".state", ta.getState().toString()).
-            td().
-              a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
-        if (containerId != null) {
-          String containerIdStr = ConverterUtils.toString(containerId);
-          nodeTd._(" ").
-            a(".logslink", url("http://", nodeHttpAddr, "yarn", "containerlogs",
-              containerIdStr), "logs");
+        
+        long attemptStartTime = ta.getLaunchTime();
+        long shuffleFinishTime = -1;
+        long sortFinishTime = -1;
+        long attemptFinishTime = ta.getFinishTime();
+        long elapsedShuffleTime = -1;
+        long elapsedSortTime = -1;
+        long elapsedReduceTime = -1;
+        if(type == TaskType.REDUCE) {
+          shuffleFinishTime = ta.getShuffleFinishTime();
+          sortFinishTime = ta.getSortFinishTime();
+          elapsedShuffleTime =
+              Times.elapsed(attemptStartTime, shuffleFinishTime, false);
+          elapsedSortTime =
+              Times.elapsed(shuffleFinishTime, sortFinishTime, false);
+          elapsedReduceTime =
+              Times.elapsed(sortFinishTime, attemptFinishTime, false); 
         }
-        nodeTd._().
-          td(".ts", Times.format(startTime)).
-          td(".ts", Times.format(finishTime)).
-          td(".dt", StringUtils.formatTime(elapsed)).
-          td(".note", Joiner.on('\n').join(ta.getDiagnostics()))._();
+        long attemptElapsed =
+            Times.elapsed(attemptStartTime, attemptFinishTime, false);
+        int sortId = ta.getID().getId() + (ta.getID().getTaskId().getId() * 10000);
+        
+        TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
+        row.
+            td().
+              br().$title(String.valueOf(sortId))._(). // sorting
+              _(taid)._().
+            td(ta.getState().toString()).
+            td().a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr)._();
+        
+        row.td().
+          br().$title(String.valueOf(attemptStartTime))._().
+            _(Times.format(attemptStartTime))._();
+
+        if(type == TaskType.REDUCE) {
+          row.td().
+            br().$title(String.valueOf(shuffleFinishTime))._().
+            _(Times.format(shuffleFinishTime))._();
+          row.td().
+          br().$title(String.valueOf(sortFinishTime))._().
+          _(Times.format(sortFinishTime))._();
+        }
+        row.
+            td().
+              br().$title(String.valueOf(attemptFinishTime))._().
+              _(Times.format(attemptFinishTime))._();
+        
+        if(type == TaskType.REDUCE) {
+          row.td().
+            br().$title(String.valueOf(elapsedShuffleTime))._().
+          _(formatTime(elapsedShuffleTime))._();
+          row.td().
+          br().$title(String.valueOf(elapsedSortTime))._().
+        _(formatTime(elapsedSortTime))._();
+          row.td().
+            br().$title(String.valueOf(elapsedReduceTime))._().
+          _(formatTime(elapsedReduceTime))._();
+        }
+        
+        row.
+          td().
+            br().$title(String.valueOf(attemptElapsed))._().
+          _(formatTime(attemptElapsed))._().
+          td(".note", Joiner.on('\n').join(ta.getDiagnostics()));
+        row._();
       }
-      tbody._()._();
+      
+      
+      TR<TFOOT<TABLE<Hamlet>>> footRow = tbody._().tfoot().tr();
+      footRow.
+          th().input("search_init").$type(InputType.text).
+              $name("attempt_name").$value("Attempt")._()._().
+          th().input("search_init").$type(InputType.text).
+              $name("attempt_state").$value("State")._()._().
+          th().input("search_init").$type(InputType.text).
+              $name("attempt_node").$value("Node")._()._().
+          th().input("search_init").$type(InputType.text).
+              $name("attempt_start_time").$value("Start Time")._()._();
+      
+      if(type == TaskType.REDUCE) {
+        footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("shuffle_time").$value("Shuffle Time")._()._();
+        footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("merge_time").$value("Merge Time")._()._();
+      }
+      
+      footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("attempt_finish").$value("Finish Time")._()._();
+      
+      if(type == TaskType.REDUCE) {
+        footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("elapsed_shuffle_time").$value("Elapsed Shuffle Time")._()._();
+        footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("elapsed_merge_time").$value("Elapsed Merge Time")._()._();
+        footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("elapsed_reduce_time").$value("Elapsed Reduce Time")._()._();
+      }
+
+      footRow.
+        th().input("search_init").$type(InputType.text).
+            $name("attempt_elapsed").$value("Elapsed Time")._()._().
+        th().input("search_init").$type(InputType.text).
+            $name("note").$value("Note")._()._();
+      
+      footRow._()._()._();
     }
 
+    private String formatTime(long elapsed) {
+      return elapsed < 0 ? "N/A" : StringUtils.formatTime(elapsed);
+    }
+    
     /**
      * @return true if this is a valid request else false.
      */
@@ -134,6 +254,7 @@ public class HsTaskPage extends HsView {
     //Set up the java script and CSS for the attempts table
     set(DATATABLES_ID, "attempts");
     set(initID(DATATABLES, "attempts"), attemptsTableInit());
+    set(postInitID(DATATABLES, "attempts"), attemptsPostTableInit());
     setTableStyles(html, "attempts");
   }
 
@@ -150,6 +271,49 @@ public class HsTaskPage extends HsView {
    * attempts table. 
    */
   private String attemptsTableInit() {
-    return tableInit().append("}").toString();
+    TaskType type = null;
+    String symbol = $(TASK_TYPE);
+    if (!symbol.isEmpty()) {
+      type = MRApps.taskType(symbol);
+    } else {
+      TaskId taskID = MRApps.toTaskID($(TASK_ID));
+      type = taskID.getTaskType();
+    }
+    StringBuilder b = tableInit().
+      append(",aoColumnDefs:[");
+
+    b.append("{'sType':'title-numeric', 'aTargets': [ 0");
+    if(type == TaskType.REDUCE) {
+      b.append(", 7, 8, 9, 10");
+    } else { //MAP
+      b.append(", 5");
+    }
+    b.append(" ] }");
+    b.append("]}");
+    return b.toString();
+  }
+  
+  private String attemptsPostTableInit() {
+    return "var asInitVals = new Array();\n" +
+           "$('tfoot input').keyup( function () \n{"+
+           "  attemptsDataTable.fnFilter( this.value, $('tfoot input').index(this) );\n"+
+           "} );\n"+
+           "$('tfoot input').each( function (i) {\n"+
+           "  asInitVals[i] = this.value;\n"+
+           "} );\n"+
+           "$('tfoot input').focus( function () {\n"+
+           "  if ( this.className == 'search_init' )\n"+
+           "  {\n"+
+           "    this.className = '';\n"+
+           "    this.value = '';\n"+
+           "  }\n"+
+           "} );\n"+
+           "$('tfoot input').blur( function (i) {\n"+
+           "  if ( this.value == '' )\n"+
+           "  {\n"+
+           "    this.className = 'search_init';\n"+
+           "    this.value = asInitVals[$('tfoot input').index(this)];\n"+
+           "  }\n"+
+           "} );\n";
   }
 }

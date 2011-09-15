@@ -117,6 +117,8 @@ message TaskAttemptReportProto {
   optional string diagnostic_info = 7;
   optional string state_string = 8;
   optional PhaseProto phase = 9;
+  optional int64 shuffle_finish_time = 10;
+  optional int64 sort_finish_time=11;
 }
 
 enum JobStateProto {

@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.postInitID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
@@ -40,9 +44,10 @@ public class HsTasksPage extends HsView {
     set(DATATABLES_ID, "tasks");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
     set(initID(DATATABLES, "tasks"), tasksTableInit());
+    set(postInitID(DATATABLES, "tasks"), jobsPostTableInit());
     setTableStyles(html, "tasks");
   }
-
+  
   /**
    * The content of this page is the TasksBlock
    * @return HsTasksBlock.class
@@ -56,9 +61,45 @@ public class HsTasksPage extends HsView {
    * for the tasks table.
    */
   private String tasksTableInit() {
-    return tableInit().
-        append(",aoColumns:[{sType:'title-numeric'},{sType:'title-numeric',").
-        append("bSearchable:false},null,{sType:'title-numeric'},").
-        append("{sType:'title-numeric'},{sType:'title-numeric'}]}").toString();
+    TaskType type = null;
+    String symbol = $(TASK_TYPE);
+    if (!symbol.isEmpty()) {
+      type = MRApps.taskType(symbol);
+    }
+    StringBuilder b = tableInit().
+    append(",aoColumnDefs:[");
+    b.append("{'sType':'title-numeric', 'aTargets': [ 0, 4");
+    if(type == TaskType.REDUCE) {
+      b.append(", 9, 10, 11, 12");
+    } else { //MAP
+      b.append(", 7");
+    }
+    b.append(" ] }");
+    b.append("]}");
+    return b.toString();
+  }
+  
+  private String jobsPostTableInit() {
+    return "var asInitVals = new Array();\n" +
+           "$('tfoot input').keyup( function () \n{"+
+           "  tasksDataTable.fnFilter( this.value, $('tfoot input').index(this) );\n"+
+           "} );\n"+
+           "$('tfoot input').each( function (i) {\n"+
+           "  asInitVals[i] = this.value;\n"+
+           "} );\n"+
+           "$('tfoot input').focus( function () {\n"+
+           "  if ( this.className == 'search_init' )\n"+
+           "  {\n"+
+           "    this.className = '';\n"+
+           "    this.value = '';\n"+
+           "  }\n"+
+           "} );\n"+
+           "$('tfoot input').blur( function (i) {\n"+
+           "  if ( this.value == '' )\n"+
+           "  {\n"+
+           "    this.className = 'search_init';\n"+
+           "    this.value = asInitVals[$('tfoot input').index(this)];\n"+
+           "  }\n"+
+           "} );\n";
   }
 }

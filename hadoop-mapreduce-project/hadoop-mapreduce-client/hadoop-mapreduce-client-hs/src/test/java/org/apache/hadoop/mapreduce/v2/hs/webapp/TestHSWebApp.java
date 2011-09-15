@@ -26,13 +26,18 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.webapp.AMParams;
+import org.apache.hadoop.mapreduce.v2.app.webapp.TestAMWebApp;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -118,19 +123,27 @@ public class TestHSWebApp {
 
   @Test public void testJobView() {
     LOG.info("HsJobPage");
-    WebAppTests.testPage(HsJobPage.class, AppContext.class, new TestAppContext());
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = TestAMWebApp.getJobParams(appContext);
+    WebAppTests.testPage(HsJobPage.class, AppContext.class, appContext, params);
   }
 
-  @Test public void testTasksView() {
+  @Test
+  public void testTasksView() {
     LOG.info("HsTasksPage");
-    WebAppTests.testPage(HsTasksPage.class, AppContext.class,
-                         new TestAppContext());
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
+    WebAppTests.testPage(HsTasksPage.class, AppContext.class, appContext,
+        params);
   }
 
-  @Test public void testTaskView() {
+  @Test
+  public void testTaskView() {
     LOG.info("HsTaskPage");
-    WebAppTests.testPage(HsTaskPage.class, AppContext.class,
-                         new TestAppContext());
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
+    WebAppTests
+        .testPage(HsTaskPage.class, AppContext.class, appContext, params);
   }
 
   @Test public void testAttemptsWithJobView() {
@@ -147,8 +160,10 @@ public class TestHSWebApp {
   
   @Test public void testAttemptsView() {
     LOG.info("HsAttemptsPage");
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
     WebAppTests.testPage(HsAttemptsPage.class, AppContext.class,
-                         new TestAppContext());
+                         appContext, params);
   }
   
   @Test public void testConfView() {
