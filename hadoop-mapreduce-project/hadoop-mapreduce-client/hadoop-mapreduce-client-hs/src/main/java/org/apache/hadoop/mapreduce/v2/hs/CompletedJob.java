@@ -70,22 +70,26 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   private final Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
   private final Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
   private final String user;
+  private final Path confFile;
   
   private List<TaskAttemptCompletionEvent> completionEvents = null;
   private JobInfo jobInfo;
 
   public CompletedJob(Configuration conf, JobId jobId, Path historyFile, 
-      boolean loadTasks, String userName) throws IOException {
+      boolean loadTasks, String userName, Path confFile) throws IOException {
     LOG.info("Loading job: " + jobId + " from file: " + historyFile);
     this.conf = conf;
     this.jobId = jobId;
+    this.confFile = confFile;
     
     loadFullHistoryData(loadTasks, historyFile);
 
     user = userName;
     counters = TypeConverter.toYarn(jobInfo.getTotalCounters());
     diagnostics.add(jobInfo.getErrorInfo());
-    report = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobReport.class);
+    report =
+        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
+            JobReport.class);
     report.setJobId(jobId);
     report.setJobState(JobState.valueOf(jobInfo.getJobStatus()));
     report.setStartTime(jobInfo.getLaunchTime());
@@ -192,11 +196,12 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
       int attemptRunTime = -1;
       if (taskAttempt.getLaunchTime() != 0 && taskAttempt.getFinishTime() != 0) {
-        attemptRunTime = (int) (taskAttempt.getFinishTime() - taskAttempt
-            .getLaunchTime());
+        attemptRunTime =
+            (int) (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
       }
       // Default to KILLED
-      TaskAttemptCompletionEventStatus taceStatus = TaskAttemptCompletionEventStatus.KILLED;
+      TaskAttemptCompletionEventStatus taceStatus =
+          TaskAttemptCompletionEventStatus.KILLED;
       String taStateString = taskAttempt.getState().toString();
       try {
         taceStatus = TaskAttemptCompletionEventStatus.valueOf(taStateString);
@@ -222,7 +227,8 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   //History data is leisurely loaded when task level data is requested
-  private synchronized void loadFullHistoryData(boolean loadTasks, Path historyFileAbsolute) throws IOException {
+  private synchronized void loadFullHistoryData(boolean loadTasks,
+      Path historyFileAbsolute) throws IOException {
     LOG.info("Loading history file: [" + historyFileAbsolute + "]");
     if (jobInfo != null) {
       return; //data already loaded
@@ -230,11 +236,13 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     
     if (historyFileAbsolute != null) {
       try {
-      JobHistoryParser parser = new JobHistoryParser(historyFileAbsolute.getFileSystem(conf), historyFileAbsolute);
-      jobInfo = parser.parse();
+        JobHistoryParser parser =
+            new JobHistoryParser(historyFileAbsolute.getFileSystem(conf),
+                historyFileAbsolute);
+        jobInfo = parser.parse();
       } catch (IOException e) {
-        throw new YarnException("Could not load history file " + historyFileAbsolute,
-            e);
+        throw new YarnException("Could not load history file "
+            + historyFileAbsolute, e);
       }
     } else {
       throw new IOException("History file not found");
@@ -293,7 +301,8 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
-  public boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation) {
+  public
+      boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation) {
     if (!UserGroupInformation.isSecurityEnabled()) {
       return true;
     }
@@ -304,8 +313,26 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
         jobInfo.getUsername(), jobACL);
   }
   
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getJobACLs()
+   */
+  @Override
+  public  Map<JobACL, AccessControlList> getJobACLs() {
+    return jobInfo.getJobACLs();
+  }
+  
   @Override
   public String getUserName() {
     return user;
+  }
+
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getConfFile()
+   */
+  @Override
+  public Path getConfFile() {
+    return confFile;
   }
 }

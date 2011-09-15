@@ -22,7 +22,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,8 +44,8 @@ import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -101,7 +100,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private SchedulerEventDispatcher schedulerDispatcher;
   protected RMAppManager rmAppManager;
 
-  private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private WebApp webApp;
   private RMContext rmContext;
   private final Store store;
@@ -490,20 +488,19 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   public static void main(String argv[]) {
     StringUtils.startupShutdownMessage(ResourceManager.class, argv, LOG);
-    ResourceManager resourceManager = null;
     try {
       Configuration conf = new YarnConfiguration();
       Store store =  StoreFactory.getStore(conf);
-      resourceManager = new ResourceManager(store);
+      ResourceManager resourceManager = new ResourceManager(store);
+      Runtime.getRuntime().addShutdownHook(
+          new CompositeServiceShutdownHook(resourceManager));
       resourceManager.init(conf);
       //resourceManager.recover(store.restore());
       //store.doneWithRecovery();
       resourceManager.start();
-    } catch (Throwable e) {
-      LOG.error("Error starting RM", e);
-      if (resourceManager != null) {
-        resourceManager.stop();
-      }
+    } catch (Throwable t) {
+      LOG.fatal("Error starting ResourceManager", t);
+      System.exit(-1);
     }
   }
 }

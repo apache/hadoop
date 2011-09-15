@@ -579,13 +579,12 @@ public abstract class TaskAttemptImpl implements
           + remoteJobConfPath.toUri().toASCIIString());
       // //////////// End of JobConf setup
 
-      
       // Setup DistributedCache
-      setupDistributedCache(remoteFS, conf, localResources, environment);
+      MRApps.setupDistributedCache(conf, localResources, environment);
 
       // Set local-resources and environment
       container.setLocalResources(localResources);
-      container.setEnv(environment);
+      container.setEnvironment(environment);
       
       // Setup up tokens
       Credentials taskCredentials = new Credentials();
@@ -618,7 +617,7 @@ public abstract class TaskAttemptImpl implements
           ShuffleHandler.serializeServiceData(jobToken));
       container.setServiceData(serviceData);
 
-      MRApps.addToClassPath(container.getEnv(), getInitialClasspath());
+      MRApps.addToClassPath(container.getEnvironment(), getInitialClasspath());
     } catch (IOException e) {
       throw new YarnException(e);
     }
@@ -645,7 +644,7 @@ public abstract class TaskAttemptImpl implements
         taskAttemptListener.getAddress(), remoteTask, javaHome,
         workDir.toString(), containerLogDir, childTmpDir, jvmID));
 
-    MapReduceChildJVM.setVMEnv(container.getEnv(), classPaths,
+    MapReduceChildJVM.setVMEnv(container.getEnvironment(), classPaths,
         workDir.toString(), containerLogDir, nmLdLibraryPath, remoteTask,
         localizedApplicationTokensFile);
 
@@ -656,116 +655,6 @@ public abstract class TaskAttemptImpl implements
     return container;
   }
 
-  private static long[] parseTimeStamps(String[] strs) {
-    if (null == strs) {
-      return null;
-    }
-    long[] result = new long[strs.length];
-    for(int i=0; i < strs.length; ++i) {
-      result[i] = Long.parseLong(strs[i]);
-    }
-    return result;
-  }
-
-  private void setupDistributedCache(FileSystem remoteFS, 
-      Configuration conf, 
-      Map<String, LocalResource> localResources,
-      Map<String, String> env) 
-  throws IOException {
-    
-    // Cache archives
-    parseDistributedCacheArtifacts(remoteFS, localResources, env, 
-        LocalResourceType.ARCHIVE, 
-        DistributedCache.getCacheArchives(conf), 
-        parseTimeStamps(DistributedCache.getArchiveTimestamps(conf)), 
-        getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES), 
-        DistributedCache.getArchiveVisibilities(conf), 
-        DistributedCache.getArchiveClassPaths(conf));
-    
-    // Cache files
-    parseDistributedCacheArtifacts(remoteFS, 
-        localResources, env, 
-        LocalResourceType.FILE, 
-        DistributedCache.getCacheFiles(conf),
-        parseTimeStamps(DistributedCache.getFileTimestamps(conf)),
-        getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES),
-        DistributedCache.getFileVisibilities(conf),
-        DistributedCache.getFileClassPaths(conf));
-  }
-
-  // TODO - Move this to MR!
-  // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], 
-  // long[], boolean[], Path[], FileType)
-  private void parseDistributedCacheArtifacts(
-      FileSystem remoteFS, 
-      Map<String, LocalResource> localResources,
-      Map<String, String> env,
-      LocalResourceType type,
-      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[], 
-      Path[] pathsToPutOnClasspath) throws IOException {
-
-    if (uris != null) {
-      // Sanity check
-      if ((uris.length != timestamps.length) || (uris.length != sizes.length) ||
-          (uris.length != visibilities.length)) {
-        throw new IllegalArgumentException("Invalid specification for " +
-        		"distributed-cache artifacts of type " + type + " :" +
-        		" #uris=" + uris.length +
-        		" #timestamps=" + timestamps.length +
-        		" #visibilities=" + visibilities.length
-        		);
-      }
-      
-      Map<String, Path> classPaths = new HashMap<String, Path>();
-      if (pathsToPutOnClasspath != null) {
-        for (Path p : pathsToPutOnClasspath) {
-          p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
-              remoteFS.getWorkingDirectory()));
-          classPaths.put(p.toUri().getPath().toString(), p);
-        }
-      }
-      for (int i = 0; i < uris.length; ++i) {
-        URI u = uris[i];
-        Path p = new Path(u);
-        p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
-            remoteFS.getWorkingDirectory()));
-        // Add URI fragment or just the filename
-        Path name = new Path((null == u.getFragment())
-          ? p.getName()
-          : u.getFragment());
-        if (name.isAbsolute()) {
-          throw new IllegalArgumentException("Resource name must be relative");
-        }
-        String linkName = name.toUri().getPath();
-        localResources.put(
-            linkName,
-            BuilderUtils.newLocalResource(
-                p.toUri(), type, 
-                visibilities[i]
-                  ? LocalResourceVisibility.PUBLIC
-                  : LocalResourceVisibility.PRIVATE,
-                sizes[i], timestamps[i])
-        );
-        if (classPaths.containsKey(u.getPath())) {
-          MRApps.addToClassPath(env, linkName);
-        }
-      }
-    }
-  }
-  
-  // TODO - Move this to MR!
-  private static long[] getFileSizes(Configuration conf, String key) {
-    String[] strs = conf.getStrings(key);
-    if (strs == null) {
-      return null;
-    }
-    long[] result = new long[strs.length];
-    for(int i=0; i < strs.length; ++i) {
-      result[i] = Long.parseLong(strs[i]);
-    }
-    return result;
-  }
-  
   @Override
   public ContainerId getAssignedContainerID() {
     readLock.lock();
@@ -806,6 +695,25 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
+  @Override
+  public long getShuffleFinishTime() {
+    readLock.lock();
+    try {
+      return this.reportedStatus.shuffleFinishTime;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public long getSortFinishTime() {
+    readLock.lock();
+    try {
+      return this.reportedStatus.sortFinishTime;
+    } finally {
+      readLock.unlock();
+    }
+  }
 
   @Override
   public int getShufflePort() {
@@ -862,6 +770,7 @@ public abstract class TaskAttemptImpl implements
       result.setProgress(reportedStatus.progress);
       result.setStartTime(launchTime);
       result.setFinishTime(finishTime);
+      result.setShuffleFinishTime(this.reportedStatus.shuffleFinishTime);
       result.setDiagnosticInfo(reportedStatus.diagnosticInfo);
       result.setPhase(reportedStatus.phase);
       result.setStateString(reportedStatus.stateString);

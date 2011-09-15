@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.io.retry;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,7 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 
-class RetryInvocationHandler implements InvocationHandler {
+class RetryInvocationHandler implements InvocationHandler, Closeable {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private FailoverProxyProvider proxyProvider;
   
@@ -101,6 +103,11 @@ class RetryInvocationHandler implements InvocationHandler {
     } catch (InvocationTargetException e) {
       throw e.getCause();
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    proxyProvider.close();
   }
 
 }

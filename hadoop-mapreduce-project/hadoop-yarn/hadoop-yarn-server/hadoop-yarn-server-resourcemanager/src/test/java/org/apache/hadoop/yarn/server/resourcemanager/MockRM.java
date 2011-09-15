@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
@@ -81,13 +82,17 @@ public class MockRM extends ResourceManager {
     ApplicationId appId = resp.getApplicationId();
     
     SubmitApplicationRequest req = Records.newRecord(SubmitApplicationRequest.class);
-    ApplicationSubmissionContext sub = Records.newRecord(ApplicationSubmissionContext.class);
+    ApplicationSubmissionContext sub = 
+        Records.newRecord(ApplicationSubmissionContext.class);
     sub.setApplicationId(appId);
     sub.setApplicationName("");
     sub.setUser("");
+    ContainerLaunchContext clc = 
+        Records.newRecord(ContainerLaunchContext.class);
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(masterMemory);
-    sub.setMasterCapability(capability);
+    clc.setResource(capability);
+    sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
     
     client.submitApplication(req);

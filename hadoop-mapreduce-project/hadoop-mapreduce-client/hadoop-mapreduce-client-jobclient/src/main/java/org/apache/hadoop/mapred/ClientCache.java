@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,12 +29,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.mapreduce.v2.security.client.ClientHSSecurityInfo;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
 
 public class ClientCache {
 
@@ -72,16 +74,21 @@ public class ClientCache {
 
   private MRClientProtocol instantiateHistoryProxy()
   throws IOException {
-	String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
+	final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
 	          JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
     LOG.info("Connecting to HistoryServer at: " + serviceAddr);
-    Configuration myConf = new Configuration(conf);
-    //TODO This should ideally be using it's own class (instead of ClientRMSecurityInfo)
+    final Configuration myConf = new Configuration(conf);
     myConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-        ClientRMSecurityInfo.class, SecurityInfo.class);
-    YarnRPC rpc = YarnRPC.create(myConf);
+        ClientHSSecurityInfo.class, SecurityInfo.class);
+    final YarnRPC rpc = YarnRPC.create(myConf);
     LOG.info("Connected to HistoryServer at: " + serviceAddr);
-    return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
-        NetUtils.createSocketAddr(serviceAddr), myConf);
+    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+    return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
+      @Override
+      public MRClientProtocol run() {
+        return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
+            NetUtils.createSocketAddr(serviceAddr), myConf);
+      }
+    });
   }
 }

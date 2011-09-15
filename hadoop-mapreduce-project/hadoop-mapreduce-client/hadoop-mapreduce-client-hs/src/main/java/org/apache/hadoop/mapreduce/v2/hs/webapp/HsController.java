@@ -78,7 +78,16 @@ public class HsController extends AppController {
   protected Class<? extends View> taskPage() {
     return HsTaskPage.class;
   }
-
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#attemptsPage()
+   */
+  @Override
+  protected Class<? extends View> attemptsPage() {
+    return HsAttemptsPage.class;
+  }
+  
   // Need all of these methods here also as Guice doesn't look into parent
   // classes.
   
@@ -125,6 +134,21 @@ public class HsController extends AppController {
   @Override
   public void attempts() {
     super.attempts();
+  }
+  
+  /**
+   * @return the page that will be used to render the /conf page
+   */
+  protected Class<? extends View> confPage() {
+    return HsConfPage.class;
+  }
+  
+  /**
+   * Render the /conf page
+   */
+  public void conf() {
+    requireJob();
+    render(confPage());
   }
   
   /**

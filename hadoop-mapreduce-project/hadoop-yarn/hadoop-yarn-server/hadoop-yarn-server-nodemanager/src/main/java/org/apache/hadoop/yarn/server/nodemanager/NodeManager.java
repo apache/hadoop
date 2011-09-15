@@ -133,13 +133,6 @@ public class NodeManager extends CompositeService {
     dispatcher.register(ContainerManagerEventType.class, containerManager);
     addService(dispatcher);
 
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-          @Override
-          public void run() {
-            NodeManager.this.stop();
-          }
-        });
-
     DefaultMetricsSystem.initialize("NodeManager");
 
     // StatusUpdater should be added last so that it get started last 
@@ -200,10 +193,17 @@ public class NodeManager extends CompositeService {
 
   public static void main(String[] args) {
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
-    NodeManager nodeManager = new NodeManager();
-    YarnConfiguration conf = new YarnConfiguration();
-    nodeManager.init(conf);
-    nodeManager.start();
+    try {
+      NodeManager nodeManager = new NodeManager();
+      Runtime.getRuntime().addShutdownHook(
+          new CompositeServiceShutdownHook(nodeManager));
+      YarnConfiguration conf = new YarnConfiguration();
+      nodeManager.init(conf);
+      nodeManager.start();
+    } catch (Throwable t) {
+      LOG.fatal("Error starting NodeManager", t);
+      System.exit(-1);
+    }
   }
 
 }

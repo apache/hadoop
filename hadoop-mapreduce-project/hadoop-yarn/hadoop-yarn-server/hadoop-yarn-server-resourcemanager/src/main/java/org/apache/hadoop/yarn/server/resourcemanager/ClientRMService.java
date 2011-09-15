@@ -71,7 +71,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -90,7 +89,6 @@ public class ClientRMService extends AbstractService implements
   final private AtomicInteger applicationCounter = new AtomicInteger(0);
   final private YarnScheduler scheduler;
   final private RMContext rmContext;
-  private final AMLivelinessMonitor amLivelinessMonitor;
   private final RMAppManager rmAppManager;
 
   private String clientServiceBindAddress;
@@ -106,7 +104,6 @@ public class ClientRMService extends AbstractService implements
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
-    this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
     this.rmAppManager = rmAppManager;
   }
   
@@ -195,15 +192,18 @@ public class ClientRMService extends AbstractService implements
       SubmitApplicationRequest request) throws YarnRemoteException {
     ApplicationSubmissionContext submissionContext = request
         .getApplicationSubmissionContext();
-    ApplicationId applicationId = null;
-    String user = null;
+    ApplicationId applicationId = submissionContext.getApplicationId();
+    String user = submissionContext.getUser();
     try {
       user = UserGroupInformation.getCurrentUser().getShortUserName();
-      applicationId = submissionContext.getApplicationId();
       if (rmContext.getRMApps().get(applicationId) != null) {
         throw new IOException("Application with id " + applicationId
             + " is already present! Cannot add a duplicate!");
       }
+      
+      // Safety 
+      submissionContext.setUser(user);
+      
       // This needs to be synchronous as the client can query 
       // immediately following the submission to get the application status.
       // So call handle directly and do not send an event.
@@ -226,6 +226,7 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public FinishApplicationResponse finishApplication(
       FinishApplicationRequest request) throws YarnRemoteException {

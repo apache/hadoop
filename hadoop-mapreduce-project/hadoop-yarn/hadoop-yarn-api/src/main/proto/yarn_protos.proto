@@ -188,17 +188,11 @@ message AMResponseProto {
 ////////////////////////////////////////////////////////////////////////
 message ApplicationSubmissionContextProto {
   optional ApplicationIdProto application_id = 1;
-  optional string application_name = 2;
-  optional ResourceProto master_capability = 3;
-  repeated StringURLMapProto resources = 4;
-  repeated StringLocalResourceMapProto resources_todo = 5;
-  repeated string fs_tokens = 6;
-  optional bytes fs_tokens_todo = 7;
-  repeated StringStringMapProto environment = 8;
-  repeated string command = 9;
-  optional string queue = 10;
-  optional PriorityProto priority = 11;
-  optional string user = 12;
+  optional string application_name = 2 [default = "N/A"];
+  optional string user = 3; 
+  optional string queue = 4 [default = "default"];
+  optional PriorityProto priority = 5;
+  optional ContainerLaunchContextProto am_container_spec = 6;
 }
 
 message YarnClusterMetricsProto {
@@ -242,7 +236,7 @@ message ContainerLaunchContextProto {
   repeated StringLocalResourceMapProto localResources = 4;
   optional bytes container_tokens = 5;
   repeated StringBytesMapProto service_data = 6;
-  repeated StringStringMapProto env = 7;
+  repeated StringStringMapProto environment = 7;
   repeated string command = 8;
 }
 

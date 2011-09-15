@@ -24,6 +24,8 @@ import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 
 import java.lang.reflect.Method;
+import java.util.Map;
+
 import com.google.inject.Module;
 import com.google.inject.Scopes;
 import com.google.inject.servlet.RequestScoped;
@@ -126,22 +128,31 @@ public class WebAppTests {
     }
   }
 
-  @SuppressWarnings("unchecked")
   public static <T> Injector testController(Class<? extends Controller> ctrlr,
       String methodName) {
     return testController(ctrlr, methodName, null, null);
   }
 
   public static <T> Injector testPage(Class<? extends View> page, Class<T> api,
-                                      T impl, Module... modules) {
+                                      T impl, Map<String,String> params, Module... modules) {
     Injector injector = createMockInjector(api, impl, modules);
-    injector.getInstance(page).render();
+    View view = injector.getInstance(page);
+    if(params != null) {
+      for(Map.Entry<String, String> entry: params.entrySet()) {
+        view.set(entry.getKey(), entry.getValue());
+      }
+    }
+    view.render();
     flushOutput(injector);
     return injector;
   }
+  
+  public static <T> Injector testPage(Class<? extends View> page, Class<T> api,
+                                      T impl, Module... modules) {
+    return testPage(page, api, impl, null, modules);
+  }
 
   // convenience
-  @SuppressWarnings("unchecked")
   public static <T> Injector testPage(Class<? extends View> page) {
     return testPage(page, null, null);
   }
@@ -155,7 +166,6 @@ public class WebAppTests {
   }
 
   // convenience
-  @SuppressWarnings("unchecked")
   public static <T> Injector testBlock(Class<? extends SubView> block) {
     return testBlock(block, null, null);
   }

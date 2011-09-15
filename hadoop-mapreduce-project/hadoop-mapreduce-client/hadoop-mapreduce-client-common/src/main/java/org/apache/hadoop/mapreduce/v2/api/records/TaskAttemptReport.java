@@ -24,6 +24,10 @@ public interface TaskAttemptReport {
   public abstract float getProgress();
   public abstract long getStartTime();
   public abstract long getFinishTime();
+  /** @return the shuffle finish time. Applicable only for reduce attempts */
+  public abstract long getShuffleFinishTime();
+  /** @return the sort/merge finish time. Applicable only for reduce attempts */
+  public abstract long getSortFinishTime();
   public abstract Counters getCounters();
   public abstract String getDiagnosticInfo();
   public abstract String getStateString();
@@ -39,4 +43,14 @@ public interface TaskAttemptReport {
   public abstract void setStateString(String stateString);
   public abstract void setPhase(Phase phase);
   
+  /** 
+   * Set the shuffle finish time. Applicable only for reduce attempts
+   * @param time the time the shuffle finished.
+   */
+  public abstract void setShuffleFinishTime(long time);
+  /** 
+   * Set the sort/merge finish time. Applicable only for reduce attempts
+   * @param time the time the shuffle finished.
+   */
+  public abstract void setSortFinishTime(long time);
 }

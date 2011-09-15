@@ -156,7 +156,7 @@ public interface ContainerLaunchContext {
    */
   @Public
   @Stable
-  Map<String, String> getEnv();
+  Map<String, String> getEnvironment();
     
   /**
    * Add <em>environment variables</em> for the container.
@@ -164,7 +164,7 @@ public interface ContainerLaunchContext {
    */
   @Public
   @Stable
-  void setEnv(Map<String, String> environment);
+  void setEnvironment(Map<String, String> environment);
 
   /**
    * Get the list of <em>commands</em> for launching the container.

@@ -36,6 +36,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -98,7 +99,8 @@ import org.apache.hadoop.util.PureJavaCrc32;
  * datanode from the original pipeline. The DataStreamer now
  * starts sending packets from the dataQueue.
 ****************************************************************/
-public class DFSOutputStream extends FSOutputSummer implements Syncable {
+@InterfaceAudience.Private
+class DFSOutputStream extends FSOutputSummer implements Syncable {
   private final DFSClient dfsClient;
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private Socket s;
@@ -1537,7 +1539,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    * write pipeline have failed. 
    * @return the number of valid replicas of the current block
    */
-  public synchronized int getNumCurrentReplicas() throws IOException {
+  synchronized int getNumCurrentReplicas() throws IOException {
     dfsClient.checkOpen();
     isClosed();
     if (streamer == null) {
@@ -1707,7 +1709,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   /**
    * Returns the size of a file as it was when this stream was opened
    */
-  public long getInitialLen() {
+  long getInitialLen() {
     return initialFileSize;
   }
 

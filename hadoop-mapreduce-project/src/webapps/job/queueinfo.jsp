@@ -21,6 +21,7 @@
 <%@ page
 contentType="text/html; charset=UTF-8"
 import="org.apache.hadoop.mapred.*"
+import="org.apache.commons.lang.StringUtils"
 import="javax.servlet.*"
 import="javax.servlet.http.*"
 import="java.io.*"
@@ -51,7 +52,8 @@ import="java.util.*"
       return "";
     }
     for (JobQueueInfo queueInfo : children) {
-      String variableName = queueInfo.getQueueName().replace(":", "_");
+      String variableName = StringUtils.replaceChars(queueInfo.getQueueName(),  
+                                 ":-*+#.^", "_______");
       String label = queueInfo.getQueueName().split(":")[queueInfo
           .getQueueName().split(":").length - 1];
       str.append(String.format(

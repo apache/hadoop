@@ -21,12 +21,17 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.APP_ID;
 import static org.junit.Assert.assertEquals;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -115,18 +120,42 @@ public class TestAMWebApp {
     WebAppTests.testPage(AppView.class, AppContext.class, new TestAppContext());
   }
 
+
+  
   @Test public void testJobView() {
-    WebAppTests.testPage(JobPage.class, AppContext.class, new TestAppContext());
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = getJobParams(appContext);
+    WebAppTests.testPage(JobPage.class, AppContext.class, appContext, params);
   }
 
   @Test public void testTasksView() {
-    WebAppTests.testPage(TasksPage.class, AppContext.class,
-                         new TestAppContext());
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = getTaskParams(appContext);
+    WebAppTests.testPage(TasksPage.class, AppContext.class, appContext, params);
   }
 
   @Test public void testTaskView() {
-    WebAppTests.testPage(TaskPage.class, AppContext.class,
-                         new TestAppContext());
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = getTaskParams(appContext);
+    WebAppTests.testPage(TaskPage.class, AppContext.class, appContext, params);
+  }
+
+  public static Map<String, String> getJobParams(AppContext appContext) {
+    JobId jobId = appContext.getAllJobs().entrySet().iterator().next().getKey();
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(AMParams.JOB_ID, MRApps.toString(jobId));
+    return params;
+  }
+  
+  public static Map<String, String> getTaskParams(AppContext appContext) {
+    JobId jobId = appContext.getAllJobs().entrySet().iterator().next().getKey();
+    Entry<TaskId, Task> e = appContext.getJob(jobId).getTasks().entrySet().iterator().next();
+    e.getValue().getType();
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(AMParams.JOB_ID, MRApps.toString(jobId));
+    params.put(AMParams.TASK_ID, e.getKey().toString());
+    params.put(AMParams.TASK_TYPE, MRApps.taskSymbol(e.getValue().getType()));
+    return params;
   }
 
   public static void main(String[] args) {

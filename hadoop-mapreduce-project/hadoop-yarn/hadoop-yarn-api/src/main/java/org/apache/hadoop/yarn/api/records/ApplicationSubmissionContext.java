@@ -18,14 +18,8 @@
 
 package org.apache.hadoop.yarn.api.records;
 
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 
 /**
@@ -36,26 +30,17 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  * <p>It includes details such as:
  *   <ul>
  *     <li>{@link ApplicationId} of the application.</li>
- *     <li>
- *       {@link Resource} necessary to run the <code>ApplicationMaster</code>.
- *     </li>
  *     <li>Application user.</li>
  *     <li>Application name.</li>
  *     <li>{@link Priority} of the application.</li>
- *     <li>Security tokens (if security is enabled).</li>
  *     <li>
- *       {@link LocalResource} necessary for running the 
- *       <code>ApplicationMaster</code> container such
- *       as binaries, jar, shared-objects, side-files etc. 
+ *       {@link ContainerLaunchContext} of the container in which the 
+ *       <code>ApplicationMaster</code> is executed.
  *     </li>
- *     <li>
- *       Environment variables for the launched <code>ApplicationMaster</code> 
- *       process.
- *     </li>
- *     <li>Command to launch the <code>ApplicationMaster</code>.</li>
  *   </ul>
  * </p>
  * 
+ * @see ContainerLaunchContext
  * @see ClientRMProtocol#submitApplication(org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest)
  */
 @Public
@@ -143,198 +128,25 @@ public interface ApplicationSubmissionContext {
   public void setUser(String user);
   
   /**
-   * Get the <code>Resource</code> required to run the 
-   * <code>ApplicationMaster</code>.
-   * @return <code>Resource</code> required to run the 
-   *         <code>ApplicationMaster</code>
+   * Get the <code>ContainerLaunchContext</code> to describe the 
+   * <code>Container</code> with which the <code>ApplicationMaster</code> is
+   * launched.
+   * @return <code>ContainerLaunchContext</code> for the 
+   *         <code>ApplicationMaster</code> container
    */
   @Public
   @Stable
-  public Resource getMasterCapability();
+  public ContainerLaunchContext getAMContainerSpec();
   
   /**
-   * Set <code>Resource</code> required to run the 
-   * <code>ApplicationMaster</code>.
-   * @param masterCapability <code>Resource</code> required to run the 
-   *                         <code>ApplicationMaster</code>
+   * Set the <code>ContainerLaunchContext</code> to describe the 
+   * <code>Container</code> with which the <code>ApplicationMaster</code> is
+   * launched.
+   * @param amContainer <code>ContainerLaunchContext</code> for the 
+   *                    <code>ApplicationMaster</code> container
    */
   @Public
   @Stable
-  public void setMasterCapability(Resource masterCapability);
-  
-  @Private
-  @Unstable
-  public Map<String, URL> getAllResources();
-  
-  @Private
-  @Unstable
-  public URL getResource(String key);
-  
-  @Private
-  @Unstable
-  public void addAllResources(Map<String, URL> resources);
+  public void setAMContainerSpec(ContainerLaunchContext amContainer);
 
-  @Private
-  @Unstable
-  public void setResource(String key, URL url);
-
-  @Private
-  @Unstable
-  public void removeResource(String key);
-
-  @Private
-  @Unstable
-  public void clearResources();
-
-  /**
-   * Get all the <code>LocalResource</code> required to run the 
-   * <code>ApplicationMaster</code>.
-   * @return <code>LocalResource</code> required to run the 
-   *         <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public Map<String, LocalResource> getAllResourcesTodo();
-  
-  @Private
-  @Unstable
-  public LocalResource getResourceTodo(String key);
-  
-  /**
-   * Add all the <code>LocalResource</code> required to run the 
-   * <code>ApplicationMaster</code>.
-   * @param resources all <code>LocalResource</code> required to run the 
-   *                      <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public void addAllResourcesTodo(Map<String, LocalResource> resources);
-
-  @Private
-  @Unstable
-  public void setResourceTodo(String key, LocalResource localResource);
-
-  @Private
-  @Unstable
-  public void removeResourceTodo(String key);
-
-  @Private
-  @Unstable
-  public void clearResourcesTodo();
-
-  @Private
-  @Unstable
-  public List<String> getFsTokenList();
-  
-  @Private
-  @Unstable
-  public String getFsToken(int index);
-  
-  @Private
-  @Unstable
-  public int getFsTokenCount();
-  
-  @Private
-  @Unstable
-  public void addAllFsTokens(List<String> fsTokens);
-
-  @Private
-  @Unstable
-  public void addFsToken(String fsToken);
-
-  @Private
-  @Unstable
-  public void removeFsToken(int index);
-
-  @Private
-  @Unstable
-  public void clearFsTokens();
-
-  /**
-   * Get <em>file-system tokens</em> for the <code>ApplicationMaster</code>.
-   * @return file-system tokens for the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public ByteBuffer getFsTokensTodo();
-  
-  /**
-   * Set <em>file-system tokens</em> for the <code>ApplicationMaster</code>.
-   * @param fsTokens file-system tokens for the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public void setFsTokensTodo(ByteBuffer fsTokens);
-
-  /**
-   * Get the <em>environment variables</em> for the 
-   * <code>ApplicationMaster</code>.
-   * @return environment variables for the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public Map<String, String> getAllEnvironment();
-  
-  @Private
-  @Unstable
-  public String getEnvironment(String key);
-  
-  /**
-   * Add all of the <em>environment variables</em> for the 
-   * <code>ApplicationMaster</code>.
-   * @param environment environment variables for the 
-   *                    <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public void addAllEnvironment(Map<String, String> environment);
-
-  @Private
-  @Unstable
-  public void setEnvironment(String key, String env);
-
-  @Private
-  @Unstable
-  public void removeEnvironment(String key);
-
-  @Private
-  @Unstable
-  public void clearEnvironment();
-
-  /**
-   * Get the <em>commands</em> to launch the <code>ApplicationMaster</code>.
-   * @return commands to launch the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public List<String> getCommandList();
-  
-  @Private
-  @Unstable
-  public String getCommand(int index);
-  
-  @Private
-  @Unstable
-  public int getCommandCount();
-  
-  /**
-   * Add all of the <em>commands</em> to launch the 
-   * <code>ApplicationMaster</code>.
-   * @param commands commands to launch the <code>ApplicationMaster</code>
-   */
-  @Public
-  @Stable
-  public void addAllCommands(List<String> commands);
-  
-  @Private
-  @Unstable
-  public void addCommand(String command);
-  
-  @Private
-  @Unstable
-  public void removeCommand(int index);
-  
-  @Private
-  @Unstable
-  public void clearCommands();
 }

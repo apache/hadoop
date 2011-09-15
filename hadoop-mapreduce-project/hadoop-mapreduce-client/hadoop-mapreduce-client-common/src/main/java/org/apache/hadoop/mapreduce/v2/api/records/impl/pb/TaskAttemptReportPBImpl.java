@@ -127,6 +127,31 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
     maybeInitBuilder();
     builder.setFinishTime((finishTime));
   }
+  
+  @Override
+  public long getShuffleFinishTime() {
+    TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getShuffleFinishTime());
+  }
+
+  @Override
+  public void setShuffleFinishTime(long time) {
+    maybeInitBuilder();
+    builder.setShuffleFinishTime(time);
+  }
+
+  @Override
+  public long getSortFinishTime() {
+    TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getSortFinishTime());
+  }
+
+  @Override
+  public void setSortFinishTime(long time) {
+    maybeInitBuilder();
+    builder.setSortFinishTime(time);
+  }
+
   @Override
   public TaskAttemptId getTaskAttemptId() {
     TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -262,7 +287,4 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
   private Phase convertFromProtoFormat(PhaseProto e) {
     return MRProtoUtils.convertFromProtoFormat(e);
   }
-
-
-
 }  

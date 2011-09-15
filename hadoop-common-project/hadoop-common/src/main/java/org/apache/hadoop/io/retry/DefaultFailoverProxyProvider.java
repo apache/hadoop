@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.io.retry;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ipc.RPC;
 
 /**
  * An implementation of {@link FailoverProxyProvider} which does nothing in the
@@ -47,6 +50,11 @@ public class DefaultFailoverProxyProvider implements FailoverProxyProvider {
   @Override
   public void performFailover(Object currentProxy) {
     // Nothing to do.
+  }
+
+  @Override
+  public void close() throws IOException {
+    RPC.stopProxy(proxy);
   }
 
 }

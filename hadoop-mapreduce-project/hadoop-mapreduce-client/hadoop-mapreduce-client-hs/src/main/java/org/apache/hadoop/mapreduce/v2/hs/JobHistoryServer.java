@@ -74,14 +74,15 @@ public class JobHistoryServer extends CompositeService {
 
   public static void main(String[] args) {
     StringUtils.startupShutdownMessage(JobHistoryServer.class, args, LOG);
-    JobHistoryServer server = null;
     try {
-      server = new JobHistoryServer();
+      JobHistoryServer jobHistoryServer = new JobHistoryServer();
+      Runtime.getRuntime().addShutdownHook(
+          new CompositeServiceShutdownHook(jobHistoryServer));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
-      server.init(conf);
-      server.start();
-    } catch (Throwable e) {
-      LOG.fatal(StringUtils.stringifyException(e));
+      jobHistoryServer.init(conf);
+      jobHistoryServer.start();
+    } catch (Throwable t) {
+      LOG.fatal("Error starting JobHistoryServer", t);
       System.exit(-1);
     }
   }

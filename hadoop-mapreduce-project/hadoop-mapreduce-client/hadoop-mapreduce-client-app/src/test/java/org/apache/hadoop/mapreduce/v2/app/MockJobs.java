@@ -22,10 +22,12 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -50,6 +52,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -258,6 +261,16 @@ public class MockJobs extends MockApps {
       public String getAssignedContainerMgrAddress() {
         return "localhost:9998";
       }
+
+      @Override
+      public long getShuffleFinishTime() {
+        return 0;
+      }
+
+      @Override
+      public long getSortFinishTime() {
+        return 0;
+      }
     };
   }
 
@@ -452,7 +465,7 @@ public class MockJobs extends MockApps {
 
       @Override
       public List<String> getDiagnostics() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return Collections.<String>emptyList();
       }
 
       @Override
@@ -463,7 +476,17 @@ public class MockJobs extends MockApps {
 
       @Override
       public String getUserName() {
+        return "mock";
+      }
+
+      @Override
+      public Path getConfFile() {
         throw new UnsupportedOperationException("Not supported yet.");
+      }
+
+      @Override
+      public Map<JobACL, AccessControlList> getJobACLs() {
+        return Collections.<JobACL, AccessControlList>emptyMap();
       }
     };
   }
