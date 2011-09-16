@@ -10,6 +10,12 @@ Trunk (unreleased changes)
 
     HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
 
+    HDFS-2338. Add configuration option to enable/disable webhdfs.
+    (jitendra via szetszwo)
+
+    HDFS-2318. Provide authentication to webhdfs using SPNEGO and delegation
+    tokens.  (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
@@ -22,6 +28,8 @@ Trunk (unreleased changes)
                (Ivan Kelly via jitendra)
 
     HDFS-2223. Untangle depencencies between NN components (todd)
+
+    HDFS-2337. DFSClient shouldn't keep multiple RPC proxy references (atm)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)

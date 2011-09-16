@@ -21,14 +21,20 @@ package org.apache.hadoop.hdfs.security.token.delegation;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Iterator;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
-import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 /**
  * A HDFS specific delegation token secret manager.
@@ -277,5 +283,23 @@ public class DelegationTokenSecretManager
   protected void logUpdateMasterKey(DelegationKey key)
       throws IOException {
     namesystem.logUpdateMasterKey(key);
+  }
+
+  /** A utility method for creating credentials. */
+  public static Credentials createCredentials(final NameNode namenode,
+      final UserGroupInformation ugi, final String renewer) throws IOException {
+    final Token<DelegationTokenIdentifier> token = namenode.getRpcServer(
+        ).getDelegationToken(new Text(renewer));
+    if (token == null) {
+      throw new IOException("Failed to get the token for " + renewer
+          + ", user=" + ugi.getShortUserName());
+    }
+
+    final InetSocketAddress addr = namenode.getNameNodeAddress();
+    final String s = addr.getAddress().getHostAddress() + ":" + addr.getPort();
+    token.setService(new Text(s));
+    final Credentials c = new Credentials();
+    c.addToken(new Text(ugi.getShortUserName()), token);
+    return c;
   }
 }

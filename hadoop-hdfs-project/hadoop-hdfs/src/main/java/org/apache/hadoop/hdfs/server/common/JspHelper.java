@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -501,29 +502,38 @@ public class JspHelper {
     return null;
   }
 
-  /**
-   * See
-   * {@link JspHelper#getUGI(ServletContext, HttpServletRequest, Configuration)}
-   * , ServletContext is passed as null.
-   */
+  /** Same as getUGI(null, request, conf). */
   public static UserGroupInformation getUGI(HttpServletRequest request,
       Configuration conf) throws IOException {
     return getUGI(null, request, conf);
   }
   
+  /** Same as getUGI(context, request, conf, KERBEROS_SSL, true). */
+  public static UserGroupInformation getUGI(ServletContext context,
+      HttpServletRequest request, Configuration conf) throws IOException {
+    return getUGI(context, request, conf, AuthenticationMethod.KERBEROS_SSL, true);
+  }
+
   /**
    * Get {@link UserGroupInformation} and possibly the delegation token out of
    * the request.
    * @param context the ServletContext that is serving this request.
    * @param request the http request
+   * @param conf configuration
+   * @param secureAuthMethod the AuthenticationMethod used in secure mode.
+   * @param tryUgiParameter Should it try the ugi parameter?
    * @return a new user from the request
    * @throws AccessControlException if the request has no token
    */
   public static UserGroupInformation getUGI(ServletContext context,
-      HttpServletRequest request, Configuration conf) throws IOException {
-    UserGroupInformation ugi = null;
+      HttpServletRequest request, Configuration conf,
+      final AuthenticationMethod secureAuthMethod,
+      final boolean tryUgiParameter) throws IOException {
+    final UserGroupInformation ugi;
+    final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
+
     if(UserGroupInformation.isSecurityEnabled()) {
-      String user = request.getRemoteUser();
+      final String user = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
         Token<DelegationTokenIdentifier> token = 
@@ -541,6 +551,7 @@ public class JspHelper {
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
         ugi = id.getUser();
+        checkUsername(ugi.getUserName(), user);
         ugi.addToken(token);
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
@@ -551,16 +562,15 @@ public class JspHelper {
         ugi = UserGroupInformation.createRemoteUser(user);
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
-        ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS_SSL);
+        ugi.setAuthenticationMethod(secureAuthMethod);
       }
+
+      checkUsername(user, usernameFromQuery);
+
     } else { // Security's not on, pull from url
-      String user = request.getParameter("ugi");
-      
-      if(user == null) { // not specified in request
-        ugi = getDefaultWebUser(conf);
-      } else {
-        ugi = UserGroupInformation.createRemoteUser(user.split(",")[0]);
-      }
+      ugi = usernameFromQuery == null?
+          getDefaultWebUser(conf) // not specified in request
+          : UserGroupInformation.createRemoteUser(usernameFromQuery);
       ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
     }
     
@@ -568,7 +578,28 @@ public class JspHelper {
       LOG.debug("getUGI is returning: " + ugi.getShortUserName());
     return ugi;
   }
-  
+
+  private static void checkUsername(final String expected, final String name
+      ) throws IOException {
+    if (name != null && !name.equals(expected)) {
+      throw new IOException("Usernames not matched: name=" + name
+          + " != expected=" + expected);
+    }
+  }
+
+  private static String getUsernameFromQuery(final HttpServletRequest request,
+      final boolean tryUgiParameter) {
+    String username = request.getParameter(UserParam.NAME);
+    if (username == null && tryUgiParameter) {
+      //try ugi parameter
+      final String ugiStr = request.getParameter("ugi");
+      if (ugiStr != null) {
+        username = ugiStr.split(",")[0];
+      }
+    }
+    return username;
+  }
+
   /**
    * Returns the url parameter for the given token string.
    * @param tokenString

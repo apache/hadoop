@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
@@ -99,7 +100,25 @@ public class NameNodeHttpServer {
           int infoPort = bindAddress.getPort();
           httpServer = new HttpServer("hdfs", infoHost, infoPort,
               infoPort == 0, conf, 
-              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " ")));
+              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " "))) {
+            {
+              if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+                  DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+                //add SPNEGO authentication filter for webhdfs
+                final String name = "SPNEGO";
+                final String classname =  AuthFilter.class.getName();
+                final String pathSpec = "/" + WebHdfsFileSystem.PATH_PREFIX + "/*";
+                defineFilter(webAppContext, name, classname, null,
+                    new String[]{pathSpec});
+                LOG.info("Added filter '" + name + "' (class=" + classname + ")");
+
+                // add webhdfs packages
+                addJerseyResourcePackage(
+                    NamenodeWebHdfsMethods.class.getPackage().getName()
+                    + ";" + Param.class.getPackage().getName(), pathSpec);
+              }
+            }
+          };
 
           boolean certSSL = conf.getBoolean("dfs.https.enable", false);
           boolean useKrb = UserGroupInformation.isSecurityEnabled();
@@ -128,7 +147,7 @@ public class NameNodeHttpServer {
               nn.getNameNodeAddress());
           httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-          setupServlets(httpServer);
+          setupServlets(httpServer, conf);
           httpServer.start();
 
           // The web-server port can be ephemeral... ensure we have the correct
@@ -159,7 +178,7 @@ public class NameNodeHttpServer {
     return httpAddress;
   }
 
-  private static void setupServlets(HttpServer httpServer) {
+  private static void setupServlets(HttpServer httpServer, Configuration conf) {
     httpServer.addInternalServlet("getDelegationToken",
         GetDelegationTokenServlet.PATH_SPEC, 
         GetDelegationTokenServlet.class, true);
@@ -181,11 +200,6 @@ public class NameNodeHttpServer {
         FileChecksumServlets.RedirectServlet.class, false);
     httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
         ContentSummaryServlet.class, false);
-
-    httpServer.addJerseyResourcePackage(
-        NamenodeWebHdfsMethods.class.getPackage().getName()
-        + ";" + Param.class.getPackage().getName(),
-        "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
   }
 
   public static FSImage getFsImageFromContext(ServletContext context) {
