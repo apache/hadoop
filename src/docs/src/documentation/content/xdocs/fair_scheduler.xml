@@ -192,6 +192,15 @@
           </tr>
           <tr>
           <td>
+            mapred.fairscheduler.allow.undeclared.pools
+          </td>
+          <td>
+            Boolean property for enabling job submission to pools not declared
+            in the allocation file. Default: true.
+          </td>
+          </tr>
+          <tr>
+          <td>
             mapred.fairscheduler.allocation.file
           </td>
           <td>

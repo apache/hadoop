@@ -42,6 +42,7 @@ import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A {@link TaskScheduler} that implements fair sharing.
@@ -97,7 +98,15 @@ public class FairScheduler extends TaskScheduler {
   protected long lastDumpTime;       // Time when we last dumped state to log
   protected long lastHeartbeatTime;  // Time we last ran assignTasks 
   private long lastPreemptCheckTime; // Time we last ran preemptTasksIfNecessary
-  
+
+  /**
+   * A configuration property that controls the ability of submitting jobs to
+   * pools not declared in the scheduler allocation file.
+   */
+  public final static String ALLOW_UNDECLARED_POOLS_KEY =
+    "mapred.fairscheduler.allow.undeclared.pools";
+  private boolean allowUndeclaredPools = false;
+
   /**
    * A class for holding per-job scheduler variables. These always contain the
    * values of the variables at the last update(), and are used along with a
@@ -195,6 +204,7 @@ public class FairScheduler extends TaskScheduler {
           "mapred.fairscheduler.locality.delay.node", defaultDelay);
       rackLocalityDelay = conf.getLong(
           "mapred.fairscheduler.locality.delay.rack", defaultDelay);
+      allowUndeclaredPools = conf.getBoolean(ALLOW_UNDECLARED_POOLS_KEY, true);
       if (defaultDelay == -1 && 
           (nodeLocalityDelay == -1 || rackLocalityDelay == -1)) {
         autoComputeLocalityDelay = true; // Compute from heartbeat interval
@@ -1098,4 +1108,24 @@ public class FairScheduler extends TaskScheduler {
   long getLastPreemptionUpdateTime() {
     return lastPreemptionUpdateTime;
   }
+
+
+  /**
+   * Examines the job's pool name to determine if it is a declared pool name (in
+   * the scheduler allocation file).
+   */
+  @Override
+  public void checkJobSubmission(JobInProgress job)
+      throws UndeclaredPoolException {
+    Set<String> declaredPools = poolMgr.getDeclaredPools();
+    if (!this.allowUndeclaredPools
+        && !declaredPools.contains(poolMgr.getPoolName(job)))
+      throw new UndeclaredPoolException("Pool name: '"
+          + poolMgr.getPoolName(job)
+          + "' is invalid. Add pool name to the fair scheduler allocation "
+          + "file. Valid pools are: "
+          + StringUtils.join(", ", declaredPools));
+  }
+
+
 }

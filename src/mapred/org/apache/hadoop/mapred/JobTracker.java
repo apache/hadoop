@@ -3978,7 +3978,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         jobInfo.write(out);
         out.close();
       }
-      
+
+      try {
+        this.taskScheduler.checkJobSubmission(job);
+      } catch (IOException ioe){
+        LOG.error("Problem in submitting job " + jobId, ioe);
+        throw ioe;
+      }
+
       // Submit the job
       JobStatus status;
       try {

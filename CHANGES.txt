@@ -10,6 +10,9 @@ Release 0.20.206.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to
+    non-existent fair scheduler pools. (Ahmed Radwan via todd)
+
 Release 0.20.205.0 - unreleased
 
   NEW FEATURES
