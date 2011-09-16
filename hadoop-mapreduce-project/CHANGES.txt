@@ -17,6 +17,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
                     process (atm)
 
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
+    fair scheduler pools. (Ahmed Radwan via todd)
+
   BUG FIXES
 
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 

@@ -28,6 +28,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -113,6 +115,8 @@ public class PoolManager {
   private long lastReloadAttempt; // Last time we tried to reload the pools file
   private long lastSuccessfulReload; // Last time we successfully reloaded pools
   private boolean lastReloadAttemptFailed = false;
+
+  private Set<String> declaredPools = new TreeSet<String>();
 
   public PoolManager(FairScheduler scheduler) {
     this.scheduler = scheduler;
@@ -370,6 +374,8 @@ public class PoolManager {
       this.fairSharePreemptionTimeout = fairSharePreemptionTimeout;
       this.defaultMinSharePreemptionTimeout = defaultMinSharePreemptionTimeout;
       this.defaultSchedulingMode = defaultSchedulingMode;
+      this.declaredPools = Collections.unmodifiableSet(new TreeSet<String>(
+          poolNamesInAllocFile));
       for (String name: poolNamesInAllocFile) {
         Pool pool = getPool(name);
         if (poolModes.containsKey(name)) {
@@ -543,4 +549,9 @@ public class PoolManager {
       pool.updateMetrics();
     }
   }
+
+  public synchronized Set<String> getDeclaredPools() {
+    return declaredPools;
+  }
+
 }
