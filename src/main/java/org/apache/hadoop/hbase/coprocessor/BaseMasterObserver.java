@@ -177,12 +177,12 @@ public class BaseMasterObserver implements MasterObserver {
   @Override
   public void preMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo region, ServerName srcServer, ServerName destServer)
-  throws UnknownRegionException {
+  throws IOException {
   }
 
   @Override
   public void postMove(ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo region, ServerName srcServer, ServerName destServer)
-  throws UnknownRegionException {
+  throws IOException {
   }
 }

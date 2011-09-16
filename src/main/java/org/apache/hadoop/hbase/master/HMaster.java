@@ -922,16 +922,23 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.unassign(hri);
     } else {
       dest = new ServerName(Bytes.toString(destServerName));
-      if (this.cpHost != null) {
-        if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
-          return;
+      try {
+        if (this.cpHost != null) {
+          if (this.cpHost.preMove(p.getFirst(), p.getSecond(), dest)) {
+            return;
+          }
         }
-      }
-      RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
-      LOG.info("Added move plan " + rp + ", running balancer");
-      this.assignmentManager.balance(rp);
-      if (this.cpHost != null) {
-        this.cpHost.postMove(p.getFirst(), p.getSecond(), dest);
+        RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
+        LOG.info("Added move plan " + rp + ", running balancer");
+        this.assignmentManager.balance(rp);
+        if (this.cpHost != null) {
+          this.cpHost.postMove(p.getFirst(), p.getSecond(), dest);
+        }
+      } catch (IOException ioe) {
+        UnknownRegionException ure = new UnknownRegionException(
+            Bytes.toStringBinary(encodedRegionName));
+        ure.initCause(ioe);
+        throw ure;
       }
     }
   }

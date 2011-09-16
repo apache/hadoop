@@ -279,6 +279,8 @@ Release 0.91.0 - Unreleased
                (Stefan Seelmann)
    HBASE-4195  Possible inconsistency in a memstore read after a reseek,
                possible performance improvement (nkeywal)
+   HBASE-4420  MasterObserver preMove() and postMove() should throw
+               IOException instead of UnknownRegionException
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

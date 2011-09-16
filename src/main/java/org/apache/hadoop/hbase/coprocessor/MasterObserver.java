@@ -187,7 +187,7 @@ public interface MasterObserver extends Coprocessor {
   void preMove(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final HRegionInfo region, final ServerName srcServer,
       final ServerName destServer)
-    throws UnknownRegionException;
+    throws IOException;
 
   /**
    * Called after the region move has been requested.
@@ -199,7 +199,7 @@ public interface MasterObserver extends Coprocessor {
   void postMove(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final HRegionInfo region, final ServerName srcServer,
       final ServerName destServer)
-    throws UnknownRegionException;
+    throws IOException;
 
   /**
    * Called prior to assigning a specific region.
