@@ -332,14 +332,13 @@ public class MasterCoprocessorHost
     }
   }
 
-  boolean preAssign(final HRegionInfo regionInfo, final boolean force)
-      throws IOException {
+  boolean preAssign(final HRegionInfo regionInfo) throws IOException {
     boolean bypass = false;
     ObserverContext<MasterCoprocessorEnvironment> ctx = null;
     for (MasterEnvironment env: coprocessors) {
       if (env.getInstance() instanceof MasterObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((MasterObserver)env.getInstance()).preAssign(ctx, regionInfo, force);
+        ((MasterObserver) env.getInstance()).preAssign(ctx, regionInfo);
         bypass |= ctx.shouldBypass();
         if (ctx.shouldComplete()) {
           break;
@@ -349,12 +348,12 @@ public class MasterCoprocessorHost
     return bypass;
   }
 
-  void postAssign(final HRegionInfo regionInfo, final boolean force) throws IOException {
+  void postAssign(final HRegionInfo regionInfo) throws IOException {
     ObserverContext<MasterCoprocessorEnvironment> ctx = null;
     for (MasterEnvironment env: coprocessors) {
       if (env.getInstance() instanceof MasterObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
-        ((MasterObserver)env.getInstance()).postAssign(ctx, regionInfo, force);
+        ((MasterObserver) env.getInstance()).postAssign(ctx, regionInfo);
         if (ctx.shouldComplete()) {
           break;
         }

@@ -333,10 +333,10 @@ public class TestMasterObserver {
     public boolean preMoveCalledOnly() {
       return preMoveCalled && !postMoveCalled;
     }
-
+    
     @Override
     public void preAssign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo, final boolean force) throws IOException {
+        final HRegionInfo regionInfo) throws IOException {
       if (bypass) {
         env.bypass();
       }
@@ -345,10 +345,10 @@ public class TestMasterObserver {
 
     @Override
     public void postAssign(ObserverContext<MasterCoprocessorEnvironment> env,
-        final HRegionInfo regionInfo, final boolean force) throws IOException {
+        final HRegionInfo regionInfo) throws IOException {
       postAssignCalled = true;
     }
-
+    
     public boolean wasAssignCalled() {
       return preAssignCalled && postAssignCalled;
     }

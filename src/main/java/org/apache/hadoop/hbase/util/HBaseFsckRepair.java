@@ -80,7 +80,7 @@ public class HBaseFsckRepair {
 
   private static void forceOfflineInZK(HBaseAdmin admin, final HRegionInfo region)
   throws ZooKeeperConnectionException, KeeperException, IOException {
-    admin.assign(region.getRegionName(), true);
+    admin.assign(region.getRegionName());
   }
 
   private static void closeRegionSilentlyAndWait(Configuration conf,

@@ -23,15 +23,15 @@ module Shell
     class Assign < Command
       def help
         return <<-EOF
-Assign a region.  Add 'true' to force assign of a region. Use with caution.
-If region already assigned, this command will just go ahead and reassign
+Assign a region.Use with caution.If region already assigned,
+this command will just go ahead and reassign
 the region anyways. For experts only.
 EOF
       end
 
-      def command(region_name, force = 'false')
+      def command(region_name)
         format_simple_command do
-          admin.assign(region_name, force)
+          admin.assign(region_name)
         end
       end
     end

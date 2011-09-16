@@ -112,12 +112,12 @@ public class BaseMasterObserver implements MasterObserver {
 
   @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo, boolean force) throws IOException {
+      HRegionInfo regionInfo) throws IOException {
   }
-
+  
   @Override
   public void postAssign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo, boolean force) throws IOException {
+      HRegionInfo regionInfo) throws IOException {
   }
 
   @Override

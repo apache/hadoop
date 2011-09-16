@@ -230,8 +230,8 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     #----------------------------------------------------------------------------------------------
     # Assign a region
-    def assign(region_name, force)
-      @admin.assign(region_name.to_java_bytes, java.lang.Boolean::valueOf(force))
+    def assign(region_name)
+      @admin.assign(region_name.to_java_bytes)
     end
 
     #----------------------------------------------------------------------------------------------

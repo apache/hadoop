@@ -1330,23 +1330,31 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public boolean isInitialized() {
     return initialized;
   }
+  
+  @Override
+  @Deprecated
+  public void assign(final byte[] regionName, final boolean force)
+      throws IOException {
+    assign(regionName);
+  }
 
   @Override
-  public void assign(final byte [] regionName, final boolean force)
-  throws IOException {
+  public void assign(final byte [] regionName)throws IOException {
     Pair<HRegionInfo, ServerName> pair =
       MetaReader.getRegion(this.catalogTracker, regionName);
     if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
     if (cpHost != null) {
-      if (cpHost.preAssign(pair.getFirst(), force)) {
+      if (cpHost.preAssign(pair.getFirst())) {
         return;
       }
     }
     assignRegion(pair.getFirst());
     if (cpHost != null) {
-      cpHost.postAssign(pair.getFirst(), force);
+      cpHost.postAssign(pair.getFirst());
     }
   }
+  
+  
 
   public void assignRegion(HRegionInfo hri) {
     assignmentManager.assign(hri, true);

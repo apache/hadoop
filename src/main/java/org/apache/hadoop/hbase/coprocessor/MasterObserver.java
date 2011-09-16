@@ -205,21 +205,18 @@ public interface MasterObserver extends Coprocessor {
    * Called prior to assigning a specific region.
    * @param ctx the environment to interact with the framework and master
    * @param regionInfo the regionInfo of the region
-   * @param force whether to force assignment or not
    */
   void preAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo regionInfo, final boolean force)
-  throws IOException;
-
+      final HRegionInfo regionInfo) throws IOException;
+  
   /**
    * Called after the region assignment has been requested.
    * @param ctx the environment to interact with the framework and master
    * @param regionInfo the regionInfo of the region
-   * @param force whether to force assignment or not
    */
   void postAssign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final HRegionInfo regionInfo, final boolean force) throws IOException;
-
+      final HRegionInfo regionInfo) throws IOException;
+  
   /**
    * Called prior to unassigning a given region.
    * @param ctx the environment to interact with the framework and master

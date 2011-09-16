@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
@@ -1303,15 +1304,31 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
-   * @param regionName Region name to assign.
-   * @param force True to force assign.
+   * @param regionName
+   *          Region name to assign.
+   * @param force
+   *          True to force assign.
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   * @deprecated The <code>force</code> is unused.Use {@link #assign(byte[])}
+   */
+  public void assign(final byte[] regionName, final boolean force)
+      throws MasterNotRunningException, ZooKeeperConnectionException,
+      IOException {
+    getMaster().assign(regionName, force);
+  }
+  
+  /**
+   * @param regionName
+   *          Region name to assign.
    * @throws MasterNotRunningException
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
-  public void assign(final byte [] regionName, final boolean force)
-  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    getMaster().assign(regionName, force);
+  public void assign(final byte[] regionName) throws MasterNotRunningException,
+      ZooKeeperConnectionException, IOException {
+    getMaster().assign(regionName);
   }
 
   /**
