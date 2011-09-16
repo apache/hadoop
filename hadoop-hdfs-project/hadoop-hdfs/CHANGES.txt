@@ -29,6 +29,8 @@ Trunk (unreleased changes)
 
     HDFS-2223. Untangle depencencies between NN components (todd)
 
+    HDFS-2337. DFSClient shouldn't keep multiple RPC proxy references (atm)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

@@ -114,7 +114,6 @@ public class DFSClient implements java.io.Closeable {
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
-  final ClientProtocol rpcNamenode;
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
@@ -253,11 +252,10 @@ public class DFSClient implements java.io.Closeable {
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     if (nameNodeAddr != null && rpcNamenode == null) {
-      this.rpcNamenode = DFSUtil.createRPCNamenode(nameNodeAddr, conf, ugi);
-      this.namenode = DFSUtil.createNamenode(this.rpcNamenode);
+      this.namenode = DFSUtil.createNamenode(nameNodeAddr, conf);
     } else if (nameNodeAddr == null && rpcNamenode != null) {
       //This case is used for testing.
-      this.namenode = this.rpcNamenode = rpcNamenode;
+      this.namenode = rpcNamenode;
     } else {
       throw new IllegalArgumentException(
           "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
@@ -340,7 +338,7 @@ public class DFSClient implements java.io.Closeable {
   void abort() {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
-    RPC.stopProxy(rpcNamenode); // close connections to the namenode
+    RPC.stopProxy(namenode); // close connections to the namenode
   }
 
   /** Close/abort all files being written. */
@@ -380,7 +378,7 @@ public class DFSClient implements java.io.Closeable {
       clientRunning = false;
       leaserenewer.closeClient(this);
       // close connections to the namenode
-      RPC.stopProxy(rpcNamenode);
+      RPC.stopProxy(namenode);
     }
   }
 
