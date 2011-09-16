@@ -24,16 +24,23 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -146,6 +153,49 @@ public class TestHBaseFsck {
     return hri;
   }
 
+  public void dumpMeta(HTableDescriptor htd) throws IOException {
+    List<byte[]> metaRows = TEST_UTIL.getMetaTableRows(htd.getName());
+    for (byte[] row : metaRows) {
+      LOG.info(Bytes.toString(row));
+    }
+  }
+
+  private void deleteRegion(Configuration conf, final HTableDescriptor htd, 
+      byte[] startKey, byte[] endKey) throws IOException {
+
+    LOG.info("Before delete:");
+    dumpMeta(htd);
+
+    Map<HRegionInfo, HServerAddress> hris = tbl.getRegionsInfo();
+    for (Entry<HRegionInfo, HServerAddress> e: hris.entrySet()) {
+      HRegionInfo hri = e.getKey();
+      HServerAddress hsa = e.getValue();
+      if (Bytes.compareTo(hri.getStartKey(), startKey) == 0 
+          && Bytes.compareTo(hri.getEndKey(), endKey) == 0) {
+
+        LOG.info("RegionName: " +hri.getRegionNameAsString());
+        byte[] deleteRow = hri.getRegionName();
+        TEST_UTIL.getHBaseAdmin().unassign(deleteRow, true);
+
+        LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
+        Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+        FileSystem fs = rootDir.getFileSystem(conf);
+        Path p = new Path(rootDir + "/" + htd.getNameAsString(), hri.getEncodedName());
+        fs.delete(p, true);
+
+        HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+        Delete delete = new Delete(deleteRow);
+        meta.delete(delete);
+      }
+      LOG.info(hri.toString() + hsa.toString());
+    }
+
+    TEST_UTIL.getMetaTableRows(htd.getName());
+    LOG.info("After delete:");
+    dumpMeta(htd);
+
+  }
+
   /**
    * Setup a clean table before we start mucking with it.
    * 
@@ -213,7 +263,8 @@ public class TestHBaseFsck {
           .waitForAssignment(hriDupe);
 
       assertErrors(doFsck(false),
-          new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS });
+          new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS,
+            ERROR_CODE.DUPE_STARTKEYS});
     } finally {
       deleteTable(table);
     }
@@ -253,10 +304,14 @@ public class TestHBaseFsck {
 
       // Mess it up by leaving a hole in the meta data
       HRegionInfo hriHole = createRegion(conf, tbl.getTableDescriptor(),
-          Bytes.toBytes("D"), Bytes.toBytes("E"));
+          Bytes.toBytes("D"), Bytes.toBytes(""));
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriHole);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriHole);
+
+      TEST_UTIL.getHBaseAdmin().disableTable(table);
+      deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("C"), Bytes.toBytes(""));
+      TEST_UTIL.getHBaseAdmin().enableTable(table);
       assertErrors(doFsck(false),
           new ERROR_CODE[] { ERROR_CODE.HOLE_IN_REGION_CHAIN });
     } finally {

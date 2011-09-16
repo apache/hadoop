@@ -272,6 +272,9 @@ Release 0.91.0 - Unreleased
                shouldn't join
    HBASE-4395  EnableTableHandler races with itself
    HBASE-4414  Region splits by size not being triggered
+   HBASE-4322  HBASE-4322 [hbck] Update checkIntegrity/checkRegionChain
+               to present more accurate region split problem 
+               (Jon Hseih)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
