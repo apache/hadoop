@@ -30,7 +30,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.*;
  * Yarn application related utilities
  */
 public class Apps {
-  public static final String APP = "app";
+  public static final String APP = "application";
   public static final String ID = "ID";
 
   public static ApplicationId toAppID(String aid) {
