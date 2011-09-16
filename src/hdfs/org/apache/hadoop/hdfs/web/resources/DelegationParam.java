@@ -17,42 +17,29 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.security.UserGroupInformation;
 
-/** Block size parameter. */
-public class BlockSizeParam extends LongParam {
+/** Delegation token parameter. */
+public class DelegationParam extends StringParam {
   /** Parameter name. */
-  public static final String NAME = "blockSize";
+  public static final String NAME = JspHelper.DELEGATION_PARAMETER_NAME;
   /** Default parameter value. */
-  public static final String DEFAULT = NULL;
+  public static final String DEFAULT = "";
 
-  private static final Domain DOMAIN = new Domain(NAME);
-
-  /**
-   * Constructor.
-   * @param value the parameter value.
-   */
-  public BlockSizeParam(final Long value) {
-    super(DOMAIN, value);
-  }
+  private static final Domain DOMAIN = new Domain(NAME, null);
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public BlockSizeParam(final String str) {
-    this(DOMAIN.parse(str));
+  public DelegationParam(final String str) {
+    super(DOMAIN, UserGroupInformation.isSecurityEnabled()
+        && str != null && !str.equals(DEFAULT)? str: null);
   }
 
   @Override
   public String getName() {
     return NAME;
-  }
-
-  /** @return the value or, if it is null, return the default from conf. */
-  public long getValue(final Configuration conf) {
-    return getValue() != null? getValue()
-        : conf.getLong("dfs.block.size", FSConstants.DEFAULT_BLOCK_SIZE);
   }
 }

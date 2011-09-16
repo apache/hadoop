@@ -29,6 +29,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -58,8 +59,12 @@ import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
@@ -70,7 +75,21 @@ public class WebHdfsFileSystem extends HftpFileSystem {
   /** Http URI: http://namenode:port/{PATH_PREFIX}/path/to/file */
   public static final String PATH_PREFIX = SCHEME;
 
+  private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
+
+  private UserGroupInformation ugi;
+  private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   protected Path workingDir;
+
+  @Override
+  public synchronized void initialize(URI uri, Configuration conf
+      ) throws IOException {
+    super.initialize(uri, conf);
+    setConf(conf);
+
+    ugi = UserGroupInformation.getCurrentUser();
+    this.workingDir = getHomeDirectory();
+  }
 
   @Override
   public URI getUri() {
@@ -84,9 +103,6 @@ public class WebHdfsFileSystem extends HftpFileSystem {
 
   @Override
   public synchronized Path getWorkingDirectory() {
-    if (workingDir == null) {
-      workingDir = getHomeDirectory();
-    }
     return workingDir;
   }
 
@@ -157,8 +173,9 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final String path = "/" + PATH_PREFIX
         + makeQualified(fspath).toUri().getPath();
     final String query = op.toQueryString()
+        + '&' + new UserParam(ugi)
         + Param.toSortedString("&", parameters);
-    final URL url = getNamenodeURL(path, query);
+    final URL url = getNamenodeURL(path, updateQuery(query));
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
     }
@@ -170,7 +187,12 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final URL url = toUrl(op, fspath, parameters);
 
     //connect and get response
-    final HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+    final HttpURLConnection conn;
+    try {
+      conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
+    } catch(AuthenticationException e) {
+      throw new IOException("Authentication failed, url=" + url, e);
+    }
     try {
       conn.setRequestMethod(op.getType().toString());
       conn.setDoOutput(op.getDoOutput());

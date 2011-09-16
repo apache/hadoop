@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import org.apache.hadoop.conf.Configuration;
+
 /** Buffer size parameter. */
 public class BufferSizeParam extends IntegerParam {
   /** Parameter name. */
@@ -45,5 +47,11 @@ public class BufferSizeParam extends IntegerParam {
   @Override
   public String getName() {
     return NAME;
+  }
+
+  /** @return the value or, if it is null, return the default from conf. */
+  public int getValue(final Configuration conf) {
+    return getValue() != null? getValue()
+        : conf.getInt("io.file.buffer.size", 4096);
   }
 }

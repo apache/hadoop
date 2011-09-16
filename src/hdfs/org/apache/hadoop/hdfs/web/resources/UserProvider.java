@@ -17,11 +17,17 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
-import java.security.Principal;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.ext.Provider;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 import com.sun.jersey.api.core.HttpContext;
 import com.sun.jersey.core.spi.component.ComponentContext;
@@ -30,33 +36,23 @@ import com.sun.jersey.server.impl.inject.AbstractHttpContextInjectable;
 import com.sun.jersey.spi.inject.Injectable;
 import com.sun.jersey.spi.inject.InjectableProvider;
 
+/** Inject user information to http operations. */
 @Provider
-public class UserProvider extends AbstractHttpContextInjectable<Principal>
+public class UserProvider
+    extends AbstractHttpContextInjectable<UserGroupInformation>
     implements InjectableProvider<Context, Type> {
+  @Context HttpServletRequest request;
 
   @Override
-  public Principal getValue(final HttpContext context) {
-    //get principal from the request
-    final Principal principal = context.getRequest().getUserPrincipal();
-    if (principal != null) {
-      return principal;
+  public UserGroupInformation getValue(final HttpContext context) {
+    final Configuration conf = (Configuration)context.getProperties().get(
+        JspHelper.CURRENT_CONF);
+    try {
+      return JspHelper.getUGI(request, conf,
+          AuthenticationMethod.KERBEROS, false);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-
-    //get username from the parameter
-    final String username = context.getRequest().getQueryParameters().getFirst(
-        UserParam.NAME);
-    if (username != null) {
-      final UserParam userparam = new UserParam(username);
-      return new Principal() {
-        @Override
-        public String getName() {
-          return userparam.getValue();
-        }
-      };
-    }
-
-    //user not found
-    return null;
   }
 
   @Override
@@ -65,9 +61,9 @@ public class UserProvider extends AbstractHttpContextInjectable<Principal>
   }
 
   @Override
-  public Injectable<Principal> getInjectable(
+  public Injectable<UserGroupInformation> getInjectable(
       final ComponentContext componentContext, final Context context,
       final Type type) {
-    return type.equals(Principal.class)? this : null;
+    return type.equals(UserGroupInformation.class)? this : null;
   }
 }

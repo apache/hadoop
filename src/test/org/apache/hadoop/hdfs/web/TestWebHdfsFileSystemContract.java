@@ -21,11 +21,17 @@ package org.apache.hadoop.hdfs.web;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   private static final Configuration conf = new Configuration();
@@ -33,9 +39,14 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   private String defaultWorkingDirectory;
 
   static {
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     try {
       cluster = new MiniDFSCluster(conf, 2, true, null);
       cluster.waitActive();
+
+      //change root permission to 777
+      cluster.getFileSystem().setPermission(
+          new Path("/"), new FsPermission((short)0777));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -45,7 +56,18 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   protected void setUp() throws Exception {
     final String uri = WebHdfsFileSystem.SCHEME  + "://"
         + conf.get("dfs.http.address");
-    fs = FileSystem.get(new URI(uri), conf); 
+
+    //get file system as a non-superuser
+    final UserGroupInformation current = UserGroupInformation.getCurrentUser();
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        current.getShortUserName() + "x", new String[]{"user"});
+    fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI(uri), conf);
+      }
+    });
+
     defaultWorkingDirectory = fs.getWorkingDirectory().toUri().getPath();
   }
 
@@ -54,6 +76,45 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     return defaultWorkingDirectory;
   }
 
+  /** HDFS throws AccessControlException
+   * when calling exist(..) on a path /foo/bar/file
+   * but /foo/bar is indeed a file in HDFS.
+   */
+  @Override
+  public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
+    Path testDir = path("/test/hadoop");
+    assertFalse(fs.exists(testDir));
+    assertTrue(fs.mkdirs(testDir));
+    assertTrue(fs.exists(testDir));
+    
+    createFile(path("/test/hadoop/file"));
+    
+    Path testSubDir = path("/test/hadoop/file/subdir");
+    try {
+      fs.mkdirs(testSubDir);
+      fail("Should throw IOException.");
+    } catch (IOException e) {
+      // expected
+    }
+    try {
+      assertFalse(fs.exists(testSubDir));
+    } catch(AccessControlException e) {
+      // also okay for HDFS.
+    }    
+    
+    Path testDeepSubDir = path("/test/hadoop/file/deep/sub/dir");
+    try {
+      fs.mkdirs(testDeepSubDir);
+      fail("Should throw IOException.");
+    } catch (IOException e) {
+      // expected
+    }
+    try {
+      assertFalse(fs.exists(testDeepSubDir));
+    } catch(AccessControlException e) {
+      // also okay for HDFS.
+    }    
+  }
 
   //In trunk, testListStatusReturnsNullForNonExistentFile was replaced by
   //testListStatusThrowsExceptionForNonExistentFile.
