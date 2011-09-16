@@ -275,6 +275,8 @@ Release 0.91.0 - Unreleased
    HBASE-4322  HBASE-4322 [hbck] Update checkIntegrity/checkRegionChain
                to present more accurate region split problem 
                (Jon Hseih)
+   HBASE-4417  HBaseAdmin.checkHBaseAvailable() doesn't close ZooKeeper connections
+               (Stefan Seelmann)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

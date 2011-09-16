@@ -1576,7 +1576,12 @@ public class HBaseAdmin implements Abortable, Closeable {
   throws MasterNotRunningException, ZooKeeperConnectionException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt("hbase.client.retries.number", 1);
-    new HBaseAdmin(copyOfConf);
+    HBaseAdmin admin = new HBaseAdmin(copyOfConf);
+    try {
+      admin.close();
+    } catch (IOException ioe) {
+      admin.LOG.info("Failed to close connection", ioe);
+    }
   }
 
   /**

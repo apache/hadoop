@@ -1268,4 +1268,15 @@ public class TestAdmin {
     return regionServer;
   }
   
+  /**
+   * HBASE-4417 checkHBaseAvailable() doesn't close zk connections
+   */
+  @Test
+  public void testCheckHBaseAvailableClosesConnection() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    for(int i=0; i<1000;i++) {
+      HBaseAdmin.checkHBaseAvailable(conf);
+    }
+  }
+  
 }
