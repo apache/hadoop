@@ -576,6 +576,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7629. Allow immutable FsPermission objects to be used as IPC
     parameters. (todd)
 
+    HADOOP-7608. SnappyCodec check for Hadoop native lib is wrong
+    (Alejandro Abdelnur via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
