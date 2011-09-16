@@ -2665,10 +2665,10 @@ public class TestHRegion extends HBaseTestCase {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
             Put put = new Put(row);
+            byte[] value = Bytes.toBytes(String.valueOf(numPutsFinished));
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
-                put.add(family, qualifier, (long) numPutsFinished,
-                    Bytes.toBytes(numPutsFinished));
+                put.add(family, qualifier, (long) numPutsFinished, value);
               }
             }
 //            System.out.println("Putting of kvsetsize=" + put.size());
@@ -2760,14 +2760,22 @@ public class TestHRegion extends HBaseTestCase {
         }
         assertTrue(timestamp >= prevTimestamp);
         prevTimestamp = timestamp;
+        KeyValue previousKV = null;
 
-        byte [] gotValue = null;
         for (KeyValue kv : result.raw()) {
-          byte [] thisValue = kv.getValue();
-          if (gotValue != null) {
-            assertEquals(gotValue, thisValue);
+          byte[] thisValue = kv.getValue();
+          if (previousKV != null) {
+            if (Bytes.compareTo(previousKV.getValue(), thisValue) != 0) {
+              LOG.warn("These two KV should have the same value." +
+                " Previous KV:" +
+                previousKV + "(memStoreTS:" + previousKV.getMemstoreTS() + ")" +
+                ", New KV: " +
+                kv + "(memStoreTS:" + kv.getMemstoreTS() + ")"
+              );
+              assertEquals(previousKV.getValue(), thisValue);
+            }
           }
-          gotValue = thisValue;
+          previousKV = kv;
         }
       }
     }

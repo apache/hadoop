@@ -277,6 +277,8 @@ Release 0.91.0 - Unreleased
                (Jon Hseih)
    HBASE-4417  HBaseAdmin.checkHBaseAvailable() doesn't close ZooKeeper connections
                (Stefan Seelmann)
+   HBASE-4195  Possible inconsistency in a memstore read after a reseek,
+               possible performance improvement (nkeywal)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
