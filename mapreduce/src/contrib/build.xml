@@ -27,7 +27,16 @@
   <!-- Compile contribs.                                      -->
   <!-- ====================================================== -->
   <target name="compile">
-    <subant target="compile" inheritAll="true">
+    <subant target="compile">
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -36,7 +45,16 @@
   <!-- Compile contrib test code.                             -->
   <!-- ====================================================== -->
   <target name="compile-test">
-    <subant target="compile-test" inheritAll="true">
+    <subant target="compile-test">
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -45,7 +63,16 @@
   <!-- Package contrib jars.                                  -->
   <!-- ====================================================== -->
   <target name="package">
-    <subant target="package" inheritAll="true">
+    <subant target="package">
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -81,19 +108,36 @@
       <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
       <delete file="${build.contrib.dir}/testsfailed"/>
       <subant target="test-system" inheritAll="true">
-          <property name="continueOnFailure" value="true"/>
-          <fileset dir="." includes="hdfsproxy/build.xml"/>
-          <fileset dir="." includes="streaming/build.xml"/>
-          <fileset dir="." includes="fairscheduler/build.xml"/>
-         <fileset dir="." includes="capacity-scheduler/build.xml"/>
-         <fileset dir="." includes="gridmix/build.xml"/>
+        <property name="continueOnFailure" value="true"/>
+        <property name="version" value="${version}"/>
+        <property name="hadoop-version" value="${hadoop-common.version}"/>
+        <property name="clover.jar" value="${clover.jar}"/>
+        <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+        <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+        <property name="offline" value="${offline}"/>
+        <property name="resolvers" value="${resolvers}"/>
+        <fileset dir="." includes="hdfsproxy/build.xml"/>
+        <fileset dir="." includes="streaming/build.xml"/>
+        <fileset dir="." includes="fairscheduler/build.xml"/>
+        <fileset dir="." includes="capacity-scheduler/build.xml"/>
+        <fileset dir="." includes="gridmix/build.xml"/>
       </subant>
       <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
       <fail if="testsfailed">Tests failed!</fail>
   </target>
 
   <target name="docs">
-    <subant target="docs" inheritAll="true">
+    <subant target="docs">
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="capacity-scheduler/build.xml"/> 
     </subant>
   </target>
@@ -103,6 +147,15 @@
   <!-- ====================================================== -->
   <target name="clean">
     <subant target="clean">
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>

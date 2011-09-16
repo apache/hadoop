@@ -422,7 +422,6 @@
         <property name="ivy_repo_url" value="${ivy_repo_url}"/>
         <property name="offline" value="${offline}"/>
         <property name="resolvers" value="${resolvers}"/>
-     	<property name="basedir" value="${basedir}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
@@ -799,7 +798,6 @@
        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
        <property name="offline" value="${offline}"/>
        <property name="resolvers" value="${resolvers}"/>
-       <property name="basedir" value="${basedir}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -821,7 +819,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-      <property name="basedir" value="${basedir}"/>
       <fileset file="${basedir}/build.xml"/>
      </subant>
   </target>
@@ -880,7 +877,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-   	  <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/capacity-scheduler/build.xml"/>
       <fileset file="${contrib.dir}/streaming/build.xml"/>
       <fileset file="${contrib.dir}/gridmix/build.xml"/>
@@ -964,7 +960,6 @@
        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
        <property name="offline" value="${offline}"/>
        <property name="resolvers" value="${resolvers}"/>
-       <property name="basedir" value="${basedir}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -1189,7 +1184,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-      <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
     <subant target="package">
@@ -1202,7 +1196,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-      <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1323,7 +1316,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-      <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
