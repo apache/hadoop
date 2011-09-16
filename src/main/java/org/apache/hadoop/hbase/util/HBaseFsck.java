@@ -572,8 +572,8 @@ public class HBaseFsck {
     String tableName;
     TreeSet <ServerName> deployedOn;
 
-    List<HbckInfo> backwards = new ArrayList<HbckInfo>();
-    RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<HbckInfo>(cmp);
+    final List<HbckInfo> backwards = new ArrayList<HbckInfo>();
+    final RegionSplitCalculator<HbckInfo> sc = new RegionSplitCalculator<HbckInfo>(cmp);
 
     TInfo(String name) {
       this.tableName = name;
