@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
 import javax.servlet.ServletContext;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** Web-hdfs DataNode implementation. */
 @Path("")
@@ -78,6 +80,7 @@ public class DatanodeWebHdfsMethods {
   @Produces({MediaType.APPLICATION_JSON})
   public Response put(
       final InputStream in,
+      @Context final UserGroupInformation ugi,
       @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
           final PutOpParam op,
@@ -91,13 +94,17 @@ public class DatanodeWebHdfsMethods {
           final ReplicationParam replication,
       @QueryParam(BlockSizeParam.NAME) @DefaultValue(BlockSizeParam.DEFAULT)
           final BlockSizeParam blockSize
-      ) throws IOException, URISyntaxException {
+      ) throws IOException, URISyntaxException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace(op + ": " + path
-            + Param.toSortedString(", ", permission, overwrite, bufferSize,
-                replication, blockSize));
+      LOG.trace(op + ": " + path + ", ugi=" + ugi
+          + Param.toSortedString(", ", permission, overwrite, bufferSize,
+              replication, blockSize));
     }
+
+    return ugi.doAs(new PrivilegedExceptionAction<Response>() {
+      @Override
+      public Response run() throws IOException, URISyntaxException {
 
     final String fullpath = path.getAbsolutePath();
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
@@ -108,14 +115,14 @@ public class DatanodeWebHdfsMethods {
       final Configuration conf = new Configuration(datanode.getConf());
       final InetSocketAddress nnRpcAddr = NameNode.getAddress(conf);
       final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
+      final int b = bufferSize.getValue(conf);
       final FSDataOutputStream out = new FSDataOutputStream(dfsclient.create(
           fullpath, permission.getFsPermission(), 
           overwrite.getValue() ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
               : EnumSet.of(CreateFlag.CREATE),
-          replication.getValue(), blockSize.getValue(), null,
-          bufferSize.getValue()), null);
+          replication.getValue(), blockSize.getValue(conf), null, b), null);
       try {
-        IOUtils.copyBytes(in, out, bufferSize.getValue());
+        IOUtils.copyBytes(in, out, b);
       } finally {
         out.close();
       }
@@ -127,6 +134,8 @@ public class DatanodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+      }
+    });
   }
 
   /** Handle HTTP POST request. */
@@ -136,17 +145,22 @@ public class DatanodeWebHdfsMethods {
   @Produces({MediaType.APPLICATION_JSON})
   public Response post(
       final InputStream in,
+      @Context final UserGroupInformation ugi,
       @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(PostOpParam.NAME) @DefaultValue(PostOpParam.DEFAULT)
           final PostOpParam op,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException {
+      ) throws IOException, URISyntaxException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace(op + ": " + path
-            + Param.toSortedString(", ", bufferSize));
+      LOG.trace(op + ": " + path + ", ugi=" + ugi
+          + Param.toSortedString(", ", bufferSize));
     }
+
+    return ugi.doAs(new PrivilegedExceptionAction<Response>() {
+      @Override
+      public Response run() throws IOException {
 
     final String fullpath = path.getAbsolutePath();
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
@@ -157,10 +171,10 @@ public class DatanodeWebHdfsMethods {
       final Configuration conf = new Configuration(datanode.getConf());
       final InetSocketAddress nnRpcAddr = NameNode.getAddress(conf);
       final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
-      final FSDataOutputStream out = dfsclient.append(fullpath,
-          bufferSize.getValue(), null, null);
+      final int b = bufferSize.getValue(conf);
+      final FSDataOutputStream out = dfsclient.append(fullpath, b, null, null);
       try {
-        IOUtils.copyBytes(in, out, bufferSize.getValue());
+        IOUtils.copyBytes(in, out, b);
       } finally {
         out.close();
       }
@@ -169,6 +183,8 @@ public class DatanodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+      }
+    });
   }
 
   /** Handle HTTP GET request. */
@@ -176,6 +192,7 @@ public class DatanodeWebHdfsMethods {
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response get(
+      @Context final UserGroupInformation ugi,
       @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(GetOpParam.NAME) @DefaultValue(GetOpParam.DEFAULT)
           final GetOpParam op,
@@ -185,12 +202,16 @@ public class DatanodeWebHdfsMethods {
           final LengthParam length,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException {
+      ) throws IOException, URISyntaxException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace(op + ": " + path
-            + Param.toSortedString(", ", offset, length, bufferSize));
+      LOG.trace(op + ": " + path + ", ugi=" + ugi
+          + Param.toSortedString(", ", offset, length, bufferSize));
     }
+
+    return ugi.doAs(new PrivilegedExceptionAction<Response>() {
+      @Override
+      public Response run() throws IOException {
 
     final String fullpath = path.getAbsolutePath();
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
@@ -201,8 +222,9 @@ public class DatanodeWebHdfsMethods {
       final Configuration conf = new Configuration(datanode.getConf());
       final InetSocketAddress nnRpcAddr = NameNode.getAddress(conf);
       final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
+      final int b = bufferSize.getValue(conf);
       final DFSDataInputStream in = new DFSClient.DFSDataInputStream(
-          dfsclient.open(fullpath, bufferSize.getValue(), true));
+          dfsclient.open(fullpath, b, true));
       in.seek(offset.getValue());
 
       final StreamingOutput streaming = new StreamingOutput() {
@@ -210,7 +232,7 @@ public class DatanodeWebHdfsMethods {
         public void write(final OutputStream out) throws IOException {
           final Long n = length.getValue();
           if (n == null) {
-            IOUtils.copyBytes(in, out, bufferSize.getValue());
+            IOUtils.copyBytes(in, out, b);
           } else {
             IOUtils.copyBytes(in, out, n, false);
           }
@@ -221,5 +243,7 @@ public class DatanodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+      }
+    });
   }
 }

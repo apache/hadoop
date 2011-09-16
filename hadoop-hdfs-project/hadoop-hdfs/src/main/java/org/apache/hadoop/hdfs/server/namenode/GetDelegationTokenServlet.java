@@ -28,11 +28,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 
 /**
  * Serve delegation tokens over http for use in hftp.
@@ -70,18 +68,9 @@ public class GetDelegationTokenServlet extends DfsServlet {
       final DataOutputStream dosFinal = dos; // for doAs block
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
-        public Void run() throws Exception {
-          String s = NameNode.getAddress(conf).getAddress().getHostAddress()
-          + ":" + NameNode.getAddress(conf).getPort();
-
-          Token<DelegationTokenIdentifier> token = 
-            nn.getRpcServer().getDelegationToken(new Text(renewerFinal));
-          if(token == null) {
-            throw new Exception("couldn't get the token for " +s);
-          }
-          token.setService(new Text(s));
-          Credentials ts = new Credentials();
-          ts.addToken(new Text(ugi.getShortUserName()), token);
+        public Void run() throws IOException {
+          final Credentials ts = DelegationTokenSecretManager.createCredentials(
+              nn, ugi, renewerFinal);
           ts.write(dosFinal);
           return null;
         }

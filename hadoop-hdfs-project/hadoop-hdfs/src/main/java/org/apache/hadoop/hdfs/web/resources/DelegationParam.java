@@ -17,44 +17,29 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.security.UserGroupInformation;
 
-/** Buffer size parameter. */
-public class BufferSizeParam extends IntegerParam {
+/** Delegation token parameter. */
+public class DelegationParam extends StringParam {
   /** Parameter name. */
-  public static final String NAME = "bufferSize";
+  public static final String NAME = JspHelper.DELEGATION_PARAMETER_NAME;
   /** Default parameter value. */
-  public static final String DEFAULT = NULL;
+  public static final String DEFAULT = "";
 
-  private static final Domain DOMAIN = new Domain(NAME);
-
-  /**
-   * Constructor.
-   * @param value the parameter value.
-   */
-  public BufferSizeParam(final Integer value) {
-    super(DOMAIN, value);
-  }
+  private static final Domain DOMAIN = new Domain(NAME, null);
 
   /**
    * Constructor.
    * @param str a string representation of the parameter value.
    */
-  public BufferSizeParam(final String str) {
-    this(DOMAIN.parse(str));
+  public DelegationParam(final String str) {
+    super(DOMAIN, UserGroupInformation.isSecurityEnabled()
+        && str != null && !str.equals(DEFAULT)? str: null);
   }
 
   @Override
   public String getName() {
     return NAME;
-  }
-
-  /** @return the value or, if it is null, return the default from conf. */
-  public int getValue(final Configuration conf) {
-    return getValue() != null? getValue()
-        : conf.getInt(
-            CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
-            CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
   }
 }
