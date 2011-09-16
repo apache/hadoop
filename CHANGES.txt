@@ -271,6 +271,7 @@ Release 0.91.0 - Unreleased
    HBASE-4390  [replication] ReplicationSource's UncaughtExceptionHandler
                shouldn't join
    HBASE-4395  EnableTableHandler races with itself
+   HBASE-4414  Region splits by size not being triggered
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

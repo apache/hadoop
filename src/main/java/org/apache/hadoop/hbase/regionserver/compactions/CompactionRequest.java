@@ -185,6 +185,9 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
           if (s.getCompactPriority() <= 0) {
             server.compactSplitThread
               .requestCompaction(r, s, "Recursive enqueue");
+          } else {
+            // see if the compaction has caused us to exceed max region size
+            server.compactSplitThread.requestSplit(r);
           }
         }
       } catch (IOException ex) {
