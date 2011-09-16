@@ -375,11 +375,12 @@
      <subant target="compile">
         <property name="version" value="${version}"/>
         <!-- Need to pass along properties so that ivy in contrib build resolves correctly. -->
+     	<property name="hadoop-version" value="${hadoop-common.version}"/>
         <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+        <property name="clover.jar" value="${clover.jar}"/>
         <property name="ivy_repo_url" value="${ivy_repo_url}"/>
         <property name="offline" value="${offline}"/>
         <property name="resolvers" value="${resolvers}"/>
-     	<property name="basedir" value="${basedir}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
   </target>
@@ -746,7 +747,6 @@
        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
        <property name="offline" value="${offline}"/>
        <property name="resolvers" value="${resolvers}"/>
-       <property name="basedir" value="${basedir}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -767,7 +767,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-      <property name="basedir" value="${basedir}"/>
       <fileset file="${basedir}/build.xml"/>
      </subant>
   </target>
@@ -1020,7 +1019,6 @@
       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
       <property name="offline" value="${offline}"/>
       <property name="resolvers" value="${resolvers}"/>
-      <property name="basedir" value="${basedir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1119,7 +1117,13 @@
       distribution directory so contribs know where to install to.-->
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
-      <property name="basedir" value="${basedir}"/>
+      <property name="version" value="${version}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
 
@@ -1291,7 +1295,13 @@
   <!-- ================================================================== -->
   <target name="clean-contrib">
      <subant target="clean">
-     	<property name="basedir" value="${basedir}"/>
+     	<property name="version" value="${version}"/>
+        <property name="hadoop-version" value="${hadoop-common.version}"/>
+     	<property name="clover.jar" value="${clover.jar}"/>
+     	<property name="hadoop-common.version" value="${hadoop-common.version}"/>
+     	<property name="ivy_repo_url" value="${ivy_repo_url}"/>
+     	<property name="offline" value="${offline}"/>
+     	<property name="resolvers" value="${resolvers}"/>
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>

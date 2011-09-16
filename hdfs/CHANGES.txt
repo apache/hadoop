@@ -626,6 +626,8 @@ Release 0.22.0 - Unreleased
     HDFS-2271. startJournalSpool should invoke processIOError.
     (Uma Maheswara Rao G via shv)
 
+    HDFS-2341. Contribs not building. (Joep Rottinghuis via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
