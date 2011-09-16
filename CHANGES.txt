@@ -46,6 +46,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
 
+    HDFS-2338. Add configuration option to enable/disable webhdfs.
+    (jitendra via szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken

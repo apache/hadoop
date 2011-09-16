@@ -400,10 +400,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
               ContentSummaryServlet.class, false);
 
-          httpServer.addJerseyResourcePackage(
-              NamenodeWebHdfsMethods.class.getPackage().getName()
-              + ";" + Param.class.getPackage().getName(),
-              "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+          if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+              DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+            httpServer.addJerseyResourcePackage(NamenodeWebHdfsMethods.class
+                .getPackage().getName()
+                + ";"
+                + Param.class.getPackage().getName(), "/"
+                + WebHdfsFileSystem.PATH_PREFIX + "/*");
+          }
           httpServer.start();
       
           // The web-server port can be ephemeral... ensure we have the correct info
