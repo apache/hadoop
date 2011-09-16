@@ -10,6 +10,9 @@ Trunk (unreleased changes)
 
     HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
 
+    HDFS-2338. Add configuration option to enable/disable webhdfs.
+    (jitendra via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
