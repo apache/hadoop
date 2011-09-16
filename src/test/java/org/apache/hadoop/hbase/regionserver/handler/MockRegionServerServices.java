@@ -26,7 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -75,7 +75,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public HBaseRpcMetrics getRpcMetrics() {
+  public RpcServer getRpcServer() {
     return null;
   }
 

@@ -1472,6 +1472,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return rpcServer.getRpcMetrics();
   }
 
+  @Override
+  public RpcServer getRpcServer() {
+    return rpcServer;
+  }
+
   /**
    * Cause the server to exit without closing the regions it is serving, the log
    * it is using and without notifying the master. Used unit testing and on

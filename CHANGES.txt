@@ -501,6 +501,7 @@ Release 0.91.0 - Unreleased
                a FAILED_OPEN state so that it can be retried quickly. (todd)
    HBASE-4381  Refactor split decisions into a split policy class. (todd)
    HBASE-4373  HBaseAdmin.assign() does not use force flag (Ramkrishna)
+   HBASE-4425  Provide access to RpcServer instance from RegionServerServices
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
