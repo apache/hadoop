@@ -480,7 +480,7 @@
             <id>generate</id>
             <phase>generate-sources</phase>
             <configuration>
-              <tasks>
+              <target>
                 <property name="build.webapps"
                           location="${project.build.directory}/hbase-webapps"/>
                 <property name="src.webapps"
@@ -515,7 +515,7 @@
                 <exec executable="sh">
                   <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}/java"/>
                 </exec>
-              </tasks>
+              </target>
             </configuration>
             <goals>
               <goal>run</goal>
@@ -524,7 +524,7 @@
           <execution>
             <phase>process-resources</phase>
             <configuration>
-              <tasks>
+              <target>
                 <replace file="${project.build.outputDirectory}/hbase-default.xml"
                   token="@@@VERSION@@@" value="${project.version}" />
                 <mkdir dir="${project.build.directory}/nativelib"/>
@@ -532,7 +532,7 @@
                   <arg value="xf"/>
                   <arg value="hadoop-snappy-nativelibs.tar"/>
                 </exec>
-              </tasks>
+              </target>
             </configuration>
             <goals>
               <goal>run</goal>
@@ -613,6 +613,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-eclipse-plugin</artifactId>
+        <version>2.8</version>
         <configuration>
           <additionalProjectnatures>
             <projectnature>org.jamon.project.jamonnature</projectnature>
@@ -674,7 +675,7 @@
     <package.release>1</package.release>	       
     <!-- also must update this when we bump version -->
     <package.version>0.91.0</package.version>	       
-    <final.name>${artifactId}-${version}</final.name>
+    <final.name>${project.artifactId}-${project.version}</final.name>
 
     <!-- For flaky tests exclusion -->
     <test.exclude></test.exclude>
@@ -849,7 +850,6 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
       <version>${slf4j.version}</version>
-      <scope>runtime</scope>
     </dependency>
     <dependency>
       <!--If this is not in the runtime lib, we get odd
