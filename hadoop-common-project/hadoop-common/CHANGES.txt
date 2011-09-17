@@ -594,6 +594,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7608. SnappyCodec check for Hadoop native lib is wrong
     (Alejandro Abdelnur via todd)
 
+    HADOOP-7637. Fix to include FairScheduler configuration file in
+    RPM. (Eric Yang via ddas)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
