@@ -1578,9 +1578,15 @@ public class HBaseTestingUtility {
       IOException, KeeperException, NodeExistsException {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "unittest", new Abortable() {
+          boolean aborted = false;
           @Override
           public void abort(String why, Throwable e) {
+            aborted = true;
             throw new RuntimeException("Fatal ZK error, why=" + why, e);
+          }
+          @Override
+          public boolean isAborted() {
+            return aborted;
           }
         });
 
