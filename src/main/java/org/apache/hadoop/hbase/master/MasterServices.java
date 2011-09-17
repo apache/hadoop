@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -58,6 +59,15 @@ public interface MasterServices extends Server {
    * @throws TableNotFoundException 
    */
   public void checkTableModifiable(final byte [] tableName) throws IOException;
+
+  /**
+   * Create a table using the given table definition.
+   * @param desc The table definition
+   * @param splitKeys Starting row keys for the initial table regions.  If null
+   *     a single region is created.
+   */
+  public void createTable(HTableDescriptor desc, byte [][] splitKeys)
+      throws IOException;
 
   /**
    * @return Return table descriptors implementation.

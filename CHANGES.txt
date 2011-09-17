@@ -504,6 +504,8 @@ Release 0.91.0 - Unreleased
    HBASE-4425  Provide access to RpcServer instance from RegionServerServices
    HBASE-4411  When copying tables/CFs, allow CF names to be changed
                (David Revell)
+   HBASE-4424  Provide coprocessors access to createTable() via 
+               MasterServices
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
