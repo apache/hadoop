@@ -174,6 +174,7 @@ public class CacheTestUtils {
         }
       };
 
+      t.setDaemon(true);
       ctx.addThread(t);
     }
 
@@ -217,6 +218,7 @@ public class CacheTestUtils {
         }
       };
 
+      t.setDaemon(true);
       ctx.addThread(t);
     }
 
