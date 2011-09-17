@@ -178,6 +178,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7644. Fix TestDelegationTokenRenewal and TestDelegationTokenFetcher
     to use and test the new style renewers. (omalley)
 
+    HADOOP-7637. Fix to include FairScheduler configuration file in 
+    RPM. (Eric Yang via ddas)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

@@ -190,6 +190,7 @@ bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
 %config(noreplace) %{_conf_dir}/ssl-client.xml.example
 %config(noreplace) %{_conf_dir}/ssl-server.xml.example
 %config(noreplace) %{_conf_dir}/taskcontroller.cfg
+%config(noreplace) %{_conf_dir}/fair-scheduler.xml
 %{_prefix}
 %attr(0755,root,root) %{_prefix}/libexec
 %attr(0755,root,root) /etc/rc.d/init.d
