@@ -223,9 +223,22 @@ public class YARNRunner implements ClientProtocol {
       throw new YarnException(e);
     }
 
+    // XXX Remove
+    Path submitJobDir = new Path(jobSubmitDir);
+    FileContext defaultFS = FileContext.getFileContext(conf);
+    Path submitJobFile =
+      defaultFS.makeQualified(JobSubmissionFiles.getJobConfPath(submitJobDir));
+    FSDataInputStream in = defaultFS.open(submitJobFile);
+    conf.addResource(in);
+    // ---
+
     // Construct necessary information to start the MR AM
     ApplicationSubmissionContext appContext = 
       createApplicationSubmissionContext(conf, jobSubmitDir, ts);
+    
+    // XXX Remove
+    in.close();
+    // ---
     
     // Submit to ResourceManager
     ApplicationId applicationId = resMgrDelegate.submitApplication(appContext);
