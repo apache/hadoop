@@ -477,6 +477,9 @@ else
   if [ ! -e ${HADOOP_CONF_DIR}/capacity-scheduler.xml ]; then
     template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
   fi
+  if [ ! -e ${HADOOP_CONF_DIR}/log4j.properties ]; then
+    cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  fi
   
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
   chmod 755 ${HADOOP_CONF_DIR}/hadoop-env.sh
