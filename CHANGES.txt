@@ -20,6 +20,8 @@ Release 0.91.0 - Unreleased
    HBASE-4299  Update to Avro 1.5.3 and use Avro Maven plugin to generate
                Avro classes. (Alejandro Abdelnur)
    HBASE-4369  Deprecate HConnection#getZookeeperWatcher in prep for HBASE-1762
+   HBASE-4247  Add isAborted method to the Abortable interface
+               (Akash Ashok)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
@@ -508,8 +510,6 @@ Release 0.91.0 - Unreleased
                (David Revell)
    HBASE-4424  Provide coprocessors access to createTable() via 
                MasterServices
-   HBASE-4247  Add isAborted method to the Abortable interface
-               (Akash Ashok)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
