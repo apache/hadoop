@@ -228,10 +228,18 @@ public class TestMasterFailover {
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       "unittest", new Abortable() {
+    	boolean aborted = false;
         @Override
         public void abort(String why, Throwable e) {
+          this.aborted = true;
           throw new RuntimeException("Fatal ZK error, why=" + why, e);
         }
+        
+        @Override
+        public boolean isAborted() {
+          return this.aborted;
+        }
+        
     });
 
     // get all the master threads
@@ -545,11 +553,18 @@ public class TestMasterFailover {
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "unittest", new Abortable() {
+          
           @Override
           public void abort(String why, Throwable e) {
             LOG.error("Fatal ZK Error: " + why, e);
             org.junit.Assert.assertFalse("Fatal ZK error", true);
           }
+          
+          @Override
+          public boolean isAborted() {
+            return false;
+          }
+          
     });
 
     // get all the master threads

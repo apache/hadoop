@@ -34,8 +34,10 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  */
 class MockServer implements Server {
   static final Log LOG = LogFactory.getLog(MockServer.class);
-  boolean stopped = false;
   final static ServerName NAME = new ServerName("MockServer", 123, -1);
+  
+  boolean stopped;
+  boolean aborted;
   final ZooKeeperWatcher zk;
   final HBaseTestingUtility htu;
 
@@ -67,7 +69,8 @@ class MockServer implements Server {
   @Override
   public void abort(String why, Throwable e) {
     LOG.fatal("Abort why=" + why, e);
-    this.stopped = true;
+    stop(why);
+    this.aborted = true;
   }
 
   @Override
@@ -99,5 +102,11 @@ class MockServer implements Server {
   @Override
   public ServerName getServerName() {
     return NAME;
+  }
+
+  @Override
+  public boolean isAborted() {
+    // TODO Auto-generated method stub
+    return this.aborted;
   }
 }

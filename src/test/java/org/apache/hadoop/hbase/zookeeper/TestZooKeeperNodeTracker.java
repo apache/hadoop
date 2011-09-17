@@ -300,6 +300,12 @@ public class TestZooKeeperNodeTracker {
   public static class StubAbortable implements Abortable {
     @Override
     public void abort(final String msg, final Throwable t) {}
+    
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
+    
   }
 
   public static class StubWatcher implements Watcher {

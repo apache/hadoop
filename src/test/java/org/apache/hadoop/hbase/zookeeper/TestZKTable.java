@@ -58,6 +58,12 @@ public class TestZKTable {
       public void abort(String why, Throwable e) {
         LOG.info(why, e);
       }
+      
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
+      
     };
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
       name, abortable, true);

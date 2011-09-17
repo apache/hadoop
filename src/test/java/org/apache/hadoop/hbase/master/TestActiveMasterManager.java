@@ -245,6 +245,11 @@ public class TestActiveMasterManager {
 
     @Override
     public void abort(final String msg, final Throwable t) {}
+    
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
 
     @Override
     public Configuration getConfiguration() {

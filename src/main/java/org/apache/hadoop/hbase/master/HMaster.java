@@ -1308,7 +1308,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return this.stopped;
   }
 
-  boolean isAborted() {
+  public boolean isAborted() {
     return this.abort;
   }
   

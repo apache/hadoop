@@ -446,6 +446,7 @@ public class HConnectionManager {
 
     private final Object masterLock = new Object();
     private volatile boolean closed;
+    private volatile boolean aborted;
     private volatile HMasterInterface master;
     private volatile boolean masterChecked;
     // ZooKeeper reference
@@ -1660,7 +1661,13 @@ public class HConnectionManager {
       }
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
+      this.aborted = true;
       this.closed = true;
+    }
+    
+    @Override
+    public boolean isAborted(){
+      return this.aborted;
     }
 
     public int getCurrentNrHRS() throws IOException {

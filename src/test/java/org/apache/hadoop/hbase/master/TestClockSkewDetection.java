@@ -65,6 +65,11 @@ public class TestClockSkewDetection {
 
       @Override
       public void abort(String why, Throwable e) {}
+      
+      @Override
+      public boolean isAborted() {
+        return false;
+      }
 
       @Override
       public boolean isStopped() {

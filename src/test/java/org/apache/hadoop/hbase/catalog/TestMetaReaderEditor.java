@@ -61,6 +61,12 @@ public class TestMetaReaderEditor {
       LOG.info(why, e);
       abort.set(true);
     }
+    
+    @Override
+    public boolean isAborted() {
+      return abort.get();
+    }
+    
   };
 
   @BeforeClass public static void beforeClass() throws Exception {

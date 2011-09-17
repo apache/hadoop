@@ -46,6 +46,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
   private ReplicationZookeeper zkHelper;
   private Set<String> hlogs = new HashSet<String>();
   private boolean stopped = false;
+  private boolean aborted;
 
   /**
    * Instantiates the cleaner, does nothing more.
@@ -166,6 +167,12 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
   @Override
   public void abort(String why, Throwable e) {
     LOG.warn("Aborting ReplicationLogCleaner because " + why, e);
+    this.aborted = true;
     stop(why);
+  }
+
+  @Override
+  public boolean isAborted() {
+    return this.aborted;
   }
 }

@@ -102,6 +102,11 @@ public class TestCatalogJanitor {
     public void abort(String why, Throwable e) {
       //no-op
     }
+    
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
 
     @Override
     public boolean isStopped() {
@@ -181,6 +186,11 @@ public class TestCatalogJanitor {
     @Override
     public void abort(String why, Throwable e) {
       //no-op
+    }
+    
+    @Override
+    public boolean isAborted() {
+      return false;
     }
 
     @Override

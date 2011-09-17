@@ -82,6 +82,11 @@ public class TestCatalogTracker {
       public void abort(String why, Throwable e) {
         LOG.info(why, e);
       }
+      
+      @Override
+      public boolean isAborted()  {
+        return false;
+      }
     };
     this.watcher = new ZooKeeperWatcher(UTIL.getConfiguration(),
       this.getClass().getSimpleName(), this.abortable, true);

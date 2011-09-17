@@ -85,6 +85,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   // numRetries is for 'normal' stuff... Mutliply by this factor when
   // want to wait a long time.
   private final int retryLongerMultiplier;
+  private boolean aborted;
   
   /**
    * Constructor
@@ -154,7 +155,13 @@ public class HBaseAdmin implements Abortable, Closeable {
   @Override
   public void abort(String why, Throwable e) {
     // Currently does nothing but throw the passed message and exception
+    this.aborted = true;
     throw new RuntimeException(why, e);
+  }
+  
+  @Override
+  public boolean isAborted(){
+    return this.aborted;
   }
 
   /** @return HConnection used by this object. */

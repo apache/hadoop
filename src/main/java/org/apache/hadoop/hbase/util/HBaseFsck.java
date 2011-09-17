@@ -365,6 +365,11 @@ public class HBaseFsck {
           LOG.error(why, e);
           System.exit(1);
         }
+        @Override
+        public boolean isAborted(){
+          return false;
+        }
+        
       });
     rootRegionTracker.start();
     ServerName sn = null;

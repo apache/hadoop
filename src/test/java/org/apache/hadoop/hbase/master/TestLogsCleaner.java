@@ -156,6 +156,11 @@ public class TestLogsCleaner {
     public void abort(String why, Throwable e) {}
 
     @Override
+    public boolean isAborted() {
+      return false;
+    }
+    
+    @Override
     public void stop(String why) {}
 
     @Override

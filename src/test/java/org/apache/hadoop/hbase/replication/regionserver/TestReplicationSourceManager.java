@@ -233,6 +233,11 @@ public class TestReplicationSourceManager {
     public void abort(String why, Throwable e) {
       //To change body of implemented methods use File | Settings | File Templates.
     }
+    
+    @Override
+    public boolean isAborted() {
+      return false;
+    }
 
     @Override
     public void stop(String why) {

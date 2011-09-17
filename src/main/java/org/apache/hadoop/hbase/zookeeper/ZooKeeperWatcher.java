@@ -395,4 +395,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public void abort(String why, Throwable e) {
     this.abortable.abort(why, e);
   }
+  
+  @Override
+  public boolean isAborted() {
+    return this.abortable.isAborted();
+  }
 }

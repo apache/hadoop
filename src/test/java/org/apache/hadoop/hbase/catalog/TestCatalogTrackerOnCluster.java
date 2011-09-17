@@ -52,6 +52,11 @@ public class TestCatalogTrackerOnCluster {
         public void abort(String why, Throwable e) {
           LOG.error("Abort was called on 'bad root location writer'", e);
         }
+        
+        @Override
+        public boolean isAborted() {
+          return false;
+        }
     });
     ServerName nonsense =
       new ServerName("example.org", 1234, System.currentTimeMillis());

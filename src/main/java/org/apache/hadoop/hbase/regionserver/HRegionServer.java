@@ -1521,6 +1521,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     abort(reason, null);
   }
 
+  public boolean isAborted() {
+    return this.abortRequested;
+  }
+  
   /*
    * Simulate a kill -9 of this server. Exits w/o closing regions or cleaninup
    * logs but it does close socket in case want to bring up server on old
