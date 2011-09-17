@@ -1564,7 +1564,7 @@ public class HBaseTestingUtility {
   /**
    * Creates an znode with OPENED state.
    * @param TEST_UTIL
-   * @param metaRegion
+   * @param region
    * @param regionServer
    * @return
    * @throws IOException
@@ -1573,7 +1573,7 @@ public class HBaseTestingUtility {
    * @throws NodeExistsException
    */
   public static ZooKeeperWatcher createAndForceNodeToOpenedState(
-      HBaseTestingUtility TEST_UTIL, HRegion metaRegion,
+      HBaseTestingUtility TEST_UTIL, HRegion region,
       HRegionServer regionServer) throws ZooKeeperConnectionException,
       IOException, KeeperException, NodeExistsException {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
@@ -1584,11 +1584,11 @@ public class HBaseTestingUtility {
           }
         });
 
-    ZKAssign.createNodeOffline(zkw, metaRegion.getRegionInfo(), regionServer
+    ZKAssign.createNodeOffline(zkw, region.getRegionInfo(), regionServer
         .getServerName());
-    int version = ZKAssign.transitionNodeOpening(zkw, metaRegion
+    int version = ZKAssign.transitionNodeOpening(zkw, region
         .getRegionInfo(), regionServer.getServerName());
-    ZKAssign.transitionNodeOpened(zkw, metaRegion.getRegionInfo(), regionServer
+    ZKAssign.transitionNodeOpened(zkw, region.getRegionInfo(), regionServer
         .getServerName(), version);
     return zkw;
   }
