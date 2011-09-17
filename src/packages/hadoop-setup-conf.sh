@@ -434,6 +434,9 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   if [ ! -e ${HADOOP_CONF_DIR}/capacity-scheduler.xml ]; then
     template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
   fi
+  if [ ! -e ${HADOOP_CONF_DIR}/log4j.properties ]; then
+    cp ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  fi
 
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
