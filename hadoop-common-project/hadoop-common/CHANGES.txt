@@ -582,6 +582,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7637. Fix to include FairScheduler configuration file in
     RPM. (Eric Yang via ddas)
 
+    HADOOP-7633. Adds log4j.properties to the hadoop-conf dir on
+    deploy (Eric Yang via ddas)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
