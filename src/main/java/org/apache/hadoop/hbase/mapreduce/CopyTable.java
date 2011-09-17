@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.mapreduce.Job;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Tool used to copy a table to another one which can be on a different setup.
@@ -67,9 +69,22 @@ public class CopyTable {
     }
     if(families != null) {
       String[] fams = families.split(",");
+      Map<String,String> cfRenameMap = new HashMap<String,String>();
       for(String fam : fams) {
-        scan.addFamily(Bytes.toBytes(fam));
+        String sourceCf;
+        if(fam.contains(":")) { 
+            // fam looks like "sourceCfName:destCfName"
+            String[] srcAndDest = fam.split(":", 2);
+            sourceCf = srcAndDest[0];
+            String destCf = srcAndDest[1];
+            cfRenameMap.put(sourceCf, destCf);
+        } else {
+            // fam is just "sourceCf"
+            sourceCf = fam; 
+        }
+        scan.addFamily(Bytes.toBytes(sourceCf));
       }
+      Import.configureCfRenaming(job.getConfiguration(), cfRenameMap);
     }
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
         Import.Importer.class, null, null, job);
@@ -101,7 +116,9 @@ public class CopyTable {
     System.err.println(" new.name     new table's name");
     System.err.println(" peer.adr     Address of the peer cluster given in the format");
     System.err.println("              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent");
-    System.err.println(" families     comma-seperated list of families to copy");
+    System.err.println(" families     comma-separated list of families to copy");
+    System.err.println("              To copy from cf1 to cf2, give sourceCfName:destCfName. ");
+    System.err.println("              To keep the same name, just give \"cfName\"");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename    Name of the table to copy");
@@ -111,7 +128,7 @@ public class CopyTable {
     System.err.println(" $ bin/hbase " +
         "org.apache.hadoop.hbase.mapreduce.CopyTable --rs.class=org.apache.hadoop.hbase.ipc.ReplicationRegionInterface " +
         "--rs.impl=org.apache.hadoop.hbase.regionserver.replication.ReplicationRegionServer --starttime=1265875194289 --endtime=1265878794289 " +
-        "--peer.adr=server1,server2,server3:2181:/hbase TestTable ");
+        "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
   }
 
   private static boolean doCommandLine(final String[] args) {

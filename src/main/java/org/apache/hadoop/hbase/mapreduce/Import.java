@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -28,6 +30,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
@@ -38,12 +41,15 @@ import org.apache.hadoop.util.GenericOptionsParser;
  */
 public class Import {
   final static String NAME = "import";
+  public static final String CF_RENAME_PROP = "HBASE_IMPORTER_RENAME_CFS";
 
   /**
    * Write table content out to files in hdfs.
    */
   static class Importer
   extends TableMapper<ImmutableBytesWritable, Put> {
+    private Map<byte[], byte[]> cfRenameMap;
+      
     /**
      * @param row  The current table row key.
      * @param value  The columns.
@@ -63,15 +69,91 @@ public class Import {
       }
     }
 
-    private static Put resultToPut(ImmutableBytesWritable key, Result result)
+    private Put resultToPut(ImmutableBytesWritable key, Result result)
     throws IOException {
       Put put = new Put(key.get());
       for (KeyValue kv : result.raw()) {
+        if(cfRenameMap != null) {
+            // If there's a rename mapping for this CF, create a new KeyValue
+            byte[] newCfName = cfRenameMap.get(kv.getFamily());
+            if(newCfName != null) {
+                kv = new KeyValue(kv.getBuffer(), // row buffer 
+                        kv.getRowOffset(),        // row offset
+                        kv.getRowLength(),        // row length
+                        newCfName,                // CF buffer
+                        0,                        // CF offset 
+                        newCfName.length,         // CF length 
+                        kv.getBuffer(),           // qualifier buffer
+                        kv.getQualifierOffset(),  // qualifier offset
+                        kv.getQualifierLength(),  // qualifier length
+                        kv.getTimestamp(),        // timestamp
+                        KeyValue.Type.codeToType(kv.getType()), // KV Type
+                        kv.getBuffer(),           // value buffer 
+                        kv.getValueOffset(),      // value offset
+                        kv.getValueLength());     // value length
+            } 
+        }
         put.add(kv);
       }
       return put;
     }
+    
+    @Override
+    public void setup(Context context) {
+      // Make a map from sourceCfName to destCfName by parsing a config key
+      cfRenameMap = null;
+      String allMappingsPropVal = context.getConfiguration().get(CF_RENAME_PROP);
+      if(allMappingsPropVal != null) {
+        // The conf value format should be sourceCf1:destCf1,sourceCf2:destCf2,...
+        String[] allMappings = allMappingsPropVal.split(",");
+        for (String mapping: allMappings) {
+          if(cfRenameMap == null) {
+              cfRenameMap = new TreeMap<byte[],byte[]>(Bytes.BYTES_COMPARATOR);
+          }
+          String [] srcAndDest = mapping.split(":");
+          if(srcAndDest.length != 2) {
+              continue;
+          }
+          cfRenameMap.put(srcAndDest[0].getBytes(), srcAndDest[1].getBytes());
+        }
+      }
+    }
   }
+  
+  /**
+   * <p>Sets a configuration property with key {@link #CF_RENAME_PROP} in conf that tells
+   * the mapper how to rename column families.
+   * 
+   * <p>Alternately, instead of calling this function, you could set the configuration key 
+   * {@link #CF_RENAME_PROP} yourself. The value should look like 
+   * <pre>srcCf1:destCf1,srcCf2:destCf2,....</pre>. This would have the same effect on
+   * the mapper behavior.
+   * 
+   * @param conf the Configuration in which the {@link #CF_RENAME_PROP} key will be
+   *  set
+   * @param renameMap a mapping from source CF names to destination CF names
+   */
+  static public void configureCfRenaming(Configuration conf, 
+          Map<String, String> renameMap) {
+    StringBuilder sb = new StringBuilder();
+    for(Map.Entry<String,String> entry: renameMap.entrySet()) {
+      String sourceCf = entry.getKey();
+      String destCf = entry.getValue();
+
+      if(sourceCf.contains(":") || sourceCf.contains(",") || 
+              destCf.contains(":") || destCf.contains(",")) {
+        throw new IllegalArgumentException("Illegal character in CF names: " 
+              + sourceCf + ", " + destCf);
+      }
+
+      if(sb.length() != 0) {
+        sb.append(",");
+      }
+      sb.append(sourceCf + ":" + destCf);
+    }
+    conf.set(CF_RENAME_PROP, sb.toString());
+  }
+  
 
   /**
    * Sets up the actual job.
