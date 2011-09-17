@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -60,7 +61,11 @@ public class JobContextImpl implements JobContext {
   protected final Credentials credentials;
   
   public JobContextImpl(Configuration conf, JobID jobId) {
-    this.conf = new org.apache.hadoop.mapred.JobConf(conf);
+    if (conf instanceof JobConf) {
+      this.conf = (JobConf)conf;
+    } else {
+      this.conf = new org.apache.hadoop.mapred.JobConf(conf);
+    }
     this.jobId = jobId;
     this.credentials = this.conf.getCredentials();
     try {

@@ -23,10 +23,14 @@ import static org.apache.hadoop.yarn.webapp.Params.*;
 public class HeaderBlock extends HtmlBlock {
 
   @Override protected void render(Block html) {
+    String loggedIn = ""; 
+    if (request().getRemoteUser() != null) {
+      loggedIn = "Logged in as: " + request().getRemoteUser();
+    }
     html.
       div("#header.ui-widget").
         div("#user").
-          _("Logged in as: "+ request().getRemoteUser())._().
+          _(loggedIn)._().
         div("#logo").
           img("/static/hadoop-st.png")._().
         h1($(TITLE))._();

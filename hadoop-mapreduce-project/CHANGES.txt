@@ -1304,6 +1304,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3007. Fixed Yarn Mapreduce client to be able to connect to 
     JobHistoryServer in secure mode. (vinodkv)
 
+    MAPREDUCE-2987. Fixed display of logged user on RM Web-UI. (Thomas Graves
+    via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
