@@ -68,6 +68,8 @@ public interface HConnection extends Abortable, Closeable {
    * Retrieve ZooKeeperWatcher used by this connection.
    * @return ZooKeeperWatcher handle being used by the connection.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Removed because it was a mistake exposing zookeeper in this
+   * interface (ZooKeeper is an implementation detail).
    */
   public ZooKeeperWatcher getZooKeeperWatcher() throws IOException;
 

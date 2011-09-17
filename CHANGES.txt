@@ -19,6 +19,7 @@ Release 0.91.0 - Unreleased
    HBASE-4233  Update protobuf dependency to 2.4.0a (todd)
    HBASE-4299  Update to Avro 1.5.3 and use Avro Maven plugin to generate
                Avro classes. (Alejandro Abdelnur)
+   HBASE-4369  Deprecate HConnection#getZookeeperWatcher in prep for HBASE-1762
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
