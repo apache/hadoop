@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -72,7 +73,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.KeeperException.NodeExistsException;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -1557,4 +1560,37 @@ public class HBaseTestingUtility {
 
     return getFromStoreFile(store,get);
   }
+  
+  /**
+   * Creates an znode with OPENED state.
+   * @param TEST_UTIL
+   * @param metaRegion
+   * @param regionServer
+   * @return
+   * @throws IOException
+   * @throws ZooKeeperConnectionException
+   * @throws KeeperException
+   * @throws NodeExistsException
+   */
+  public static ZooKeeperWatcher createAndForceNodeToOpenedState(
+      HBaseTestingUtility TEST_UTIL, HRegion metaRegion,
+      HRegionServer regionServer) throws ZooKeeperConnectionException,
+      IOException, KeeperException, NodeExistsException {
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+        "unittest", new Abortable() {
+          @Override
+          public void abort(String why, Throwable e) {
+            throw new RuntimeException("Fatal ZK error, why=" + why, e);
+          }
+        });
+
+    ZKAssign.createNodeOffline(zkw, metaRegion.getRegionInfo(), regionServer
+        .getServerName());
+    int version = ZKAssign.transitionNodeOpening(zkw, metaRegion
+        .getRegionInfo(), regionServer.getServerName());
+    ZKAssign.transitionNodeOpened(zkw, metaRegion.getRegionInfo(), regionServer
+        .getServerName(), version);
+    return zkw;
+  }
+  
 }

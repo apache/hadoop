@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -44,9 +45,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.Test;
 
 public class TestMasterFailover {
@@ -127,6 +131,83 @@ public class TestMasterFailover {
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
   }
+  
+  @Test
+  public void testShouldCheckMasterFailOverWhenMETAIsInOpenedState()
+      throws Exception {
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 2;
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
+    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 8000);
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+
+    // get all the master threads
+    List<MasterThread> masterThreads = cluster.getMasterThreads();
+
+    // wait for each to come online
+    for (MasterThread mt : masterThreads) {
+      assertTrue(mt.isAlive());
+    }
+
+    // verify only one is the active master and we have right number
+    int numActive = 0;
+    ServerName activeName = null;
+    for (int i = 0; i < masterThreads.size(); i++) {
+      if (masterThreads.get(i).getMaster().isActiveMaster()) {
+        numActive++;
+        activeName = masterThreads.get(i).getMaster().getServerName();
+      }
+    }
+    assertEquals(1, numActive);
+    assertEquals(NUM_MASTERS, masterThreads.size());
+
+    // verify still one active master and it's the same
+    for (int i = 0; i < masterThreads.size(); i++) {
+      if (masterThreads.get(i).getMaster().isActiveMaster()) {
+        assertTrue(activeName.equals(masterThreads.get(i).getMaster()
+            .getServerName()));
+      }
+    }
+    assertEquals(1, numActive);
+    assertEquals(1, masterThreads.size());
+
+    List<RegionServerThread> regionServerThreads = cluster
+        .getRegionServerThreads();
+    int count = -1;
+    HRegion metaRegion = null;
+    for (RegionServerThread regionServerThread : regionServerThreads) {
+      HRegionServer regionServer = regionServerThread.getRegionServer();
+      metaRegion = regionServer
+          .getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      count++;
+      regionServer.abort("");
+      if (null != metaRegion) {
+        break;
+      }
+    }
+    HRegionServer regionServer = cluster.getRegionServer(count);
+
+    cluster.shutdown();
+    // Create a ZKW to use in the test
+    ZooKeeperWatcher zkw = 
+      HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL, 
+          metaRegion, regionServer);
+
+    TEST_UTIL.startMiniHBaseCluster(1, 1);
+
+    // Failover should be completed, now wait for no RIT
+    log("Waiting for no more RIT");
+    ZKAssign.blockUntilNoRIT(zkw);
+
+    // Stop the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
 
   /**
    * Complex test of master failover that tests as many permutations of the

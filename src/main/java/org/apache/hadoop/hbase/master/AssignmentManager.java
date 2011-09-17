@@ -510,10 +510,9 @@ public class AssignmentManager extends ZooKeeperListener {
           LOG.warn("Region in transition " + regionInfo.getEncodedName() +
             " references a null server; letting RIT timeout so will be " +
             "assigned elsewhere");
-        } else if (isOnDeadServer(regionInfo, deadServers) &&
-            !serverManager.isServerOnline(sn)) {
-          // If was on a dead server, then its not open any more; needs
-          // handling.
+        } else if (!serverManager.isServerOnline(sn)
+            && (isOnDeadServer(regionInfo, deadServers)
+                || regionInfo.isMetaRegion() || regionInfo.isRootRegion())) {
           forceOffline(regionInfo, data);
         } else {
           new OpenedRegionHandler(master, this, regionInfo, sn).process();
