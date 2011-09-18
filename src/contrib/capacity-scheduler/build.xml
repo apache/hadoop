@@ -25,4 +25,15 @@ to call at top-level: ant deploy-contrib compile-core-test
 
   <import file="../build-contrib.xml"/>
 
+  <!-- ====================================================== -->
+  <!-- Package a Hadoop contrib                               -->
+  <!-- ====================================================== -->
+  <target name="package" depends="jar, jar-examples" unless="skip.contrib">
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hadoop-${name}-${version}.jar" />
+      </fileset>
+    </copy>
+  </target>
+
 </project>
