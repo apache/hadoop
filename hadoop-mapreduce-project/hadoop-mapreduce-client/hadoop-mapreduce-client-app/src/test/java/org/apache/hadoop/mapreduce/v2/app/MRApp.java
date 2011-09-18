@@ -63,6 +63,7 @@ import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -234,11 +235,16 @@ public class MRApp extends MRAppMaster {
   }
 
   @Override
-  protected Job createJob(Configuration conf, Credentials fsTokens,
-      String user) {
-    Job newJob = new TestJob(getAppID(), getDispatcher().getEventHandler(),
+  protected Job createJob(Configuration conf) {
+    UserGroupInformation currentUser = null;
+    try {
+      currentUser = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      throw new YarnException(e);
+    }
+    Job newJob = new TestJob(conf, getAppID(), getDispatcher().getEventHandler(),
                              getTaskAttemptListener(), getContext().getClock(),
-                             user);
+                             currentUser.getUserName());
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
@@ -279,8 +285,7 @@ public class MRApp extends MRAppMaster {
   }
   
   @Override
-  protected ContainerLauncher createContainerLauncher(AppContext context,
-                                                      boolean isLocal) {
+  protected ContainerLauncher createContainerLauncher(AppContext context) {
     return new MockContainerLauncher();
   }
 
@@ -317,7 +322,7 @@ public class MRApp extends MRAppMaster {
 
   @Override
   protected ContainerAllocator createContainerAllocator(
-      ClientService clientService, AppContext context, boolean isLocal) {
+      ClientService clientService, AppContext context) {
     return new ContainerAllocator(){
       private int containerCount;
       @Override
@@ -369,12 +374,14 @@ public class MRApp extends MRAppMaster {
 
   class TestJob extends JobImpl {
     //override the init transition
+    private final TestInitTransition initTransition = new TestInitTransition(
+        maps, reduces);
     StateMachineFactory<JobImpl, JobState, JobEventType, JobEvent> localFactory
         = stateMachineFactory.addTransition(JobState.NEW,
             EnumSet.of(JobState.INITED, JobState.FAILED),
             JobEventType.JOB_INIT,
             // This is abusive.
-            new TestInitTransition(getConfig(), maps, reduces));
+            initTransition);
 
     private final StateMachine<JobState, JobEventType, JobEvent>
         localStateMachine;
@@ -384,10 +391,10 @@ public class MRApp extends MRAppMaster {
       return localStateMachine;
     }
 
-    public TestJob(ApplicationId appID, EventHandler eventHandler,
-        TaskAttemptListener taskAttemptListener, Clock clock, 
-        String user) {
-      super(appID, new Configuration(), eventHandler, taskAttemptListener,
+    public TestJob(Configuration conf, ApplicationId appID,
+        EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
+        Clock clock, String user) {
+      super(appID, conf, eventHandler, taskAttemptListener,
           new JobTokenSecretManager(), new Credentials(), clock, getStartCount(), 
           getCompletedTaskFromPreviousRun(), metrics, user);
 
@@ -399,17 +406,14 @@ public class MRApp extends MRAppMaster {
 
   //Override InitTransition to not look for split files etc
   static class TestInitTransition extends JobImpl.InitTransition {
-    private Configuration config;
     private int maps;
     private int reduces;
-    TestInitTransition(Configuration config, int maps, int reduces) {
-      this.config = config;
+    TestInitTransition(int maps, int reduces) {
       this.maps = maps;
       this.reduces = reduces;
     }
     @Override
     protected void setup(JobImpl job) throws IOException {
-      job.conf = config;
       job.conf.setInt(MRJobConfig.NUM_REDUCES, reduces);
       job.remoteJobConfFile = new Path("test");
     }

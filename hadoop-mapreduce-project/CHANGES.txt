@@ -1307,6 +1307,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2987. Fixed display of logged user on RM Web-UI. (Thomas Graves
     via acmurthy)
 
+    MAPREDUCE-3006. Fixed MapReduce AM to exit only after properly writing out
+    history file. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

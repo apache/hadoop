@@ -92,6 +92,60 @@ public class TestJobHistoryEvents {
         parsedJob.getState());
   }
 
+  /**
+   * Verify that all the events are flushed on stopping the HistoryHandler
+   * @throws Exception
+   */
+  @Test
+  public void testEventsFlushOnStop() throws Exception {
+
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.USER_NAME, "test");
+    MRApp app = new MRAppWithSpecialHistoryHandler(1, 0, true, this
+        .getClass().getName(), true);
+    app.submit(conf);
+    Job job = app.getContext().getAllJobs().values().iterator().next();
+    JobId jobId = job.getID();
+    LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
+    app.waitForState(job, JobState.SUCCEEDED);
+
+    // make sure all events are flushed
+    app.waitForState(Service.STATE.STOPPED);
+    /*
+     * Use HistoryContext to read logged events and verify the number of
+     * completed maps
+     */
+    HistoryContext context = new JobHistory();
+    ((JobHistory) context).init(conf);
+    Job parsedJob = context.getJob(jobId);
+    Assert.assertEquals("CompletedMaps not correct", 1, parsedJob
+        .getCompletedMaps());
+
+    Map<TaskId, Task> tasks = parsedJob.getTasks();
+    Assert.assertEquals("No of tasks not correct", 1, tasks.size());
+    verifyTask(tasks.values().iterator().next());
+
+    Map<TaskId, Task> maps = parsedJob.getTasks(TaskType.MAP);
+    Assert.assertEquals("No of maps not correct", 1, maps.size());
+
+    Assert.assertEquals("Job state not currect", JobState.SUCCEEDED,
+        parsedJob.getState());
+  }
+
+  @Test
+  public void testJobHistoryEventHandlerIsFirstServiceToStop() {
+    MRApp app = new MRAppWithSpecialHistoryHandler(1, 0, true, this
+        .getClass().getName(), true);
+    Configuration conf = new Configuration();
+    app.init(conf);
+    Service[] services = app.getServices().toArray(new Service[0]);
+    // Verifying that it is the last to be added is same as verifying that it is
+    // the first to be stopped. CompositeService related tests already validate
+    // this.
+    Assert.assertEquals("JobHistoryEventHandler",
+        services[services.length - 1].getName());
+  }
+
   private void verifyTask(Task task) {
     Assert.assertEquals("Task state not currect", TaskState.SUCCEEDED,
         task.getState());
@@ -116,14 +170,43 @@ public class TestJobHistoryEvents {
     @Override
     protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
         AppContext context) {
-      JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(context, 
-          getStartCount());
+      JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(
+          context, getStartCount());
       return eventHandler;
     }
   }
-  
+
+  /**
+   * MRapp with special HistoryEventHandler that writes events only during stop.
+   * This is to simulate events that don't get written by the eventHandling
+   * thread due to say a slow DFS and verify that they are flushed during stop.
+   */
+  private static class MRAppWithSpecialHistoryHandler extends MRApp {
+
+    public MRAppWithSpecialHistoryHandler(int maps, int reduces,
+        boolean autoComplete, String testName, boolean cleanOnStart) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart);
+    }
+
+    @Override
+    protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
+        AppContext context) {
+      return new JobHistoryEventHandler(context, getStartCount()) {
+        @Override
+        public void start() {
+          // Don't start any event draining thread.
+          super.eventHandlingThread = new Thread();
+          super.eventHandlingThread.start();
+        }
+      };
+    }
+
+  }
+
   public static void main(String[] args) throws Exception {
     TestJobHistoryEvents t = new TestJobHistoryEvents();
     t.testHistoryEvents();
+    t.testEventsFlushOnStop();
+    t.testJobHistoryEventHandlerIsFirstServiceToStop();
   }
 }
