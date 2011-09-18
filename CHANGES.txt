@@ -190,6 +190,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7630. Fixes hadoop-metrics2.properties to have a property
     *.period set to a default value. (Eric Yang via ddas)
 
+    HADOOP-7615. Fixes to have contrib jars in the HADOOP_CLASSPATH
+    for the binary layout case. (Eric Yang via ddas) 
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
