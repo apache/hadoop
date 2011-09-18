@@ -139,8 +139,8 @@ public class TestClientRedirect {
     Cluster cluster = new Cluster(conf);
     org.apache.hadoop.mapreduce.JobID jobID =
       new org.apache.hadoop.mapred.JobID("201103121733", 1);
-    org.apache.hadoop.mapreduce.Counters counters = cluster.getJob(jobID)
-        .getCounters();
+    org.apache.hadoop.mapreduce.Counters counters = 
+        cluster.getJob(jobID).getCounters();
     validateCounters(counters);
     Assert.assertTrue(amContact);
    

@@ -280,7 +280,7 @@ public class TeraSort extends Configured implements Tool {
 
   public int run(String[] args) throws Exception {
     LOG.info("starting");
-    Job job = Job.getInstance(new Cluster(getConf()), getConf());
+    Job job = Job.getInstance(getConf());
     Path inputDir = new Path(args[0]);
     Path outputDir = new Path(args[1]);
     boolean useSimplePartitioner = getUseSimplePartitioner(job);

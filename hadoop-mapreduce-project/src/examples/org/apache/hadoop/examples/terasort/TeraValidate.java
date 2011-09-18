@@ -157,7 +157,7 @@ public class TeraValidate extends Configured implements Tool {
   }
 
   public int run(String[] args) throws Exception {
-    Job job = Job.getInstance(new Cluster(getConf()), getConf());
+    Job job = Job.getInstance(getConf());
     if (args.length != 2) {
       usage();
       return 1;

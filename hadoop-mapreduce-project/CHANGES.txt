@@ -1320,6 +1320,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2994. Fixed a bug in ApplicationID parsing that affects RM
     UI. (Devaraj K via vinodkv)
 
+    MAPREDUCE-1788. o.a.h.mapreduce.Job shouldn't make a copy of the JobConf.
+    (Arun Murthy via mahadev)
+
   NEW FEATURES
 
     MAPREDUCE-1804. Stress-test tool for HDFS introduced in HDFS-708.
