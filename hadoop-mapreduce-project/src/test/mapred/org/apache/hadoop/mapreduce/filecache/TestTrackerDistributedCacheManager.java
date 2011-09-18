@@ -234,12 +234,11 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     }
     TrackerDistributedCacheManager manager = 
       new FakeTrackerDistributedCacheManager(conf);
-    Cluster cluster = new Cluster(conf);
     String userName = getJobOwnerName();
     File workDir = new File(new Path(TEST_ROOT_DIR, "workdir").toString());
 
     // Configures a job with a regular file
-    Job job1 = Job.getInstance(cluster, conf);
+    Job job1 = Job.getInstance(conf);
     job1.setUser(userName);
     job1.addCacheFile(secondCacheFile.toUri());
     Configuration conf1 = job1.getConfiguration();
@@ -262,7 +261,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     createPrivateTempFile(thirdCacheFile);
     
     // Configures another job with three regular files.
-    Job job2 = Job.getInstance(cluster, conf);
+    Job job2 = Job.getInstance(conf);
     job2.setUser(userName);
     // add a file that would get failed to localize
     job2.addCacheFile(firstCacheFile.toUri());
@@ -366,7 +365,6 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   throws IOException, LoginException, InterruptedException {
     TrackerDistributedCacheManager manager = 
       new TrackerDistributedCacheManager(conf, taskController);
-    Cluster cluster = new Cluster(conf);
     String userName = getJobOwnerName();
     File workDir = new File(TEST_ROOT_DIR, "workdir");
     Path cacheFile = new Path(TEST_ROOT_DIR, "fourthcachefile");
@@ -376,7 +374,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
       createPrivateTempFile(cacheFile);
     }
     
-    Job job1 = Job.getInstance(cluster, conf);
+    Job job1 = Job.getInstance(conf);
     job1.setUser(userName);
     job1.addCacheFile(cacheFile.toUri());
     Configuration conf1 = job1.getConfiguration();

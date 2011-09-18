@@ -208,7 +208,7 @@ public class TestClusterStatus extends TestCase {
     Configuration conf = mr.createJobConf();
     conf.setInt(JobContext.NUM_MAPS, 1);
 
-    Job job = Job.getInstance(cluster, conf);
+    Job job = Job.getInstance(conf);
     job.setNumReduceTasks(1);
     job.setSpeculativeExecution(false);
     job.setJobSetupCleanupNeeded(false);

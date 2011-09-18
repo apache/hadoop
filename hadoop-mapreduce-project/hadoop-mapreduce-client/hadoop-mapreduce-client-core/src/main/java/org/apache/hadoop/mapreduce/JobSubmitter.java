@@ -319,7 +319,6 @@ class JobSubmitter {
    * @throws InterruptedException
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   JobStatus submitJobInternal(Job job, Cluster cluster) 
   throws ClassNotFoundException, InterruptedException, IOException {
 

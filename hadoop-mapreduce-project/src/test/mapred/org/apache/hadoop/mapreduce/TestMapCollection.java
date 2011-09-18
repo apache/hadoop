@@ -298,7 +298,7 @@ public class TestMapCollection {
       throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
-    Job job = Job.getInstance(new Cluster(conf), conf);
+    Job job = Job.getInstance(conf);
     conf = job.getConfiguration();
     conf.setInt(MRJobConfig.IO_SORT_MB, ioSortMB);
     conf.set(MRJobConfig.MAP_SORT_SPILL_PERCENT, Float.toString(spillPer));
@@ -409,7 +409,7 @@ public class TestMapCollection {
     // no writes into the serialization buffer
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
-    Job job = Job.getInstance(new Cluster(conf), conf);
+    Job job = Job.getInstance(conf);
     conf = job.getConfiguration();
     conf.setInt(MRJobConfig.IO_SORT_MB, 1);
     // 2^20 * spill = 14336 bytes available post-spill, at most 896 meta
@@ -427,7 +427,7 @@ public class TestMapCollection {
   public void testLargeRecConcurrent() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
-    Job job = Job.getInstance(new Cluster(conf), conf);
+    Job job = Job.getInstance(conf);
     conf = job.getConfiguration();
     conf.setInt(MRJobConfig.IO_SORT_MB, 1);
     conf.set(MRJobConfig.MAP_SORT_SPILL_PERCENT, Float.toString(.986328125f));
@@ -496,7 +496,7 @@ public class TestMapCollection {
   public void testRandom() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
-    Job job = Job.getInstance(new Cluster(conf), conf);
+    Job job = Job.getInstance(conf);
     conf = job.getConfiguration();
     conf.setInt(MRJobConfig.IO_SORT_MB, 1);
     conf.setClass("test.mapcollection.class", RandomFactory.class,
@@ -517,7 +517,7 @@ public class TestMapCollection {
   public void testRandomCompress() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(Job.COMPLETION_POLL_INTERVAL_KEY, 100);
-    Job job = Job.getInstance(new Cluster(conf), conf);
+    Job job = Job.getInstance(conf);
     conf = job.getConfiguration();
     conf.setInt(MRJobConfig.IO_SORT_MB, 1);
     conf.setBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, true);

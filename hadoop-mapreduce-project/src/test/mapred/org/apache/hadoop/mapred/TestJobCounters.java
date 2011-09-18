@@ -199,7 +199,7 @@ public class TestJobCounters {
 
   public static Job createJob() throws IOException {
     final Configuration conf = new Configuration();
-    final Job baseJob = Job.getInstance(new Cluster(conf), conf);
+    final Job baseJob = Job.getInstance(conf);
     baseJob.setOutputKeyClass(Text.class);
     baseJob.setOutputValueClass(IntWritable.class);
     baseJob.setMapperClass(NewMapTokenizer.class);

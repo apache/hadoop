@@ -535,7 +535,7 @@ public class JobClient extends CLI {
     try {
       conf.setBooleanIfUnset("mapred.mapper.new-api", false);
       conf.setBooleanIfUnset("mapred.reducer.new-api", false);
-      Job job = Job.getInstance(cluster, conf);
+      Job job = Job.getInstance(conf);
       job.submit();
       return new NetworkedJob(job);
     } catch (InterruptedException ie) {
