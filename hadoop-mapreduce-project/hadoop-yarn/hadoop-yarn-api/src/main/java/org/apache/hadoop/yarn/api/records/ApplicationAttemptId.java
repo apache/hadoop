@@ -38,9 +38,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 public abstract class ApplicationAttemptId implements
     Comparable<ApplicationAttemptId> {
   
-  int id;
-  ApplicationId appId;
-  
   /**
    * Get the <code>ApplicationId</code> of the <code>ApplicationAttempId</code>. 
    * @return <code>ApplicationId</code> of the <code>ApplicationAttempId</code>
