@@ -1,3 +1,22 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 package org.apache.hadoop.yarn.api;
 
 import junit.framework.Assert;
@@ -32,6 +51,12 @@ public class TestContainerId {
     Assert.assertFalse(c1.hashCode() == c2.hashCode());
     Assert.assertFalse(c1.hashCode() == c4.hashCode());
     Assert.assertFalse(c1.hashCode() == c5.hashCode());
+    
+    long ts = System.currentTimeMillis();
+    ContainerId c6 = createContainerId(ts, 36473, 4365472, 25645811);
+    Assert.assertEquals("container_10_0001_01_000001", c1.toString());
+    Assert.assertEquals("container_" + ts + "_36473_4365472_25645811",
+        c6.toString());
   }
 
   private ContainerId createContainerId(long clusterTimestamp, int appIdInt,
