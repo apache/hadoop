@@ -104,12 +104,6 @@
   </property>
 
   <property>
-    <name>stream.tmpdir</name>
-    <value>${mapred.temp.dir}</value>
-  </property>
-
-
-  <property>
     <name>mapred.child.java.opts</name>
     <value>-server -Xmx640m -Djava.net.preferIPv4Stack=true</value>
   </property>
