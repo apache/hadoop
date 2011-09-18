@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records.impl.pb;
 
-
-import java.text.NumberFormat;
-
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -29,30 +26,14 @@ import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskIdProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskIdProtoOrBuilder;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.TaskTypeProto;
 import org.apache.hadoop.mapreduce.v2.util.MRProtoUtils;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 
-
-    
-public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
+public class TaskIdPBImpl extends TaskId {
   TaskIdProto proto = TaskIdProto.getDefaultInstance();
   TaskIdProto.Builder builder = null;
   boolean viaProto = false;
-  protected static final NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setGroupingUsed(false);
-    idFormat.setMinimumIntegerDigits(6);
-  }
-  
-  protected static final NumberFormat jobidFormat = NumberFormat.getInstance();
-  static {
-    jobidFormat.setGroupingUsed(false);
-    jobidFormat.setMinimumIntegerDigits(4);
-  }
-  
-  
-  private JobId jobId = null;
-  
-  
+
+  private JobId jobId = null;  
+
   public TaskIdPBImpl() {
     builder = TaskIdProto.newBuilder(proto);
   }
@@ -61,7 +42,7 @@ public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
     this.proto = proto;
     viaProto = true;
   }
-  
+
   public synchronized TaskIdProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -70,7 +51,8 @@ public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
   }
 
   private synchronized void mergeLocalToBuilder() {
-    if (this.jobId != null && !((JobIdPBImpl)this.jobId).getProto().equals(builder.getJobId()) ) {
+    if (this.jobId != null
+        && !((JobIdPBImpl) this.jobId).getProto().equals(builder.getJobId())) {
       builder.setJobId(convertToProtoFormat(this.jobId));
     }
   }
@@ -89,8 +71,7 @@ public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
     }
     viaProto = false;
   }
-    
-  
+
   @Override
   public synchronized int getId() {
     TaskIdProtoOrBuilder p = viaProto ? proto : builder;
@@ -102,6 +83,7 @@ public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
     maybeInitBuilder();
     builder.setId((id));
   }
+
   @Override
   public synchronized JobId getJobId() {
     TaskIdProtoOrBuilder p = viaProto ? proto : builder;
@@ -122,6 +104,7 @@ public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
       builder.clearJobId();
     this.jobId = jobId;
   }
+
   @Override
   public synchronized TaskType getTaskType() {
     TaskIdProtoOrBuilder p = viaProto ? proto : builder;
@@ -141,29 +124,19 @@ public class TaskIdPBImpl extends ProtoBase<TaskIdProto> implements TaskId {
     builder.setTaskType(convertToProtoFormat(taskType));
   }
 
-  private synchronized JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
+  private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
     return new JobIdPBImpl(p);
   }
 
-  private synchronized JobIdProto convertToProtoFormat(JobId t) {
+  private JobIdProto convertToProtoFormat(JobId t) {
     return ((JobIdPBImpl)t).getProto();
   }
 
-  private synchronized TaskTypeProto convertToProtoFormat(TaskType e) {
+  private TaskTypeProto convertToProtoFormat(TaskType e) {
     return MRProtoUtils.convertToProtoFormat(e);
   }
 
-  private synchronized TaskType convertFromProtoFormat(TaskTypeProto e) {
+  private TaskType convertFromProtoFormat(TaskTypeProto e) {
     return MRProtoUtils.convertFromProtoFormat(e);
   }
-
-  
-  @Override
-  public synchronized String toString() {
-    String jobIdentifier =  (jobId == null) ? "none":
-      jobId.getAppId().getClusterTimestamp() + "_" + 
-      jobidFormat.format(jobId.getAppId().getId()) + "_" + 
-      ((getTaskType() == TaskType.MAP) ? "m":"r") + "_" + idFormat.format(getId());
-    return "task_" + jobIdentifier;
-  }
-}  
+}

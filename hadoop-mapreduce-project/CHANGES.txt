@@ -301,6 +301,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2672. MR-279: JobHistory Server needs Analysis this job. 
     (Robert Evans via mahadev)
 
+    MAPREDUCE-2965. Streamlined the methods hashCode(), equals(), compareTo()
+    and toString() for all IDs. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

@@ -59,19 +59,6 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   public abstract void setId(int id);
  
   
-  // TODO: Why thread local?
-  // ^ NumberFormat instances are not threadsafe
-  private static final ThreadLocal<NumberFormat> appIdFormat =
-      new ThreadLocal<NumberFormat>() {
-        @Override
-        public NumberFormat initialValue() {
-          NumberFormat fmt = NumberFormat.getInstance();
-          fmt.setGroupingUsed(false);
-          fmt.setMinimumIntegerDigits(4);
-          return fmt;
-        }
-      };
-
   // TODO: fail the app submission if attempts are more than 10 or something
   private static final ThreadLocal<NumberFormat> appAttemptIdFormat =
       new ThreadLocal<NumberFormat>() {
@@ -102,24 +89,24 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     final int prime = 31;
     int result = 1;
     result = prime * result + getId();
-    result = prime * result
-        + ((getApplicationAttemptId() == null) ? 0 : getApplicationAttemptId().hashCode());
+    result = prime * result + getApplicationAttemptId().hashCode();
     return result;
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (other == null) {
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
       return false;
-    }
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      ContainerId otherCId = (ContainerId)other;
-      if (this.getApplicationAttemptId().equals(
-          otherCId.getApplicationAttemptId())) {
-        return this.getId() == otherCId.getId();
-      }
-    }
-    return false;
+    if (getClass() != obj.getClass())
+      return false;
+    ContainerId other = (ContainerId) obj;
+    if (!this.getApplicationAttemptId().equals(other.getApplicationAttemptId()))
+      return false;
+    if (this.getId() != other.getId())
+      return false;
+    return true;
   }
 
   @Override
@@ -133,15 +120,18 @@ public abstract class ContainerId implements Comparable<ContainerId>{
     }
     
   }
-  
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
+    sb.append("container_");
     ApplicationId appId = getApplicationAttemptId().getApplicationId();
-    sb.append("container_").append(appId.getClusterTimestamp()).append("_");
-    sb.append(appIdFormat.get().format(appId.getId())).append("_");
-    sb.append(appAttemptIdFormat.get().format(getApplicationAttemptId().
-        getAttemptId())).append("_");
+    sb.append(appId.getClusterTimestamp()).append("_");
+    sb.append(ApplicationId.appIdFormat.get().format(appId.getId()))
+        .append("_");
+    sb.append(
+        appAttemptIdFormat.get().format(
+            getApplicationAttemptId().getAttemptId())).append("_");
     sb.append(containerIdFormat.get().format(getId()));
     return sb.toString();
   }
