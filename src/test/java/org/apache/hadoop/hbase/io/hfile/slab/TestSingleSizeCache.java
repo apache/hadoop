@@ -48,28 +48,28 @@ public class TestSingleSizeCache {
     cache.shutdown();
   }
 
-  @Test
+  @Ignore @Test
   public void testCacheSimple() throws Exception {
     CacheTestUtils.testCacheSimple(cache, BLOCK_SIZE, NUM_QUERIES);
   }
 
-  @Test
+  @Ignore @Test
   public void testCacheMultiThreaded() throws Exception {
     CacheTestUtils.testCacheMultiThreaded(cache, BLOCK_SIZE,
         NUM_THREADS, NUM_QUERIES, 0.80);
   }
 
-  @Test
+  @Ignore @Test
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
 
-  @Test
+  @Ignore @Test
   public void testCacheMultiThreadedEviction() throws Exception {
     CacheTestUtils.hammerEviction(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
 
-  @Test
+  @Ignore @Test
   public void testHeapSizeChanges(){
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }
