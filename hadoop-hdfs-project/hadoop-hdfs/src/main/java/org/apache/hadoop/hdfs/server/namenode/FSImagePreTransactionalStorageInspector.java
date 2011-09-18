@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Inspects a FSImage storage directory in the "old" (pre-HDFS-1073) format.
@@ -130,8 +131,10 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
       DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
       try {
         timeStamp = in.readLong();
-      } finally {
         in.close();
+        in = null;
+      } finally {
+        IOUtils.cleanup(LOG, in);
       }
     }
     return timeStamp;
