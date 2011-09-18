@@ -87,6 +87,12 @@ public abstract class MultithreadedTestUtil {
       threadDoneCount++;
     }
 
+    public void setStopFlag(boolean s) throws Exception {
+      synchronized (this) {
+        stopped = s;
+      }
+    }
+    
     public void stop() throws Exception {
       synchronized (this) {
         stopped = true;
