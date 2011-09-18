@@ -437,6 +437,9 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   if [ ! -e ${HADOOP_CONF_DIR}/log4j.properties ]; then
     cp ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
   fi
+  if [ ! -e ${HADOOP_CONF_DIR}/hadoop-metrics2.properties ]; then
+    cp ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
+  fi
 
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
