@@ -74,7 +74,7 @@ public class JobHistoryEventHandler extends AbstractService
 
   private BlockingQueue<JobHistoryEvent> eventQueue =
     new LinkedBlockingQueue<JobHistoryEvent>();
-  private Thread eventHandlingThread;
+  protected Thread eventHandlingThread;
   private volatile boolean stopped;
   private final Object lock = new Object();
 

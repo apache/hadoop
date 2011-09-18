@@ -94,7 +94,7 @@ public class MRAppBenchmark {
     
     @Override
     protected ContainerAllocator createContainerAllocator(
-        ClientService clientService, AppContext context, boolean isLocal) {
+        ClientService clientService, AppContext context) {
       return new ThrottledContainerAllocator();
     }
     
