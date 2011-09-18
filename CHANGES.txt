@@ -157,6 +157,9 @@ Release 0.20.205.0 - 2011.09.12
     HADOOP-7633. Adds log4j.properties to the hadoop-conf dir on 
     deploy (Eric Yang via ddas)
 
+    HADOOP-7631. Fixes a config problem to do with running streaming jobs
+    (Eric Yang via ddas)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
