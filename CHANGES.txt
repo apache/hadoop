@@ -630,6 +630,8 @@ Release 0.90.5 - Unreleased
                in hbck. (Jonathan Hsieh)
    HBASE-4384  Hard to tell what causes failure in CloseRegionHandler#getCurrentVersion
                (Harsh J)
+   HBASE-4375  [hbck] Add region coverage visualization to hbck
+               (Jonathan Hsieh)
 
 Release 0.90.4 - August 10, 2011
 
