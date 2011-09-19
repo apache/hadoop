@@ -27,14 +27,7 @@
   <!-- Compile contribs.                                      -->
   <!-- ====================================================== -->
   <target name="compile">
-    <subant target="compile">
-      <property name="version" value="${version}"/>
-      <property name="hadoop-version" value="${hadoop-common.version}"/>
-      <property name="clover.jar" value="${clover.jar}"/>
-      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
-      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
-      <property name="offline" value="${offline}"/>
-      <property name="resolvers" value="${resolvers}"/>
+    <subant target="compile"  inheritAll="true">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -44,13 +37,6 @@
   <!-- ====================================================== -->
   <target name="package">
     <subant target="package" inheritAll="true">
-      <property name="version" value="${version}"/>
-      <property name="hadoop-version" value="${hadoop-common.version}"/>
-      <property name="clover.jar" value="${clover.jar}"/>
-      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
-      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
-      <property name="offline" value="${offline}"/>
-      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
@@ -61,13 +47,6 @@
   <target name="test">
     <!-- hdfsproxy tests failing due to HDFS-1666
     <subant target="test" inheritAll="true">
-      <property name="version" value="${version}"/>
-      <property name="hadoop-version" value="${hadoop-common.version}"/>
-      <property name="clover.jar" value="${clover.jar}"/>
-      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
-      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
-      <property name="offline" value="${offline}"/>
-      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="hdfsproxy/build.xml"/>
     </subant>
       -->
@@ -79,13 +58,6 @@
   <!-- ====================================================== -->
   <target name="clean">
     <subant target="clean" inheritAll="true">
-      <property name="version" value="${version}"/>
-      <property name="hadoop-version" value="${hadoop-common.version}"/>
-      <property name="clover.jar" value="${clover.jar}"/>
-      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
-      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
-      <property name="offline" value="${offline}"/>
-      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>
