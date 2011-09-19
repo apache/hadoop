@@ -1325,6 +1325,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3042. Fixed default ResourceTracker address. (Chris Riccomini
     via acmurthy) 
 
+    MAPREDUCE-3038. job history server not starting because conf() missing
+    HsController (Jeffrey Naisbitt via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
