@@ -617,8 +617,7 @@
             mentioned above. If the binary was not built with a specific 
             conf directory, the path defaults to
             <em>/path-to-binary/../conf</em>. The configuration file must be
-            owned by the user running TaskTracker (user <em>mapred</em> in the
-            above example), group-owned by anyone and should have the
+            owned by root, group-owned by anyone and should have the
             permissions <em>0400 or r--------</em>.
             </p>
             

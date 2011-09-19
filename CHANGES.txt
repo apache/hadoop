@@ -8,6 +8,8 @@ Release 0.20.206.0 - unreleased
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
 
+    HADOOP-7634. Docs specify wrong owner for task-controller.cfg (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
