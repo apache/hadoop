@@ -1363,6 +1363,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3004. Fix ReduceTask to not assume 'local' mode in YARN. (Hitesh
     Shah via acmurthy)
 
+    MAPREDUCE-3017. The Web UI shows FINISHED for killed/successful/failed jobs.
+    (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
