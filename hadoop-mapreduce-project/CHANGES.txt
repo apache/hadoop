@@ -1322,6 +1322,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3030. Fixed a bug in NodeId.equals() that was causing RM to
     reject all NMs. (Devaraj K via vinodkv)
 
+    MAPREDUCE-3042. Fixed default ResourceTracker address. (Chris Riccomini
+    via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
