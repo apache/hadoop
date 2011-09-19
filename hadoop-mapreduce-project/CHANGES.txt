@@ -275,6 +275,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2965. Streamlined the methods hashCode(), equals(), compareTo()
     and toString() for all IDs. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-2726. Added job-file to the AM and JobHistoryServer web
+    interfaces. (Jeffrey Naisbitt via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
