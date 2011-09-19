@@ -1348,6 +1348,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2925. Fixed Yarn+MR client code to behave saner with completed
     jobs. (Devaraj K via vinodkv)
 
+    MAPREDUCE-3030. Fixed a bug in NodeId.equals() that was causing RM to
+    reject all NMs. (Devaraj K via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
