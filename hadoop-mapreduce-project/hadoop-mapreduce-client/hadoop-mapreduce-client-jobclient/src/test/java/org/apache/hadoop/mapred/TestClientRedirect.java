@@ -119,7 +119,7 @@ public class TestClientRedirect {
   public void testRedirect() throws Exception {
     
     Configuration conf = new YarnConfiguration();
-    conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     conf.set(YarnConfiguration.RM_ADDRESS, RMADDRESS);
     conf.set(JHAdminConfig.MR_HISTORY_ADDRESS, HSHOSTADDRESS);
     RMService rmService = new RMService("test");
