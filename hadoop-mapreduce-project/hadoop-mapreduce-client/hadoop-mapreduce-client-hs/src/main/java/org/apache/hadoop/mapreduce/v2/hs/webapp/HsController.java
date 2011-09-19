@@ -139,18 +139,11 @@ public class HsController extends AppController {
   /**
    * @return the page that will be used to render the /conf page
    */
+  @Override
   protected Class<? extends View> confPage() {
     return HsConfPage.class;
   }
-  
-  /**
-   * Render the /conf page
-   */
-  public void conf() {
-    requireJob();
-    render(confPage());
-  }
-  
+
   /**
    * @return the page about the current server.
    */
