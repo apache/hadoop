@@ -340,7 +340,14 @@ public class ReduceTask extends Task {
     // Initialize the codec
     codec = initCodec();
     RawKeyValueIterator rIter = null;
-    boolean isLocal = "local".equals(job.get(MRConfig.MASTER_ADDRESS, "local"));
+    
+    boolean isLocal = false; 
+    // local iff framework == classic && master address == local
+    String framework = job.get(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
+    if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {
+    	isLocal = "local".equals(job.get(MRConfig.MASTER_ADDRESS, "local"));        	
+    }
+    
     if (!isLocal) {
       Class combinerClass = conf.getCombinerClass();
       CombineOutputCollector combineCollector = 

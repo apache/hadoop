@@ -1328,6 +1328,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3038. job history server not starting because conf() missing
     HsController (Jeffrey Naisbitt via mahadev)
 
+    MAPREDUCE-3004. Fix ReduceTask to not assume 'local' mode in YARN. (Hitesh
+    Shah via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
