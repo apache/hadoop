@@ -97,7 +97,7 @@ public class ResourceTrackerService extends AbstractService implements
   public synchronized void init(Configuration conf) {
     String resourceTrackerBindAddress =
       conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-          YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
+          YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS);
     resourceTrackerAddress = NetUtils.createSocketAddr(resourceTrackerBindAddress);
 
     RackResolver.init(conf);
