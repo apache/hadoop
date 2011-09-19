@@ -1313,6 +1313,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3006. Fixed MapReduce AM to exit only after properly writing out
     history file. (vinodkv)
 
+    MAPREDUCE-2925. Fixed Yarn+MR client code to behave saner with completed
+    jobs. (Devaraj K via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

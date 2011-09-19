@@ -23,6 +23,7 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -74,8 +75,11 @@ public class ClientCache {
 
   private MRClientProtocol instantiateHistoryProxy()
   throws IOException {
-	final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
-	          JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
+    final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS);
+    if (StringUtils.isEmpty(serviceAddr)) {
+      LOG.info("HistoryServer is not configured.");
+      return null;
+    }
     LOG.info("Connecting to HistoryServer at: " + serviceAddr);
     final Configuration myConf = new Configuration(conf);
     myConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
