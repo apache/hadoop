@@ -612,6 +612,7 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4238  CatalogJanitor can clear a daughter that split before
                processing its parent
+   HBASE-4445  Not passing --config when checking if distributed mode or not
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

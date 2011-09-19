@@ -38,7 +38,7 @@ then
   exit $errCode
 fi
 
-distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
+distMode=`$bin/hbase --config "$HBASE_CONF_DIR" org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`
 
 
 if [ "$distMode" == 'false' ] 
