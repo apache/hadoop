@@ -71,6 +71,21 @@ public class HttpServerFunctionalTest extends Assert {
   }
 
   /**
+   * Create but do not start the test webapp server. The test webapp dir is
+   * prepared/checked in advance.
+   * @param conf the server configuration to use
+   * @return the server instance
+   *
+   * @throws IOException if a problem occurs
+   * @throws AssertionError if a condition was not met
+   */
+  public static HttpServer createTestServer(Configuration conf, 
+      String[] pathSpecs) throws IOException {
+    prepareTestWebapp();
+    return createServer(TEST, conf, pathSpecs);
+  }
+
+  /**
    * Prepare the test webapp by creating the directory from the test properties
    * fail if the directory cannot be created.
    * @throws AssertionError if a condition was not met
@@ -103,6 +118,18 @@ public class HttpServerFunctionalTest extends Assert {
   public static HttpServer createServer(String webapp, Configuration conf)
       throws IOException {
     return new HttpServer(webapp, "0.0.0.0", 0, true, conf);
+  }
+  /**
+   * Create an HttpServer instance for the given webapp
+   * @param webapp the webapp to work with
+   * @param conf the configuration to use for the server
+   * @param pathSpecs the paths specifications the server will service
+   * @return the server
+   * @throws IOException if it could not be created
+   */
+  public static HttpServer createServer(String webapp, Configuration conf,
+      String[] pathSpecs) throws IOException {
+    return new HttpServer(webapp, "0.0.0.0", 0, true, conf, pathSpecs);
   }
 
   /**
