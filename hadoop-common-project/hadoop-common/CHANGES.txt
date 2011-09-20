@@ -402,6 +402,9 @@ Release 0.23.0 - Unreleased
 
   BUG FIXES
 
+    HADOOP-7630. hadoop-metrics2.properties should have a property *.period 
+    set to a default value for metrics. (Eric Yang via mattf)
+
     HADOOP-7327. FileSystem.listStatus() throws NullPointerException instead of
     IOException upon access permission failure. (mattf)
 
