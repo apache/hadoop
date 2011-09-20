@@ -625,7 +625,7 @@ public class BlockManager {
 
     // Add this replica to corruptReplicas Map
     corruptReplicas.addToCorruptReplicasMap(storedBlock, node);
-    if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {
+    if (countNodes(storedBlock).liveReplicas() >= inode.getReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
       invalidateBlock(storedBlock, node);
     } else {
@@ -651,7 +651,7 @@ public class BlockManager {
     // Check how many copies we have of the block. If we have at least one
     // copy on a live node, then we can delete it.
     int count = countNodes(blk).liveReplicas();
-    if (count > 1) {
+    if (count >= 1) {
       addToInvalidates(blk, dn);
       removeStoredBlock(blk, node);
       if(NameNode.stateChangeLog.isDebugEnabled()) {

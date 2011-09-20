@@ -628,6 +628,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-2341. Contribs not building. (Joep Rottinghuis via shv)
 
+    HDFS-2290. Block with corrupt replica is not getting replicated.
+    (Benoy Antony via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
