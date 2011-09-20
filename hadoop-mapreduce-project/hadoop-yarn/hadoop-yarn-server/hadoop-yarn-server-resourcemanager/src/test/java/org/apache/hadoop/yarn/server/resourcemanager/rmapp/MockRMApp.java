@@ -163,6 +163,11 @@ public class MockRMApp implements RMApp {
   }
 
   public void handle(RMAppEvent event) {
+  }
+
+  @Override
+  public String getAMFinalState() {
+    return "UNKNOWN";
   };
 
 }

@@ -263,6 +263,16 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   public ApplicationSubmissionContext getSubmissionContext() {
     return this.submissionContext;
   }
+  
+  @Override
+  public String getAMFinalState() {
+    this.readLock.lock();
+    try {
+      return this.finalState;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
 
   @Override
   public RMAppAttemptState getAppAttemptState() {
@@ -413,7 +423,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   private static final class AttemptStartedTransition extends BaseTransition {
-    @Override
+    @SuppressWarnings("unchecked")
+	@Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 

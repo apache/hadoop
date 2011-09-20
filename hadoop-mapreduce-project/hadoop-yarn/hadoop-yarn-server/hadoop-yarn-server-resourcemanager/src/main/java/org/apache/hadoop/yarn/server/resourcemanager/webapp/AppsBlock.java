@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -69,7 +70,8 @@ class AppsBlock extends HtmlBlock {
           td(app.getUser().toString()).
           td(app.getName().toString()).
           td(app.getQueue().toString()).
-          td(app.getState().toString()).
+          td(app.getState() == RMAppState.FINISHED ? app.getAMFinalState() : 
+            app.getState().toString()).
           td().
             br().$title(percent)._(). // for sorting
             div(_PROGRESSBAR).
