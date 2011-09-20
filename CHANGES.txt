@@ -288,6 +288,7 @@ Release 0.91.0 - Unreleased
    HBASE-4428  Two methods in CacheTestUtils don't call setDaemon() on the threads
    HBASE-4400  .META. getting stuck if RS hosting it is dead and znode state is in
                RS_ZK_REGION_OPENED (Ramkrishna)
+   HBASE-3421  Very wide rows -- 30M plus -- cause us OOME (Nate Putnam)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
