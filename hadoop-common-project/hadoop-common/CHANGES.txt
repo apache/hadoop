@@ -388,6 +388,10 @@ Release 0.23.0 - Unreleased
     HADOOP-7599. Script improvements to setup a secure Hadoop cluster
     (Eric Yang via ddas)
 
+    HADOOP-7639. Enhance HttpServer to allow passing path-specs for filtering,
+    so that servers like Yarn WebApp can get filtered the paths served by
+    their own injected servlets. (Thomas Graves via vinodkv)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

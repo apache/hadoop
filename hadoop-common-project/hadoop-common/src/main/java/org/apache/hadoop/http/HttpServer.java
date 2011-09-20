@@ -124,6 +124,29 @@ public class HttpServer implements FilterContainer {
       boolean findPort, Configuration conf, Connector connector) throws IOException {
     this(name, bindAddress, port, findPort, conf, null, connector);
   }
+
+  /**
+   * Create a status server on the given port. Allows you to specify the
+   * path specifications that this server will be serving so that they will be
+   * added to the filters properly.  
+   * 
+   * @param name The name of the server
+   * @param bindAddress The address for this server
+   * @param port The port to use on the server
+   * @param findPort whether the server should start at the given port and 
+   *        increment by 1 until it finds a free port.
+   * @param conf Configuration 
+   * @param pathSpecs Path specifications that this httpserver will be serving. 
+   *        These will be added to any filters.
+   */
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, String[] pathSpecs) throws IOException {
+    this(name, bindAddress, port, findPort, conf, null, null);
+    for (String path : pathSpecs) {
+        LOG.info("adding path spec: " + path);
+      addFilterPathMapping(path, webAppContext);
+    }
+  }
   
   /**
    * Create a status server on the given port.
