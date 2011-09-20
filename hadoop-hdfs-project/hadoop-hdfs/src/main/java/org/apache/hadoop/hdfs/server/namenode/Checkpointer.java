@@ -60,7 +60,8 @@ class Checkpointer extends Daemon {
   private BackupNode backupNode;
   volatile boolean shouldRun;
   private long checkpointPeriod;    // in seconds
-  private long checkpointTxnCount;    // size (in MB) of current Edit Log
+  // Transactions count to trigger the checkpoint
+  private long checkpointTxnCount; 
 
   private String infoBindAddress;
 
@@ -108,7 +109,7 @@ class Checkpointer extends Daemon {
 
     LOG.info("Checkpoint Period : " + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");
-    LOG.info("Log Size Trigger  : " + checkpointTxnCount + " txns ");
+    LOG.info("Transactions count is  : " + checkpointTxnCount + ", to trigger checkpoint");
   }
 
   /**
