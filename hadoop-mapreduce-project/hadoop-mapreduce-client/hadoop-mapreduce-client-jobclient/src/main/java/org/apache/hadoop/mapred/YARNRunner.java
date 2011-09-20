@@ -20,16 +20,13 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -43,7 +40,6 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
-import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.QueueAclsInfo;
 import org.apache.hadoop.mapreduce.QueueInfo;
@@ -62,7 +58,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -91,7 +86,7 @@ public class YARNRunner implements ClientProtocol {
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private ResourceMgrDelegate resMgrDelegate;
   private ClientCache clientCache;
-  private YarnConfiguration conf;
+  private Configuration conf;
   private final FileContext defaultFileContext;
 
   /**
@@ -99,22 +94,21 @@ public class YARNRunner implements ClientProtocol {
    * yarn
    * @param conf the configuration object for the client
    */
-  public YARNRunner(YarnConfiguration conf) {
-   this(conf, new ResourceMgrDelegate(conf));
+  public YARNRunner(Configuration conf) {
+   this(conf, new ResourceMgrDelegate(new YarnConfiguration(conf)));
   }
 
   /**
-   * Similar to {@link #YARNRunner(YarnConfiguration)} but allowing injecting 
+   * Similar to {@link #YARNRunner(Configuration)} but allowing injecting 
    * {@link ResourceMgrDelegate}. Enables mocking and testing.
    * @param conf the configuration object for the client
    * @param resMgrDelegate the resourcemanager client handle.
    */
-  public YARNRunner(YarnConfiguration conf, ResourceMgrDelegate resMgrDelegate) {
+  public YARNRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate) {
     this.conf = conf;
     try {
       this.resMgrDelegate = resMgrDelegate;
-      this.clientCache = new ClientCache(this.conf,
-          resMgrDelegate);
+      this.clientCache = new ClientCache(this.conf, resMgrDelegate);
       this.defaultFileContext = FileContext.getFileContext(this.conf);
     } catch (UnsupportedFileSystemException ufe) {
       throw new RuntimeException("Error in instantiating YarnClient", ufe);

@@ -1366,6 +1366,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3017. The Web UI shows FINISHED for killed/successful/failed jobs.
     (mahadev)
 
+    MAPREDUCE-3040. Fixed extra copy of Configuration in
+    YarnClientProtocolProvider and ensured MiniMRYarnCluster sets JobHistory
+    configuration for tests. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -77,7 +77,6 @@ public class ClientCache {
   throws IOException {
     final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS);
     if (StringUtils.isEmpty(serviceAddr)) {
-      LOG.info("HistoryServer is not configured.");
       return null;
     }
     LOG.info("Connecting to HistoryServer at: " + serviceAddr);
