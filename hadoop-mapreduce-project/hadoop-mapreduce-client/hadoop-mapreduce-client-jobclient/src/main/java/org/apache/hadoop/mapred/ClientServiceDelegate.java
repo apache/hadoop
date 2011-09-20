@@ -63,7 +63,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -86,6 +85,7 @@ class ClientServiceDelegate {
   private boolean forceRefresh;
   private MRClientProtocol realProxy = null;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private static String UNKNOWN_USER = "Unknown User";
 
   ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm, 
       JobID jobId, MRClientProtocol historyServerProxy) {
@@ -126,7 +126,12 @@ class ClientServiceDelegate {
     // and redirect to the history server.
     ApplicationReport application = rm.getApplicationReport(appId);
     String serviceAddr = null;
-    while (ApplicationState.RUNNING.equals(application.getState())) {
+    while (application == null || ApplicationState.RUNNING.equals(application.getState())) {
+      if (application == null) {
+        LOG.info("Could not get Job info from RM for job " + jobId
+            + ". Redirecting to job history server.");
+        return checkAndGetHSProxy(UNKNOWN_USER, JobState.NEW);
+      }
       try {
         if (application.getHost() == null || "".equals(application.getHost())) {
           LOG.debug("AM not assigned to Job. Waiting to get the AM ...");
@@ -163,6 +168,11 @@ class ClientServiceDelegate {
           throw new YarnException(e1);
         }
         application = rm.getApplicationReport(appId);
+        if (application == null) {
+          LOG.info("Could not get Job info from RM for job " + jobId
+              + ". Redirecting to job history server.");
+          return checkAndGetHSProxy(UNKNOWN_USER, JobState.RUNNING);
+        }
       } catch (InterruptedException e) {
         LOG.warn("getProxy() call interruped", e);
         throw new YarnException(e);
@@ -176,7 +186,7 @@ class ClientServiceDelegate {
     
     String user = application.getUser();
     if (user == null) {
-      throw new YarnRemoteExceptionPBImpl("User is not set in the application report");
+      throw RPCUtil.getRemoteException("User is not set in the application report");
     }
     if (application.getState() == ApplicationState.NEW ||
         application.getState() == ApplicationState.SUBMITTED) {
@@ -199,9 +209,17 @@ class ClientServiceDelegate {
     if (application.getState() == ApplicationState.SUCCEEDED) {
       LOG.info("Application state is completed. " +
           "Redirecting to job history server");
-      realProxy = historyServerProxy;
+      realProxy = checkAndGetHSProxy(user, JobState.SUCCEEDED);
     }
     return realProxy;
+  }
+
+  private MRClientProtocol checkAndGetHSProxy(String user, JobState state) {
+    if (null == historyServerProxy) {
+      LOG.warn("Job History Server is not configured.");
+      return getNotRunningJob(user, state);
+    }
+    return historyServerProxy;
   }
 
   private void instantiateAMProxy(final String serviceAddr) throws IOException {
@@ -236,11 +254,14 @@ class ClientServiceDelegate {
       try {
         return methodOb.invoke(getProxy(), args);
       } catch (YarnRemoteException yre) {
-        LOG.warn("Exception thrown by remote end.");
-        LOG.warn(RPCUtil.toString(yre));
+        LOG.warn("Exception thrown by remote end.", yre);
         throw yre;
       } catch (InvocationTargetException e) {
-        //TODO Finite # of errors before giving up?
+        if (e.getTargetException() instanceof YarnRemoteException) {
+          LOG.warn("Exception thrown by remote end.", e
+              .getTargetException());
+          throw (YarnRemoteException) e.getTargetException();
+        }
         LOG.info("Failed to contact AM/History for job " + jobId
             + "  Will retry..", e.getTargetException());
         forceRefresh = true;

@@ -60,20 +60,16 @@ public abstract class ApplicationAttemptId implements
   @Unstable
   public abstract void setAttemptId(int attemptId);
 
-  
-  
-  protected static final NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setGroupingUsed(false);
-    idFormat.setMinimumIntegerDigits(4);
-  }
-
-  protected static final NumberFormat counterFormat = NumberFormat
-      .getInstance();
-  static {
-    counterFormat.setGroupingUsed(false);
-    counterFormat.setMinimumIntegerDigits(6);
-  }
+  static final ThreadLocal<NumberFormat> attemptIdFormat =
+      new ThreadLocal<NumberFormat>() {
+        @Override
+        public NumberFormat initialValue() {
+          NumberFormat fmt = NumberFormat.getInstance();
+          fmt.setGroupingUsed(false);
+          fmt.setMinimumIntegerDigits(6);
+          return fmt;
+        }
+      };
 
   @Override
   public int hashCode() {
@@ -81,22 +77,25 @@ public abstract class ApplicationAttemptId implements
     final int prime = 31;
     int result = 1;
     ApplicationId appId = getApplicationId();
-    result = prime * result + ((appId == null) ? 0 : appId.hashCode());
+    result = prime * result +  appId.hashCode();
     result = prime * result + getAttemptId();
     return result;
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (other == null)
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
       return false;
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      ApplicationAttemptId otherAttemptId = (ApplicationAttemptId) other;
-      if (this.getApplicationId().equals(otherAttemptId.getApplicationId())) {
-        return this.getAttemptId() == otherAttemptId.getAttemptId();
-      }
-    }
-    return false;
+    if (getClass() != obj.getClass())
+      return false;
+    ApplicationAttemptId other = (ApplicationAttemptId) obj;
+    if (!this.getApplicationId().equals(other.getApplicationId()))
+      return false;
+    if (this.getAttemptId() != other.getAttemptId())
+      return false;
+    return true;
   }
 
   @Override
@@ -109,14 +108,14 @@ public abstract class ApplicationAttemptId implements
       return compareAppIds;
     }
   }
-  
+
   @Override
   public String toString() {
-    String id =
-        (this.getApplicationId() != null) ? this.getApplicationId()
-            .getClusterTimestamp()
-            + "_"
-            + idFormat.format(this.getApplicationId().getId()) : "none";
-    return "appattempt_" + id + "_" + counterFormat.format(getAttemptId());
+    StringBuilder sb = new StringBuilder("appattempt_");
+    sb.append(this.getApplicationId().getClusterTimestamp()).append("_");
+    sb.append(ApplicationId.appIdFormat.get().format(
+        this.getApplicationId().getId()));
+    sb.append("_").append(attemptIdFormat.get().format(getAttemptId()));
+    return sb.toString();
   }
 }

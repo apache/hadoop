@@ -104,4 +104,14 @@ abstract class TaskScheduler implements Configurable {
   QueueRefresher getQueueRefresher() {
     return null;
   }
+
+  /**
+   * Subclasses can override to provide any scheduler-specific checking
+   * mechanism for job submission.
+   * @param job
+   * @throws IOException
+   */
+  public void checkJobSubmission(JobInProgress job) throws IOException{
+  }
+
 }

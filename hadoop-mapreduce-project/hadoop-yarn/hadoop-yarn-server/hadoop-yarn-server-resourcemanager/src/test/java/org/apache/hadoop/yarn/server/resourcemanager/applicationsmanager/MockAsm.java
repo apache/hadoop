@@ -209,6 +209,11 @@ public abstract class MockAsm extends MockApps {
     public void handle(RMAppEvent event) {
       throw new UnsupportedOperationException("Not supported yet.");      
     }
+
+    @Override
+    public String getAMFinalState() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
   }
 
   public static RMApp newApplication(int i) {

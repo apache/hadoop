@@ -13,38 +13,20 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.
  */
 
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
-import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
+/**
+ * Thrown when the pool is not declared in the fair scheduler allocation file.
+ */
+public class UndeclaredPoolException extends IOException {
 
-public class YarnClientProtocolProvider extends ClientProtocolProvider {
+  private static final long serialVersionUID = -3559057276650280117L;
 
-  @Override
-  public ClientProtocol create(Configuration conf) throws IOException {
-    if (MRConfig.YARN_FRAMEWORK_NAME.equals(conf.get(MRConfig.FRAMEWORK_NAME))) {
-      return new YARNRunner(conf);
-    }
-    return null;
+  public UndeclaredPoolException(String message) {
+    super(message);
   }
-
-  @Override
-  public ClientProtocol create(InetSocketAddress addr, Configuration conf)
-      throws IOException {
-    return create(conf);
-  }
-
-  @Override
-  public void close(ClientProtocol clientProtocol) throws IOException {
-    // nothing to do
-  }
-
 }

@@ -158,6 +158,11 @@ public class TestAMWebApp {
     return params;
   }
 
+  @Test public void testConfView() {
+    WebAppTests.testPage(JobConfPage.class, AppContext.class,
+                         new TestAppContext());
+  }
+
   public static void main(String[] args) {
     WebApps.$for("yarn", AppContext.class, new TestAppContext(0, 8, 88, 4)).
         at(58888).inDevMode().start(new AMWebApp()).joinThread();

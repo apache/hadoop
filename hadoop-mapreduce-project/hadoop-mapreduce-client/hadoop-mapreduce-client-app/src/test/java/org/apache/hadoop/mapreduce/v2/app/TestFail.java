@@ -169,7 +169,7 @@ public class TestFail {
 
   @Test
   public void testTaskFailWithUnusedContainer() throws Exception {
-    MRApp app = new FailingTaskWithUnusedContainer();
+    MRApp app = new MRAppWithFailingTaskAndUnusedContainer();
     Configuration conf = new Configuration();
     int maxAttempts = 1;
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, maxAttempts);
@@ -194,21 +194,21 @@ public class TestFail {
     app.waitForState(job, JobState.FAILED);
   }
 
-  static class FailingTaskWithUnusedContainer extends MRApp {
+  static class MRAppWithFailingTaskAndUnusedContainer extends MRApp {
 
-    public FailingTaskWithUnusedContainer() {
+    public MRAppWithFailingTaskAndUnusedContainer() {
       super(1, 0, false, "TaskFailWithUnsedContainer", true);
     }
 
-    protected ContainerLauncher createContainerLauncher(AppContext context,
-        boolean isLocal) {
+    @Override
+    protected ContainerLauncher createContainerLauncher(AppContext context) {
       return new ContainerLauncherImpl(context) {
         @Override
         public void handle(ContainerLauncherEvent event) {
 
           switch (event.getType()) {
           case CONTAINER_REMOTE_LAUNCH:
-            super.handle(event);
+            super.handle(event); // Unused event and container.
             break;
           case CONTAINER_REMOTE_CLEANUP:
             getContext().getEventHandler().handle(

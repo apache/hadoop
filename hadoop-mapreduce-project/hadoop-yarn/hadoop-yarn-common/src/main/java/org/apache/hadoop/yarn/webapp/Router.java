@@ -25,6 +25,8 @@ import com.google.common.collect.Maps;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.NoSuchMethodException;
+import java.lang.SecurityException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -88,23 +90,28 @@ class Router {
   private Dest addController(WebApp.HTTP httpMethod, String path,
                              Class<? extends Controller> cls,
                              String action, List<String> names) {
-    for (Method method : cls.getDeclaredMethods()) {
-      if (method.getName().equals(action) &&
-          method.getParameterTypes().length == 0 &&
-          Modifier.isPublic(method.getModifiers())) {
-        // TODO: deal with parameters using the names
-        Dest dest = routes.get(path);
-        if (dest == null) {
-          method.setAccessible(true); // avoid any runtime checks
-          dest = new Dest(path, method, cls, names, httpMethod);
-          routes.put(path, dest);
-          return dest;
-        }
-        dest.methods.add(httpMethod);
+    try {
+      // Look for the method in all public methods declared in the class
+      // or inherited by the class.
+      // Note: this does not distinguish methods with the same signature
+      // but different return types.
+      // TODO: We may want to deal with methods that take parameters in the future
+      Method method = cls.getMethod(action, null);
+      Dest dest = routes.get(path);
+      if (dest == null) {
+        method.setAccessible(true); // avoid any runtime checks
+        dest = new Dest(path, method, cls, names, httpMethod);
+        routes.put(path, dest);
         return dest;
       }
+      dest.methods.add(httpMethod);
+      return dest;
+    } catch (NoSuchMethodException nsme) {
+      throw new WebAppException(action + "() not found in " + cls);
+    } catch (SecurityException se) {
+      throw new WebAppException("Security exception thrown for " + action +
+        "() in " + cls);
     }
-    throw new WebAppException(action + "() not found in " + cls);
   }
 
   private void addDefaultView(Dest dest) {

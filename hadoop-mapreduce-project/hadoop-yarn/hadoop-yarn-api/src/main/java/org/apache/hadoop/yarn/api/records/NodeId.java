@@ -32,7 +32,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  */
 @Public
 @Stable
-public interface NodeId extends Comparable<NodeId> {
+public abstract class NodeId implements Comparable<NodeId> {
 
   /**
    * Get the <em>hostname</em> of the node.
@@ -40,11 +40,11 @@ public interface NodeId extends Comparable<NodeId> {
    */ 
   @Public
   @Stable
-  String getHost();
+  public abstract String getHost();
   
   @Private
   @Unstable
-  void setHost(String host);
+  public abstract void setHost(String host);
 
   /**
    * Get the <em>port</em> for communicating with the node.
@@ -52,9 +52,54 @@ public interface NodeId extends Comparable<NodeId> {
    */
   @Public
   @Stable
-  int getPort();
+  public abstract int getPort();
   
   @Private
   @Unstable
-  void setPort(int port);
+  public abstract void setPort(int port);
+
+  @Override
+  public String toString() {
+    return this.getHost() + ":" + this.getPort();
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + this.getHost().hashCode();
+    result = prime * result + this.getPort();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    NodeId other = (NodeId) obj;
+    if (!this.getHost().equals(other.getHost()))
+      return false;
+    if (this.getPort() != other.getPort())
+      return false;
+    return true;
+  }
+
+  @Override
+  public int compareTo(NodeId other) {
+    int hostCompare = this.getHost().compareTo(other.getHost());
+    if (hostCompare == 0) {
+      if (this.getPort() > other.getPort()) {
+        return 1;
+      } else if (this.getPort() < other.getPort()) {
+        return -1;
+      }
+      return 0;
+    }
+    return hostCompare;
+  }
+
 }

@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
@@ -72,6 +74,8 @@ public class FSImageSerialization {
    */
   static private final class TLData {
     final DeprecatedUTF8 U_STR = new DeprecatedUTF8();
+    final ShortWritable U_SHORT = new ShortWritable();
+    final LongWritable U_LONG = new LongWritable();
     final FsPermission FILE_PERM = new FsPermission((short) 0);
   }
 
@@ -215,7 +219,35 @@ public class FSImageSerialization {
     ustr.write(out);
   }
 
+  
+  /** read the long value */
+  static long readLong(DataInputStream in) throws IOException {
+    LongWritable ustr = TL_DATA.get().U_LONG;
+    ustr.readFields(in);
+    return ustr.get();
+  }
 
+  /** write the long value */
+  static void writeLong(long value, DataOutputStream out) throws IOException {
+    LongWritable uLong = TL_DATA.get().U_LONG;
+    uLong.set(value);
+    uLong.write(out);
+  }
+
+  /** read short value */
+  static short readShort(DataInputStream in) throws IOException {
+    ShortWritable uShort = TL_DATA.get().U_SHORT;
+    uShort.readFields(in);
+    return uShort.get();
+  }
+
+  /** write short value */
+  static void writeShort(short value, DataOutputStream out) throws IOException {
+    ShortWritable uShort = TL_DATA.get().U_SHORT;
+    uShort.set(value);
+    uShort.write(out);
+  }
+  
   // Same comments apply for this method as for readString()
   @SuppressWarnings("deprecation")
   public static byte[] readBytes(DataInputStream in) throws IOException {

@@ -186,6 +186,21 @@ public class AppController extends Controller implements AMParams {
   }
 
   /**
+   * @return the page that will be used to render the /conf page
+   */
+  protected Class<? extends View> confPage() {
+    return JobConfPage.class;
+  }
+
+  /**
+   * Render the /conf page
+   */
+  public void conf() {
+    requireJob();
+    render(confPage());
+  }
+
+  /**
    * Render a BAD_REQUEST error.
    * @param s the error message to include.
    */

@@ -64,7 +64,7 @@ public class TestJobMonitorAndPrint extends TestCase {
     when(cluster.getClient()).thenReturn(clientProtocol);
     JobStatus jobStatus = new JobStatus(new JobID("job_000", 1), 0f, 0f, 0f, 0f, 
         State.RUNNING, JobPriority.HIGH, "tmp-user", "tmp-jobname", "tmp-jobfile", "tmp-url");
-    job = new Job(cluster, jobStatus, conf);
+    job = Job.getInstance(cluster, jobStatus, conf);
     job = spy(job);
   }
 

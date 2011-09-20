@@ -18,35 +18,21 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records.impl.pb;
 
-import java.text.NumberFormat;
-
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.JobIdProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.JobIdProtoOrBuilder;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
     
-public class JobIdPBImpl extends ProtoBase<JobIdProto> implements JobId {
+public class JobIdPBImpl extends JobId {
 
-  protected static final String JOB = "job";
-  protected static final char SEPARATOR = '_';
-  protected static final NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setGroupingUsed(false);
-    idFormat.setMinimumIntegerDigits(4);
-  }
-  
-  
   JobIdProto proto = JobIdProto.getDefaultInstance();
   JobIdProto.Builder builder = null;
   boolean viaProto = false;
   
   private ApplicationId applicationId = null;
-//  boolean hasLocalAppId = false;
-  
-  
+
   public JobIdPBImpl() {
     builder = JobIdProto.newBuilder();
   }
@@ -56,17 +42,17 @@ public class JobIdPBImpl extends ProtoBase<JobIdProto> implements JobId {
     viaProto = true;
   }
 
-  @Override
   public synchronized JobIdProto getProto() {
-  
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
   private synchronized void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)this.applicationId).getProto().equals(builder.getAppId()))   {
+    if (this.applicationId != null
+        && !((ApplicationIdPBImpl) this.applicationId).getProto().equals(
+            builder.getAppId())) {
       builder.setAppId(convertToProtoFormat(this.applicationId));
     }
   }
@@ -107,7 +93,6 @@ public class JobIdPBImpl extends ProtoBase<JobIdProto> implements JobId {
       builder.clearAppId();
     }
     this.applicationId = appId;
-//    builder.setAppId(convertToProtoFormat(appId));
   }
   @Override
   public synchronized int getId() {
@@ -121,21 +106,12 @@ public class JobIdPBImpl extends ProtoBase<JobIdProto> implements JobId {
     builder.setId((id));
   }
 
-  private synchronized ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
+  private ApplicationIdPBImpl convertFromProtoFormat(
+      ApplicationIdProto p) {
     return new ApplicationIdPBImpl(p);
   }
 
-  private synchronized ApplicationIdProto convertToProtoFormat(ApplicationId t) {
-    return ((ApplicationIdPBImpl)t).getProto();
+  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl) t).getProto();
   }
-  
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder(JOB);
-    builder.append(SEPARATOR);
-    builder.append(getAppId().getClusterTimestamp());
-    builder.append(SEPARATOR);
-    builder.append(idFormat.format(getId()));
-    return builder.toString();
-  }
-}  
+}

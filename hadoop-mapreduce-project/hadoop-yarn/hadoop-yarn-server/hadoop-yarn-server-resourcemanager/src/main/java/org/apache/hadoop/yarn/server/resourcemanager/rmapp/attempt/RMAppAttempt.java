@@ -26,33 +26,103 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 
+/**
+ * Interface to an Application Attempt in the Resource Manager.
+ * A {@link RMApp} can have multiple app attempts based on 
+ * {@link YarnConfiguration#RM_AM_MAX_RETRIES}. For specific 
+ * implementation take a look at {@link RMAppAttemptImpl}.
+ */
 public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
 
+  /**
+   * Get the application attempt id for this {@link RMAppAttempt}.
+   * @return the {@link ApplicationAttemptId} for this RM attempt.
+   */
   ApplicationAttemptId getAppAttemptId();
 
+  /**
+   * The state of the {@link RMAppAttempt}.
+   * @return the state {@link RMAppAttemptState} of this {@link RMAppAttempt}
+   */
   RMAppAttemptState getAppAttemptState();
-
+  
+  /**
+   * The host on which the {@link RMAppAttempt} is running/ran on.
+   * @return the host on which the {@link RMAppAttempt} ran/is running on.
+   */
   String getHost();
 
+  /**
+   * The rpc port of the {@link RMAppAttempt}.
+   * @return the rpc port of the {@link RMAppAttempt} to which the clients can connect
+   * to.
+   */
   int getRpcPort();
 
+  /**
+   * The url at which the status of the application attempt can be accessed.
+   * @return the url at which the status of the attempt can be accessed.
+   */
   String getTrackingUrl();
 
+  /**
+   * The token required by the clients to talk to the application attempt
+   * @return the token required by the clients to talk to the application attempt
+   */
   String getClientToken();
 
+  /**
+   * Diagnostics information for the application attempt.
+   * @return diagnostics information for the application attempt.
+   */
   StringBuilder getDiagnostics();
 
+  /**
+   * Progress for the application attempt.
+   * @return the progress for this {@link RMAppAttempt}
+   */
   float getProgress();
 
+  /**
+   * The final state set by the AM.
+   * @return the final state that is set by the AM when unregistering itself.
+   */
+  String getAMFinalState();
+  
+  /**
+   * Nodes on which the containers for this {@link RMAppAttempt} ran.
+   * @return the set of nodes that ran any containers from this {@link RMAppAttempt}
+   */
   Set<NodeId> getRanNodes();
 
+  /**
+   * Return a list of the last set of finished containers, resetting the 
+   * finished containers to empty.
+   * @return the list of just finished containers, re setting the finished containers.
+   */
   List<ContainerStatus> pullJustFinishedContainers();
 
+  /**
+   * Return the list of last set of finished containers. This does not reset the 
+   * finished containers.
+   * @return the list of just finished contianers, this does not reset the 
+   * finished containers.
+   */
   List<ContainerStatus> getJustFinishedContainers();
 
+  /**
+   * The container on which the Application Master is running.
+   * @return the {@link Container} on which the application master is running.
+   */
   Container getMasterContainer();
 
+  /**
+   * The application submission context for this {@link RMAppAttempt}.
+   * @return the application submission context for this Application.
+   */
   ApplicationSubmissionContext getSubmissionContext();
 }

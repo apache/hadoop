@@ -52,6 +52,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -133,11 +134,15 @@ public class TestMRJobs {
       return;
     }
 
+    Configuration sleepConf = new Configuration(mrCluster.getConfig());
+    // set master address to local to test that local mode applied iff framework == classic and master_address == local
+    sleepConf.set(MRConfig.MASTER_ADDRESS, "local");	
+    
     SleepJob sleepJob = new SleepJob();
-    sleepJob.setConf(mrCluster.getConfig());
+    sleepJob.setConf(sleepConf);
 
-    int numReduces = mrCluster.getConfig().getInt("TestMRJobs.testSleepJob.reduces", 2); // or mrCluster.getConfig().getInt(MRJobConfig.NUM_REDUCES, 2);
-
+    int numReduces = sleepConf.getInt("TestMRJobs.testSleepJob.reduces", 2); // or sleepConf.getConfig().getInt(MRJobConfig.NUM_REDUCES, 2);
+   
     // job with 3 maps (10s) and numReduces reduces (5s), 1 "record" each:
     Job job = sleepJob.createJob(3, numReduces, 10000, 1, 5000, 1);
 

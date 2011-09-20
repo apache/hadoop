@@ -112,7 +112,7 @@ public class Cluster {
   private Job[] getJobs(JobStatus[] stats) throws IOException {
     List<Job> jobs = new ArrayList<Job>();
     for (JobStatus stat : stats) {
-      jobs.add(new Job(this, stat, new JobConf(stat.getJobFile())));
+      jobs.add(Job.getInstance(this, stat, new JobConf(stat.getJobFile())));
     }
     return jobs.toArray(new Job[0]);
   }
@@ -152,7 +152,7 @@ public class Cluster {
   public Job getJob(JobID jobId) throws IOException, InterruptedException {
     JobStatus status = client.getJobStatus(jobId);
     if (status != null) {
-      return new Job(this, status, new JobConf(status.getJobFile()));
+      return Job.getInstance(this, status, new JobConf(status.getJobFile()));
     }
     return null;
   }

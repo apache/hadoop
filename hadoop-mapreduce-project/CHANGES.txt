@@ -17,6 +17,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
                     process (atm)
 
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
+    fair scheduler pools. (Ahmed Radwan via todd)
+
   BUG FIXES
 
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
@@ -297,6 +300,12 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2672. MR-279: JobHistory Server needs Analysis this job. 
     (Robert Evans via mahadev)
+
+    MAPREDUCE-2965. Streamlined the methods hashCode(), equals(), compareTo()
+    and toString() for all IDs. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-2726. Added job-file to the AM and JobHistoryServer web
+    interfaces. (Jeffrey Naisbitt via vinodkv)
 
   OPTIMIZATIONS
 
@@ -1333,6 +1342,34 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3007. Fixed Yarn Mapreduce client to be able to connect to 
     JobHistoryServer in secure mode. (vinodkv)
 
+    MAPREDUCE-2987. Fixed display of logged user on RM Web-UI. (Thomas Graves
+    via acmurthy)
+
+    MAPREDUCE-3006. Fixed MapReduce AM to exit only after properly writing out
+    history file. (vinodkv)
+
+    MAPREDUCE-2925. Fixed Yarn+MR client code to behave saner with completed
+    jobs. (Devaraj K via vinodkv)
+
+    MAPREDUCE-3030. Fixed a bug in NodeId.equals() that was causing RM to
+    reject all NMs. (Devaraj K via vinodkv)
+
+    MAPREDUCE-3042. Fixed default ResourceTracker address. (Chris Riccomini
+    via acmurthy) 
+
+    MAPREDUCE-3038. job history server not starting because conf() missing
+    HsController (Jeffrey Naisbitt via mahadev)
+
+    MAPREDUCE-3004. Fix ReduceTask to not assume 'local' mode in YARN. (Hitesh
+    Shah via acmurthy)
+
+    MAPREDUCE-3017. The Web UI shows FINISHED for killed/successful/failed jobs.
+    (mahadev)
+
+    MAPREDUCE-3040. Fixed extra copy of Configuration in
+    YarnClientProtocolProvider and ensured MiniMRYarnCluster sets JobHistory
+    configuration for tests. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -1345,6 +1382,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2994. Fixed a bug in ApplicationID parsing that affects RM
     UI. (Devaraj K via vinodkv)
+
+    MAPREDUCE-1788. o.a.h.mapreduce.Job shouldn't make a copy of the JobConf.
+    (Arun Murthy via mahadev)
 
   NEW FEATURES
 

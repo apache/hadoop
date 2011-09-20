@@ -31,22 +31,22 @@ import java.net.URLConnection;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -130,7 +130,7 @@ public class Job extends JobContextImpl implements JobContext {
 
   @Deprecated
   public Job(Configuration conf) throws IOException {
-    this(new Cluster(conf), conf);
+    this(new JobConf(conf));
   }
 
   @Deprecated
@@ -139,18 +139,13 @@ public class Job extends JobContextImpl implements JobContext {
     setJobName(jobName);
   }
 
-  Job(Cluster cluster) throws IOException {
-    this(cluster, new Configuration());
-  }
-
-  Job(Cluster cluster, Configuration conf) throws IOException {
+  Job(JobConf conf) throws IOException {
     super(conf, null);
-    this.cluster = cluster;
+    this.cluster = null;
   }
 
-  Job(Cluster cluster, JobStatus status,
-             Configuration conf) throws IOException {
-    this(cluster, conf);
+  Job(JobStatus status, JobConf conf) throws IOException {
+    this(conf);
     setJobID(status.getJobID());
     this.status = status;
     state = JobState.RUNNING;
@@ -170,7 +165,13 @@ public class Job extends JobContextImpl implements JobContext {
   }
       
   /**
-   * Creates a new {@link Job} with no particular {@link Cluster} .
+   * Creates a new {@link Job} with no particular {@link Cluster} and a 
+   * given {@link Configuration}.
+   * 
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so 
+   * that any necessary internal modifications do not reflect on the incoming 
+   * parameter.
+   * 
    * A Cluster will be created from the conf parameter only when it's needed.
    * 
    * @param conf the configuration
@@ -179,13 +180,18 @@ public class Job extends JobContextImpl implements JobContext {
    */
   public static Job getInstance(Configuration conf) throws IOException {
     // create with a null Cluster
-    return new Job(null, conf);
+    JobConf jobConf = new JobConf(conf);
+    return new Job(jobConf);
   }
 
       
   /**
    * Creates a new {@link Job} with no particular {@link Cluster} and a given jobName.
    * A Cluster will be created from the conf parameter only when it's needed.
+   *
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so 
+   * that any necessary internal modifications do not reflect on the incoming 
+   * parameter.
    * 
    * @param conf the configuration
    * @return the {@link Job} , with no connection to a cluster yet.
@@ -194,25 +200,92 @@ public class Job extends JobContextImpl implements JobContext {
   public static Job getInstance(Configuration conf, String jobName)
            throws IOException {
     // create with a null Cluster
-    Job result = new Job(null, conf);
+    Job result = getInstance(conf);
     result.setJobName(jobName);
     return result;
   }
   
-  public static Job getInstance(Cluster cluster) throws IOException {
-     return new Job(cluster);
+  /**
+   * Creates a new {@link Job} with no particular {@link Cluster} and given
+   * {@link Configuration} and {@link JobStatus}.
+   * A Cluster will be created from the conf parameter only when it's needed.
+   * 
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so 
+   * that any necessary internal modifications do not reflect on the incoming 
+   * parameter.
+   * 
+   * @param status job status
+   * @param conf job configuration
+   * @return the {@link Job} , with no connection to a cluster yet.
+   * @throws IOException
+   */
+  public static Job getInstance(JobStatus status, Configuration conf) 
+  throws IOException {
+    return new Job(status, new JobConf(conf));
+  }
+
+  /**
+   * Creates a new {@link Job} with no particular {@link Cluster}.
+   * A Cluster will be created from the conf parameter only when it's needed.
+   *
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so 
+   * that any necessary internal modifications do not reflect on the incoming 
+   * parameter.
+   * 
+   * @param ignored
+   * @return the {@link Job} , with no connection to a cluster yet.
+   * @throws IOException
+   * @deprecated Use {@link #getInstance()}
+   */
+  @Deprecated
+  public static Job getInstance(Cluster ignored) throws IOException {
+    return getInstance();
   }
   
-  public static Job getInstance(Cluster cluster, Configuration conf) 
+  /**
+   * Creates a new {@link Job} with no particular {@link Cluster} and given
+   * {@link Configuration}.
+   * A Cluster will be created from the conf parameter only when it's needed.
+   * 
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so 
+   * that any necessary internal modifications do not reflect on the incoming 
+   * parameter.
+   * 
+   * @param ignored
+   * @param conf job configuration
+   * @return the {@link Job} , with no connection to a cluster yet.
+   * @throws IOException
+   * @deprecated Use {@link #getInstance(Configuration)}
+   */
+  @Deprecated
+  public static Job getInstance(Cluster ignored, Configuration conf) 
       throws IOException {
-    return new Job(cluster, conf);
+    return getInstance(conf);
   }
   
+  /**
+   * Creates a new {@link Job} with no particular {@link Cluster} and given
+   * {@link Configuration} and {@link JobStatus}.
+   * A Cluster will be created from the conf parameter only when it's needed.
+   * 
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so 
+   * that any necessary internal modifications do not reflect on the incoming 
+   * parameter.
+   * 
+   * @param cluster cluster
+   * @param status job status
+   * @param conf job configuration
+   * @return the {@link Job} , with no connection to a cluster yet.
+   * @throws IOException
+   */
+  @Private
   public static Job getInstance(Cluster cluster, JobStatus status, 
       Configuration conf) throws IOException {
-    return new Job(cluster, status, conf);
+    Job job = getInstance(status, conf);
+    job.setCluster(cluster);
+    return job;
   }
-  
+
   private void ensureState(JobState state) throws IllegalStateException {
     if (state != this.state) {
       throw new IllegalStateException("Job in state "+ this.state + 
@@ -253,6 +326,10 @@ public class Job extends JobContextImpl implements JobContext {
     ensureState(JobState.RUNNING);
     updateStatus();
     return status;
+  }
+  
+  private void setStatus(JobStatus status) {
+    this.status = status;
   }
 
   /**
@@ -352,6 +429,12 @@ public class Job extends JobContextImpl implements JobContext {
     ensureState(JobState.RUNNING);
     updateStatus();
     return status.isRetired();
+  }
+
+  /** Only for mocks in unit tests. */
+  @Private
+  private void setCluster(Cluster cluster) {
+    this.cluster = cluster;
   }
 
   /**
@@ -1055,6 +1138,12 @@ public class Job extends JobContextImpl implements JobContext {
     return cluster != null;
   }
 
+  /** Only for mocking via unit tests. */
+  @Private
+  public JobSubmitter getJobSubmitter(FileSystem fs, 
+      ClientProtocol submitClient) throws IOException {
+    return new JobSubmitter(fs, submitClient);
+  }
   /**
    * Submit the job to the cluster and return immediately.
    * @throws IOException
@@ -1064,8 +1153,8 @@ public class Job extends JobContextImpl implements JobContext {
     ensureState(JobState.DEFINE);
     setUseNewAPI();
     connect();
-    final JobSubmitter submitter = new JobSubmitter(cluster.getFileSystem(),
-        cluster.getClient());
+    final JobSubmitter submitter = 
+        getJobSubmitter(cluster.getFileSystem(), cluster.getClient());
     status = ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
       public JobStatus run() throws IOException, InterruptedException, 
       ClassNotFoundException {
@@ -1114,7 +1203,7 @@ public class Job extends JobContextImpl implements JobContext {
       throws IOException, InterruptedException {
     String lastReport = null;
     Job.TaskStatusFilter filter;
-    Configuration clientConf = cluster.getConf();
+    Configuration clientConf = getConfiguration();
     filter = Job.getTaskOutputFilter(clientConf);
     JobID jobId = getJobID();
     LOG.info("Running job: " + jobId);

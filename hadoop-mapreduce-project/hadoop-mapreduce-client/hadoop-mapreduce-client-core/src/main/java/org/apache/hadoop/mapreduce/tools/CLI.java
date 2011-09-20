@@ -215,7 +215,7 @@ public class CLI extends Configured implements Tool {
     // Submit the request
     try {
       if (submitJobFile != null) {
-        Job job = Job.getInstance(cluster, new JobConf(submitJobFile));
+        Job job = Job.getInstance(new JobConf(submitJobFile));
         job.submit();
         System.out.println("Created job " + job.getJobID());
         exitCode = 0;

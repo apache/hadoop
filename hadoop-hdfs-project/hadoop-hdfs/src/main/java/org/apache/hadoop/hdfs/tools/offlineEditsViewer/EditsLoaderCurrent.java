@@ -41,7 +41,7 @@ import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.VIntToke
 class EditsLoaderCurrent implements EditsLoader {
 
   private static int[] supportedVersions = { -18, -19, -20, -21, -22, -23, -24,
-      -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38};
+      -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39};
 
   private EditsVisitor v;
   private int editsVersion = 0;
@@ -102,20 +102,29 @@ class EditsLoaderCurrent implements EditsLoader {
   private void visit_OP_ADD_or_OP_CLOSE(FSEditLogOpCodes editsOpCode)
     throws IOException {
     visitTxId();
-
-    IntToken opAddLength = v.visitInt(EditsElement.LENGTH);
-    // this happens if the edits is not properly ended (-1 op code),
-    // it is padded at the end with all zeros, OP_ADD is zero so
-    // without this check we would treat all zeros as empty OP_ADD)
-    if(opAddLength.value == 0) {
-      throw new IOException("OpCode " + editsOpCode +
-        " has zero length (corrupted edits)");
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      IntToken opAddLength = v.visitInt(EditsElement.LENGTH);
+      // this happens if the edits is not properly ended (-1 op code),
+      // it is padded at the end with all zeros, OP_ADD is zero so
+      // without this check we would treat all zeros as empty OP_ADD)
+      if (opAddLength.value == 0) {
+        throw new IOException("OpCode " + editsOpCode
+            + " has zero length (corrupted edits)");
+      }
     }
+    
     v.visitStringUTF8(EditsElement.PATH);
-    v.visitStringUTF8(EditsElement.REPLICATION);
-    v.visitStringUTF8(EditsElement.MTIME);
-    v.visitStringUTF8(EditsElement.ATIME);
-    v.visitStringUTF8(EditsElement.BLOCKSIZE);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitShort(EditsElement.REPLICATION);
+      v.visitLong(EditsElement.MTIME);
+      v.visitLong(EditsElement.ATIME);
+      v.visitLong(EditsElement.BLOCKSIZE);
+    } else {
+      v.visitStringUTF8(EditsElement.REPLICATION);
+      v.visitStringUTF8(EditsElement.MTIME);
+      v.visitStringUTF8(EditsElement.ATIME);
+      v.visitStringUTF8(EditsElement.BLOCKSIZE);
+    }
     // now read blocks
     IntToken numBlocksToken = v.visitInt(EditsElement.NUMBLOCKS);
     for (int i = 0; i < numBlocksToken.value; i++) {
@@ -146,11 +155,16 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_RENAME_OLD() throws IOException {
     visitTxId();
-
-    v.visitInt(        EditsElement.LENGTH);
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitInt(EditsElement.LENGTH);
+    }
     v.visitStringUTF8( EditsElement.SOURCE);
     v.visitStringUTF8( EditsElement.DESTINATION);
-    v.visitStringUTF8( EditsElement.TIMESTAMP);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.TIMESTAMP);
+    } else {
+      v.visitStringUTF8(EditsElement.TIMESTAMP);
+    }
   }
 
   /**
@@ -158,10 +172,15 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_DELETE() throws IOException {
     visitTxId();
-
-    v.visitInt(        EditsElement.LENGTH);
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitInt(EditsElement.LENGTH);
+    }
     v.visitStringUTF8( EditsElement.PATH);
-    v.visitStringUTF8( EditsElement.TIMESTAMP);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.TIMESTAMP);
+    } else {
+      v.visitStringUTF8(EditsElement.TIMESTAMP);
+    }
   }
 
   /**
@@ -169,11 +188,17 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_MKDIR() throws IOException {
     visitTxId();
-
-    v.visitInt(        EditsElement.LENGTH);
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitInt(EditsElement.LENGTH);
+    }
     v.visitStringUTF8( EditsElement.PATH);
-    v.visitStringUTF8( EditsElement.TIMESTAMP);
-    v.visitStringUTF8( EditsElement.ATIME);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.TIMESTAMP);
+      v.visitLong(EditsElement.ATIME);
+    } else {
+      v.visitStringUTF8(EditsElement.TIMESTAMP);
+      v.visitStringUTF8(EditsElement.ATIME);
+    }
     // PERMISSION_STATUS
     v.visitEnclosingElement( EditsElement.PERMISSION_STATUS);
 
@@ -191,7 +216,11 @@ class EditsLoaderCurrent implements EditsLoader {
     visitTxId();
 
     v.visitStringUTF8(EditsElement.PATH);
-    v.visitStringUTF8(EditsElement.REPLICATION);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitShort(EditsElement.REPLICATION);
+    } else {
+      v.visitStringUTF8(EditsElement.REPLICATION);
+    }
   }
 
   /**
@@ -229,11 +258,17 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_TIMES() throws IOException {
     visitTxId();
-
-    v.visitInt(        EditsElement.LENGTH);
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitInt(EditsElement.LENGTH);
+    }
     v.visitStringUTF8( EditsElement.PATH);
-    v.visitStringUTF8( EditsElement.MTIME);
-    v.visitStringUTF8( EditsElement.ATIME);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.MTIME);
+      v.visitLong(EditsElement.ATIME);
+    } else {
+      v.visitStringUTF8(EditsElement.MTIME);
+      v.visitStringUTF8(EditsElement.ATIME);
+    }
   }
 
   /**
@@ -252,11 +287,16 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_RENAME() throws IOException {
     visitTxId();
-
-    v.visitInt(           EditsElement.LENGTH);
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitInt(EditsElement.LENGTH);
+    }
     v.visitStringUTF8(    EditsElement.SOURCE);
     v.visitStringUTF8(    EditsElement.DESTINATION);
-    v.visitStringUTF8(    EditsElement.TIMESTAMP);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.TIMESTAMP);
+    } else {
+      v.visitStringUTF8(EditsElement.TIMESTAMP);
+    }
     v.visitBytesWritable( EditsElement.RENAME_OPTIONS);
   }
 
@@ -265,15 +305,25 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_CONCAT_DELETE() throws IOException {
     visitTxId();
-
-    IntToken lengthToken = v.visitInt(EditsElement.LENGTH);
+    int sourceCount = 0;
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      IntToken lengthToken = v.visitInt(EditsElement.LENGTH);
+      sourceCount = lengthToken.value - 2;
+    }
     v.visitStringUTF8(EditsElement.CONCAT_TARGET);
     // all except of CONCAT_TARGET and TIMESTAMP
-    int sourceCount = lengthToken.value - 2;
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      IntToken lengthToken = v.visitInt(EditsElement.LENGTH);
+      sourceCount = lengthToken.value;
+    }
     for(int i = 0; i < sourceCount; i++) {
       v.visitStringUTF8(EditsElement.CONCAT_SOURCE);
     }
-    v.visitStringUTF8(EditsElement.TIMESTAMP);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.TIMESTAMP);
+    } else {
+      v.visitStringUTF8(EditsElement.TIMESTAMP);
+    }
   }
 
   /**
@@ -281,12 +331,18 @@ class EditsLoaderCurrent implements EditsLoader {
    */
   private void visit_OP_SYMLINK() throws IOException {
     visitTxId();
-
-    v.visitInt(        EditsElement.LENGTH);
+    if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitInt(EditsElement.LENGTH);
+    }
     v.visitStringUTF8( EditsElement.SOURCE);
     v.visitStringUTF8( EditsElement.DESTINATION);
-    v.visitStringUTF8( EditsElement.MTIME);
-    v.visitStringUTF8( EditsElement.ATIME);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.MTIME);
+      v.visitLong(EditsElement.ATIME);
+    } else {
+      v.visitStringUTF8(EditsElement.MTIME);
+      v.visitStringUTF8(EditsElement.ATIME);
+    }
     // PERMISSION_STATUS
     v.visitEnclosingElement(EditsElement.PERMISSION_STATUS);
 
@@ -303,15 +359,19 @@ class EditsLoaderCurrent implements EditsLoader {
   private void visit_OP_GET_DELEGATION_TOKEN() throws IOException {
     visitTxId();
     
-      v.visitByte(       EditsElement.T_VERSION);
-      v.visitStringText( EditsElement.T_OWNER);
-      v.visitStringText( EditsElement.T_RENEWER);
-      v.visitStringText( EditsElement.T_REAL_USER);
-      v.visitVLong(      EditsElement.T_ISSUE_DATE);
-      v.visitVLong(      EditsElement.T_MAX_DATE);
-      v.visitVInt(       EditsElement.T_SEQUENCE_NUMBER);
-      v.visitVInt(       EditsElement.T_MASTER_KEY_ID);
-      v.visitStringUTF8( EditsElement.T_EXPIRY_TIME);
+    v.visitByte(EditsElement.T_VERSION);
+    v.visitStringText(EditsElement.T_OWNER);
+    v.visitStringText(EditsElement.T_RENEWER);
+    v.visitStringText(EditsElement.T_REAL_USER);
+    v.visitVLong(EditsElement.T_ISSUE_DATE);
+    v.visitVLong(EditsElement.T_MAX_DATE);
+    v.visitVInt(EditsElement.T_SEQUENCE_NUMBER);
+    v.visitVInt(EditsElement.T_MASTER_KEY_ID);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.T_EXPIRY_TIME);
+    } else {
+      v.visitStringUTF8(EditsElement.T_EXPIRY_TIME);
+    }
   }
 
   /**
@@ -321,15 +381,19 @@ class EditsLoaderCurrent implements EditsLoader {
     throws IOException {
     visitTxId();
 
-      v.visitByte(       EditsElement.T_VERSION);
-      v.visitStringText( EditsElement.T_OWNER);
-      v.visitStringText( EditsElement.T_RENEWER);
-      v.visitStringText( EditsElement.T_REAL_USER);
-      v.visitVLong(      EditsElement.T_ISSUE_DATE);
-      v.visitVLong(      EditsElement.T_MAX_DATE);
-      v.visitVInt(       EditsElement.T_SEQUENCE_NUMBER);
-      v.visitVInt(       EditsElement.T_MASTER_KEY_ID);
-      v.visitStringUTF8( EditsElement.T_EXPIRY_TIME);
+    v.visitByte(EditsElement.T_VERSION);
+    v.visitStringText(EditsElement.T_OWNER);
+    v.visitStringText(EditsElement.T_RENEWER);
+    v.visitStringText(EditsElement.T_REAL_USER);
+    v.visitVLong(EditsElement.T_ISSUE_DATE);
+    v.visitVLong(EditsElement.T_MAX_DATE);
+    v.visitVInt(EditsElement.T_SEQUENCE_NUMBER);
+    v.visitVInt(EditsElement.T_MASTER_KEY_ID);
+    if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, editsVersion)) {
+      v.visitLong(EditsElement.T_EXPIRY_TIME);
+    } else {
+      v.visitStringUTF8(EditsElement.T_EXPIRY_TIME);
+    }
   }
 
   /**

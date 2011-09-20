@@ -31,6 +31,10 @@ Trunk (unreleased changes)
 
     HDFS-2337. DFSClient shouldn't keep multiple RPC proxy references (atm)
 
+    HDFS-362.  FSEditLog should not writes long and short as UTF8, and should
+    not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
+    via szetszwo)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
@@ -48,6 +52,10 @@ Trunk (unreleased changes)
 
     HDFS-2333. Change DFSOutputStream back to package private, otherwise,
     there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
+
+    HDFS-2330. In NNStorage and FSImagePreTransactionalStorageInspector,
+    IOExceptions of stream closures can mask root exceptions.  (Uma Maheswara
+    Rao G via szetszwo)
 
 Release 0.23.0 - Unreleased
 
@@ -749,6 +757,9 @@ Release 0.23.0 - Unreleased
     HDFS-2118. Couple dfs data dir improvements. (eli)
 
   BUG FIXES
+
+    HDFS-2347. Fix checkpointTxnCount's comment about editlog size. 
+    (Uma Maheswara Rao G via mattf)
 
     HDFS-2011. Removal and restoration of storage directories on checkpointing
     failure doesn't work properly. (Ravi Prakash via mattf)

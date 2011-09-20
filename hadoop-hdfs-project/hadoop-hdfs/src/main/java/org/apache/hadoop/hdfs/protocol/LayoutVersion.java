@@ -80,7 +80,9 @@ public class LayoutVersion {
     FEDERATION(-35, "Support for namenode federation"),
     LEASE_REASSIGNMENT(-36, "Support for persisting lease holder reassignment"),
     STORED_TXIDS(-37, "Transaction IDs are stored in edits log and image files"),
-    TXID_BASED_LAYOUT(-38, "File names in NN Storage are based on transaction IDs");
+    TXID_BASED_LAYOUT(-38, "File names in NN Storage are based on transaction IDs"), 
+    EDITLOG_OP_OPTIMIZATION(-39,
+        "Use LongWritable and ShortWritable directly instead of ArrayWritable of UTF8");
     
     final int lv;
     final int ancestorLV;

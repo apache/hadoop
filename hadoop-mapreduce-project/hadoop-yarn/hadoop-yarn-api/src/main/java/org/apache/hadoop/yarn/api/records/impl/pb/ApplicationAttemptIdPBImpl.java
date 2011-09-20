@@ -25,7 +25,8 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProtoOrBuilde
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 
 public class ApplicationAttemptIdPBImpl extends ApplicationAttemptId {
-  ApplicationAttemptIdProto proto = ApplicationAttemptIdProto.getDefaultInstance();
+  ApplicationAttemptIdProto proto = ApplicationAttemptIdProto
+      .getDefaultInstance();
   ApplicationAttemptIdProto.Builder builder = null;
   boolean viaProto = false;
   
@@ -48,7 +49,9 @@ public class ApplicationAttemptIdPBImpl extends ApplicationAttemptId {
   }
 
   private synchronized void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)applicationId).getProto().equals(builder.getApplicationId())) {
+    if (this.applicationId != null
+        && !((ApplicationIdPBImpl) applicationId).getProto().equals(
+            builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
   }

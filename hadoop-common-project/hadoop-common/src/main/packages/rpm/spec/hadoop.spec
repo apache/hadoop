@@ -166,6 +166,7 @@ bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
 %config(noreplace) %{_conf_dir}/log4j.properties
 %config(noreplace) %{_conf_dir}/masters
 %config(noreplace) %{_conf_dir}/slaves
+%config{noreplace) %{_conf_dir}/fair-scheduler.xml
 %{_conf_dir}/hadoop-env.sh.template
 %{_conf_dir}/ssl-client.xml.example
 %{_conf_dir}/ssl-server.xml.example
