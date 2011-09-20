@@ -705,6 +705,9 @@ Release 0.23.0 - Unreleased
 
   BUG FIXES
 
+    HDFS-2347. Fix checkpointTxnCount's comment about editlog size. 
+    (Uma Maheswara Rao G via mattf)
+
     HDFS-2011. Removal and restoration of storage directories on checkpointing
     failure doesn't work properly. (Ravi Prakash via mattf)
 
