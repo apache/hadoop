@@ -74,16 +74,16 @@ import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
 public class ResourceMgrDelegate {
   private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
       
-  private Configuration conf;
+  private YarnConfiguration conf;
   ClientRMProtocol applicationsManager;
   private ApplicationId applicationId;
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
-  public ResourceMgrDelegate(Configuration conf) {
+  public ResourceMgrDelegate(YarnConfiguration conf) {
     this.conf = conf;
-    YarnRPC rpc = YarnRPC.create(conf);
+    YarnRPC rpc = YarnRPC.create(this.conf);
     InetSocketAddress rmAddress =
-        NetUtils.createSocketAddr(conf.get(
+        NetUtils.createSocketAddr(this.conf.get(
             YarnConfiguration.RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADDRESS));
     LOG.info("Connecting to ResourceManager at " + rmAddress);
