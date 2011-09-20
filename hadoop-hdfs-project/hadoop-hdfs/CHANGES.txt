@@ -705,6 +705,9 @@ Release 0.23.0 - Unreleased
 
   BUG FIXES
 
+    HDFS-2344. Fix the TestOfflineEditsViewer test failure in 0.23 branch.
+    (Uma Maheswara Rao G via mattf)
+
     HDFS-2347. Fix checkpointTxnCount's comment about editlog size. 
     (Uma Maheswara Rao G via mattf)
 
