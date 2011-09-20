@@ -16,7 +16,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.92.0-SNAPSHOT</version>
+  <version>${hbase.version}</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -640,6 +640,9 @@
 
   <properties>
     <compileSource>1.6</compileSource>
+
+    <!--HBase version-->
+    <hbase.version>0.92.0-SNAPSHOT</hbase.version>
 
     <!-- Dependencies -->
     <avro.version>1.5.3</avro.version>
