@@ -43,20 +43,24 @@ public class JobTrackerClientProtocolProvider extends ClientProtocolProvider {
     String tracker = conf.get(JTConfig.JT_IPC_ADDRESS, "local");
     if (!"local".equals(tracker)) {
       return createRPCProxy(JobTracker.getAddress(conf), conf);
+    } else {
+      throw new IOException("Invalid \"" + JTConfig.JT_IPC_ADDRESS
+          + "\" configuration value for JobTracker: \""
+          + tracker + "\"");
     }
-    return null;
   }
 
   @Override
-  public ClientProtocol create(InetSocketAddress addr, Configuration conf) throws IOException {
+  public ClientProtocol create(InetSocketAddress addr, Configuration conf)
+      throws IOException {
     return createRPCProxy(addr, conf);
   }
-  
+
   private ClientProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
     return (ClientProtocol) RPC.getProxy(ClientProtocol.class,
-      ClientProtocol.versionID, addr, UserGroupInformation.getCurrentUser(),
-      conf, NetUtils.getSocketFactory(conf, ClientProtocol.class));
+        ClientProtocol.versionID, addr, UserGroupInformation.getCurrentUser(),
+        conf, NetUtils.getSocketFactory(conf, ClientProtocol.class));
   }
 
   @Override
