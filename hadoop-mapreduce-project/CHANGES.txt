@@ -1390,6 +1390,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2970. Fixed NPEs in corner cases with different configurations
     for mapreduce.framework.name. (Venu Gopala Rao via vinodkv)
 
+    MAPREDUCE-3062. Fixed default RMAdmin address. (Chris Riccomini
+    via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
