@@ -19,6 +19,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import java.io.*;
+
 import junit.framework.*;
 
 /**
@@ -152,5 +153,11 @@ public class TestLocalFileSystem extends TestCase {
     FileStatus status = fs.getFileStatus(path);
     assertEquals(path.makeQualified(fs), status.getPath());
     cleanupFile(fs, path);
+  }
+  
+  public void testGetCanonicalServiceName() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    assertEquals(fs.getUri().toString(), fs.getCanonicalServiceName());
   }
 }
