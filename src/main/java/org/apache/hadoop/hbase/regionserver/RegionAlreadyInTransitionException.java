@@ -27,8 +27,7 @@ import java.io.IOException;
  */
 public class RegionAlreadyInTransitionException extends IOException {
 
-  public RegionAlreadyInTransitionException(String action, String region) {
-    super("Received " + action + " for region we are" +
-          " already opening or closing; " + region);
+  public RegionAlreadyInTransitionException(String s) {
+    super(s);
   }
 }

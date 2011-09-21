@@ -60,9 +60,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -79,7 +81,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
@@ -94,6 +95,7 @@ import org.apache.zookeeper.data.Stat;
  * Handles existing regions in transition during master failover.
  */
 public class AssignmentManager extends ZooKeeperListener {
+
   private static final Log LOG = LogFactory.getLog(AssignmentManager.class);
 
   protected Server master;
@@ -162,6 +164,9 @@ public class AssignmentManager extends ZooKeeperListener {
 
   //Thread pool executor service for timeout monitor
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
+  //String to compare the RegionsAlreadyInTransition from RS
+  private static final String ALREADY_TRANSITIONING = "for the region we are " +
+  	"already trying to ";
 
   /**
    * Constructs a new assignment manager.
@@ -1449,6 +1454,17 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         break;
       } catch (Throwable t) {
+        if (t instanceof RemoteException) {
+          t = ((RemoteException) t).unwrapRemoteException();
+          if (t instanceof RegionAlreadyInTransitionException) {
+            String errorMsg = "Failed assignment of " +
+              state.getRegion().getRegionNameAsString() + " to " +
+              plan.getDestination() + " as the region was already " +
+              extractRegionState((RegionAlreadyInTransitionException) t) +
+              " in the RS " +plan.getDestination();
+            LOG.error(errorMsg, t);
+            return;            
+          }
         LOG.warn("Failed assignment of " +
           state.getRegion().getRegionNameAsString() + " to " +
           plan.getDestination() + ", trying to assign elsewhere instead; " +
@@ -1465,8 +1481,16 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+   }
   }
 
+  private State extractRegionState(RegionAlreadyInTransitionException t) {
+    RegionState.State state = t.getMessage().contains(
+        ALREADY_TRANSITIONING + "OPEN") ? RegionState.State.PENDING_OPEN
+        : RegionState.State.PENDING_CLOSE;
+    return state;
+  }
+  
   private void debugLog(HRegionInfo region, String string) {
     if (region.isMetaTable() || region.isRootRegion()) {
       LOG.info(string);
@@ -2656,7 +2680,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * State of a Region while undergoing transitions.
    */
-  public static class RegionState implements Writable {
+  public static class RegionState implements org.apache.hadoop.io.Writable {
     private HRegionInfo region;
 
     public enum State {

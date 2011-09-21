@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -42,7 +44,8 @@ import org.apache.zookeeper.KeeperException;
 class MockRegionServerServices implements RegionServerServices {
   private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
   private boolean stopping = false;
-  private final Set<byte[]> rit = new HashSet<byte[]>();
+  private final ConcurrentSkipListMap<byte[], Boolean> rit = 
+    new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
 
   @Override
   public boolean removeFromOnlineRegions(String encodedRegionName) {
@@ -80,7 +83,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Set<byte[]> getRegionsInTransitionInRS() {
+  public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return rit;
   }
 
@@ -132,7 +135,7 @@ class MockRegionServerServices implements RegionServerServices {
   public boolean isStopped() {
     return false;
   }
-
+}
   @Override
   public boolean isAborted() {
     // TODO Auto-generated method stub

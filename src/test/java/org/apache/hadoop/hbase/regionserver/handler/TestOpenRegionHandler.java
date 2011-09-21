@@ -132,7 +132,7 @@ public class TestOpenRegionHandler {
   @Test
   public void testFailedOpenRegion() throws Exception {
     Server server = new MockServer(HTU);
-    RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
+    RegionServerServices rsServices = new MockRegionServerServices();
 
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
@@ -157,7 +157,7 @@ public class TestOpenRegionHandler {
   @Test
   public void testFailedUpdateMeta() throws Exception {
     Server server = new MockServer(HTU);
-    RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
+    RegionServerServices rsServices = new MockRegionServerServices();
 
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());

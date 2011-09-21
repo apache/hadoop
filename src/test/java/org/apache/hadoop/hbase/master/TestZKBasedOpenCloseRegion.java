@@ -49,6 +49,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -239,7 +241,7 @@ public class TestZKBasedOpenCloseRegion {
     HRegionInfo hri = getNonMetaRegion(hr0.getOnlineRegions());
 
     // fake that hr1 is processing the region
-    hr1.getRegionsInTransitionInRS().add(hri.getEncodedNameAsBytes());
+    hr1.getRegionsInTransitionInRS().putIfAbsent(hri.getEncodedNameAsBytes(), true);
 
     AtomicBoolean reopenEventProcessed = new AtomicBoolean(false);
     EventHandlerListener openListener =
@@ -252,12 +254,9 @@ public class TestZKBasedOpenCloseRegion {
     TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
         Bytes.toBytes(hr1.getServerName().toString()));
 
-    while (!reopenEventProcessed.get()) {
-      Threads.sleep(100);
-    }
-
     // make sure the region came back
-    assertTrue(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
+    assertEquals(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()), null);
+
 
     // remove the block and reset the boolean
     hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());

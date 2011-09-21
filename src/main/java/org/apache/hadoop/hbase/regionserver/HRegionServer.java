@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -155,6 +156,7 @@ import com.google.common.collect.Lists;
  */
 public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     Runnable, RegionServerServices {
+
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   // Set when a report to the master comes back with a message asking us to
@@ -182,8 +184,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private Path rootDir;
   private final Random rand = new Random();
 
-  private final Set<byte[]> regionsInTransitionInRS =
-      new ConcurrentSkipListSet<byte[]>(Bytes.BYTES_COMPARATOR);
+  //RegionName vs current action in progress
+  //true - if open region action in progress
+  //false - if close region action in progress
+  private final ConcurrentSkipListMap<byte[], Boolean> regionsInTransitionInRS =
+      new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
 
   /**
    * Map of regions currently being served by this region server. Key is the
@@ -305,6 +310,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * Go here to get table descriptors.
    */
   private TableDescriptors tableDescriptors;
+
+  /*
+   * Strings to be used in forming the exception message for
+   * RegionsAlreadyInTransitionException. The below strings combination  
+   * is used to extract the status in the master. 
+   */
+  private static final String ALREADY_TRANSITIONING = "for the region we are already trying to ";
+  private static final String RECEIVED = " received ";
+  private static final String OPEN = "OPEN ";
+  private static final String CLOSE = "CLOSE ";
 
   /**
    * Starts a HRegionServer at the default location
@@ -803,7 +818,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // iterator of onlineRegions to close all user regions.
       for (Map.Entry<String, HRegion> e : this.onlineRegions.entrySet()) {
         HRegionInfo hri = e.getValue().getRegionInfo();
-        if (!this.regionsInTransitionInRS.contains(hri.getEncodedNameAsBytes())) {
+        if (!this.regionsInTransitionInRS.containsKey(hri.getEncodedNameAsBytes())) {
           // Don't update zk with this close transition; pass false.
           closeRegion(hri, abort, false);
         }
@@ -2352,9 +2367,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
       throws IOException {
     checkOpen();
-    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
-      throw new RegionAlreadyInTransitionException("open", region.getEncodedName());
-    }
+    checkIfRegionInTransition(region,OPEN);
     HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
     if (null != onlineRegion) {
       LOG.warn("Attempted open of " + region.getEncodedName()
@@ -2363,7 +2376,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
-    this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
+    this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(),
+        true);
     HTableDescriptor htd = this.tableDescriptors.get(region.getTableName());
     // Need to pass the expected version in the constructor.
     if (region.isRootRegion()) {
@@ -2377,6 +2391,25 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           versionOfOfflineNode));
     }
     return RegionOpeningState.OPENED;
+  }
+  
+  private void checkIfRegionInTransition(HRegionInfo region,
+      String currentAction) throws RegionAlreadyInTransitionException {
+
+    byte[] encodedName = region.getEncodedNameAsBytes();
+    if (this.regionsInTransitionInRS.containsKey(encodedName)) {
+      // The below exception message will be used in master.
+      throw new RegionAlreadyInTransitionException(getExceptionMessage(region,
+          encodedName, currentAction));
+    }
+  }
+
+  private String getExceptionMessage(HRegionInfo region, byte[] encodedName,
+      String receivedAction) {
+    boolean openAction = this.regionsInTransitionInRS.get(encodedName);
+    return REGIONSERVER + ":" + this.getServerName() + RECEIVED
+        + receivedAction + ALREADY_TRANSITIONING + (openAction ? OPEN : CLOSE)
+        + "; " + region.getRegionNameAsString();
   }
 
   @Override
@@ -2408,9 +2441,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new NotServingRegionException("Received close for "
         + region.getRegionNameAsString() + " but we are not serving it");
     }
-    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
-      throw new RegionAlreadyInTransitionException("close", region.getEncodedName());
-    }
+    checkIfRegionInTransition(region, CLOSE);
     return closeRegion(region, false, zk);
   }
   
@@ -2430,12 +2461,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk) {
-    if (this.regionsInTransitionInRS.contains(region.getEncodedNameAsBytes())) {
+    if (this.regionsInTransitionInRS.containsKey(region.getEncodedNameAsBytes())) {
       LOG.warn("Received close for region we are already opening or closing; " +
           region.getEncodedName());
       return false;
     }
-    this.regionsInTransitionInRS.add(region.getEncodedNameAsBytes());
+    this.regionsInTransitionInRS.putIfAbsent(region.getEncodedNameAsBytes(), false);
     CloseRegionHandler crh = null;
     if (region.isRootRegion()) {
       crh = new CloseRootHandler(this, this, region, abort, zk);
@@ -3031,7 +3062,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
 
-  public Set<byte[]> getRegionsInTransitionInRS() {
+  public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return this.regionsInTransitionInRS;
   }
   
