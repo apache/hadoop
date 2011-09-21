@@ -614,6 +614,8 @@ Release 0.90.5 - Unreleased
    HBASE-4238  CatalogJanitor can clear a daughter that split before
                processing its parent
    HBASE-4445  Not passing --config when checking if distributed mode or not
+   HBASE-4453  TestReplication failing up on builds.a.o because already
+               running zk with new format root servername
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

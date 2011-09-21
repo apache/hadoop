@@ -77,7 +77,7 @@ public class TestHBaseTestingUtility {
    * @throws Exception
    */
   @Test (timeout=180000)
-  public void multiClusters() throws Exception {
+  public void testMultiClusters() throws Exception {
     // Create three clusters
 
     // Cluster 1.
@@ -89,11 +89,17 @@ public class TestHBaseTestingUtility {
     // Cluster 2
     HBaseTestingUtility htu2 = new HBaseTestingUtility();
     htu2.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
+    htu2.getConfiguration().set("hbase.zookeeper.property.clientPort",
+      htu1.getConfiguration().get("hbase.zookeeper.property.clientPort", "-1"));
     htu2.setZkCluster(htu1.getZkCluster());
 
-    // Cluster 3.
+    // Cluster 3; seed it with the conf from htu1 so we pickup the 'right'
+    // zk cluster config; it is set back into the config. as part of the
+    // start of minizkcluster.
     HBaseTestingUtility htu3 = new HBaseTestingUtility();
     htu3.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
+    htu3.getConfiguration().set("hbase.zookeeper.property.clientPort",
+      htu1.getConfiguration().get("hbase.zookeeper.property.clientPort", "-1"));
     htu3.setZkCluster(htu1.getZkCluster());
 
     try {

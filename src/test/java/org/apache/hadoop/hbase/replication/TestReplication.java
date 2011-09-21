@@ -104,11 +104,15 @@ public class TestReplication {
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
+    // Have to reget conf1 in case zk cluster location different
+    // than default
+    conf1 = utility1.getConfiguration();
     zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null, true);
     admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
-    conf2 = HBaseConfiguration.create();
+    // Base conf2 on conf1 so it gets the right zk cluster.
+    conf2 = HBaseConfiguration.create(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf2.setInt("hbase.client.retries.number", 6);
     conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
