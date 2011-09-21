@@ -23,6 +23,9 @@ Trunk (unreleased changes)
 
     HADOOP-7641. Add Apache License to template config files (Eric Yang via atm)
 
+    HADOOP-7621. alfredo config should be in a file not readable by users
+                 (Alejandro Abdelnur via atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
