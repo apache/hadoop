@@ -78,4 +78,5 @@ public interface RegionServerServices extends OnlineRegions {
    * @return map of regions in transition in this RS
    */
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS();
+  
 }

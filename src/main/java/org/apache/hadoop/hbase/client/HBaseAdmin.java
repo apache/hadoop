@@ -1311,6 +1311,8 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Tries to assign a region. Region could be reassigned to the same server.
+   * 
    * @param regionName
    *          Region name to assign.
    * @param force

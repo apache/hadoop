@@ -30,4 +30,5 @@ public class RegionAlreadyInTransitionException extends IOException {
   public RegionAlreadyInTransitionException(String s) {
     super(s);
   }
+  
 }

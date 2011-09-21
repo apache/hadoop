@@ -44,7 +44,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -101,7 +100,6 @@ import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -313,13 +311,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /*
    * Strings to be used in forming the exception message for
-   * RegionsAlreadyInTransitionException. The below strings combination  
-   * is used to extract the status in the master. 
+   * RegionsAlreadyInTransitionException.
    */
-  private static final String ALREADY_TRANSITIONING = "for the region we are already trying to ";
-  private static final String RECEIVED = " received ";
-  private static final String OPEN = "OPEN ";
-  private static final String CLOSE = "CLOSE ";
+  private static final String OPEN = "OPEN";
+  private static final String CLOSE = "CLOSE";
 
   /**
    * Starts a HRegionServer at the default location
@@ -2367,7 +2362,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public RegionOpeningState openRegion(HRegionInfo region, int versionOfOfflineNode)
       throws IOException {
     checkOpen();
-    checkIfRegionInTransition(region,OPEN);
+    checkIfRegionInTransition(region, OPEN);
     HRegion onlineRegion = this.getFromOnlineRegions(region.getEncodedName());
     if (null != onlineRegion) {
       LOG.warn("Attempted open of " + region.getEncodedName()
@@ -2395,21 +2390,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   
   private void checkIfRegionInTransition(HRegionInfo region,
       String currentAction) throws RegionAlreadyInTransitionException {
-
     byte[] encodedName = region.getEncodedNameAsBytes();
     if (this.regionsInTransitionInRS.containsKey(encodedName)) {
+      boolean openAction = this.regionsInTransitionInRS.get(encodedName);
       // The below exception message will be used in master.
-      throw new RegionAlreadyInTransitionException(getExceptionMessage(region,
-          encodedName, currentAction));
+      throw new RegionAlreadyInTransitionException("Received:" + currentAction + 
+        " for the region:" + region.getRegionNameAsString() +
+        " ,which we are already trying to " + 
+        (openAction ? OPEN : CLOSE)+ ".");
     }
-  }
-
-  private String getExceptionMessage(HRegionInfo region, byte[] encodedName,
-      String receivedAction) {
-    boolean openAction = this.regionsInTransitionInRS.get(encodedName);
-    return REGIONSERVER + ":" + this.getServerName() + RECEIVED
-        + receivedAction + ALREADY_TRANSITIONING + (openAction ? OPEN : CLOSE)
-        + "; " + region.getRegionNameAsString();
   }
 
   @Override

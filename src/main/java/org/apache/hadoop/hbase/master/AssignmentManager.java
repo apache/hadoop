@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.master.AssignmentManager.RegionState.State;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -164,9 +163,6 @@ public class AssignmentManager extends ZooKeeperListener {
 
   //Thread pool executor service for timeout monitor
   private java.util.concurrent.ExecutorService threadPoolExecutorService;
-  //String to compare the RegionsAlreadyInTransition from RS
-  private static final String ALREADY_TRANSITIONING = "for the region we are " +
-  	"already trying to ";
 
   /**
    * Constructs a new assignment manager.
@@ -1457,13 +1453,10 @@ public class AssignmentManager extends ZooKeeperListener {
         if (t instanceof RemoteException) {
           t = ((RemoteException) t).unwrapRemoteException();
           if (t instanceof RegionAlreadyInTransitionException) {
-            String errorMsg = "Failed assignment of " +
-              state.getRegion().getRegionNameAsString() + " to " +
-              plan.getDestination() + " as the region was already " +
-              extractRegionState((RegionAlreadyInTransitionException) t) +
-              " in the RS " +plan.getDestination();
+            String errorMsg = "Failed assignment in: " + plan.getDestination()
+                + " due to " + t.getMessage();
             LOG.error(errorMsg, t);
-            return;            
+            return;
           }
         LOG.warn("Failed assignment of " +
           state.getRegion().getRegionNameAsString() + " to " +
@@ -1484,13 +1477,6 @@ public class AssignmentManager extends ZooKeeperListener {
    }
   }
 
-  private State extractRegionState(RegionAlreadyInTransitionException t) {
-    RegionState.State state = t.getMessage().contains(
-        ALREADY_TRANSITIONING + "OPEN") ? RegionState.State.PENDING_OPEN
-        : RegionState.State.PENDING_CLOSE;
-    return state;
-  }
-  
   private void debugLog(HRegionInfo region, String string) {
     if (region.isMetaTable() || region.isRootRegion()) {
       LOG.info(string);

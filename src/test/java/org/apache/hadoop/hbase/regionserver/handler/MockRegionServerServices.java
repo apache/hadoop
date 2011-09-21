@@ -19,9 +19,7 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -135,10 +133,10 @@ class MockRegionServerServices implements RegionServerServices {
   public boolean isStopped() {
     return false;
   }
-}
+
   @Override
   public boolean isAborted() {
-    // TODO Auto-generated method stub
     return false;
   }
+  
 }
