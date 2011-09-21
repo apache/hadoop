@@ -1338,6 +1338,8 @@ Release 0.23.0 - Unreleased
     YarnClientProtocolProvider and ensured MiniMRYarnCluster sets JobHistory
     configuration for tests. (acmurthy) 
 
+    MAPREDUCE-3018. Fixed -file option for streaming. (mahadev via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
