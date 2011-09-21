@@ -19,11 +19,14 @@ package org.apache.hadoop.mapreduce;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.junit.Test;
@@ -66,5 +69,15 @@ public class TestTypeConverter {
     Assert.assertEquals("schedulingInfo set incorrectly", "dummy-tracking-url", status.getSchedulingInfo());
     Assert.assertEquals("jobId set incorrectly", 6789, status.getJobID().getId());
     Assert.assertEquals("state set incorrectly", JobStatus.State.KILLED, status.getState());
+  }
+
+  @Test
+  public void testFromYarnQueueInfo() {
+    org.apache.hadoop.yarn.api.records.QueueInfo queueInfo = new QueueInfoPBImpl();
+    queueInfo.setQueueState(org.apache.hadoop.yarn.api.records.QueueState.STOPPED);
+    org.apache.hadoop.mapreduce.QueueInfo returned =
+      TypeConverter.fromYarn(queueInfo, new Configuration());
+    Assert.assertEquals("queueInfo translation didn't work.",
+      returned.getState().toString(), queueInfo.getQueueState().toString().toLowerCase());
   }
 }
