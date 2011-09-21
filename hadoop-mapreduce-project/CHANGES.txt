@@ -1340,6 +1340,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3018. Fixed -file option for streaming. (mahadev via acmurthy) 
 
+    MAPREDUCE-3036. Fixed metrics for reserved resources in CS. (Robert Evans
+    via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -202,6 +202,8 @@ public class TestLeafQueue {
     assertEquals(1*GB, a.getUsedResources().getMemory());
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(1, a.getMetrics().getAllocatedGB());
 
     // Also 2nd -> minCapacity = 1024 since (.1 * 8G) < minAlloc, also
     // you can get one container more than user-limit
@@ -209,12 +211,16 @@ public class TestLeafQueue {
     assertEquals(2*GB, a.getUsedResources().getMemory());
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(2, a.getMetrics().getAllocatedGB());
     
     // Can't allocate 3rd due to user-limit
     a.assignContainers(clusterResource, node_0);
     assertEquals(2*GB, a.getUsedResources().getMemory());
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(2, a.getMetrics().getAllocatedGB());
     
     // Bump up user-limit-factor, now allocate should work
     a.setUserLimitFactor(10);
@@ -222,12 +228,16 @@ public class TestLeafQueue {
     assertEquals(3*GB, a.getUsedResources().getMemory());
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(3, a.getMetrics().getAllocatedGB());
 
     // One more should work, for app_1, due to user-limit-factor
     a.assignContainers(clusterResource, node_0);
     assertEquals(4*GB, a.getUsedResources().getMemory());
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(4, a.getMetrics().getAllocatedGB());
 
     // Test max-capacity
     // Now - no more allocs since we are at max-cap
@@ -236,6 +246,8 @@ public class TestLeafQueue {
     assertEquals(4*GB, a.getUsedResources().getMemory());
     assertEquals(3*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(4, a.getMetrics().getAllocatedGB());
     
     // Release each container from app_0
     for (RMContainer rmContainer : app_0.getLiveContainers()) {
@@ -245,6 +257,8 @@ public class TestLeafQueue {
     assertEquals(1*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(1, a.getMetrics().getAllocatedGB());
     
     // Release each container from app_1
     for (RMContainer rmContainer : app_1.getLiveContainers()) {
@@ -254,6 +268,8 @@ public class TestLeafQueue {
     assertEquals(0*GB, a.getUsedResources().getMemory());
     assertEquals(0*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(0, a.getMetrics().getAllocatedGB());
   }
   
   @Test
@@ -473,6 +489,8 @@ public class TestLeafQueue {
     assertEquals(1*GB, a.getUsedResources().getMemory());
     assertEquals(1*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(1, a.getMetrics().getAllocatedGB());
 
     // Also 2nd -> minCapacity = 1024 since (.1 * 8G) < minAlloc, also
     // you can get one container more than user-limit
@@ -480,6 +498,8 @@ public class TestLeafQueue {
     assertEquals(2*GB, a.getUsedResources().getMemory());
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(2, a.getMetrics().getAllocatedGB());
     
     // Now, reservation should kick in for app_1
     a.assignContainers(clusterResource, node_0);
@@ -488,6 +508,8 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
     assertEquals(2*GB, node_0.getUsedResource().getMemory());
+    assertEquals(4, a.getMetrics().getReservedGB());
+    assertEquals(2, a.getMetrics().getAllocatedGB());
     
     // Now free 1 container from app_0 i.e. 1G
     a.completedContainer(clusterResource, app_0, node_0, 
@@ -498,6 +520,8 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(4*GB, app_1.getCurrentReservation().getMemory());
     assertEquals(1*GB, node_0.getUsedResource().getMemory());
+    assertEquals(4, a.getMetrics().getReservedGB());
+    assertEquals(1, a.getMetrics().getAllocatedGB());
 
     // Now finish another container from app_0 and fulfill the reservation
     a.completedContainer(clusterResource, app_0, node_0, 
@@ -508,6 +532,8 @@ public class TestLeafQueue {
     assertEquals(4*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentReservation().getMemory());
     assertEquals(4*GB, node_0.getUsedResource().getMemory());
+    assertEquals(0, a.getMetrics().getReservedGB());
+    assertEquals(4, a.getMetrics().getAllocatedGB());
   }
   
   @Test

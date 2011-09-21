@@ -1152,14 +1152,17 @@ public class LeafQueue implements CSQueue {
 
   private void reserve(SchedulerApp application, Priority priority, 
       SchedulerNode node, RMContainer rmContainer, Container container) {
-    rmContainer = application.reserve(node, priority, rmContainer, container);
-    node.reserveResource(application, priority, rmContainer);
-    
     // Update reserved metrics if this is the first reservation
     if (rmContainer == null) {
       getMetrics().reserveResource(
           application.getUser(), container.getResource());
     }
+
+    // Inform the application 
+    rmContainer = application.reserve(node, priority, rmContainer, container);
+    
+    // Update the node
+    node.reserveResource(application, priority, rmContainer);
   }
 
   private void unreserve(SchedulerApp application, Priority priority, 
