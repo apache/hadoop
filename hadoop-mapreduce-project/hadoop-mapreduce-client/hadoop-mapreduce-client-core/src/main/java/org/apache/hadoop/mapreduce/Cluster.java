@@ -41,8 +41,8 @@ import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * Provides a way to access information about the map/reduce cluster.
@@ -68,29 +68,40 @@ public class Cluster {
   }
   
   public Cluster(Configuration conf) throws IOException {
-    this.conf = conf;
-    this.ugi = UserGroupInformation.getCurrentUser();
-    for (ClientProtocolProvider provider : ServiceLoader.load(ClientProtocolProvider.class)) {
-      ClientProtocol clientProtocol = provider.create(conf);
-      if (clientProtocol != null) {
-        clientProtocolProvider = provider;
-        client = clientProtocol;
-        break;
-      }
-    }
+    this(null, conf);
   }
 
   public Cluster(InetSocketAddress jobTrackAddr, Configuration conf) 
       throws IOException {
     this.conf = conf;
     this.ugi = UserGroupInformation.getCurrentUser();
-    for (ClientProtocolProvider provider : ServiceLoader.load(ClientProtocolProvider.class)) {
-      ClientProtocol clientProtocol = provider.create(jobTrackAddr, conf);
+    initialize(jobTrackAddr, conf);
+  }
+  
+  private void initialize(InetSocketAddress jobTrackAddr, Configuration conf)
+      throws IOException {
+
+    for (ClientProtocolProvider provider : ServiceLoader
+        .load(ClientProtocolProvider.class)) {
+      ClientProtocol clientProtocol = null;
+      if (jobTrackAddr == null) {
+        clientProtocol = provider.create(conf);
+      } else {
+        clientProtocol = provider.create(jobTrackAddr, conf);
+      }
+
       if (clientProtocol != null) {
         clientProtocolProvider = provider;
         client = clientProtocol;
         break;
       }
+    }
+
+    if (null == clientProtocolProvider || null == client) {
+      throw new IOException(
+          "Cannot initialize Cluster. Please check your configuration for "
+              + MRConfig.FRAMEWORK_NAME
+              + " and the correspond server addresses.");
     }
   }
 

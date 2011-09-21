@@ -1352,6 +1352,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3023. Fixed clients to display queue state correctly. (Ravi
     Prakash via acmurthy) 
 
+    MAPREDUCE-2970. Fixed NPEs in corner cases with different configurations
+    for mapreduce.framework.name. (Venu Gopala Rao via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
