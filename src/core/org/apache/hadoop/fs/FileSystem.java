@@ -167,11 +167,14 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Get a canonical name for this file system.
-   * @return a URI string that uniquely identifies this file system
+   * Get a canonical name for this file system. It returns the uri of the file
+   * system unless overridden by a FileSystem implementation. File Systems with
+   * a valid authority can choose to return host:port or ip:port.
+   * 
+   * @return A string that uniquely identifies this file system
    */
   public String getCanonicalServiceName() {
-    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
+    return getUri().toString();
   }
   
   /** @deprecated call #getUri() instead.*/

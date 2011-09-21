@@ -23,6 +23,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -67,6 +68,11 @@ public class FilterFileSystem extends FileSystem {
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public URI getUri() {
     return fs.getUri();
+  }
+  
+  @Override
+  public String getCanonicalServiceName() {
+    return fs.getCanonicalServiceName();
   }
 
   /** @deprecated call #getUri() instead.*/

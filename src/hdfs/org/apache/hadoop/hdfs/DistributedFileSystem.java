@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Progressable;
@@ -65,6 +66,11 @@ public class DistributedFileSystem extends FileSystem {
   public DistributedFileSystem() {
   }
 
+  @Override
+  public String getCanonicalServiceName() {
+    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
+  }
+  
   /** @deprecated */
   public DistributedFileSystem(InetSocketAddress namenode,
     Configuration conf) throws IOException {
