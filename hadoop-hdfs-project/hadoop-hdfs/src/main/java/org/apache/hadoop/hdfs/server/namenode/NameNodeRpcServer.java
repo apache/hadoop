@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -909,8 +910,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   private static String getClientMachine() {
-    String clientMachine = Server.getRemoteAddress();
-    if (clientMachine == null) {
+    String clientMachine = NamenodeWebHdfsMethods.getRemoteAddress();
+    if (clientMachine == null) { //not a web client
+      clientMachine = Server.getRemoteAddress();
+    }
+    if (clientMachine == null) { //not a RPC client
       clientMachine = "";
     }
     return clientMachine;

@@ -115,6 +115,26 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.location = location;
     this.hostName = hostName;
   }
+
+  /** Constructor */
+  public DatanodeInfo(final String name, final String storageID,
+      final int infoPort, final int ipcPort,
+      final long capacity, final long dfsUsed, final long remaining,
+      final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
+      final String networkLocation, final String hostName,
+      final AdminStates adminState) {
+    super(name, storageID, infoPort, ipcPort);
+
+    this.capacity = capacity;
+    this.dfsUsed = dfsUsed;
+    this.remaining = remaining;
+    this.blockPoolUsed = blockPoolUsed;
+    this.lastUpdate = lastUpdate;
+    this.xceiverCount = xceiverCount;
+    this.location = networkLocation;
+    this.hostName = hostName;
+    this.adminState = adminState;
+  }
   
   /** The raw capacity. */
   public long getCapacity() { return capacity; }

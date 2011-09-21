@@ -23,12 +23,12 @@ package org.apache.hadoop.hdfs.security;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -38,12 +38,16 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.log4j.Level;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,12 +60,13 @@ public class TestDelegationToken {
   @Before
   public void setUp() throws Exception {
     config = new HdfsConfiguration();
+    config.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
     config.set("hadoop.security.auth_to_local",
         "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
-    cluster = new MiniDFSCluster.Builder(config).build();
+    cluster = new MiniDFSCluster.Builder(config).numDataNodes(0).build();
     cluster.waitActive();
     dtSecretManager = NameNodeAdapter.getDtSecretManager(
         cluster.getNamesystem());
@@ -153,6 +158,31 @@ public class TestDelegationToken {
     dtSecretManager.renewToken(token, "JobTracker");
   }
   
+  @Test
+  public void testDelegationTokenWebHdfsApi() throws Exception {
+    ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
+    final String uri = WebHdfsFileSystem.SCHEME  + "://"
+        + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    //get file system as JobTracker
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        "JobTracker", new String[]{"user"});
+    final WebHdfsFileSystem webhdfs = ugi.doAs(
+        new PrivilegedExceptionAction<WebHdfsFileSystem>() {
+      @Override
+      public WebHdfsFileSystem run() throws Exception {
+        return (WebHdfsFileSystem)FileSystem.get(new URI(uri), config);
+      }
+    });
+
+    final Token<DelegationTokenIdentifier> token = webhdfs.getDelegationToken("JobTracker");
+    DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
+    byte[] tokenId = token.getIdentifier();
+    identifier.readFields(new DataInputStream(new ByteArrayInputStream(tokenId)));
+    LOG.info("A valid token should have non-null password, and should be renewed successfully");
+    Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
+    dtSecretManager.renewToken(token, "JobTracker");
+  }
+
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
     final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();

@@ -16,6 +16,9 @@ Trunk (unreleased changes)
     HDFS-2318. Provide authentication to webhdfs using SPNEGO and delegation
     tokens.  (szetszwo)
 
+    HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)

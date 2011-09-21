@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
+import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
@@ -92,7 +93,14 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 /** Web-hdfs NameNode implementation. */
 @Path("")
 public class NamenodeWebHdfsMethods {
-  private static final Log LOG = LogFactory.getLog(NamenodeWebHdfsMethods.class);
+  public static final Log LOG = LogFactory.getLog(NamenodeWebHdfsMethods.class);
+
+  private static final ThreadLocal<String> REMOTE_ADDRESS = new ThreadLocal<String>(); 
+
+  /** @return the remote client address. */
+  public static String getRemoteAddress() {
+    return REMOTE_ADDRESS.get();
+  }
 
   private @Context ServletContext context;
   private @Context HttpServletRequest request;
@@ -215,6 +223,8 @@ public class NamenodeWebHdfsMethods {
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
+        REMOTE_ADDRESS.set(request.getRemoteAddr());
+        try {
 
     final String fullpath = path.getAbsolutePath();
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
@@ -272,6 +282,10 @@ public class NamenodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+
+        } finally {
+          REMOTE_ADDRESS.set(null);
+        }
       }
     });
   }
@@ -301,6 +315,8 @@ public class NamenodeWebHdfsMethods {
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
+        REMOTE_ADDRESS.set(request.getRemoteAddr());
+        try {
 
     final String fullpath = path.getAbsolutePath();
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
@@ -315,6 +331,10 @@ public class NamenodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
+
+        } finally {
+          REMOTE_ADDRESS.set(null);
+        }
       }
     });
   }
@@ -335,10 +355,12 @@ public class NamenodeWebHdfsMethods {
           final OffsetParam offset,
       @QueryParam(LengthParam.NAME) @DefaultValue(LengthParam.DEFAULT)
           final LengthParam length,
+      @QueryParam(RenewerParam.NAME) @DefaultValue(RenewerParam.DEFAULT)
+          final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
       ) throws IOException, URISyntaxException, InterruptedException {
-    return get(ugi, delegation, ROOT, op, offset, length, bufferSize);
+    return get(ugi, delegation, ROOT, op, offset, length, renewer, bufferSize);
   }
 
   /** Handle HTTP GET request. */
@@ -356,19 +378,23 @@ public class NamenodeWebHdfsMethods {
           final OffsetParam offset,
       @QueryParam(LengthParam.NAME) @DefaultValue(LengthParam.DEFAULT)
           final LengthParam length,
+      @QueryParam(RenewerParam.NAME) @DefaultValue(RenewerParam.DEFAULT)
+          final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
       ) throws IOException, URISyntaxException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
-          + Param.toSortedString(", ", offset, length, bufferSize));
+          + Param.toSortedString(", ", offset, length, renewer, bufferSize));
     }
 
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
+        REMOTE_ADDRESS.set(request.getRemoteAddr());
+        try {
 
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final String fullpath = path.getAbsolutePath();
@@ -381,6 +407,15 @@ public class NamenodeWebHdfsMethods {
           op.getValue(), offset.getValue(), offset, length, bufferSize);
       return Response.temporaryRedirect(uri).build();
     }
+    case GETFILEBLOCKLOCATIONS:
+    {
+      final long offsetValue = offset.getValue();
+      final Long lengthValue = length.getValue();
+      final LocatedBlocks locatedblocks = np.getBlockLocations(fullpath,
+          offsetValue, lengthValue != null? lengthValue: offsetValue + 1);
+      final String js = JsonUtil.toJsonString(locatedblocks);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case GETFILESTATUS:
     {
       final HdfsFileStatus status = np.getFileInfo(fullpath);
@@ -392,9 +427,20 @@ public class NamenodeWebHdfsMethods {
       final StreamingOutput streaming = getListingStream(np, fullpath);
       return Response.ok(streaming).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETDELEGATIONTOKEN:
+    {
+      final Token<? extends TokenIdentifier> token = generateDelegationToken(
+          namenode, ugi, renewer.getValue());
+      final String js = JsonUtil.toJsonString(token);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }    
+
+        } finally {
+          REMOTE_ADDRESS.set(null);
+        }
       }
     });
   }
@@ -462,6 +508,9 @@ public class NamenodeWebHdfsMethods {
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException {
+        REMOTE_ADDRESS.set(request.getRemoteAddr());
+        try {
+
         final NameNode namenode = (NameNode)context.getAttribute("name.node");
         final String fullpath = path.getAbsolutePath();
 
@@ -474,6 +523,10 @@ public class NamenodeWebHdfsMethods {
         }
         default:
           throw new UnsupportedOperationException(op + " is not supported");
+        }
+
+        } finally {
+          REMOTE_ADDRESS.set(null);
         }
       }
     });
