@@ -57,6 +57,9 @@ Release 0.20.205.0 - unreleased
     HDFS-2318. Provide authentication to webhdfs using SPNEGO and delegation
     tokens.  (szetszwo)
 
+    HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
+    (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken
