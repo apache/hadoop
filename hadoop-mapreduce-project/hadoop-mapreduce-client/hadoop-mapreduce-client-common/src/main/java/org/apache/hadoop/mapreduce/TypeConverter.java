@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -290,6 +291,15 @@ public class TypeConverter {
         jobFile, trackingUrl);
   }
   
+  public static org.apache.hadoop.mapreduce.QueueState fromYarn(
+      QueueState state) {
+    org.apache.hadoop.mapreduce.QueueState qState = 
+      org.apache.hadoop.mapreduce.QueueState.getState(
+        state.toString().toLowerCase());
+    return qState;
+  }
+
+  
   public static int fromYarn(JobState state) {
     switch (state) {
     case NEW:
@@ -431,9 +441,9 @@ public class TypeConverter {
   
   public static QueueInfo fromYarn(org.apache.hadoop.yarn.api.records.QueueInfo 
       queueInfo, Configuration conf) {
-    return new QueueInfo(queueInfo.getQueueName(), 
-        queueInfo.toString(), QueueState.RUNNING, 
-        TypeConverter.fromYarnApps(queueInfo.getApplications(), conf));
+    return new QueueInfo(queueInfo.getQueueName(),queueInfo.toString(),
+        fromYarn(queueInfo.getQueueState()), TypeConverter.fromYarnApps(
+        queueInfo.getApplications(), conf));
   }
   
   public static QueueInfo[] fromYarnQueueInfo(

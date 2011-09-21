@@ -1378,6 +1378,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2998. Fixed a bug in TaskAttemptImpl which caused it to fork
     bin/mapred too many times. (vinodkv via acmurthy)
 
+    MAPREDUCE-3023. Fixed clients to display queue state correctly. (Ravi
+    Prakash via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
