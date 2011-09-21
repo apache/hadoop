@@ -44,6 +44,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -89,7 +90,6 @@ public class ContainerLaunch implements Callable<Integer> {
     final Map<Path,String> localResources = container.getLocalizedResources();
     String containerIdStr = ConverterUtils.toString(container.getContainerID());
     final String user = launchContext.getUser();
-    final Map<String,String> env = launchContext.getEnvironment();
     final List<String> command = launchContext.getCommands();
     int ret = -1;
 
@@ -109,16 +109,16 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       launchContext.setCommands(newCmds);
 
-      Map<String, String> envs = launchContext.getEnvironment();
-      Map<String, String> newEnvs = new HashMap<String, String>(envs.size());
-      for (Entry<String, String> entry : envs.entrySet()) {
-        newEnvs.put(
-            entry.getKey(),
-            entry.getValue().replace(
+      Map<String, String> environment = launchContext.getEnvironment();
+      // Make a copy of env to iterate & do variable expansion
+      for (Entry<String, String> entry : environment.entrySet()) {
+        String value = entry.getValue();
+        entry.setValue(
+            value.replace(
                 ApplicationConstants.LOG_DIR_EXPANSION_VAR,
-                containerLogDir.toUri().getPath()));
+                containerLogDir.toUri().getPath())
+            );
       }
-      launchContext.setEnvironment(newEnvs);
       // /////////////////////////// End of variable expansion
 
       FileContext lfs = FileContext.getLocalFSFileContext();
@@ -164,11 +164,18 @@ public class ContainerLaunch implements Callable<Integer> {
               EnumSet.of(CREATE, OVERWRITE));
 
         // Set the token location too.
-        env.put(ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, new Path(
-            containerWorkDir, FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
+        environment.put(
+            ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, 
+            new Path(containerWorkDir, 
+                FINAL_CONTAINER_TOKENS_FILE).toUri().getPath());
 
-        writeLaunchEnv(containerScriptOutStream, env, localResources,
-            launchContext.getCommands(), appDirs);
+        // Sanitize the container's environment
+        sanitizeEnv(environment, containerWorkDir, appDirs);
+        
+        // Write out the environment
+        writeLaunchEnv(containerScriptOutStream, environment, localResources,
+            launchContext.getCommands());
+        
         // /////////// End of writing out container-script
 
         // /////////// Write out the container-tokens in the nmPrivate space.
@@ -275,19 +282,71 @@ public class ContainerLaunch implements Callable<Integer> {
   
   }
 
+  private static void putEnvIfNotNull(
+      Map<String, String> environment, String variable, String value) {
+    if (value != null) {
+      environment.put(variable, value);
+    }
+  }
+  
+  private static void putEnvIfAbsent(
+      Map<String, String> environment, String variable) {
+    if (environment.get(variable) == null) {
+      putEnvIfNotNull(environment, variable, System.getenv(variable));
+    }
+  }
+  
+  public void sanitizeEnv(Map<String, String> environment, 
+      Path pwd, List<Path> appDirs) {
+    /**
+     * Non-modifiable environment variables
+     */
+    
+    putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
+    
+    putEnvIfNotNull(environment, 
+        Environment.LOGNAME.name(),container.getUser());
+    
+    putEnvIfNotNull(environment, 
+        Environment.HOME.name(),
+        conf.get(
+            YarnConfiguration.NM_USER_HOME_DIR, 
+            YarnConfiguration.DEFAULT_NM_USER_HOME_DIR
+            )
+        );
+    
+    putEnvIfNotNull(environment, Environment.PWD.name(), pwd.toString());
+    
+    putEnvIfNotNull(environment, 
+        Environment.HADOOP_CONF_DIR.name(), 
+        System.getenv(Environment.HADOOP_CONF_DIR.name())
+        );
+    
+    putEnvIfNotNull(environment, 
+        ApplicationConstants.LOCAL_DIR_ENV, 
+        StringUtils.join(",", appDirs)
+        );
+
+    if (!Shell.WINDOWS) {
+      environment.put("JVM_PID", "$$");
+    }
+
+    /**
+     * Modifiable environment variables
+     */
+    
+    putEnvIfAbsent(environment, Environment.JAVA_HOME.name());
+    putEnvIfAbsent(environment, Environment.HADOOP_COMMON_HOME.name());
+    putEnvIfAbsent(environment, Environment.HADOOP_HDFS_HOME.name());
+    putEnvIfAbsent(environment, Environment.YARN_HOME.name());
+
+  }
+  
   private static void writeLaunchEnv(OutputStream out,
       Map<String,String> environment, Map<Path,String> resources,
-      List<String> command, List<Path> appDirs)
+      List<String> command)
       throws IOException {
     ShellScriptBuilder sb = new ShellScriptBuilder();
-    if (System.getenv("YARN_HOME") != null) {
-      // TODO: Get from whitelist.
-      sb.env("YARN_HOME", System.getenv("YARN_HOME"));
-    }
-    sb.env(ApplicationConstants.LOCAL_DIR_ENV, StringUtils.join(",", appDirs));
-    if (!Shell.WINDOWS) {
-      sb.env("JVM_PID", "$$");
-    }
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {
         sb.env(env.getKey().toString(), env.getValue().toString());

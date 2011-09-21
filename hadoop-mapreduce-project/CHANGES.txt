@@ -321,6 +321,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-901. Efficient framework counters. (llu via acmurthy)
 
+    MAPREDUCE-2880. Improve classpath-construction for mapreduce AM and
+    containers. (Arun C Murthy via vinodkv)
+
   BUG FIXES
 
     MAPREDUCE-2603. Disable High-Ram emulation in system tests. 

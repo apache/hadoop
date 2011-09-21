@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
 /*******************************
  * Some handy constants
  * 
  *******************************/
-interface MRConstants {
+@Private
+@Unstable
+public class MRConstants {
   //
   // Timeouts, constants
   //
@@ -52,6 +57,4 @@ interface MRConstants {
    * The reduce task number for which this map output is being transferred
    */
   public static final String FOR_REDUCE_TASK = "for-reduce-task";
-  
-  public static final String WORKDIR = "work";
 }

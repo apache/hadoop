@@ -357,6 +357,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_AUX_SERVICE_FMT =
     NM_PREFIX + "aux-services.%s.class";
 
+  public static final String NM_USER_HOME_DIR =
+      NM_PREFIX + "user-home-dir";
+
+  public static final String DEFAULT_NM_USER_HOME_DIR= "/home/";
+
+
   public static final int INVALID_CONTAINER_EXIT_STATUS = -1000;
   public static final int ABORTED_CONTAINER_EXIT_STATUS = -100;
   

@@ -47,7 +47,6 @@ import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.Credentials;
@@ -71,7 +70,7 @@ class YarnChild {
     LOG.debug("Child starting");
 
     final JobConf defaultConf = new JobConf();
-    defaultConf.addResource(MRConstants.JOB_CONF_FILE);
+    defaultConf.addResource(MRJobConfig.JOB_CONF_FILE);
     UserGroupInformation.setConfiguration(defaultConf);
 
     String host = args[0];
@@ -238,7 +237,7 @@ class YarnChild {
 
   private static JobConf configureTask(Task task, Credentials credentials,
       Token<JobTokenIdentifier> jt) throws IOException {
-    final JobConf job = new JobConf(MRConstants.JOB_CONF_FILE);
+    final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
     job.setCredentials(credentials);
     // set tcp nodelay
     job.setBoolean("ipc.client.tcpnodelay", true);
@@ -260,7 +259,7 @@ class YarnChild {
 
     // Overwrite the localized task jobconf which is linked to in the current
     // work-dir.
-    Path localTaskFile = new Path(Constants.JOBFILE);
+    Path localTaskFile = new Path(MRJobConfig.JOB_CONF_FILE);
     writeLocalJobFile(localTaskFile, job);
     task.setJobFile(localTaskFile.toString());
     task.setConf(job);
