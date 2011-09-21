@@ -10,6 +10,9 @@ Release 0.20.206.0 - unreleased
 
     HADOOP-7634. Docs specify wrong owner for task-controller.cfg (eli)
 
+    HADOOP-7665. branch-0.20-security doesn't include SPNEGO settings in
+                 core-default.xml (atm)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
