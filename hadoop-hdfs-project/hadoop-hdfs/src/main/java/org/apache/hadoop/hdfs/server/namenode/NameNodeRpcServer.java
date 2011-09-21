@@ -142,10 +142,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
       serviceRpcServer = null;
       serviceRPCAddress = null;
     }
-    this.server = RPC.getServer(NamenodeProtocols.class, this,
+    // Add all the RPC protocols that the namenode implements
+    this.server = RPC.getServer(ClientProtocol.class, this,
                                 socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf, 
                                 namesystem.getDelegationTokenSecretManager());
+    this.server.addProtocol(DatanodeProtocol.class, this);
+    this.server.addProtocol(NamenodeProtocol.class, this);
+    this.server.addProtocol(RefreshAuthorizationPolicyProtocol.class, this);
+    this.server.addProtocol(RefreshUserMappingsProtocol.class, this);
+    this.server.addProtocol(GetUserMappingsProtocol.class, this);
+    
 
     // set service-level authorization security policy
     if (serviceAuthEnabled =

@@ -38,6 +38,8 @@ Trunk (unreleased changes)
     not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
     via szetszwo)
 
+	HDFS-2351 Change Namenode and Datanode to register each of their protocols seperately (Sanjay Radia)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
