@@ -153,7 +153,7 @@ public abstract class TaskAttemptImpl implements
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
   private static String initialClasspath = null;
-  private final Object classpathLock = new Object();
+  private static final Object classpathLock = new Object();
   private long launchTime;
   private long finishTime;
   private WrappedProgressSplitsBlock progressSplitBlock;
