@@ -374,6 +374,9 @@ Release 0.23.0 - Unreleased
     so that servers like Yarn WebApp can get filtered the paths served by
     their own injected servlets. (Thomas Graves via vinodkv)
 
+    HADOOP-7575. Enhanced LocalDirAllocator to support fully-qualified
+    paths. (Jonathan Eagles via vinodkv)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
