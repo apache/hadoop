@@ -18,6 +18,9 @@ Release 0.20.206.0 - unreleased
 
     HADOOP-7621. alfredo config should be in a file not readable by users (atm)
 
+    HADOOP-7653. tarball doesn't include .eclipse.templates.
+    (Jonathan Natkins via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to

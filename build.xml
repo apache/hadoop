@@ -1521,6 +1521,10 @@
 
     <copy todir="${dist.dir}/" file="build.xml"/>
 
+    <copy todir="${dist.dir}/.eclipse.templates">
+      <fileset dir="${basedir}/.eclipse.templates"/>
+    </copy>
+
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/sbin"/>
@@ -1549,6 +1553,7 @@
           <exclude name="${final.name}/src/contrib/ec2/bin/*" />
           <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
           <include name="${final.name}/**" />
+          <include name="${final.name}/eclipse.templates/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
@@ -1634,6 +1639,10 @@
       <fileset dir="bin">
         <include name="hadoop-config.sh"/>
       </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/.eclipse.templates">
+      <fileset dir="${basedir}/.eclipse.templates"/>
     </copy>
 
     <copy todir="${dist.dir}/etc/hadoop">
