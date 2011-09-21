@@ -348,6 +348,7 @@ public class JobConf extends Configuration {
    */
   public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
   
+  
   /**
    * Construct a map/reduce job configuration.
    */

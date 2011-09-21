@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
@@ -243,10 +242,10 @@ public class MRAppMaster extends CompositeService {
         // Read the file-system tokens from the localized tokens-file.
         Path jobSubmitDir = 
             FileContext.getLocalFSFileContext().makeQualified(
-                new Path(new File(MRConstants.JOB_SUBMIT_DIR)
+                new Path(new File(MRJobConfig.JOB_SUBMIT_DIR)
                     .getAbsolutePath()));
         Path jobTokenFile = 
-            new Path(jobSubmitDir, MRConstants.APPLICATION_TOKENS_FILE);
+            new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
         fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
         LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
             + jobTokenFile);
@@ -658,7 +657,7 @@ public class MRAppMaster extends CompositeService {
       Runtime.getRuntime().addShutdownHook(
           new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
-      conf.addResource(new Path(MRConstants.JOB_CONF_FILE));
+      conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
       conf.set(MRJobConfig.USER_NAME, 
           System.getProperty("user.name")); 
       UserGroupInformation.setConfiguration(conf);

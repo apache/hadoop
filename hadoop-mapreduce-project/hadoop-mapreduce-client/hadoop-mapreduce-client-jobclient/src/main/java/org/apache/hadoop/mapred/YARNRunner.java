@@ -51,7 +51,6 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.Credentials;
@@ -60,6 +59,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -210,7 +210,7 @@ public class YARNRunner implements ClientProtocol {
 
     // Upload only in security mode: TODO
     Path applicationTokensFile =
-        new Path(jobSubmitDir, MRConstants.APPLICATION_TOKENS_FILE);
+        new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
     try {
       ts.writeTokenStorageFile(applicationTokensFile, conf);
     } catch (IOException e) {
@@ -226,7 +226,9 @@ public class YARNRunner implements ClientProtocol {
     
     ApplicationReport appMaster = resMgrDelegate
         .getApplicationReport(applicationId);
-    String diagnostics = (appMaster == null ? "application report is null" : appMaster.getDiagnostics());
+    String diagnostics = 
+        (appMaster == null ? 
+            "application report is null" : appMaster.getDiagnostics());
     if (appMaster == null || appMaster.getState() == ApplicationState.FAILED 
         || appMaster.getState() == ApplicationState.KILLED) {
       throw new IOException("Failed to run job : " + 
@@ -263,7 +265,7 @@ public class YARNRunner implements ClientProtocol {
     Map<String, LocalResource> localResources =
         new HashMap<String, LocalResource>();
     
-    Path jobConfPath = new Path(jobSubmitDir, MRConstants.JOB_CONF_FILE);
+    Path jobConfPath = new Path(jobSubmitDir, MRJobConfig.JOB_CONF_FILE);
     
     URL yarnUrlForJobSubmitDir = ConverterUtils
         .getYarnUrlFromPath(defaultFileContext.getDefaultFileSystem()
@@ -272,13 +274,13 @@ public class YARNRunner implements ClientProtocol {
     LOG.debug("Creating setup context, jobSubmitDir url is "
         + yarnUrlForJobSubmitDir);
 
-    localResources.put(MRConstants.JOB_CONF_FILE,
+    localResources.put(MRJobConfig.JOB_CONF_FILE,
         createApplicationResource(defaultFileContext,
             jobConfPath));
     if (jobConf.get(MRJobConfig.JAR) != null) {
-      localResources.put(MRConstants.JOB_JAR,
+      localResources.put(MRJobConfig.JOB_JAR,
           createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, MRConstants.JOB_JAR)));
+              new Path(jobSubmitDir, MRJobConfig.JOB_JAR)));
     } else {
       // Job jar may be null. For e.g, for pipes, the job jar is the hadoop
       // mapreduce jar itself which is already on the classpath.
@@ -287,10 +289,12 @@ public class YARNRunner implements ClientProtocol {
     }
     
     // TODO gross hack
-    for (String s : new String[] { "job.split", "job.splitmetainfo",
-        MRConstants.APPLICATION_TOKENS_FILE }) {
+    for (String s : new String[] { 
+        MRJobConfig.JOB_SPLIT, 
+        MRJobConfig.JOB_SPLIT_METAINFO,
+        MRJobConfig.APPLICATION_TOKENS_FILE }) {
       localResources.put(
-          MRConstants.JOB_SUBMIT_DIR + "/" + s,
+          MRJobConfig.JOB_SUBMIT_DIR + "/" + s,
           createApplicationResource(defaultFileContext, 
               new Path(jobSubmitDir, s)));
     }
@@ -304,9 +308,8 @@ public class YARNRunner implements ClientProtocol {
     }
 
     // Setup the command to run the AM
-    String javaHome = "$JAVA_HOME";
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
-    vargs.add(javaHome + "/bin/java");
+    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
     vargs.add("-Dhadoop.root.logger="
         + conf.get(MRJobConfig.MR_AM_LOG_OPTS,
             MRJobConfig.DEFAULT_MR_AM_LOG_OPTS) + ",console");
@@ -314,12 +317,15 @@ public class YARNRunner implements ClientProtocol {
     vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
-    vargs.add("org.apache.hadoop.mapreduce.v2.app.MRAppMaster");
+    vargs.add(MRJobConfig.APPLICATION_MASTER_CLASS);
     vargs.add(String.valueOf(applicationId.getClusterTimestamp()));
     vargs.add(String.valueOf(applicationId.getId()));
     vargs.add(ApplicationConstants.AM_FAIL_COUNT_STRING);
-    vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");
-    vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
+    vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + 
+        Path.SEPARATOR + ApplicationConstants.STDOUT);
+    vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + 
+        Path.SEPARATOR + ApplicationConstants.STDERR);
+
 
     Vector<String> vargsFinal = new Vector<String>(8);
     // Final commmand
@@ -332,15 +338,13 @@ public class YARNRunner implements ClientProtocol {
     LOG.info("Command to launch container for ApplicationMaster is : "
         + mergedCommand);
     
-    // Setup the environment - Add { job jar, MR app jar } to classpath.
+    // Setup the CLASSPATH in environment 
+    // i.e. add { job jar, CWD, Hadoop jars} to classpath.
     Map<String, String> environment = new HashMap<String, String>();
-    MRApps.setInitialClasspath(environment);
-    MRApps.addToClassPath(environment, MRConstants.JOB_JAR);
-    MRApps.addToClassPath(environment,
-        MRConstants.YARN_MAPREDUCE_APP_JAR_PATH);
-
+    MRApps.setClasspath(environment);
+    
     // Parse distributed cache
-    MRApps.setupDistributedCache(jobConf, localResources, environment);
+    MRApps.setupDistributedCache(jobConf, localResources);
 
     // Setup ContainerLaunchContext for AM container
     ContainerLaunchContext amContainer =

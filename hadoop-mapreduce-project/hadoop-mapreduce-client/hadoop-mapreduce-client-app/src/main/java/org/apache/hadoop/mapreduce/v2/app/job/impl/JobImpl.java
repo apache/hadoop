@@ -42,6 +42,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceChildJVM;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -64,7 +65,6 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
@@ -1007,7 +1007,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           FileSystem.get(job.conf).makeQualified(
               new Path(path, oldJobIDString));
       job.remoteJobConfFile =
-          new Path(job.remoteJobSubmitDir, MRConstants.JOB_CONF_FILE);
+          new Path(job.remoteJobSubmitDir, MRJobConfig.JOB_CONF_FILE);
 
       // Prepare the TaskAttemptListener server for authentication of Containers
       // TaskAttemptListener gets the information via jobTokenSecretManager.
@@ -1033,7 +1033,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
       Path remoteJobTokenFile =
           new Path(job.remoteJobSubmitDir,
-              MRConstants.APPLICATION_TOKENS_FILE);
+              MRJobConfig.APPLICATION_TOKENS_FILE);
       tokenStorage.writeTokenStorageFile(remoteJobTokenFile, job.conf);
       LOG.info("Writing back the job-token file on the remote file system:"
           + remoteJobTokenFile.toString());

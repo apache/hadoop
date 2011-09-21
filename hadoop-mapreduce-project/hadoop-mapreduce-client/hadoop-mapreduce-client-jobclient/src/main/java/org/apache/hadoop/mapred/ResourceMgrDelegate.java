@@ -32,12 +32,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.QueueAclsInfo;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
@@ -254,7 +254,7 @@ public class ResourceMgrDelegate {
 
 
   public String getSystemDir() throws IOException, InterruptedException {
-    Path sysDir = new Path(MRConstants.JOB_SUBMIT_DIR);
+    Path sysDir = new Path(MRJobConfig.JOB_SUBMIT_DIR);
     //FileContext.getFileContext(conf).delete(sysDir, true);
     return sysDir.toString();
   }

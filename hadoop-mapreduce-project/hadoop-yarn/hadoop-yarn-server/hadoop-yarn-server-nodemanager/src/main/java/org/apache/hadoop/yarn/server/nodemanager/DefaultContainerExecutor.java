@@ -133,8 +133,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       String[] command = 
           new String[] { "bash", "-c", launchDst.toUri().getPath().toString() };
       LOG.info("launchContainer: " + Arrays.toString(command));
-      shExec = new ShellCommandExecutor(command,
-          new File(containerWorkDir.toUri().getPath()));
+      shExec = new ShellCommandExecutor(
+          command,
+          new File(containerWorkDir.toUri().getPath()), 
+          container.getLaunchContext().getEnvironment());      // sanitized env
       launchCommandObjs.put(containerId, shExec);
       shExec.execute();
     } catch (IOException e) {
