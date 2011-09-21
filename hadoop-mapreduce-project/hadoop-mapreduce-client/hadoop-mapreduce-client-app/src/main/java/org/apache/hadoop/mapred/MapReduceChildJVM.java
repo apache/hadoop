@@ -31,6 +31,8 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class MapReduceChildJVM {
 
@@ -164,8 +166,8 @@ public class MapReduceChildJVM {
   private static void setupLog4jProperties(Vector<String> vargs,
       long logSize) {
     vargs.add("-Dlog4j.configuration=container-log4j.properties");
-    vargs.add("-Dhadoop.yarn.mr.containerLogDir=" + ApplicationConstants.LOG_DIR_EXPANSION_VAR);
-    vargs.add("-Dhadoop.yarn.mr.totalLogFileSize=" + logSize);
+    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "=" + ApplicationConstants.LOG_DIR_EXPANSION_VAR);
+    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
   }
 
   public static List<String> getVMCommand(

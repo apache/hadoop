@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Appender;
@@ -75,10 +76,18 @@ public class TaskLog {
       }
     }
   }
-
+  
+  public static String getMRv2LogDir() {
+    return System.getProperty(MRJobConfig.TASK_LOG_DIR);
+  }
+  
   public static File getTaskLogFile(TaskAttemptID taskid, boolean isCleanup,
       LogName filter) {
-    return new File(getAttemptDir(taskid, isCleanup), filter.toString());
+    if (getMRv2LogDir() != null) {
+      return new File(getMRv2LogDir(), filter.toString());
+    } else {
+      return new File(getAttemptDir(taskid, isCleanup), filter.toString());
+    }
   }
 
   static File getRealTaskLogFileLocation(TaskAttemptID taskid,
