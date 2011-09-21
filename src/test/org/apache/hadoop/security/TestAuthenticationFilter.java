@@ -25,14 +25,27 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.Writer;
 import java.util.Map;
 
 public class TestAuthenticationFilter extends TestCase {
 
   @SuppressWarnings("unchecked")
-  public void testConfiguration() {
+  public void testConfiguration() throws Exception {
     Configuration conf = new Configuration();
     conf.set("hadoop.http.authentication.foo", "bar");
+
+    File testDir = new File(System.getProperty("test.build.data", "/tmp"));
+    testDir.mkdirs();
+    File secretFile = new File(testDir, "http-secret.txt");
+    Writer writer = new FileWriter(new File(testDir, "http-secret.txt"));
+    writer.write("hadoop");
+    writer.close();
+    conf.set(AuthenticationFilterInitializer.PREFIX +
+             AuthenticationFilterInitializer.SIGNATURE_SECRET_FILE,
+             secretFile.getAbsolutePath());
 
     FilterContainer container = Mockito.mock(FilterContainer.class);
     Mockito.doAnswer(

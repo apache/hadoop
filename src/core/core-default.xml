@@ -492,8 +492,8 @@
 </property>
 
 <property>
-  <name>hadoop.http.authentication.signature.secret</name>
-  <value>hadoop</value>
+  <name>hadoop.http.authentication.signature.secret.file</name>
+  <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
     If not set a random secret is generated at startup time.

@@ -16,6 +16,8 @@ Release 0.20.206.0 - unreleased
     HADOOP-7666. branch-0.20-security doesn't include
                  o.a.h.security.TestAuthenticationFilter (atm)
 
+    HADOOP-7621. alfredo config should be in a file not readable by users (atm)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
