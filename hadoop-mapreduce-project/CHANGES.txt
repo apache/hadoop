@@ -41,6 +41,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2037. Capture intermediate progress, CPU and memory usage for
     tasks. (Dick King via acmurthy) 
 
+    MAPREDUCE-2930. Added the ability to be able to generate graphs from the
+    state-machine definitions. (Binglin Chang via vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
