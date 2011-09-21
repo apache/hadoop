@@ -1,0 +1,2 @@
+org.apache.hadoop.tools.TestDelegationTokenFetcher$FakeRenewer
+org.apache.hadoop.mapreduce.security.token.TestDelegationTokenRenewal$Renewer
