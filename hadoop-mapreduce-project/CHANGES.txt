@@ -1396,6 +1396,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3066. Fixed default ResourceTracker address for the NodeManager. 
     (Chris Riccomini via acmurthy) 
 
+    MAPREDUCE-3044. Pipes jobs stuck without making progress. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
