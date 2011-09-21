@@ -98,4 +98,41 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>visualize</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2</version>
+            <executions>
+              <execution>
+                <phase>compile</phase>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+                <configuration>
+                  <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
+                  <arguments>
+                    <argument>ResourceManager</argument>
+                    <argument>org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl</argument>
+                    <argument>ResourceManager.gv</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

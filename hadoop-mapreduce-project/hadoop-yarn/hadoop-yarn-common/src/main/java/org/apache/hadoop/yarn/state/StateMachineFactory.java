@@ -20,9 +20,13 @@ package org.apache.hadoop.yarn.state;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
+
+import org.apache.hadoop.yarn.util.Graph;
 
 /**
  * State machine topology.
@@ -440,5 +444,40 @@ final public class StateMachineFactory
           (operand, currentState, eventType, event);
       return currentState;
     }
+  }
+
+  /**
+   * Generate a graph represents the state graph of this StateMachine
+   * @param name graph name
+   * @return Graph object generated
+   */
+  public Graph generateStateGraph(String name) {
+    maybeMakeStateMachineTable();
+    Graph g = new Graph(name);
+    for (STATE startState : stateMachineTable.keySet()) {
+      Map<EVENTTYPE, Transition<OPERAND, STATE, EVENTTYPE, EVENT>> transitions
+          = stateMachineTable.get(startState);
+      for (Entry<EVENTTYPE, Transition<OPERAND, STATE, EVENTTYPE, EVENT>> entry :
+         transitions.entrySet()) {
+        Transition<OPERAND, STATE, EVENTTYPE, EVENT> transition = entry.getValue();
+        if (transition instanceof StateMachineFactory.SingleInternalArc) {
+          StateMachineFactory.SingleInternalArc sa
+              = (StateMachineFactory.SingleInternalArc) transition;
+          Graph.Node fromNode = g.getNode(startState.toString());
+          Graph.Node toNode = g.getNode(sa.postState.toString());
+          fromNode.addEdge(toNode, entry.getKey().toString());
+        } else if (transition instanceof StateMachineFactory.MultipleInternalArc) {
+          StateMachineFactory.MultipleInternalArc ma
+              = (StateMachineFactory.MultipleInternalArc) transition;
+          Iterator<STATE> iter = ma.validPostStates.iterator();
+          while (iter.hasNext()) {
+            Graph.Node fromNode = g.getNode(startState.toString());
+            Graph.Node toNode = g.getNode(iter.next().toString());
+            fromNode.addEdge(toNode, entry.getKey().toString());
+          }
+        }
+      }
+    }
+    return g;
   }
 }
