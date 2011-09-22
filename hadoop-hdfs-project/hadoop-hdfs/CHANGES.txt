@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     IOExceptions of stream closures can mask root exceptions.  (Uma Maheswara
     Rao G via szetszwo)
 
+    HDFS-46.   Change default namespace quota of root directory from
+    Integer.MAX_VALUE to Long.MAX_VALUE.  (Uma Maheswara Rao G via szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
