@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
@@ -70,7 +71,7 @@ public class TestLoadIncrementalHFiles {
    */
   @Test
   public void testSimpleLoad() throws Exception {
-    runTest("testSimpleLoad",
+    runTest("testSimpleLoad", BloomType.NONE,
         new byte[][][] {
           new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("cccc") },
           new byte[][]{ Bytes.toBytes("ddd"), Bytes.toBytes("ooo") },
@@ -83,15 +84,39 @@ public class TestLoadIncrementalHFiles {
    */
   @Test
   public void testRegionCrossingLoad() throws Exception {
-    runTest("testRegionCrossingLoad",
+    runTest("testRegionCrossingLoad", BloomType.NONE,
         new byte[][][] {
           new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
           new byte[][]{ Bytes.toBytes("fff"), Bytes.toBytes("zzz") },
     });
   }
 
-  private void runTest(String testName, byte[][][] hfileRanges)
-  throws Exception {
+  /**
+   * Test loading into a column family that has a ROW bloom filter.
+   */
+  @Test
+  public void testRegionCrossingRowBloom() throws Exception {
+    runTest("testRegionCrossingLoadRowBloom", BloomType.ROW,
+        new byte[][][] {
+          new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
+          new byte[][]{ Bytes.toBytes("fff"), Bytes.toBytes("zzz") },
+    });
+  }
+  
+  /**
+   * Test loading into a column family that has a ROWCOL bloom filter.
+   */
+  @Test
+  public void testRegionCrossingRowColBloom() throws Exception {
+    runTest("testRegionCrossingLoadRowColBloom", BloomType.ROWCOL,
+        new byte[][][] {
+          new byte[][]{ Bytes.toBytes("aaaa"), Bytes.toBytes("eee") },
+          new byte[][]{ Bytes.toBytes("fff"), Bytes.toBytes("zzz") },
+    });
+  }
+
+  private void runTest(String testName, BloomType bloomType, 
+          byte[][][] hfileRanges) throws Exception {
     Path dir = HBaseTestingUtility.getTestDir(testName);
     FileSystem fs = util.getTestFileSystem();
     dir = dir.makeQualified(fs);
@@ -111,7 +136,9 @@ public class TestLoadIncrementalHFiles {
     try {
       HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
       HTableDescriptor htd = new HTableDescriptor(TABLE);
-      htd.addFamily(new HColumnDescriptor(FAMILY));
+      HColumnDescriptor familyDesc = new HColumnDescriptor(FAMILY);
+      familyDesc.setBloomFilterType(bloomType);
+      htd.addFamily(familyDesc);
       admin.createTable(htd, SPLIT_KEYS);
 
       HTable table = new HTable(util.getConfiguration(), TABLE);

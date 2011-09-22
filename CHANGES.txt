@@ -291,6 +291,8 @@ Release 0.91.0 - Unreleased
    HBASE-3421  Very wide rows -- 30M plus -- cause us OOME (Nate Putnam)
    HBASE-4153  Handle RegionAlreadyInTransitionException in AssignmentManager  
                (Ramkrishna)
+   HBASE-4449  LoadIncrementalHFiles should be able to handle CFs with blooms
+               (David Revell)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
