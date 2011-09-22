@@ -227,10 +227,8 @@ public class TestRefreshUserMappings {
   private void addNewConfigResource(String rsrcName, String keyGroup,
       String groups, String keyHosts, String hosts)  throws FileNotFoundException {
     // location for temp resource should be in CLASSPATH
-    Configuration conf = new Configuration();
-    URL url = conf.getResource("hdfs-default.xml");
-    Path p = new Path(url.getPath());
-    Path dir = p.getParent();
+    String dir = System.getProperty("test.build.extraconf", 
+        "build/test/extraconf");
     tempResource = dir.toString() + "/" + rsrcName;
 
 
