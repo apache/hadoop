@@ -293,6 +293,8 @@ Release 0.91.0 - Unreleased
                (Ramkrishna)
    HBASE-4449  LoadIncrementalHFiles should be able to handle CFs with blooms
                (David Revell)
+   HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
+               znode version mismatch (Ramkrishna)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
