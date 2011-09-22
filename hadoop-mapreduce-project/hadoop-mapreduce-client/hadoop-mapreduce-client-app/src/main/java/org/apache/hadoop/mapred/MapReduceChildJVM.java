@@ -245,8 +245,8 @@ public class MapReduceChildJVM {
 
     // Finally add the jvmID
     vargs.add(String.valueOf(jvmID.getId()));
-    vargs.add("1>" + getTaskLogFile(TaskLog.LogName.STDERR));
-    vargs.add("2>" + getTaskLogFile(TaskLog.LogName.STDOUT));
+    vargs.add("1>" + getTaskLogFile(TaskLog.LogName.STDOUT));
+    vargs.add("2>" + getTaskLogFile(TaskLog.LogName.STDERR));
 
     // Final commmand
     StringBuilder mergedCommand = new StringBuilder();

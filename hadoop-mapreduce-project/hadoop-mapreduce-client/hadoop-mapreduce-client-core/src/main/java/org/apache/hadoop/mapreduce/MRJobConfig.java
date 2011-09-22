@@ -462,7 +462,7 @@ public interface MRJobConfig {
   /** The log directory for the containers */
   public static final String TASK_LOG_DIR = MR_PREFIX + "container.log.dir";
   
-  public static final String TASK_LOG_SIZE = MR_PREFIX + "log.filesize";
+  public static final String TASK_LOG_SIZE = MR_PREFIX + "container.log.filesize";
   
   public static final String MAPREDUCE_V2_CHILD_CLASS = 
       "org.apache.hadoop.mapred.YarnChild";

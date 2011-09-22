@@ -310,9 +310,12 @@ public class YARNRunner implements ClientProtocol {
     // Setup the command to run the AM
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
     vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-    vargs.add("-Dhadoop.root.logger="
-        + conf.get(MRJobConfig.MR_AM_LOG_OPTS,
-            MRJobConfig.DEFAULT_MR_AM_LOG_OPTS) + ",console");
+    
+    long logSize = TaskLog.getTaskLogLength(new JobConf(conf));
+    vargs.add("-Dlog4j.configuration=container-log4j.properties");
+    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "="
+        + ApplicationConstants.LOG_DIR_EXPANSION_VAR);
+    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
     
     vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));

@@ -1366,6 +1366,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3044. Pipes jobs stuck without making progress. (mahadev)
 
+    MAPREDUCE-2754. Fixed MR AM stdout, stderr and syslog to redirect to
+    correct log-files. (Ravi Teja Ch N V via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
