@@ -270,11 +270,13 @@ if [ "${SECURITY_TYPE}" = "kerberos" ]; then
   HADOOP_DN_ADDR="0.0.0.0:1019"
   HADOOP_DN_HTTP_ADDR="0.0.0.0:1022"
   SECURITY="true"
+  HADOOP_SECURE_DN_USER=${HADOOP_HDFS_USER}
 else
   TASK_CONTROLLER="org.apache.hadoop.mapred.DefaultTaskController"
   HADDOP_DN_ADDR="0.0.0.0:50010"
   HADOOP_DN_HTTP_ADDR="0.0.0.0:50075"
   SECURITY="false"
+  HADOOP_SECURE_DN_USER=""
 fi
 
 if [ "${AUTOMATED}" != "1" ]; then
