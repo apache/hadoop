@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  *******************************/
 @Private
 @Unstable
-public class MRConstants {
+public interface MRConstants {
   //
   // Timeouts, constants
   //
@@ -57,4 +57,7 @@ public class MRConstants {
    * The reduce task number for which this map output is being transferred
    */
   public static final String FOR_REDUCE_TASK = "for-reduce-task";
+  
+  /** Used in MRv1, mostly in TaskTracker code **/
+  public static final String WORKDIR = "work";
 }
