@@ -864,21 +864,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   }
 
   private void createInstrumentation() {
-    Class<? extends TaskTrackerInstrumentation> metricsInst =
-        getInstrumentationClass(fConf);
-    LOG.debug("instrumentation class="+ metricsInst);
-    if (metricsInst == null) {
-      myInstrumentation = TaskTrackerInstrumentation.create(this);
-      return;
-    }
     try {
+      Class<? extends TaskTrackerInstrumentation> metricsInst =
+          getInstrumentationClass(fConf);
+      LOG.debug("instrumentation class="+ metricsInst);
+      if (metricsInst == null) {
+        myInstrumentation = TaskTrackerInstrumentation.create(this);
+        return;
+      }
       java.lang.reflect.Constructor<? extends TaskTrackerInstrumentation> c =
         metricsInst.getConstructor(new Class<?>[] {TaskTracker.class} );
       this.myInstrumentation = c.newInstance(this);
     } catch(Exception e) {
       //Reflection can throw lots of exceptions -- handle them all by
       //falling back on the default.
-      LOG.error("failed to initialize taskTracker metrics", e);
+      LOG.error(
+          "Failed to initialize taskTracker metrics, falling back to default.",
+          e);
       this.myInstrumentation = TaskTrackerInstrumentation.create(this);
     }
 
