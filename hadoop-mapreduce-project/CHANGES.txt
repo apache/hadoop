@@ -1369,6 +1369,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2754. Fixed MR AM stdout, stderr and syslog to redirect to
     correct log-files. (Ravi Teja Ch N V via vinodkv)
 
+    MAPREDUCE-3073. Fixed build issues in MR1. (mahadev via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
