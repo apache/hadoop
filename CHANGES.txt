@@ -212,6 +212,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7661. FileSystem.getCanonicalServiceName throws NPE for any 
     file system uri that doesn't have an authority. (jitendra)
 
+    HADOOP-7649. TestMapredGroupMappingServiceRefresh and 
+    TestRefreshUserMappings fail after HADOOP-7625. (jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

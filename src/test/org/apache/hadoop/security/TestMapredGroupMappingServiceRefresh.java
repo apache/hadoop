@@ -246,9 +246,8 @@ public class TestMapredGroupMappingServiceRefresh {
   private void addNewConfigResource(String rsrcName, String keyGroup,
       String groups, String keyHosts, String hosts)  throws FileNotFoundException {
     // location for temp resource should be in CLASSPATH
-    URL url = config.getResource("mapred-default.xml");
-    Path p = new Path(url.getPath());
-    Path dir = p.getParent();
+    String dir = System.getProperty("test.build.extraconf", 
+        "build/test/extraconf");
     tempResource = dir.toString() + "/" + rsrcName;
 
 
