@@ -257,21 +257,29 @@ public class TestZKBasedOpenCloseRegion {
     // make sure the region came back
     assertEquals(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()), null);
 
-
     // remove the block and reset the boolean
     hr1.getRegionsInTransitionInRS().remove(hri.getEncodedNameAsBytes());
     reopenEventProcessed.set(false);
+    
+    // now try moving a region when there is no region in transition.
+    hri = getNonMetaRegion(hr1.getOnlineRegions());
 
-    // move the region again, but this time it will work
+    openListener =
+      new ReopenEventListener(hri.getRegionNameAsString(),
+          reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
+
+    cluster.getMaster().executorService.
+      registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
+    
     TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
-        Bytes.toBytes(hr1.getServerName().toString()));
+        Bytes.toBytes(hr0.getServerName().toString()));
 
     while (!reopenEventProcessed.get()) {
       Threads.sleep(100);
     }
 
     // make sure the region has moved from the original RS
-    assertTrue(hr0.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
+    assertTrue(hr1.getOnlineRegion(hri.getEncodedNameAsBytes()) == null);
 
   }
 
