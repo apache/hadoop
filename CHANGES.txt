@@ -177,6 +177,9 @@ Release 0.20.205.0 - 2011.09.12
 
   IMPROVEMENTS
 
+    HADOOP-7655. provide a small validation script that smoke tests the installed
+    cluster. (Arpit Gupta via mattf)
+
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
     acmurthy) 
 
