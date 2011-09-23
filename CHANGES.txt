@@ -1674,6 +1674,10 @@ Release 0.90.0 - January 19th, 2011
    HBASE-3401  Region IPC operations should be high priority
    HBASE-3430  hbase-daemon.sh should clean up PID files on process stop
 
+  TEST
+   HBASE-4450  test for number of blocks read: to serve as baseline for
+               expected blocks read and for catching regressions
+               (Kannan  Muthukkaruppan)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
