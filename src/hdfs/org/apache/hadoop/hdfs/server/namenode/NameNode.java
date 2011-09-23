@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
@@ -354,7 +355,25 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           int infoPort = infoSocAddr.getPort();
           httpServer = new HttpServer("hdfs", infoHost, infoPort, 
               infoPort == 0, conf, 
-              SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN));
+              SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN)) {
+            {
+              if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+                  DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+                //add SPNEGO authentication filter for webhdfs
+                final String name = "SPNEGO";
+                final String classname =  AuthFilter.class.getName();
+                final String pathSpec = "/" + WebHdfsFileSystem.PATH_PREFIX + "/*";
+                defineFilter(webAppContext, name, classname, null,
+                    new String[]{pathSpec});
+                LOG.info("Added filter '" + name + "' (class=" + classname + ")");
+
+                // add webhdfs packages
+                addJerseyResourcePackage(
+                    NamenodeWebHdfsMethods.class.getPackage().getName()
+                    + ";" + Param.class.getPackage().getName(), pathSpec);
+              }
+            }
+          };
           
           boolean certSSL = conf.getBoolean("dfs.https.enable", false);
           boolean useKrb = UserGroupInformation.isSecurityEnabled();
@@ -399,15 +418,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
               FileChecksumServlets.RedirectServlet.class, false);
           httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
               ContentSummaryServlet.class, false);
-
-          if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
-              DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
-            httpServer.addJerseyResourcePackage(NamenodeWebHdfsMethods.class
-                .getPackage().getName()
-                + ";"
-                + Param.class.getPackage().getName(), "/"
-                + WebHdfsFileSystem.PATH_PREFIX + "/*");
-          }
           httpServer.start();
       
           // The web-server port can be ephemeral... ensure we have the correct info

@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -424,19 +425,31 @@ public class JspHelper {
     return UserGroupInformation.createRemoteUser(strings[0]);
   }
 
+  /** Same as getUGI(request, conf, KERBEROS_SSL, true). */
+  public static UserGroupInformation getUGI(final HttpServletRequest request,
+      final Configuration conf) throws IOException {
+    return getUGI(request, conf, AuthenticationMethod.KERBEROS_SSL, true);
+  }
+
   /**
    * Get {@link UserGroupInformation} and possibly the delegation token out of
    * the request.
    * @param request the http request
+   * @param conf configuration
+   * @param secureAuthMethod the AuthenticationMethod used in secure mode.
+   * @param tryUgiParameter Should it try the ugi parameter?
    * @return a new user from the request
    * @throws AccessControlException if the request has no token
    */
   public static UserGroupInformation getUGI(HttpServletRequest request,
-                                            Configuration conf
-                                           ) throws IOException {
-    UserGroupInformation ugi = null;
+      Configuration conf,
+      final AuthenticationMethod secureAuthMethod,
+      final boolean tryUgiParameter) throws IOException {
+    final UserGroupInformation ugi;
+    final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
+
     if(UserGroupInformation.isSecurityEnabled()) {
-      String user = request.getRemoteUser();
+      final String user = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
         Token<DelegationTokenIdentifier> token = 
@@ -450,6 +463,7 @@ public class JspHelper {
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
         ugi = id.getUser();
+        checkUsername(ugi.getUserName(), user);
         ugi.addToken(token);        
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
@@ -460,22 +474,42 @@ public class JspHelper {
         ugi = UserGroupInformation.createRemoteUser(user);
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
-        ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS_SSL);
+        ugi.setAuthenticationMethod(secureAuthMethod);
       }
+
+      checkUsername(user, usernameFromQuery);
+
     } else { // Security's not on, pull from url
-      String user = request.getParameter("ugi");
-      
-      if(user == null) { // not specified in request
-        ugi = getDefaultWebUser(conf);
-      } else {
-        ugi = UserGroupInformation.createRemoteUser(user.split(",")[0]);
-      }
+      ugi = usernameFromQuery == null?
+          getDefaultWebUser(conf) // not specified in request
+          : UserGroupInformation.createRemoteUser(usernameFromQuery);
       ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
     }
     
     if(LOG.isDebugEnabled())
       LOG.debug("getUGI is returning: " + ugi.getShortUserName());
     return ugi;
+  }
+
+  private static void checkUsername(final String expected, final String name
+      ) throws IOException {
+    if (name != null && !name.equals(expected)) {
+      throw new IOException("Usernames not matched: name=" + name
+          + " != expected=" + expected);
+    }
+  }
+
+  private static String getUsernameFromQuery(final HttpServletRequest request,
+      final boolean tryUgiParameter) {
+    String username = request.getParameter(UserParam.NAME);
+    if (username == null && tryUgiParameter) {
+      //try ugi parameter
+      final String ugiStr = request.getParameter("ugi");
+      if (ugiStr != null) {
+        username = ugiStr.split(",")[0];
+      }
+    }
+    return username;
   }
 
   public static DFSClient getDFSClient(final UserGroupInformation user,

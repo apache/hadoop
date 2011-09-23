@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import org.apache.hadoop.security.UserGroupInformation;
+
 /** User parameter. */
 public class UserParam extends StringParam {
   /** Parameter name. */
@@ -32,6 +34,13 @@ public class UserParam extends StringParam {
    */
   public UserParam(final String str) {
     super(DOMAIN, str == null || str.equals(DEFAULT)? null: str);
+  }
+
+  /**
+   * Construct an object from a UGI.
+   */
+  public UserParam(final UserGroupInformation ugi) {
+    this(ugi.getShortUserName());
   }
 
   @Override

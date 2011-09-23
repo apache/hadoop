@@ -18,7 +18,8 @@
 package org.apache.hadoop.hdfs.web.resources;
 
 /** Http operation parameter. */
-public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op> extends EnumParam<E> {
+public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
+    extends EnumParam<E> {
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 
@@ -32,20 +33,16 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op> extends En
     /** @return the Http operation type. */
     public Type getType();
 
-    /** @return true if the operation has output. */
+    /** @return true if the operation will do output. */
     public boolean getDoOutput();
 
-    /** @return true if the operation has output. */
+    /** @return true the expected http response code. */
     public int getExpectedHttpResponseCode();
 
     /** @return a URI query string. */
     public String toQueryString();
   }
 
-  /**
-   * Constructor.
-   * @param str a string representation of the parameter value.
-   */
   HttpOpParam(final Domain<E> domain, final E value) {
     super(domain, value);
   }
