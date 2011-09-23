@@ -21,6 +21,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
+import org.junit.Ignore;
 import org.mockito.Mockito;
 import sun.security.jgss.GSSUtil;
 
@@ -29,6 +30,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
+//Disabled because kerberos setup and valid keytabs are required.
+@Ignore("requires kerberos setup")
 public class TestKerberosAuthenticationHandler extends TestCase {
 
   private KerberosAuthenticationHandler handler;

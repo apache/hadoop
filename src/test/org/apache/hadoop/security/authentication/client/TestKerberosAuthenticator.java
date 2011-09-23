@@ -17,12 +17,15 @@ import org.apache.hadoop.security.authentication.KerberosTestUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.junit.Ignore;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
+//Disabled because kerberos setup and valid keytabs are required.
+@Ignore("requires kerberos setup")
 public class TestKerberosAuthenticator extends AuthenticatorTestCase {
 
   private Properties getAuthenticationHandlerConfiguration() {
