@@ -65,12 +65,8 @@ public class RowCounter {
     public void map(ImmutableBytesWritable row, Result values,
       Context context)
     throws IOException {
-      for (KeyValue value: values.list()) {
-        if (value.getValue().length > 0) {
-          context.getCounter(Counters.ROWS).increment(1);
-          break;
-        }
-      }
+      // Count every row containing data, whether it's in qualifiers or values
+      context.getCounter(Counters.ROWS).increment(1);
     }
   }
 

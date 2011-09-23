@@ -626,6 +626,8 @@ Release 0.90.5 - Unreleased
                running zk with new format root servername
    HBASE-4387  Error while syncing: DFSOutputStream is closed
                (Lars Hofhansl)
+   HBASE-4295  rowcounter does not return the correct number of rows in
+               certain circumstances (David Revell)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

@@ -58,20 +58,8 @@ public class RowCounter extends Configured implements Tool {
         OutputCollector<ImmutableBytesWritable, Result> output,
         Reporter reporter)
     throws IOException {
-      boolean content = false;
-
-      for (KeyValue value: values.list()) {
-        if (value.getValue().length > 0) {
-          content = true;
-          break;
-        }
-      }
-      if (!content) {
-        // Don't count rows that are all empty values.
-        return;
-      }
-      // Give out same value every time.  We're only interested in the row/key
-      reporter.incrCounter(Counters.ROWS, 1);
+        // Count every row containing data, whether it's in qualifiers or values
+        reporter.incrCounter(Counters.ROWS, 1);
     }
 
     public void configure(JobConf jc) {
