@@ -36,9 +36,6 @@ Release 0.20.205.0 - 2011.09.12
 
     HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
 
-    HADOOP-7645. HTTP auth tests requiring Kerberos infrastructure are not 
-    disabled on branch-0.20-security. (jitendra)
-
     HDFS-2338. Add configuration option to enable/disable webhdfs.
     (jitendra via szetszwo)
 
@@ -191,6 +188,11 @@ Release 0.20.205.0 - 2011.09.12
 
     HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
     version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
+
+    HADOOP-7645. HTTP auth tests requiring Kerberos infrastructure are not
+    disabled on branch-0.20-security. (jitendra)
+
+    HADOOP-7674. TestKerberosName fails in 20 branch. (jitendra)
 
     HDFS-2333. Change DFSOutputStream back to package private, otherwise,
     there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)

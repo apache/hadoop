@@ -342,6 +342,14 @@ public class KerberosName {
     String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
     rules = parseRules(ruleString);
   }
+  
+  /**
+   * Set the rules.
+   * @param ruleString the rules string.
+   */
+  public static void setRules(String ruleString) {
+    rules = parseRules(ruleString);
+  }
 
   @SuppressWarnings("serial")
   public static class BadFormatString extends IOException {
@@ -386,7 +394,7 @@ public class KerberosName {
     throw new NoMatchingRule("No rules applied to " + toString());
   }
 
-  static void printRules() throws IOException {
+  public static void printRules() throws IOException {
     int i = 0;
     for(Rule r: rules) {
       System.out.println(++i + " " + r);

@@ -17,7 +17,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import com.sun.security.auth.module.Krb5LoginModule;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.KerberosName;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
