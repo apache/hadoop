@@ -26,6 +26,8 @@ Trunk (unreleased changes)
     HADOOP-7621. alfredo config should be in a file not readable by users
                  (Alejandro Abdelnur via atm)
 
+    HADOOP-7542. Change Configuration XML format to 1.1 to support for serializing additional characters (Christopher Egner via harsh)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
