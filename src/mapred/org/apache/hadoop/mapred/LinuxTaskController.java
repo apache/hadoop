@@ -156,7 +156,7 @@ class LinuxTaskController extends TaskController {
     List<String> command = new ArrayList<String>(
       Arrays.asList(taskControllerExe, 
                     user,
-                    localStorage.getGoodLocalDirsString(),
+                    localStorage.getDirsString(),
                     Integer.toString(Commands.INITIALIZE_JOB.getValue()),
                     jobid,
                     credentials.toUri().getPath().toString(),
@@ -222,7 +222,7 @@ class LinuxTaskController extends TaskController {
       String[] command = 
         new String[]{taskControllerExe, 
           user,
-          localStorage.getGoodLocalDirsString(),
+          localStorage.getDirsString(),
           Integer.toString(Commands.LAUNCH_TASK_JVM.getValue()),
           jobId,
           attemptId,
@@ -263,7 +263,7 @@ class LinuxTaskController extends TaskController {
     String[] command = 
       new String[]{taskControllerExe, 
                    user,
-                   localStorage.getGoodLocalDirsString(),
+                   localStorage.getDirsString(),
                    Integer.toString(Commands.DELETE_AS_USER.getValue()),
                    subDir};
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
@@ -278,7 +278,7 @@ class LinuxTaskController extends TaskController {
     String[] command = 
       new String[]{taskControllerExe, 
                    user,
-                   localStorage.getGoodLocalDirsString(),
+                   localStorage.getDirsString(),
                    Integer.toString(Commands.DELETE_LOG_AS_USER.getValue()),
                    subDir};
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
@@ -294,7 +294,7 @@ class LinuxTaskController extends TaskController {
     String[] command = 
       new String[]{taskControllerExe, 
                    user,
-                   localStorage.getGoodLocalDirsString(),
+                   localStorage.getDirsString(),
                    Integer.toString(Commands.SIGNAL_TASK.getValue()),
                    Integer.toString(taskPid),
                    Integer.toString(signal.getValue())};
@@ -362,7 +362,7 @@ class LinuxTaskController extends TaskController {
     String[] taskControllerCmd = new String[4 + command.size()];
     taskControllerCmd[0] = taskControllerExe;
     taskControllerCmd[1] = user;
-    taskControllerCmd[2] = localStorage.getGoodLocalDirsString();
+    taskControllerCmd[2] = localStorage.getDirsString();
     taskControllerCmd[3] = Integer.toString(
         Commands.RUN_COMMAND_AS_USER.getValue());
     int i = 4;

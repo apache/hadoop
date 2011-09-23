@@ -188,8 +188,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     // setup task controller
     taskController = getTaskController();
     taskController.setConf(trackerFConf);
-    taskController.setup(lDirAlloc,
-                         new LocalStorage(trackerFConf.getLocalDirs()));
+    taskController.setup(lDirAlloc, new LocalStorage(trackerFConf.getLocalDirs()));
     tracker.setTaskController(taskController);
     tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(),localDirs));
   }

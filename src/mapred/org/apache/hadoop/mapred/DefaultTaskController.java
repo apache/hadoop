@@ -69,7 +69,7 @@ public class DefaultTaskController extends TaskController {
   public void createLogDir(TaskAttemptID taskID, 
 		  			boolean isCleanup) throws IOException {
     TaskLog.createTaskAttemptLogDir(taskID, isCleanup, 
-                                    localStorage.getGoodLocalDirs());
+                                    localStorage.getDirs());
   }
   
   /**
@@ -243,7 +243,7 @@ public class DefaultTaskController extends TaskController {
     FileUtil.fullyDelete( subDirPath );
     
     //Delete the subDir in all good <mapred.local.dirs>/userlogs 
-    String [] localDirs = localStorage.getGoodLocalDirs();
+    String [] localDirs = localStorage.getDirs();
     for(String localdir : localDirs) {
     	String dirPath = localdir + File.separatorChar + 
     					TaskLog.USERLOGS_DIR_NAME + File.separatorChar +
@@ -271,9 +271,9 @@ public class DefaultTaskController extends TaskController {
   }
 
   @Override
-  public void setup(LocalDirAllocator allocator, LocalStorage l) {
+  public void setup(LocalDirAllocator allocator, LocalStorage localStorage) {
     this.allocator = allocator;
-    this.localStorage = l;
+    this.localStorage = localStorage;
   }
   
 }

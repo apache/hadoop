@@ -42,7 +42,7 @@ import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.JobLocalizer;
 import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.mapred.TaskTracker;
-import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
+import org.apache.hadoop.mapred.UtilsForTests;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -114,8 +114,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         taskControllerClass, conf);
 
     // setup permissions for mapred local dir
-    taskController.setup(localDirAllocator,
-        new LocalStorage(conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
+    UtilsForTests.setupTC(taskController, localDirAllocator,
+        conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
 
     // Create the temporary cache files to be used in the tests.
     firstCacheFile = new Path(TEST_ROOT_DIR, "firstcachefile");
@@ -130,8 +130,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   
   protected void refreshConf(Configuration conf) throws IOException {
     taskController.setConf(conf);
-    taskController.setup(localDirAllocator,
-        new LocalStorage(conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
+    UtilsForTests.setupTC(taskController, localDirAllocator,
+        conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
   }
 
   /**

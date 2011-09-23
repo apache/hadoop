@@ -58,10 +58,6 @@ public abstract class TaskController implements Configurable {
   protected static final String COMMAND_FILE = "taskjvm.sh";
   
   protected LocalDirAllocator allocator;
-
-  /**
-   * LocalStorage of TaskTracker
-   */
   protected LocalStorage localStorage;
 
   final public static FsPermission TASK_LAUNCH_SCRIPT_PERMISSION =
@@ -71,8 +67,8 @@ public abstract class TaskController implements Configurable {
     return conf;
   }
 
-  public LocalStorage getLocalStorage() {
-	  return localStorage;
+  public String[] getLocalDirs() {
+    return localStorage.getDirs();
   }
   
   public void setConf(Configuration conf) {
@@ -82,10 +78,10 @@ public abstract class TaskController implements Configurable {
   /**
    * Does initialization and setup.
    * @param allocator the local dir allocator to use
-   * @param l TaskTracker's LocalStorage object
+   * @param localStorage local storage to obtain dirs from
    */
   public abstract void setup(LocalDirAllocator allocator,
-      LocalStorage l) throws IOException;
+      LocalStorage localStorage) throws IOException;
   
   /**
    * Create all of the directories necessary for the job to start and download
