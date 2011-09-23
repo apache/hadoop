@@ -44,6 +44,24 @@
       name="jetty"
       rev="${jetty.version}"
       conf="common->default"/>
+
+    <dependency org="asm"
+      name="asm"
+      rev="${asm.version}"
+      conf="common->master"/>
+    <dependency org="com.sun.jersey"
+      name="jersey-core"
+      rev="${jersey-core.version}"
+      conf="common->master"/>
+    <dependency org="com.sun.jersey"
+      name="jersey-json"
+      rev="${jersey-json.version}"
+      conf="common->master"/>
+    <dependency org="com.sun.jersey"
+      name="jersey-server"
+      rev="${jersey-server.version}"
+      conf="common->master"/>
+
     <dependency org="commons-httpclient"
       name="commons-httpclient"
       rev="${commons-httpclient.version}"

@@ -47,6 +47,9 @@ Release 0.20.205.0 - 2011.09.12
 
   BUG FIXES
 
+    HDFS-2342. add Jersey libraries to ivy.xml files in contrib, to fix
+    TestSleepJob and TestHdfsProxy. (Tsz Wo (Nicholas), SZE via mattf)
+
     MAPREDUCE-2324. Removed usage of broken
     ResourceEstimator.getEstimatedReduceInputSize to check against usable
     disk-space on TaskTracker. (Robert Evans via acmurthy) 
