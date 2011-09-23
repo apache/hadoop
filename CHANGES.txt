@@ -186,6 +186,9 @@ Release 0.20.205.0 - 2011.09.12
     MAPREDUCE-3076. Annotate o.a.h.mapreduce.TestSleepJob with @Ignore since it
     is not a junit test.  (acmurthy via szetszwo)
 
+    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
+    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7655. provide a small validation script that smoke tests the installed
