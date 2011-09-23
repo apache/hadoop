@@ -197,15 +197,6 @@ public class TestHdfsProxy extends TestCase {
 
   /** verify hdfsproxy implements the hftp interface */
   public void testHdfsProxyInterface() throws Exception {
-      // Test currently fails in Jenkins with 
-      //   "org.apache.hadoop.ipc.RemoteException: hudson is not allowed to impersonate hudson"
-      // TODO: Fix and restore test after 0.20-security-204 release.
-      //
-      // doTestHdfsProxyInterface();
-  }
-
-  /** verify hdfsproxy implements the hftp interface */
-  private void doTestHdfsProxyInterface() throws Exception {
     MiniDFSCluster cluster = null;
     HdfsProxy proxy = null;
     try {
