@@ -458,31 +458,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException {
     LocatedBlocks blocks = callGetBlockLocations(namenode, src, start, length);
-    if (blocks == null) {
-      return new BlockLocation[0];
-    }
-    int nrBlocks = blocks.locatedBlockCount();
-    BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
-    int idx = 0;
-    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
-      assert idx < nrBlocks : "Incorrect index";
-      DatanodeInfo[] locations = blk.getLocations();
-      String[] hosts = new String[locations.length];
-      String[] names = new String[locations.length];
-      String[] racks = new String[locations.length];
-      for (int hCnt = 0; hCnt < locations.length; hCnt++) {
-        hosts[hCnt] = locations[hCnt].getHostName();
-        names[hCnt] = locations[hCnt].getName();
-        NodeBase node = new NodeBase(names[hCnt], 
-                                     locations[hCnt].getNetworkLocation());
-        racks[hCnt] = node.toString();
-      }
-      blkLocations[idx] = new BlockLocation(names, hosts, racks,
-                                            blk.getStartOffset(),
-                                            blk.getBlockSize());
-      idx++;
-    }
-    return blkLocations;
+    return DFSUtil.locatedBlocks2Locations(blocks);
   }
 
   public DFSInputStream open(String src) throws IOException {

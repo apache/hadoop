@@ -88,6 +88,25 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.hostName = hostName;
   }
   
+  /** Constructor */
+  public DatanodeInfo(final String name, final String storageID,
+      final int infoPort, final int ipcPort,
+      final long capacity, final long dfsUsed, final long remaining,
+      final long lastUpdate, final int xceiverCount,
+      final String networkLocation, final String hostName,
+      final AdminStates adminState) {
+    super(name, storageID, infoPort, ipcPort);
+
+    this.capacity = capacity;
+    this.dfsUsed = dfsUsed;
+    this.remaining = remaining;
+    this.lastUpdate = lastUpdate;
+    this.xceiverCount = xceiverCount;
+    this.location = networkLocation;
+    this.hostName = hostName;
+    this.adminState = adminState;
+  }
+
   /** The raw capacity. */
   public long getCapacity() { return capacity; }
   
@@ -266,7 +285,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /**
    * Retrieves the admin state of this node.
    */
-  AdminStates getAdminState() {
+  public AdminStates getAdminState() {
     if (adminState == null) {
       return AdminStates.NORMAL;
     }

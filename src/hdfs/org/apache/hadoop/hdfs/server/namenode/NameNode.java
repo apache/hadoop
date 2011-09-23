@@ -562,8 +562,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
   
   private static String getClientMachine() {
-    String clientMachine = Server.getRemoteAddress();
-    if (clientMachine == null) {
+    String clientMachine = NamenodeWebHdfsMethods.getRemoteAddress();
+    if (clientMachine == null) { //not a web client
+      clientMachine = Server.getRemoteAddress();
+    }
+    if (clientMachine == null) { //not a RPC client
       clientMachine = "";
     }
     return clientMachine;

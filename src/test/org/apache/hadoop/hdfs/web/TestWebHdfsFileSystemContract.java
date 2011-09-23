@@ -24,6 +24,8 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
@@ -130,6 +132,21 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       fail("Should throw FileNotFoundException");
     } catch (FileNotFoundException fnfe) {
       // expected
+    }
+  }
+  
+  public void testGetFileBlockLocations() throws IOException {
+    final String f = "/test/testGetFileBlockLocations";
+    final Path p = path(f);
+    createFile(p);
+    final BlockLocation[] computed = fs.getFileBlockLocations(
+        fs.getFileStatus(p), 0L, 1L);
+    final FileSystem hdfs = cluster.getFileSystem();
+    final BlockLocation[] expected = hdfs.getFileBlockLocations(
+        hdfs.getFileStatus(new Path(f)), 0L, 1L);
+    assertEquals(expected.length, computed.length);
+    for(int i = 0; i < computed.length; i++) {
+      assertEquals(expected[i].toString(), computed[i].toString());
     }
   }
 }

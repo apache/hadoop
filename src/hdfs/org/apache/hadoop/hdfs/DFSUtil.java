@@ -19,9 +19,14 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.UnsupportedEncodingException;
-
 import java.util.StringTokenizer;
+
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.net.NodeBase;
 
 public class DFSUtil {
   /**
@@ -71,6 +76,39 @@ public class DFSUtil {
       assert false : "UTF8 encoding is not supported ";
     }
     return null;
+  }
+
+  /**
+   * Convert a LocatedBlocks to BlockLocations[]
+   * @param blocks a LocatedBlocks
+   * @return an array of BlockLocations
+   */
+  public static BlockLocation[] locatedBlocks2Locations(LocatedBlocks blocks) {
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
+    int nrBlocks = blocks.locatedBlockCount();
+    BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
+    int idx = 0;
+    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
+      assert idx < nrBlocks : "Incorrect index";
+      DatanodeInfo[] locations = blk.getLocations();
+      String[] hosts = new String[locations.length];
+      String[] names = new String[locations.length];
+      String[] racks = new String[locations.length];
+      for (int hCnt = 0; hCnt < locations.length; hCnt++) {
+        hosts[hCnt] = locations[hCnt].getHostName();
+        names[hCnt] = locations[hCnt].getName();
+        NodeBase node = new NodeBase(names[hCnt], 
+                                     locations[hCnt].getNetworkLocation());
+        racks[hCnt] = node.toString();
+      }
+      blkLocations[idx] = new BlockLocation(names, hosts, racks,
+                                            blk.getStartOffset(),
+                                            blk.getBlockSize());
+      idx++;
+    }
+    return blkLocations;
   }
 }
 
