@@ -233,7 +233,7 @@ public class UserLogCleaner extends Thread {
 	//If <hadoop.log.dir>/userlogs/jobid not found, then get user from 
 	//any one of existing <mapred.local.dir>/userlogs/jobid path(s)
 	String[] localDirs = 
-	   userLogManager.getTaskController().getLocalStorage().getGoodLocalDirs();
+	   userLogManager.getTaskController().getLocalDirs();
 	for(String localDir : localDirs) {
 		try{
 		   logRoot = localDir + File.separator + TaskLog.USERLOGS_DIR_NAME;

@@ -32,6 +32,7 @@ import java.util.Properties;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -49,6 +50,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
+import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogEvent;
@@ -878,5 +880,17 @@ public class UtilsForTests {
     return tmpTaskTracker;
   }
 
+  /**
+   * Setup the given task controller
+   * @param taskController to setup
+   * @param localAlloc local allocator to use
+   * @param dirs to use for local storage
+   * @throws IOException
+   */
+  public static void setupTC(TaskController taskController, 
+      LocalDirAllocator localAlloc, String[] dirs) throws IOException {
+    // Hide LocalStorage from callers
+    taskController.setup(localAlloc, new LocalStorage(dirs));
+  }
 }
 

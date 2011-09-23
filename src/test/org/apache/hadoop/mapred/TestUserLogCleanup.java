@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -30,7 +29,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.*;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.junit.Assert.*;
 
@@ -92,16 +90,13 @@ public class TestUserLogCleanup {
     tt.setConf(new JobConf(conf));
     LocalDirAllocator localDirAllocator = 
     					new LocalDirAllocator("mapred.local.dir");
-    tt.setLocalDirAllocator(localDirAllocator);
-    LocalStorage localStorage = new LocalStorage(conf.getLocalDirs());
-    localStorage.checkLocalDirs();
-    tt.setLocalStorage(localStorage);
     localizer = new Localizer(FileSystem.get(conf), conf
         .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
     tt.setLocalizer(localizer);
     userLogManager = new UtilsForTests.InLineUserLogManager(conf);
     TaskController taskController = userLogManager.getTaskController();
-    taskController.setup(localDirAllocator, localStorage);
+    taskController.setup(localDirAllocator,
+        new LocalStorage(conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
     tt.setTaskController(taskController);
     userLogCleaner = userLogManager.getUserLogCleaner();
     userLogCleaner.setClock(myClock);

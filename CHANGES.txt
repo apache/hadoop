@@ -205,6 +205,8 @@ Release 0.20.205.0 - 2011.09.12
 
   IMPROVEMENTS
 
+    MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
+
     HADOOP-7655. provide a small validation script that smoke tests the installed
     cluster. (Arpit Gupta via mattf)
 

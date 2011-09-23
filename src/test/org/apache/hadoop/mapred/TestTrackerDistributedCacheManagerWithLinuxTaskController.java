@@ -66,9 +66,8 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     String execPath = path + "/task-controller";
     ((MyLinuxTaskController)taskController).setTaskControllerExe(execPath);
     taskController.setConf(conf);
-    taskController.setup(
-        new LocalDirAllocator(JobConf.MAPRED_LOCAL_DIR_PROPERTY),
-        new LocalStorage(conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)));
+    UtilsForTests.setupTC(taskController, localDirAllocator,
+        conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
   }
 
   @Override
