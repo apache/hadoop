@@ -45,7 +45,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
-import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -149,10 +148,8 @@ public class DatanodeWebHdfsMethods {
     {
       final Configuration conf = new Configuration(datanode.getConf());
       final DFSClient dfsclient = new DFSClient(conf);
-      final DFSOutputStream dfsout = dfsclient.append(fullpath,
-          bufferSize.getValue(), null);
-      final FSDataOutputStream out = new FSDataOutputStream(dfsout, null,
-          dfsout.getInitialLen());
+      final FSDataOutputStream out = dfsclient.append(fullpath,
+          bufferSize.getValue(), null, null);
       try {
         IOUtils.copyBytes(in, out, bufferSize.getValue());
       } finally {
