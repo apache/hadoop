@@ -39,6 +39,9 @@ Release 0.20.205.0 - 2011.09.12
     HADOOP-7645. HTTP auth tests requiring Kerberos infrastructure are not 
     disabled on branch-0.20-security. (jitendra)
 
+    HDFS-2338. Add configuration option to enable/disable webhdfs.
+    (jitendra via szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-2324. Removed usage of broken

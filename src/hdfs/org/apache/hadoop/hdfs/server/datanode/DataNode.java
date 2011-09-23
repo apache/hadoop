@@ -455,10 +455,12 @@ public class DataNode extends Configured
     this.infoServer.addServlet(null, "/blockScannerReport", 
                                DataBlockScanner.Servlet.class);
 
-    infoServer.addJerseyResourcePackage(
-        DatanodeWebHdfsMethods.class.getPackage().getName()
-        + ";" + Param.class.getPackage().getName(),
-        "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+    if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+      infoServer.addJerseyResourcePackage(DatanodeWebHdfsMethods.class
+          .getPackage().getName() + ";" + Param.class.getPackage().getName(),
+          "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+    }
     this.infoServer.start();
     // adjust info port
     this.dnRegistration.setInfoPort(this.infoServer.getPort());
