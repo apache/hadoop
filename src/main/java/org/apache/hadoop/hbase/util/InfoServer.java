@@ -102,10 +102,10 @@ public class InfoServer extends HttpServer {
    */
   protected String getWebAppsPath(String appName) throws FileNotFoundException {
     // Copied from the super-class.
-    URL url = getClass().getClassLoader().getResource("hbase-webapps/" + appName);
+    String resourceName = "hbase-webapps/" + appName;
+    URL url = getClass().getClassLoader().getResource(resourceName);
     if (url == null)
-      throw new FileNotFoundException("webapps/" + appName
-          + " not found in CLASSPATH");
+      throw new FileNotFoundException(resourceName + " not found in CLASSPATH");
     String urlString = url.toString();
     return urlString.substring(0, urlString.lastIndexOf('/'));
   }

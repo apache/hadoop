@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.91.0 - Unreleased
+Release 0.92.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-2002  Coprocessors: Client side support; Support RPC interface
                changes at runtime (Gary Helmling via Andrew Purtell)
@@ -296,7 +296,9 @@ Release 0.91.0 - Unreleased
    HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
                znode version mismatch (Ramkrishna)
    HBASE-4446  Rolling restart RSs scenario, regions could stay in OPENING state
-               (Ming Ma)
+               (Ming Ma) 
+   HBASE-4468  Wrong resource name in an error massage: webapps instead of
+               hbase-webapps (nkeywal)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
