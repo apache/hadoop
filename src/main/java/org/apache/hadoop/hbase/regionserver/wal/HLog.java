@@ -1061,8 +1061,17 @@ public class HLog implements Syncable {
     try {
       long now = System.currentTimeMillis();
       // Done in parallel for all writer threads, thanks to HDFS-895
-      this.writer.sync();
+      boolean syncSuccessful = true;
+      try {
+        this.writer.sync();
+      } catch(IOException io) {
+        syncSuccessful = false;
+      }
       synchronized (this.updateLock) {
+        if (!syncSuccessful) {
+          // HBASE-4387, retry with updateLock held
+          this.writer.sync();
+        }
         syncTime += System.currentTimeMillis() - now;
         syncOps++;
         if (!this.logRollRunning) {

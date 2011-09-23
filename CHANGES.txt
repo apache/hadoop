@@ -624,6 +624,8 @@ Release 0.90.5 - Unreleased
    HBASE-4445  Not passing --config when checking if distributed mode or not
    HBASE-4453  TestReplication failing up on builds.a.o because already
                running zk with new format root servername
+   HBASE-4387  Error while syncing: DFSOutputStream is closed
+               (Lars Hofhansl)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
