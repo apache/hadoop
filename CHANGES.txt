@@ -525,6 +525,7 @@ Release 0.92.0 - Unreleased
                (David Revell)
    HBASE-4424  Provide coprocessors access to createTable() via 
                MasterServices
+   HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
