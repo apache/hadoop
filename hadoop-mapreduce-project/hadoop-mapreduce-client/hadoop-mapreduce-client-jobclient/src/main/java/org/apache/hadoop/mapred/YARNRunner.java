@@ -321,9 +321,6 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
     vargs.add(MRJobConfig.APPLICATION_MASTER_CLASS);
-    vargs.add(String.valueOf(applicationId.getClusterTimestamp()));
-    vargs.add(String.valueOf(applicationId.getId()));
-    vargs.add(ApplicationConstants.AM_FAIL_COUNT_STRING);
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + 
         Path.SEPARATOR + ApplicationConstants.STDOUT);
     vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + 

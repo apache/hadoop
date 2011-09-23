@@ -42,9 +42,9 @@ public class ApplicationMasterLauncher extends AbstractService implements
   private final BlockingQueue<Runnable> masterEvents
     = new LinkedBlockingQueue<Runnable>();
   
-  private ApplicationTokenSecretManager applicationTokenSecretManager;
+  protected ApplicationTokenSecretManager applicationTokenSecretManager;
   private ClientToAMSecretManager clientToAMSecretManager;
-  private final RMContext context;
+  protected final RMContext context;
   
   public ApplicationMasterLauncher(ApplicationTokenSecretManager 
       applicationTokenSecretManager, ClientToAMSecretManager clientToAMSecretManager,

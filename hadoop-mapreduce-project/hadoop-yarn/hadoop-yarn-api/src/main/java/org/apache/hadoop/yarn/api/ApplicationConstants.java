@@ -37,8 +37,11 @@ public interface ApplicationConstants {
   public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
     "AppClientTokenEnv";
 
-  // TODO: Weird. This is part of AM command line. Instead it should be a env.
-  public static final String AM_FAIL_COUNT_STRING = "<FAILCOUNT>";
+  /**
+   * The environmental variable for APPLICATION_ATTEMPT_ID. Set in
+   * ApplicationMaster's environment only.
+   */
+  public static final String APPLICATION_ATTEMPT_ID_ENV = "APPLICATION_ATTEMPT_ID";
 
   public static final String CONTAINER_TOKEN_FILE_ENV_NAME =
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;

@@ -31,8 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
@@ -56,22 +54,26 @@ public class ContainerLogsPage extends NMView {
     private final Configuration conf;
     private final LocalDirAllocator logsSelector;
     private final Context nmContext;
-    private final RecordFactory recordFactory;
 
     @Inject
     public ContainersLogsBlock(Configuration conf, Context context) {
       this.conf = conf;
       this.logsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
       this.nmContext = context;
-      this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     }
 
     @Override
     protected void render(Block html) {
       DIV<Hamlet> div = html.div("#content");
 
-      ContainerId containerId =
-        ConverterUtils.toContainerId(this.recordFactory, $(CONTAINER_ID));
+      ContainerId containerId;
+      try {
+        containerId = ConverterUtils.toContainerId($(CONTAINER_ID));
+      } catch (IOException e) {
+        div.h1("Invalid containerId " + $(CONTAINER_ID))._();
+        return;
+      }
+
       Container container = this.nmContext.getContainers().get(containerId);
 
       if (container == null) {

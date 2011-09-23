@@ -77,6 +77,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -87,6 +88,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * The Map-Reduce Application Master.
@@ -647,13 +649,18 @@ public class MRAppMaster extends CompositeService {
 
   public static void main(String[] args) {
     try {
-      //Configuration.addDefaultResource("job.xml");
-      ApplicationId applicationId = RecordFactoryProvider
-          .getRecordFactory(null).newRecordInstance(ApplicationId.class);
-      applicationId.setClusterTimestamp(Long.valueOf(args[0]));
-      applicationId.setId(Integer.valueOf(args[1]));
-      int failCount = Integer.valueOf(args[2]);
-      MRAppMaster appMaster = new MRAppMaster(applicationId, failCount);
+      String applicationAttemptIdStr = System
+          .getenv(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV);
+      if (applicationAttemptIdStr == null) {
+        String msg = ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV
+            + " is null";
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+      ApplicationAttemptId applicationAttemptId = ConverterUtils
+          .toApplicationAttemptId(applicationAttemptIdStr);
+      MRAppMaster appMaster = new MRAppMaster(applicationAttemptId
+          .getApplicationId(), applicationAttemptId.getAttemptId());
       Runtime.getRuntime().addShutdownHook(
           new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
