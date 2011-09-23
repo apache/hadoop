@@ -80,11 +80,12 @@ class StoreFileScanner implements KeyValueScanner {
 
   public KeyValue next() throws IOException {
     KeyValue retKey = cur;
-    cur = hfs.getKeyValue();
     try {
-      // only seek if we arent at the end. cur == null implies 'end'.
-      if (cur != null)
+      // only seek if we aren't at the end. cur == null implies 'end'.
+      if (cur != null) {
         hfs.next();
+        cur = hfs.getKeyValue();
+      }
     } catch(IOException e) {
       throw new IOException("Could not iterate " + this, e);
     }
@@ -98,7 +99,6 @@ class StoreFileScanner implements KeyValueScanner {
         return false;
       }
       cur = hfs.getKeyValue();
-      hfs.next();
       return true;
     } catch(IOException ioe) {
       throw new IOException("Could not seek " + this, ioe);
@@ -112,7 +112,6 @@ class StoreFileScanner implements KeyValueScanner {
         return false;
       }
       cur = hfs.getKeyValue();
-      hfs.next();
       return true;
     } catch (IOException ioe) {
       throw new IOException("Could not seek " + this, ioe);
