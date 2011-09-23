@@ -281,6 +281,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2726. Added job-file to the AM and JobHistoryServer web
     interfaces. (Jeffrey Naisbitt via vinodkv)
 
+    MAPREDUCE-3055. Simplified ApplicationAttemptId passing to
+    ApplicationMaster via environment variable. (vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

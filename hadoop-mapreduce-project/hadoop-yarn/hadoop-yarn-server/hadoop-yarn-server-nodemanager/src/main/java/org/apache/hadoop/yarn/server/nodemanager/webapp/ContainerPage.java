@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
-import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.IOException;
+
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -53,21 +52,23 @@ public class ContainerPage extends NMView implements NMWebParams {
 
   public static class ContainerBlock extends HtmlBlock implements NMWebParams {
 
-    private final Configuration conf;
     private final Context nmContext;
-    private final RecordFactory recordFactory;
 
     @Inject
-    public ContainerBlock(Configuration conf, Context nmContext) {
-      this.conf = conf;
+    public ContainerBlock(Context nmContext) {
       this.nmContext = nmContext;
-      this.recordFactory = RecordFactoryProvider.getRecordFactory(this.conf);
     }
 
     @Override
     protected void render(Block html) {
-      ContainerId containerID =
-        ConverterUtils.toContainerId(this.recordFactory, $(CONTAINER_ID));
+      ContainerId containerID;
+      try {
+        containerID = ConverterUtils.toContainerId($(CONTAINER_ID));
+      } catch (IOException e) {
+        html.p()._("Invalid containerId " + $(CONTAINER_ID))._();
+        return;
+      }
+
       Container container = this.nmContext.getContainers().get(containerID);
       ContainerStatus containerData = container.cloneAndGetContainerStatus();
       int exitCode = containerData.getExitStatus();
