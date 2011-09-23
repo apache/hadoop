@@ -1523,7 +1523,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // to OFFLINE state meanwhile the RS could have opened the corresponding
     // region and the state in znode will be RS_ZK_REGION_OPENED.
     // For all other cases we can change the in-memory state to OFFLINE.
-    if (hijack && 
+    if (hijack &&
         (state.getState().equals(RegionState.State.PENDING_OPEN) || 
             state.getState().equals(RegionState.State.OPENING))) {
       state.update(RegionState.State.PENDING_OPEN);
@@ -2504,7 +2504,8 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("Region has transitioned to OPENED, allowing "
             + "watched event handlers to process");
         return;
-      } else if (dataInZNode.getEventType() != EventType.RS_ZK_REGION_OPENING) {
+      } else if (dataInZNode.getEventType() != EventType.RS_ZK_REGION_OPENING &&
+          dataInZNode.getEventType() != EventType.RS_ZK_REGION_FAILED_OPEN ) {
         LOG.warn("While timing out a region in state OPENING, "
             + "found ZK node in unexpected state: "
             + dataInZNode.getEventType());

@@ -295,6 +295,8 @@ Release 0.91.0 - Unreleased
                (David Revell)
    HBASE-4452  Possibility of RS opening a region though tickleOpening fails due to
                znode version mismatch (Ramkrishna)
+   HBASE-4446  Rolling restart RSs scenario, regions could stay in OPENING state
+               (Ming Ma)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
