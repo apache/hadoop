@@ -25,6 +25,9 @@ Trunk (unreleased changes)
 
     HADOOP-7621. alfredo config should be in a file not readable by users
                  (Alejandro Abdelnur via atm)
+    
+    HADOOP-7669  Fix newly introduced release audit warning. 
+                 (Uma Maheswara Rao G via stevel)
 
 Release 0.23.0 - Unreleased
 
