@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import org.junit.Ignore;
+
 import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -41,6 +43,7 @@ import org.apache.hadoop.util.ToolRunner;
  * of <code>numMappers * mapSleepTime / 100</code>, so the job uses
  * some disk space.
  */
+@Ignore
 public class TestSleepJob extends Configured implements Tool {
   public static String MAP_SLEEP_COUNT = "mapreduce.sleepjob.map.sleep.count";
   public static String REDUCE_SLEEP_COUNT = 
