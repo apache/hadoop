@@ -19,69 +19,61 @@ package org.apache.hadoop.hdfs.web;
 
 
 import static org.apache.hadoop.fs.FileSystemTestHelper.exists;
-import static org.apache.hadoop.fs.FileSystemTestHelper.getDefaultBlockSize;
 import static org.apache.hadoop.fs.FileSystemTestHelper.getTestRootPath;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.apache.log4j.Level;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   {
     ((Log4JLogger)ExceptionHandler.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DatanodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  private static final MiniDFSCluster cluster;
-  private static final Path defaultWorkingDirectory;
+  private static MiniDFSCluster cluster = null;
+  private static Path defaultWorkingDirectory;
 
-  static {
+  @BeforeClass
+  public static void setupCluster() {
     Configuration conf = new Configuration();
     try {
       cluster = new MiniDFSCluster(conf, 2, true, null);
-      fSys = cluster.getWebHdfsFileSystem();
+      cluster.waitActive();
+
+      final String uri = WebHdfsFileSystem.SCHEME  + "://"
+          + conf.get("dfs.http.address");
+      fSys = FileSystem.get(new URI(uri), conf); 
       defaultWorkingDirectory = fSys.getWorkingDirectory();
-    } catch (IOException e) {
+    } catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  @AfterClass
+  public static void shutdownCluster() {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
     }
   }
 
   @Override
   protected Path getDefaultWorkingDirectory() {
     return defaultWorkingDirectory;
-  }
-
-  /** Override the following method without using position read. */
-  @Override
-  protected void writeReadAndDelete(int len) throws IOException {
-    Path path = getTestRootPath(fSys, "test/hadoop/file");
-    fSys.mkdirs(path.getParent());
-
-    FSDataOutputStream out = 
-      fSys.create(path, false, 4096, (short) 1, getDefaultBlockSize() );
-    out.write(data, 0, len);
-    out.close();
-
-    Assert.assertTrue("Exists", exists(fSys, path));
-    Assert.assertEquals("Length", len, fSys.getFileStatus(path).getLen());
-
-    FSDataInputStream in = fSys.open(path);
-    for (int i = 0; i < len; i++) {
-      final int b  = in.read();
-      Assert.assertEquals("Position " + i, data[i], b);
-    }
-    in.close();
-    Assert.assertTrue("Deleted", fSys.delete(path, false));
-    Assert.assertFalse("No longer exists", exists(fSys, path));
   }
 
   //copied from trunk.

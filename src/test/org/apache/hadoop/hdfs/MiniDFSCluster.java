@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
@@ -801,18 +800,6 @@ public class MiniDFSCluster {
     final String str = "hftp://" + conf.get("dfs.http.address");
     try {
       return (HftpFileSystem)FileSystem.get(new URI(str), conf); 
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-  }
-
-  /**
-   * @return a {@link WebHdfsFileSystem} object.
-   */
-  public WebHdfsFileSystem getWebHdfsFileSystem() throws IOException {
-    final String str = WebHdfsFileSystem.SCHEME  + "://" + conf.get("dfs.http.address");
-    try {
-      return (WebHdfsFileSystem)FileSystem.get(new URI(str), conf); 
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }

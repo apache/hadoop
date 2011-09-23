@@ -18,24 +18,24 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
+  private static final Configuration conf = new Configuration();
   private static final MiniDFSCluster cluster;
   private String defaultWorkingDirectory;
 
   static {
-    Configuration conf = new Configuration();
     try {
       cluster = new MiniDFSCluster(conf, 2, true, null);
+      cluster.waitActive();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -43,9 +43,10 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
   @Override
   protected void setUp() throws Exception {
-    fs = cluster.getWebHdfsFileSystem();
-    defaultWorkingDirectory = "/user/"
-        + UserGroupInformation.getCurrentUser().getShortUserName();
+    final String uri = WebHdfsFileSystem.SCHEME  + "://"
+        + conf.get("dfs.http.address");
+    fs = FileSystem.get(new URI(uri), conf); 
+    defaultWorkingDirectory = fs.getWorkingDirectory().toUri().getPath();
   }
 
   @Override
@@ -53,34 +54,21 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     return defaultWorkingDirectory;
   }
 
-  /** Override the following method without using position read. */
-  @Override
-  protected void writeReadAndDelete(int len) throws IOException {
-    Path path = path("/test/hadoop/file");
-    
-    fs.mkdirs(path.getParent());
 
-    FSDataOutputStream out = fs.create(path, false,
-        fs.getConf().getInt("io.file.buffer.size", 4096), 
-        (short) 1, getBlockSize());
-    out.write(data, 0, len);
-    out.close();
-
-    assertTrue("Exists", fs.exists(path));
-    assertEquals("Length", len, fs.getFileStatus(path).getLen());
-
-    FSDataInputStream in = fs.open(path);
-    for (int i = 0; i < len; i++) {
-      final int b = in.read();
-      assertEquals("Position " + i, data[i], b);
-    }
-    in.close();
-    
-    assertTrue("Deleted", fs.delete(path, false));
-    assertFalse("No longer exists", fs.exists(path));
-  }
-
-  //The following test failed for HftpFileSystem,
-  //Disable it for WebHdfsFileSystem
+  //In trunk, testListStatusReturnsNullForNonExistentFile was replaced by
+  //testListStatusThrowsExceptionForNonExistentFile.
+  //
+  //For WebHdfsFileSystem,
+  //disable testListStatusReturnsNullForNonExistentFile
+  //and add testListStatusThrowsExceptionForNonExistentFile below.
   public void testListStatusReturnsNullForNonExistentFile() {}
+
+  public void testListStatusThrowsExceptionForNonExistentFile() throws Exception {
+    try {
+      fs.listStatus(path("/test/hadoop/file"));
+      fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      // expected
+    }
+  }
 }

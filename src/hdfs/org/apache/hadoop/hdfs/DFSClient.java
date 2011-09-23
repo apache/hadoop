@@ -495,7 +495,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * inner subclass of InputStream that does the right out-of-band
    * work.
    */
-  DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
+  public DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
                       FileSystem.Statistics stats
       ) throws IOException {
     checkOpen();
@@ -2363,7 +2363,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * The Hdfs implementation of {@link FSDataInputStream}
    */
   public static class DFSDataInputStream extends FSDataInputStream {
-    DFSDataInputStream(DFSInputStream in)
+    public DFSDataInputStream(DFSInputStream in)
       throws IOException {
       super(in);
     }

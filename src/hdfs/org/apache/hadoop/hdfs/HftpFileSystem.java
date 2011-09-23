@@ -268,6 +268,15 @@ public class HftpFileSystem extends FileSystem {
     return ugiParamenter.toString();
   }
 
+  static Void throwIOExceptionFromConnection(
+      final HttpURLConnection connection, final IOException ioe
+      ) throws IOException {
+    final int code = connection.getResponseCode();
+    final String s = connection.getResponseMessage();
+    throw s == null? ioe:
+        new IOException(s + " (error code=" + code + ")", ioe);
+  }
+
   /**
    * Open an HTTP connection to the namenode to read file data and metadata.
    * @param path The path component of the URL
