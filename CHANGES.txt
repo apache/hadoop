@@ -178,6 +178,9 @@ Release 0.20.205.0 - 2011.09.12
     HADOOP-7658. Fix hadoop config template for secured and unsecured
     installation (Eric Yang via gkesavan)
 
+    MAPREDUCE-3076. Annotate o.a.h.mapreduce.TestSleepJob with @Ignore since it
+    is not a junit test.  (acmurthy via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7655. provide a small validation script that smoke tests the installed
