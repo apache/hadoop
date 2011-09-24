@@ -1137,6 +1137,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7568. SequenceFile should not print into stdout.
     (Plamen Jeliazkov via shv)
 
+    HADOOP-7663. Fix TestHDFSTrash failure. (Mayank Bansal via shv)
+
     HADOOP-7457. Remove out-of-date Chinese language documentation.
     (Jakob Homan via eli)
 
