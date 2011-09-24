@@ -608,6 +608,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-3025. Contribs not building. (Joep Rottinghuis via shv)
 
+    MAPREDUCE-3026. Fix NPE in mapred queue -list with hierarchical queues.
+    (Mayank Bansal via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

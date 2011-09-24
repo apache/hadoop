@@ -4317,6 +4317,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       throws IOException {
     for (JobQueueInfo queue : queues) {
       queue.setJobStatuses(getJobsFromQueue(queue.getQueueName()));
+      for(JobQueueInfo childqueue : queue.getChildren()){
+    	  childqueue.setJobStatuses(getJobsFromQueue(childqueue.getQueueName()));
+      }
     }
     return queues;
   }
