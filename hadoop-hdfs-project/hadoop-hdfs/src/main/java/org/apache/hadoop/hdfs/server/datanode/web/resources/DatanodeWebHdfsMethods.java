@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
@@ -66,8 +67,11 @@ import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.sun.jersey.spi.container.ResourceFilters;
+
 /** Web-hdfs DataNode implementation. */
 @Path("")
+@ResourceFilters(ParamFilter.class)
 public class DatanodeWebHdfsMethods {
   public static final Log LOG = LogFactory.getLog(DatanodeWebHdfsMethods.class);
 

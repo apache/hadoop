@@ -21,9 +21,6 @@ import java.net.HttpURLConnection;
 
 /** Http DELETE operation parameter. */
 public class DeleteOpParam extends HttpOpParam<DeleteOpParam.Op> {
-  /** Parameter name. */
-  public static final String NAME = "deleteOp";
-
   /** Delete operations. */
   public static enum Op implements HttpOpParam.Op {
     DELETE(HttpURLConnection.HTTP_OK),
