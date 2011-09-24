@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.Path;
 /** Destination path parameter. */
 public class DstPathParam extends StringParam {
   /** Parameter name. */
-  public static final String NAME = "dstPath";
+  public static final String NAME = "dstpath";
   /** Default parameter value. */
   public static final String DEFAULT = "";
 

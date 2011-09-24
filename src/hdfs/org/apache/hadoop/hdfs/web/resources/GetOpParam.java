@@ -21,9 +21,6 @@ import java.net.HttpURLConnection;
 
 /** Http GET operation parameter. */
 public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
-  /** Parameter name. */
-  public static final String NAME = "getOp";
-
   /** Get operations. */
   public static enum Op implements HttpOpParam.Op {
     OPEN(HttpURLConnection.HTTP_OK),

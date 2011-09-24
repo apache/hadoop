@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.web.resources;
 /** Http operation parameter. */
 public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     extends EnumParam<E> {
+  /** Parameter name. */
+  public static final String NAME = "op";
+
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 

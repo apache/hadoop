@@ -176,7 +176,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     return url;
   }
 
-  private URL toUrl(final HttpOpParam.Op op, final Path fspath,
+  URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
     final String path = "/" + PATH_PREFIX

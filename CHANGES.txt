@@ -308,6 +308,9 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-1734. Undeprecate old API in branch-0.20-security. (Todd Lipcon
     via acmurthy)
 
+    HDFS-2356.  Support case insensitive query parameter names in webhdfs.
+    (szetszwo)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
