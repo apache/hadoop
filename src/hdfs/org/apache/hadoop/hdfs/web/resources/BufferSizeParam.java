@@ -22,7 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 /** Buffer size parameter. */
 public class BufferSizeParam extends IntegerParam {
   /** Parameter name. */
-  public static final String NAME = "bufferSize";
+  public static final String NAME = "buffersize";
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 

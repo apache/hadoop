@@ -23,7 +23,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 /** Block size parameter. */
 public class BlockSizeParam extends LongParam {
   /** Parameter name. */
-  public static final String NAME = "blockSize";
+  public static final String NAME = "blocksize";
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 

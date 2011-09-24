@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
@@ -84,8 +85,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
+import com.sun.jersey.spi.container.ResourceFilters;
+
 /** Web-hdfs NameNode implementation. */
 @Path("")
+@ResourceFilters(ParamFilter.class)
 public class NamenodeWebHdfsMethods {
   public static final Log LOG = LogFactory.getLog(NamenodeWebHdfsMethods.class);
 
