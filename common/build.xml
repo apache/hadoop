@@ -875,7 +875,7 @@
   
   <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. 
        To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
-    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest.bat"
+    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
 	  failonerror="true">
     </exec>
     <copy todir="${build.docs}">
