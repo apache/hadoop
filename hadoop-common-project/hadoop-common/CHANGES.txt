@@ -299,9 +299,6 @@ Release 0.23.0 - Unreleased
     HADOOP-7430. Improve error message when moving to trash fails due to 
     quota issue. (Ravi Prakash via mattf)
 
-    HADOOP-7457. Remove out-of-date Chinese language documentation.
-    (Jakob Homan via eli)
-
     HADOOP-7444. Add Checksum API to verify and calculate checksums "in bulk"
     (todd)
 
@@ -1139,6 +1136,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7568. SequenceFile should not print into stdout.
     (Plamen Jeliazkov via shv)
+
+    HADOOP-7457. Remove out-of-date Chinese language documentation.
+    (Jakob Homan via eli)
 
 Release 0.21.1 - Unreleased
 
