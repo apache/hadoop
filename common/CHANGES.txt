@@ -541,6 +541,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7663. Fix TestHDFSTrash failure. (Mayank Bansal via shv)
 
+    HADOOP-7457. Remove out-of-date Chinese language documentation.
+    (Jakob Homan via eli)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
