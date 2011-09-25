@@ -725,4 +725,15 @@
     version is X.X.X-SNAPSHOT"
     </description>
   </property>
+  <property>
+      <name>hbase.coprocessor.abortonerror</name>
+      <value>false</value>
+      <description>
+      Set to true to cause the hosting server (master or regionserver) to
+      abort if a coprocessor throws a Throwable object that is not IOException or
+      a subclass of IOException. Setting it to true might be useful in development
+      environments where one wants to terminate the server as soon as possible to
+      simplify coprocessor failure analysis.
+      </description>
+  </property>
 </configuration>

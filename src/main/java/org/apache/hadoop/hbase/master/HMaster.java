@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -1162,8 +1163,25 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return fileSystemManager.getClusterId();
   }
 
+  /**
+   * The set of loaded coprocessors is stored in a static set. Since it's
+   * statically allocated, it does not require that HMaster's cpHost be
+   * initialized prior to accessing it.
+   * @return a String representation of the set of names of the loaded
+   * coprocessors.
+   */
+  public static String getLoadedCoprocessors() {
+    return CoprocessorHost.getLoadedCoprocessors().toString();
+  }
+
   @Override
   public void abort(final String msg, final Throwable t) {
+    if (cpHost != null) {
+      // HBASE-4014: dump a list of loaded coprocessors.
+      LOG.fatal("Master server abort: loaded coprocessors are: " +
+          getLoadedCoprocessors());
+    }
+
     if (abortNow(msg, t)) {
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);

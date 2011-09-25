@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -617,7 +618,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     try {
       // Try and register with the Master; tell it we are here.  Break if
-      // server is stopped or the clusterup flag is down of hdfs went wacky.
+      // server is stopped or the clusterup flag is down or hdfs went wacky.
       while (keepLooping()) {
         MapWritable w = reportForDuty();
         if (w == null) {
@@ -1506,6 +1507,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     this.abortRequested = true;
     this.reservedSpace.clear();
+    // HBASE-4014: show list of coprocessors that were loaded to help debug
+    // regionserver crashes.Note that we're implicitly using
+    // java.util.HashSet's toString() method to print the coprocessor names.
+    LOG.fatal("RegionServer abort: loaded coprocessors are: " +
+        CoprocessorHost.getLoadedCoprocessors());
     if (this.metrics != null) {
       LOG.info("Dump of metrics: " + this.metrics);
     }

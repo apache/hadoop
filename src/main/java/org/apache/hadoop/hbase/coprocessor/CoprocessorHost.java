@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.*;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.Server;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,6 +71,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
   public CoprocessorHost() {
     pathPrefix = UUID.randomUUID().toString();
+  }
+
+  private static Set<String> coprocessorNames =
+      Collections.synchronizedSet(new HashSet<String>());
+  public static Set<String> getLoadedCoprocessors() {
+      return coprocessorNames;
   }
 
   /**
@@ -156,7 +164,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       // load the jar and get the implementation main class
       String cp = System.getProperty("java.class.path");
       // NOTE: Path.toURL is deprecated (toURI instead) but the URLClassLoader
-      // unsuprisingly wants URLs, not URIs; so we will use the deprecated
+      // unsurprisingly wants URLs, not URIs; so we will use the deprecated
       // method which returns URLs for as long as it is available
       List<URL> paths = new ArrayList<URL>();
       paths.add(new File(dst.toString()).getCanonicalFile().toURL());
@@ -213,6 +221,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     if (env instanceof Environment) {
       ((Environment)env).startup();
     }
+    // HBASE-4014: maintain list of loaded coprocessors for later crash analysis
+    // if server (master or regionserver) aborts.
+    coprocessorNames.add(implClass.getName());
     return env;
   }
 
@@ -576,4 +587,65 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       return new HTableWrapper(tableName);
     }
   }
+
+  protected void abortServer(final String service,
+      final Server server,
+      final CoprocessorEnvironment environment,
+      final Throwable e) {
+    String coprocessorName = (environment.getInstance()).toString();
+    server.abort("Aborting service: " + service + " running on : "
+            + server.getServerName() + " because coprocessor: "
+            + coprocessorName + " threw an exception.", e);
+  }
+
+  protected void abortServer(final CoprocessorEnvironment environment,
+                             final Throwable e) {
+    String coprocessorName = (environment.getInstance()).toString();
+    LOG.error("The coprocessor: " + coprocessorName + " threw an unexpected " +
+        "exception: " + e + ", but there's no specific implementation of " +
+        " abortServer() for this coprocessor's environment.");
+  }
+
+
+  /**
+   * This is used by coprocessor hooks which are declared to throw IOException
+   * (or its subtypes). For such hooks, we should handle throwable objects
+   * depending on the Throwable's type. Those which are instances of
+   * IOException should be passed on to the client. This is in conformance with
+   * the HBase idiom regarding IOException: that it represents a circumstance
+   * that should be passed along to the client for its own handling. For
+   * example, a coprocessor that implements access controls would throw a
+   * subclass of IOException, such as AccessDeniedException, in its preGet()
+   * method to prevent an unauthorized client's performing a Get on a particular
+   * table.
+   * @param env Coprocessor Environment
+   * @param e Throwable object thrown by coprocessor.
+   * @exception IOException Exception
+   */
+  protected void handleCoprocessorThrowable(final CoprocessorEnvironment env,
+                                            final Throwable e)
+      throws IOException {
+    if (e instanceof IOException) {
+      throw (IOException)e;
+    }
+    // If we got here, e is not an IOException. A loaded coprocessor has a
+    // fatal bug, and the server (master or regionserver) should remove the
+    // faulty coprocessor from its set of active coprocessors. Setting
+    // 'hbase.coprocessor.abortonerror' to true will cause abortServer(),
+    // which may be useful in development and testing environments where
+    // 'failing fast' for error analysis is desired.
+    if (env.getConfiguration().getBoolean("hbase.coprocessor.abortonerror",false)) {
+      // server is configured to abort.
+      abortServer(env, e);
+    } else {
+      LOG.error("Removing coprocessor '" + env.toString() + "' from " +
+          "environment because it threw:  " + e,e);
+      coprocessors.remove(env);
+      throw new DoNotRetryIOException("Coprocessor: '" + env.toString() +
+          "' threw: '" + e + "' and has been removed" + "from the active " +
+          "coprocessor set.", e);
+    }
+  }
 }
+
+

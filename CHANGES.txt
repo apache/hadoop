@@ -300,6 +300,8 @@ Release 0.92.0 - Unreleased
    HBASE-4468  Wrong resource name in an error massage: webapps instead of
                hbase-webapps (nkeywal)
    HBASE-4472  MiniHBaseCluster.shutdown() doesn't work if no active master
+   HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged exceptions
+               (Eugene Koontz)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
