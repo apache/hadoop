@@ -382,6 +382,7 @@ public class MiniMRCluster {
                                   UserGroupInformation ugi) {
     JobConf result = new JobConf(conf);
     FileSystem.setDefaultUri(result, namenode);
+    result.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
     result.set(JTConfig.JT_IPC_ADDRESS, "localhost:"+jobTrackerPort);
     result.set(JTConfig.JT_HTTP_ADDRESS, 
                         "127.0.0.1:" + jobTrackerInfoPort);

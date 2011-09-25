@@ -37,7 +37,7 @@ public class JobTrackerClientProtocolProvider extends ClientProtocolProvider {
   @Override
   public ClientProtocol create(Configuration conf) throws IOException {
     String framework = conf.get(MRConfig.FRAMEWORK_NAME);
-    if (framework != null && !framework.equals("classic")) {
+    if (!MRConfig.CLASSIC_FRAMEWORK_NAME.equals(framework)) {
       return null;
     }
     String tracker = conf.get(JTConfig.JT_IPC_ADDRESS, "local");
