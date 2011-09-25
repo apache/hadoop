@@ -332,9 +332,15 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"num-progress-splits";
   public static final int DEFAULT_MR_AM_NUM_PROGRESS_SPLITS = 12;
 
-  /** Number of threads user to launch containers in the app master.*/
-  public static final String MR_AM_CONTAINERLAUNCHER_THREAD_COUNT =
-    MR_AM_PREFIX+"containerlauncher.thread-count";
+  /**
+   * Upper limit on the number of threads user to launch containers in the app
+   * master. Expect level config, you shouldn't be needing it in most cases.
+   */
+  public static final String MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT =
+    MR_AM_PREFIX+"containerlauncher.thread-count-limit";
+
+  public static final int DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT = 
+      500;
 
   /** Number of threads to handle job client RPC requests.*/
   public static final String MR_AM_JOB_CLIENT_THREAD_COUNT =

@@ -1374,6 +1374,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3073. Fixed build issues in MR1. (mahadev via acmurthy)
 
+    MAPREDUCE-2691. Increase threadpool size for launching containers in
+    MapReduce ApplicationMaster. (vinodkv via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
