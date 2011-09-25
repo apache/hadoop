@@ -1409,6 +1409,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2691. Increase threadpool size for launching containers in
     MapReduce ApplicationMaster. (vinodkv via acmurthy)
 
+    MAPREDUCE-2990. Fixed display of NodeHealthStatus. (Subroto Sanyal via
+    acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
