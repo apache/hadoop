@@ -1409,6 +1409,7 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2691. Increase threadpool size for launching containers in
     MapReduce ApplicationMaster. (vinodkv via acmurthy)
 
+
     MAPREDUCE-2990. Fixed display of NodeHealthStatus. (Subroto Sanyal via
     acmurthy) 
 
@@ -1417,6 +1418,10 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2952. Fixed ResourceManager/MR-client to consume diagnostics
     for AM failures in a couple of corner cases. (Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3064. 27 unit test failures with Invalid 
+    "mapreduce.jobtracker.address" configuration value for 
+    JobTracker: "local" (Venu Gopala Rao via mahadev)
 
 Release 0.22.0 - Unreleased
 
