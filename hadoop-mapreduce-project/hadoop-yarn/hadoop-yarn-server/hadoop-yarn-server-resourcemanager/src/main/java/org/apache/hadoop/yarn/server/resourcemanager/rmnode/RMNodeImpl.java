@@ -147,6 +147,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.httpAddress = hostName + ":" + httpPort;;
     this.node = node;
     this.nodeHealthStatus.setIsNodeHealthy(true);
+    this.nodeHealthStatus.setHealthReport("Healthy");
     this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
 
     this.latestHeartBeatResponse.setResponseId(0);
@@ -219,6 +220,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       return this.nodeHealthStatus;
     } finally {
       this.readLock.unlock();
+    }
+  }
+
+  private void setNodeHealthStatus(NodeHealthStatus status)
+  {
+    this.writeLock.lock();
+    try {
+      this.nodeHealthStatus.setHealthReport(status.getHealthReport());
+      this.nodeHealthStatus.setIsNodeHealthy(status.getIsNodeHealthy());
+      this.nodeHealthStatus.setLastHealthReportTime(status.getLastHealthReportTime());
+    } finally {
+      this.writeLock.unlock();
     }
   }
 
@@ -345,7 +358,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Switch the last heartbeatresponse.
       rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
 
-      if (!statusEvent.getNodeHealthStatus().getIsNodeHealthy()) {
+      NodeHealthStatus remoteNodeHealthStatus = 
+          statusEvent.getNodeHealthStatus();
+      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      if (!remoteNodeHealthStatus.getIsNodeHealthy()) {
         // Inform the scheduler
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeRemovedSchedulerEvent(rmNode));
@@ -392,8 +408,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       // Switch the last heartbeatresponse.
       rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
-
-      if (statusEvent.getNodeHealthStatus().getIsNodeHealthy()) {
+      NodeHealthStatus remoteNodeHealthStatus = statusEvent.getNodeHealthStatus();
+      rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
+      if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));
         return RMNodeState.RUNNING;

@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
@@ -152,6 +156,23 @@ public class TestResourceManager {
     checkResourceUsage(nm1, nm2);
     
     LOG.info("--- END: testResourceAllocation ---");
+  }
+  
+  @Test
+  public void testNodeHealthReportIsNotNull() throws Exception{
+    String host1 = "host1";
+    final int memory = 4 * 1024;
+    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
+      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
+    nm1.heartbeat();
+    nm1.heartbeat();
+    Collection<RMNode> values = resourceManager.getRMContext().getRMNodes().values();
+    for (RMNode ni : values)
+    {
+      NodeHealthStatus nodeHealthStatus = ni.getNodeHealthStatus();
+      String healthReport = nodeHealthStatus.getHealthReport();
+      assertNotNull(healthReport);
+    }
   }
 
   private void checkResourceUsage(
