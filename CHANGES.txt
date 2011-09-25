@@ -300,8 +300,6 @@ Release 0.92.0 - Unreleased
    HBASE-4468  Wrong resource name in an error massage: webapps instead of
                hbase-webapps (nkeywal)
    HBASE-4472  MiniHBaseCluster.shutdown() doesn't work if no active master
-   HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged exceptions
-               (Eugene Koontz)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -528,6 +526,8 @@ Release 0.92.0 - Unreleased
    HBASE-4424  Provide coprocessors access to createTable() via 
                MasterServices
    HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
+   HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged exceptions
+               (Eugene Koontz)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
