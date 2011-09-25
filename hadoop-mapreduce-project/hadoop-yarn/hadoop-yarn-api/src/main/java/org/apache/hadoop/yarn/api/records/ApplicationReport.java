@@ -186,4 +186,16 @@ public interface ApplicationReport {
   @Private
   @Unstable
   void setStartTime(long startTime);
+
+  /**
+   * Get the <em>finish time</em> of the application.
+   * @return <em>finish time</em> of the application
+   */
+  @Public
+  @Stable
+  long getFinishTime();
+  
+  @Private
+  @Unstable
+  void setFinishTime(long finishTime);
 }

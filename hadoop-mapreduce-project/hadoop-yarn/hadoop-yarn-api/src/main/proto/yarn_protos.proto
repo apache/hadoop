@@ -140,6 +140,7 @@ message ApplicationReportProto {
   optional string trackingUrl = 11;
   optional string diagnostics = 12 [default = "N/A"];
   optional int64 startTime = 13;
+  optional int64 finishTime = 14;
 }
 
 message NodeIdProto {

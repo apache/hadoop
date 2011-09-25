@@ -46,13 +46,12 @@ public class ApplicationMasterLauncher extends AbstractService implements
   private ClientToAMSecretManager clientToAMSecretManager;
   protected final RMContext context;
   
-  public ApplicationMasterLauncher(ApplicationTokenSecretManager 
-      applicationTokenSecretManager, ClientToAMSecretManager clientToAMSecretManager,
+  public ApplicationMasterLauncher(
+      ApplicationTokenSecretManager applicationTokenSecretManager, 
+      ClientToAMSecretManager clientToAMSecretManager,
       RMContext context) {
     super(ApplicationMasterLauncher.class.getName());
     this.context = context;
-    /* register to dispatcher */
-    this.context.getDispatcher().register(AMLauncherEventType.class, this);
     this.launcherPool = new ThreadPoolExecutor(1, 10, 1, 
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
     this.launcherHandlingThread = new LauncherThread();

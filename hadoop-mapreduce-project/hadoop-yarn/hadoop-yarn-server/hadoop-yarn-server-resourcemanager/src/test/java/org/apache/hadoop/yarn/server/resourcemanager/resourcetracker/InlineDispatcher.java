@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 
-class InlineDispatcher extends AsyncDispatcher {
+@Private
+public class InlineDispatcher extends AsyncDispatcher {
   private class InlineEventHandler implements EventHandler {
     private final InlineDispatcher dispatcher;
     public InlineEventHandler(InlineDispatcher dispatcher) {

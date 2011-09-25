@@ -267,6 +267,13 @@ public class TestClientRedirect {
       application.setHost(split[0]);
       application.setRpcPort(Integer.parseInt(split[1]));
       application.setUser("TestClientRedirect-user");
+      application.setName("N/A");
+      application.setQueue("N/A");
+      application.setStartTime(0);
+      application.setFinishTime(0);
+      application.setTrackingUrl("N/A");
+      application.setDiagnostics("N/A");
+
       GetApplicationReportResponse response = recordFactory
           .newRecordInstance(GetApplicationReportResponse.class);
       response.setApplicationReport(application);

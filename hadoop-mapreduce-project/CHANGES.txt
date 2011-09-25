@@ -1383,6 +1383,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3053. Better diagnostic message for unknown methods in ProtoBuf
     RPCs. (vinodkv via acmurthy)
 
+    MAPREDUCE-2952. Fixed ResourceManager/MR-client to consume diagnostics
+    for AM failures in a couple of corner cases. (Arun C Murthy via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

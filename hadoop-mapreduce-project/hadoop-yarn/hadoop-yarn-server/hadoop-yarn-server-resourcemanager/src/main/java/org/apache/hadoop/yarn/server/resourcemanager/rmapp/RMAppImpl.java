@@ -310,7 +310,8 @@ public class RMAppImpl implements RMApp {
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
-          this.diagnostics.toString(), trackingUrl, this.startTime);
+          this.diagnostics.toString(), trackingUrl, 
+          this.startTime, this.finishTime);
     } finally {
       this.readLock.unlock();
     }
@@ -470,11 +471,13 @@ public class RMAppImpl implements RMApp {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
-
+      
+      RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent)event);
       if (app.attempts.size() == app.maxRetries) {
         String msg = "Application " + app.getApplicationId()
         + " failed " + app.maxRetries
-        + " times. Failing the application.";
+        + " times due to " + failedEvent.getDiagnostics()
+        + ". Failing the application.";
         LOG.info(msg);
         app.diagnostics.append(msg);
         // Inform the node for app-finish

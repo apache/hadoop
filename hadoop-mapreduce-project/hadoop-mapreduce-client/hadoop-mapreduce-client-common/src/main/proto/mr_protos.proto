@@ -143,6 +143,8 @@ message JobReportProto {
   optional int64 finish_time = 8;
   optional string user = 9;
   optional string jobName = 10;
+  optional string trackingUrl = 11;
+  optional string diagnostics = 12;
 }
 
 enum TaskAttemptCompletionEventStatusProto {
