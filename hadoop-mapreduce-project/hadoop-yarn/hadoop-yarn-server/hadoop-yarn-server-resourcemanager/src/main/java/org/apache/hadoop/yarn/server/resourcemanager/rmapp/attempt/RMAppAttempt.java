@@ -79,7 +79,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
    * Diagnostics information for the application attempt.
    * @return diagnostics information for the application attempt.
    */
-  StringBuilder getDiagnostics();
+  String getDiagnostics();
 
   /**
    * Progress for the application attempt.

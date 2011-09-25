@@ -242,7 +242,7 @@ public class BuilderUtils {
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, String user, String queue, String name,
       String host, int rpcPort, String clientToken, ApplicationState state,
-      String diagnostics, String url, long startTime) {
+      String diagnostics, String url, long startTime, long finishTime) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -256,6 +256,7 @@ public class BuilderUtils {
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
+    report.setFinishTime(finishTime);
     return report;
   }
   

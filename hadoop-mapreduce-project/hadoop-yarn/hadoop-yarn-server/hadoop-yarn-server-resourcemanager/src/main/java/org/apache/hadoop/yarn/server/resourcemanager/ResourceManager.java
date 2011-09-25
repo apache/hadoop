@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
@@ -186,6 +187,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(adminService);
 
     this.applicationMasterLauncher = createAMLauncher();
+    this.rmDispatcher.register(AMLauncherEventType.class, 
+        this.applicationMasterLauncher);
+
     addService(applicationMasterLauncher);
 
     super.init(conf);

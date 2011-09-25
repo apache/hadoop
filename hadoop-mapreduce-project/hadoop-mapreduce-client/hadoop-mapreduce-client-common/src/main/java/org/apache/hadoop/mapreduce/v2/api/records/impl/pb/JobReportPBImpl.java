@@ -206,6 +206,30 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     builder.setJobName((jobName));
   }
 
+  @Override
+  public String getTrackingUrl() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getTrackingUrl());
+  }
+
+  @Override
+  public void setTrackingUrl(String trackingUrl) {
+    maybeInitBuilder();
+    builder.setTrackingUrl(trackingUrl);
+  }
+
+  @Override
+  public String getDiagnostics() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getDiagnostics();
+  }
+
+  @Override
+  public void setDiagnostics(String diagnostics) {
+    maybeInitBuilder();
+    builder.setDiagnostics(diagnostics);
+  }
+
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
     return new JobIdPBImpl(p);
   }

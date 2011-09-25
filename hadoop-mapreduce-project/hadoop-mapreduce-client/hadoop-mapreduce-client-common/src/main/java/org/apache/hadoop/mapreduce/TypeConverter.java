@@ -281,14 +281,17 @@ public class TypeConverter {
   }
   
   public static org.apache.hadoop.mapred.JobStatus fromYarn(
-      JobReport jobreport, String jobFile, String trackingUrl) {
+      JobReport jobreport, String jobFile) {
     JobPriority jobPriority = JobPriority.NORMAL;
-    return new org.apache.hadoop.mapred.JobStatus(fromYarn(jobreport.getJobId()),
-        jobreport.getSetupProgress(), jobreport.getMapProgress(),
-        jobreport.getReduceProgress(), jobreport.getCleanupProgress(),
-        fromYarn(jobreport.getJobState()),
-        jobPriority, jobreport.getUser(), jobreport.getJobName(),
-        jobFile, trackingUrl);
+    org.apache.hadoop.mapred.JobStatus jobStatus =
+        new org.apache.hadoop.mapred.JobStatus(fromYarn(jobreport.getJobId()),
+            jobreport.getSetupProgress(), jobreport.getMapProgress(),
+            jobreport.getReduceProgress(), jobreport.getCleanupProgress(),
+            fromYarn(jobreport.getJobState()),
+            jobPriority, jobreport.getUser(), jobreport.getJobName(),
+            jobFile, jobreport.getTrackingUrl());
+    jobStatus.setFailureInfo(jobreport.getDiagnostics());
+    return jobStatus;
   }
   
   public static org.apache.hadoop.mapreduce.QueueState fromYarn(
@@ -422,6 +425,7 @@ public class TypeConverter {
       );
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
     jobStatus.setStartTime(application.getStartTime());
+    jobStatus.setFailureInfo(application.getDiagnostics());
     return jobStatus;
   }
 
