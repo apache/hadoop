@@ -1412,6 +1412,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2990. Fixed display of NodeHealthStatus. (Subroto Sanyal via
     acmurthy) 
 
+    MAPREDUCE-3053. Better diagnostic message for unknown methods in ProtoBuf
+    RPCs. (vinodkv via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
