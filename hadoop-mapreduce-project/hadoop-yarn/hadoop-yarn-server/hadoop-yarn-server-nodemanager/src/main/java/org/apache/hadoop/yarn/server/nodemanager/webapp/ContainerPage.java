@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -69,7 +71,13 @@ public class ContainerPage extends NMView implements NMWebParams {
         return;
       }
 
+      DIV<Hamlet> div = html.div("#content");
       Container container = this.nmContext.getContainers().get(containerID);
+      if (container == null) {
+        div.h1("Unknown Container. Container might have completed, "
+                + "please go back to the previous page and retry.")._();
+        return;
+      }
       ContainerStatus containerData = container.cloneAndGetContainerStatus();
       int exitCode = containerData.getExitStatus();
       String exiStatus = 
