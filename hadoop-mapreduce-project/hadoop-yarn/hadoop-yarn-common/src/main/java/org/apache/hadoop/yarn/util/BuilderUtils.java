@@ -184,32 +184,24 @@ public class BuilderUtils {
     return id;
   }
 
-  public static Container clone(Container c) {
-    Container container = recordFactory.newRecordInstance(Container.class);
-    container.setId(c.getId());
-    container.setContainerToken(c.getContainerToken());
-    container.setNodeId(c.getNodeId());
-    container.setNodeHttpAddress(c.getNodeHttpAddress());
-    container.setResource(c.getResource());
-    container.setState(c.getState());
-    return container;
-  }
-
   public static Container newContainer(RecordFactory recordFactory,
       ApplicationAttemptId appAttemptId, int containerId, NodeId nodeId,
-      String nodeHttpAddress, Resource resource) {
+      String nodeHttpAddress, Resource resource, Priority priority) {
     ContainerId containerID =
         newContainerId(recordFactory, appAttemptId, containerId);
-    return newContainer(containerID, nodeId, nodeHttpAddress, resource);
+    return newContainer(containerID, nodeId, nodeHttpAddress, 
+        resource, priority);
   }
 
   public static Container newContainer(ContainerId containerId,
-      NodeId nodeId, String nodeHttpAddress, Resource resource) {
+      NodeId nodeId, String nodeHttpAddress, 
+      Resource resource, Priority priority) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
+    container.setPriority(priority);
     container.setState(ContainerState.NEW);
     ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
     containerStatus.setContainerId(containerId);
