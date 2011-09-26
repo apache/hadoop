@@ -1432,6 +1432,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3031. Proper handling of killed containers to prevent stuck
     containers/AMs on an external kill signal. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-2984. Better error message for displaying completed containers.
+    (Devaraj K via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
