@@ -32,13 +32,20 @@
 
 
   <target name="check-libhdfs-exists" if="fusedfs">
-  <property name="libhdfs.lib" value="${hadoop.root}/build/libhdfs/libhdfs.so"/>
+    <patternset id="empty.exclude.list.id" />
+        <exec executable="sed" inputstring="${os.name}"
+            outputproperty="nonspace.os">
+          <arg value="s/ /_/g"/>
+        </exec>
+    <property name="build.platform" 
+            value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
+    <property name="libhdfs.lib" value="${hadoop.root}/build/c++/${build.platform}/lib/libhdfs.so"/>
         <available file="${libhdfs.lib}" property="libhdfs-exists"/>
     <fail message="libhdfs.so does not exist: ${libhdfs.lib}. Please check flags -Dlibhdfs=1 -Dfusedfs=1 are set or first try ant compile-libhdfs -Dlibhdfs=1">
          <condition>
             <not><isset property="libhdfs-exists"/></not>
           </condition>
-   </fail>
+     </fail>
    </target>
 
   <!-- override compile target !-->

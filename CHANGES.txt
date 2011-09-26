@@ -76,6 +76,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    HDFS-2325. Fuse-DFS fails to build on Hadoop 20.203.0
+    (Kihwal Lee via mattf)
+
     HDFS-2342. add Jersey libraries to ivy.xml files in contrib, to fix
     TestSleepJob and TestHdfsProxy. (Tsz Wo (Nicholas), SZE via mattf)
 
