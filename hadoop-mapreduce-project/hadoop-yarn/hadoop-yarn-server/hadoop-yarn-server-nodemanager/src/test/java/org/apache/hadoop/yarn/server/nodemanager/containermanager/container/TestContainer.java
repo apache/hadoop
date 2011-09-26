@@ -38,8 +38,6 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -129,6 +127,28 @@ public class TestContainer {
         };
       verify(wc.launcherBus).handle(argThat(matchesContainerLaunch));
     } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked") // mocked generic
+  public void testExternalKill() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(13, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      wc.containerKilledOnRequest();
+      assertEquals(ContainerState.EXITED_WITH_FAILURE, 
+          wc.c.getContainerState());
+      verifyCleanupCall(wc);
+    }
+    finally {
       if (wc != null) {
         wc.finished();
       }

@@ -1397,6 +1397,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2646. Fixed AMRMProtocol to return containers based on
     priority. (Sharad Agarwal and Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3031. Proper handling of killed containers to prevent stuck
+    containers/AMs on an external kill signal. (Siddharth Seth via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
