@@ -135,7 +135,8 @@ public class TestLeafQueue {
             Container container = TestUtils.getMockContainer(
                 containerId,
                 ((SchedulerNode)(invocation.getArguments()[1])).getNodeID(), 
-                (Resource)(invocation.getArguments()[2]));
+                (Resource)(invocation.getArguments()[2]),
+                ((Priority)invocation.getArguments()[3]));
             return container;
           }
         }
@@ -143,7 +144,9 @@ public class TestLeafQueue {
       when(queue).createContainer(
               any(SchedulerApp.class), 
               any(SchedulerNode.class), 
-              any(Resource.class));
+              any(Resource.class),
+              any(Priority.class)
+              );
     
     // 2. Stub out LeafQueue.parent.completedContainer
     CSQueue parent = queue.getParent();

@@ -1426,6 +1426,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3090. Fix MR AM to use ApplicationAttemptId rather than
     (ApplicationId, startCount) consistently. (acmurthy)  
 
+    MAPREDUCE-2646. Fixed AMRMProtocol to return containers based on
+    priority. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

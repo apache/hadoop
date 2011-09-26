@@ -586,37 +586,21 @@ public class RMContainerAllocator extends RMContainerRequestor
     private ContainerRequest assign(Container allocated) {
       ContainerRequest assigned = null;
       
-      if (mapResourceReqt != reduceResourceReqt) {
-        //assign based on size
-        LOG.info("Assigning based on container size");
-        if (allocated.getResource().getMemory() == mapResourceReqt) {
-          assigned = assignToFailedMap(allocated);
-          if (assigned == null) {
-            assigned = assignToMap(allocated);
-          }
-        } else if (allocated.getResource().getMemory() == reduceResourceReqt) {
-          assigned = assignToReduce(allocated);
-        }
-        
-        return assigned;
-      }
-      
-      //container can be given to either map or reduce
-      //assign based on priority
-      
-      //try to assign to earlierFailedMaps if present
-      assigned = assignToFailedMap(allocated);
-      
-      //Assign to reduces before assigning to maps ?
-      if (assigned == null) {
+      Priority priority = allocated.getPriority();
+      if (PRIORITY_FAST_FAIL_MAP.equals(priority)) {
+        LOG.info("Assigning container " + allocated + " to fast fail map");
+        assigned = assignToFailedMap(allocated);
+      } else if (PRIORITY_REDUCE.equals(priority)) {
+        LOG.info("Assigning container " + allocated + " to reduce");
         assigned = assignToReduce(allocated);
-      }
-      
-      //try to assign to maps if present
-      if (assigned == null) {
+      } else if (PRIORITY_MAP.equals(priority)) {
+        LOG.info("Assigning container " + allocated + " to map");
         assigned = assignToMap(allocated);
+      } else {
+        LOG.warn("Container allocated at unwanted priority: " + priority + 
+            ". Returning to RM...");
       }
-      
+        
       return assigned;
     }
     

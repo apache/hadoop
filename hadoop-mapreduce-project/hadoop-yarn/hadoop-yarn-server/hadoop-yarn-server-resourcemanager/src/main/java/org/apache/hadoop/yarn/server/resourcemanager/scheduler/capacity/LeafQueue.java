@@ -1046,19 +1046,20 @@ public class LeafQueue implements CSQueue {
   }
   
   private Container getContainer(RMContainer rmContainer, 
-      SchedulerApp application, SchedulerNode node, Resource capability) {
+      SchedulerApp application, SchedulerNode node, 
+      Resource capability, Priority priority) {
     return (rmContainer != null) ? rmContainer.getContainer() :
-      createContainer(application, node, capability);
+      createContainer(application, node, capability, priority);
   }
   
   public Container createContainer(SchedulerApp application, SchedulerNode node, 
-      Resource capability) {
+      Resource capability, Priority priority) {
     Container container = 
           BuilderUtils.newContainer(this.recordFactory,
               application.getApplicationAttemptId(),
               application.getNewContainerId(),
-              node.getNodeID(),
-              node.getHttpAddress(), capability);
+              node.getNodeID(), node.getHttpAddress(), 
+              capability, priority);
 
     // If security is enabled, send the container-tokens too.
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -1099,7 +1100,7 @@ public class LeafQueue implements CSQueue {
 
     // Create the container if necessary
     Container container = 
-        getContainer(rmContainer, application, node, capability);
+        getContainer(rmContainer, application, node, capability, priority);
 
     // Can we allocate a container on this node?
     int availableContainers = 

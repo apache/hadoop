@@ -528,7 +528,8 @@ public class FifoScheduler implements ResourceScheduler {
                 application.getApplicationAttemptId(),
                 application.getNewContainerId(),
                 node.getRMNode().getNodeID(),
-                node.getRMNode().getHttpAddress(), capability);
+                node.getRMNode().getHttpAddress(), 
+                capability, priority);
         
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
