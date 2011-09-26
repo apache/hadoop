@@ -47,6 +47,9 @@ Release 0.20.205.0 - 2011.09.12
 
   BUG FIXES
 
+    HADOOP-7679. log4j.properties templates must define mapred.jobsummary.logger
+    (Ramya Sunil via mattf)
+
     HDFS-2325. Fuse-DFS fails to build on Hadoop 20.203.0
     (Kihwal Lee via mattf)
 
