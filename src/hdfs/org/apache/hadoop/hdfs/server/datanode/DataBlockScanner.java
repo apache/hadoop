@@ -785,6 +785,9 @@ class DataBlockScanner implements Runnable {
      * return true if append was successful.
      */
     synchronized boolean appendLine(String line) {
+      if (out == null) {
+        return false;
+      }
       out.println();
       out.print(line);
       curNumLines += (curNumLines < 0) ? -1 : 1;

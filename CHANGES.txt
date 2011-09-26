@@ -235,6 +235,9 @@ Release 0.20.205.0 - unreleased
 
     HADOOP-7674. TestKerberosName fails in 20 branch. (jitendra)
 
+    HDFS-2359. Fix NullPointerException in DataBlockScanner.
+    (Jonthan Eagles via suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
