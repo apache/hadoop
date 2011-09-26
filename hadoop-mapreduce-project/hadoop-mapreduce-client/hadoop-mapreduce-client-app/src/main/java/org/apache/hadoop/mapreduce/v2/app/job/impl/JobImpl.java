@@ -42,7 +42,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceChildJVM;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -101,6 +100,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -129,11 +129,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       RecordFactoryProvider.getRecordFactory(null);
   
   //final fields
+  private final ApplicationAttemptId applicationAttemptId;
   private final Clock clock;
   private final JobACLsManager aclsManager;
   private final String username;
   private final Map<JobACL, AccessControlList> jobACLs;
-  private final int startCount;
   private final Set<TaskId> completedTasksFromPreviousRun;
   private final Lock readLock;
   private final Lock writeLock;
@@ -365,26 +365,26 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
 
-  public JobImpl(ApplicationId appID, Configuration conf,
+  public JobImpl(ApplicationAttemptId applicationAttemptId, Configuration conf,
       EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
-      Credentials fsTokenCredentials, Clock clock, int startCount, 
+      Credentials fsTokenCredentials, Clock clock, 
       Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
       String userName) {
-
+    this.applicationAttemptId = applicationAttemptId;
     this.jobId = recordFactory.newRecordInstance(JobId.class);
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
     this.conf = conf;
     this.metrics = metrics;
     this.clock = clock;
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
-    this.startCount = startCount;
     this.userName = userName;
-    jobId.setAppId(appID);
-    jobId.setId(appID.getId());
+    ApplicationId applicationId = applicationAttemptId.getApplicationId();
+    jobId.setAppId(applicationId);
+    jobId.setId(applicationId.getId());
     oldJobId = TypeConverter.fromYarn(jobId);
     LOG.info("Job created" +
-    		" appId=" + appID + 
+    		" appId=" + applicationId + 
     		" jobId=" + jobId + 
     		" oldJobId=" + oldJobId);
     
@@ -1078,7 +1078,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.conf, splits[i], 
                 job.taskAttemptListener, 
                 job.committer, job.jobToken, job.fsTokens.getAllTokens(), 
-                job.clock, job.completedTasksFromPreviousRun, job.startCount,
+                job.clock, job.completedTasksFromPreviousRun, 
+                job.applicationAttemptId.getAttemptId(),
                 job.metrics);
         job.addTask(task);
       }
@@ -1095,7 +1096,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.conf, job.numMapTasks, 
                 job.taskAttemptListener, job.committer, job.jobToken,
                 job.fsTokens.getAllTokens(), job.clock, 
-                job.completedTasksFromPreviousRun, job.startCount, job.metrics);
+                job.completedTasksFromPreviousRun, 
+                job.applicationAttemptId.getAttemptId(),
+                job.metrics);
         job.addTask(task);
       }
       LOG.info("Number of reduces for job " + job.jobId + " = "

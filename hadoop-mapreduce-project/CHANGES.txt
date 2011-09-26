@@ -1423,6 +1423,9 @@ Release 0.23.0 - Unreleased
     "mapreduce.jobtracker.address" configuration value for 
     JobTracker: "local" (Venu Gopala Rao via mahadev)
 
+    MAPREDUCE-3090. Fix MR AM to use ApplicationAttemptId rather than
+    (ApplicationId, startCount) consistently. (acmurthy)  
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
