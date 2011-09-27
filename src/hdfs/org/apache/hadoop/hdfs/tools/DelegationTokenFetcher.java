@@ -129,29 +129,37 @@ public class DelegationTokenFetcher {
           for(Token<?> token: readTokens(tokenFile, conf)) {
             if (token.isManaged()) {
               token.cancel(conf);
-              System.out.println("Cancelled token for " + token.getService());
+              if(LOG.isDebugEnabled()) {
+                LOG.debug("Cancelled token for " + token.getService());
+              }
             }
           }          
         } else if (renew) {
           for(Token<?> token: readTokens(tokenFile, conf)) {
             if (token.isManaged()) {
               token.renew(conf);
-              System.out.println("Renewed token for " + token.getService());
+              if(LOG.isDebugEnabled()) {
+                LOG.debug("Renewed token for " + token.getService());
+              }
             }
           }          
         } else {
           if (webUrl != null) {
             getDTfromRemote(webUrl, null).
               writeTokenStorageFile(tokenFile, conf);
-            System.out.println("Fetched token via http for " + webUrl);
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Fetched token via http for " + webUrl);
+            }
           } else {
             FileSystem fs = FileSystem.get(conf);
             Token<?> token = fs.getDelegationToken(ugi.getShortUserName());
             Credentials cred = new Credentials();
             cred.addToken(token.getService(), token);
             cred.writeTokenStorageFile(tokenFile, conf);
-            System.out.println("Fetched token for " + fs.getUri() + " into " +
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Fetched token for " + fs.getUri() + " into " +
                                tokenFile);
+            }
           }        
         }
         return null;
@@ -176,7 +184,9 @@ public class DelegationTokenFetcher {
       } else {
         url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC);
       }
-      System.out.println("Retrieving token from: " + url);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Retrieving token from: " + url);
+      }
       URL remoteURL = new URL(url.toString());
       SecurityUtil.fetchServiceTicket(remoteURL);
       URLConnection connection = remoteURL.openConnection();
