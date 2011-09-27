@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
-import org.apache.avro.AvroRemoteException;
+import org.apache.avro.ipc.AvroRemoteException;
 
 @SuppressWarnings("serial")
 public interface AvroTestProtocol {

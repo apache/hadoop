@@ -28,7 +28,6 @@ import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.EncoderFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
@@ -94,7 +93,7 @@ public abstract class AvroSerialization<T> extends Configured
     @Override
     public void open(OutputStream out) throws IOException {
       outStream = out;
-      encoder = EncoderFactory.get().binaryEncoder(out, null);
+      encoder = new BinaryEncoder(out);
     }
 
     @Override

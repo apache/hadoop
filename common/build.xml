@@ -498,7 +498,7 @@
   </target>
 
   <target name="generate-avro-records" depends="init, ivy-retrieve-test">
-    <taskdef name="schema" classname="org.apache.avro.compiler.specific.SchemaTask">
+    <taskdef name="schema" classname="org.apache.avro.specific.SchemaTask">
       <classpath refid="test.classpath"/>
     </taskdef>
     <schema destdir="${test.generated.dir}">
@@ -509,7 +509,7 @@
   </target>
 
   <target name="generate-avro-protocols" depends="init, ivy-retrieve-test">
-    <taskdef name="schema" classname="org.apache.avro.compiler.specific.ProtocolTask">
+    <taskdef name="schema" classname="org.apache.avro.specific.ProtocolTask">
       <classpath refid="test.classpath"/>
     </taskdef>
     <schema destdir="${test.generated.dir}">

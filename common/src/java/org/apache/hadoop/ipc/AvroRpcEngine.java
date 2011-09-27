@@ -34,9 +34,9 @@ import javax.net.SocketFactory;
 
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.Transceiver;
-import org.apache.avro.ipc.reflect.ReflectRequestor;
-import org.apache.avro.ipc.reflect.ReflectResponder;
-import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.avro.reflect.ReflectRequestor;
+import org.apache.avro.reflect.ReflectResponder;
+import org.apache.avro.specific.SpecificRequestor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceStability;
