@@ -51,6 +51,18 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.token.service.use_ip</name>
+  <value>true</value>
+  <description>Controls whether tokens always use IP addresses.  DNS changes
+  will not be detected if this option is enabled.  Existing client connections
+  that break will always reconnect to the IP of the original host.  New clients
+  will connect to the host's new IP but fail to locate a token.  Disabling
+  this option will allow existing and new clients to detect an IP change and
+  continue to locate the new host's token.
+  </description>
+</property>
+
 <!--
 <property>
   <name>hadoop.security.service.user.name.key</name>

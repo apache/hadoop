@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -65,6 +66,16 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
 
   @Override
+  protected int getDefaultPort() {
+    return getDefaultSecurePort();
+  }
+
+  @Override
+  protected InetSocketAddress getNamenodeSecureAddr(URI uri) {
+    return getNamenodeAddr(uri);
+  }
+
+  @Override
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     try {
@@ -78,16 +89,6 @@ public class HsftpFileSystem extends HftpFileSystem {
     } catch (URISyntaxException e) {
       throw (IOException)new IOException().initCause(e);
     }
-  }
-
-  @Override
-  public URI getUri() {
-    try {
-      return new URI("hsftp", null, nnAddr.getHostName(), nnAddr.getPort(),
-                     null, null, null);
-    } catch (URISyntaxException e) {
-      return null;
-    } 
   }
 
   /**

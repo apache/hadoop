@@ -53,7 +53,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.tools.HadoopArchives;
@@ -266,9 +265,8 @@ public class TestTokenCache {
     Credentials credentials = new Credentials();
     TokenCache.obtainTokensForNamenodesInternal(credentials, new Path [] {p1, p2},
                                         jConf);
-    // this token is keyed by hostname:port key.
-    String fs_addr = 
-      SecurityUtil.buildDTServiceName(p1.toUri(), NameNode.DEFAULT_PORT); 
+    // this filesystem's token is keyed by the canonical service
+    String fs_addr = fs.getCanonicalServiceName();
     Token<DelegationTokenIdentifier> nnt =
       TokenCache.getDelegationToken(credentials, fs_addr);
 

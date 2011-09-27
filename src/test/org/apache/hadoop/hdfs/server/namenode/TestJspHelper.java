@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -81,13 +82,12 @@ public class TestJspHelper {
     UserGroupInformation.setConfiguration(conf);
 
     InetSocketAddress serviceAddr = NameNode.getAddress(conf);
-    Text tokenService = new Text(serviceAddr.getAddress().getHostAddress()
-        + ":" + serviceAddr.getPort());
+    Text tokenService = SecurityUtil.buildTokenService(serviceAddr);
 
     UserGroupInformation ugi = JspHelper.getUGI(request, conf);
     Token<? extends TokenIdentifier> tokenInUgi = ugi.getTokens().iterator()
         .next();
-    Assert.assertEquals(tokenInUgi.getService(), tokenService);
+    Assert.assertEquals(tokenService, tokenInUgi.getService());
   }
   
   @Test

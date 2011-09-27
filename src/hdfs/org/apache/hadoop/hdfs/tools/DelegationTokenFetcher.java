@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
@@ -42,7 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -112,7 +113,7 @@ public class DelegationTokenFetcher {
       printUsage(System.err);
     }
     if (remaining.length != 1 || remaining[0].charAt(0) == '-') {
-      System.err.println("ERROR: Must specify exacltly one token file");
+      System.err.println("ERROR: Must specify exactly one token file");
       printUsage(System.err);
     }
     // default to using the local file system
@@ -175,6 +176,7 @@ public class DelegationTokenFetcher {
   static public Credentials getDTfromRemote(String nnAddr, 
                                             String renewer) throws IOException {
     DataInputStream dis = null;
+    InetSocketAddress serviceAddr = NetUtils.createSocketAddr(nnAddr);
 
     try {
       StringBuffer url = new StringBuffer();
@@ -197,9 +199,7 @@ public class DelegationTokenFetcher {
       ts.readFields(dis);
       for(Token<?> token: ts.getAllTokens()) {
         token.setKind(HftpFileSystem.TOKEN_KIND);
-        token.setService(new Text(SecurityUtil.buildDTServiceName
-                                   (remoteURL.toURI(), 
-                                    HftpFileSystem.DEFAULT_PORT)));
+        SecurityUtil.setTokenService(token, serviceAddr);
       }
       return ts;
     } catch (Exception e) {

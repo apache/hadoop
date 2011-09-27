@@ -42,6 +42,12 @@ public class CommonConfigurationKeys {
   /** See src/core/core-default.xml */
   public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY = 
     "hadoop.security.service.user.name.key";
+  /** See src/core/core-default.xml */
+  public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
+    "hadoop.security.token.service.use_ip";
+  public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
+      true;
+  
   public static final String IPC_SERVER_RPC_READ_THREADS_KEY =
                                         "ipc.server.read.threadpool.size";
   public static final int IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
