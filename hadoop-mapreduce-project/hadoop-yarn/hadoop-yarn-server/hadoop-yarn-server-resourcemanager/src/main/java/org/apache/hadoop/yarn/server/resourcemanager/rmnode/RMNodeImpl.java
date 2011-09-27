@@ -144,7 +144,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.httpPort = httpPort;
     this.totalCapability = capability; 
     this.nodeAddress = hostName + ":" + cmPort;
-    this.httpAddress = hostName + ":" + httpPort;;
+    this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
     this.nodeHealthStatus.setIsNodeHealthy(true);
     this.nodeHealthStatus.setHealthReport("Healthy");

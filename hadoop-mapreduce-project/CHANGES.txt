@@ -1444,6 +1444,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3067. Ensure exit-code is set correctly for containers. (Hitesh
     Shah via acmurthy)
 
+    MAPREDUCE-2999. Fix YARN webapp framework to properly filter servlet
+    paths. (Thomas Graves via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
