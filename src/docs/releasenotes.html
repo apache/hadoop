@@ -17,44 +17,479 @@
 <h2>Changes since Hadoop 0.20.204.0</h2>
 
 <ul>
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2981">MAPREDUCE-2981</a>.
-     Major improvement reported by matei and fixed by matei (contrib/fair-share)<br>
-     <b>Backport trunk fairscheduler to 0.20-security branch</b><br>
-     <blockquote>A lot of improvements have been made to the fair scheduler in 0.21, 0.22 and trunk.  Back ported to 0.20.20X releases.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6722">HADOOP-6722</a>.
+     Major bug reported by tlipcon and fixed by tlipcon (util)<br>
+     <b>NetUtils.connect should check that it hasn&apos;t connected a socket to itself</b><br>
+     <blockquote>I had no idea this was possible, but it turns out that a TCP connection will be established in the rare case that the local side of the socket binds to the ephemeral port that you later try to connect to. This can present itself in very very rare occasion when an RPC client is trying to connect to a daemon running on the same node, but that daemon is down. To see what I&apos;m talking about, run &quot;while true ; do telnet localhost 60020 ; done&quot; on a multicore box and wait several minutes.<br><br>This can ...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2915">MAPREDUCE-2915</a>.
-     Major bug reported by kihwal and fixed by kihwal (task-controller)<br>
-     <b>LinuxTaskController does not work when JniBasedUnixGroupsNetgroupMapping or JniBasedUnixGroupsMapping is enabled</b><br>
-     <blockquote>When a job is submitted, LinuxTaskController launches the native task-controller binary for job initialization. The native program does a series of prep work and call execv() to run JobLocalizer.  It was observed that JobLocalizer does fails to run when JniBasedUnixGroupsNetgroupMapping or JniBasedUnixGroupsMapping is enabled, resulting in 100% job failures.<br><br>JobLocalizer normally does not need the native library (libhadoop) for its functioning, but enabling a JNI user-to-group mapping functi...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6833">HADOOP-6833</a>.
+     Blocker bug reported by tlipcon and fixed by tlipcon <br>
+     <b>IPC leaks call parameters when exceptions thrown</b><br>
+     <blockquote>HADOOP-6498 moved the calls.remove() call lower into the SUCCESS clause of receiveResponse(), but didn&apos;t put a similar calls.remove into the ERROR clause. So, any RPC call that throws an exception ends up orphaning the Call object in the connection&apos;s &quot;calls&quot; hashtable. This prevents cleanup of the connection and is a memory leak for the call parameters.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2852">MAPREDUCE-2852</a>.
-     Major bug reported by eli and fixed by kihwal (tasktracker)<br>
-     <b>Jira for YDH bug 2854624 </b><br>
-     <blockquote>The DefaultTaskController and LinuxTaskController reference Yahoo! internal bug 2854624.  Updated with correct information.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6889">HADOOP-6889</a>.
+     Major new feature reported by hairong and fixed by johnvijoe (ipc)<br>
+     <b>Make RPC to have an option to timeout</b><br>
+     <blockquote>Currently Hadoop RPC does not timeout when the RPC server is alive. What it currently does is that a RPC client sends a ping to the server whenever a socket timeout happens. If the server is still alive, it continues to wait instead of throwing a SocketTimeoutException. This is to avoid a client to retry when a server is busy and thus making the server even busier. This works great if the RPC server is NameNode.<br><br>But Hadoop RPC is also used for some of client to DataNode communications, for e...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2729">MAPREDUCE-2729</a>.
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7119">HADOOP-7119</a>.
+     Major new feature reported by tucu00 and fixed by tucu00 (security)<br>
+     <b>add Kerberos HTTP SPNEGO authentication support to Hadoop JT/NN/DN/TT web-consoles</b><br>
+     <blockquote>                                              Adding support for Kerberos HTTP SPNEGO authentication to the Hadoop web-consoles<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7314">HADOOP-7314</a>.
+     Major improvement reported by naisbitt and fixed by naisbitt <br>
+     <b>Add support for throwing UnknownHostException when a host doesn&apos;t resolve</b><br>
+     <blockquote>As part of MAPREDUCE-2489, we need support for having the resolve methods (for DNS mapping) throw UnknownHostExceptions.  (Currently, they hide the exception).  Since the existing &apos;resolve&apos; method is ultimately used by several other locations/components, I propose we add a new &apos;resolveValidHosts&apos; method.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7343">HADOOP-7343</a>.
+     Minor improvement reported by tgraves and fixed by tgraves (test)<br>
+     <b>backport HADOOP-7008 and HADOOP-7042 to branch-0.20-security</b><br>
+     <blockquote>backport HADOOP-7008 and HADOOP-7042 to branch-0.20-security so that we can enable test-patch.sh to have a configured number of acceptable findbugs and javadoc warnings</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7388">HADOOP-7388</a>.
+     Trivial improvement reported by eyang and fixed by eyang <br>
+     <b>Remove definition of HADOOP_HOME and HADOOP_PREFIX from hadoop-env.sh.template</b><br>
+     <blockquote>The file structure layout proposed in HADOOP-6255 was designed to remove the need of using HADOOP_HOME environment to locate hadoop bits.  The file structure layout should be able to map to /usr or system directories, therefore HADOOP_HOME is renamed to HADOOP_PREFIX to be more concise.  HADOOP_PREFIX should not be exported to the user.  If the user use hadoop-setup-single-node.sh or hadoop-setup-conf.sh to configure hadoop, the current scripts put HADOOP_PREFIX/HADOOP_HOME in hadoop-env.sh. ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7400">HADOOP-7400</a>.
+     Major bug reported by gkesavan and fixed by gkesavan (build)<br>
+     <b>HdfsProxyTests fails when the -Dtest.build.dir and -Dbuild.test is set </b><br>
+     <blockquote>HdfsProxyTests fails when the -Dtest.build.dir and -Dbuild.test is set a dir other than build dir<br><br>test-junit:<br>     [copy] Copying 1 file to /home/y/var/builds/thread2/workspace/Cloud-Hadoop-0.20.1xx-Secondary/src/contrib/hdfsproxy/src/test/resources/proxy-config<br>    [junit] Running org.apache.hadoop.hdfsproxy.TestHdfsProxy<br>    [junit] Tests run: 1, Failures: 0, Errors: 1, Time elapsed: 0 sec<br>    [junit] Test org.apache.hadoop.hdfsproxy.TestHdfsProxy FAILED</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7432">HADOOP-7432</a>.
      Major improvement reported by sherri_chen and fixed by sherri_chen <br>
-     <b>Reducers are always counted having &quot;pending tasks&quot; even if they can&apos;t be scheduled yet because not enough of their mappers have completed</b><br>
-     <blockquote>In capacity scheduler, number of users in a queue needing slots are calculated based on whether users&apos; jobs have any pending tasks.<br>This works fine for map tasks. However, for reduce tasks, jobs do not need reduce slots until the minimum number of map tasks have been completed.<br><br>Here, we add checking whether reduce is ready to schedule (i.e. if a job has completed enough map tasks) when we increment number of users in a queue needing reduce slots.<br></blockquote></li>
+     <b>Back-port HADOOP-7110 to 0.20-security</b><br>
+     <blockquote>HADOOP-7110 implemented chmod in the NativeIO library so we can have good performance (ie not fork) and still not be prone to races. This should fix build failures (and probably task failures too).</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2705">MAPREDUCE-2705</a>.
-     Major bug reported by tgraves and fixed by tgraves (tasktracker)<br>
-     <b>tasks localized and launched serially by TaskLauncher - causing other tasks to be delayed</b><br>
-     <blockquote>The current TaskLauncher serially launches new tasks one at a time. During the launch it does the localization and then starts the map/reduce task.  This can cause any other tasks to be blocked waiting for the current task to be localized and started. In some instances we have seen a task that has a large file to localize (1.2MB) block another task for about 40 minutes. This particular task being blocked was a cleanup task which caused the job to be delayed finishing for the 40 minutes.<br></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7472">HADOOP-7472</a>.
+     Minor improvement reported by kihwal and fixed by kihwal (ipc)<br>
+     <b>RPC client should deal with the IP address changes</b><br>
+     <blockquote>The current RPC client implementation and the client-side callers assume that the hostname-address mappings of servers never change. The resolved address is stored in an immutable InetSocketAddress object above/outside RPC, and the reconnect logic in the RPC Connection implementation also trusts the resolved address that was passed down.<br><br>If the NN suffers a failure that requires migration, it may be started on a different node with a different IP address. In this case, even if the name-addre...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2651">MAPREDUCE-2651</a>.
-     Major bug reported by bharathm and fixed by bharathm (task-controller)<br>
-     <b>Race condition in Linux Task Controller for job log directory creation</b><br>
-     <blockquote>There is a rare race condition in linux task controller when concurrent task processes tries to create job log directory at the same time. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7539">HADOOP-7539</a>.
+     Major bug reported by johnvijoe and fixed by johnvijoe <br>
+     <b>merge hadoop archive goodness from trunk to .20</b><br>
+     <blockquote>hadoop archive in branch-0.20-security is outdated. When run recently, it produced  some bugs which were all fixed in trunk. This JIRA aims to bring in all these JIRAs to branch-0.20-security.<br></blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2650">MAPREDUCE-2650</a>.
-     Major bug reported by sherri_chen and fixed by sherri_chen <br>
-     <b>back-port MAPREDUCE-2238 to 0.20-security</b><br>
-     <blockquote>Dev had seen the attempt directory permission getting set to 000 or 111 in the CI builds and tests run on dev desktops with 0.20-security.<br>MAPREDUCE-2238 reported and fixed the issue for 0.22.0, back-port to 0.20-security is needed.<br></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7594">HADOOP-7594</a>.
+     Major new feature reported by szetszwo and fixed by szetszwo <br>
+     <b>Support HTTP REST in HttpServer</b><br>
+     <blockquote>Provide an API in HttpServer for supporting HTTP REST.<br><br>This is a part of HDFS-2284.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2621">MAPREDUCE-2621</a>.
-     Minor bug reported by sherri_chen and fixed by sherri_chen <br>
-     <b>TestCapacityScheduler fails with &quot;Queue &quot;q1&quot; does not exist&quot;</b><br>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7596">HADOOP-7596</a>.
+     Major bug reported by eyang and fixed by eyang (build)<br>
+     <b>Enable jsvc to work with Hadoop RPM package</b><br>
+     <blockquote>For secure Hadoop 0.20.2xx cluster, datanode can only run with 32 bit jvm because Hadoop only packages 32 bit jsvc.  The build process should download proper jsvc versions base on the build architecture.  In addition, the shell script should be enhanced to locate hadoop jar files in the proper location.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7599">HADOOP-7599</a>.
+     Major bug reported by eyang and fixed by eyang (scripts)<br>
+     <b>Improve hadoop setup conf script to setup secure Hadoop cluster</b><br>
+     <blockquote>Setting up a secure Hadoop cluster requires a lot of manual setup.  The motivation of this jira is to provide setup scripts to automate setup secure Hadoop cluster.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7602">HADOOP-7602</a>.
+     Major bug reported by johnvijoe and fixed by johnvijoe <br>
+     <b>wordcount, sort etc on har files fails with NPE</b><br>
+     <blockquote>wordcount, sort etc on har files fails with NPE@createSocketAddr(NetUtils.java:137). </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7603">HADOOP-7603</a>.
+     Major bug reported by eyang and fixed by eyang <br>
+     <b>Set default hdfs, mapred uid, and hadoop group gid for RPM packages</b><br>
+     <blockquote>Hadoop rpm package creates hdfs, mapped users, and hadoop group for automatically setting up pid directory and log directory with proper permission.  The default headless users should have a fixed uid, and gid numbers defined.<br><br>Searched through the standard uid and gid on both Redhat and Debian distro.  It looks like:<br><br>{noformat}<br>uid: 201 for hdfs<br>uid: 202 for mapred<br>gid: 49 for hadoop<br>{noformat}<br><br>would be free for use.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7610">HADOOP-7610</a>.
+     Major bug reported by eyang and fixed by eyang (scripts)<br>
+     <b>/etc/profile.d does not exist on Debian</b><br>
+     <blockquote>As part of post installation script, there is a symlink created in /etc/profile.d/hadoop-env.sh to source /etc/hadoop/hadoop-env.sh.  Therefore, users do not need to configure HADOOP_* environment.  Unfortunately, /etc/profile.d only exists in Ubuntu.  [Section 9.9 of the Debian Policy|http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.9] states:<br><br>{quote}<br>A program must not depend on environment variables to get reasonable defaults. (That&apos;s because these environment variables would ha...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7615">HADOOP-7615</a>.
+     Major bug reported by eyang and fixed by eyang (scripts)<br>
+     <b>Binary layout does not put share/hadoop/contrib/*.jar into the class path</b><br>
+     <blockquote>For contrib projects, contrib jar files are not included in HADOOP_CLASSPATH in the binary layout.  Several projects jar files should be copied to $HADOOP_PREFIX/share/hadoop/lib for binary deployment.  The interesting jar files to include in $HADOOP_PREFIX/share/hadoop/lib are: capacity-scheduler, thriftfs, fairscheduler.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7625">HADOOP-7625</a>.
+     Major bug reported by owen.omalley and fixed by owen.omalley <br>
+     <b>TestDelegationToken is failing in 205</b><br>
+     <blockquote>After the patches on Friday, org.apache.hadoop.hdfs.security.TestDelegationToken is failing.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7626">HADOOP-7626</a>.
+     Major bug reported by eyang and fixed by eyang (scripts)<br>
+     <b>Allow overwrite of HADOOP_CLASSPATH and HADOOP_OPTS</b><br>
+     <blockquote>Quote email from Ashutosh Chauhan:<br><br>bq. There is a bug in hadoop-env.sh which prevents hcatalog server to start in secure settings. Instead of adding classpath, it overrides them. I was not able to verify where the bug belongs to, in HMS or in hadoop scripts. Looks like hadoop-env.sh is generated from hadoop-env.sh.template in installation process by HMS. Hand crafted patch follows:<br><br>bq. - export HADOOP_CLASSPATH=$f<br>bq. +export HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:$f<br><br>bq. -export HADOOP_OPTS=...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7630">HADOOP-7630</a>.
+     Major bug reported by arpitgupta and fixed by eyang (conf)<br>
+     <b>hadoop-metrics2.properties should have a property *.period set to a default value foe metrics</b><br>
+     <blockquote>currently the hadoop-metrics2.properties file does not have a value set for *.period<br><br>This property is useful for metrics to determine when the property will refresh. We should set it to default of 60</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7631">HADOOP-7631</a>.
+     Major bug reported by rramya and fixed by eyang (conf)<br>
+     <b>In mapred-site.xml, stream.tmpdir is mapped to ${mapred.temp.dir} which is undeclared.</b><br>
+     <blockquote>Streaming jobs seem to fail with the following exception:<br><br>{noformat}<br>Exception in thread &quot;main&quot; java.io.IOException: No such file or directory<br>        at java.io.UnixFileSystem.createFileExclusively(Native Method)<br>        at java.io.File.checkAndCreate(File.java:1704)<br>        at java.io.File.createTempFile(File.java:1792)<br>        at org.apache.hadoop.streaming.StreamJob.packageJobJar(StreamJob.java:603)<br>        at org.apache.hadoop.streaming.StreamJob.setJobConf(StreamJob.java:798)<br>        a...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7633">HADOOP-7633</a>.
+     Major bug reported by arpitgupta and fixed by eyang (conf)<br>
+     <b>log4j.properties should be added to the hadoop conf on deploy</b><br>
+     <blockquote>currently the log4j properties are not present in the hadoop conf dir. We should add them so that log rotation happens appropriately and also define other logs that hadoop can generate for example the audit and the auth logs as well as the mapred summary logs etc.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7637">HADOOP-7637</a>.
+     Major bug reported by eyang and fixed by eyang (build)<br>
+     <b>Fair scheduler configuration file is not bundled in RPM</b><br>
+     <blockquote>205 build of tar is fine, but rpm failed with:<br><br>{noformat}<br>      [rpm] Processing files: hadoop-0.20.205.0-1<br>      [rpm] warning: File listed twice: /usr/libexec<br>      [rpm] warning: File listed twice: /usr/libexec/hadoop-config.sh<br>      [rpm] warning: File listed twice: /usr/libexec/jsvc.i386<br>      [rpm] Checking for unpackaged file(s): /usr/lib/rpm/check-files /tmp/hadoop_package_build_hortonfo/BUILD<br>      [rpm] error: Installed (but unpackaged) file(s) found:<br>      [rpm]    /etc/hadoop/fai...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7644">HADOOP-7644</a>.
+     Blocker bug reported by owen.omalley and fixed by owen.omalley (security)<br>
+     <b>Fix the delegation token tests to use the new style renewers</b><br>
+     <blockquote>Currently, TestDelegationTokenRenewal and TestDelegationTokenFetcher use the old style renewal and fail.<br><br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7645">HADOOP-7645</a>.
+     Blocker bug reported by atm and fixed by jnp (security)<br>
+     <b>HTTP auth tests requiring Kerberos infrastructure are not disabled on branch-0.20-security</b><br>
+     <blockquote>The back-port of HADOOP-7119 to branch-0.20-security included tests which require Kerberos infrastructure in order to run. In trunk and 0.23, these are disabled unless one enables the {{testKerberos}} maven profile. In branch-0.20-security, these tests are always run regardless, and so fail most of the time.<br><br>See this Jenkins build for an example: https://builds.apache.org/view/G-L/view/Hadoop/job/Hadoop-0.20-security/26/</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7649">HADOOP-7649</a>.
+     Blocker bug reported by kihwal and fixed by jnp (security, test)<br>
+     <b>TestMapredGroupMappingServiceRefresh and TestRefreshUserMappings  fail after HADOOP-7625</b><br>
+     <blockquote>TestMapredGroupMappingServiceRefresh and TestRefreshUserMappings  fail after HADOOP-7625.<br>The classpath has been changed, so they try to create the rsrc file in a jar and fail.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7655">HADOOP-7655</a>.
+     Major improvement reported by arpitgupta and fixed by arpitgupta <br>
+     <b>provide a small validation script that smoke tests the installed cluster</b><br>
+     <blockquote>currently we have scripts that will setup a hadoop cluster, create users etc. We should add a script that will smoke test the installed cluster. The script could run 3 small mr jobs teragen, terasort and teravalidate and cleanup once its done.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7658">HADOOP-7658</a>.
+     Major bug reported by gkesavan and fixed by eyang <br>
+     <b>to fix hadoop config template</b><br>
+     <blockquote>hadoop rpm config template by default sets the HADOOP_SECURE_DN_USER, HADOOP_SECURE_DN_LOG_DIR &amp; HADOOP_SECURE_DN_PID_DIR <br>the above values should only be set for secured deployment ; <br># On secure datanodes, user to run the datanode as after dropping privileges<br>export HADOOP_SECURE_DN_USER=${HADOOP_HDFS_USER}<br><br># Where log files are stored.  $HADOOP_HOME/logs by default.<br>export HADOOP_LOG_DIR=${HADOOP_LOG_DIR}/$USER<br><br># Where log files are stored in the secure data environment.<br>export HADOOP_SE...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7661">HADOOP-7661</a>.
+     Major bug reported by jnp and fixed by jnp <br>
+     <b>FileSystem.getCanonicalServiceName throws NPE for any file system uri that doesn&apos;t have an authority.</b><br>
+     <blockquote>FileSystem.getCanonicalServiceName throws NPE for any file system uri that doesn&apos;t have an authority. <br><br>....<br>java.lang.NullPointerException<br>at org.apache.hadoop.net.NetUtils.createSocketAddr(NetUtils.java:138)<br>at org.apache.hadoop.security.SecurityUtil.buildDTServiceName(SecurityUtil.java:261)<br>at org.apache.hadoop.fs.FileSystem.getCanonicalServiceName(FileSystem.java:174)<br>....</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7674">HADOOP-7674</a>.
+     Major bug reported by jnp and fixed by jnp <br>
+     <b>TestKerberosName fails in 20 branch.</b><br>
+     <blockquote>TestKerberosName fails in 20 branch. In fact this test has got duplicated in 20, with a little change to the rules.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7676">HADOOP-7676</a>.
+     Major bug reported by gkesavan and fixed by gkesavan <br>
+     <b>add rules to the core-site.xml template</b><br>
+     <blockquote>add rules for master and region in core-site.xml template.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7679">HADOOP-7679</a>.
+     Major bug reported by rramya and fixed by rramya (conf)<br>
+     <b>log4j.properties templates does not define mapred.jobsummary.logger</b><br>
+     <blockquote>In templates/conf/hadoop-env.sh, HADOOP_JOBTRACKER_OPTS is defined as -Dsecurity.audit.logger=INFO,DRFAS -Dmapred.audit.logger=INFO,MRAUDIT -Dmapred.jobsummary.logger=INFO,JSA ${HADOOP_JOBTRACKER_OPTS}<br>However, in templates/conf/hadoop-env.sh, instead of mapred.jobsummary.logger, hadoop.mapreduce.jobsummary.logger is defined as follows:<br>hadoop.mapreduce.jobsummary.logger=${hadoop.root.logger}<br>This is preventing collection of jobsummary logs.<br><br>We have to consistently use mapred.jobsummary.logg...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7681">HADOOP-7681</a>.
+     Minor bug reported by arpitgupta and fixed by arpitgupta (conf)<br>
+     <b>log4j.properties is missing properties for security audit and hdfs audit should be changed to info</b><br>
+     <blockquote>log4j.properties defines the security audit and hdfs audit files but is missing properties for security audit which causes security audit logs to not be present and also updates the hdfs audit to log at a WARN level. hdfs-audit logs should be at the INFO level so admin&apos;s/users can track when the namespace got the appropriate change.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-142">HDFS-142</a>.
+     Blocker bug reported by rangadi and fixed by dhruba <br>
+     <b>In 0.20, move blocks being written into a blocksBeingWritten directory</b><br>
+     <blockquote>Before 0.18, when Datanode restarts, it deletes files under data-dir/tmp  directory since these files are not valid anymore. But in 0.18 it moves these files to normal directory incorrectly making them valid blocks. One of the following would work :<br><br>- remove the tmp files during upgrade, or<br>- if the files under /tmp are in pre-18 format (i.e. no generation), delete them.<br><br>Currently effect of this bug is that, these files end up failing block verification and eventually get deleted. But cause...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-200">HDFS-200</a>.
+     Blocker new feature reported by szetszwo and fixed by dhruba <br>
+     <b>In HDFS, sync() not yet guarantees data available to the new readers</b><br>
+     <blockquote>In the append design doc (https://issues.apache.org/jira/secure/attachment/12370562/Appends.doc), it says<br>* A reader is guaranteed to be able to read data that was &apos;flushed&apos; before the reader opened the file<br><br>However, this feature is not yet implemented.  Note that the operation &apos;flushed&apos; is now called &quot;sync&quot;.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-561">HDFS-561</a>.
+     Major sub-task reported by kzhang and fixed by kzhang (data-node, hdfs client)<br>
+     <b>Fix write pipeline READ_TIMEOUT</b><br>
+     <blockquote>When writing a file, the pipeline status read timeouts for datanodes are not set up properly.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-606">HDFS-606</a>.
+     Major bug reported by shv and fixed by shv (name-node)<br>
+     <b>ConcurrentModificationException in invalidateCorruptReplicas()</b><br>
+     <blockquote>{{BlockManager.invalidateCorruptReplicas()}} iterates over DatanodeDescriptor-s while removing corrupt replicas from the descriptors. This causes {{ConcurrentModificationException}} if there is more than one replicas of the block. I ran into this exception debugging different scenarios in append, but it should be fixed in the trunk too.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630</a>.
+     Major improvement reported by mry.maillist and fixed by clehene (hdfs client, name-node)<br>
+     <b>In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block.</b><br>
+     <blockquote>created from hdfs-200.<br><br>If during a write, the dfsclient sees that a block replica location for a newly allocated block is not-connectable, it re-requests the NN to get a fresh set of replica locations of the block. It tries this dfs.client.block.write.retries times (default 3), sleeping 6 seconds between each retry ( see DFSClient.nextBlockOutputStream).<br><br>This setting works well when you have a reasonable size cluster; if u have few datanodes in the cluster, every retry maybe pick the dead-d...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-724">HDFS-724</a>.
+     Blocker bug reported by szetszwo and fixed by hairong (data-node, hdfs client)<br>
+     <b>Pipeline close hangs if one of the datanode is not responsive.</b><br>
+     <blockquote>In the new pipeline design, pipeline close is implemented by sending an additional empty packet.  If one of the datanode does not response to this empty packet, the pipeline hangs.  It seems that there is no timeout.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-826">HDFS-826</a>.
+     Major improvement reported by dhruba and fixed by dhruba (hdfs client)<br>
+     <b>Allow a mechanism for an application to detect that datanode(s)  have died in the write pipeline</b><br>
+     <blockquote>HDFS does not replicate the last block of the file that is being currently written to by an application. Every datanode death in the write pipeline decreases the reliability of the last block of the currently-being-written block. This situation can be improved if the application can be notified of a datanode death in the write pipeline. Then, the application can decide what is the right course of action to be taken on this event.<br><br>In our use-case, the application can close the file on the fir...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-895">HDFS-895</a>.
+     Major improvement reported by dhruba and fixed by tlipcon (hdfs client)<br>
+     <b>Allow hflush/sync to occur in parallel with new writes to the file</b><br>
+     <blockquote>In the current trunk, the HDFS client methods writeChunk() and hflush./sync are syncronized. This means that if a hflush/sync is in progress, an applicationn cannot write data to the HDFS client buffer. This reduces the write throughput of the transaction log in HBase. <br><br>The hflush/sync should allow new writes to happen to the HDFS client even when a hflush/sync is in progress. It can record the seqno of the message for which it should receice the ack, indicate to the DataStream thread to sta...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-988">HDFS-988</a>.
+     Blocker bug reported by dhruba and fixed by eli (name-node)<br>
+     <b>saveNamespace race can corrupt the edits log</b><br>
+     <blockquote>The adminstrator puts the namenode is safemode and then issues the savenamespace command. This can corrupt the edits log. The problem is that  when the NN enters safemode, there could still be pending logSycs occuring from other threads. Now, the saveNamespace command, when executed, would save a edits log with partial writes. I have seen this happen on 0.20.<br><br>https://issues.apache.org/jira/browse/HDFS-909?focusedCommentId=12828853&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1054">HDFS-1054</a>.
+     Major improvement reported by tlipcon and fixed by tlipcon (hdfs client)<br>
+     <b>Remove unnecessary sleep after failure in nextBlockOutputStream</b><br>
+     <blockquote>If DFSOutputStream fails to create a pipeline, it currently sleeps 6 seconds before retrying. I don&apos;t see a great reason to wait at all, much less 6 seconds (especially now that HDFS-630 ensures that a retry won&apos;t go back to the bad node). We should at least make it configurable, and perhaps something like backoff makes some sense.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1057">HDFS-1057</a>.
+     Blocker sub-task reported by tlipcon and fixed by rash37 (data-node)<br>
+     <b>Concurrent readers hit ChecksumExceptions if following a writer to very end of file</b><br>
+     <blockquote>In BlockReceiver.receivePacket, it calls replicaInfo.setBytesOnDisk before calling flush(). Therefore, if there is a concurrent reader, it&apos;s possible to race here - the reader will see the new length while those bytes are still in the buffers of BlockReceiver. Thus the client will potentially see checksum errors or EOFs. Additionally, the last checksum chunk of the file is made accessible to readers even though it is not stable.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1118">HDFS-1118</a>.
+     Major bug reported by zshao and fixed by zshao <br>
+     <b>DFSOutputStream socket leak when cannot connect to DataNode</b><br>
+     <blockquote>The offending code is in {{DFSOutputStream.nextBlockOutputStream}}<br><br>This function retries several times to call {{createBlockOutputStream}}. Each time when it fails, it leaves a {{Socket}} object in {{DFSOutputStream.s}}.<br>That object is never closed, but overwritten the next time {{createBlockOutputStream}} is called.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1122">HDFS-1122</a>.
+     Major sub-task reported by rash37 and fixed by rash37 <br>
+     <b>client block verification may result in blocks in DataBlockScanner prematurely</b><br>
+     <blockquote>found that when the DN uses client verification of a block that is open for writing, it will add it to the DataBlockScanner prematurely. </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1141">HDFS-1141</a>.
+     Blocker bug reported by tlipcon and fixed by tlipcon (name-node)<br>
+     <b>completeFile does not check lease ownership</b><br>
+     <blockquote>completeFile should check that the caller still owns the lease of the file that it&apos;s completing. This is for the &apos;testCompleteOtherLeaseHoldersFile&apos; case in HDFS-1139.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1164">HDFS-1164</a>.
+     Major bug reported by eli and fixed by tlipcon (contrib/hdfsproxy)<br>
+     <b>TestHdfsProxy is failing</b><br>
+     <blockquote>TestHdfsProxy is failing on trunk, seen in HDFS-1132 and HDFS-1143. It doesn&apos;t look like hudson posts test results for contrib and it&apos;s hard to see what&apos;s going on from the raw console output. Can someone with access to hudson upload the individual test output for TestHdfsProxy so we can see what the issue is?</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1186">HDFS-1186</a>.
+     Blocker bug reported by tlipcon and fixed by tlipcon (data-node)<br>
+     <b>0.20: DNs should interrupt writers at start of recovery</b><br>
+     <blockquote>When block recovery starts (eg due to NN recovering lease) it needs to interrupt any writers currently writing to those blocks. Otherwise, an old writer (who hasn&apos;t realized he lost his lease) can continue to write+sync to the blocks, and thus recovery ends up truncating data that has been sync()ed.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1197">HDFS-1197</a>.
+     Major bug reported by tlipcon and fixed by  (data-node, hdfs client, name-node)<br>
+     <b>Blocks are considered &quot;complete&quot; prematurely after commitBlockSynchronization or DN restart</b><br>
+     <blockquote>I saw this failure once on my internal Hudson job that runs the append tests 48 times a day:<br>junit.framework.AssertionFailedError: expected:&lt;114688&gt; but was:&lt;98304&gt;<br>	at org.apache.hadoop.hdfs.AppendTestUtil.check(AppendTestUtil.java:112)<br>	at org.apache.hadoop.hdfs.TestFileAppend3.testTC2(TestFileAppend3.java:116)<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1202">HDFS-1202</a>.
+     Major bug reported by tlipcon and fixed by tlipcon (data-node)<br>
+     <b>DataBlockScanner throws NPE when updated before initialized</b><br>
+     <blockquote>Missing an isInitialized() check in updateScanStatusInternal</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1204">HDFS-1204</a>.
+     Major bug reported by tlipcon and fixed by rash37 <br>
+     <b>0.20: Lease expiration should recover single files, not entire lease holder</b><br>
+     <blockquote>This was brought up in HDFS-200 but didn&apos;t make it into the branch on Apache.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1207">HDFS-1207</a>.
+     Major bug reported by tlipcon and fixed by tlipcon (name-node)<br>
+     <b>0.20-append: stallReplicationWork should be volatile</b><br>
+     <blockquote>the stallReplicationWork member in FSNamesystem is accessed by multiple threads without synchronization, but isn&apos;t marked volatile. I believe this is responsible for about 1% failure rate on TestFileAppend4.testAppendSyncChecksum* on my 8-core test boxes (looking at logs I see replication happening even though we&apos;ve supposedly disabled it)</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1210">HDFS-1210</a>.
+     Trivial improvement reported by tlipcon and fixed by tlipcon (hdfs client)<br>
+     <b>DFSClient should log exception when block recovery fails</b><br>
+     <blockquote>Right now we just retry without necessarily showing the exception. It can be useful to see what the error was that prevented the recovery RPC from succeeding.<br>(I believe this only applies in 0.20 style of block recovery)</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1211">HDFS-1211</a>.
+     Minor improvement reported by tlipcon and fixed by tlipcon (data-node)<br>
+     <b>0.20 append: Block receiver should not log &quot;rewind&quot; packets at INFO level</b><br>
+     <blockquote>In the 0.20 append implementation, it logs an INFO level message for every packet that &quot;rewinds&quot; the end of the block file. This is really noisy for applications like HBase which sync every edit.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1218">HDFS-1218</a>.
+     Critical bug reported by tlipcon and fixed by tlipcon (data-node)<br>
+     <b>20 append: Blocks recovered on startup should be treated with lower priority during block synchronization</b><br>
+     <blockquote>When a datanode experiences power loss, it can come back up with truncated replicas (due to local FS journal replay). Those replicas should not be allowed to truncate the block during block synchronization if there are other replicas from DNs that have _not_ restarted.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1242">HDFS-1242</a>.
+     Major test reported by tlipcon and fixed by tlipcon <br>
+     <b>0.20 append: Add test for appendFile() race solved in HDFS-142</b><br>
+     <blockquote>This is a unit test that didn&apos;t make it into branch-0.20-append, but worth having in TestFileAppend4.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1252">HDFS-1252</a>.
+     Major test reported by tlipcon and fixed by tlipcon (test)<br>
+     <b>TestDFSConcurrentFileOperations broken in 0.20-appendj</b><br>
+     <blockquote>This test currently has several flaws:<br> - It calls DN.updateBlock with a BlockInfo instance, which then causes java.lang.RuntimeException: java.lang.NoSuchMethodException: org.apache.hadoop.hdfs.server.namenode.BlocksMap$BlockInfo.&lt;init&gt;() in the logs when the DN tries to send blockReceived for the block<br> - It assumes that getBlockLocations returns an up-to-date length block after a sync, which is false. It happens to work because it calls getBlockLocations directly on the NN, and thus gets a...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1260">HDFS-1260</a>.
+     Critical bug reported by tlipcon and fixed by tlipcon <br>
+     <b>0.20: Block lost when multiple DNs trying to recover it to different genstamps</b><br>
+     <blockquote>Saw this issue on a cluster where some ops people were doing network changes without shutting down DNs first. So, recovery ended up getting started at multiple different DNs at the same time, and some race condition occurred that caused a block to get permanently stuck in recovery mode. What seems to have happened is the following:<br>- FSDataset.tryUpdateBlock called with old genstamp 7091, new genstamp 7094, while the block in the volumeMap (and on filesystem) was genstamp 7093<br>- we find the b...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1346">HDFS-1346</a>.
+     Major bug reported by hairong and fixed by hairong (data-node, hdfs client)<br>
+     <b>DFSClient receives out of order packet ack</b><br>
+     <blockquote>When running 0.20 patched with HDFS-101, we sometimes see an error as follow:<br>WARN hdfs.DFSClient: DFSOutputStream ResponseProcessor exception for block blk_-2871223654872350746_21421120java.io.IOException: Responseprocessor: Expecting seq<br>no for block blk_-2871223654872350746_21421120 10280 but received 10281<br>at org.apache.hadoop.hdfs.DFSClient$DFSOutputStream$ResponseProcessor.run(DFSClient.java:2570)<br><br>This indicates that DFS client expects an ack for packet N, but receives an ack for packe...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1520">HDFS-1520</a>.
+     Major new feature reported by hairong and fixed by hairong (name-node)<br>
+     <b>HDFS 20 append: Lightweight NameNode operation to trigger lease recovery</b><br>
+     <blockquote>Currently HBase uses append to trigger the close of HLog during Hlog split. Append is a very expensive operation, which involves not only NameNode operations but creating a writing pipeline. If one of datanodes on the pipeline has a problem, this recovery may takes minutes. I&apos;d like implement a lightweight NameNode operation to trigger lease recovery and make HBase to use this instead.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1554">HDFS-1554</a>.
+     Major improvement reported by hairong and fixed by hairong <br>
+     <b>Append 0.20: New semantics for recoverLease</b><br>
+     <blockquote>                                              Change recoverLease API to return if the file is closed or not. It also change the semantics of recoverLease to start lease recovery immediately.<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1555">HDFS-1555</a>.
+     Major improvement reported by hairong and fixed by hairong <br>
+     <b>HDFS 20 append: Disallow pipeline recovery if a file is already being lease recovered</b><br>
+     <blockquote>When a file is under lease recovery and the writer is still alive, the write pipeline will be killed and then the writer will start a pipeline recovery. Sometimes the pipeline recovery may race before the lease recovery and as a result fail the lease recovery. This is very bad if we want to support the strong recoverLease semantics in HDFS-1554. So it would be nice if we could disallow a file&apos;s pipeline recovery while its lease recovery is in progress.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1779">HDFS-1779</a>.
+     Major bug reported by umamaheswararao and fixed by umamaheswararao (data-node, name-node)<br>
+     <b>After NameNode restart , Clients can not read partial files even after client invokes Sync.</b><br>
+     <blockquote>In Append HDFS-200 issue,<br>If file has 10 blocks and after writing 5 blocks if client invokes sync method then NN will persist the blocks information in edits. <br>After this if we restart the NN, All the DataNodes will reregister with NN. But DataNodes are not sending the blocks being written information to NN. DNs are sending the blocksBeingWritten information in DN startup. So, here NameNode can not find that the 5 persisted blocks belongs to which datanodes. This information can build based o...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1836">HDFS-1836</a>.
+     Major bug reported by hkdennis2k and fixed by bharathm (hdfs client)<br>
+     <b>Thousand of CLOSE_WAIT socket </b><br>
+     <blockquote>$ /usr/sbin/lsof -i TCP:50010 | grep -c CLOSE_WAIT<br>4471<br><br>It is better if everything runs normal. <br>However, from time to time there are some &quot;DataStreamer Exception: java.net.SocketTimeoutException&quot; and &quot;DFSClient.processDatanodeError(2507) | Error Recovery for&quot; can be found from log file and the number of CLOSE_WAIT socket just keep increasing<br><br>The CLOSE_WAIT handles may remain for hours and days; then &quot;Too many open file&quot; some day.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2053">HDFS-2053</a>.
+     Minor bug reported by miguno and fixed by miguno (name-node)<br>
+     <b>Bug in INodeDirectory#computeContentSummary warning</b><br>
+     <blockquote>*How to reproduce*<br><br>{code}<br># create test directories<br>$ hadoop fs -mkdir /hdfs-1377/A<br>$ hadoop fs -mkdir /hdfs-1377/B<br>$ hadoop fs -mkdir /hdfs-1377/C<br><br># ...add some test data (few kB or MB) to all three dirs...<br><br># set space quota for subdir C only<br>$ hadoop dfsadmin -setSpaceQuota 1g /hdfs-1377/C<br><br># the following two commands _on the parent dir_ trigger the warning<br>$ hadoop fs -dus /hdfs-1377<br>$ hadoop fs -count -q /hdfs-1377<br>{code}<br><br>Warning message in the namenode logs:<br><br>{code}<br>2011-06-09 09:42...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2117">HDFS-2117</a>.
+     Minor bug reported by eli and fixed by eli (data-node)<br>
+     <b>DiskChecker#mkdirsWithExistsAndPermissionCheck may return true even when the dir is not created</b><br>
+     <blockquote>In branch-0.20-security as part of HADOOP-6566, DiskChecker#mkdirsWithExistsAndPermissionCheck will return true even if it wasn&apos;t able to create the directory, which means instead of throwing a DiskErrorException the code will proceed to getFileStatus and throw a FNF exception. Post HADOOP-7040, which modified makeInstance to catch not just DiskErrorExceptions but IOExceptions as well, this is not an issue since now the exception is caught either way. But for future modifications we should st...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2190">HDFS-2190</a>.
+     Major bug reported by atm and fixed by atm (name-node)<br>
+     <b>NN fails to start if it encounters an empty or malformed fstime file</b><br>
+     <blockquote>On startup, the NN reads the fstime file of all the configured dfs.name.dirs to determine which one to load. However, if any of the searched directories contain an empty or malformed fstime file, the NN will fail to start. The NN should be able to just proceed with starting and ignore the directory containing the bad fstime file.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2202">HDFS-2202</a>.
+     Major new feature reported by eepayne and fixed by eepayne (balancer, data-node)<br>
+     <b>Changes to balancer bandwidth should not require datanode restart.</b><br>
+     <blockquote>                    New dfsadmin command added: [-setBalancerBandwidth &amp;lt;bandwidth&amp;gt;] where bandwidth is max network bandwidth in bytes per second that the balancer is allowed to use on each datanode during balacing.&lt;br/&gt;<br><br>This is an incompatible change in 0.23.  The versions of ClientProtocol and DatanodeProtocol are changed.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2259">HDFS-2259</a>.
+     Minor bug reported by eli and fixed by eli (data-node)<br>
+     <b>DN web-UI doesn&apos;t work with paths that contain html </b><br>
+     <blockquote>The 20-based DN web UI doesn&apos;t work with paths that contain html. The paths need to be unescaped when used to access the file and escaped when printed for navigation.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2284">HDFS-2284</a>.
+     Major sub-task reported by sanjay.radia and fixed by szetszwo <br>
+     <b>Write Http access to HDFS</b><br>
+     <blockquote>HFTP allows on read access to HDFS via HTTP. Add write HTTP access to HDFS.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2300">HDFS-2300</a>.
+     Major bug reported by jnp and fixed by jnp <br>
+     <b>TestFileAppend4 and TestMultiThreadedSync fail on 20.append and 20-security.</b><br>
+     <blockquote>TestFileAppend4 and TestMultiThreadedSync fail on the 20.append and 20-security branch.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2309">HDFS-2309</a>.
+     Major bug reported by jnp and fixed by jnp <br>
+     <b>TestRenameWhileOpen fails in branch-0.20-security</b><br>
+     <blockquote>TestRenameWhileOpen is failing in branch-0.20-security.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2317">HDFS-2317</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Read access to HDFS using HTTP REST</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2318">HDFS-2318</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Provide authentication to webhdfs using SPNEGO</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2320">HDFS-2320</a>.
+     Major bug reported by sureshms and fixed by sureshms (data-node, hdfs client, name-node)<br>
+     <b>Make merged protocol changes from 0.20-append to 0.20-security compatible with previous releases.</b><br>
+     <blockquote>0.20-append changes have been merged to 0.20-security. The merge has changes to version numbers in several protocols. This jira makes the protocol changes compatible with older release, allowing clients running older version to talk to server running 205 version and clients running 205 version talk to older servers running 203, 204.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2325">HDFS-2325</a>.
+     Blocker bug reported by charlescearl and fixed by kihwal (contrib/fuse-dfs, libhdfs)<br>
+     <b>Fuse-DFS fails to build on Hadoop 20.203.0</b><br>
+     <blockquote>In building fuse-dfs, the compile fails due to an argument mismatch between call to hdfsConnectAsUser on line 40 of src/contrib/fuse-dfs/src/fuse_connect.c and an earlier definition of hdfsConnectAsUser given in src/c++/libhdfs/hdfs.h.<br>I suggest changing hdfs.h. I made the following change in hdfs.h in my local copy:<br><br>106c106,107<br>&lt;      hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user);<br>---<br>&gt;   //     hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *us...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2328">HDFS-2328</a>.
+     Critical bug reported by daryn and fixed by owen.omalley <br>
+     <b>hftp throws NPE if security is not enabled on remote cluster</b><br>
+     <blockquote>If hftp cannot locate either a hdfs or hftp token in the ugi, it will call {{getDelegationToken}} to acquire one from the remote nn.  This method may return a null {{Token}} if security is disabled(*)  on the remote nn.  Hftp will internally call its {{setDelegationToken}} which will throw a NPE when the token is {{null}}.<br><br>(*) Actually, if any problem happens while acquiring the token it assumes security is disabled!  However, it&apos;s a pre-existing issue beyond the scope of the token renewal c...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2331">HDFS-2331</a>.
+     Major bug reported by abhijit.shingate and fixed by abhijit.shingate (hdfs client)<br>
+     <b>Hdfs compilation fails</b><br>
+     <blockquote>I am trying to perform complete build from trunk folder but the compilation fails.<br><br>*Commandline:*<br>mvn clean install  <br><br>*Error Message:*<br><br>[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:2.<br>3.2:compile (default-compile) on project hadoop-hdfs: Compilation failure<br>[ERROR] \Hadoop\SVN\trunk\hadoop-hdfs-project\hadoop-hdfs\src\main\java\org<br>\apache\hadoop\hdfs\web\WebHdfsFileSystem.java:[209,21] type parameters of &lt;T&gt;T<br>cannot be determined; no unique maximal instance...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2333">HDFS-2333</a>.
+     Major bug reported by ikelly and fixed by szetszwo <br>
+     <b>HDFS-2284 introduced 2 findbugs warnings on trunk</b><br>
+     <blockquote>When HDFS-2284 was submitted it made DFSOutputStream public which triggered two SC_START_IN_CTOR findbug warnings.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2338">HDFS-2338</a>.
+     Major sub-task reported by jnp and fixed by jnp <br>
+     <b>Configuration option to enable/disable webhdfs.</b><br>
+     <blockquote>We should add a configuration option to enable/disable webhdfs.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2340">HDFS-2340</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Support getFileBlockLocations and getDelegationToken in webhdfs</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2342">HDFS-2342</a>.
+     Blocker bug reported by kihwal and fixed by szetszwo (build)<br>
+     <b>TestSleepJob and TestHdfsProxy broken after HDFS-2284</b><br>
+     <blockquote>After HDFS-2284, TestSleepJob and TestHdfsProxy are failing.<br>The both work in rev 1167444 and fail in rev 1167663.<br>It will be great if they can be fixed for 205.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2356">HDFS-2356</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>webhdfs: support case insensitive query parameter names</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2359">HDFS-2359</a>.
+     Major bug reported by rajsaha and fixed by jeagles (data-node)<br>
+     <b>NPE found in Datanode log while Disk failed during different HDFS operation</b><br>
+     <blockquote>Scenario:<br>I have a cluster of 4 DN ,each of them have 12disks.<br><br>In hdfs-site.xml I have &quot;dfs.datanode.failed.volumes.tolerated=3&quot; <br><br>During the execution of distcp (hdfs-&gt;hdfs), I am failing 3 disks in one Datanode, by making Data Directory permission 000, The distcp job is successful but , I am getting some NullPointerException in Datanode log<br><br>In one thread<br>$hadoop distcp  /user/$HADOOPQA_USER/data1 /user/$HADOOPQA_USER/data3<br><br>In another thread in a datanode<br>$ chmod 000 /xyz/{0,1,2}/hadoop/v...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2361">HDFS-2361</a>.
+     Critical bug reported by rajsaha and fixed by jnp (name-node)<br>
+     <b>hftp is broken</b><br>
+     <blockquote>Distcp with hftp is failing.<br><br><br>$hadoop   distcp hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp 1316814737/as<br>11/09/23 21:52:33 INFO tools.DistCp: srcPaths=[hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp]<br>11/09/23 21:52:33 INFO tools.DistCp: destPath=1316814737/as<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken?renewer=mapred<br>11/09/23 21:52:34 INFO security.TokenCache: Got dt for hftp://&lt;NNh...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2366">HDFS-2366</a>.
+     Major bug reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs throws a npe when ugi is null from getDelegationToken</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2375">HDFS-2375</a>.
+     Blocker bug reported by sureshms and fixed by sureshms (hdfs client)<br>
+     <b>TestFileAppend4 fails in 0.20.205 branch</b><br>
+     <blockquote>TestFileAppend4 fails due to change from HDFS-2333. The test uses reflection to get to the method DFSOutputStream#getNumCurrentReplicas(). Since HDFS-2333 patch change this method from public to private, reflection get the method fails resulting in test failures.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1734">MAPREDUCE-1734</a>.
+     Blocker improvement reported by tomwhite and fixed by tlipcon (documentation)<br>
+     <b>Un-deprecate the old MapReduce API in the 0.20 branch</b><br>
+     <blockquote>This issue is to un-deprecate the &quot;old&quot; MapReduce API (in o.a.h.mapred) in the next 0.20 release, as discussed at http://www.mail-archive.com/mapreduce-dev@hadoop.apache.org/msg01833.html</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2187">MAPREDUCE-2187</a>.
+     Major bug reported by azaroth and fixed by anupamseth <br>
+     <b>map tasks timeout during sorting</b><br>
+     <blockquote>                                              I just committed this. Thanks Anupam!<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2324">MAPREDUCE-2324</a>.
+     Major bug reported by tlipcon and fixed by revans2 <br>
+     <b>Job should fail if a reduce task can&apos;t be scheduled anywhere</b><br>
+     <blockquote>If there&apos;s a reduce task that needs more disk space than is available on any mapred.local.dir in the cluster, that task will stay pending forever. For example, we produced this in a QA cluster by accidentally running terasort with one reducer - since no mapred.local.dir had 1T free, the job remained in pending state for several days. The reason for the &quot;stuck&quot; task wasn&apos;t clear from a user perspective until we looked at the JT logs.<br><br>Probably better to just fail the job if a reduce task goes ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2489">MAPREDUCE-2489</a>.
+     Major bug reported by naisbitt and fixed by naisbitt (jobtracker)<br>
+     <b>Jobsplits with random hostnames can make the queue unusable</b><br>
+     <blockquote>We saw an issue where a custom InputSplit was returning invalid hostnames for the splits that were then causing the JobTracker to attempt to excessively resolve host names.  This caused a major slowdown for the JobTracker.  We should prevent invalid InputSplit hostnames from affecting everyone else.<br><br>I propose we implement some verification for the hostnames to try to ensure that we only do DNS lookups on valid hostnames (and fail otherwise).  We could also fail the job after a certain number...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2494">MAPREDUCE-2494</a>.
+     Major improvement reported by revans2 and fixed by revans2 (distributed-cache)<br>
+     <b>Make the distributed cache delete entires using LRU priority</b><br>
+     <blockquote>                    Added config option mapreduce.tasktracker.cache.local.keep.pct to the TaskTracker.  It is the target percentage of the local distributed cache that should be kept in between garbage collection runs.  In practice it will delete unused distributed cache entries in LRU order until the size of the cache is less than mapreduce.tasktracker.cache.local.keep.pct of the maximum cache size.  This is a floating point value between 0.0 and 1.0.  The default is 0.95.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2549">MAPREDUCE-2549</a>.
+     Major bug reported by devaraj.k and fixed by devaraj.k (contrib/eclipse-plugin, contrib/streaming)<br>
+     <b>Potential resource leaks in HadoopServer.java, RunOnHadoopWizard.java and Environment.java</b><br>
      <blockquote></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2610">MAPREDUCE-2610</a>.
@@ -62,270 +497,65 @@
      <b>Inconsistent API JobClient.getQueueAclsForCurrentUser</b><br>
      <blockquote>Client needs access to the current user&apos;s queue name.<br>Public method JobClient.getQueueAclsForCurrentUser() returns QueueAclsInfo[].<br>The QueueAclsInfo class has default access. A public method should not return a package-private class.<br><br>The QueueAclsInfo class, its two constructors, getQueueName, and getOperations methods should be public.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2549">MAPREDUCE-2549</a>.
-     Major bug reported by devaraj.k and fixed by devaraj.k (contrib/eclipse-plugin, contrib/streaming)<br>
-     <b>Potential resource leaks in HadoopServer.java, RunOnHadoopWizard.java and Environment.java</b><br>
-     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2621">MAPREDUCE-2621</a>.
+     Minor bug reported by sherri_chen and fixed by sherri_chen <br>
+     <b>TestCapacityScheduler fails with &quot;Queue &quot;q1&quot; does not exist&quot;</b><br>
+     <blockquote>{quote}<br>Error Message<br><br>Queue &quot;q1&quot; does not exist<br><br>Stacktrace<br><br>java.io.IOException: Queue &quot;q1&quot; does not exist<br>	at org.apache.hadoop.mapred.JobInProgress.&lt;init&gt;(JobInProgress.java:354)<br>	at org.apache.hadoop.mapred.TestCapacityScheduler$FakeJobInProgress.&lt;init&gt;(TestCapacityScheduler.java:172)<br>	at org.apache.hadoop.mapred.TestCapacityScheduler.submitJob(TestCapacityScheduler.java:794)<br>	at org.apache.hadoop.mapred.TestCapacityScheduler.submitJob(TestCapacityScheduler.java:818)<br>	at org.apache.hadoo...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2494">MAPREDUCE-2494</a>.
-     Major improvement reported by revans2 and fixed by revans2 (distributed-cache)<br>
-     <b>Make the distributed cache delete entires using LRU priority</b><br>
-     <blockquote>Currently the distributed cache will wait until a cache directory is above a preconfigured threshold.  At which point it will delete all entries that are not currently being used.  It seems like we would get far fewer cache misses if we kept some of them around, even when they are not being used.  We should add in a configurable percentage for a goal of how much of the cache should remain clear when not in use, and select objects to delete based off of how recently they were used, and possibl...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2650">MAPREDUCE-2650</a>.
+     Major bug reported by sherri_chen and fixed by sherri_chen <br>
+     <b>back-port MAPREDUCE-2238 to 0.20-security</b><br>
+     <blockquote>Dev had seen the attempt directory permission getting set to 000 or 111 in the CI builds and tests run on dev desktops with 0.20-security.<br>MAPREDUCE-2238 reported and fixed the issue for 0.22.0, back-port to 0.20-security is needed.<br></blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2489">MAPREDUCE-2489</a>.
-     Major bug reported by naisbitt and fixed by naisbitt (jobtracker)<br>
-     <b>Jobsplits with random hostnames can make the queue unusable</b><br>
-     <blockquote>We saw an issue where a custom InputSplit was returning invalid hostnames for the splits that were then causing the JobTracker to attempt to excessively resolve host names.  This caused a major slowdown for the JobTracker.  We should prevent invalid InputSplit hostnames from affecting everyone else.<br><br>I propose we implement some verification for the hostnames to try to ensure that we only do DNS lookups on valid hostnames (and fail otherwise).  We could also fail the job after a certain number...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2651">MAPREDUCE-2651</a>.
+     Major bug reported by bharathm and fixed by bharathm (task-controller)<br>
+     <b>Race condition in Linux Task Controller for job log directory creation</b><br>
+     <blockquote>There is a rare race condition in linux task controller when concurrent task processes tries to create job log directory at the same time. </blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2324">MAPREDUCE-2324</a>.
-     Major bug reported by tlipcon and fixed by revans2 <br>
-     <b>Job should fail if a reduce task can&apos;t be scheduled anywhere</b><br>
-     <blockquote>If there&apos;s a reduce task that needs more disk space than is available on any mapred.local.dir in the cluster, that task will stay pending forever. For example, we produced this in a QA cluster by accidentally running terasort with one reducer - since no mapred.local.dir had 1T free, the job remained in pending state for several days. The reason for the &quot;stuck&quot; task wasn&apos;t clear from a user perspective until we looked at the JT logs.<br><br>Probably better to just fail the job if a reduce task goes ...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2705">MAPREDUCE-2705</a>.
+     Major bug reported by tgraves and fixed by tgraves (tasktracker)<br>
+     <b>tasks localized and launched serially by TaskLauncher - causing other tasks to be delayed</b><br>
+     <blockquote>The current TaskLauncher serially launches new tasks one at a time. During the launch it does the localization and then starts the map/reduce task.  This can cause any other tasks to be blocked waiting for the current task to be localized and started. In some instances we have seen a task that has a large file to localize (1.2MB) block another task for about 40 minutes. This particular task being blocked was a cleanup task which caused the job to be delayed finishing for the 40 minutes.<br></blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2187">MAPREDUCE-2187</a>.
-     Major bug reported by azaroth and fixed by anupamseth <br>
-     <b>map tasks timeout during sorting</b><br>
-     <blockquote>During the execution of a large job, the map tasks timeout:<br><br>{code}<br>INFO mapred.JobClient: Task Id : attempt_201010290414_60974_m_000057_1, Status : FAILED<br>Task attempt_201010290414_60974_m_000057_1 failed to report status for 609 seconds. Killing!<br>{code}<br><br>The bug is in the fact that the mapper has already finished, and, according to the logs, the timeout occurs during the merge sort phase.<br>The intermediate data generated by the map task is quite large. So I think this is the problem.<br><br>The lo...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2328">HDFS-2328</a>.
-     Critical bug reported by daryn and fixed by owen.omalley <br>
-     <b>hftp throws NPE if security is not enabled on remote cluster</b><br>
-     <blockquote>If hftp cannot locate either a hdfs or hftp token in the ugi, it will call {{getDelegationToken}} to acquire one from the remote nn.  This method may return a null {{Token}} if security is disabled(*)  on the remote nn.  Hftp will internally call its {{setDelegationToken}} which will throw a NPE when the token is {{null}}.<br><br>(*) Actually, if any problem happens while acquiring the token it assumes security is disabled!  However, it&apos;s a pre-existing issue beyond the scope of the token renewal c...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2320">HDFS-2320</a>.
-     Major bug reported by sureshms and fixed by sureshms (data-node, hdfs client, name-node)<br>
-     <b>Make merged protocol changes from 0.20-append to 0.20-security compatible with previous releases.</b><br>
-     <blockquote>0.20-append changes have been merged to 0.20-security. The merge has changes to version numbers in several protocols. This jira makes the protocol changes compatible with older release, allowing clients running older version to talk to server running 205 version and clients running 205 version talk to older servers running 203, 204.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2317">HDFS-2317</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo <br>
-     <b>Read access to HDFS using HTTP REST</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2309">HDFS-2309</a>.
-     Major bug reported by jnp and fixed by jnp <br>
-     <b>TestRenameWhileOpen fails in branch-0.20-security</b><br>
-     <blockquote>TestRenameWhileOpen is failing in branch-0.20-security.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2284">HDFS-2284</a>.
-     Major sub-task reported by sanjay.radia and fixed by szetszwo <br>
-     <b>Write Http access to HDFS</b><br>
-     <blockquote>HFTP allows on read access to HDFS via HTTP. Add write HTTP access to HDFS.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2259">HDFS-2259</a>.
-     Minor bug reported by eli and fixed by eli (data-node)<br>
-     <b>DN web-UI doesn&apos;t work with paths that contain html </b><br>
-     <blockquote>The 20-based DN web UI doesn&apos;t work with paths that contain html. The paths need to be unescaped when used to access the file and escaped when printed for navigation.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2202">HDFS-2202</a>.
-     Major new feature reported by eepayne and fixed by eepayne (balancer, data-node)<br>
-     <b>Changes to balancer bandwidth should not require datanode restart.</b><br>
-     <blockquote>Currently in order to change the value of the balancer bandwidth (dfs.datanode.balance.bandwidthPerSec), the datanode daemon must be restarted.<br><br>The optimal value of the bandwidthPerSec parameter is not always (almost never) known at the time of cluster startup, but only once a new node is placed in the cluster and balancing is begun. If the balancing is taking too long (bandwidthPerSec is too low) or the balancing is taking up too much bandwidth (bandwidthPerSec is too high), the cluster mus...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2190">HDFS-2190</a>.
-     Major bug reported by atm and fixed by atm (name-node)<br>
-     <b>NN fails to start if it encounters an empty or malformed fstime file</b><br>
-     <blockquote>On startup, the NN reads the fstime file of all the configured dfs.name.dirs to determine which one to load. However, if any of the searched directories contain an empty or malformed fstime file, the NN will fail to start. The NN should be able to just proceed with starting and ignore the directory containing the bad fstime file.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2117">HDFS-2117</a>.
-     Minor bug reported by eli and fixed by eli (data-node)<br>
-     <b>DiskChecker#mkdirsWithExistsAndPermissionCheck may return true even when the dir is not created</b><br>
-     <blockquote>In branch-0.20-security as part of HADOOP-6566, DiskChecker#mkdirsWithExistsAndPermissionCheck will return true even if it wasn&apos;t able to create the directory, which means instead of throwing a DiskErrorException the code will proceed to getFileStatus and throw a FNF exception. Post HADOOP-7040, which modified makeInstance to catch not just DiskErrorExceptions but IOExceptions as well, this is not an issue since now the exception is caught either way. But for future modifications we should st...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2053">HDFS-2053</a>.
-     Minor bug reported by miguno and fixed by miguno (name-node)<br>
-     <b>Bug in INodeDirectory#computeContentSummary warning</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1836">HDFS-1836</a>.
-     Major bug reported by hkdennis2k and fixed by bharathm (hdfs client)<br>
-     <b>Thousand of CLOSE_WAIT socket </b><br>
-     <blockquote>$ /usr/sbin/lsof -i TCP:50010 | grep -c CLOSE_WAIT<br>4471<br><br>It is better if everything runs normal. <br>However, from time to time there are some &quot;DataStreamer Exception: java.net.SocketTimeoutException&quot; and &quot;DFSClient.processDatanodeError(2507) | Error Recovery for&quot; can be found from log file and the number of CLOSE_WAIT socket just keep increasing<br><br>The CLOSE_WAIT handles may remain for hours and days; then &quot;Too many open file&quot; some day.<br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1555">HDFS-1555</a>.
-     Major improvement reported by hairong and fixed by hairong <br>
-     <b>HDFS 20 append: Disallow pipeline recovery if a file is already being lease recovered</b><br>
-     <blockquote>When a file is under lease recovery and the writer is still alive, the write pipeline will be killed and then the writer will start a pipeline recovery. Sometimes the pipeline recovery may race before the lease recovery and as a result fail the lease recovery. This is very bad if we want to support the strong recoverLease semantics in HDFS-1554. So it would be nice if we could disallow a file&apos;s pipeline recovery while its lease recovery is in progress.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1554">HDFS-1554</a>.
-     Major improvement reported by hairong and fixed by hairong <br>
-     <b>Append 0.20: New semantics for recoverLease</b><br>
-     <blockquote>Current recoverLease API implemented in append 0.20 aims to provide a lighter weight (comparing to using create/append) way to trigger a file&apos;s soft lease expiration. From both the use case of hbase and scribe, it could have a stronger semantics: revoking the file&apos;s lease, thus starting lease recovery immediately.<br><br>Also I&apos;d like to port this recoverLease API to HDFS 0.22 and trunk since HBase is moving to HDFS 0.22.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1520">HDFS-1520</a>.
-     Major new feature reported by hairong and fixed by hairong (name-node)<br>
-     <b>HDFS 20 append: Lightweight NameNode operation to trigger lease recovery</b><br>
-     <blockquote>Currently HBase uses append to trigger the close of HLog during Hlog split. Append is a very expensive operation, which involves not only NameNode operations but creating a writing pipeline. If one of datanodes on the pipeline has a problem, this recovery may takes minutes. I&apos;d like implement a lightweight NameNode operation to trigger lease recovery and make HBase to use this instead.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1346">HDFS-1346</a>.
-     Major bug reported by hairong and fixed by hairong (data-node, hdfs client)<br>
-     <b>DFSClient receives out of order packet ack</b><br>
-     <blockquote>When running 0.20 patched with HDFS-101, we sometimes see an error as follow:<br>WARN hdfs.DFSClient: DFSOutputStream ResponseProcessor exception for block blk_-2871223654872350746_21421120java.io.IOException: Responseprocessor: Expecting seq<br>no for block blk_-2871223654872350746_21421120 10280 but received 10281<br>at org.apache.hadoop.hdfs.DFSClient$DFSOutputStream$ResponseProcessor.run(DFSClient.java:2570)<br><br>This indicates that DFS client expects an ack for packet N, but receives an ack for packe...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1211">HDFS-1211</a>.
-     Minor improvement reported by tlipcon and fixed by tlipcon (data-node)<br>
-     <b>0.20 append: Block receiver should not log &quot;rewind&quot; packets at INFO level</b><br>
-     <blockquote>In the 0.20 append implementation, it logs an INFO level message for every packet that &quot;rewinds&quot; the end of the block file. This is really noisy for applications like HBase which sync every edit.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1210">HDFS-1210</a>.
-     Trivial improvement reported by tlipcon and fixed by tlipcon (hdfs client)<br>
-     <b>DFSClient should log exception when block recovery fails</b><br>
-     <blockquote>Right now we just retry without necessarily showing the exception. It can be useful to see what the error was that prevented the recovery RPC from succeeding.<br>(I believe this only applies in 0.20 style of block recovery)</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1207">HDFS-1207</a>.
-     Major bug reported by tlipcon and fixed by tlipcon (name-node)<br>
-     <b>0.20-append: stallReplicationWork should be volatile</b><br>
-     <blockquote>the stallReplicationWork member in FSNamesystem is accessed by multiple threads without synchronization, but isn&apos;t marked volatile. I believe this is responsible for about 1% failure rate on TestFileAppend4.testAppendSyncChecksum* on my 8-core test boxes (looking at logs I see replication happening even though we&apos;ve supposedly disabled it)</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1204">HDFS-1204</a>.
-     Major bug reported by tlipcon and fixed by rash37 <br>
-     <b>0.20: Lease expiration should recover single files, not entire lease holder</b><br>
-     <blockquote>This was brought up in HDFS-200 but didn&apos;t make it into the branch on Apache.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1202">HDFS-1202</a>.
-     Major bug reported by tlipcon and fixed by tlipcon (data-node)<br>
-     <b>DataBlockScanner throws NPE when updated before initialized</b><br>
-     <blockquote>Missing an isInitialized() check in updateScanStatusInternal</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1164">HDFS-1164</a>.
-     Major bug reported by eli and fixed by tlipcon (contrib/hdfsproxy)<br>
-     <b>TestHdfsProxy is failing</b><br>
-     <blockquote>TestHdfsProxy is failing on trunk, seen in HDFS-1132 and HDFS-1143. It doesn&apos;t look like hudson posts test results for contrib and it&apos;s hard to see what&apos;s going on from the raw console output. Can someone with access to hudson upload the individual test output for TestHdfsProxy so we can see what the issue is?</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1141">HDFS-1141</a>.
-     Blocker bug reported by tlipcon and fixed by tlipcon (name-node)<br>
-     <b>completeFile does not check lease ownership</b><br>
-     <blockquote>completeFile should check that the caller still owns the lease of the file that it&apos;s completing. This is for the &apos;testCompleteOtherLeaseHoldersFile&apos; case in HDFS-1139.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1118">HDFS-1118</a>.
-     Major bug reported by zshao and fixed by zshao <br>
-     <b>DFSOutputStream socket leak when cannot connect to DataNode</b><br>
-     <blockquote>The offending code is in {{DFSOutputStream.nextBlockOutputStream}}<br><br>This function retries several times to call {{createBlockOutputStream}}. Each time when it fails, it leaves a {{Socket}} object in {{DFSOutputStream.s}}.<br>That object is never closed, but overwritten the next time {{createBlockOutputStream}} is called.<br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1057">HDFS-1057</a>.
-     Blocker sub-task reported by tlipcon and fixed by rash37 (data-node)<br>
-     <b>Concurrent readers hit ChecksumExceptions if following a writer to very end of file</b><br>
-     <blockquote>In BlockReceiver.receivePacket, it calls replicaInfo.setBytesOnDisk before calling flush(). Therefore, if there is a concurrent reader, it&apos;s possible to race here - the reader will see the new length while those bytes are still in the buffers of BlockReceiver. Thus the client will potentially see checksum errors or EOFs. Additionally, the last checksum chunk of the file is made accessible to readers even though it is not stable.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1054">HDFS-1054</a>.
-     Major improvement reported by tlipcon and fixed by tlipcon (hdfs client)<br>
-     <b>Remove unnecessary sleep after failure in nextBlockOutputStream</b><br>
-     <blockquote>If DFSOutputStream fails to create a pipeline, it currently sleeps 6 seconds before retrying. I don&apos;t see a great reason to wait at all, much less 6 seconds (especially now that HDFS-630 ensures that a retry won&apos;t go back to the bad node). We should at least make it configurable, and perhaps something like backoff makes some sense.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-988">HDFS-988</a>.
-     Blocker bug reported by dhruba and fixed by eli (name-node)<br>
-     <b>saveNamespace race can corrupt the edits log</b><br>
-     <blockquote>The adminstrator puts the namenode is safemode and then issues the savenamespace command. This can corrupt the edits log. The problem is that  when the NN enters safemode, there could still be pending logSycs occuring from other threads. Now, the saveNamespace command, when executed, would save a edits log with partial writes. I have seen this happen on 0.20.<br><br>https://issues.apache.org/jira/browse/HDFS-909?focusedCommentId=12828853&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-895">HDFS-895</a>.
-     Major improvement reported by dhruba and fixed by tlipcon (hdfs client)<br>
-     <b>Allow hflush/sync to occur in parallel with new writes to the file</b><br>
-     <blockquote>In the current trunk, the HDFS client methods writeChunk() and hflush./sync are syncronized. This means that if a hflush/sync is in progress, an applicationn cannot write data to the HDFS client buffer. This reduces the write throughput of the transaction log in HBase. <br><br>The hflush/sync should allow new writes to happen to the HDFS client even when a hflush/sync is in progress. It can record the seqno of the message for which it should receice the ack, indicate to the DataStream thread to sta...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-826">HDFS-826</a>.
-     Major improvement reported by dhruba and fixed by dhruba (hdfs client)<br>
-     <b>Allow a mechanism for an application to detect that datanode(s)  have died in the write pipeline</b><br>
-     <blockquote>HDFS does not replicate the last block of the file that is being currently written to by an application. Every datanode death in the write pipeline decreases the reliability of the last block of the currently-being-written block. This situation can be improved if the application can be notified of a datanode death in the write pipeline. Then, the application can decide what is the right course of action to be taken on this event.<br><br>In our use-case, the application can close the file on the fir...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-724">HDFS-724</a>.
-     Blocker bug reported by szetszwo and fixed by hairong (data-node, hdfs client)<br>
-     <b>Pipeline close hangs if one of the datanode is not responsive.</b><br>
-     <blockquote>In the new pipeline design, pipeline close is implemented by sending an additional empty packet.  If one of the datanode does not response to this empty packet, the pipeline hangs.  It seems that there is no timeout.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-630">HDFS-630</a>.
-     Major improvement reported by mry.maillist and fixed by clehene (hdfs client, name-node)<br>
-     <b>In DFSOutputStream.nextBlockOutputStream(), the client can exclude specific datanodes when locating the next block.</b><br>
-     <blockquote>created from hdfs-200.<br><br>If during a write, the dfsclient sees that a block replica location for a newly allocated block is not-connectable, it re-requests the NN to get a fresh set of replica locations of the block. It tries this dfs.client.block.write.retries times (default 3), sleeping 6 seconds between each retry ( see DFSClient.nextBlockOutputStream).<br><br>This setting works well when you have a reasonable size cluster; if u have few datanodes in the cluster, every retry maybe pick the dead-d...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-606">HDFS-606</a>.
-     Major bug reported by shv and fixed by shv (name-node)<br>
-     <b>ConcurrentModificationException in invalidateCorruptReplicas()</b><br>
-     <blockquote>{{BlockManager.invalidateCorruptReplicas()}} iterates over DatanodeDescriptor-s while removing corrupt replicas from the descriptors. This causes {{ConcurrentModificationException}} if there is more than one replicas of the block. I ran into this exception debugging different scenarios in append, but it should be fixed in the trunk too.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-561">HDFS-561</a>.
-     Major sub-task reported by kzhang and fixed by kzhang (data-node, hdfs client)<br>
-     <b>Fix write pipeline READ_TIMEOUT</b><br>
-     <blockquote>When writing a file, the pipeline status read timeouts for datanodes are not set up properly.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-200">HDFS-200</a>.
-     Blocker new feature reported by szetszwo and fixed by dhruba <br>
-     <b>In HDFS, sync() not yet guarantees data available to the new readers</b><br>
-     <blockquote>In the append design doc (https://issues.apache.org/jira/secure/attachment/12370562/Appends.doc), it says<br>* A reader is guaranteed to be able to read data that was &apos;flushed&apos; before the reader opened the file<br><br>However, this feature is not yet implemented.  Note that the operation &apos;flushed&apos; is now called &quot;sync&quot;.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-142">HDFS-142</a>.
-     Blocker bug reported by rangadi and fixed by dhruba <br>
-     <b>In 0.20, move blocks being written into a blocksBeingWritten directory</b><br>
-     <blockquote>Before 0.18, when Datanode restarts, it deletes files under data-dir/tmp  directory since these files are not valid anymore. But in 0.18 it moves these files to normal directory incorrectly making them valid blocks. One of the following would work :<br><br>- remove the tmp files during upgrade, or<br>- if the files under /tmp are in pre-18 format (i.e. no generation), delete them.<br><br>Currently effect of this bug is that, these files end up failing block verification and eventually get deleted. But cause...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7626">HADOOP-7626</a>.
-     Major bug reported by eyang and fixed by eyang (scripts)<br>
-     <b>Allow overwrite of HADOOP_CLASSPATH and HADOOP_OPTS</b><br>
-     <blockquote>Quote email from Ashutosh Chauhan:<br><br>bq. There is a bug in hadoop-env.sh which prevents hcatalog server to start in secure settings. Instead of adding classpath, it overrides them. I was not able to verify where the bug belongs to, in HMS or in hadoop scripts. Looks like hadoop-env.sh is generated from hadoop-env.sh.template in installation process by HMS. Hand crafted patch follows:<br><br>bq. - export HADOOP_CLASSPATH=$f<br>bq. +export HADOOP_CLASSPATH=${HADOOP_CLASSPATH}:$f<br><br>bq. -export HADOOP_OPTS=...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7610">HADOOP-7610</a>.
-     Major bug reported by eyang and fixed by eyang (scripts)<br>
-     <b>/etc/profile.d does not exist on Debian</b><br>
-     <blockquote>As part of post installation script, there is a symlink created in /etc/profile.d/hadoop-env.sh to source /etc/hadoop/hadoop-env.sh.  Therefore, users do not need to configure HADOOP_* environment.  Unfortunately, /etc/profile.d only exists in Ubuntu.  [Section 9.9 of the Debian Policy|http://www.debian.org/doc/debian-policy/ch-opersys.html#s9.9] states:<br><br>{quote}<br>A program must not depend on environment variables to get reasonable defaults. (That&apos;s because these environment variables would ha...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7599">HADOOP-7599</a>.
-     Major bug reported by eyang and fixed by eyang (scripts)<br>
-     <b>Improve hadoop setup conf script to setup secure Hadoop cluster</b><br>
-     <blockquote>Setting up a secure Hadoop cluster requires a lot of manual setup.  The motivation of this jira is to provide setup scripts to automate setup secure Hadoop cluster.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7596">HADOOP-7596</a>.
-     Major bug reported by eyang and fixed by eyang (build)<br>
-     <b>Enable jsvc to work with Hadoop RPM package</b><br>
-     <blockquote>For secure Hadoop 0.20.2xx cluster, datanode can only run with 32 bit jvm because Hadoop only packages 32 bit jsvc.  The build process should download proper jsvc versions base on the build architecture.  In addition, the shell script should be enhanced to locate hadoop jar files in the proper location.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7594">HADOOP-7594</a>.
-     Major new feature reported by szetszwo and fixed by szetszwo <br>
-     <b>Support HTTP REST in HttpServer</b><br>
-     <blockquote>Provide an API in HttpServer for supporting HTTP REST.<br><br>This is a part of HDFS-2284.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7539">HADOOP-7539</a>.
-     Major bug reported by johnvijoe and fixed by johnvijoe <br>
-     <b>merge hadoop archive goodness from trunk to .20</b><br>
-     <blockquote>hadoop archive in branch-0.20-security is outdated. When run recently, it produced  some bugs which were all fixed in trunk. This JIRA aims to bring in all these JIRAs to branch-0.20-security.<br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7472">HADOOP-7472</a>.
-     Minor improvement reported by kihwal and fixed by kihwal (ipc)<br>
-     <b>RPC client should deal with the IP address changes</b><br>
-     <blockquote>The current RPC client implementation and the client-side callers assume that the hostname-address mappings of servers never change. The resolved address is stored in an immutable InetSocketAddress object above/outside RPC, and the reconnect logic in the RPC Connection implementation also trusts the resolved address that was passed down.<br><br>If the NN suffers a failure that requires migration, it may be started on a different node with a different IP address. In this case, even if the name-addre...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7432">HADOOP-7432</a>.
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2729">MAPREDUCE-2729</a>.
      Major improvement reported by sherri_chen and fixed by sherri_chen <br>
-     <b>Back-port HADOOP-7110 to 0.20-security</b><br>
-     <blockquote>HADOOP-7110 implemented chmod in the NativeIO library so we can have good performance (ie not fork) and still not be prone to races. This should fix build failures (and probably task failures too).</blockquote></li>
+     <b>Reducers are always counted having &quot;pending tasks&quot; even if they can&apos;t be scheduled yet because not enough of their mappers have completed</b><br>
+     <blockquote>In capacity scheduler, number of users in a queue needing slots are calculated based on whether users&apos; jobs have any pending tasks.<br>This works fine for map tasks. However, for reduce tasks, jobs do not need reduce slots until the minimum number of map tasks have been completed.<br><br>Here, we add checking whether reduce is ready to schedule (i.e. if a job has completed enough map tasks) when we increment number of users in a queue needing reduce slots.<br></blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7388">HADOOP-7388</a>.
-     Trivial improvement reported by eyang and fixed by eyang <br>
-     <b>Remove definition of HADOOP_HOME and HADOOP_PREFIX from hadoop-env.sh.template</b><br>
-     <blockquote>The file structure layout proposed in HADOOP-6255 was designed to remove the need of using HADOOP_HOME environment to locate hadoop bits.  The file structure layout should be able to map to /usr or system directories, therefore HADOOP_HOME is renamed to HADOOP_PREFIX to be more concise.  HADOOP_PREFIX should not be exported to the user.  If the user use hadoop-setup-single-node.sh or hadoop-setup-conf.sh to configure hadoop, the current scripts put HADOOP_PREFIX/HADOOP_HOME in hadoop-env.sh. ...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2764">MAPREDUCE-2764</a>.
+     Major bug reported by daryn and fixed by owen.omalley <br>
+     <b>Fix renewal of dfs delegation tokens</b><br>
+     <blockquote>The JT may have issues renewing hftp tokens which disrupt long distcp jobs.  The problem is the JT&apos;s delegation token renewal code is built on brittle assumptions.  The token&apos;s service field contains only the &quot;ip:port&quot; pair.  The renewal process assumes that the scheme must be hdfs.  If that fails due to a {{VersionMismatchException}}, it tries https based on another assumption that it must be hftp if it&apos;s not hdfs.  A number of other exceptions, most commonly {{IOExceptions}}, can be generat...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7343">HADOOP-7343</a>.
-     Minor improvement reported by tgraves and fixed by tgraves (test)<br>
-     <b>backport HADOOP-7008 and HADOOP-7042 to branch-0.20-security</b><br>
-     <blockquote>backport HADOOP-7008 and HADOOP-7042 to branch-0.20-security so that we can enable test-patch.sh to have a configured number of acceptable findbugs and javadoc warnings</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2780">MAPREDUCE-2780</a>.
+     Major sub-task reported by daryn and fixed by daryn <br>
+     <b>Standardize the value of token service</b><br>
+     <blockquote>The token&apos;s service field must (currently) be set to &quot;ip:port&quot;.  All the producers of a token are independently building the service string.  This should be done via a common method to reduce the chance of error, and to facilitate the field value being easily changed in the (near) future.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7314">HADOOP-7314</a>.
-     Major improvement reported by naisbitt and fixed by naisbitt <br>
-     <b>Add support for throwing UnknownHostException when a host doesn&apos;t resolve</b><br>
-     <blockquote>As part of MAPREDUCE-2489, we need support for having the resolve methods (for DNS mapping) throw UnknownHostExceptions.  (Currently, they hide the exception).  Since the existing &apos;resolve&apos; method is ultimately used by several other locations/components, I propose we add a new &apos;resolveValidHosts&apos; method.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2852">MAPREDUCE-2852</a>.
+     Major bug reported by eli and fixed by kihwal (tasktracker)<br>
+     <b>Jira for YDH bug 2854624 </b><br>
+     <blockquote>The DefaultTaskController and LinuxTaskController reference Yahoo! internal bug 2854624:<br><br>{code}<br>FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();<br>long logSize = 0; //TODO: Ref BUG:2854624<br>{code}<br><br>This jira tracks this TODO. If someone w/ access to Yahoo&apos;s bugzilla could update this jira with what the bug is that would be great.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7119">HADOOP-7119</a>.
-     Major new feature reported by tucu00 and fixed by tucu00 (security)<br>
-     <b>add Kerberos HTTP SPNEGO authentication support to Hadoop JT/NN/DN/TT web-consoles</b><br>
-     <blockquote>Currently the JT/NN/DN/TT web-consoles don&apos;t support any form of authentication.<br><br>Hadoop RPC API already supports Kerberos authentication.<br><br>Kerberos enables single sign-on.<br><br>Popular browsers (Firefox and Internet Explorer) have support for Kerberos HTTP SPNEGO.<br><br>Adding support for Kerberos HTTP SPNEGO to Hadoop web consoles would provide a unified authentication mechanism and single sign-on for Hadoop web UI and Hadoop RPC.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2915">MAPREDUCE-2915</a>.
+     Major bug reported by kihwal and fixed by kihwal (task-controller)<br>
+     <b>LinuxTaskController does not work when JniBasedUnixGroupsNetgroupMapping or JniBasedUnixGroupsMapping is enabled</b><br>
+     <blockquote>When a job is submitted, LinuxTaskController launches the native task-controller binary for job initialization. The native program does a series of prep work and call execv() to run JobLocalizer.  It was observed that JobLocalizer does fails to run when JniBasedUnixGroupsNetgroupMapping or JniBasedUnixGroupsMapping is enabled, resulting in 100% job failures.<br><br>JobLocalizer normally does not need the native library (libhadoop) for its functioning, but enabling a JNI user-to-group mapping functi...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6833">HADOOP-6833</a>.
-     Blocker bug reported by tlipcon and fixed by tlipcon <br>
-     <b>IPC leaks call parameters when exceptions thrown</b><br>
-     <blockquote>HADOOP-6498 moved the calls.remove() call lower into the SUCCESS clause of receiveResponse(), but didn&apos;t put a similar calls.remove into the ERROR clause. So, any RPC call that throws an exception ends up orphaning the Call object in the connection&apos;s &quot;calls&quot; hashtable. This prevents cleanup of the connection and is a memory leak for the call parameters.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2928">MAPREDUCE-2928</a>.
+     Major sub-task reported by eli and fixed by eli (tasktracker)<br>
+     <b>MR-2413 improvements</b><br>
+     <blockquote>Tracks improvements to MR-2413. See [this comment|https://issues.apache.org/jira/browse/MAPREDUCE-2413?focusedCommentId=13095073&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13095073].</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6722">HADOOP-6722</a>.
-     Major bug reported by tlipcon and fixed by tlipcon (util)<br>
-     <b>NetUtils.connect should check that it hasn&apos;t connected a socket to itself</b><br>
-     <blockquote>I had no idea this was possible, but it turns out that a TCP connection will be established in the rare case that the local side of the socket binds to the ephemeral port that you later try to connect to. This can present itself in very very rare occasion when an RPC client is trying to connect to a daemon running on the same node, but that daemon is down. To see what I&apos;m talking about, run &quot;while true ; do telnet localhost 60020 ; done&quot; on a multicore box and wait several minutes.<br><br>This can ...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2981">MAPREDUCE-2981</a>.
+     Major improvement reported by matei and fixed by matei (contrib/fair-share)<br>
+     <b>Backport trunk fairscheduler to 0.20-security branch</b><br>
+     <blockquote>A lot of improvements have been made to the fair scheduler in 0.21, 0.22 and trunk, but have not been ported back to the new 0.20.20X releases that are currently considered the stable branch of Hadoop.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3076">MAPREDUCE-3076</a>.
+     Blocker bug reported by acmurthy and fixed by acmurthy (test)<br>
+     <b>TestSleepJob fails </b><br>
+     <blockquote>TestSleepJob fails, it was intended to be used in other tests for MAPREDUCE-2981.</blockquote></li>
 
 </ul>
 
