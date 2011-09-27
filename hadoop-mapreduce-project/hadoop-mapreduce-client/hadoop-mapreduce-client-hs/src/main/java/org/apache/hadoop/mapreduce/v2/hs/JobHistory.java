@@ -22,7 +22,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -84,25 +83,6 @@ public class JobHistory extends AbstractService implements HistoryContext   {
 
   private static final Log SUMMARY_LOG = LogFactory.getLog(JobSummary.class);
 
-  /*
-   * TODO Get rid of this once JobId has it's own comparator
-   */
-  private static final Comparator<JobId> JOB_ID_COMPARATOR = 
-    new Comparator<JobId>() {
-    @Override
-    public int compare(JobId o1, JobId o2) {
-      if (o1.getAppId().getClusterTimestamp() > 
-          o2.getAppId().getClusterTimestamp()) {
-        return 1;
-      } else if (o1.getAppId().getClusterTimestamp() < 
-          o2.getAppId().getClusterTimestamp()) {
-        return -1;
-      } else {
-        return o1.getId() - o2.getId();
-      }
-    }
-  };
-  
   private static String DONE_BEFORE_SERIAL_TAIL = 
     JobHistoryUtils.doneSubdirsBeforeSerialTail();
   
@@ -118,19 +98,19 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   //Maintains minimal details for recent jobs (parsed from history file name).
   //Sorted on Job Completion Time.
   private final SortedMap<JobId, MetaInfo> jobListCache = 
-    new ConcurrentSkipListMap<JobId, MetaInfo>(JOB_ID_COMPARATOR);
+    new ConcurrentSkipListMap<JobId, MetaInfo>();
   
   
   // Re-use exisiting MetaInfo objects if they exist for the specific JobId. (synchronization on MetaInfo)
   // Check for existance of the object when using iterators.
   private final SortedMap<JobId, MetaInfo> intermediateListCache = 
-    new ConcurrentSkipListMap<JobId, JobHistory.MetaInfo>(JOB_ID_COMPARATOR);
+    new ConcurrentSkipListMap<JobId, JobHistory.MetaInfo>();
   
   //Maintains a list of known done subdirectories. Not currently used.
   private final Set<Path> existingDoneSubdirs = new HashSet<Path>();
   
   private final SortedMap<JobId, Job> loadedJobCache = 
-    new ConcurrentSkipListMap<JobId, Job>(JOB_ID_COMPARATOR);
+    new ConcurrentSkipListMap<JobId, Job>();
 
   /**
    * Maintains a mapping between intermediate user directories and the last 
@@ -673,7 +653,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   private Map<JobId, Job> getAllJobsInternal() {
     //TODO This should ideally be using getAllJobsMetaInfo
     // or get rid of that method once Job has APIs for user, finishTime etc.
-    SortedMap<JobId, Job> result = new TreeMap<JobId, Job>(JOB_ID_COMPARATOR);
+    SortedMap<JobId, Job> result = new TreeMap<JobId, Job>();
     try {
       scanIntermediateDirectory();
     } catch (IOException e) {
