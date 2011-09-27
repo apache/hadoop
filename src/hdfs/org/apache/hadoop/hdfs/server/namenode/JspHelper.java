@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.KerberosName;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -464,7 +465,8 @@ public class JspHelper {
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
         ugi = id.getUser();
-        checkUsername(ugi.getUserName(), user);
+        checkUsername(ugi.getShortUserName(), usernameFromQuery);
+        checkUsername(ugi.getShortUserName(), user);
         ugi.addToken(token);        
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
@@ -473,13 +475,11 @@ public class JspHelper {
                                 "authenticated by filter");
         }
         ugi = UserGroupInformation.createRemoteUser(user);
+        checkUsername(ugi.getShortUserName(), usernameFromQuery);
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
         ugi.setAuthenticationMethod(secureAuthMethod);
       }
-
-      checkUsername(user, usernameFromQuery);
-
     } else { // Security's not on, pull from url
       ugi = usernameFromQuery == null?
           getDefaultWebUser(conf) // not specified in request
@@ -492,10 +492,18 @@ public class JspHelper {
     return ugi;
   }
 
+  /**
+   * Expected user name should be a short name.
+   */
   private static void checkUsername(final String expected, final String name
       ) throws IOException {
-    if (name != null && !name.equals(expected)) {
-      throw new IOException("Usernames not matched: name=" + name
+    if (name == null) {
+      return;
+    }
+    KerberosName u = new KerberosName(name);
+    String shortName = u.getShortName();
+    if (!shortName.equals(expected)) {
+      throw new IOException("Usernames not matched: name=" + shortName
           + " != expected=" + expected);
     }
   }
