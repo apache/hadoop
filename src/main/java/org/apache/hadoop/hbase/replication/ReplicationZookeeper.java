@@ -399,7 +399,7 @@ public class ReplicationZookeeper {
    * @throws KeeperException
    */
   public boolean getReplication() throws KeeperException {
-    byte [] data = this.statusTracker.getData();
+    byte [] data = this.statusTracker.getData(false);
     if (data == null || data.length == 0) {
       setReplicating(true);
       return true;

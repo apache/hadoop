@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
@@ -170,7 +169,7 @@ public class ServerManager {
       LOG.info(message);
       if (existingServer.getStartcode() < serverName.getStartcode()) {
         LOG.info("Triggering server recovery; existingServer " +
-          existingServer + " looks stale");
+          existingServer + " looks stale, new server:" + serverName);
         expireServer(existingServer);
       }
       throw new PleaseHoldException(message);
@@ -219,8 +218,8 @@ public class ServerManager {
     if (this.deadservers.cleanPreviousInstance(serverName)) {
       // This server has now become alive after we marked it as dead.
       // We removed it's previous entry from the dead list to reflect it.
-      LOG.debug("Server " + serverName + " came back up, removed it from the" +
-          " dead servers list");
+      LOG.debug(what + ":" + " Server " + serverName + " came back up," +
+          " removed it from the dead servers list");
     }
   }
 
@@ -353,30 +352,15 @@ public class ServerManager {
       }
       return;
     }
-    CatalogTracker ct = this.master.getCatalogTracker();
-    // Was this server carrying root?
-    boolean carryingRoot;
-    try {
-      ServerName address = ct.getRootLocation();
-      carryingRoot = address != null && address.equals(serverName);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      LOG.info("Interrupted");
-      return;
-    }
-    // Was this server carrying meta?  Can't ask CatalogTracker because it
-    // may have reset the meta location as null already (it may have already
-    // run into fact that meta is dead).  I can ask assignment manager. It
-    // has an inmemory list of who has what.  This list will be cleared as we
-    // process the dead server but should be  find asking it now.
-    ServerName address = ct.getMetaLocation();
-    boolean carryingMeta = address != null && address.equals(serverName);
+
+    boolean carryingRoot = services.getAssignmentManager().isCarryingRoot(serverName);
+    boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
     if (carryingRoot || carryingMeta) {
       this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
         this.services, this.deadservers, serverName, carryingRoot, carryingMeta));
     } else {
       this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
-        this.services, this.deadservers, serverName));
+        this.services, this.deadservers, serverName, true));
     }
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed, root=" +

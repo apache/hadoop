@@ -101,7 +101,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    */
   public synchronized byte [] blockUntilAvailable()
   throws InterruptedException {
-    return blockUntilAvailable(0);
+    return blockUntilAvailable(0, false);
   }
 
   /**
@@ -113,12 +113,19 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * @return data of the node
    * @throws InterruptedException if the waiting thread is interrupted
    */
-  public synchronized byte [] blockUntilAvailable(long timeout)
+  public synchronized byte [] blockUntilAvailable(long timeout, boolean refresh)
   throws InterruptedException {
     if (timeout < 0) throw new IllegalArgumentException();
     boolean notimeout = timeout == 0;
     long startTime = System.currentTimeMillis();
     long remaining = timeout;
+    if (refresh) {
+      try {
+        this.data = ZKUtil.getDataAndWatch(watcher, node);
+      } catch(KeeperException e) {
+        abortable.abort("Unexpected exception handling blockUntilAvailable", e);
+      }
+    }
     while (!this.stopped && (notimeout || remaining > 0) && this.data == null) {
       if (notimeout) {
         wait();
@@ -127,7 +134,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
       wait(remaining);
       remaining = timeout - (System.currentTimeMillis() - startTime);
     }
-    return data;
+    return this.data;
   }
 
   /**
@@ -136,11 +143,18 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * <p>If the node is currently available, the most up-to-date known version of
    * the data is returned.  If the node is not currently available, null is
    * returned.
-   *
+   * @param whether to refresh the data by calling ZK directly.
    * @return data of the node, null if unavailable
    */
-  public synchronized byte [] getData() {
-    return data;
+  public synchronized byte [] getData(boolean refresh) {
+    if (refresh) {
+      try {
+        this.data = ZKUtil.getDataAndWatch(watcher, node);
+      } catch(KeeperException e) {
+        abortable.abort("Unexpected exception handling getData", e);
+      }
+    }
+    return this.data;
   }
 
   public String getNode() {

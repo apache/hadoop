@@ -606,15 +606,15 @@ public class AssignmentManager extends ZooKeeperListener {
         handleHBCK(data);
         return;
       }
+      String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
+      String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
       // Verify this is a known server
       if (!serverManager.isServerOnline(sn) &&
           !this.master.getServerName().equals(sn)) {
         LOG.warn("Attempted to handle region transition for server but " +
-          "server is not online: " + Bytes.toString(data.getRegionName()));
+          "server is not online: " + prettyPrintedRegionName);
         return;
       }
-      String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
-      String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
       // Printing if the event was created a long time ago helps debugging
       boolean lateEvent = data.getStamp() <
           (System.currentTimeMillis() - 15000);
@@ -1427,6 +1427,9 @@ public class AssignmentManager extends ZooKeeperListener {
           // Remove region from in-memory transition and unassigned node from ZK
           // While trying to enable the table the regions of the table were
           // already enabled.
+          debugLog(state.getRegion(),
+              "ALREADY_OPENED region " + state.getRegion().getRegionNameAsString() +
+              " to " + plan.getDestination().toString());
           String encodedRegionName = state.getRegion()
               .getEncodedName();
           try {
@@ -2518,15 +2521,62 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     return;
   }
-  
+
   private void invokeAssign(HRegionInfo regionInfo) {
     threadPoolExecutorService.submit(new AssignCallable(this, regionInfo));
   }
-  
+
   private void invokeUnassign(HRegionInfo regionInfo) {
     threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
   }
-  
+
+  public boolean isCarryingRoot(ServerName serverName) {
+    return isCarryingRegion(serverName, HRegionInfo.ROOT_REGIONINFO);
+  }
+
+  public boolean isCarryingMeta(ServerName serverName) {
+    return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
+  }
+  /**
+   * Check if the shutdown server carries the specific region.
+   * We have a bunch of places that store region location
+   * Those values aren't consistent. There is a delay of notification.
+   * The location from zookeeper unassigned node has the most recent data;
+   * but the node could be deleted after the region is opened by AM.
+   * The AM's info could be old when OpenedRegionHandler
+   * processing hasn't finished yet when server shutdown occurs.
+   * @return whether the serverName currently hosts the region
+   */
+  public boolean isCarryingRegion(ServerName serverName, HRegionInfo hri) {
+    RegionTransitionData data = null;
+    try {
+      data = ZKAssign.getData(master.getZooKeeper(), hri.getEncodedName());
+    } catch (KeeperException e) {
+      master.abort("Unexpected ZK exception reading unassigned node for region="
+        + hri.getEncodedName(), e);
+    }
+
+    ServerName addressFromZK = (data != null && data.getOrigin() != null) ?
+      data.getOrigin() : null;
+    if (addressFromZK != null) {
+      // if we get something from ZK, we will use the data
+      boolean matchZK = (addressFromZK != null &&
+        addressFromZK.equals(serverName));
+      LOG.debug("based on ZK, current region=" + hri.getRegionNameAsString() +
+          " is on server=" + addressFromZK +
+          " server being checked=: " + serverName);
+      return matchZK;
+    }
+
+    ServerName addressFromAM = getRegionServerOfRegion(hri);
+    boolean matchAM = (addressFromAM != null &&
+      addressFromAM.equals(serverName));
+    LOG.debug("based on AM, current region=" + hri.getRegionNameAsString() +
+      " is on server=" + (addressFromAM != null ? addressFromAM : "null") +
+      " server being checked: " + serverName);
+
+    return matchAM;
+  }
   /**
    * Process shutdown server removing any assignments.
    * @param sn Server that went down.

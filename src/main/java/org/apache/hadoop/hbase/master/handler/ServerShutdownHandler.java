@@ -54,14 +54,18 @@ public class ServerShutdownHandler extends EventHandler {
   private final ServerName serverName;
   private final MasterServices services;
   private final DeadServer deadServers;
+  private final boolean shouldSplitHlog; // whether to split HLog or not
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
-      final DeadServer deadServers, final ServerName serverName) {
-    this(server, services, deadServers, serverName, EventType.M_SERVER_SHUTDOWN);
+      final DeadServer deadServers, final ServerName serverName,
+      final boolean shouldSplitHlog) {
+    this(server, services, deadServers, serverName, EventType.M_SERVER_SHUTDOWN,
+        shouldSplitHlog);
   }
 
   ServerShutdownHandler(final Server server, final MasterServices services,
-      final DeadServer deadServers, final ServerName serverName, EventType type) {
+      final DeadServer deadServers, final ServerName serverName, EventType type,
+      final boolean shouldSplitHlog) {
     super(server, type);
     this.serverName = serverName;
     this.server = server;
@@ -70,8 +74,9 @@ public class ServerShutdownHandler extends EventHandler {
     if (!this.deadServers.contains(this.serverName)) {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
+    this.shouldSplitHlog = shouldSplitHlog;
   }
-  
+
   @Override
   public String getInformativeName() {
     if (serverName != null) {
@@ -92,15 +97,15 @@ public class ServerShutdownHandler extends EventHandler {
    * @throws IOException
    * @throws KeeperException
    */
-  private void verifyAndAssignRoot() 
+  private void verifyAndAssignRoot()
   throws InterruptedException, IOException, KeeperException {
     long timeout = this.server.getConfiguration().
       getLong("hbase.catalog.verification.timeout", 1000);
     if (!this.server.getCatalogTracker().verifyRootRegionLocation(timeout)) {
-      this.services.getAssignmentManager().assignRoot();     
+      this.services.getAssignmentManager().assignRoot();
     }
   }
-  
+
   /**
    * Failed many times, shutdown processing
    * @throws IOException
@@ -160,14 +165,59 @@ public class ServerShutdownHandler extends EventHandler {
     }
     return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
   }
-  
+
   @Override
   public void process() throws IOException {
     final ServerName serverName = this.serverName;
 
-    LOG.info("Splitting logs for " + serverName);
     try {
-      this.services.getMasterFileSystem().splitLog(serverName);
+
+      if ( this.shouldSplitHlog ) {
+        LOG.info("Splitting logs for " + serverName);
+        this.services.getMasterFileSystem().splitLog(serverName);
+      }
+
+      // Assign root and meta if we were carrying them.
+      if (isCarryingRoot()) { // -ROOT-
+        LOG.info("Server " + serverName +
+            " was carrying ROOT. Trying to assign.");
+        this.services.getAssignmentManager().
+        regionOffline(HRegionInfo.ROOT_REGIONINFO);
+        verifyAndAssignRootWithRetries();
+      }
+
+      // Carrying meta?
+      if (isCarryingMeta()) {
+        LOG.info("Server " + serverName +
+          " was carrying META. Trying to assign.");
+        this.services.getAssignmentManager().
+        regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+        this.services.getAssignmentManager().assignMeta();
+      }
+
+      // We don't want worker thread in the MetaServerShutdownHandler
+      // executor pool to block by waiting availability of -ROOT-
+      // and .META. server. Otherwise, it could run into the following issue:
+      // 1. The current MetaServerShutdownHandler instance For RS1 waits for the .META.
+      //    to come online.
+      // 2. The newly assigned .META. region server RS2 was shutdown right after
+      //    it opens the .META. region. So the MetaServerShutdownHandler
+      //    instance For RS1 will still be blocked.
+      // 3. The new instance of MetaServerShutdownHandler for RS2 is queued.
+      // 4. The newly assigned .META. region server RS3 was shutdown right after
+      //    it opens the .META. region. So the MetaServerShutdownHandler
+      //    instance For RS1 and RS2 will still be blocked.
+      // 5. The new instance of MetaServerShutdownHandler for RS3 is queued.
+      // 6. Repeat until we run out of MetaServerShutdownHandler worker threads
+      // The solution here is to resubmit a ServerShutdownHandler request to process
+      // user regions on that server so that MetaServerShutdownHandler
+      // executor pool is always available.
+      if (isCarryingRoot() || isCarryingMeta()) { // -ROOT- or .META.
+        this.services.getExecutorService().submit(new ServerShutdownHandler(
+          this.server, this.services, this.deadServers, serverName, false));
+        this.deadServers.add(serverName);
+        return;
+      }
 
       // Clean out anything in regions in transition.  Being conservative and
       // doing after log splitting.  Could do some states before -- OPENING?
@@ -177,18 +227,6 @@ public class ServerShutdownHandler extends EventHandler {
         this.services.getAssignmentManager()
         .processServerShutdown(this.serverName);
 
-      // Assign root and meta if we were carrying them.
-      if (isCarryingRoot()) { // -ROOT-
-        LOG.info("Server " + serverName +
-            " was carrying ROOT. Trying to assign.");
-        verifyAndAssignRootWithRetries();
-      }
-
-      // Carrying meta?
-      if (isCarryingMeta()) {
-        LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
-        this.services.getAssignmentManager().assignMeta();
-      }
 
       // Wait on meta to come online; we need it to progress.
       // TODO: Best way to hold strictly here?  We should build this retry logic
@@ -225,7 +263,8 @@ public class ServerShutdownHandler extends EventHandler {
       for (RegionState rit : regionsInTransition) {
         if (!rit.isClosing() && !rit.isPendingClose()) {
           LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
-          " from list of regions to assign because in RIT");
+          " from list of regions to assign because in RIT" + " region state: "
+          + rit.getState());
           hris.remove(rit.getRegion());
         }
       }

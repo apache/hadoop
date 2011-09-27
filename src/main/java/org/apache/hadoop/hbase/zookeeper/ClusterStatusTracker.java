@@ -53,7 +53,7 @@ public class ClusterStatusTracker extends ZooKeeperNodeTracker {
    * @return true if root region location is available, false if not
    */
   public boolean isClusterUp() {
-    return super.getData() != null;
+    return super.getData(false) != null;
   }
 
   /**

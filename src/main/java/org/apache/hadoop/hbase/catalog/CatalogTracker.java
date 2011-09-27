@@ -213,11 +213,10 @@ public class CatalogTracker {
    * for up to the specified timeout if not immediately available.  Returns null
    * if the timeout elapses before root is available.
    * @param timeout maximum time to wait for root availability, in milliseconds
-   * @return Location of server hosting root region,
-   * or null if none available
+   * @return Location of server hosting root region or null if none available
    * @throws InterruptedException if interrupted while waiting
    * @throws NotAllMetaRegionsOnlineException if root not available before
-   *                                          timeout
+   * timeout
    */
   ServerName waitForRoot(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
@@ -264,14 +263,11 @@ public class CatalogTracker {
    * if available.  Returns null if no location is immediately available.
    * @return connection to server hosting root, null if not available
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   private HRegionInterface getRootServerConnection()
   throws IOException, InterruptedException {
     ServerName sn = this.rootRegionTracker.getRootRegionLocation();
-    if (sn == null) {
-      return null;
-    }
     return getCachedConnection(sn);
   }
 
@@ -289,16 +285,13 @@ public class CatalogTracker {
    *
    * @return connection to server hosting meta, null if location not available
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
-  private HRegionInterface getMetaServerConnection(boolean refresh)
+  private HRegionInterface getMetaServerConnection()
   throws IOException, InterruptedException {
     synchronized (metaAvailable) {
       if (metaAvailable.get()) {
-        HRegionInterface current = getCachedConnection(metaLocation);
-        if (!refresh) {
-          return current;
-        }
+        HRegionInterface current = getCachedConnection(this.metaLocation);
         if (verifyRegionLocation(current, this.metaLocation, META_REGION)) {
           return current;
         }
@@ -306,17 +299,22 @@ public class CatalogTracker {
       }
       HRegionInterface rootConnection = getRootServerConnection();
       if (rootConnection == null) {
+        LOG.debug("-ROOT- server unavailable.");
         return null;
       }
       ServerName newLocation = MetaReader.readMetaLocation(rootConnection);
       if (newLocation == null) {
+        LOG.debug(".META. server unavailable.");
         return null;
       }
 
       HRegionInterface newConnection = getCachedConnection(newLocation);
-      if (verifyRegionLocation(newConnection, this.metaLocation, META_REGION)) {
+      if (verifyRegionLocation(newConnection, newLocation, META_REGION)) {
         setMetaLocation(newLocation);
         return newConnection;
+      } else {
+        LOG.debug("new .META. server: " + newLocation + " isn't valid." +
+          " Cached .META. server: " + this.metaLocation);
       }
       return null;
     }
@@ -339,27 +337,28 @@ public class CatalogTracker {
    * Gets the current location for <code>.META.</code> if available and waits
    * for up to the specified timeout if not immediately available.  Throws an
    * exception if timed out waiting.  This method differs from {@link #waitForMeta()}
-   * in that it will go ahead and verify the location gotten from ZooKeeper by
-   * trying to use returned connection.
+   * in that it will go ahead and verify the location gotten from ZooKeeper and
+   * -ROOT- region by trying to use returned connection.
    * @param timeout maximum time to wait for meta availability, in milliseconds
    * @return location of meta
    * @throws InterruptedException if interrupted while waiting
    * @throws IOException unexpected exception connecting to meta server
    * @throws NotAllMetaRegionsOnlineException if meta not available before
-   *                                          timeout
+   * timeout
    */
   public ServerName waitForMeta(long timeout)
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
     long stop = System.currentTimeMillis() + timeout;
+    long waitTime = Math.min(500, timeout);
     synchronized (metaAvailable) {
-      while(!stopped && !metaAvailable.get() &&
-          (timeout == 0 || System.currentTimeMillis() < stop)) {
-        if (getMetaServerConnection(true) != null) {
+      while(!stopped && (timeout == 0 || System.currentTimeMillis() < stop)) {
+        if (getMetaServerConnection() != null) {
           return metaLocation;
         }
-        metaAvailable.wait(timeout == 0 ? 50 : timeout);
+        // perhaps -ROOT- region isn't available, let us wait a bit and retry.
+        metaAvailable.wait(waitTime);
       }
-      if (getMetaServerConnection(true) == null) {
+      if (getMetaServerConnection() == null) {
         throw new NotAllMetaRegionsOnlineException(
             "Timed out (" + timeout + "ms)");
       }
@@ -399,11 +398,13 @@ public class CatalogTracker {
   }
 
   private void resetMetaLocation() {
-    LOG.info("Current cached META location is not valid, resetting");
+    LOG.debug("Current cached META location: " + metaLocation +
+      " is not valid, resetting");
     this.metaAvailable.set(false);
   }
 
   private void setMetaLocation(final ServerName metaLocation) {
+    LOG.debug("set new cached META location: " + metaLocation);
     metaAvailable.set(true);
     this.metaLocation = metaLocation;
     // no synchronization because these are private and already under lock
@@ -412,6 +413,9 @@ public class CatalogTracker {
 
   private HRegionInterface getCachedConnection(ServerName sn)
   throws IOException {
+    if (sn == null) {
+      return null;
+    }
     HRegionInterface protocol = null;
     try {
       protocol = connection.getHRegionConnection(sn.getHostname(), sn.getPort());
@@ -491,9 +495,6 @@ public class CatalogTracker {
       // Pass
     } catch (ServerNotRunningYetException e) {
       // Pass -- remote server is not up so can't be carrying root
-    } catch (IOException e) {
-      // Unexpected exception
-      throw e;
     }
     return (connection == null)? false:
       verifyRegionLocation(connection,
@@ -511,7 +512,15 @@ public class CatalogTracker {
    */
   public boolean verifyMetaRegionLocation(final long timeout)
   throws InterruptedException, IOException {
-    return getMetaServerConnection(true) != null;
+    HRegionInterface connection = null;
+    try {
+      connection = waitForMetaServerConnection(timeout);
+    } catch (NotAllMetaRegionsOnlineException e) {
+      // Pass
+    } catch (ServerNotRunningYetException e) {
+      // Pass -- remote server is not up so can't be carrying .META.
+    }
+    return connection != null;
   }
 
   MetaNodeTracker getMetaNodeTracker() {

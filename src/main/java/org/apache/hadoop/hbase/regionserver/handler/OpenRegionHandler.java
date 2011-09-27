@@ -134,7 +134,8 @@ public class OpenRegionHandler extends EventHandler {
       }
 
       // Done!  Successful region open
-      LOG.debug("Opened " + name);
+      LOG.debug("Opened " + name + " on server:" +
+        this.server.getServerName());
     } finally {
       this.rsServices.getRegionsInTransitionInRS().
           remove(this.regionInfo.getEncodedNameAsBytes());
@@ -273,8 +274,11 @@ public class OpenRegionHandler extends EventHandler {
         LOG.warn("Completed the OPEN of region " + name +
           " but when transitioning from " +
           " OPENING to OPENED got a version mismatch, someone else clashed " +
-          "so now unassigning -- closing region");
+          "so now unassigning -- closing region on server: " +
+          this.server.getServerName());
       } else {
+        LOG.debug("region transitioned to opened in zookeeper: " +
+          r.getRegionInfo() + ", server: " + this.server.getServerName());
         result = true;
       }
     } catch (KeeperException e) {

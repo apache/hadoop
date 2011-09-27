@@ -31,12 +31,13 @@ import org.apache.hadoop.hbase.master.MasterServices;
 public class MetaServerShutdownHandler extends ServerShutdownHandler {
   private final boolean carryingRoot;
   private final boolean carryingMeta;
-  
+
   public MetaServerShutdownHandler(final Server server,
       final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
       final boolean carryingRoot, final boolean carryingMeta) {
-    super(server, services, deadServers, serverName, EventType.M_META_SERVER_SHUTDOWN);
+    super(server, services, deadServers, serverName,
+      EventType.M_META_SERVER_SHUTDOWN, true);
     this.carryingRoot = carryingRoot;
     this.carryingMeta = carryingMeta;
   }

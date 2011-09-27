@@ -109,7 +109,7 @@ public class TestZooKeeperNodeTracker {
     zk.registerListener(localTracker);
 
     // Make sure we don't have a node
-    assertNull(localTracker.getData());
+    assertNull(localTracker.getData(false));
 
     // Spin up a thread with another ZKNT and have it block
     WaitToGetDataThread thread = new WaitToGetDataThread(zk, node);
@@ -142,17 +142,17 @@ public class TestZooKeeperNodeTracker {
     thread.join();
 
     // Both trackers should have the node available with data one
-    assertNotNull(localTracker.getData());
+    assertNotNull(localTracker.getData(false));
     assertNotNull(localTracker.blockUntilAvailable());
-    assertTrue(Bytes.equals(localTracker.getData(), dataOne));
+    assertTrue(Bytes.equals(localTracker.getData(false), dataOne));
     assertTrue(thread.hasData);
-    assertTrue(Bytes.equals(thread.tracker.getData(), dataOne));
+    assertTrue(Bytes.equals(thread.tracker.getData(false), dataOne));
     LOG.info("Successfully got data one");
 
     // Make sure it's available and with the expected data
-    assertNotNull(secondTracker.getData());
+    assertNotNull(secondTracker.getData(false));
     assertNotNull(secondTracker.blockUntilAvailable());
-    assertTrue(Bytes.equals(secondTracker.getData(), dataOne));
+    assertTrue(Bytes.equals(secondTracker.getData(false), dataOne));
     LOG.info("Successfully got data one with the second tracker");
 
     // Drop the node
@@ -166,8 +166,8 @@ public class TestZooKeeperNodeTracker {
 
     // Verify other guys don't have data
     assertFalse(thread.hasData);
-    assertNull(secondTracker.getData());
-    assertNull(localTracker.getData());
+    assertNull(secondTracker.getData(false));
+    assertNull(localTracker.getData(false));
     LOG.info("Successfully made unavailable");
 
     // Create with second data
@@ -178,14 +178,14 @@ public class TestZooKeeperNodeTracker {
     thread.join();
 
     // All trackers should have the node available with data two
-    assertNotNull(localTracker.getData());
+    assertNotNull(localTracker.getData(false));
     assertNotNull(localTracker.blockUntilAvailable());
-    assertTrue(Bytes.equals(localTracker.getData(), dataTwo));
-    assertNotNull(secondTracker.getData());
+    assertTrue(Bytes.equals(localTracker.getData(false), dataTwo));
+    assertNotNull(secondTracker.getData(false));
     assertNotNull(secondTracker.blockUntilAvailable());
-    assertTrue(Bytes.equals(secondTracker.getData(), dataTwo));
+    assertTrue(Bytes.equals(secondTracker.getData(false), dataTwo));
     assertTrue(thread.hasData);
-    assertTrue(Bytes.equals(thread.tracker.getData(), dataTwo));
+    assertTrue(Bytes.equals(thread.tracker.getData(false), dataTwo));
     LOG.info("Successfully got data two on all trackers and threads");
 
     // Change the data back to data one
@@ -195,14 +195,14 @@ public class TestZooKeeperNodeTracker {
     zkListener.waitForDataChange();
 
     // All trackers should have the node available with data one
-    assertNotNull(localTracker.getData());
+    assertNotNull(localTracker.getData(false));
     assertNotNull(localTracker.blockUntilAvailable());
-    assertTrue(Bytes.equals(localTracker.getData(), dataOne));
-    assertNotNull(secondTracker.getData());
+    assertTrue(Bytes.equals(localTracker.getData(false), dataOne));
+    assertNotNull(secondTracker.getData(false));
     assertNotNull(secondTracker.blockUntilAvailable());
-    assertTrue(Bytes.equals(secondTracker.getData(), dataOne));
+    assertTrue(Bytes.equals(secondTracker.getData(false), dataOne));
     assertTrue(thread.hasData);
-    assertTrue(Bytes.equals(thread.tracker.getData(), dataOne));
+    assertTrue(Bytes.equals(thread.tracker.getData(false), dataOne));
     LOG.info("Successfully got data one following a data change on all trackers and threads");
   }
 

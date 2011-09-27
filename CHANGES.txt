@@ -302,6 +302,8 @@ Release 0.92.0 - Unreleased
    HBASE-4472  MiniHBaseCluster.shutdown() doesn't work if no active master
    HBASE-4433  avoid extra next (potentially a seek) if done with column/row
                (Kannan Muthukkaruppan)
+   HBASE-4455  Rolling restart RSs scenario, -ROOT-, .META. regions are lost in
+               AssignmentManager (Ming Ma)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

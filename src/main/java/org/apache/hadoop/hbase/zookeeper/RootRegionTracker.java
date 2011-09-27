@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the root region server location node in zookeeper.
@@ -49,21 +50,23 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
    * @return true if root region location is available, false if not
    */
   public boolean isLocationAvailable() {
-    return super.getData() != null;
+    return super.getData(true) != null;
   }
 
   /**
    * Gets the root region location, if available.  Null if not.  Does not block.
    * @return server name
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public ServerName getRootRegionLocation() throws InterruptedException {
-    return dataToServerName(super.getData());
+    return dataToServerName(super.getData(true));
   }
 
   /**
    * Gets the root region location, if available, and waits for up to the
    * specified timeout if not immediately available.
+   * Given the zookeeper notification could be delayed, we will try to
+   * get the latest data.
    * @param timeout maximum time to wait, in millis
    * @return server name for server hosting root region formatted as per
    * {@link ServerName}, or null if none available
@@ -77,7 +80,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
       LOG.error(errorMsg);
       throw new IllegalArgumentException(errorMsg);
     }
-    return dataToServerName(super.blockUntilAvailable(timeout));
+    return dataToServerName(super.blockUntilAvailable(timeout, true));
   }
 
   /*

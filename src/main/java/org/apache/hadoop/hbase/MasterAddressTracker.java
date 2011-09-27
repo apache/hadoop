@@ -58,7 +58,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return Server name or null if timed out.
    */
   public ServerName getMasterAddress() {
-    byte [] data = super.getData();
+    byte [] data = super.getData(false);
     return data == null ? null : new ServerName(Bytes.toString(data));
   }
 
@@ -67,21 +67,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return true if there is a master set, false if not.
    */
   public boolean hasMaster() {
-    return super.getData() != null;
+    return super.getData(false) != null;
   }
 
-  /**
-   * Get the address of the current master.  If no master is available, method
-   * will block until one is available, the thread is interrupted, or timeout
-   * has passed.
-   *
-   * @param timeout maximum time to wait for master in millis, 0 for forever
-   * @return String of master host and port or null if timed out.
-   * @throws InterruptedException if the thread is interrupted while waiting
-   */
-  public synchronized ServerName waitForMaster(long timeout)
-  throws InterruptedException {
-    byte [] data = super.blockUntilAvailable();
-    return data == null ? null : new ServerName(Bytes.toString(data));
-  }
 }

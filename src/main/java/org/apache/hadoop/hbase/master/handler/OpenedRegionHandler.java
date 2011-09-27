@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -87,23 +88,26 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     }
     return getClass().getSimpleName() + "-" + name + "-" + getSeqid();
   }
-  
+
   @Override
   public void process() {
-    debugLog(regionInfo, "Handling OPENED event for " + this.regionInfo.getEncodedName() +
-      "; deleting unassigned node");
+    debugLog(regionInfo, "Handling OPENED event for " +
+      this.regionInfo.getRegionNameAsString() + " from " + this.sn.toString()
+      + "; deleting unassigned node");
     // Remove region from in-memory transition and unassigned node from ZK
     try {
       ZKAssign.deleteOpenedNode(server.getZooKeeper(),
           regionInfo.getEncodedName());
     } catch (KeeperException e) {
-      server.abort("Error deleting OPENED node in ZK for transition ZK node (" +
-          regionInfo.getEncodedName() + ")", e);
+      server.abort("Error deleting OPENED node in ZK for transition ZK node ("
+        + regionInfo.getRegionNameAsString() + ")", e);
     }
     // Code to defend against case where we get SPLIT before region open
     // processing completes; temporary till we make SPLITs go via zk -- 0.92.
     if (this.assignmentManager.isRegionInTransition(regionInfo) != null) {
       this.assignmentManager.regionOnline(regionInfo, this.sn);
+      debugLog(regionInfo, "region online: "
+        + regionInfo.getRegionNameAsString() + " on " + this.sn.toString());
     } else {
       LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
         " because regions is NOT in RIT -- presuming this is because it SPLIT");

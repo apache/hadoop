@@ -136,7 +136,15 @@ public class CloseRegionHandler extends EventHandler {
 
       this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
 
-      if (this.zk) setClosedState(expectedVersion, region);
+      if (this.zk) {
+        if (setClosedState(expectedVersion, region)) {
+          LOG.debug("set region closed state in zk successfully for region " +
+            name + " sn name: " + this.server.getServerName());
+        } else {
+          LOG.debug("set region closed state in zk unsuccessfully for region " +
+            name + " sn name: " + this.server.getServerName());
+        }
+      }
 
       // Done!  Region is closed on this RS
       LOG.debug("Closed region " + region.getRegionNameAsString());
@@ -149,8 +157,9 @@ public class CloseRegionHandler extends EventHandler {
   /**
    * Transition ZK node to CLOSED
    * @param expectedVersion
+   * @return If the state is set successfully
    */
-  private void setClosedState(final int expectedVersion, final HRegion region) {
+  private boolean setClosedState(final int expectedVersion, final HRegion region) {
     try {
       if (ZKAssign.transitionNodeClosed(server.getZooKeeper(), regionInfo,
           server.getServerName(), expectedVersion) == FAILED) {
@@ -158,18 +167,20 @@ public class CloseRegionHandler extends EventHandler {
             " CLOSING to CLOSED got a version mismatch, someone else clashed " +
             "so now unassigning");
         region.close();
-        return;
+        return false;
       }
     } catch (NullPointerException e) {
       // I've seen NPE when table was deleted while close was running in unit tests.
       LOG.warn("NPE during close -- catching and continuing...", e);
+      return false;
     } catch (KeeperException e) {
       LOG.error("Failed transitioning node from CLOSING to CLOSED", e);
-      return;
+      return false;
     } catch (IOException e) {
       LOG.error("Failed to close region after failing to transition", e);
-      return;
+      return false;
     }
+    return true;
   }
 
   /**

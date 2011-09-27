@@ -571,7 +571,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       LOG.error(errorMsg);
       abort(errorMsg);
     }
-    while (tracker.blockUntilAvailable(this.msgInterval) == null) {
+    while (tracker.blockUntilAvailable(this.msgInterval, false) == null) {
       if (this.stopped) {
         throw new IOException("Received the shutdown message while waiting.");
       }
@@ -715,7 +715,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
-    if (this.fsOk) waitOnAllRegionsToClose(abortRequested);
+    if (this.fsOk) {
+      waitOnAllRegionsToClose(abortRequested);
+      LOG.info("stopping server " + this.serverNameFromMasterPOV +
+        "; all regions closed.");
+    }
 
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
@@ -729,6 +733,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       LOG.warn("Failed deleting my ephemeral node", e);
     }
     this.zooKeeper.close();
+    LOG.info("stopping server " + this.serverNameFromMasterPOV +
+      "; zookeeper connection closed.");
+
     if (!killed) {
       join();
     }
