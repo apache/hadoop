@@ -1438,6 +1438,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3071. app master configuration web UI link under the Job menu 
     opens up application menu. (thomas graves  via mahadev)
 
+    MAPREDUCE-3067. Ensure exit-code is set correctly for containers. (Hitesh
+    Shah via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
