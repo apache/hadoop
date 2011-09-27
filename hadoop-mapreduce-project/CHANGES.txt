@@ -29,6 +29,8 @@ Trunk (unreleased changes)
     findBugs, correct links to findBugs artifacts and no links to the
     artifacts when there are no warnings. (Tom White via vinodkv).
 
+    MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
