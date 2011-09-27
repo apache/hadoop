@@ -300,6 +300,8 @@ Release 0.92.0 - Unreleased
    HBASE-4468  Wrong resource name in an error massage: webapps instead of
                hbase-webapps (nkeywal)
    HBASE-4472  MiniHBaseCluster.shutdown() doesn't work if no active master
+   HBASE-4433  avoid extra next (potentially a seek) if done with column/row
+               (Kannan Muthukkaruppan)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -634,8 +636,6 @@ Release 0.90.5 - Unreleased
                (Lars Hofhansl)
    HBASE-4295  rowcounter does not return the correct number of rows in
                certain circumstances (David Revell)
-   HBASE-4433  avoid extra next (potentially a seek) if done with column/row
-               (Kannan Muthukkaruppan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
