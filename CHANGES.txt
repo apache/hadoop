@@ -76,6 +76,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7603. Set default hdfs, mapred uid, and hadoop group gid for RPM 
+    packages. (Eric Yang via mattf)
+
     HADOOP-7681. log4j.properties is missing properties for security audit and 
     hdfs audit should be changed to info. (Arpit Gupta via mattf)
 
