@@ -139,11 +139,9 @@ public class TestFileAppend4 extends TestCase {
   }
   
   private void assertNumCurrentReplicas(short rep) throws Exception {
-    OutputStream hdfs_out = stm.getWrappedStream();
-    Method r = hdfs_out.getClass().getMethod("getNumCurrentReplicas",
-                                             new Class<?> []{});
-    r.setAccessible(true);
-    int actualRepl = ((Integer)r.invoke(hdfs_out, NO_ARGS)).intValue();
+    DFSClient.DFSOutputStream hdfs_out = (DFSClient.DFSOutputStream) stm
+        .getWrappedStream();
+    int actualRepl = hdfs_out.getNumCurrentReplicas();
     assertTrue(file1 + " should be replicated to " + rep + " datanodes, not " +
                actualRepl + ".", actualRepl == rep);
   }

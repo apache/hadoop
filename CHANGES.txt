@@ -222,6 +222,8 @@ Release 0.20.205.0 - 2011.09.12
 
     HDFS-2361. hftp is broken. Fixed username checks in JspHelper. (jitendra)
 
+    HDFS-2375. Fix TestFileAppend4 failure. (suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
