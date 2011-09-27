@@ -69,6 +69,9 @@ Trunk (unreleased changes)
     HDFS-46.   Change default namespace quota of root directory from
     Integer.MAX_VALUE to Long.MAX_VALUE.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
+    (szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
