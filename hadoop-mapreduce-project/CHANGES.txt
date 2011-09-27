@@ -289,6 +289,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3092. Removed a special comparator for JobIDs in JobHistory as
     JobIDs are already comparable. (Devaraj K via vinodkv)
 
+    MAPREDUCE-3099. Add docs for setting up a single node MRv2 cluster.
+    (mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
