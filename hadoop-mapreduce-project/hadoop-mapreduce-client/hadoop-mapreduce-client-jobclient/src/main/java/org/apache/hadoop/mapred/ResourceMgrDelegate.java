@@ -44,7 +44,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -79,6 +79,10 @@ public class ResourceMgrDelegate {
   private ApplicationId applicationId;
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
+  /**
+   * Delegate responsible for communicating with the Resource Manager's {@link ClientRMProtocol}.
+   * @param conf the configuration object.
+   */
   public ResourceMgrDelegate(YarnConfiguration conf) {
     this.conf = conf;
     YarnRPC rpc = YarnRPC.create(this.conf);
@@ -95,6 +99,16 @@ public class ResourceMgrDelegate {
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
             rmAddress, appsManagerServerConf);
     LOG.info("Connected to ResourceManager at " + rmAddress);
+  }
+  
+  /**
+   * Used for injecting applicationsManager, mostly for testing.
+   * @param conf the configuration object
+   * @param applicationsManager the handle to talk the resource managers {@link ClientRMProtocol}.
+   */
+  public ResourceMgrDelegate(YarnConfiguration conf, ClientRMProtocol applicationsManager) {
+    this.conf = conf;
+    this.applicationsManager = applicationsManager;
   }
   
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
@@ -294,9 +308,9 @@ public class ResourceMgrDelegate {
   }
   
   public void killApplication(ApplicationId applicationId) throws IOException {
-    FinishApplicationRequest request = recordFactory.newRecordInstance(FinishApplicationRequest.class);
+    KillApplicationRequest request = recordFactory.newRecordInstance(KillApplicationRequest.class);
     request.setApplicationId(applicationId);
-    applicationsManager.finishApplication(request);
+    applicationsManager.forceKillApplication(request);
     LOG.info("Killing application " + applicationId);
   }
 

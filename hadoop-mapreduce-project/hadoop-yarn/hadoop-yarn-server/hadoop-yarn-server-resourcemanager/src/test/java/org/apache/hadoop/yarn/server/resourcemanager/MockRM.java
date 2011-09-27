@@ -22,7 +22,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -109,9 +109,9 @@ public class MockRM extends ResourceManager {
 
   public void killApp(ApplicationId appId) throws Exception {
     ClientRMProtocol client = getClientRMService();
-    FinishApplicationRequest req = Records.newRecord(FinishApplicationRequest.class);
+    KillApplicationRequest req = Records.newRecord(KillApplicationRequest.class);
     req.setApplicationId(appId);
-    client.finishApplication(req);
+    client.forceKillApplication(req);
   }
 
   //from AMLauncher

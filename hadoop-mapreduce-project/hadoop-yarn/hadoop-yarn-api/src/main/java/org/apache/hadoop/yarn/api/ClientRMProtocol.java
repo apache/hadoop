@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.api;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -102,7 +102,7 @@ public interface ClientRMProtocol {
    * <p>The interface used by clients to request the 
    * <code>ResourceManager</code> to abort submitted application.</p>
    * 
-   * <p>The client, via {@link FinishApplicationRequest} provides the
+   * <p>The client, via {@link KillApplicationRequest} provides the
    * {@link ApplicationId} of the application to be aborted.</p>
    * 
    * <p> In secure mode,the <code>ResourceManager</code> verifies access to the
@@ -117,8 +117,8 @@ public interface ClientRMProtocol {
    * @throws YarnRemoteException
    * @see #getQueueUserAcls(GetQueueUserAclsInfoRequest) 
    */
-  public FinishApplicationResponse finishApplication(
-      FinishApplicationRequest request) 
+  public KillApplicationResponse forceKillApplication(
+      KillApplicationRequest request) 
   throws YarnRemoteException;
 
   /**

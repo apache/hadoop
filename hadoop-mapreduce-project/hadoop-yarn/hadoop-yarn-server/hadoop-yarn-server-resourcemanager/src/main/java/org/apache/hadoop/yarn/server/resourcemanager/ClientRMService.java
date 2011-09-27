@@ -36,8 +36,8 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -228,8 +228,8 @@ public class ClientRMService extends AbstractService implements
 
   @SuppressWarnings("unchecked")
   @Override
-  public FinishApplicationResponse finishApplication(
-      FinishApplicationRequest request) throws YarnRemoteException {
+  public KillApplicationResponse forceKillApplication(
+      KillApplicationRequest request) throws YarnRemoteException {
 
     ApplicationId applicationId = request.getApplicationId();
 
@@ -262,8 +262,8 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(), 
         AuditConstants.KILL_APP_REQUEST, "ClientRMService" , applicationId);
-    FinishApplicationResponse response = recordFactory
-        .newRecordInstance(FinishApplicationResponse.class);
+    KillApplicationResponse response = recordFactory
+        .newRecordInstance(KillApplicationResponse.class);
     return response;
   }
 
