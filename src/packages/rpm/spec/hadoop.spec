@@ -147,10 +147,10 @@ if [ "${RPM_BUILD_DIR}%{_conf_dir}" != "${RPM_BUILD_DIR}/%{_prefix}/conf" ]; the
 fi
 
 %pre
-getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -r hadoop
+getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 114 -r hadoop
 
-/usr/sbin/useradd --comment "Hadoop MapReduce" --shell /bin/bash -M -r -g hadoop --home /tmp mapred 2> /dev/null || :
-/usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r -g hadoop --home /tmp hdfs 2> /dev/null || :
+/usr/sbin/useradd --comment "Hadoop MapReduce" -u 202 --shell /bin/bash -M -r -g hadoop --home /tmp mapred 2> /dev/null || :
+/usr/sbin/useradd --comment "Hadoop HDFS" -u 201 --shell /bin/bash -M -r -g hadoop --home /tmp hdfs 2> /dev/null || :
 
 %post
 bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
