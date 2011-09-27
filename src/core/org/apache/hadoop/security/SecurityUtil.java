@@ -31,6 +31,7 @@ import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -44,6 +45,33 @@ public class SecurityUtil {
   public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
 
+  // controls whether buildTokenService will use an ip or host/ip as given
+  // by the user
+  private static boolean useIpForTokenService;
+  
+  static {
+    boolean useIp = new Configuration().getBoolean(
+      CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
+      CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
+    setTokenServiceUseIp(useIp);
+  }
+  
+  /**
+   * For use only by tests!
+   */
+  static void setTokenServiceUseIp(boolean flag) {
+    useIpForTokenService = flag;
+    NetUtils.setUseQualifiedHostResolver(!flag);
+  }
+  
+  /**
+   * Intended only for temporary use by NetUtils.  Do not use.
+   * @return whether tokens use an IP address
+   */
+ public static boolean getTokenServiceUseIp() {
+    return useIpForTokenService;
+  }
+  
   /**
    * Find the original TGT within the current subject's credentials. Cross-realm
    * TGT's of the form "krbtgt/TWO.COM@ONE.COM" may be present.
@@ -233,6 +261,15 @@ public class SecurityUtil {
         hostname);
     UserGroupInformation.loginUserFromKeytab(principalName, keytabFilename);
   }
+
+  /**
+   * Decode the given token's service field into an InetAddress
+   * @param token from which to obtain the service
+   * @return InetAddress for the service
+   */
+  public static InetSocketAddress getTokenServiceAddr(Token<?> token) {
+    return NetUtils.createSocketAddr(token.getService().toString());
+  }
   
   /**
    * Set the given token's service to the format expected by the RPC client 
@@ -245,46 +282,40 @@ public class SecurityUtil {
   
   /**
    * Construct the service key for a token
-   * @param addr the socket for the rpc connection
-   * @return Text formatted for the service field in a token 
+   * @param addr InetSocketAddress of remote connection with a token
+   * @return "ip:port" or "host:port" depending on the value of
+   *          hadoop.security.token.service.use_ip
    */
   public static Text buildTokenService(InetSocketAddress addr) {
-    return new Text(buildDTAuthority(addr));
+    String host = null;
+    if (useIpForTokenService) {
+      if (addr.isUnresolved()) { // host has no ip address
+        throw new IllegalArgumentException(
+            new UnknownHostException(addr.getHostName())
+        );
+      }
+      host = addr.getAddress().getHostAddress();
+    } else {
+      host = addr.getHostName().toLowerCase();
+    }
+    return new Text(host + ":" + addr.getPort());
   }
   
   /**
-   * create service name for Delegation token ip:port
-   * @param uri
-   * @return "ip:port"
+   * create the service name for a Delegation token
+   * @param uri of the service
+   * @param defPort is used if the uri lacks a port
+   * @return the token service, or null if no authority
+   * @see #buildTokenService(InetSocketAddress)
    */
   public static String buildDTServiceName(URI uri, int defPort) {
-    InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
-                                                       defPort);
-    return buildDTAuthority(addr);
+    String authority = uri.getAuthority();
+    if (authority == null || authority.isEmpty()) {
+      return null;
+    }
+    InetSocketAddress addr = NetUtils.createSocketAddr(authority, defPort);
+    return buildTokenService(addr).toString();
    }
-  
-  /**
-   * create an authority name for looking up a Delegation token based
-   * on a socket
-   * @param addr InetSocketAddress of remote connection with a token
-   * @return "ip:port"
-   */
-  static String buildDTAuthority(InetSocketAddress addr) {
-    String host= addr.getAddress().getHostAddress();
-    return buildDTAuthority(host, addr.getPort());
-  }
-  
-  /**
-   * create an authority name for looking up a Delegation token based
-   * on a host/ip pair
-   * @param host the remote host
-   * @param port the remote port
-   * @return "ip:port"
-   */
-  static String buildDTAuthority(String host, int port) {
-    host = (host != null) ? NetUtils.normalizeHostName(host) : "";
-    return host + ":" + port;
-  }
   
   /**
    * Get the ACL object representing the cluster administrators

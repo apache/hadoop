@@ -118,7 +118,6 @@ public class TokenCache {
         Token<?> token = fs.getDelegationToken(delegTokenRenewer);
         if (token != null) {
           Text fsNameText = new Text(fsName);
-          token.setService(fsNameText);
           credentials.addToken(fsNameText, token);
           LOG.info("Got dt for " + p + ";uri="+ fsName + 
                    ";t.service="+token.getService());

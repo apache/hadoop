@@ -147,8 +147,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy (
       DatanodeID datanodeid, Configuration conf, 
       Block block, Token<BlockTokenIdentifier> token, int socketTimeout) throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(
-      datanodeid.getHost() + ":" + datanodeid.getIpcPort());
+    InetSocketAddress addr = NetUtils.makeSocketAddr(
+      datanodeid.getHost(), datanodeid.getIpcPort());
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
       ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
     }
@@ -356,9 +356,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       Token<DelegationTokenIdentifier> delToken = 
           (Token<DelegationTokenIdentifier>) token;
       LOG.info("Renewing " + stringifyToken(delToken));
+      InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
       ClientProtocol nn = 
-        createRPCNamenode(NameNode.getAddress(token.getService().toString()),
-                          conf, UserGroupInformation.getCurrentUser());
+          createRPCNamenode(addr, conf, UserGroupInformation.getCurrentUser());
       try {
         return nn.renewDelegationToken(delToken);
       } catch (RemoteException re) {
@@ -373,9 +373,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       Token<DelegationTokenIdentifier> delToken = 
           (Token<DelegationTokenIdentifier>) token;
       LOG.info("Cancelling " + stringifyToken(delToken));
+      InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
       ClientProtocol nn = 
-          createRPCNamenode(NameNode.getAddress(token.getService().toString()),
-                            conf, UserGroupInformation.getCurrentUser());
+          createRPCNamenode(addr, conf, UserGroupInformation.getCurrentUser());
         try {
           nn.cancelDelegationToken(delToken);
         } catch (RemoteException re) {

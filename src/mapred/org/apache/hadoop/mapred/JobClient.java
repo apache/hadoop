@@ -493,8 +493,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     @Override
     public long renew(Token<?> token, Configuration conf
                       ) throws IOException, InterruptedException {
-      InetSocketAddress addr = 
-          NetUtils.createSocketAddr(token.getService().toString());
+      InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
       JobSubmissionProtocol jt = createRPCProxy(addr, conf);
       return jt.renewDelegationToken((Token<DelegationTokenIdentifier>) token);
     }
@@ -503,8 +502,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     @Override
     public void cancel(Token<?> token, Configuration conf
                        ) throws IOException, InterruptedException {
-      InetSocketAddress addr = 
-          NetUtils.createSocketAddr(token.getService().toString());
+      InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
       JobSubmissionProtocol jt = createRPCProxy(addr, conf);
       jt.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
     }

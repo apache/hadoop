@@ -24,9 +24,9 @@ import static org.junit.Assert.*;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
 import java.util.Set;
 
 import junit.framework.Assert;
@@ -41,10 +41,10 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
-import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -54,11 +54,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 import org.apache.log4j.Level;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /** Unit tests for using Sasl over RPC. */
 public class TestSaslRPC {
-  private static final String ADDRESS = "0.0.0.0";
+  private static final String ADDRESS = "localhost";
 
   public static final Log LOG =
     LogFactory.getLog(TestSaslRPC.class);
@@ -85,7 +86,19 @@ public class TestSaslRPC {
     ((Log4JLogger) SecurityUtil.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  public static class TestTokenIdentifier extends TokenIdentifier {
+  static Method setUseIpMethod;
+  
+  @BeforeClass
+  public static void exposeUseIp() throws Exception {
+    setUseIpMethod = SecurityUtil.class.getDeclaredMethod("setTokenServiceUseIp", boolean.class);
+    setUseIpMethod.setAccessible(true);
+  }
+  
+  private void setTokenServiceUseIp(boolean flag) throws Exception {
+    setUseIpMethod.invoke(setUseIpMethod.getClass(), flag);
+  }
+
+  public static class TestTokenIdentifier extends AbstractDelegationTokenIdentifier {
     private Text tokenid;
     private Text realUser;
     final static Text KIND_NAME = new Text("test.token");
@@ -152,22 +165,10 @@ public class TestSaslRPC {
     }
   }
 
-  public static class TestTokenSelector implements
-      TokenSelector<TestTokenIdentifier> {
-    @SuppressWarnings("unchecked")
-    @Override
-    public Token<TestTokenIdentifier> selectToken(Text service,
-        Collection<Token<? extends TokenIdentifier>> tokens) {
-      if (service == null) {
-        return null;
-      }
-      for (Token<? extends TokenIdentifier> token : tokens) {
-        if (TestTokenIdentifier.KIND_NAME.equals(token.getKind())
-            && service.equals(token.getService())) {
-          return (Token<TestTokenIdentifier>) token;
-        }
-      }
-      return null;
+  public static class TestTokenSelector extends
+  AbstractDelegationTokenSelector<TestTokenIdentifier> {
+    TestTokenSelector() {
+      super(TestTokenIdentifier.KIND_NAME);
     }
   }
   
@@ -354,8 +355,9 @@ public class TestSaslRPC {
     System.out.println("Test is successful.");
   }
   
-  @Test
-  public void testDigestAuthMethod() throws Exception {
+  public void testDigestAuthMethod(boolean useIp) throws Exception {
+    setTokenServiceUseIp(useIp);
+
     TestTokenSecretManager sm = new TestTokenSecretManager();
     Server server = RPC.getServer(
         new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
@@ -369,6 +371,19 @@ public class TestSaslRPC {
         sm);
     SecurityUtil.setTokenService(token, addr);
     LOG.info("Service IP address for token is " + token.getService());
+
+    InetSocketAddress tokenAddr = SecurityUtil.getTokenServiceAddr(token);
+    String expectedHost, gotHost;
+    if (useIp) {
+      expectedHost = addr.getAddress().getHostAddress();
+      gotHost = tokenAddr.getAddress().getHostAddress();
+    } else {
+      gotHost = tokenAddr.getHostName();
+      expectedHost = ADDRESS;
+    }
+    Assert.assertEquals(expectedHost, gotHost);
+    Assert.assertEquals(expectedHost+":"+addr.getPort(), token.getService().toString());
+    
     current.addToken(token);
 
     current.doAs(new PrivilegedExceptionAction<Object>() {
@@ -388,7 +403,17 @@ public class TestSaslRPC {
     });
     server.stop();
   }
+
+  @Test
+  public void testDigestAuthMethodIpBasedToken() throws Exception {
+    testDigestAuthMethod(true);
+  }
   
+  @Test
+  public void testDigestAuthMethodHostBasedToken() throws Exception {
+    testDigestAuthMethod(false);
+  }
+
   public static void main(String[] args) throws Exception {
     System.out.println("Testing Kerberos authentication over RPC");
     if (args.length != 2) {

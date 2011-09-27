@@ -65,9 +65,9 @@ import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -103,16 +103,6 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     setConf(conf);
 
     this.workingDir = getHomeDirectory();
-  }
-
-  @Override
-  public URI getUri() {
-    try {
-      return new URI(SCHEME, null, nnAddr.getHostName(), nnAddr.getPort(),
-          null, null, null);
-    } catch (URISyntaxException e) {
-      return null;
-    }
   }
 
   @Override
@@ -416,7 +406,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
     final Map<String, Object> m = run(op, null, new RenewerParam(renewer));
     final Token<DelegationTokenIdentifier> token = JsonUtil.toDelegationToken(m); 
-    token.setService(new Text(getCanonicalServiceName()));
+    SecurityUtil.setTokenService(token, nnAddr);
     return token;
   }
 

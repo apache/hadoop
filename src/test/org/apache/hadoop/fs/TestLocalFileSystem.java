@@ -158,6 +158,6 @@ public class TestLocalFileSystem extends TestCase {
   public void testGetCanonicalServiceName() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
-    assertEquals(fs.getUri().toString(), fs.getCanonicalServiceName());
+    assertNull(fs.getCanonicalServiceName());
   }
 }

@@ -25,27 +25,22 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
-import java.util.List;
-import java.util.regex.Pattern;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
-import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
-import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetricsSource;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
@@ -77,7 +72,7 @@ class Child {
     final JobConf defaultConf = new JobConf();
     String host = args[0];
     int port = Integer.parseInt(args[1]);
-    final InetSocketAddress address = new InetSocketAddress(host, port);
+    final InetSocketAddress address = NetUtils.makeSocketAddr(host, port);
     final TaskAttemptID firstTaskid = TaskAttemptID.forName(args[2]);
     final String logLocation = args[3];
     final int SLEEP_LONGER_COUNT = 5;
@@ -100,8 +95,7 @@ class Child {
         "; from file=" + jobTokenFile);
     
     Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
-    jt.setService(new Text(address.getAddress().getHostAddress() + ":"
-        + address.getPort()));
+    SecurityUtil.setTokenService(jt, address);
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     current.addToken(jt);
 

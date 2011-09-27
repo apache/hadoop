@@ -167,14 +167,16 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Get a canonical name for this file system. It returns the uri of the file
-   * system unless overridden by a FileSystem implementation. File Systems with
-   * a valid authority can choose to return host:port or ip:port.
-   * 
-   * @return A string that uniquely identifies this file system
+   * Get a canonical service name for this file system.  The token cache is
+   * the only user of this value, and uses it to lookup this filesystem's
+   * service tokens.  The token cache will not attempt to acquire tokens if the
+   * service is null.
+   * @return a service string that uniquely identifies this file system, null
+   *         if the filesystem does not implement tokens
+   * @see SecurityUtil#buildDTServiceName(URI, int) 
    */
   public String getCanonicalServiceName() {
-    return getUri().toString();
+    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
   }
   
   /** @deprecated call #getUri() instead.*/

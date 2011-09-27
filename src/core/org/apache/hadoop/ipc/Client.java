@@ -19,10 +19,8 @@
 package org.apache.hadoop.ipc;
 
 import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.net.ConnectException;
@@ -51,7 +49,6 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -393,7 +390,7 @@ public class Client {
      */
     private synchronized boolean updateAddress() throws IOException {
       // Do a fresh lookup with the old host name.
-      InetSocketAddress currentAddr =  new InetSocketAddress(
+      InetSocketAddress currentAddr = NetUtils.makeSocketAddr(
                                server.getHostName(), server.getPort());
 
       if (!server.equals(currentAddr)) {
@@ -1069,7 +1066,9 @@ public class Client {
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
-          throw wrapException(remoteId.getAddress(), call.error);
+          // use the connection because it will reflect an ip change, unlike
+          // the remoteId
+          throw wrapException(connection.getRemoteAddress(), call.error);
         }
       } else {
         return call.value;

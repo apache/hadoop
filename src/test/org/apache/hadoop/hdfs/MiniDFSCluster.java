@@ -415,6 +415,8 @@ public class MiniDFSCluster {
         NetUtils.addStaticResolution(hosts[i - curDatanodesNum], "localhost");
       }
       DataNode dn = DataNode.instantiateDataNode(dnArgs, dnConf);
+      //NOTE: the following is true if and only if:
+      //      hadoop.security.token.service.use_ip=true
       //since the HDFS does things based on IP:port, we need to add the mapping
       //for IP:port to rackId
       String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();
@@ -842,7 +844,7 @@ public class MiniDFSCluster {
     if (nameNode == null) {
       return;
     }
-    InetSocketAddress addr = new InetSocketAddress("localhost",
+    InetSocketAddress addr = NetUtils.makeSocketAddr("localhost",
                                                    getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
 
