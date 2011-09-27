@@ -1403,6 +1403,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2984. Better error message for displaying completed containers.
     (Devaraj K via acmurthy)
 
+    MAPREDUCE-3071. app master configuration web UI link under the Job menu 
+    opens up application menu. (thomas graves  via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
