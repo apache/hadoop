@@ -27,8 +27,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -86,9 +84,17 @@ public class WebHdfsFileSystem extends HftpFileSystem {
 
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
 
-  private UserGroupInformation ugi;
+  private final UserGroupInformation ugi;
   private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   protected Path workingDir;
+
+  {
+    try {
+      ugi = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
   @Override
   public synchronized void initialize(URI uri, Configuration conf
@@ -96,7 +102,6 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     super.initialize(uri, conf);
     setConf(conf);
 
-    ugi = UserGroupInformation.getCurrentUser();
     this.workingDir = getHomeDirectory();
   }
 
@@ -108,6 +113,11 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     } catch (URISyntaxException e) {
       return null;
     }
+  }
+
+  @Override
+  public Path getHomeDirectory() {
+    return makeQualified(new Path("/user/" + ugi.getShortUserName()));
   }
 
   @Override
