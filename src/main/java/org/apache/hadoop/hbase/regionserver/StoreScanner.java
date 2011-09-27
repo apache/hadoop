@@ -258,8 +258,23 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
       //DebugPrint.println("SS peek kv = " + kv + " with qcode = " + qcode);
       switch(qcode) {
         case INCLUDE:
+        case INCLUDE_AND_SEEK_NEXT_ROW:
+        case INCLUDE_AND_SEEK_NEXT_COL:
+
           results.add(copyKv);
-          this.heap.next();
+
+          if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+            if (!matcher.moreRowsMayExistAfter(kv)) {
+              outResult.addAll(results);
+              return false;
+            }
+            reseek(matcher.getKeyForNextRow(kv));
+          } else if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL) {
+            reseek(matcher.getKeyForNextColumn(kv));
+          } else {
+            this.heap.next();
+          }
+
           if (limit > 0 && (results.size() == limit)) {
             break LOOP;
           }

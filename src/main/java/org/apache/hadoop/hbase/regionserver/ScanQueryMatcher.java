@@ -352,5 +352,15 @@ public class ScanQueryMatcher {
      * Seek to next key which is given as hint.
      */
     SEEK_NEXT_USING_HINT,
+
+    /**
+     * Include KeyValue and done with column, seek to next.
+     */
+    INCLUDE_AND_SEEK_NEXT_COL,
+
+    /**
+     * Include KeyValue and done with row, seek to next.
+     */
+    INCLUDE_AND_SEEK_NEXT_ROW,
   }
 }

@@ -77,11 +77,11 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     columns.add(col2);
     columns.add(col4);
     List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);             // col1
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL); // col2
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);             // col3    
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW); // col4
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);             // col5    
     int maxVersions = 1;
 
     //Create "Scanner"
@@ -111,16 +111,16 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
 
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);                   // col2; 1st version
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL); // col2; 2nd version
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
 
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
 
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);                   // col4; 1st version
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW); // col4; 2nd version
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
 
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);

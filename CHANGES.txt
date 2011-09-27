@@ -634,6 +634,8 @@ Release 0.90.5 - Unreleased
                (Lars Hofhansl)
    HBASE-4295  rowcounter does not return the correct number of rows in
                certain circumstances (David Revell)
+   HBASE-4433  avoid extra next (potentially a seek) if done with column/row
+               (Kannan Muthukkaruppan)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

@@ -88,10 +88,10 @@ public class TestQueryMatcher extends HBaseTestCase {
     //Expected result
     List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW);
     expected.add(ScanQueryMatcher.MatchCode.DONE);
 
     // 2,4,5
@@ -182,9 +182,9 @@ public class TestQueryMatcher extends HBaseTestCase {
     long testTTL = 1000;
     MatchCode [] expected = new MatchCode[] {
         ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
-        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL,
         ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
-        ScanQueryMatcher.MatchCode.INCLUDE,
+        ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL,
         ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW,
         ScanQueryMatcher.MatchCode.DONE
     };

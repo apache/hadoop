@@ -201,8 +201,8 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col7", 7);
     region.flushcache();
 
-    // Expected block reads: 2
-    kvs = getData(FAMILY, "row", "col1", 2);
+    // Expected block reads: 1
+    kvs = getData(FAMILY, "row", "col1", 1);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 1);
 
@@ -218,8 +218,8 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[0], "row", "col2", 2);
     verifyData(kvs[1], "row", "col3", 3);
 
-    // Expected block reads: 4
-    kvs = getData(FAMILY, "row", Arrays.asList("col5"), 4);
+    // Expected block reads: 3
+    kvs = getData(FAMILY, "row", Arrays.asList("col5"), 3);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col5", 5);
   }
@@ -248,15 +248,16 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col2", 4);
     region.flushcache();
 
-    // Baseline expected blocks read: 3
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 3);
+    // Baseline expected blocks read: 2
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 2);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
 
-    // Baseline expected blocks read: 5
+    // Baseline expected blocks read: 6
     // This increase is a minor glitch due to: HBASE-4466. Once that
-    // is fixed this will drop back. The extra access will be a cache hit.
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 5);
+    // is fixed this will drop back. The extra access will be a cache
+    // hit.
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2"), 6);
     assertEquals(2, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
     verifyData(kvs[1], "row", "col2", 4);
@@ -271,8 +272,8 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[0], "row", "col3", 5);
 
     // Get a column from older file.
-    // Baseline expected blocks read: 4
-    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 4);
+    // Baseline expected blocks read: 3
+    kvs = getData(FAMILY, "row", Arrays.asList("col1"), 3);
     assertEquals(1, kvs.length);
     verifyData(kvs[0], "row", "col1", 3);
 
@@ -290,10 +291,12 @@ public class TestBlocksRead extends HBaseTestCase {
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6);
     assertEquals(0, kvs.length);
 
-    // File 5: Delete with post data timestamp and insert some older
-    // date in new files.
+    // File 5: Delete
     deleteFamily(FAMILY, "row", 10);
     region.flushcache();
+
+    // File 6: some more puts, but with timestamps older than the
+    // previous delete.
     putData(FAMILY, "row", "col1", 7);
     putData(FAMILY, "row", "col2", 8);
     putData(FAMILY, "row", "col3", 9);
@@ -303,14 +306,17 @@ public class TestBlocksRead extends HBaseTestCase {
     kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 10);
     assertEquals(0, kvs.length);
 
-    // File 6: Put back new data
+    // File 7: Put back new data
     putData(FAMILY, "row", "col1", 11);
     putData(FAMILY, "row", "col2", 12);
     putData(FAMILY, "row", "col3", 13);
     region.flushcache();
 
-    // Baseline expected blocks read: 13
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 13);
+    // Baseline expected blocks read: 21
+    // This increase is a minor glitch due to: HBASE-4466. Once that
+    // is fixed this will drop back. The extra access will be a cache
+    // hit. The test case only has 13 blocks altogther!
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 21);
     assertEquals(3, kvs.length);
     verifyData(kvs[0], "row", "col1", 11);
     verifyData(kvs[1], "row", "col2", 12);

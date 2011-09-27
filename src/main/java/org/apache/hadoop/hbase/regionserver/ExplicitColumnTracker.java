@@ -50,6 +50,12 @@ public class ExplicitColumnTracker implements ColumnTracker {
 
   private final int maxVersions;
   private final int minVersions;
+
+ /**
+  * Contains the list of columns that the ExplicitColumnTracker is tracking.
+  * Each ColumnCount instance also tracks how many versions of the requested
+  * column have been returned.
+  */
   private final List<ColumnCount> columns;
   private final List<ColumnCount> columnsToReuse;
   private int index;
@@ -127,13 +133,22 @@ public class ExplicitColumnTracker implements ColumnTracker {
         int count = this.column.increment();
         if(count >= maxVersions || (count >= minVersions && isExpired(timestamp))) {
           // Done with versions for this column
+          // Note: because we are done with this column, and are removing
+          // it from columns, we don't do a ++this.index. The index stays
+          // the same but the columns have shifted within the array such
+          // that index now points to the next column we are interested in.
           this.columns.remove(this.index);
+
           resetTS();
-          if(this.columns.size() == this.index) {
-            // Will not hit any more columns in this storefile
+          if (this.columns.size() == this.index) {
+            // We have served all the requested columns.
             this.column = null;
+	    return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
           } else {
+	    // We are done with current column; advance to next column
+	    // of interest.
             this.column = this.columns.get(this.index);
+	    return ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL;
           }
         } else {
           setTS(timestamp);
@@ -144,15 +159,18 @@ public class ExplicitColumnTracker implements ColumnTracker {
       resetTS();
 
       if (ret > 0) {
-        // Specified column is smaller than the current, skip to next column.
+        // The current KV is smaller than the column the ExplicitColumnTracker
+        // is interested in, so seek to that column of interest.
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
       }
 
-      // Specified column is bigger than current column
-      // Move down current column and check again
-      if(ret <= -1) {
-        if(++this.index >= this.columns.size()) {
-          // No more to match, do not include, done with storefile
+      // The current KV is bigger than the column the ExplicitColumnTracker
+      // is interested in. That means there is no more data for the column
+      // of interest. Advance the ExplicitColumnTracker state to next
+      // column of interest, and check again.
+      if (ret <= -1) {
+        if (++this.index >= this.columns.size()) {
+          // No more to match, do not include, done with this row.
           return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
         }
         // This is the recursive case.
