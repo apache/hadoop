@@ -72,6 +72,9 @@ Trunk (unreleased changes)
     HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
     (szetszwo)
 
+    HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
+    info on the console with security enabled. (Arpit Gupta via suresh)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
