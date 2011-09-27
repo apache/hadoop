@@ -22,8 +22,8 @@ import java.io.IOException;
 
 import org.apache.avro.ipc.Responder;
 import org.apache.avro.ipc.Transceiver;
-import org.apache.avro.specific.SpecificRequestor;
-import org.apache.avro.specific.SpecificResponder;
+import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
