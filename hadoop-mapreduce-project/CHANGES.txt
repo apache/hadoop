@@ -1449,6 +1449,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2999. Fix YARN webapp framework to properly filter servlet
     paths. (Thomas Graves via vinodkv)
 
+    MAPREDUCE-3095. fairscheduler ivy including wrong version for hdfs.
+    (John George via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
