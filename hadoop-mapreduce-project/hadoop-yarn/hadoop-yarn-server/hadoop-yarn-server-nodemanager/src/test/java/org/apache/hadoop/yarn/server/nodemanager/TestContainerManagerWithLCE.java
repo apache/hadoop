@@ -105,7 +105,31 @@ public class TestContainerManagerWithLCE extends TestContainerManager {
     LOG.info("Running testContainerLaunchAndStop");
     super.testContainerLaunchAndStop();
   }
+  
+  @Override
+  public void testContainerLaunchAndExitSuccess() throws IOException,
+      InterruptedException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerLaunchAndExitSuccess");
+    super.testContainerLaunchAndExitSuccess();
+  }
 
+  @Override
+  public void testContainerLaunchAndExitFailure() throws IOException,
+      InterruptedException {
+    // Don't run the test if the binary is not available.
+    if (!shouldRunTest()) {
+      LOG.info("LCE binary path is not passed. Not running the test");
+      return;
+    }
+    LOG.info("Running testContainerLaunchAndExitFailure");
+    super.testContainerLaunchAndExitFailure();
+  }
+  
   @Override
   public void testLocalFilesCleanup() throws InterruptedException,
       IOException {

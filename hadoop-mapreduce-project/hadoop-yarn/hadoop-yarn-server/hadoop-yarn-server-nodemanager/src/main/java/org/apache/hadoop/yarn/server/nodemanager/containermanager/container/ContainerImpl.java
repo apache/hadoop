@@ -567,6 +567,9 @@ public class ContainerImpl implements Container {
 
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
+      // Set exit code to 0 on success    	
+      container.exitCode = 0;
+    	
       // TODO: Add containerWorkDir to the deletion service.
 
       if (clCleanupRequired) {
