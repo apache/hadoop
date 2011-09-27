@@ -217,6 +217,9 @@ Release 0.20.205.0 - 2011.09.12
     MAPREDUCE-3801. Fix for vaidya.sh to work with the new layout
     (Suhas via gkesavan)
 
+    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
+    (szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
