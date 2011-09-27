@@ -1,5 +1,7 @@
 Hadoop MapReduce Change Log
 
+    MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
