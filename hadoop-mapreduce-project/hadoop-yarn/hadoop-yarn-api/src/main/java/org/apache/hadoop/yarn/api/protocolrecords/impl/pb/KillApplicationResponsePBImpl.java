@@ -19,27 +19,27 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationResponseProto;
 
 
     
-public class FinishApplicationResponsePBImpl extends ProtoBase<FinishApplicationResponseProto> implements FinishApplicationResponse {
-  FinishApplicationResponseProto proto = FinishApplicationResponseProto.getDefaultInstance();
-  FinishApplicationResponseProto.Builder builder = null;
+public class KillApplicationResponsePBImpl extends ProtoBase<KillApplicationResponseProto> implements KillApplicationResponse {
+  KillApplicationResponseProto proto = KillApplicationResponseProto.getDefaultInstance();
+  KillApplicationResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  public FinishApplicationResponsePBImpl() {
-    builder = FinishApplicationResponseProto.newBuilder();
+  public KillApplicationResponsePBImpl() {
+    builder = KillApplicationResponseProto.newBuilder();
   }
 
-  public FinishApplicationResponsePBImpl(FinishApplicationResponseProto proto) {
+  public KillApplicationResponsePBImpl(KillApplicationResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public FinishApplicationResponseProto getProto() {
+  public KillApplicationResponseProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -47,7 +47,7 @@ public class FinishApplicationResponsePBImpl extends ProtoBase<FinishApplication
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = FinishApplicationResponseProto.newBuilder(proto);
+      builder = KillApplicationResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }

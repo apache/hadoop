@@ -1420,6 +1420,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3095. fairscheduler ivy including wrong version for hdfs.
     (John George via mahadev)
 
+    MAPREDUCE-3054. Unable to kill submitted jobs. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

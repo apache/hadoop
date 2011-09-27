@@ -27,7 +27,7 @@ service ClientRMProtocolService {
   rpc getNewApplicationId (GetNewApplicationIdRequestProto) returns (GetNewApplicationIdResponseProto);
   rpc getApplicationReport (GetApplicationReportRequestProto) returns (GetApplicationReportResponseProto);
   rpc submitApplication (SubmitApplicationRequestProto) returns (SubmitApplicationResponseProto);
-  rpc finishApplication (FinishApplicationRequestProto) returns (FinishApplicationResponseProto);
+  rpc forceKillApplication (KillApplicationRequestProto) returns (KillApplicationResponseProto);
   rpc getClusterMetrics (GetClusterMetricsRequestProto) returns (GetClusterMetricsResponseProto);
   rpc getAllApplications (GetAllApplicationsRequestProto) returns (GetAllApplicationsResponseProto);
   rpc getClusterNodes (GetClusterNodesRequestProto) returns (GetClusterNodesResponseProto);

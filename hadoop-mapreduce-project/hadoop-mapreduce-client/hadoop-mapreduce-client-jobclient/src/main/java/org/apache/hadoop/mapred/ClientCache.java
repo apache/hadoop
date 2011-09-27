@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.mapred;
 
@@ -42,29 +42,29 @@ public class ClientCache {
 
   private final Configuration conf;
   private final ResourceMgrDelegate rm;
-  
+
   private static final Log LOG = LogFactory.getLog(ClientCache.class);
 
   private Map<JobID, ClientServiceDelegate> cache = 
-    new HashMap<JobID, ClientServiceDelegate>();
-  
+      new HashMap<JobID, ClientServiceDelegate>();
+
   private MRClientProtocol hsProxy;
 
-  ClientCache(Configuration conf, ResourceMgrDelegate rm) {
+  public ClientCache(Configuration conf, ResourceMgrDelegate rm) {
     this.conf = conf;
     this.rm = rm;
   }
 
   //TODO: evict from the cache on some threshold
-  synchronized ClientServiceDelegate getClient(JobID jobId) {
-	if (hsProxy == null) {
+  public synchronized ClientServiceDelegate getClient(JobID jobId) {
+    if (hsProxy == null) {
       try {
-		hsProxy = instantiateHistoryProxy();
-	  } catch (IOException e) {
-		LOG.warn("Could not connect to History server.", e);
-		throw new YarnException("Could not connect to History server.", e);
-	  }
-	}
+        hsProxy = instantiateHistoryProxy();
+      } catch (IOException e) {
+        LOG.warn("Could not connect to History server.", e);
+        throw new YarnException("Could not connect to History server.", e);
+      }
+    }
     ClientServiceDelegate client = cache.get(jobId);
     if (client == null) {
       client = new ClientServiceDelegate(conf, rm, jobId, hsProxy);
@@ -74,7 +74,7 @@ public class ClientCache {
   }
 
   private MRClientProtocol instantiateHistoryProxy()
-  throws IOException {
+      throws IOException {
     final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS);
     if (StringUtils.isEmpty(serviceAddr)) {
       return null;

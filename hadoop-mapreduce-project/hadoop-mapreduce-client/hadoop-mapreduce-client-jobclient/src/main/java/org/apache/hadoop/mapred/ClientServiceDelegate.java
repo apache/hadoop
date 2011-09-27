@@ -70,7 +70,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 
-class ClientServiceDelegate {
+public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
 
   // Caches for per-user NotRunningJobs
@@ -87,7 +87,7 @@ class ClientServiceDelegate {
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static String UNKNOWN_USER = "Unknown User";
 
-  ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm, 
+  public ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm, 
       JobID jobId, MRClientProtocol historyServerProxy) {
     this.conf = new Configuration(conf); // Cloning for modifying.
     // For faster redirects from AM to HS.
@@ -279,7 +279,7 @@ class ClientServiceDelegate {
     }
   }
 
-  org.apache.hadoop.mapreduce.Counters getJobCounters(JobID arg0) throws IOException,
+  public org.apache.hadoop.mapreduce.Counters getJobCounters(JobID arg0) throws IOException,
   InterruptedException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobID = TypeConverter.toYarn(arg0);
       GetCountersRequest request = recordFactory.newRecordInstance(GetCountersRequest.class);
@@ -290,7 +290,7 @@ class ClientServiceDelegate {
       
   }
 
-  TaskCompletionEvent[] getTaskCompletionEvents(JobID arg0, int arg1, int arg2)
+  public TaskCompletionEvent[] getTaskCompletionEvents(JobID arg0, int arg1, int arg2)
       throws IOException, InterruptedException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobID = TypeConverter
         .toYarn(arg0);
@@ -308,7 +308,7 @@ class ClientServiceDelegate {
             .toArray(new org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent[0]));
   }
 
-  String[] getTaskDiagnostics(org.apache.hadoop.mapreduce.TaskAttemptID arg0)
+  public String[] getTaskDiagnostics(org.apache.hadoop.mapreduce.TaskAttemptID arg0)
       throws IOException, InterruptedException {
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID = TypeConverter
@@ -326,7 +326,7 @@ class ClientServiceDelegate {
     return result;
   }
   
-  JobStatus getJobStatus(JobID oldJobID) throws YarnRemoteException {
+  public JobStatus getJobStatus(JobID oldJobID) throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId = 
       TypeConverter.toYarn(oldJobID);
     GetJobReportRequest request = 
@@ -339,7 +339,7 @@ class ClientServiceDelegate {
     return TypeConverter.fromYarn(report, jobFile);
   }
 
-  org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
+  public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
        throws YarnRemoteException, YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId = 
       TypeConverter.toYarn(oldJobID);
@@ -356,7 +356,7 @@ class ClientServiceDelegate {
     (taskReports).toArray(new org.apache.hadoop.mapreduce.TaskReport[0]);
   }
 
-  boolean killTask(TaskAttemptID taskAttemptID, boolean fail)
+  public boolean killTask(TaskAttemptID taskAttemptID, boolean fail)
        throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID 
       = TypeConverter.toYarn(taskAttemptID);
@@ -372,7 +372,7 @@ class ClientServiceDelegate {
     return true;
   }
   
-  boolean killJob(JobID oldJobID)
+  public boolean killJob(JobID oldJobID)
        throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId 
     = TypeConverter.toYarn(oldJobID);

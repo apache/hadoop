@@ -105,10 +105,22 @@ public class YARNRunner implements ClientProtocol {
    * @param resMgrDelegate the resourcemanager client handle.
    */
   public YARNRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate) {
+   this(conf, resMgrDelegate, new ClientCache(conf, resMgrDelegate));
+  }
+  
+  /**
+   * Similar to {@link YARNRunner#YARNRunner(Configuration, ResourceMgrDelegate)} 
+   * but allowing injecting {@link ClientCache}. Enable mocking and testing.
+   * @param conf the configuration object
+   * @param resMgrDelegate the resource manager delegate 
+   * @param clientCache the client cache object.
+   */
+  public YARNRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate,
+      ClientCache clientCache) {
     this.conf = conf;
     try {
       this.resMgrDelegate = resMgrDelegate;
-      this.clientCache = new ClientCache(this.conf, resMgrDelegate);
+      this.clientCache = clientCache;
       this.defaultFileContext = FileContext.getFileContext(this.conf);
     } catch (UnsupportedFileSystemException ufe) {
       throw new RuntimeException("Error in instantiating YarnClient", ufe);
@@ -429,9 +441,35 @@ public class YARNRunner implements ClientProtocol {
 
   @Override
   public void killJob(JobID arg0) throws IOException, InterruptedException {
-    if (!clientCache.getClient(arg0).killJob(arg0)) {
-    resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
-  }
+    /* check if the status is not running, if not send kill to RM */
+    JobStatus status = clientCache.getClient(arg0).getJobStatus(arg0);
+    if (status.getState() != JobStatus.State.RUNNING) {
+      resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+      return;
+    } 
+    
+    try {
+      /* send a kill to the AM */
+      clientCache.getClient(arg0).killJob(arg0);
+      long currentTimeMillis = System.currentTimeMillis();
+      long timeKillIssued = currentTimeMillis;
+      while ((currentTimeMillis < timeKillIssued + 10000L) && (status.getState()
+          != JobStatus.State.KILLED)) {
+          try {
+            Thread.sleep(1000L);
+          } catch(InterruptedException ie) {
+            /** interrupted, just break */
+            break;
+          }
+          currentTimeMillis = System.currentTimeMillis();
+          status = clientCache.getClient(arg0).getJobStatus(arg0);
+      }
+    } catch(IOException io) {
+      LOG.debug("Error when checking for application status", io);
+    }
+    if (status.getState() != JobStatus.State.KILLED) {
+      resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+    }
   }
 
   @Override

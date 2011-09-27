@@ -88,11 +88,11 @@ message SubmitApplicationRequestProto {
 message SubmitApplicationResponseProto {
 }
 
-message FinishApplicationRequestProto {
+message KillApplicationRequestProto {
   optional ApplicationIdProto application_id = 1;
 }
 
-message FinishApplicationResponseProto {
+message KillApplicationResponseProto {
 }
 
 message GetClusterMetricsRequestProto {

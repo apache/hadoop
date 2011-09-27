@@ -68,8 +68,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -288,9 +288,9 @@ public class TestClientRedirect {
     }
 
     @Override
-    public FinishApplicationResponse finishApplication(
-        FinishApplicationRequest request) throws YarnRemoteException {
-      return null;
+    public KillApplicationResponse forceKillApplication(
+        KillApplicationRequest request) throws YarnRemoteException {
+      return recordFactory.newRecordInstance(KillApplicationResponse.class);
     }
 
     @Override
@@ -451,7 +451,7 @@ public class TestClientRedirect {
     @Override
     public KillJobResponse killJob(KillJobRequest request)
         throws YarnRemoteException {
-      return null;
+      return recordFactory.newRecordInstance(KillJobResponse.class);
     }
 
     @Override
