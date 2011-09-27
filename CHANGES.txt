@@ -254,6 +254,9 @@ Release 0.20.205.0 - unreleased
 
     HDFS-2375. Fix TestFileAppend4 failure. (suresh)
 
+    HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
+    info on the console with security enabled. (Arpit Gupta via suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
