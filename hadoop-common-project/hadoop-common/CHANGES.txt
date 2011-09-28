@@ -39,6 +39,10 @@ Trunk (unreleased changes)
     
     HADOOP-7669  Fix newly introduced release audit warning. 
                  (Uma Maheswara Rao G via stevel)
+    
+    HADOOP-6220. HttpServer wraps InterruptedExceptions by IOExceptions if interrupted 
+                 in startup (stevel)
+                 
 
 Release 0.23.0 - Unreleased
 

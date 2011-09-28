@@ -20,6 +20,7 @@ package org.apache.hadoop.http;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.InterruptedIOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
@@ -683,6 +684,9 @@ public class HttpServer implements FilterContainer {
       }
     } catch (IOException e) {
       throw e;
+    } catch (InterruptedException e) {
+      throw (IOException) new InterruptedIOException(
+          "Interrupted while starting HTTP server").initCause(e);
     } catch (Exception e) {
       throw new IOException("Problem starting http server", e);
     }
