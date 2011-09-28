@@ -32,6 +32,9 @@ Release 0.20.206.0 - unreleased
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
     non-existent fair scheduler pools. (Ahmed Radwan via todd)
 
+    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
+    object as an RPC parameter fails). (todd)
+
 Release 0.20.205.0 - unreleased
 
   NEW FEATURES
