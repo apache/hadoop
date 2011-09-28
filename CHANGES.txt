@@ -270,7 +270,7 @@ Release 0.20.205.0 - unreleased
     HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
     (szetszwo)
 
-    MAPREDUCE-3801. Fix for vaidya.sh to work with the new layout
+    MAPREDUCE-3081. Fix for vaidya.sh to work with the new layout
     (Suhas via gkesavan)
 
     HDFS-2361. hftp is broken. Fixed username checks in JspHelper. (jitendra)
