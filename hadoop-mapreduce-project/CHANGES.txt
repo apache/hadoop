@@ -1464,6 +1464,9 @@ Release 0.23.0 - Unreleased
     capabilities along-with new ApplicationId for application submission.
     (Hitesh Shah via acmurthy)
 
+    MAPREDUCE-2843. Fixed the node-table to be completely displayed and making
+    node entries on RM UI to be sortable. (Abhijit Suresh Shingate via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
