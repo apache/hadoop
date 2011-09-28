@@ -20,10 +20,14 @@ package org.apache.hadoop.mapreduce.jobhistory;
 
 import java.io.Closeable;
 import java.io.DataInputStream;
-import java.io.IOException;
 import java.io.EOFException;
-import java.io.StringBufferInputStream;
+import java.io.IOException;
 
+import org.apache.avro.Schema;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.Decoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,13 +36,6 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
 
-import org.apache.avro.Schema;
-import org.apache.avro.AvroRuntimeException;
-import org.apache.avro.io.Decoder;
-import org.apache.avro.io.JsonDecoder;
-import org.apache.avro.io.DatumReader;
-import org.apache.avro.specific.SpecificDatumReader;
-
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class EventReader implements Closeable {
@@ -46,7 +43,7 @@ public class EventReader implements Closeable {
   private Schema schema;
   private DataInputStream in;
   private Decoder decoder;
-  private DatumReader reader;
+  private DatumReader<Event> reader;
 
   /**
    * Create a new Event Reader
@@ -73,8 +70,8 @@ public class EventReader implements Closeable {
     }
     
     this.schema = Schema.parse(in.readLine());
-    this.reader = new SpecificDatumReader(schema);
-    this.decoder = new JsonDecoder(schema, in);
+    this.reader = new SpecificDatumReader<Event>(schema);
+    this.decoder = DecoderFactory.get().jsonDecoder(schema, in);
   }
   
   /**
@@ -82,11 +79,10 @@ public class EventReader implements Closeable {
    * @return the next event
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   public HistoryEvent getNextEvent() throws IOException {
     Event wrapper;
     try {
-      wrapper = (Event)reader.read(null, decoder);
+      wrapper = reader.read(null, decoder);
     } catch (EOFException e) {            // at EOF
       return null;
     }

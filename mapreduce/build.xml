@@ -339,7 +339,7 @@
 
   <target name="avro-generate" depends="init">
     <mkdir dir="${build.src}/org/apache/hadoop/mapreduce/jobhistory"/>
-    <taskdef name="protocol" classname="org.apache.avro.specific.ProtocolTask">
+    <taskdef name="protocol" classname="org.apache.avro.compiler.specific.ProtocolTask">
       <classpath refid="classpath" />
     </taskdef>
     <protocol destdir="${build.src}">

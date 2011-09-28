@@ -68,12 +68,6 @@
                 rev="${commons-httpclient.version}" conf="common->default"/>
     <dependency org="log4j" name="log4j" 
                 rev="${log4j.version}" conf="common->master"/>
-    <dependency org="org.apache.hadoop" name="avro" 
-                rev="${avro.version}" conf="common->default">
-      <exclude module="ant"/>
-      <exclude module="jetty"/>
-      <exclude module="slf4j-simple"/>
-    </dependency>
     <dependency org="org.slf4j" name="slf4j-api" 
                 rev="${slf4j-api.version}" conf="common->master"/>
   </dependencies>

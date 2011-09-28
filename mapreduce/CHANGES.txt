@@ -223,6 +223,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7106. Reorganize project SVN layout to "unsplit" the projects.
     (todd, nigel)
 
+    MAPREDUCE-3039. Upgrade to Avro 1.5.3. (Joep Rottinghuis via shv)
+
   OPTIMIZATIONS
     
     MAPREDUCE-1354. Enhancements to JobTracker for better performance and

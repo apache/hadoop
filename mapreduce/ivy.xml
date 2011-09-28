@@ -97,12 +97,18 @@
 
    <dependency org="org.apache.lucene" name="lucene-core" 
                rev="${lucene-core.version}" conf="javadoc->default"/>
-   <dependency org="org.apache.hadoop" name="avro" rev="${avro.version}" 
-               conf="common->default">
+   <dependency org="org.apache.avro" name="avro"
+               rev="${avro.version}" conf="common->default">
       <exclude module="ant"/>
       <exclude module="jetty"/>
-      <exclude module="slf4j-simple"/>
-    </dependency>
+      <exclude module="slf4j-api"/>
+   </dependency>
+   <dependency org="org.apache.avro" name="avro-compiler"
+               rev="${avro.version}" conf="common->default">
+      <exclude module="ant"/>
+      <exclude module="jetty"/>
+      <exclude module="slf4j-api"/>
+   </dependency>
    <dependency org="org.mockito" name="mockito-all" rev="${mockito-all.version}" 
                conf="test->default"/>
    <dependency org="org.mortbay.jetty" name="jetty-servlet-tester" rev="${jetty.version}"

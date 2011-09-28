@@ -19,20 +19,18 @@
 package org.apache.hadoop.mapreduce.jobhistory;
 
 import java.io.IOException;
-import java.util.Iterator;
 
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
-
-import org.apache.avro.Schema;
-import org.apache.avro.io.Encoder;
-import org.apache.avro.io.JsonEncoder;
-import org.apache.avro.io.DatumWriter;
-import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.util.Utf8;
 
 /**
  * Event Writer is an utility class used to write events to the underlying
@@ -54,7 +52,7 @@ class EventWriter {
     out.writeBytes("\n");
     out.writeBytes(Event.SCHEMA$.toString());
     out.writeBytes("\n");
-    this.encoder = new JsonEncoder(Event.SCHEMA$, out);
+    this.encoder = EncoderFactory.get().jsonEncoder(Event.SCHEMA$, out);
   }
   
   synchronized void write(HistoryEvent event) throws IOException { 

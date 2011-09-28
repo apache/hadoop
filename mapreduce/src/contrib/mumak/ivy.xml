@@ -114,13 +114,5 @@
       name="commons-cli"
       rev="${commons-cli.version}"
       conf="common->default"/>
-    <dependency org="org.apache.hadoop"
-      name="avro"
-	  rev="${avro.version}"
-      conf="common->default">
-      <exclude module="ant"/>
-      <exclude module="jetty"/>
-      <exclude module="slf4j-simple"/>
-    </dependency>
   </dependencies>
 </ivy-module>

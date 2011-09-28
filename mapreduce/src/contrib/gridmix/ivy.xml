@@ -102,14 +102,6 @@
       name="commons-cli"
       rev="${commons-cli.version}"
       conf="common->default"/>
-    <dependency org="org.apache.hadoop"
-      name="avro"
-      rev="${avro.version}"
-      conf="common->default">
-      <exclude module="ant"/>
-      <exclude module="jetty"/>
-      <exclude module="slf4j-simple"/>
-    </dependency>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
       rev="${jackson.version}"
@@ -117,10 +109,6 @@
     <dependency org="org.codehaus.jackson"
       name="jackson-core-asl"
       rev="${jackson.version}"
-      conf="common->default"/>
-    <dependency org="com.thoughtworks.paranamer"
-      name="paranamer"
-      rev="${paranamer.version}"
       conf="common->default"/>
   </dependencies>
 </ivy-module>

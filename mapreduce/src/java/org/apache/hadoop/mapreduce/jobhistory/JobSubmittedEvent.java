@@ -57,7 +57,7 @@ public class JobSubmittedEvent implements HistoryEvent {
     datum.userName = new Utf8(userName);
     datum.submitTime = submitTime;
     datum.jobConfPath = new Utf8(jobConfPath);
-    Map<Utf8, Utf8> jobAcls = new HashMap<Utf8, Utf8>();
+    Map<CharSequence, CharSequence> jobAcls = new HashMap<CharSequence, CharSequence>();
     for (Entry<JobACL, AccessControlList> entry : jobACLs.entrySet()) {
       jobAcls.put(new Utf8(entry.getKey().getAclName()), new Utf8(
           entry.getValue().getAclString()));
