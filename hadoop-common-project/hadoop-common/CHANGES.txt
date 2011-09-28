@@ -19,6 +19,9 @@ Trunk (unreleased changes)
 
     HADOOP-7635. RetryInvocationHandler should release underlying resources on
                  close (atm)
+    
+    HADOOP-7668. Add a NetUtils method that can tell if an InetAddress 
+    belongs to local host. (suresh)
 
   BUGS
 
