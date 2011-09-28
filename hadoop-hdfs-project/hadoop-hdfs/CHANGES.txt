@@ -757,6 +757,9 @@ Release 0.23.0 - Unreleased
     HDFS-1217.  Change some NameNode methods from public to package private.
     (Laxman via szetszwo)
 
+    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
+    object as an RPC parameter fails). (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
