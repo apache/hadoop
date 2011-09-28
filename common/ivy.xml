@@ -261,8 +261,18 @@
       rev="${slf4j-log4j12.version}"
       conf="common->master">
     </dependency>
-    <dependency org="org.apache.hadoop"
+    <dependency org="org.apache.avro"
       name="avro"
+      rev="${avro.version}"
+      conf="common->default">
+    </dependency>
+    <dependency org="org.apache.avro"
+      name="avro-compiler"
+      rev="${avro.version}"
+      conf="common->default">
+    </dependency>
+     <dependency org="org.apache.avro"
+      name="avro-ipc"
       rev="${avro.version}"
       conf="common->default">
       <exclude module="ant"/>

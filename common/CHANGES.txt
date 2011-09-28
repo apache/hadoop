@@ -544,6 +544,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7457. Remove out-of-date Chinese language documentation.
     (Jakob Homan via eli)
 
+    HADOOP-7646. Upgrade to Avro 1.5.3. (Joep Rottinghuis via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

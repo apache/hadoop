@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.io;
 
-import java.io.IOException;
+import static junit.framework.Assert.assertEquals;
+
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Type;
 
 import org.apache.avro.Schema;
-import org.apache.avro.reflect.ReflectData;
-import org.apache.avro.reflect.ReflectDatumWriter;
-import org.apache.avro.reflect.ReflectDatumReader;
+import org.apache.avro.Schema.Parser;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DecoderFactory;
-
-import static junit.framework.TestCase.assertEquals;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.reflect.ReflectData;
+import org.apache.avro.reflect.ReflectDatumReader;
+import org.apache.avro.reflect.ReflectDatumWriter;
 
 public class AvroTestUtil {
 
@@ -42,15 +43,17 @@ public class AvroTestUtil {
 
     // check that schema matches expected
     Schema s = ReflectData.get().getSchema(type);
-    assertEquals(Schema.parse(schema), s);
+    assertEquals(new Parser().parse(schema), s);
 
     // check that value is serialized correctly
     ReflectDatumWriter<Object> writer = new ReflectDatumWriter<Object>(s);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    writer.write(value, new BinaryEncoder(out));
+    BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
+    writer.write(value, encoder);
+    encoder.flush();
     ReflectDatumReader<Object> reader = new ReflectDatumReader<Object>(s);
     Object after =
-      reader.read(null, DecoderFactory.defaultFactory().createBinaryDecoder(
+      reader.read(null, DecoderFactory.get().binaryDecoder(
           out.toByteArray(), null));
     assertEquals(value, after);
   }
