@@ -321,6 +321,9 @@ Release 0.20.205.0 - 2011.09.27
     HADOOP-7510. Add configurable option to use original hostname in token
     instead of IP to allow server IP change. (Daryn Sharp via suresh)
 
+    HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
+    hdfs-site.xml.  (szetszwo)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
