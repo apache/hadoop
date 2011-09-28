@@ -24,6 +24,9 @@ Release 0.20.206.0 - unreleased
     MAPREDUCE-2932. Missing instrumentation plugin class shouldn't
     crash the TT startup per design. (harsh via eli)
 
+    HADOOP-7629. Allow immutable FsPermission objects to be used as IPC
+    parameters. (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
