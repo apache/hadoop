@@ -80,6 +80,9 @@ Trunk (unreleased changes)
 
     HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
 
+    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
+               execution order of test methods (Laxman via atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
