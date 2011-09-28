@@ -1021,6 +1021,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2323. start-dfs.sh script fails for tarball install (tomwhite)
 
+    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
+               execution order of test methods (Laxman via atm)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
