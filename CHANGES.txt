@@ -304,6 +304,8 @@ Release 0.92.0 - Unreleased
                (Kannan Muthukkaruppan)
    HBASE-4455  Rolling restart RSs scenario, -ROOT-, .META. regions are lost in
                AssignmentManager (Ming Ma)
+   HBASE-4488  Store could miss rows during flush (Lars H via jgray)
+
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

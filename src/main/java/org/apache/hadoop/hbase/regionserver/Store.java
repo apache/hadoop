@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
@@ -198,8 +197,6 @@ public class Store implements HeapSize {
 
     // Check if this is in-memory store
     this.inMemory = family.isInMemory();
-    long maxFileSize = 0L;
-    HTableDescriptor hTableDescriptor = region.getTableDesc();
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", 7);
 
@@ -499,7 +496,9 @@ public class Store implements HeapSize {
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
-          while (scanner.next(kvs)) {
+          boolean hasMore;
+          do {
+            hasMore = scanner.next(kvs);
             if (!kvs.isEmpty()) {
               for (KeyValue kv : kvs) {
                 writer.append(kv);
@@ -507,7 +506,7 @@ public class Store implements HeapSize {
               }
               kvs.clear();
             }
-          }
+          } while (hasMore);
         } finally {
           // Write out the log sequence number that corresponds to this output
           // hfile.  The hfile is current up to and including logCacheFlushId.
