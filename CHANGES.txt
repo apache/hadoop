@@ -234,7 +234,7 @@ Release 0.20.205.0 - 2011.09.27
     HDFS-2359. Fix NullPointerException in DataBlockScanner.
     (Jonthan Eagles via suresh)
 
-    MAPREDUCE-3801. Fix for vaidya.sh to work with the new layout
+    MAPREDUCE-3081. Fix for vaidya.sh to work with the new layout
     (Suhas via gkesavan)
 
     HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
