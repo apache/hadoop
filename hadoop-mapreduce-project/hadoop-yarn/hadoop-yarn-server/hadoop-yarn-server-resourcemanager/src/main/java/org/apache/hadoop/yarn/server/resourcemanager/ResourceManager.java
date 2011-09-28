@@ -385,7 +385,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected void startWepApp() {
-    webApp = WebApps.$for("yarn", masterService).at(
+    webApp = WebApps.$for("cluster", masterService).at(
         conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)).
       start(new RMWebApp(this));

@@ -149,7 +149,7 @@ public class MRClientService extends AbstractService
             + ":" + server.getPort());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
     try {
-      webApp = WebApps.$for("yarn", AppContext.class, appContext).with(conf).
+      webApp = WebApps.$for("mapreduce", AppContext.class, appContext).with(conf).
           start(new AMWebApp());
     } catch (Exception e) {
       LOG.error("Webapps failed to start. Ignoring for now:", e);

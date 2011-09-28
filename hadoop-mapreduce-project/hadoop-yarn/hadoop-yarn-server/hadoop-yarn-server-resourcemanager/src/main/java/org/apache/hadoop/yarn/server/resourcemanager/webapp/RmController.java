@@ -102,7 +102,7 @@ public class RmController extends Controller {
         .getMasterContainer();
     if (masterContainer != null) {
       String url = join("http://", masterContainer.getNodeHttpAddress(),
-          "/yarn", "/containerlogs/",
+          "/node", "/containerlogs/",
           ConverterUtils.toString(masterContainer.getId()));
       info._("AM container logs:", url, url);
     } else {

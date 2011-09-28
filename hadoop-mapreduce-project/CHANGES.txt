@@ -1425,6 +1425,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3054. Unable to kill submitted jobs. (mahadev)
 
+    MAPREDUCE-3021. Change base urls for RM web-ui. (Thomas Graves via
+    acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
