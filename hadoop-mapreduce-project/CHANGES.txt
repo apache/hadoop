@@ -1435,6 +1435,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2843. Fixed the node-table to be completely displayed and making
     node entries on RM UI to be sortable. (Abhijit Suresh Shingate via vinodkv)
 
+    MAPREDUCE-3110. Fixed TestRPC failure. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

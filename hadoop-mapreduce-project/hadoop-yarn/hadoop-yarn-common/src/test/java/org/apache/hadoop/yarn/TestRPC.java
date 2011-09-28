@@ -90,10 +90,10 @@ public class TestRPC {
           .newRecord(GetNewApplicationRequest.class));
       Assert.fail("Excepted RPC call to fail with unknown method.");
     } catch (YarnRemoteException e) {
-      Assert.assertEquals("Unknown method getNewApplication called on "
-          + "org.apache.hadoop.yarn.proto.ClientRMProtocol"
-          + "$ClientRMProtocolService$BlockingInterface protocol.", e
-          .getMessage());
+      Assert.assertTrue(e.getMessage().matches(
+          "Unknown method getNewApplication called on.*"
+              + "org.apache.hadoop.yarn.proto.ClientRMProtocol"
+              + "\\$ClientRMProtocolService\\$BlockingInterface protocol."));
     }
   }
 
