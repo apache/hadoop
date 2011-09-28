@@ -88,7 +88,7 @@ Release 0.20.205.0 - unreleased
     MAPREDUCE-3112. Calling hadoop cli inside mapreduce job leads to errors.
     (Eric Yang via mattf)
 
-    HDFS-7691. Hadoop deb pkg group id. (Eric Yang via mattf)
+    HADOOP-7691. Hadoop deb pkg group id. (Eric Yang via mattf)
 
     HADOOP-7685. Resolve issues with hadoop-common file hadoop-setup-conf.sh. 
     (Eric Yang and Devaraj K, via mattf)
