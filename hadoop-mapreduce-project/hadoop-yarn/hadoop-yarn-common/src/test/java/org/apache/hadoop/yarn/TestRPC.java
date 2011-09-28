@@ -29,7 +29,7 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
@@ -86,11 +86,11 @@ public class TestRPC {
             + server.getPort()), conf);
 
     try {
-      proxy.getNewApplicationId(Records
-          .newRecord(GetNewApplicationIdRequest.class));
+      proxy.getNewApplication(Records
+          .newRecord(GetNewApplicationRequest.class));
       Assert.fail("Excepted RPC call to fail with unknown method.");
     } catch (YarnRemoteException e) {
-      Assert.assertEquals("Unknown method getNewApplicationId called on "
+      Assert.assertEquals("Unknown method getNewApplication called on "
           + "org.apache.hadoop.yarn.proto.ClientRMProtocol"
           + "$ClientRMProtocolService$BlockingInterface protocol.", e
           .getMessage());

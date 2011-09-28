@@ -27,10 +27,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
  * <p>The request sent by clients to get a new {@link ApplicationId} for
  * submitting an application.</p>
  * 
- * @see ClientRMProtocol#getNewApplicationId(GetNewApplicationIdRequest)
+ * @see ClientRMProtocol#getNewApplication(GetNewApplicationRequest)
  */
 @Public
 @Stable
-public interface GetNewApplicationIdRequest {
+public interface GetNewApplicationRequest {
 
 }

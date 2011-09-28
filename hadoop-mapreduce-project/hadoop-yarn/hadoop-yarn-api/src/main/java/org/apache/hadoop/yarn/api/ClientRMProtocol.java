@@ -31,8 +31,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -62,14 +62,18 @@ public interface ClientRMProtocol {
    * <p>The <code>ResourceManager</code> responds with a new, monotonically
    * increasing, {@link ApplicationId} which is used by the client to submit
    * a new application.</p>
-   * 
+   *
+   * <p>The <code>ResourceManager</code> also responds with details such 
+   * as minimum and maximum resource capabilities in the cluster as specified in
+   * {@link GetNewApplicationResponse}.</p>
+   *
    * @param request request to get a new <code>ApplicationId</code>
    * @return new <code>ApplicationId</code> to be used to submit an application
    * @throws YarnRemoteException
    * @see #submitApplication(SubmitApplicationRequest)
    */
-  public GetNewApplicationIdResponse getNewApplicationId(
-      GetNewApplicationIdRequest request) 
+  public GetNewApplicationResponse getNewApplication(
+      GetNewApplicationRequest request)
   throws YarnRemoteException;
   
   /**
@@ -92,7 +96,7 @@ public interface ClientRMProtocol {
    * @param request request to submit a new application
    * @return (empty) response on accepting the submission
    * @throws YarnRemoteException
-   * @see #getNewApplicationId(GetNewApplicationIdRequest)
+   * @see #getNewApplication(GetNewApplicationRequest)
    */
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) 

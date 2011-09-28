@@ -1460,6 +1460,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3021. Change base urls for RM web-ui. (Thomas Graves via
     acmurthy) 
 
+    MAPREDUCE-3041. Fixed ClientRMProtocol to provide min/max resource
+    capabilities along-with new ApplicationId for application submission.
+    (Hitesh Shah via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -24,7 +24,7 @@ option java_generate_equals_and_hash = true;
 import "yarn_service_protos.proto";
 
 service ClientRMProtocolService {
-  rpc getNewApplicationId (GetNewApplicationIdRequestProto) returns (GetNewApplicationIdResponseProto);
+  rpc getNewApplication (GetNewApplicationRequestProto) returns (GetNewApplicationResponseProto);
   rpc getApplicationReport (GetApplicationReportRequestProto) returns (GetApplicationReportResponseProto);
   rpc submitApplication (SubmitApplicationRequestProto) returns (SubmitApplicationResponseProto);
   rpc forceKillApplication (KillApplicationRequestProto) returns (KillApplicationResponseProto);
