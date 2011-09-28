@@ -693,6 +693,9 @@ Release 0.21.1 - Unreleased
     HDFS-1855. TestDatanodeBlockScanner.testBlockCorruptionRecoveryPolicy()
     part 2 fails in two different ways. (Matt Foley via eli)
 
+    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
+    execution order of test methods (Laxman, Uma Maheswara Rao G via shv)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES

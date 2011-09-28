@@ -19,18 +19,19 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
+
+import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Unit test for ReplicasMap class
  */
 public class TestReplicasMap {
-  private static final ReplicasMap map = new ReplicasMap();
-  private static final  Block block = new Block(1234, 1234, 1234);
+  private final ReplicasMap map = new ReplicasMap();
+  private final  Block block = new Block(1234, 1234, 1234);
   
-  @BeforeClass
-  public static void setup() {
+  @Before
+  public void setup() {
     map.add(new FinalizedReplica(block, null, null));
   }
   
