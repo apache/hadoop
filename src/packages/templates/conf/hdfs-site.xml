@@ -182,20 +182,6 @@
   </property>
   
   <property>
-    <name>dfs.namenode.http-address</name>
-    <value>${HADOOP_NN_HOST}:50070</value>
-    <description>
-      The address and the base port where the dfs namenode web ui will listen on.
-      If the port is 0 then the server will start on a free port.
-    </description>
-  </property>
-
-  <property>
-    <name>dfs.namenode.https-address</name>
-    <value>${HADOOP_NN_HOST}:50470</value>
-  </property>
-
-  <property>
     <name>dfs.secondary.http.address</name>
     <value>${HADOOP_SNN_HOST}:50090</value>
     <description>

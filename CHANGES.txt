@@ -47,6 +47,9 @@ Release 0.20.205.0 - 2011.09.27
 
   BUG FIXES
 
+    HADOOP-7683. remove hdfs-site.xml template has properties that are not used
+    in 0.20-security. (Arpit Gupta via mattf)
+
     HADOOP-7603. Set default hdfs, mapred uid, and hadoop group gid for RPM 
     packages. (Eric Yang via mattf)
 
