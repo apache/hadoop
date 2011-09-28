@@ -4468,9 +4468,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
   
-  public static final String MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY =
+  static final String MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY =
       "mapred.cluster.map.memory.mb";
-  public static final String MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY =
+  static final String MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY =
       "mapred.cluster.reduce.memory.mb";
 
   static final String MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY =

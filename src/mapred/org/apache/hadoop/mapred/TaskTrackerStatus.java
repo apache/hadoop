@@ -55,7 +55,6 @@ public class TaskTrackerStatus implements Writable {
   private int maxReduceTasks;
   private TaskTrackerHealthStatus healthStatus;
    
-  public static final int UNAVAILABLE = -1;
   /**
    * Class representing a collection of resources on this tasktracker.
    */
@@ -67,13 +66,6 @@ public class TaskTrackerStatus implements Writable {
     private long reduceSlotMemorySizeOnTT;
     private long availableSpace;
     
-    private long availableVirtualMemory = UNAVAILABLE; // in byte
-    private long availablePhysicalMemory = UNAVAILABLE; // in byte
-    private int numProcessors = UNAVAILABLE;
-    private long cumulativeCpuTime = UNAVAILABLE; // in millisecond
-    private long cpuFrequency = UNAVAILABLE; // in kHz
-    private float cpuUsage = UNAVAILABLE; // in %
-
     ResourceStatus() {
       totalVirtualMemory = JobConf.DISABLED_MEMORY_LIMIT;
       totalPhysicalMemory = JobConf.DISABLED_MEMORY_LIMIT;
@@ -180,160 +172,21 @@ public class TaskTrackerStatus implements Writable {
     long getAvailableSpace() {
       return availableSpace;
     }
-
-    /**
-     * Set the amount of available virtual memory on the tasktracker.
-     * If the input is not a valid number, it will be set to UNAVAILABLE
-     *
-     * @param vmem amount of available virtual memory on the tasktracker
-     *                    in bytes.
-     */
-    void setAvailableVirtualMemory(long availableMem) {
-      availableVirtualMemory = availableMem > 0 ?
-                               availableMem : UNAVAILABLE;
-    }
-
-    /**
-     * Get the amount of available virtual memory on the tasktracker.
-     * Will return UNAVAILABLE if it cannot be obtained
-     *
-     * @return the amount of available virtual memory on the tasktracker
-     *             in bytes.
-     */
-    long getAvailableVirtualMemory() {
-      return availableVirtualMemory;
-    }
-
-    /**
-     * Set the amount of available physical memory on the tasktracker.
-     * If the input is not a valid number, it will be set to UNAVAILABLE
-     *
-     * @param availableRAM amount of available physical memory on the
-     *                     tasktracker in bytes.
-     */
-    void setAvailablePhysicalMemory(long availableRAM) {
-      availablePhysicalMemory = availableRAM > 0 ?
-                                availableRAM : UNAVAILABLE;
-    }
-
-    /**
-     * Get the amount of available physical memory on the tasktracker.
-     * Will return UNAVAILABLE if it cannot be obtained
-     *
-     * @return amount of available physical memory on the tasktracker in bytes.
-     */
-    long getAvailablePhysicalMemory() {
-      return availablePhysicalMemory;
-    }
-
-    /**
-     * Set the CPU frequency of this TaskTracker
-     * If the input is not a valid number, it will be set to UNAVAILABLE
-     *
-     * @param cpuFrequency CPU frequency in kHz
-     */
-    public void setCpuFrequency(long cpuFrequency) {
-      this.cpuFrequency = cpuFrequency > 0 ?
-                          cpuFrequency : UNAVAILABLE;
-    }
-
-    /**
-     * Get the CPU frequency of this TaskTracker
-     * Will return UNAVAILABLE if it cannot be obtained
-     *
-     * @return CPU frequency in kHz
-     */
-    public long getCpuFrequency() {
-      return cpuFrequency;
-    }
-
-    /**
-     * Set the number of processors on this TaskTracker
-     * If the input is not a valid number, it will be set to UNAVAILABLE
-     *
-     * @param numProcessors number of processors
-     */
-    public void setNumProcessors(int numProcessors) {
-      this.numProcessors = numProcessors > 0 ?
-                           numProcessors : UNAVAILABLE;
-    }
-
-    /**
-     * Get the number of processors on this TaskTracker
-     * Will return UNAVAILABLE if it cannot be obtained
-     *
-     * @return number of processors
-     */
-    public int getNumProcessors() {
-      return numProcessors;
-    }
-
-    /**
-     * Set the cumulative CPU time on this TaskTracker since it is up
-     * It can be set to UNAVAILABLE if it is currently unavailable.
-     *
-     * @param cumulativeCpuTime Used CPU time in millisecond
-     */
-    public void setCumulativeCpuTime(long cumulativeCpuTime) {
-      this.cumulativeCpuTime = cumulativeCpuTime > 0 ?
-                               cumulativeCpuTime : UNAVAILABLE;
-    }
-
-    /**
-     * Get the cumulative CPU time on this TaskTracker since it is up
-     * Will return UNAVAILABLE if it cannot be obtained
-     *
-     * @return used CPU time in milliseconds
-     */
-    public long getCumulativeCpuTime() {
-      return cumulativeCpuTime;
-    }
-    
-    /**
-     * Set the CPU usage on this TaskTracker
-     * 
-     * @param cpuUsage CPU usage in %
-     */
-    public void setCpuUsage(float cpuUsage) {
-      this.cpuUsage = cpuUsage;
-    }
-
-    /**
-     * Get the CPU usage on this TaskTracker
-     * Will return UNAVAILABLE if it cannot be obtained
-     *
-     * @return CPU usage in %
-     */
-    public float getCpuUsage() {
-      return cpuUsage;
-    }
     
     public void write(DataOutput out) throws IOException {
       WritableUtils.writeVLong(out, totalVirtualMemory);
       WritableUtils.writeVLong(out, totalPhysicalMemory);
-      WritableUtils.writeVLong(out, availableVirtualMemory);
-      WritableUtils.writeVLong(out, availablePhysicalMemory);
       WritableUtils.writeVLong(out, mapSlotMemorySizeOnTT);
       WritableUtils.writeVLong(out, reduceSlotMemorySizeOnTT);
       WritableUtils.writeVLong(out, availableSpace);
-      WritableUtils.writeVLong(out, cumulativeCpuTime);
-      WritableUtils.writeVLong(out, cpuFrequency);
-      WritableUtils.writeVInt(out, numProcessors);
-      out.writeFloat(getCpuUsage());
     }
     
     public void readFields(DataInput in) throws IOException {
       totalVirtualMemory = WritableUtils.readVLong(in);
       totalPhysicalMemory = WritableUtils.readVLong(in);
-      availableVirtualMemory = WritableUtils.readVLong(in);
-      availablePhysicalMemory = WritableUtils.readVLong(in);
       mapSlotMemorySizeOnTT = WritableUtils.readVLong(in);
       reduceSlotMemorySizeOnTT = WritableUtils.readVLong(in);
       availableSpace = WritableUtils.readVLong(in);
-      cumulativeCpuTime = WritableUtils.readVLong(in);
-      cpuFrequency = WritableUtils.readVLong(in);
-      numProcessors = WritableUtils.readVInt(in);
-      setCpuUsage(in.readFloat());
     }
   }
   

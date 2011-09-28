@@ -20,9 +20,6 @@ package org.apache.hadoop.mapred;
 import junit.framework.TestCase;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Random;
-
-import org.apache.hadoop.mapred.Counters.Counter;
 
 /**
  * TestCounters checks the sanity and recoverability of {@code Counters}
@@ -90,33 +87,6 @@ public class TestCounters extends TestCase {
       testCounter(getEnumCounters(groups, counters));
     } catch (ParseException pe) {
       throw new IOException(pe);
-    }
-  }
-  
-  /**
-   * Verify counter value works
-   */
-  public void testCounterValue() {
-    final int NUMBER_TESTS = 100;
-    final int NUMBER_INC = 10;
-    final Random rand = new Random();
-    for (int i = 0; i < NUMBER_TESTS; i++) {
-      long initValue = rand.nextInt();
-      long expectedValue = initValue;
-      Counter counter = new Counter("foo", "bar", expectedValue);
-      assertEquals("Counter value is not initialized correctly",
-                   expectedValue, counter.getValue());
-      for (int j = 0; j < NUMBER_INC; j++) {
-        int incValue = rand.nextInt();
-        counter.increment(incValue);
-        expectedValue += incValue;
-        assertEquals("Counter value is not incremented correctly",
-                     expectedValue, counter.getValue());
-      }
-      expectedValue = rand.nextInt();
-      counter.setValue(expectedValue);
-      assertEquals("Counter value is not set correctly",
-                   expectedValue, counter.getValue());
     }
   }
   

@@ -186,14 +186,14 @@
 -->
 
 <property>
-  <name>mapred.tasktracker.resourcecalculatorplugin</name>
+  <name>mapred.tasktracker.memory_calculator_plugin</name>
   <value></value>
   <description>
-   Name of the class whose instance will be used to query resource information
+   Name of the class whose instance will be used to query memory information
    on the tasktracker.
    
    The class must be an instance of 
-   org.apache.hadoop.util.ResourceCalculatorPlugin. If the value is null, the
+   org.apache.hadoop.util.MemoryCalculatorPlugin. If the value is null, the
    tasktracker attempts to use a class appropriate to the platform. 
    Currently, the only platform supported is Linux.
   </description>

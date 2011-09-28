@@ -33,7 +33,7 @@ import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.fs.FileUtil;
 
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
@@ -44,49 +44,17 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       .getLog(ProcfsBasedProcessTree.class);
 
   private static final String PROCFS = "/proc/";
-  private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern .compile(
-    "^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s" +
-    "([0-9-]+\\s){7}([0-9]+)\\s([0-9]+)\\s([0-9-]+\\s){7}([0-9]+)\\s([0-9]+)" +
-    "(\\s[0-9-]+){15}");
+  private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern
+      .compile("^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+\\s){16}([0-9]+)(\\s[0-9-]+){16}");
 
   static final String PROCFS_STAT_FILE = "stat";
   static final String PROCFS_CMDLINE_FILE = "cmdline";
-  public static final long PAGE_SIZE;
-  static {
-    ShellCommandExecutor shellExecutor =
-            new ShellCommandExecutor(new String[]{"getconf",  "PAGESIZE"});
-    long pageSize = -1;
-    try {
-      shellExecutor.execute();
-      pageSize = Long.parseLong(shellExecutor.getOutput().replace("\n", ""));
-    } catch (IOException e) {
-      LOG.error(StringUtils.stringifyException(e));
-    } finally {
-      PAGE_SIZE = pageSize;
-    }
-  }
-  public static final long JIFFY_LENGTH_IN_MILLIS; // in millisecond
-  static {
-    ShellCommandExecutor shellExecutor =
-            new ShellCommandExecutor(new String[]{"getconf",  "CLK_TCK"});
-    long jiffiesPerSecond = -1;
-    try {
-      shellExecutor.execute();
-      jiffiesPerSecond = Long.parseLong(shellExecutor.getOutput().replace("\n", ""));
-    } catch (IOException e) {
-      LOG.error(StringUtils.stringifyException(e));
-    } finally {
-      JIFFY_LENGTH_IN_MILLIS = jiffiesPerSecond != -1 ?
-                     Math.round(1000D / jiffiesPerSecond) : -1;
-    }
-  }
 
   // to enable testing, using this variable which can be configured
   // to a test directory.
   private String procfsDir;
   
   private Integer pid = -1;
-  private Long cpuTime = 0L;
 
   private Map<Integer, ProcessInfo> processTree = new HashMap<Integer, ProcessInfo>();
 
@@ -181,12 +149,11 @@ public class ProcfsBasedProcessTree extends ProcessTree {
         pInfoQueue.addAll(pInfo.getChildren());
       }
 
-      // update age values and compute the number of jiffies since last update
+      // update age values.
       for (Map.Entry<Integer, ProcessInfo> procs : processTree.entrySet()) {
         ProcessInfo oldInfo = oldProcs.get(procs.getKey());
-        if (procs.getValue() != null) {
-          procs.getValue().updateJiffy(oldInfo);
-          if (oldInfo != null) {
+        if (oldInfo != null) {
+          if (procs.getValue() != null) {
             procs.getValue().updateAge(oldInfo);  
           }
         }
@@ -229,7 +196,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   }
 
   private static final String PROCESSTREE_DUMP_FORMAT =
-      "\t|- %d %d %d %d %s %d %d %d %d %s\n";
+      "\t|- %d %d %d %d %s %d %s\n";
 
   /**
    * Get a dump of the process-tree.
@@ -241,14 +208,12 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     StringBuilder ret = new StringBuilder();
     // The header.
     ret.append(String.format("\t|- PID PPID PGRPID SESSID CMD_NAME "
-        + "USER_MODE_TIME(MILLIS) SYSTEM_TIME(MILLIS) VMEM_USAGE(BYTES) "
-        + "RSSMEM_USAGE(PAGES) FULL_CMD_LINE\n"));
+        + "VMEM_USAGE(BYTES) FULL_CMD_LINE\n"));
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
         ret.append(String.format(PROCESSTREE_DUMP_FORMAT, p.getPid(), p
             .getPpid(), p.getPgrpId(), p.getSessionId(), p.getName(), p
-            .getUtime(), p.getStime(), p.getVmem(), p.getRssmemPage(), p
-            .getCmdLine(procfsDir)));
+            .getVmem(), p.getCmdLine(procfsDir)));
       }
     }
     return ret.toString();
@@ -263,18 +228,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   public long getCumulativeVmem() {
     // include all processes.. all processes will be older than 0.
     return getCumulativeVmem(0);
-  }
-
-  /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
-   * in the process-tree.
-   *
-   * @return cumulative rss memory used by the process-tree in bytes. return 0
-   *         if it cannot be calculated
-   */
-  public long getCumulativeRssmem() {
-    // include all processes.. all processes will be older than 0.
-    return getCumulativeRssmem(0);
   }
 
   /**
@@ -294,50 +247,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       }
     }
     return total;
-  }
-
-  /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
-   * in the process-tree that are older than the passed in age.
-   *
-   * @param olderThanAge processes above this age are included in the
-   *                      memory addition
-   * @return cumulative rss memory used by the process-tree in bytes,
-   *          for processes older than this age. return 0 if it cannot be
-   *          calculated
-   */
-  public long getCumulativeRssmem(int olderThanAge) {
-    if (PAGE_SIZE < 0) {
-      return 0;
-    }
-    long totalPages = 0;
-    for (ProcessInfo p : processTree.values()) {
-      if ((p != null) && (p.getAge() > olderThanAge)) {
-        totalPages += p.getRssmemPage();
-      }
-    }
-    return totalPages * PAGE_SIZE; // convert # pages to byte
-  }
-
-  /**
-   * Get the CPU time in millisecond used by all the processes in the
-   * process-tree since the process-tree created
-   *
-   * @return cumulative CPU time in millisecond since the process-tree created
-   *         return 0 if it cannot be calculated
-   */
-  public long getCumulativeCpuTime() {
-    if (JIFFY_LENGTH_IN_MILLIS < 0) {
-      return 0;
-    }
-    long incJiffies = 0;
-    for (ProcessInfo p : processTree.values()) {
-      if (p != null) {
-        incJiffies += p.dtime;
-      }
-    }
-    cpuTime += incJiffies * JIFFY_LENGTH_IN_MILLIS;
-    return cpuTime;
   }
 
   private static Integer getValidPID(String pid) {
@@ -409,11 +318,10 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       Matcher m = PROCFS_STAT_FILE_FORMAT.matcher(str);
       boolean mat = m.find();
       if (mat) {
-        // Set (name) (ppid) (pgrpId) (session) (utime) (stime) (vsize) (rss)
-         pinfo.updateProcessInfo(m.group(2), Integer.parseInt(m.group(3)),
-                 Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5)),
-                 Long.parseLong(m.group(7)), Long.parseLong(m.group(8)),
-                 Long.parseLong(m.group(10)), Long.parseLong(m.group(11)));
+        // Set ( name ) ( ppid ) ( pgrpId ) (session ) (vsize )
+        pinfo.updateProcessInfo(m.group(2), Integer.parseInt(m.group(3)), Integer
+            .parseInt(m.group(4)), Integer.parseInt(m.group(5)), Long
+            .parseLong(m.group(7)));
       }
     } catch (IOException io) {
       LOG.warn("Error reading the stream " + io);
@@ -460,18 +368,8 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     private Integer ppid; // parent process-id
     private Integer sessionId; // session-id
     private Long vmem; // virtual memory usage
-    private Long rssmemPage; // rss memory usage in # of pages
-    private Long utime = 0L; // # of jiffies in user mode
-    private Long stime = 0L; // # of jiffies in kernel mode
     // how many times has this process been seen alive
     private int age; 
-
-    // # of jiffies used since last update:
-    private Long dtime = 0L;
-    // dtime = (utime + stime) - (utimeOld + stimeOld)
-    // We need this to compute the cumulative CPU time
-    // because the subprocess may finish earlier than root process
-
     private List<ProcessInfo> children = new ArrayList<ProcessInfo>(); // list of children
 
     public ProcessInfo(int pid) {
@@ -504,41 +402,17 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       return vmem;
     }
 
-    public Long getUtime() {
-      return utime;
-    }
-
-    public Long getStime() {
-      return stime;
-    }
-
-    public Long getDtime() {
-      return dtime;
-    }
-
-    public Long getRssmemPage() { // get rss # of pages
-      return rssmemPage;
-    }
-
     public int getAge() {
       return age;
     }
     
     public void updateProcessInfo(String name, Integer ppid, Integer pgrpId,
-        Integer sessionId, Long utime, Long stime, Long vmem, Long rssmem) {
+        Integer sessionId, Long vmem) {
       this.name = name;
       this.ppid = ppid;
       this.pgrpId = pgrpId;
       this.sessionId = sessionId;
-      this.utime = utime;
-      this.stime = stime;
       this.vmem = vmem;
-      this.rssmemPage = rssmem;
-    }
-
-    public void updateJiffy(ProcessInfo oldInfo) {
-      this.dtime = (oldInfo == null ? this.utime + this.stime
-              : (this.utime + this.stime) - (oldInfo.utime + oldInfo.stime));
     }
 
     public void updateAge(ProcessInfo oldInfo) {
