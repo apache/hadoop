@@ -526,7 +526,6 @@ public class NetUtils {
   public static boolean isLocalAddress(InetAddress addr) {
     // Check if the address is any local or loop back
     boolean local = addr.isAnyLocalAddress() || addr.isLoopbackAddress();
-    System.out.println("address is any or loopback address " + addr);
 
     // Check if the address is defined on any interface
     if (!local) {
@@ -536,7 +535,6 @@ public class NetUtils {
         local = false;
       }
     }
-        System.out.println("address " + addr + " is local " + local);
     return local;
   }
 }
