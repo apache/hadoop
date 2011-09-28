@@ -23,6 +23,8 @@ Trunk (unreleased changes)
     HADOOP-7668. Add a NetUtils method that can tell if an InetAddress 
     belongs to local host. (suresh)
 
+    HADOOP-7687 Make getProtocolSignature public  (sanjay)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
