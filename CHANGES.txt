@@ -51,6 +51,9 @@ Release 0.20.205.0 - 2011.09.27
 
   BUG FIXES
 
+    HADOOP-7685. Resolve issues with hadoop-common file hadoop-setup-conf.sh. 
+    (Eric Yang and Devaraj K, via mattf)
+
     HADOOP-7684. jobhistory server and secondarynamenode should have init.d script
     for rpm and deb. (Eric Yang via mattf)
 
