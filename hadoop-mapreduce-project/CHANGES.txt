@@ -1469,6 +1469,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3110. Fixed TestRPC failure. (vinodkv)
 
+    MAPREDUCE-3078. Ensure MapReduce AM reports progress correctly for
+    displaying on the RM Web-UI. (vinodkv via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.util;
 
 import java.net.URI;
 import java.util.Comparator;
+import java.util.List;
 
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -184,6 +186,13 @@ public class BuilderUtils {
     return id;
   }
 
+  public static NodeId newNodeId(String host, int port) {
+    NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
+    nodeId.setHost(host);
+    nodeId.setPort(port);
+    return nodeId;
+  }
+
   public static Container newContainer(RecordFactory recordFactory,
       ApplicationAttemptId appAttemptId, int containerId, NodeId nodeId,
       String nodeHttpAddress, Resource resource, Priority priority) {
@@ -266,5 +275,18 @@ public class BuilderUtils {
     url.setFile(file);
     return url;
   }
-  
+
+  public static AllocateRequest newAllocateRequest(
+      ApplicationAttemptId applicationAttemptId, int responseID,
+      float appProgress, List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased) {
+    AllocateRequest allocateRequest = recordFactory
+        .newRecordInstance(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(applicationAttemptId);
+    allocateRequest.setResponseId(responseID);
+    allocateRequest.setProgress(appProgress);
+    allocateRequest.addAllAsks(resourceAsk);
+    allocateRequest.addAllReleases(containersToBeReleased);
+    return allocateRequest;
+  }
 }

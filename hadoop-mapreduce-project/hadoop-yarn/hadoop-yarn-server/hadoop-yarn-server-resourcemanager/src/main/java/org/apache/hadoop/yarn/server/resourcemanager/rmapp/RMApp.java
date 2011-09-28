@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
  * look at {@link RMAppImpl} for its implementation. This interface 
  * exposes methods to access various updates in application status/report.
  */
-public interface RMApp extends EventHandler<RMAppEvent>{
+public interface RMApp extends EventHandler<RMAppEvent> {
 
   /**
    * The application id for this {@link RMApp}.

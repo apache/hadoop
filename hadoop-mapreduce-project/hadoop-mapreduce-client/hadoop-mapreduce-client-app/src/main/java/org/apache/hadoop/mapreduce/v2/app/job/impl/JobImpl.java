@@ -92,6 +92,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -584,25 +585,17 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobReport getReport() {
     readLock.lock();
     try {
-      JobReport report = recordFactory.newRecordInstance(JobReport.class);
-      report.setJobId(jobId);
-      report.setJobState(getState());
-      
-      // TODO - Fix to correctly setup report and to check state
-      if (report.getJobState() == JobState.NEW) {
-        return report;
-      }
-      
-      report.setStartTime(startTime);
-      report.setFinishTime(finishTime);
-      report.setSetupProgress(setupProgress);
-      report.setCleanupProgress(cleanupProgress);
-      report.setMapProgress(computeProgress(mapTasks));
-      report.setReduceProgress(computeProgress(reduceTasks));
-      report.setJobName(jobName);
-      report.setUser(username);
+      JobState state = getState();
 
-      return report;
+      if (getState() == JobState.NEW) {
+        return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
+            startTime, finishTime, setupProgress, 0.0f,
+            0.0f, cleanupProgress);
+      }
+
+      return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
+          startTime, finishTime, setupProgress, computeProgress(mapTasks),
+          computeProgress(reduceTasks), cleanupProgress);
     } finally {
       readLock.unlock();
     }

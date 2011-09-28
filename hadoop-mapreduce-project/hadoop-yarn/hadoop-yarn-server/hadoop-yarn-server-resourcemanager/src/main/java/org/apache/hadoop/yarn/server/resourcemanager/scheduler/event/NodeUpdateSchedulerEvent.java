@@ -19,10 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
 import java.util.List;
-import java.util.Map;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 

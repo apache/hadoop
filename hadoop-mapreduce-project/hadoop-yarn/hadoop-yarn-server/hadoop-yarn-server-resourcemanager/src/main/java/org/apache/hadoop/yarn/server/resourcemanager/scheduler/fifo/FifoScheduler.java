@@ -291,7 +291,7 @@ public class FifoScheduler implements ResourceScheduler {
   
   @SuppressWarnings("unchecked")
   private synchronized void addApplication(ApplicationAttemptId appAttemptId,
-      String queueName, String user) {
+      String user) {
     // TODO: Fix store
     SchedulerApp schedulerApp = 
         new SchedulerApp(appAttemptId, user, DEFAULT_QUEUE, 
@@ -628,7 +628,7 @@ public class FifoScheduler implements ResourceScheduler {
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
       addApplication(appAddedEvent.getApplicationAttemptId(), appAddedEvent
-          .getQueue(), appAddedEvent.getUser());
+          .getUser());
     }
     break;
     case APP_REMOVED:
