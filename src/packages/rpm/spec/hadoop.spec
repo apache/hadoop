@@ -132,6 +132,8 @@ mv ${RPM_BUILD_DIR}/%{_final_name}/hadoop-namenode ${RPM_BUILD_DIR}/etc/rc.d/ini
 mv ${RPM_BUILD_DIR}/%{_final_name}/hadoop-datanode ${RPM_BUILD_DIR}/etc/rc.d/init.d/hadoop-datanode
 mv ${RPM_BUILD_DIR}/%{_final_name}/hadoop-jobtracker ${RPM_BUILD_DIR}/etc/rc.d/init.d/hadoop-jobtracker
 mv ${RPM_BUILD_DIR}/%{_final_name}/hadoop-tasktracker ${RPM_BUILD_DIR}/etc/rc.d/init.d/hadoop-tasktracker
+mv ${RPM_BUILD_DIR}/%{_final_name}/hadoop-secondarynamenode ${RPM_BUILD_DIR}/etc/rc.d/init.d/hadoop-secondarynamenode
+mv ${RPM_BUILD_DIR}/%{_final_name}/hadoop-historyserver ${RPM_BUILD_DIR}/etc/rc.d/init.d/hadoop-historyserver
 chmod 0755 ${RPM_BUILD_DIR}/etc/rc.d/init.d/*
 chmod 0755 ${RPM_BUILD_DIR}/%{_final_name}/sbin/hadoop-*
 

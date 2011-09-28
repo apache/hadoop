@@ -51,6 +51,9 @@ Release 0.20.205.0 - 2011.09.27
 
   BUG FIXES
 
+    HADOOP-7684. jobhistory server and secondarynamenode should have init.d script
+    for rpm and deb. (Eric Yang via mattf)
+
     HADOOP-7683. remove hdfs-site.xml template has properties that are not used
     in 0.20-security. (Arpit Gupta via mattf)
 
