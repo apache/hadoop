@@ -39,13 +39,16 @@ Trunk (unreleased changes)
     via szetszwo)
 
     HDFS-2351 Change Namenode and Datanode to register each of their protocols
-    seperately (Sanjay Radia)
+    seperately. (Sanjay Radia)
 
     HDFS-2356.  Support case insensitive query parameter names in webhdfs.
     (szetszwo)
 
     HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
     hdfs-site.xml.  (szetszwo)
+
+    HDFS-2355. Federation: enable using the same configuration file across 
+    all the nodes in the cluster. (suresh)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)

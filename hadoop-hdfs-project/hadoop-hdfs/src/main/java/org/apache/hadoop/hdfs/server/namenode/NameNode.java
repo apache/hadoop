@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -453,9 +454,12 @@ public class NameNode {
       throws IOException { 
     this.role = role;
     try {
-      initializeGenericKeys(conf);
+      initializeGenericKeys(conf, getNameServiceId(conf));
       initialize(conf);
     } catch (IOException e) {
+      this.stop();
+      throw e;
+    } catch (HadoopIllegalArgumentException e) {
       this.stop();
       throw e;
     }
@@ -762,16 +766,16 @@ public class NameNode {
    * @param conf
    *          Configuration object to lookup specific key and to set the value
    *          to the key passed. Note the conf object is modified
+   * @param nameserviceId name service Id
    * @see DFSUtil#setGenericConf(Configuration, String, String...)
    */
-  public static void initializeGenericKeys(Configuration conf) {
-    final String nameserviceId = DFSUtil.getNameServiceId(conf);
+  public static void initializeGenericKeys(Configuration conf, String
+      nameserviceId) {
     if ((nameserviceId == null) || nameserviceId.isEmpty()) {
       return;
     }
     
     DFSUtil.setGenericConf(conf, nameserviceId, NAMESERVICE_SPECIFIC_KEYS);
-    
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
@@ -779,6 +783,14 @@ public class NameNode {
     }
   }
     
+  /** 
+   * Get the name service Id for the node
+   * @return name service Id or null if federation is not configured
+   */
+  protected String getNameServiceId(Configuration conf) {
+    return DFSUtil.getNamenodeNameServiceId(conf);
+  }
+  
   /**
    */
   public static void main(String argv[]) throws Exception {
@@ -792,5 +804,4 @@ public class NameNode {
       System.exit(-1);
     }
   }
-  
 }

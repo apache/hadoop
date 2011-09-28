@@ -38,6 +38,7 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -576,17 +577,6 @@ public class DFSUtil {
     }
   }
   
-  /**
-   * Returns the configured nameservice Id
-   * 
-   * @param conf
-   *          Configuration object to lookup the nameserviceId
-   * @return nameserviceId string from conf
-   */
-  public static String getNameServiceId(Configuration conf) {
-    return conf.get(DFS_FEDERATION_NAMESERVICE_ID);
-  }
-  
   /** Return used as percentage of capacity */
   public static float getPercentUsed(long used, long capacity) {
     return capacity <= 0 ? 100 : ((float)used * 100.0f)/(float)capacity; 
@@ -695,5 +685,78 @@ public class DFSUtil {
     return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
         ClientDatanodeProtocol.versionID, addr, ticket, confWithNoIpcIdle,
         NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+  }
+  
+  /**
+   * Get name service Id for the {@link NameNode} based on namenode RPC address
+   * matching the local node address.
+   */
+  public static String getNamenodeNameServiceId(Configuration conf) {
+    return getNameServiceId(conf, DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+  
+  /**
+   * Get name service Id for the BackupNode based on backup node RPC address
+   * matching the local node address.
+   */
+  public static String getBackupNameServiceId(Configuration conf) {
+    return getNameServiceId(conf, DFS_NAMENODE_BACKUP_ADDRESS_KEY);
+  }
+  
+  /**
+   * Get name service Id for the secondary node based on secondary http address
+   * matching the local node address.
+   */
+  public static String getSecondaryNameServiceId(Configuration conf) {
+    return getNameServiceId(conf, DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY);
+  }
+  
+  /**
+   * Get the nameservice Id by matching the {@code addressKey} with the
+   * the address of the local node. 
+   * 
+   * If {@link DFSConfigKeys#DFS_FEDERATION_NAMESERVICE_ID} is not specifically
+   * configured, this method determines the nameservice Id by matching the local
+   * nodes address with the configured addresses. When a match is found, it
+   * returns the nameservice Id from the corresponding configuration key.
+   * 
+   * @param conf Configuration
+   * @param addressKey configuration key to get the address.
+   * @return name service Id on success, null on failure.
+   * @throws HadoopIllegalArgumentException on error
+   */
+  private static String getNameServiceId(Configuration conf, String addressKey) {
+    String nameserviceId = conf.get(DFS_FEDERATION_NAMESERVICE_ID);
+    if (nameserviceId != null) {
+      return nameserviceId;
+    }
+    
+    Collection<String> ids = getNameServiceIds(conf);
+    if (ids == null || ids.size() == 0) {
+      // Not federation configuration, hence no nameservice Id
+      return null;
+    }
+    
+    // Match the rpc address with that of local address
+    int found = 0;
+    for (String id : ids) {
+      String addr = conf.get(getNameServiceIdKey(addressKey, id));
+      InetSocketAddress s = NetUtils.createSocketAddr(addr);
+      if (NetUtils.isLocalAddress(s.getAddress())) {
+        nameserviceId = id;
+        found++;
+      }
+    }
+    if (found > 1) { // Only one address must match the local address
+      throw new HadoopIllegalArgumentException(
+          "Configuration has multiple RPC addresses that matches "
+              + "the local node's address. Please configure the system with "
+              + "the parameter " + DFS_FEDERATION_NAMESERVICE_ID);
+    }
+    if (found == 0) {
+      throw new HadoopIllegalArgumentException("Configuration address "
+          + addressKey + " is missing in configuration with name service Id");
+    }
+    return nameserviceId;
   }
 }
