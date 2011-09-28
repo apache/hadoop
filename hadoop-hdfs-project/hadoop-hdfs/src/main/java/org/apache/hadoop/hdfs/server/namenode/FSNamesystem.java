@@ -537,11 +537,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       out.println(totalInodes + " files and directories, " + totalBlocks
           + " blocks = " + (totalInodes + totalBlocks) + " total");
 
-      final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
-      final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
-      blockManager.getDatanodeManager().fetchDatanodes(live, dead, false);
-      out.println("Live Datanodes: "+live.size());
-      out.println("Dead Datanodes: "+dead.size());
       blockManager.metaSave(out);
 
       out.flush();

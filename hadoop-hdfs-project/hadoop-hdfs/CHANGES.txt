@@ -689,6 +689,9 @@ Release 0.23.0 - Unreleased
     HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
     object as an RPC parameter fails). (todd)
 
+    HDFS-2363. Move datanodes size printing from FSNamesystem.metasave(..)
+    to BlockManager.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

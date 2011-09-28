@@ -306,6 +306,11 @@ public class BlockManager {
   /** Dump meta data to out. */
   public void metaSave(PrintWriter out) {
     assert namesystem.hasWriteLock();
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    datanodeManager.fetchDatanodes(live, dead, false);
+    out.println("Live Datanodes: " + live.size());
+    out.println("Dead Datanodes: " + dead.size());
     //
     // Dump contents of neededReplication
     //
