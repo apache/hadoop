@@ -622,6 +622,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7631. Fixes a config problem to do with running streaming jobs
     (Eric Yang via ddas)
 
+    HADOOP-7662. Fixed logs servlet to use the pathspec '/*' instead of '/'
+    for correct filtering. (Thomas Graves via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
