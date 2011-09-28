@@ -135,7 +135,7 @@ public class HistoryClientService extends AbstractService {
     webApp = new HsWebApp(history);
     String bindAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-    WebApps.$for("yarn", this).at(bindAddress).start(webApp); 
+    WebApps.$for("jobhistory", this).at(bindAddress).start(webApp); 
   }
 
   @Override

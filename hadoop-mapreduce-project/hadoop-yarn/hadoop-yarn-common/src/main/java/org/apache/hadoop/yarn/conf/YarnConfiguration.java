@@ -386,6 +386,6 @@ public class YarnConfiguration extends Configuration {
     // Use apps manager address to figure out the host for webapp
     addr = conf.get(YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS);
     String host = ADDR_SPLITTER.split(addr).iterator().next();
-    return JOINER.join("http://", host, ":", port, "/");
+    return JOINER.join("http://", host, ":", port);
   }
 }

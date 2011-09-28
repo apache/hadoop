@@ -85,7 +85,7 @@ public class TaskPage extends AppView {
         if (containerId != null) {
           String containerIdStr = ConverterUtils.toString(containerId);
           nodeTd._(" ").
-            a(".logslink", url("http://", nodeHttpAddr, "yarn", "containerlogs",
+            a(".logslink", url("http://", nodeHttpAddr, "node", "containerlogs",
               containerIdStr), "logs");
         }
         nodeTd._().
