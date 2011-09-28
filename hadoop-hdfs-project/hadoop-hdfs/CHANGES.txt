@@ -44,6 +44,9 @@ Trunk (unreleased changes)
     HDFS-2356.  Support case insensitive query parameter names in webhdfs.
     (szetszwo)
 
+    HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
+    hdfs-site.xml.  (szetszwo)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
