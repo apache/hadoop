@@ -207,13 +207,18 @@ public class SchedulerApp {
         .getDispatcher().getEventHandler(), this.rmContext
         .getContainerAllocationExpirer());
 
+    // Add it to allContainers list.
+    newlyAllocatedContainers.add(rmContainer);
+    liveContainers.put(container.getId(), rmContainer);    
+
     // Update consumption and track allocations
-    
+    appSchedulingInfo.allocate(type, node, priority, request, container);
+    Resources.addTo(currentConsumption, container.getResource());
+
     // Inform the container
     rmContainer.handle(
         new RMContainerEvent(container.getId(), RMContainerEventType.START));
 
-    Resources.addTo(currentConsumption, container.getResource());
     if (LOG.isDebugEnabled()) {
       LOG.debug("allocate: applicationAttemptId=" 
           + container.getId().getApplicationAttemptId() 
@@ -223,12 +228,6 @@ public class SchedulerApp {
     RMAuditLogger.logSuccess(getUser(), 
         AuditConstants.ALLOC_CONTAINER, "SchedulerApp", 
         getApplicationId(), container.getId());
-
-    // Add it to allContainers list.
-    newlyAllocatedContainers.add(rmContainer);
-    liveContainers.put(container.getId(), rmContainer);
-    
-    appSchedulingInfo.allocate(type, node, priority, request, container);
     
     return rmContainer;
   }

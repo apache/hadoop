@@ -98,7 +98,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private ContainerAllocationExpirer containerAllocationExpirer;
   protected NMLivelinessMonitor nmLivelinessMonitor;
   protected NodesListManager nodesListManager;
-  private SchedulerEventDispatcher schedulerDispatcher;
+  private EventHandler<SchedulerEvent> schedulerDispatcher;
   protected RMAppManager rmAppManager;
 
   private WebApp webApp;
@@ -119,7 +119,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Override
   public synchronized void init(Configuration conf) {
 
-    this.rmDispatcher = new AsyncDispatcher();
+    this.rmDispatcher = createDispatcher();
     addIfService(this.rmDispatcher);
 
     this.containerAllocationExpirer = new ContainerAllocationExpirer(
@@ -138,8 +138,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.conf = new YarnConfiguration(conf);
     // Initialize the scheduler
     this.scheduler = createScheduler();
-    this.schedulerDispatcher = new SchedulerEventDispatcher(this.scheduler);
-    addService(this.schedulerDispatcher);
+    this.schedulerDispatcher = createSchedulerEventDispatcher();
+    addIfService(this.schedulerDispatcher);
     this.rmDispatcher.register(SchedulerEventType.class,
         this.schedulerDispatcher);
 
@@ -193,6 +193,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(applicationMasterLauncher);
 
     super.init(conf);
+  }
+
+  protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
+    return new SchedulerEventDispatcher(this.scheduler);
+  }
+
+  protected Dispatcher createDispatcher() {
+    return new AsyncDispatcher();
   }
 
   protected void addIfService(Object object) {

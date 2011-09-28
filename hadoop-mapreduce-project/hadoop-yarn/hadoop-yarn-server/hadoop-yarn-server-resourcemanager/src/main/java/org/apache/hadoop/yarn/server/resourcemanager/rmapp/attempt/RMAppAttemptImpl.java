@@ -685,6 +685,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
+      appAttempt.progress = 1.0f;
+
       // Tell the app and the scheduler
       super.transition(appAttempt, event);
 

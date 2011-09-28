@@ -549,9 +549,9 @@ public class MRAppMaster extends CompositeService {
     // It's more test friendly to put it here.
     DefaultMetricsSystem.initialize("MRAppMaster");
 
-    /** create a job event for job intialization */
+    // create a job event for job intialization
     JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
-    /** send init to the job (this does NOT trigger job execution) */
+    // Send init to the job (this does NOT trigger job execution)
     // This is a synchronous call, not an event through dispatcher. We want
     // job-init to be done completely here.
     jobEventDispatcher.handle(initJobEvent);
