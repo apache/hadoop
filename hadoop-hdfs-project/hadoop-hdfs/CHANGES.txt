@@ -78,6 +78,8 @@ Trunk (unreleased changes)
     HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
 
+    HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
