@@ -60,9 +60,11 @@ check_permission() {
   OWNER="0"
   RESULT=0
   while [ "$TARGET" != "/" ]; do
-    PARENT=`dirname $TARGET`
-    NAME=`basename $TARGET`
-    OWNER=`ls -ln $PARENT | grep $NAME| awk '{print $3}'`
+    if [ "`uname`" = "Darwin" ]; then
+      OWNER=`stat -f %u $TARGET`
+    else
+      OWNER=`stat -c %u $TARGET`
+    fi
     if [ "$OWNER" != "0" ]; then
       RESULT=1
       break
@@ -247,6 +249,7 @@ AUTOSETUP=${AUTOSETUP:-1}
 JAVA_HOME=${JAVA_HOME:-/usr/java/default}
 HADOOP_GROUP=${HADOOP_GROUP:-hadoop}
 HADOOP_NN_HOST=${HADOOP_NN_HOST:-`hostname`}
+HADOOP_SNN_HOST=${HADOOP_SNN_HOST:-`hostname`}
 HADOOP_NN_DIR=${HADOOP_NN_DIR:-/var/lib/hadoop/hdfs/namenode}
 HADOOP_DN_DIR=${HADOOP_DN_DIR:-/var/lib/hadoop/hdfs/datanode}
 HADOOP_JT_HOST=${HADOOP_JT_HOST:-`hostname`}
@@ -272,7 +275,7 @@ if [ "${SECURITY_TYPE}" = "kerberos" ]; then
   SECURITY="true"
 else
   TASK_CONTROLLER="org.apache.hadoop.mapred.DefaultTaskController"
-  HADDOP_DN_ADDR="0.0.0.0:50010"
+  HADOOP_DN_ADDR="0.0.0.0:50010"
   HADOOP_DN_HTTP_ADDR="0.0.0.0:50075"
   SECURITY="false"
 fi
