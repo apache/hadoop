@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -169,8 +169,8 @@ public class ResourceMgrDelegate {
   }
 
   public JobID getNewJobID() throws IOException, InterruptedException {
-    GetNewApplicationIdRequest request = recordFactory.newRecordInstance(GetNewApplicationIdRequest.class);
-    applicationId = applicationsManager.getNewApplicationId(request).getApplicationId();
+    GetNewApplicationRequest request = recordFactory.newRecordInstance(GetNewApplicationRequest.class);
+    applicationId = applicationsManager.getNewApplication(request).getApplicationId();
     return TypeConverter.fromYarn(applicationId);
   }
 

@@ -19,27 +19,26 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationIdRequestProto;
-
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationRequestProto;
 
     
-public class GetNewApplicationIdRequestPBImpl extends ProtoBase<GetNewApplicationIdRequestProto> implements GetNewApplicationIdRequest {
-  GetNewApplicationIdRequestProto proto = GetNewApplicationIdRequestProto.getDefaultInstance();
-  GetNewApplicationIdRequestProto.Builder builder = null;
+public class GetNewApplicationRequestPBImpl extends ProtoBase<GetNewApplicationRequestProto> implements GetNewApplicationRequest {
+  GetNewApplicationRequestProto proto = GetNewApplicationRequestProto.getDefaultInstance();
+  GetNewApplicationRequestProto.Builder builder = null;
   boolean viaProto = false;
   
-  public GetNewApplicationIdRequestPBImpl() {
-    builder = GetNewApplicationIdRequestProto.newBuilder();
+  public GetNewApplicationRequestPBImpl() {
+    builder = GetNewApplicationRequestProto.newBuilder();
   }
 
-  public GetNewApplicationIdRequestPBImpl(GetNewApplicationIdRequestProto proto) {
+  public GetNewApplicationRequestPBImpl(GetNewApplicationRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public GetNewApplicationIdRequestProto getProto() {
+  public GetNewApplicationRequestProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -47,7 +46,7 @@ public class GetNewApplicationIdRequestPBImpl extends ProtoBase<GetNewApplicatio
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = GetNewApplicationIdRequestProto.newBuilder(proto);
+      builder = GetNewApplicationRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }

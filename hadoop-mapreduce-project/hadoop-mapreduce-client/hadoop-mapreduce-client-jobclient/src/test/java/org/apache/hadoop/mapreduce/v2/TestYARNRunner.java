@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClientCache;
 import org.apache.hadoop.mapred.ClientServiceDelegate;
-import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.ResourceMgrDelegate;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.JobID;
@@ -48,6 +47,8 @@ import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
@@ -57,8 +58,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -213,13 +212,13 @@ public class TestYARNRunner extends TestCase {
     delegate.getActiveTrackers();
     verify(clientRMProtocol).getClusterNodes(any(GetClusterNodesRequest.class));
     
-    GetNewApplicationIdResponse newAppIdResponse = recordFactory.newRecordInstance(
-        GetNewApplicationIdResponse.class);
-    newAppIdResponse.setApplicationId(appId);
-    when(clientRMProtocol.getNewApplicationId(any(GetNewApplicationIdRequest.class))).
-    thenReturn(newAppIdResponse);
+    GetNewApplicationResponse newAppResponse = recordFactory.newRecordInstance(
+        GetNewApplicationResponse.class);
+    newAppResponse.setApplicationId(appId);
+    when(clientRMProtocol.getNewApplication(any(GetNewApplicationRequest.class))).
+    thenReturn(newAppResponse);
     delegate.getNewJobID();
-    verify(clientRMProtocol).getNewApplicationId(any(GetNewApplicationIdRequest.class));
+    verify(clientRMProtocol).getNewApplication(any(GetNewApplicationRequest.class));
     
     GetQueueInfoResponse queueInfoResponse = recordFactory.newRecordInstance(
         GetQueueInfoResponse.class);
