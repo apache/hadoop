@@ -631,6 +631,9 @@ Release 0.22.0 - Unreleased
     HDFS-2290. Block with corrupt replica is not getting replicated.
     (Benoy Antony via shv)
 
+    HDFS-1943. fail to start datanode while start-dfs.sh is executed by root
+    user (Wei Yongjun via cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
