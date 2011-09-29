@@ -555,7 +555,7 @@ public class WritableRpcEngine implements RpcEngine {
 
  
     @Override
-    public <PROTO extends VersionedProtocol, IMPL extends PROTO> Server
+    public <PROTO, IMPL extends PROTO> Server
       addProtocol(
         Class<PROTO> protocolClass, IMPL protocolImpl) throws IOException {
       registerProtocolAndImpl(protocolClass, protocolImpl);

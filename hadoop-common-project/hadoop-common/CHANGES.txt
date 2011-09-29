@@ -413,6 +413,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7575. Enhanced LocalDirAllocator to support fully-qualified
     paths. (Jonathan Eagles via vinodkv)
 
+    HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
+    interface introduced in HADOOP-7524.  (cutting)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
