@@ -108,7 +108,7 @@ public class TaskPage extends AppView {
 
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:3}");
     set(DATATABLES_ID, "attempts");
     set(initID(DATATABLES, "attempts"), attemptsTableInit());
     setTableStyles(html, "attempts");

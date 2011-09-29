@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletResponse;
@@ -30,7 +32,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.View;
@@ -41,7 +43,7 @@ import com.google.inject.Inject;
  * This class renders the various pages that the web app supports.
  */
 public class AppController extends Controller implements AMParams {
-  final App app;
+  protected final App app;
   
   protected AppController(App app, Configuration conf, RequestContext ctx,
       String title) {
@@ -108,6 +110,54 @@ public class AppController extends Controller implements AMParams {
       setTitle(join("Counters for ", $(JOB_ID)));
     }
     render(countersPage());
+  }
+  
+  /**
+   * Display a page showing a task's counters
+   */
+  public void taskCounters() {
+    requireTask();
+    if (app.getTask() != null) {
+      setTitle(StringHelper.join("Counters for ", $(TASK_ID)));
+    }
+    render(countersPage());
+  }
+  
+  /**
+   * @return the class that will render the /singlejobcounter page
+   */
+  protected Class<? extends View> singleCounterPage() {
+    return SingleCounterPage.class;
+  }
+  
+  /**
+   * Render the /singlejobcounter page
+   * @throws IOException on any error.
+   */
+  public void singleJobCounter() throws IOException{
+    requireJob();
+    set(COUNTER_GROUP, URLDecoder.decode($(COUNTER_GROUP), "UTF-8"));
+    set(COUNTER_NAME, URLDecoder.decode($(COUNTER_NAME), "UTF-8"));
+    if (app.getJob() != null) {
+      setTitle(StringHelper.join($(COUNTER_GROUP)," ",$(COUNTER_NAME),
+          " for ", $(JOB_ID)));
+    }
+    render(singleCounterPage());
+  }
+  
+  /**
+   * Render the /singletaskcounter page
+   * @throws IOException on any error.
+   */
+  public void singleTaskCounter() throws IOException{
+    requireTask();
+    set(COUNTER_GROUP, URLDecoder.decode($(COUNTER_GROUP), "UTF-8"));
+    set(COUNTER_NAME, URLDecoder.decode($(COUNTER_NAME), "UTF-8"));
+    if (app.getTask() != null) {
+      setTitle(StringHelper.join($(COUNTER_GROUP)," ",$(COUNTER_NAME),
+          " for ", $(TASK_ID)));
+    }
+    render(singleCounterPage());
   }
 
   /**

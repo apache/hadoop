@@ -36,7 +36,6 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
@@ -87,6 +86,7 @@ public class TestAMWebApp {
       return jobs; // OK
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public EventHandler getEventHandler() {
       return null;
@@ -163,6 +163,23 @@ public class TestAMWebApp {
                          new TestAppContext());
   }
 
+  @Test public void testCountersView() {
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = getJobParams(appContext);
+    WebAppTests.testPage(CountersPage.class, AppContext.class,
+                         appContext, params);
+  }
+  
+  @Test public void testSingleCounterView() {
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = getJobParams(appContext);
+    params.put(AMParams.COUNTER_GROUP, 
+        "org.apache.hadoop.mapreduce.FileSystemCounter");
+    params.put(AMParams.COUNTER_NAME, "HDFS_WRITE_OPS");
+    WebAppTests.testPage(SingleCounterPage.class, AppContext.class,
+                         appContext, params);
+  }
+  
   public static void main(String[] args) {
     WebApps.$for("yarn", AppContext.class, new TestAppContext(0, 8, 88, 4)).
         at(58888).inDevMode().start(new AMWebApp()).joinThread();

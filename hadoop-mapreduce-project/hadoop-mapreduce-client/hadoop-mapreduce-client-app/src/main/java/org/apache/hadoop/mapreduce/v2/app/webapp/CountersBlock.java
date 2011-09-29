@@ -61,6 +61,29 @@ public class CountersBlock extends HtmlBlock {
         p()._("Sorry, no counters for nonexistent", $(TASK_ID, "task"))._();
       return;
     }
+    
+    if(total == null || total.getAllCounterGroups() == null || 
+        total.getAllCounterGroups().size() <= 0) {
+      String type = $(TASK_ID);
+      if(type == null || type.isEmpty()) {
+        type = $(JOB_ID, "the job");
+      }
+      html.
+        p()._("Sorry it looks like ",type," has no counters.")._();
+      return;
+    }
+    
+    String urlBase;
+    String urlId;
+    if(task != null) {
+      urlBase = "singletaskcounter";
+      urlId = MRApps.toString(task.getID());
+    } else {
+      urlBase = "singlejobcounter";
+      urlId = MRApps.toString(job.getID());
+    }
+    
+    
     int numGroups = 0;
     TBODY<TABLE<DIV<Hamlet>>> tbody = html.
       div(_INFO_WRAP).
@@ -79,12 +102,13 @@ public class CountersBlock extends HtmlBlock {
       // serves as an indicator of where we're in the tag hierarchy.
       TR<THEAD<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupHeadRow = tbody.
         tr().
-          th().$title(g.getName()).
+          th().$title(g.getName()).$class("ui-state-default").
             _(fixGroupDisplayName(g.getDisplayName()))._().
           td().$class(C_TABLE).
             table(".dt-counters").
               thead().
                 tr().th(".name", "Name");
+
       if (map != null) {
         groupHeadRow.th("Map").th("Reduce");
       }
@@ -97,7 +121,9 @@ public class CountersBlock extends HtmlBlock {
         TR<TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupRow = group.
           tr().
             td().$title(counter.getName()).
-              _(counter.getDisplayName())._();
+              a(url(urlBase,urlId,g.getName(), 
+                  counter.getName()), counter.getDisplayName()).
+            _();
         if (map != null) {
           Counter mc = mg == null ? null : mg.getCounter(counter.getName());
           Counter rc = rg == null ? null : rg.getCounter(counter.getName());
@@ -121,7 +147,7 @@ public class CountersBlock extends HtmlBlock {
       jobID = taskID.getJobId();
     } else {
       String jid = $(JOB_ID);
-      if (!jid.isEmpty()) {
+      if (jid != null && !jid.isEmpty()) {
         jobID = MRApps.toJobID(jid);
       }
     }

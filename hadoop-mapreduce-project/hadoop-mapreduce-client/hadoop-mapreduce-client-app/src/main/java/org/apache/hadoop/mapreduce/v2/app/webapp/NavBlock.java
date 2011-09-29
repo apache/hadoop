@@ -55,6 +55,14 @@ public class NavBlock extends HtmlBlock {
           li().a(url("conf", jobid), "Configuration")._().
           li().a(url("tasks", jobid, "m"), "Map tasks")._().
           li().a(url("tasks", jobid, "r"), "Reduce tasks")._()._();
+      if (app.getTask() != null) {
+        String taskid = MRApps.toString(app.getTask().getID());
+        nav.
+          h3("Task").
+          ul().
+            li().a(url("task", taskid), "Task Overview")._().
+            li().a(url("taskcounters", taskid), "Counters")._()._();
+      }
     }
     nav.
       h3("Tools").
