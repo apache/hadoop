@@ -17,6 +17,7 @@
 <h2>Changes since Hadoop 0.20.204.0</h2>
 
 <ul>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-6722">HADOOP-6722</a>.
      Major bug reported by tlipcon and fixed by tlipcon (util)<br>
      <b>NetUtils.connect should check that it hasn&apos;t connected a socket to itself</b><br>
@@ -66,6 +67,11 @@
      Minor improvement reported by kihwal and fixed by kihwal (ipc)<br>
      <b>RPC client should deal with the IP address changes</b><br>
      <blockquote>The current RPC client implementation and the client-side callers assume that the hostname-address mappings of servers never change. The resolved address is stored in an immutable InetSocketAddress object above/outside RPC, and the reconnect logic in the RPC Connection implementation also trusts the resolved address that was passed down.<br><br>If the NN suffers a failure that requires migration, it may be started on a different node with a different IP address. In this case, even if the name-addre...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7510">HADOOP-7510</a>.
+     Major improvement reported by daryn and fixed by daryn (security)<br>
+     <b>Tokens should use original hostname provided instead of ip</b><br>
+     <blockquote>Tokens currently store the ip:port of the remote server.  This precludes tokens from being used after a host&apos;s ip is changed.  Tokens should store the hostname used to make the RPC connection.  This will enable new processes to use their existing tokens.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7539">HADOOP-7539</a>.
      Major bug reported by johnvijoe and fixed by johnvijoe <br>
@@ -186,6 +192,26 @@
      Minor bug reported by arpitgupta and fixed by arpitgupta (conf)<br>
      <b>log4j.properties is missing properties for security audit and hdfs audit should be changed to info</b><br>
      <blockquote>log4j.properties defines the security audit and hdfs audit files but is missing properties for security audit which causes security audit logs to not be present and also updates the hdfs audit to log at a WARN level. hdfs-audit logs should be at the INFO level so admin&apos;s/users can track when the namespace got the appropriate change.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7683">HADOOP-7683</a>.
+     Minor bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>hdfs-site.xml template has properties that are not used in 20</b><br>
+     <blockquote>properties dfs.namenode.http-address and dfs.namenode.https-address should be removed</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7684">HADOOP-7684</a>.
+     Major bug reported by eyang and fixed by eyang (scripts)<br>
+     <b>jobhistory server and secondarynamenode should have init.d script</b><br>
+     <blockquote>The current set of init.d scripts can start/stop process for:<br><br>namenode<br>datanode<br>jobtracker<br>tasktracker<br><br>It is missing init.d scripts for:<br><br>secondarynamenode<br>jobhistory</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7685">HADOOP-7685</a>.
+     Major bug reported by devaraj.k and fixed by devaraj.k (scripts)<br>
+     <b>Issues with hadoop-common-project\hadoop-common\src\main\packages\hadoop-setup-conf.sh file </b><br>
+     <blockquote>hadoop-common-project\hadoop-common\src\main\packages\hadoop-setup-conf.sh has following issues<br>1. check_permission does not work as expected if there are two folders with $NAME as part of their name inside $PARENT<br>e.g. /home/hadoop/conf, /home/hadoop/someconf, <br>The result of `ls -ln $PARENT | grep -w $NAME| awk &apos;{print $3}&apos;` is non zero..it is 0 0 and hence the following if check becomes true.<br>{code:xml}<br>if [ &quot;$OWNER&quot; != &quot;0&quot; ]; then<br>RESULT=1<br>break<br>fi <br>{code}<br><br>2. Spelling mistake<br>{code:xml}<br>H...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7691">HADOOP-7691</a>.
+     Major bug reported by gkesavan and fixed by eyang <br>
+     <b>hadoop deb pkg should take a diff group id</b><br>
+     <blockquote>ubuntu - 11.04 is using group id 114 for gdm.<br>hadoop deb pkg should pickup a different groupid.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-142">HDFS-142</a>.
      Blocker bug reported by rangadi and fixed by dhruba <br>
@@ -395,7 +421,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2318">HDFS-2318</a>.
      Major sub-task reported by szetszwo and fixed by szetszwo <br>
      <b>Provide authentication to webhdfs using SPNEGO</b><br>
-     <blockquote></blockquote></li>
+     <blockquote>                                              Added two new conf properties dfs.web.authentication.kerberos.principal and dfs.web.authentication.kerberos.keytab for the SPNEGO servlet filter.<br><br>      <br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2320">HDFS-2320</a>.
      Major bug reported by sureshms and fixed by sureshms (data-node, hdfs client, name-node)<br>
@@ -425,7 +451,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2338">HDFS-2338</a>.
      Major sub-task reported by jnp and fixed by jnp <br>
      <b>Configuration option to enable/disable webhdfs.</b><br>
-     <blockquote>We should add a configuration option to enable/disable webhdfs.</blockquote></li>
+     <blockquote>                                              Added a conf property dfs.webhdfs.enabled for enabling/disabling webhdfs.<br><br>      <br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2340">HDFS-2340</a>.
      Major sub-task reported by szetszwo and fixed by szetszwo <br>
@@ -450,12 +476,22 @@
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2361">HDFS-2361</a>.
      Critical bug reported by rajsaha and fixed by jnp (name-node)<br>
      <b>hftp is broken</b><br>
-     <blockquote>Distcp with hftp is failing.<br><br><br>$hadoop   distcp hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp 1316814737/as<br>11/09/23 21:52:33 INFO tools.DistCp: srcPaths=[hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp]<br>11/09/23 21:52:33 INFO tools.DistCp: destPath=1316814737/as<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken?renewer=mapred<br>11/09/23 21:52:34 INFO security.TokenCache: Got dt for hftp://&lt;NNh...</blockquote></li>
+     <blockquote>Distcp with hftp is failing.<br><br>{noformat}<br>$hadoop   distcp hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp 1316814737/as<br>11/09/23 21:52:33 INFO tools.DistCp: srcPaths=[hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp]<br>11/09/23 21:52:33 INFO tools.DistCp: destPath=1316814737/as<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken?renewer=mapred<br>11/09/23 21:52:34 INFO security.TokenCache: Got dt for h...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2366">HDFS-2366</a>.
      Major bug reported by arpitgupta and fixed by szetszwo <br>
      <b>webhdfs throws a npe when ugi is null from getDelegationToken</b><br>
      <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2368">HDFS-2368</a>.
+     Major bug reported by arpitgupta and fixed by szetszwo <br>
+     <b>defaults created for web keytab and principal, these properties should not have defaults</b><br>
+     <blockquote>the following defaults are set in hdfs-defaults.xml<br><br>&lt;property&gt;<br>  &lt;name&gt;dfs.web.authentication.kerberos.principal&lt;/name&gt;<br>  &lt;value&gt;HTTP/${dfs.web.hostname}@${kerberos.realm}&lt;/value&gt;<br>  &lt;description&gt;<br>    The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint.<br><br>    The HTTP Kerberos principal MUST start with &apos;HTTP/&apos; per Kerberos<br>    HTTP SPENGO specification.<br>  &lt;/description&gt;<br>&lt;/property&gt;<br><br>&lt;property&gt;<br>  &lt;name&gt;dfs.web.authentication.kerberos.keytab&lt;/name&gt;<br>  &lt;value&gt;${user.home}/dfs.web....</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2373">HDFS-2373</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>Commands using webhdfs and hftp print unnecessary debug information on the console with security enabled</b><br>
+     <blockquote>run an hdfs command using either hftp or webhdfs and it prints the following line to the console (system out)<br><br>Retrieving token from: https://NN_HOST:50470/getDelegationToken<br><br><br>Probably in the code where we get the delegation token. This should be removed as people using the dfs commands to get a handle to the content such as dfs -cat will now get an extra line that is not part of the actual content. This should either be only in the log or not logged at all.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2375">HDFS-2375</a>.
      Blocker bug reported by sureshms and fixed by sureshms (hdfs client)<br>
@@ -556,6 +592,16 @@
      Blocker bug reported by acmurthy and fixed by acmurthy (test)<br>
      <b>TestSleepJob fails </b><br>
      <blockquote>TestSleepJob fails, it was intended to be used in other tests for MAPREDUCE-2981.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3081">MAPREDUCE-3081</a>.
+     Major bug reported by vitthal_gogate and fixed by  (contrib/vaidya)<br>
+     <b>Change the name format for hadoop core and vaidya jar to be hadoop-{core/vaidya}-{version}.jar in vaidya.sh</b><br>
+     <blockquote>                                              contrib/vaidya/bin/vaidya.sh script fixed to use appropriate jars and classpath <br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3112">MAPREDUCE-3112</a>.
+     Major bug reported by eyang and fixed by eyang (contrib/streaming)<br>
+     <b>Calling hadoop cli inside mapreduce job leads to errors</b><br>
+     <blockquote>                    Removed inheritance of certain server environment variables (HADOOP_OPTS and HADOOP_ROOT_LOGGER) in task attempt process.&lt;br/&gt;<br><br><br></blockquote></li>
 
 </ul>
 
