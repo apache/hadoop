@@ -158,10 +158,12 @@ public class ContainerImpl implements Container {
         ContainerEventType.CONTAINER_LAUNCHED, new LaunchTransition())
     .addTransition(ContainerState.LOCALIZED, ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
-        new ExitedWithFailureTransition())
+        new ExitedWithFailureTransition(true))
     .addTransition(ContainerState.LOCALIZED, ContainerState.LOCALIZED,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
+       // TODO race: Can lead to a CONTAINER_LAUNCHED event at state KILLING, 
+       // and a container which will never be killed by the NM.
     .addTransition(ContainerState.LOCALIZED, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
 
@@ -169,16 +171,19 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.RUNNING,
         ContainerState.EXITED_WITH_SUCCESS,
         ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
-        new ExitedWithSuccessTransition())
+        new ExitedWithSuccessTransition(true))
     .addTransition(ContainerState.RUNNING,
         ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
-        new ExitedWithFailureTransition())
+        new ExitedWithFailureTransition(true))
     .addTransition(ContainerState.RUNNING, ContainerState.RUNNING,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.RUNNING, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
+    .addTransition(ContainerState.RUNNING, ContainerState.EXITED_WITH_FAILURE,
+        ContainerEventType.CONTAINER_KILLED_ON_REQUEST,
+        new KilledExternallyTransition()) 
 
     // From CONTAINER_EXITED_WITH_SUCCESS State
     .addTransition(ContainerState.EXITED_WITH_SUCCESS, ContainerState.DONE,
@@ -220,10 +225,10 @@ public class ContainerImpl implements Container {
         ContainerEventType.KILL_CONTAINER)
     .addTransition(ContainerState.KILLING, ContainerState.EXITED_WITH_SUCCESS,
         ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS,
-        new ExitedWithSuccessTransition())
+        new ExitedWithSuccessTransition(false))
     .addTransition(ContainerState.KILLING, ContainerState.EXITED_WITH_FAILURE,
         ContainerEventType.CONTAINER_EXITED_WITH_FAILURE,
-        new ExitedWithFailureTransition())
+        new ExitedWithFailureTransition(false))
     .addTransition(ContainerState.KILLING,
             ContainerState.DONE,
             ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP,
@@ -551,18 +556,41 @@ public class ContainerImpl implements Container {
     }
   }
 
+  @SuppressWarnings("unchecked")  // dispatcher not typed
   static class ExitedWithSuccessTransition extends ContainerTransition {
+
+    boolean clCleanupRequired;
+
+    public ExitedWithSuccessTransition(boolean clCleanupRequired) {
+      this.clCleanupRequired = clCleanupRequired;
+    }
+
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
+      // Set exit code to 0 on success    	
+      container.exitCode = 0;
+    	
       // TODO: Add containerWorkDir to the deletion service.
 
-      // Inform the localizer to decrement reference counts and cleanup
-      // resources.
+      if (clCleanupRequired) {
+        container.dispatcher.getEventHandler().handle(
+            new ContainersLauncherEvent(container,
+                ContainersLauncherEventType.CLEANUP_CONTAINER));
+      }
+
       container.cleanup();
     }
   }
 
+  @SuppressWarnings("unchecked")  // dispatcher not typed
   static class ExitedWithFailureTransition extends ContainerTransition {
+
+    boolean clCleanupRequired;
+
+    public ExitedWithFailureTransition(boolean clCleanupRequired) {
+      this.clCleanupRequired = clCleanupRequired;
+    }
+
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
@@ -571,9 +599,25 @@ public class ContainerImpl implements Container {
       // TODO: Add containerWorkDir to the deletion service.
       // TODO: Add containerOuputDir to the deletion service.
 
-      // Inform the localizer to decrement reference counts and cleanup
-      // resources.
+      if (clCleanupRequired) {
+        container.dispatcher.getEventHandler().handle(
+            new ContainersLauncherEvent(container,
+                ContainersLauncherEventType.CLEANUP_CONTAINER));
+      }
+
       container.cleanup();
+    }
+  }
+
+  static class KilledExternallyTransition extends ExitedWithFailureTransition {
+    KilledExternallyTransition() {
+      super(true);
+    }
+
+    @Override
+    public void transition(ContainerImpl container, ContainerEvent event) {
+      super.transition(container, event);
+      container.diagnostics.append("Killed by external signal\n");
     }
   }
 

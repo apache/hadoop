@@ -25,6 +25,7 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -40,6 +41,20 @@ public class TestRM {
 
   private static final Log LOG = LogFactory.getLog(TestRM.class);
 
+  @Test
+  public void testGetNewAppId() throws Exception {
+    Logger rootLogger = LogManager.getRootLogger();
+    rootLogger.setLevel(Level.DEBUG);
+    MockRM rm = new MockRM();
+    rm.start();
+    
+    GetNewApplicationResponse resp = rm.getNewAppId();
+    assert (resp.getApplicationId().getId() != 0);    
+    assert (resp.getMinimumResourceCapability().getMemory() > 0);
+    assert (resp.getMaximumResourceCapability().getMemory() > 0);    
+    rm.stop();
+  }
+  
   @Test
   public void testAppWithNoContainers() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
@@ -119,6 +134,7 @@ public class TestRM {
 
   public static void main(String[] args) throws Exception {
     TestRM t = new TestRM();
+    t.testGetNewAppId();
     t.testAppWithNoContainers();
     t.testAppOnMultiNode();
   }

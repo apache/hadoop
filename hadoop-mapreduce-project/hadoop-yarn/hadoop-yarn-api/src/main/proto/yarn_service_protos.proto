@@ -66,11 +66,13 @@ message AllocateResponseProto {
 /////// client_RM_Protocol ///////////////////////////
 //////////////////////////////////////////////////////
 
-message GetNewApplicationIdRequestProto {
+message GetNewApplicationRequestProto {
 }
 
-message GetNewApplicationIdResponseProto {
+message GetNewApplicationResponseProto {
   optional ApplicationIdProto application_id = 1;
+  optional ResourceProto minimumCapability = 2;
+  optional ResourceProto maximumCapability = 3;
 }
 
 message GetApplicationReportRequestProto {
@@ -88,11 +90,11 @@ message SubmitApplicationRequestProto {
 message SubmitApplicationResponseProto {
 }
 
-message FinishApplicationRequestProto {
+message KillApplicationRequestProto {
   optional ApplicationIdProto application_id = 1;
 }
 
-message FinishApplicationResponseProto {
+message KillApplicationResponseProto {
 }
 
 message GetClusterMetricsRequestProto {

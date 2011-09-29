@@ -21,7 +21,6 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -62,7 +61,6 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
@@ -103,6 +101,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
@@ -117,7 +116,6 @@ import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 
@@ -153,7 +151,7 @@ public abstract class TaskAttemptImpl implements
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
   private static String initialClasspath = null;
-  private final Object classpathLock = new Object();
+  private static final Object classpathLock = new Object();
   private long launchTime;
   private long finishTime;
   private WrappedProgressSplitsBlock progressSplitBlock;
@@ -518,8 +516,8 @@ public abstract class TaskAttemptImpl implements
         return initialClasspath;
       }
       Map<String, String> env = new HashMap<String, String>();
-      MRApps.setInitialClasspath(env);
-      initialClasspath = env.get(MRApps.CLASSPATH);
+      MRApps.setClasspath(env);
+      initialClasspath = env.get(Environment.CLASSPATH.name());
       initialClasspathFlag.set(true);
       return initialClasspath;
     }
@@ -531,16 +529,18 @@ public abstract class TaskAttemptImpl implements
    */
   private ContainerLaunchContext createContainerLaunchContext() {
 
-    ContainerLaunchContext container =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-
     // Application resources
     Map<String, LocalResource> localResources = 
         new HashMap<String, LocalResource>();
     
     // Application environment
     Map<String, String> environment = new HashMap<String, String>();
-    
+
+    // Service data
+    Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
+
+    // Tokens
+    ByteBuffer tokens = ByteBuffer.wrap(new byte[]{});
     try {
       FileSystem remoteFS = FileSystem.get(conf);
 
@@ -550,7 +550,7 @@ public abstract class TaskAttemptImpl implements
               MRJobConfig.JAR))).makeQualified(remoteFS.getUri(), 
                                                remoteFS.getWorkingDirectory());
         localResources.put(
-            MRConstants.JOB_JAR,
+            MRJobConfig.JOB_JAR,
             createLocalResource(remoteFS, recordFactory, remoteJobJar,
                 LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
         LOG.info("The job-jar file on the remote FS is "
@@ -570,9 +570,9 @@ public abstract class TaskAttemptImpl implements
       Path remoteJobSubmitDir =
           new Path(path, oldJobId.toString());
       Path remoteJobConfPath = 
-          new Path(remoteJobSubmitDir, MRConstants.JOB_CONF_FILE);
+          new Path(remoteJobSubmitDir, MRJobConfig.JOB_CONF_FILE);
       localResources.put(
-          MRConstants.JOB_CONF_FILE,
+          MRJobConfig.JOB_CONF_FILE,
           createLocalResource(remoteFS, recordFactory, remoteJobConfPath,
               LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
       LOG.info("The job-conf file on the remote FS is "
@@ -580,12 +580,8 @@ public abstract class TaskAttemptImpl implements
       // //////////// End of JobConf setup
 
       // Setup DistributedCache
-      MRApps.setupDistributedCache(conf, localResources, environment);
+      MRApps.setupDistributedCache(conf, localResources);
 
-      // Set local-resources and environment
-      container.setLocalResources(localResources);
-      container.setEnvironment(environment);
-      
       // Setup up tokens
       Credentials taskCredentials = new Credentials();
 
@@ -606,52 +602,43 @@ public abstract class TaskAttemptImpl implements
       LOG.info("Size of containertokens_dob is "
           + taskCredentials.numberOfTokens());
       taskCredentials.writeTokenStorageToStream(containerTokens_dob);
-      container.setContainerTokens(
+      tokens = 
           ByteBuffer.wrap(containerTokens_dob.getData(), 0,
-              containerTokens_dob.getLength()));
+              containerTokens_dob.getLength());
 
       // Add shuffle token
       LOG.info("Putting shuffle token in serviceData");
-      Map<String, ByteBuffer> serviceData = new HashMap<String, ByteBuffer>();
       serviceData.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
           ShuffleHandler.serializeServiceData(jobToken));
-      container.setServiceData(serviceData);
 
-      MRApps.addToClassPath(container.getEnvironment(), getInitialClasspath());
+      MRApps.addToEnvironment(
+          environment,  
+          Environment.CLASSPATH.name(), 
+          getInitialClasspath());
     } catch (IOException e) {
       throw new YarnException(e);
     }
+
+    // Setup environment
+    MapReduceChildJVM.setVMEnv(environment, remoteTask);
+
+    // Set up the launch command
+    List<String> commands = MapReduceChildJVM.getVMCommand(
+        taskAttemptListener.getAddress(), remoteTask,
+        jvmID);
     
-    container.setContainerId(containerID);
-    container.setUser(conf.get(MRJobConfig.USER_NAME)); // TODO: Fix
-
-    File workDir = new File("$PWD"); // Will be expanded by the shell.
-    String containerLogDir =
-        new File(ApplicationConstants.LOG_DIR_EXPANSION_VAR).toString();
-    String childTmpDir = new File(workDir, "tmp").toString();
-    String javaHome = "${JAVA_HOME}"; // Will be expanded by the shell.
-    String nmLdLibraryPath = "{LD_LIBRARY_PATH}"; // Expanded by the shell?
-    List<String> classPaths = new ArrayList<String>();
-
-    String localizedApplicationTokensFile =
-        new File(workDir, MRConstants.APPLICATION_TOKENS_FILE).toString();
-    classPaths.add(MRConstants.JOB_JAR);
-    classPaths.add(MRConstants.YARN_MAPREDUCE_APP_JAR_PATH);
-    classPaths.add(workDir.toString()); // TODO
-
     // Construct the actual Container
-    container.setCommands(MapReduceChildJVM.getVMCommand(
-        taskAttemptListener.getAddress(), remoteTask, javaHome,
-        workDir.toString(), containerLogDir, childTmpDir, jvmID));
-
-    MapReduceChildJVM.setVMEnv(container.getEnvironment(), classPaths,
-        workDir.toString(), containerLogDir, nmLdLibraryPath, remoteTask,
-        localizedApplicationTokensFile);
-
-    // Construct the actual Container
+    ContainerLaunchContext container =
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
     container.setContainerId(containerID);
     container.setUser(conf.get(MRJobConfig.USER_NAME));
     container.setResource(assignedCapability);
+    container.setLocalResources(localResources);
+    container.setEnvironment(environment);
+    container.setCommands(commands);
+    container.setServiceData(serviceData);
+    container.setContainerTokens(tokens);
+    
     return container;
   }
 

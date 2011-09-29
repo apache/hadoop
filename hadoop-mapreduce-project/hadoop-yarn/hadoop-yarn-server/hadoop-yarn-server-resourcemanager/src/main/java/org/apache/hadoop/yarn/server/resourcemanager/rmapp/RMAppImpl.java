@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
@@ -86,7 +87,8 @@ public class RMAppImpl implements RMApp {
   private long startTime;
   private long finishTime;
   private RMAppAttempt currentAttempt;
-
+  @SuppressWarnings("rawtypes")
+  private EventHandler handler;
   private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
 
   private static final StateMachineFactory<RMAppImpl,
@@ -98,9 +100,6 @@ public class RMAppImpl implements RMApp {
                                            RMAppEventType,
                                            RMAppEvent>(RMAppState.NEW)
 
-
-     // TODO - ATTEMPT_KILLED not sent right now but should handle if 
-     // attempt starts sending
 
      // Transitions from NEW state
     .addTransition(RMAppState.NEW, RMAppState.SUBMITTED,
@@ -116,7 +115,7 @@ public class RMAppImpl implements RMApp {
     .addTransition(RMAppState.SUBMITTED, RMAppState.ACCEPTED,
         RMAppEventType.APP_ACCEPTED)
     .addTransition(RMAppState.SUBMITTED, RMAppState.KILLED,
-        RMAppEventType.KILL, new AppKilledTransition())
+        RMAppEventType.KILL, new KillAppAndAttemptTransition())
 
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
@@ -126,7 +125,7 @@ public class RMAppImpl implements RMApp {
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.SUBMITTED))
     .addTransition(RMAppState.ACCEPTED, RMAppState.KILLED,
-        RMAppEventType.KILL, new AppKilledTransition())
+        RMAppEventType.KILL, new KillAppAndAttemptTransition())
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
@@ -136,7 +135,7 @@ public class RMAppImpl implements RMApp {
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.SUBMITTED))
     .addTransition(RMAppState.RUNNING, RMAppState.KILLED,
-        RMAppEventType.KILL, new AppKilledTransition())
+        RMAppEventType.KILL, new KillAppAndAttemptTransition())
 
      // Transitions from FINISHED state
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
@@ -168,6 +167,7 @@ public class RMAppImpl implements RMApp {
     this.name = name;
     this.rmContext = rmContext;
     this.dispatcher = rmContext.getDispatcher();
+    this.handler = dispatcher.getEventHandler();
     this.conf = config;
     this.user = user;
     this.queue = queue;
@@ -310,7 +310,8 @@ public class RMAppImpl implements RMApp {
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
-          this.diagnostics.toString(), trackingUrl, this.startTime);
+          this.diagnostics.toString(), trackingUrl, 
+          this.startTime, this.finishTime);
     } finally {
       this.readLock.unlock();
     }
@@ -402,7 +403,7 @@ public class RMAppImpl implements RMApp {
         submissionContext);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
-    dispatcher.getEventHandler().handle(
+    handler.handle(
         new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
   }
 
@@ -419,13 +420,23 @@ public class RMAppImpl implements RMApp {
     };
   }
 
-  private static final class AppKilledTransition extends FinalTransition {
+  private static class AppKilledTransition extends FinalTransition {
+    @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.diagnostics.append("Application killed by user.");
       super.transition(app, event);
     };
   }
 
+  private static class KillAppAndAttemptTransition extends AppKilledTransition {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      app.handler.handle(new RMAppAttemptEvent(app.currentAttempt.getAppAttemptId(), 
+          RMAppAttemptEventType.KILL));
+      super.transition(app, event);
+    }
+  }
   private static final class AppRejectedTransition extends
       FinalTransition{
     public void transition(RMAppImpl app, RMAppEvent event) {
@@ -449,11 +460,11 @@ public class RMAppImpl implements RMApp {
     public void transition(RMAppImpl app, RMAppEvent event) {
       Set<NodeId> nodes = getNodesOnWhichAttemptRan(app);
       for (NodeId nodeId : nodes) {
-        app.dispatcher.getEventHandler().handle(
+        app.handler.handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
       app.finishTime = System.currentTimeMillis();
-      app.dispatcher.getEventHandler().handle(
+      app.handler.handle(
           new RMAppManagerEvent(app.applicationId, 
           RMAppManagerEventType.APP_COMPLETED));
     };
@@ -470,11 +481,13 @@ public class RMAppImpl implements RMApp {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
-
+      
+      RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent)event);
       if (app.attempts.size() == app.maxRetries) {
         String msg = "Application " + app.getApplicationId()
         + " failed " + app.maxRetries
-        + " times. Failing the application.";
+        + " times due to " + failedEvent.getDiagnostics()
+        + ". Failing the application.";
         LOG.info(msg);
         app.diagnostics.append(msg);
         // Inform the node for app-finish

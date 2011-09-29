@@ -81,6 +81,7 @@ public class JobStatus implements Writable, Cloneable {
   private String queue;
   private JobPriority priority;
   private String schedulingInfo="NA";
+  private String failureInfo = "NA";
 
   private Map<JobACL, AccessControlList> jobACLs =
       new HashMap<JobACL, AccessControlList>();
@@ -279,6 +280,14 @@ public class JobStatus implements Writable, Cloneable {
   }
 
   /**
+   * Set diagnostic information.
+   * @param failureInfo diagnostic information
+   */
+  protected synchronized void setFailureInfo(String failureInfo) {
+    this.failureInfo = failureInfo;
+  }
+  
+  /**
    * Get queue name
    * @return queue name
    */
@@ -359,6 +368,15 @@ public class JobStatus implements Writable, Cloneable {
    */
    public synchronized JobPriority getPriority() { return priority; }
   
+   /**
+    * Gets any available info on the reason of failure of the job.
+    * @return diagnostic information on why a job might have failed.
+    */
+   public synchronized String getFailureInfo() {
+     return this.failureInfo;
+   }
+
+
   /**
    * Returns true if the status is for a completed job.
    */

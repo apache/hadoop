@@ -16,6 +16,9 @@ Trunk (unreleased changes)
     HDFS-2318. Provide authentication to webhdfs using SPNEGO and delegation
     tokens.  (szetszwo)
 
+    HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
@@ -34,6 +37,18 @@ Trunk (unreleased changes)
     HDFS-362.  FSEditLog should not writes long and short as UTF8, and should
     not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
     via szetszwo)
+
+    HDFS-2351 Change Namenode and Datanode to register each of their protocols
+    seperately. (Sanjay Radia)
+
+    HDFS-2356.  Support case insensitive query parameter names in webhdfs.
+    (szetszwo)
+
+    HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
+    hdfs-site.xml.  (szetszwo)
+
+    HDFS-2355. Federation: enable using the same configuration file across 
+    all the nodes in the cluster. (suresh)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
@@ -56,6 +71,17 @@ Trunk (unreleased changes)
     HDFS-2330. In NNStorage and FSImagePreTransactionalStorageInspector,
     IOExceptions of stream closures can mask root exceptions.  (Uma Maheswara
     Rao G via szetszwo)
+
+    HDFS-46.   Change default namespace quota of root directory from
+    Integer.MAX_VALUE to Long.MAX_VALUE.  (Uma Maheswara Rao G via szetszwo)
+
+    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
+    (szetszwo)
+
+    HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
+    info on the console with security enabled. (Arpit Gupta via suresh)
+
+    HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
 
 Release 0.23.0 - Unreleased
 
@@ -738,6 +764,12 @@ Release 0.23.0 - Unreleased
 
     HDFS-1217.  Change some NameNode methods from public to package private.
     (Laxman via szetszwo)
+
+    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
+    object as an RPC parameter fails). (todd)
+
+    HDFS-2363. Move datanodes size printing from FSNamesystem.metasave(..)
+    to BlockManager.  (Uma Maheswara Rao G via szetszwo)
 
   OPTIMIZATIONS
 
@@ -1607,7 +1639,11 @@ Release 0.22.0 - Unreleased
     HDFS-2232. Generalize regular expressions in TestHDFSCLI.
     (Plamen Jeliazkov via shv)
 
+    HDFS-2290. Block with corrupt replica is not getting replicated.
+    (Benoy Antony via shv)
+
 Release 0.21.1 - Unreleased
+
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
     HDFS-874. TestHDFSFileContextMainOperations fails on weirdly 

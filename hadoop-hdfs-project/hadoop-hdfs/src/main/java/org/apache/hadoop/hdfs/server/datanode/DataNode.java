@@ -425,7 +425,7 @@ public class DataNode extends Configured
   private List<ServicePlugin> plugins;
   
   // For InterDataNodeProtocol
-  public Server ipcServer;
+  public RPC.Server ipcServer;
 
   private SecureResources secureResources = null;
   private AbstractList<File> dataDirs;
@@ -575,11 +575,15 @@ public class DataNode extends Configured
   private void initIpcServer(Configuration conf) throws IOException {
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
         conf.get("dfs.datanode.ipc.address"));
-    ipcServer = RPC.getServer(DataNode.class, this, ipcAddr.getHostName(),
+    
+    // Add all the RPC protocols that the Datanode implements
+    ipcServer = RPC.getServer(ClientDatanodeProtocol.class, this, ipcAddr.getHostName(),
                               ipcAddr.getPort(), 
                               conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
                                           DFS_DATANODE_HANDLER_COUNT_DEFAULT), 
                               false, conf, blockPoolTokenSecretManager);
+    ipcServer.addProtocol(InterDatanodeProtocol.class, this);
+    
     // set service-level authorization security policy
     if (conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {

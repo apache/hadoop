@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
@@ -34,6 +35,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerTokenProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -48,6 +50,7 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
   private ContainerId containerId = null;
   private NodeId nodeId = null;
   private Resource resource = null;
+  private Priority priority = null;
   private ContainerToken containerToken = null;
   private ContainerStatus containerStatus = null;
   
@@ -83,6 +86,11 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
         && !((ResourcePBImpl) this.resource).getProto().equals(
             builder.getResource())) {
       builder.setResource(convertToProtoFormat(this.resource));
+    }
+    if (this.priority != null && 
+        !((PriorityPBImpl) this.priority).getProto().equals(
+            builder.getPriority())) {
+      builder.setPriority(convertToProtoFormat(this.priority));
     }
     if (this.containerToken != null
         && !((ContainerTokenPBImpl) this.containerToken).getProto().equals(
@@ -211,6 +219,29 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
       builder.clearResource();
     this.resource = resource;
   }
+  
+  @Override
+  public Priority getPriority() {
+    ContainerProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.priority != null) {
+      return this.priority;
+    }
+    if (!p.hasPriority()) {
+      return null;
+    }
+    this.priority = convertFromProtoFormat(p.getPriority());
+    return this.priority;
+  }
+
+  @Override
+  public void setPriority(Priority priority) {
+    maybeInitBuilder();
+    if (priority == null) {
+      builder.clearPriority();
+    }
+    this.priority = priority;
+  }
+
   @Override
   public ContainerToken getContainerToken() {
     ContainerProtoOrBuilder p = viaProto ? proto : builder;
@@ -285,6 +316,14 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
     return ((ResourcePBImpl)t).getProto();
   }
 
+  private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
+    return new PriorityPBImpl(p);
+  }
+
+  private PriorityProto convertToProtoFormat(Priority p) {
+    return ((PriorityPBImpl)p).getProto();
+  }
+  
   private ContainerTokenPBImpl convertFromProtoFormat(ContainerTokenProto p) {
     return new ContainerTokenPBImpl(p);
   }

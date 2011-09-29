@@ -58,7 +58,7 @@ import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -92,10 +92,9 @@ public class RecoveryService extends CompositeService implements Recovery {
 
   private static final Log LOG = LogFactory.getLog(RecoveryService.class);
 
-  private final ApplicationId appID;
+  private final ApplicationAttemptId applicationAttemptId;
   private final Dispatcher dispatcher;
   private final ControlledClock clock;
-  private final int startCount;
 
   private JobInfo jobInfo = null;
   private final Map<TaskId, TaskInfo> completedTasks =
@@ -106,10 +105,10 @@ public class RecoveryService extends CompositeService implements Recovery {
 
   private volatile boolean recoveryMode = false;
 
-  public RecoveryService(ApplicationId appID, Clock clock, int startCount) {
+  public RecoveryService(ApplicationAttemptId applicationAttemptId, 
+      Clock clock) {
     super("RecoveringDispatcher");
-    this.appID = appID;
-    this.startCount = startCount;
+    this.applicationAttemptId = applicationAttemptId;
     this.dispatcher = new RecoveryDispatcher();
     this.clock = new ControlledClock(clock);
       addService((Service) dispatcher);
@@ -152,7 +151,8 @@ public class RecoveryService extends CompositeService implements Recovery {
 
   private void parse() throws IOException {
     // TODO: parse history file based on startCount
-    String jobName = TypeConverter.fromYarn(appID).toString();
+    String jobName = 
+        TypeConverter.fromYarn(applicationAttemptId.getApplicationId()).toString();
     String jobhistoryDir = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(getConfig());
     FSDataInputStream in = null;
     Path historyFile = null;
@@ -160,8 +160,9 @@ public class RecoveryService extends CompositeService implements Recovery {
         new Path(jobhistoryDir));
     FileContext fc = FileContext.getFileContext(histDirPath.toUri(),
         getConfig());
+    //read the previous history file
     historyFile = fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(
-        histDirPath, jobName, startCount - 1));          //read the previous history file
+        histDirPath, jobName, (applicationAttemptId.getAttemptId() - 1)));          
     in = fc.open(historyFile);
     JobHistoryParser parser = new JobHistoryParser(in);
     jobInfo = parser.parse();

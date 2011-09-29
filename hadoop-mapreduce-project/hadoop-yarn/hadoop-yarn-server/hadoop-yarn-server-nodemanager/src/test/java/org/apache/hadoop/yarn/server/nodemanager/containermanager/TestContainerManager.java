@@ -287,7 +287,95 @@ public class TestContainerManager extends BaseContainerManagerTest {
         exec.signalContainer(user,
             pid, Signal.NULL));
   }
+  
+  private void testContainerLaunchAndExit(int exitCode) throws IOException, InterruptedException {
 
+	  File scriptFile = new File(tmpDir, "scriptFile.sh");
+	  PrintWriter fileWriter = new PrintWriter(scriptFile);
+	  File processStartFile =
+			  new File(tmpDir, "start_file.txt").getAbsoluteFile();
+	  fileWriter.write("\numask 0"); // So that start file is readable by the test
+	  fileWriter.write("\necho Hello World! > " + processStartFile);
+	  fileWriter.write("\necho $$ >> " + processStartFile); 
+
+	  // Have script throw an exit code at the end
+	  if (exitCode != 0) {
+		  fileWriter.write("\nexit "+exitCode);
+	  }
+	  
+	  fileWriter.close();
+
+	  ContainerLaunchContext containerLaunchContext = 
+			  recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+	  // ////// Construct the Container-id
+	  ContainerId cId = createContainerId();
+	  containerLaunchContext.setContainerId(cId);
+
+	  containerLaunchContext.setUser(user);
+
+	  URL resource_alpha =
+			  ConverterUtils.getYarnUrlFromPath(localFS
+					  .makeQualified(new Path(scriptFile.getAbsolutePath())));
+	  LocalResource rsrc_alpha =
+			  recordFactory.newRecordInstance(LocalResource.class);
+	  rsrc_alpha.setResource(resource_alpha);
+	  rsrc_alpha.setSize(-1);
+	  rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+	  rsrc_alpha.setType(LocalResourceType.FILE);
+	  rsrc_alpha.setTimestamp(scriptFile.lastModified());
+	  String destinationFile = "dest_file";
+	  Map<String, LocalResource> localResources = 
+			  new HashMap<String, LocalResource>();
+	  localResources.put(destinationFile, rsrc_alpha);
+	  containerLaunchContext.setLocalResources(localResources);
+	  containerLaunchContext.setUser(containerLaunchContext.getUser());
+	  List<String> commands = new ArrayList<String>();
+	  commands.add("/bin/bash");
+	  commands.add(scriptFile.getAbsolutePath());
+	  containerLaunchContext.setCommands(commands);
+	  containerLaunchContext.setResource(recordFactory
+			  .newRecordInstance(Resource.class));
+	  containerLaunchContext.getResource().setMemory(100 * 1024 * 1024);
+
+	  StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
+	  startRequest.setContainerLaunchContext(containerLaunchContext);
+	  containerManager.startContainer(startRequest);
+
+	  BaseContainerManagerTest.waitForContainerState(containerManager, cId,
+			  ContainerState.COMPLETE);
+
+	  GetContainerStatusRequest gcsRequest = 
+			  recordFactory.newRecordInstance(GetContainerStatusRequest.class);
+	  gcsRequest.setContainerId(cId);
+	  ContainerStatus containerStatus = 
+			  containerManager.getContainerStatus(gcsRequest).getStatus();
+
+	  // Verify exit status matches exit state of script
+	  Assert.assertEquals(exitCode,
+			  containerStatus.getExitStatus());	    
+  }
+  
+  @Test
+  public void testContainerLaunchAndExitSuccess() throws IOException, InterruptedException {
+	  containerManager.start();
+	  int exitCode = 0; 
+
+	  // launch context for a command that will return exit code 0 
+	  // and verify exit code returned 
+	  testContainerLaunchAndExit(exitCode);	  
+  }
+
+  @Test
+  public void testContainerLaunchAndExitFailure() throws IOException, InterruptedException {
+	  containerManager.start();
+	  int exitCode = 50; 
+
+	  // launch context for a command that will return exit code 0 
+	  // and verify exit code returned 
+	  testContainerLaunchAndExit(exitCode);	  
+  }
+  
   @Test
   public void testLocalFilesCleanup() throws InterruptedException,
       IOException {

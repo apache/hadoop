@@ -35,7 +35,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -87,7 +86,7 @@ public class DefaultSpeculator extends AbstractService implements
   private final ConcurrentMap<JobId, AtomicInteger> reduceContainerNeeds
       = new ConcurrentHashMap<JobId, AtomicInteger>();
 
-  private final Set<TaskId> mayHaveSpeculated = new HashSet();
+  private final Set<TaskId> mayHaveSpeculated = new HashSet<TaskId>();
 
   private final Configuration conf;
   private AppContext context;

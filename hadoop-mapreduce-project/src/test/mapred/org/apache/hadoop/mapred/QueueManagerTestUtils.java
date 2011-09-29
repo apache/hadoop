@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
@@ -314,6 +315,7 @@ public class QueueManagerTestUtils {
       final long reduceSleepTime, boolean shouldComplete, String userInfo,
       String queueName, Configuration clientConf) throws IOException,
       InterruptedException, ClassNotFoundException {
+    clientConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
     clientConf.set(JTConfig.JT_IPC_ADDRESS, "localhost:"
         + miniMRCluster.getJobTrackerPort());
     UserGroupInformation ugi;

@@ -25,7 +25,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -115,7 +114,8 @@ public class TestMRApps {
   @Test public void testGetJobFileWithUser() {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/my/path/to/staging");
-    String jobFile = MRApps.getJobFile(conf, "dummy-user", new JobID("dummy-job", 12345));
+    String jobFile = MRApps.getJobFile(conf, "dummy-user", 
+        new JobID("dummy-job", 12345));
     assertNotNull("getJobFile results in null.", jobFile);
     assertEquals("jobFile with specified user is not as expected.",
         "/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile);

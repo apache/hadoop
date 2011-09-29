@@ -84,6 +84,15 @@ public class Dispatcher extends HttpServlet {
       prepareToExit();
       return;
     }
+    // if they provide a redirectPath go there instead of going to
+    // "/" so that filters can differentiate the webapps.
+    if (uri.equals("/")) {
+      String redirectPath = webApp.getRedirectPath();
+      if (redirectPath != null && !redirectPath.isEmpty()) {
+        res.sendRedirect(redirectPath);
+        return;
+      }
+    }
     String method = req.getMethod();
     if (method.equals("OPTIONS")) {
       doOptions(req, res);

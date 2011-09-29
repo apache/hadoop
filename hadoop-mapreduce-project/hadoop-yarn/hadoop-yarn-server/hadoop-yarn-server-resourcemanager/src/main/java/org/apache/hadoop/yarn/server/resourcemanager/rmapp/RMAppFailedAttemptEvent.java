@@ -16,21 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.protocolrecords;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-/**
- * <p>The request sent by clients to get a new {@link ApplicationId} for
- * submitting an application.</p>
- * 
- * @see ClientRMProtocol#getNewApplicationId(GetNewApplicationIdRequest)
- */
-@Public
-@Stable
-public interface GetNewApplicationIdRequest {
+public class RMAppFailedAttemptEvent extends RMAppEvent {
 
+  private final String diagnostics;
+
+  public RMAppFailedAttemptEvent(ApplicationId appId, RMAppEventType event, 
+      String diagnostics) {
+    super(appId, event);
+    this.diagnostics = diagnostics;
+  }
+
+  public String getDiagnostics() {
+    return this.diagnostics;
+  }
 }

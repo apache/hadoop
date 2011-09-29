@@ -70,7 +70,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 
-class ClientServiceDelegate {
+public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
 
   // Caches for per-user NotRunningJobs
@@ -87,7 +87,7 @@ class ClientServiceDelegate {
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static String UNKNOWN_USER = "Unknown User";
 
-  ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm, 
+  public ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm, 
       JobID jobId, MRClientProtocol historyServerProxy) {
     this.conf = new Configuration(conf); // Cloning for modifying.
     // For faster redirects from AM to HS.
@@ -101,16 +101,20 @@ class ClientServiceDelegate {
 
   // Get the instance of the NotRunningJob corresponding to the specified
   // user and state
-  private NotRunningJob getNotRunningJob(String user, JobState state) {
+  private NotRunningJob getNotRunningJob(ApplicationReport applicationReport, 
+      JobState state) {
     synchronized (notRunningJobs) {
       HashMap<String, NotRunningJob> map = notRunningJobs.get(state);
       if (map == null) {
         map = new HashMap<String, NotRunningJob>();
         notRunningJobs.put(state, map);
       }
+      String user = 
+          (applicationReport == null) ? 
+              UNKNOWN_USER : applicationReport.getUser();
       NotRunningJob notRunningJob = map.get(user);
       if (notRunningJob == null) {
-        notRunningJob = new NotRunningJob(user, state);
+        notRunningJob = new NotRunningJob(applicationReport, state);
         map.put(user, notRunningJob);
       }
       return notRunningJob;
@@ -130,7 +134,7 @@ class ClientServiceDelegate {
       if (application == null) {
         LOG.info("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
-        return checkAndGetHSProxy(UNKNOWN_USER, JobState.NEW);
+        return checkAndGetHSProxy(null, JobState.NEW);
       }
       try {
         if (application.getHost() == null || "".equals(application.getHost())) {
@@ -171,7 +175,7 @@ class ClientServiceDelegate {
         if (application == null) {
           LOG.info("Could not get Job info from RM for job " + jobId
               + ". Redirecting to job history server.");
-          return checkAndGetHSProxy(UNKNOWN_USER, JobState.RUNNING);
+          return checkAndGetHSProxy(null, JobState.RUNNING);
         }
       } catch (InterruptedException e) {
         LOG.warn("getProxy() call interruped", e);
@@ -191,17 +195,17 @@ class ClientServiceDelegate {
     if (application.getState() == ApplicationState.NEW ||
         application.getState() == ApplicationState.SUBMITTED) {
       realProxy = null;
-      return getNotRunningJob(user, JobState.NEW);
+      return getNotRunningJob(application, JobState.NEW);
     }
     
     if (application.getState() == ApplicationState.FAILED) {
       realProxy = null;
-      return getNotRunningJob(user, JobState.FAILED);
+      return getNotRunningJob(application, JobState.FAILED);
     }
     
     if (application.getState() == ApplicationState.KILLED) {
       realProxy = null;
-      return getNotRunningJob(user, JobState.KILLED);
+      return getNotRunningJob(application, JobState.KILLED);
     }
     
     //History server can serve a job only if application 
@@ -209,15 +213,16 @@ class ClientServiceDelegate {
     if (application.getState() == ApplicationState.SUCCEEDED) {
       LOG.info("Application state is completed. " +
           "Redirecting to job history server");
-      realProxy = checkAndGetHSProxy(user, JobState.SUCCEEDED);
+      realProxy = checkAndGetHSProxy(application, JobState.SUCCEEDED);
     }
     return realProxy;
   }
 
-  private MRClientProtocol checkAndGetHSProxy(String user, JobState state) {
+  private MRClientProtocol checkAndGetHSProxy(
+      ApplicationReport applicationReport, JobState state) {
     if (null == historyServerProxy) {
       LOG.warn("Job History Server is not configured.");
-      return getNotRunningJob(user, state);
+      return getNotRunningJob(applicationReport, state);
     }
     return historyServerProxy;
   }
@@ -274,7 +279,7 @@ class ClientServiceDelegate {
     }
   }
 
-  org.apache.hadoop.mapreduce.Counters getJobCounters(JobID arg0) throws IOException,
+  public org.apache.hadoop.mapreduce.Counters getJobCounters(JobID arg0) throws IOException,
   InterruptedException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobID = TypeConverter.toYarn(arg0);
       GetCountersRequest request = recordFactory.newRecordInstance(GetCountersRequest.class);
@@ -285,7 +290,7 @@ class ClientServiceDelegate {
       
   }
 
-  TaskCompletionEvent[] getTaskCompletionEvents(JobID arg0, int arg1, int arg2)
+  public TaskCompletionEvent[] getTaskCompletionEvents(JobID arg0, int arg1, int arg2)
       throws IOException, InterruptedException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobID = TypeConverter
         .toYarn(arg0);
@@ -303,7 +308,7 @@ class ClientServiceDelegate {
             .toArray(new org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent[0]));
   }
 
-  String[] getTaskDiagnostics(org.apache.hadoop.mapreduce.TaskAttemptID arg0)
+  public String[] getTaskDiagnostics(org.apache.hadoop.mapreduce.TaskAttemptID arg0)
       throws IOException, InterruptedException {
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID = TypeConverter
@@ -321,24 +326,25 @@ class ClientServiceDelegate {
     return result;
   }
   
-  JobStatus getJobStatus(JobID oldJobID) throws YarnRemoteException {
+  public JobStatus getJobStatus(JobID oldJobID) throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId = 
       TypeConverter.toYarn(oldJobID);
-    GetJobReportRequest request = recordFactory.newRecordInstance(GetJobReportRequest.class);
+    GetJobReportRequest request = 
+        recordFactory.newRecordInstance(GetJobReportRequest.class);
     request.setJobId(jobId);
     JobReport report = ((GetJobReportResponse) invoke("getJobReport", 
         GetJobReportRequest.class, request)).getJobReport();
     String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID); 
 
-    //TODO: add tracking url in JobReport
-    return TypeConverter.fromYarn(report, jobFile, "");
+    return TypeConverter.fromYarn(report, jobFile);
   }
 
-  org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
+  public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
        throws YarnRemoteException, YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId = 
       TypeConverter.toYarn(oldJobID);
-    GetTaskReportsRequest request = recordFactory.newRecordInstance(GetTaskReportsRequest.class);
+    GetTaskReportsRequest request = 
+        recordFactory.newRecordInstance(GetTaskReportsRequest.class);
     request.setJobId(jobId);
     request.setTaskType(TypeConverter.toYarn(taskType));
     
@@ -350,7 +356,7 @@ class ClientServiceDelegate {
     (taskReports).toArray(new org.apache.hadoop.mapreduce.TaskReport[0]);
   }
 
-  boolean killTask(TaskAttemptID taskAttemptID, boolean fail)
+  public boolean killTask(TaskAttemptID taskAttemptID, boolean fail)
        throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID 
       = TypeConverter.toYarn(taskAttemptID);
@@ -366,7 +372,7 @@ class ClientServiceDelegate {
     return true;
   }
   
-  boolean killJob(JobID oldJobID)
+  public boolean killJob(JobID oldJobID)
        throws YarnRemoteException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId 
     = TypeConverter.toYarn(oldJobID);

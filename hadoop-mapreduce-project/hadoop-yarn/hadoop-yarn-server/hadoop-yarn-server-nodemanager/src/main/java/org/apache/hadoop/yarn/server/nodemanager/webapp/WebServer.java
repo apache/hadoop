@@ -57,7 +57,7 @@ public class WebServer extends AbstractService {
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
       this.webApp =
-          WebApps.$for("yarn", Context.class, this.nmContext)
+          WebApps.$for("node", Context.class, this.nmContext)
               .at(bindAddress).with(getConfig())
               .start(new NMWebApp(this.resourceView));
     } catch (Exception e) {

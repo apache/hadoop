@@ -38,9 +38,9 @@ public class NavBlock extends HtmlBlock {
       div("#nav").
         h3("Cluster").
         ul().
-          li().a(url(rmweb, prefix(), "cluster"), "About")._().
-          li().a(url(rmweb, prefix(), "apps"), "Applications")._().
-          li().a(url(rmweb, prefix(), "scheduler"), "Scheduler")._()._().
+          li().a(url(rmweb, "cluster", "cluster"), "About")._().
+          li().a(url(rmweb, "cluster", "apps"), "Applications")._().
+          li().a(url(rmweb, "cluster", "scheduler"), "Scheduler")._()._().
         h3("Application").
         ul().
           li().a(url("app/info"), "About")._().

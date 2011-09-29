@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -53,20 +55,41 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 public class NotRunningJob implements MRClientProtocol {
 
+  private static final Log LOG = LogFactory.getLog(NotRunningJob.class);
+  
   private RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
   
   private final JobState jobState;
-  private final String user;
-
-  NotRunningJob(String username, JobState jobState) {
-    this.user = username;
+  private final ApplicationReport applicationReport;
+  
+  
+  private ApplicationReport getUnknownApplicationReport() {
+    ApplicationReport unknown = 
+        recordFactory.newRecordInstance(ApplicationReport.class);
+    unknown.setUser("N/A");
+    unknown.setHost("N/A");
+    unknown.setName("N/A");
+    unknown.setQueue("N/A");
+    unknown.setStartTime(0);
+    unknown.setFinishTime(0);
+    unknown.setTrackingUrl("N/A");
+    unknown.setDiagnostics("N/A");
+    LOG.info("getUnknownApplicationReport");
+    return unknown;
+  }
+  
+  NotRunningJob(ApplicationReport applicationReport, JobState jobState) {
+    this.applicationReport = 
+        (applicationReport ==  null) ? 
+            getUnknownApplicationReport() : applicationReport;
     this.jobState = jobState;
   }
 
@@ -101,15 +124,19 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public GetJobReportResponse getJobReport(GetJobReportRequest request)
       throws YarnRemoteException {
-    GetJobReportResponse resp = 
-      recordFactory.newRecordInstance(GetJobReportResponse.class);
     JobReport jobReport =
       recordFactory.newRecordInstance(JobReport.class);
     jobReport.setJobId(request.getJobId());
-    jobReport.setJobState(this.jobState);
+    jobReport.setJobState(jobState);
+    jobReport.setUser(applicationReport.getUser());
+    jobReport.setStartTime(applicationReport.getStartTime());
+    jobReport.setDiagnostics(applicationReport.getDiagnostics());
+    jobReport.setJobName(applicationReport.getName());
+    jobReport.setTrackingUrl(applicationReport.getTrackingUrl());
+    jobReport.setFinishTime(applicationReport.getFinishTime());
 
-    jobReport.setUser(this.user);
-    // TODO: Add jobName & other job information that is available
+    GetJobReportResponse resp = 
+        recordFactory.newRecordInstance(GetJobReportResponse.class);
     resp.setJobReport(jobReport);
     return resp;
   }

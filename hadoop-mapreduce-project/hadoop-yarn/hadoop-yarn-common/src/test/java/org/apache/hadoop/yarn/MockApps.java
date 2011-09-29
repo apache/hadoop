@@ -167,6 +167,16 @@ public class MockApps {
         // TODO Auto-generated method stub
 
       }
+      @Override
+      public long getFinishTime() {
+        // TODO Auto-generated method stub
+        return 0;
+      }
+      @Override
+      public void setFinishTime(long finishTime) {
+        // TODO Auto-generated method stub
+        
+      }
     };
   }
 

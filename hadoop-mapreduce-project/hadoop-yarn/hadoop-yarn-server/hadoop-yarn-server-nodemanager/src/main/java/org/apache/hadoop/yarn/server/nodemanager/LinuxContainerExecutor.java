@@ -161,7 +161,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                     nmPrivateCotainerScriptPath.toUri().getPath().toString(),
                     nmPrivateTokensPath.toUri().getPath().toString()));
     String[] commandArray = command.toArray(new String[command.size()]);
-    ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
+    ShellCommandExecutor shExec = 
+        new ShellCommandExecutor(
+            commandArray,
+            null,                                              // NM's cwd
+            container.getLaunchContext().getEnvironment());    // sanitized env
     launchCommandObjs.put(containerId, shExec);
     // DEBUG
     LOG.info("launchContainer: " + Arrays.toString(commandArray));

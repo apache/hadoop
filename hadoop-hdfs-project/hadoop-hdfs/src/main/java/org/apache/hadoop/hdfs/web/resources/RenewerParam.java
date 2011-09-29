@@ -15,23 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.web.resources;
 
-package org.apache.hadoop.yarn.api.protocolrecords;
+/** Renewer parameter. */
+public class RenewerParam extends StringParam {
+  /** Parameter name. */
+  public static final String NAME = "renewer";
+  /** Default parameter value. */
+  public static final String DEFAULT = NULL;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
+  private static final Domain DOMAIN = new Domain(NAME, null);
 
-/**
- * <p>The response sent by the <code>ResourceManager</code> to the client
- * aborting a submitted application.</p>
- *
- * <p>Currently it's empty.</p>
- * 
- * @see ClientRMProtocol#finishApplication(FinishApplicationRequest)
- */
-@Public
-@Stable
-public interface FinishApplicationResponse {
+  /**
+   * Constructor.
+   * @param str a string representation of the parameter value.
+   */
+  public RenewerParam(final String str) {
+    super(DOMAIN, str == null || str.equals(DEFAULT)? null: str);
+  }
 
+  @Override
+  public String getName() {
+    return NAME;
+  }
 }

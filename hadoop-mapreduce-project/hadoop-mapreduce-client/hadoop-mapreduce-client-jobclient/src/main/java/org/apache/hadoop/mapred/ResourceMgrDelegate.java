@@ -32,19 +32,19 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.QueueAclsInfo;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -53,7 +53,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -79,6 +79,10 @@ public class ResourceMgrDelegate {
   private ApplicationId applicationId;
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
+  /**
+   * Delegate responsible for communicating with the Resource Manager's {@link ClientRMProtocol}.
+   * @param conf the configuration object.
+   */
   public ResourceMgrDelegate(YarnConfiguration conf) {
     this.conf = conf;
     YarnRPC rpc = YarnRPC.create(this.conf);
@@ -95,6 +99,16 @@ public class ResourceMgrDelegate {
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
             rmAddress, appsManagerServerConf);
     LOG.info("Connected to ResourceManager at " + rmAddress);
+  }
+  
+  /**
+   * Used for injecting applicationsManager, mostly for testing.
+   * @param conf the configuration object
+   * @param applicationsManager the handle to talk the resource managers {@link ClientRMProtocol}.
+   */
+  public ResourceMgrDelegate(YarnConfiguration conf, ClientRMProtocol applicationsManager) {
+    this.conf = conf;
+    this.applicationsManager = applicationsManager;
   }
   
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
@@ -155,8 +169,8 @@ public class ResourceMgrDelegate {
   }
 
   public JobID getNewJobID() throws IOException, InterruptedException {
-    GetNewApplicationIdRequest request = recordFactory.newRecordInstance(GetNewApplicationIdRequest.class);
-    applicationId = applicationsManager.getNewApplicationId(request).getApplicationId();
+    GetNewApplicationRequest request = recordFactory.newRecordInstance(GetNewApplicationRequest.class);
+    applicationId = applicationsManager.getNewApplication(request).getApplicationId();
     return TypeConverter.fromYarn(applicationId);
   }
 
@@ -254,7 +268,7 @@ public class ResourceMgrDelegate {
 
 
   public String getSystemDir() throws IOException, InterruptedException {
-    Path sysDir = new Path(MRConstants.JOB_SUBMIT_DIR);
+    Path sysDir = new Path(MRJobConfig.JOB_SUBMIT_DIR);
     //FileContext.getFileContext(conf).delete(sysDir, true);
     return sysDir.toString();
   }
@@ -294,9 +308,9 @@ public class ResourceMgrDelegate {
   }
   
   public void killApplication(ApplicationId applicationId) throws IOException {
-    FinishApplicationRequest request = recordFactory.newRecordInstance(FinishApplicationRequest.class);
+    KillApplicationRequest request = recordFactory.newRecordInstance(KillApplicationRequest.class);
     request.setApplicationId(applicationId);
-    applicationsManager.finishApplication(request);
+    applicationsManager.forceKillApplication(request);
     LOG.info("Killing application " + applicationId);
   }
 

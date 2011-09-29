@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
@@ -97,7 +98,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private ContainerAllocationExpirer containerAllocationExpirer;
   protected NMLivelinessMonitor nmLivelinessMonitor;
   protected NodesListManager nodesListManager;
-  private SchedulerEventDispatcher schedulerDispatcher;
+  private EventHandler<SchedulerEvent> schedulerDispatcher;
   protected RMAppManager rmAppManager;
 
   private WebApp webApp;
@@ -118,7 +119,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Override
   public synchronized void init(Configuration conf) {
 
-    this.rmDispatcher = new AsyncDispatcher();
+    this.rmDispatcher = createDispatcher();
     addIfService(this.rmDispatcher);
 
     this.containerAllocationExpirer = new ContainerAllocationExpirer(
@@ -137,8 +138,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.conf = new YarnConfiguration(conf);
     // Initialize the scheduler
     this.scheduler = createScheduler();
-    this.schedulerDispatcher = new SchedulerEventDispatcher(this.scheduler);
-    addService(this.schedulerDispatcher);
+    this.schedulerDispatcher = createSchedulerEventDispatcher();
+    addIfService(this.schedulerDispatcher);
     this.rmDispatcher.register(SchedulerEventType.class,
         this.schedulerDispatcher);
 
@@ -186,9 +187,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(adminService);
 
     this.applicationMasterLauncher = createAMLauncher();
+    this.rmDispatcher.register(AMLauncherEventType.class, 
+        this.applicationMasterLauncher);
+
     addService(applicationMasterLauncher);
 
     super.init(conf);
+  }
+
+  protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
+    return new SchedulerEventDispatcher(this.scheduler);
+  }
+
+  protected Dispatcher createDispatcher() {
+    return new AsyncDispatcher();
   }
 
   protected void addIfService(Object object) {
@@ -381,7 +393,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected void startWepApp() {
-    webApp = WebApps.$for("yarn", masterService).at(
+    webApp = WebApps.$for("cluster", masterService).at(
         conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)).
       start(new RMWebApp(this));
