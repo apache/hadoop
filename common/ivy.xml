@@ -265,11 +265,13 @@
       name="avro"
       rev="${avro.version}"
       conf="common->default">
+      <exclude module="slf4j-api"/>
     </dependency>
     <dependency org="org.apache.avro"
       name="avro-compiler"
       rev="${avro.version}"
       conf="common->default">
+      <exclude module="slf4j-api"/>
     </dependency>
      <dependency org="org.apache.avro"
       name="avro-ipc"
@@ -277,7 +279,7 @@
       conf="common->default">
       <exclude module="ant"/>
       <exclude module="jetty"/>
-      <exclude module="slf4j-simple"/>
+      <exclude module="slf4j-api"/>
     </dependency>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
