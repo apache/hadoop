@@ -66,7 +66,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -92,7 +91,7 @@ public class MRApp extends MRAppMaster {
   private File testWorkDir;
   private Path testAbsPath;
 
-  private static final RecordFactory recordFactory =
+  private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
 
   //if true, tasks complete automatically as soon as they are launched
@@ -101,7 +100,7 @@ public class MRApp extends MRAppMaster {
   static ApplicationId applicationId;
 
   static {
-    applicationId = recordFactory.newRecordInstance(ApplicationId.class);
+    applicationId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class);
     applicationId.setClusterTimestamp(0);
     applicationId.setId(0);
   }
@@ -109,19 +108,9 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName, boolean cleanOnStart) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1);
   }
-  
-  private static ApplicationAttemptId getApplicationAttemptId(
-      ApplicationId applicationId, int startCount) {
-    ApplicationAttemptId applicationAttemptId =
-        recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    applicationAttemptId.setApplicationId(applicationId);
-    applicationAttemptId.setAttemptId(startCount);
-    return applicationAttemptId;
-  }
 
-  public MRApp(int maps, int reduces, boolean autoComplete, String testName, 
-      boolean cleanOnStart, int startCount) {
-    super(getApplicationAttemptId(applicationId, startCount));
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName, boolean cleanOnStart, int startCount) {
+    super(applicationId, startCount);
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("PathUsed: " + testAbsPath);
@@ -402,12 +391,11 @@ public class MRApp extends MRAppMaster {
       return localStateMachine;
     }
 
-    public TestJob(Configuration conf, ApplicationId applicationId,
+    public TestJob(Configuration conf, ApplicationId appID,
         EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
         Clock clock, String user) {
-      super(getApplicationAttemptId(applicationId, getStartCount()), 
-          conf, eventHandler, taskAttemptListener,
-          new JobTokenSecretManager(), new Credentials(), clock, 
+      super(appID, conf, eventHandler, taskAttemptListener,
+          new JobTokenSecretManager(), new Credentials(), clock, getStartCount(), 
           getCompletedTaskFromPreviousRun(), metrics, user);
 
       // This "this leak" is okay because the retained pointer is in an

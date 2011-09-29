@@ -489,7 +489,7 @@ public class JobHistoryUtils {
       sb.append(address.getHostName());
     }
     sb.append(":").append(address.getPort());
-    sb.append("/jobhistory/job/"); // TODO This will change when the history server
+    sb.append("/yarn/job/"); // TODO This will change when the history server
                             // understands apps.
     // TOOD Use JobId toString once UI stops using _id_id
     sb.append("job_").append(appId.getClusterTimestamp());

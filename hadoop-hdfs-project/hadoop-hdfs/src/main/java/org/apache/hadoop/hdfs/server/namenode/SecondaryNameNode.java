@@ -38,12 +38,10 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -175,14 +173,9 @@ public class SecondaryNameNode implements Runnable {
   public SecondaryNameNode(Configuration conf,
       CommandLineOpts commandLineOpts) throws IOException {
     try {
-      NameNode.initializeGenericKeys(conf,
-          DFSUtil.getSecondaryNameServiceId(conf));
+      NameNode.initializeGenericKeys(conf);
       initialize(conf, commandLineOpts);
     } catch(IOException e) {
-      shutdown();
-      LOG.fatal("Failed to start secondary namenode. ", e);
-      throw e;
-    } catch(HadoopIllegalArgumentException e) {
       shutdown();
       LOG.fatal("Failed to start secondary namenode. ", e);
       throw e;

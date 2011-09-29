@@ -64,6 +64,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
@@ -92,7 +93,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -101,7 +101,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -130,11 +129,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       RecordFactoryProvider.getRecordFactory(null);
   
   //final fields
-  private final ApplicationAttemptId applicationAttemptId;
   private final Clock clock;
   private final JobACLsManager aclsManager;
   private final String username;
   private final Map<JobACL, AccessControlList> jobACLs;
+  private final int startCount;
   private final Set<TaskId> completedTasksFromPreviousRun;
   private final Lock readLock;
   private final Lock writeLock;
@@ -366,26 +365,26 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
 
-  public JobImpl(ApplicationAttemptId applicationAttemptId, Configuration conf,
+  public JobImpl(ApplicationId appID, Configuration conf,
       EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
-      Credentials fsTokenCredentials, Clock clock, 
+      Credentials fsTokenCredentials, Clock clock, int startCount, 
       Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
       String userName) {
-    this.applicationAttemptId = applicationAttemptId;
+
     this.jobId = recordFactory.newRecordInstance(JobId.class);
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
     this.conf = conf;
     this.metrics = metrics;
     this.clock = clock;
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
+    this.startCount = startCount;
     this.userName = userName;
-    ApplicationId applicationId = applicationAttemptId.getApplicationId();
-    jobId.setAppId(applicationId);
-    jobId.setId(applicationId.getId());
+    jobId.setAppId(appID);
+    jobId.setId(appID.getId());
     oldJobId = TypeConverter.fromYarn(jobId);
     LOG.info("Job created" +
-    		" appId=" + applicationId + 
+    		" appId=" + appID + 
     		" jobId=" + jobId + 
     		" oldJobId=" + oldJobId);
     
@@ -585,17 +584,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public JobReport getReport() {
     readLock.lock();
     try {
-      JobState state = getState();
-
-      if (getState() == JobState.NEW) {
-        return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-            startTime, finishTime, setupProgress, 0.0f,
-            0.0f, cleanupProgress);
+      JobReport report = recordFactory.newRecordInstance(JobReport.class);
+      report.setJobId(jobId);
+      report.setJobState(getState());
+      
+      // TODO - Fix to correctly setup report and to check state
+      if (report.getJobState() == JobState.NEW) {
+        return report;
       }
+      
+      report.setStartTime(startTime);
+      report.setFinishTime(finishTime);
+      report.setSetupProgress(setupProgress);
+      report.setCleanupProgress(cleanupProgress);
+      report.setMapProgress(computeProgress(mapTasks));
+      report.setReduceProgress(computeProgress(reduceTasks));
+      report.setJobName(jobName);
+      report.setUser(username);
 
-      return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-          startTime, finishTime, setupProgress, computeProgress(mapTasks),
-          computeProgress(reduceTasks), cleanupProgress);
+      return report;
     } finally {
       readLock.unlock();
     }
@@ -1000,7 +1007,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           FileSystem.get(job.conf).makeQualified(
               new Path(path, oldJobIDString));
       job.remoteJobConfFile =
-          new Path(job.remoteJobSubmitDir, MRJobConfig.JOB_CONF_FILE);
+          new Path(job.remoteJobSubmitDir, MRConstants.JOB_CONF_FILE);
 
       // Prepare the TaskAttemptListener server for authentication of Containers
       // TaskAttemptListener gets the information via jobTokenSecretManager.
@@ -1026,7 +1033,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
       Path remoteJobTokenFile =
           new Path(job.remoteJobSubmitDir,
-              MRJobConfig.APPLICATION_TOKENS_FILE);
+              MRConstants.APPLICATION_TOKENS_FILE);
       tokenStorage.writeTokenStorageFile(remoteJobTokenFile, job.conf);
       LOG.info("Writing back the job-token file on the remote file system:"
           + remoteJobTokenFile.toString());
@@ -1071,8 +1078,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.conf, splits[i], 
                 job.taskAttemptListener, 
                 job.committer, job.jobToken, job.fsTokens.getAllTokens(), 
-                job.clock, job.completedTasksFromPreviousRun, 
-                job.applicationAttemptId.getAttemptId(),
+                job.clock, job.completedTasksFromPreviousRun, job.startCount,
                 job.metrics);
         job.addTask(task);
       }
@@ -1089,9 +1095,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.conf, job.numMapTasks, 
                 job.taskAttemptListener, job.committer, job.jobToken,
                 job.fsTokens.getAllTokens(), job.clock, 
-                job.completedTasksFromPreviousRun, 
-                job.applicationAttemptId.getAttemptId(),
-                job.metrics);
+                job.completedTasksFromPreviousRun, job.startCount, job.metrics);
         job.addTask(task);
       }
       LOG.info("Number of reduces for job " + job.jobId + " = "

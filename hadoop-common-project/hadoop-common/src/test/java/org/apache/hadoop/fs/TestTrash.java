@@ -486,9 +486,6 @@ public class TestTrash extends TestCase {
     conf.set(FS_TRASH_INTERVAL_KEY, "0.2"); // 12 seconds
     conf.setClass("fs.file.impl", TestLFS.class, FileSystem.class);
     conf.set(FS_TRASH_CHECKPOINT_INTERVAL_KEY, "0.1"); // 6 seconds
-    FileSystem fs = FileSystem.getLocal(conf);
-    conf.set("fs.default.name", fs.getUri().toString());
-    
     Trash trash = new Trash(conf);
 
     // Start Emptier in background
@@ -496,6 +493,8 @@ public class TestTrash extends TestCase {
     Thread emptierThread = new Thread(emptier);
     emptierThread.start();
 
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.set("fs.defaultFS", fs.getUri().toString());
     FsShell shell = new FsShell();
     shell.setConf(conf);
     shell.init();

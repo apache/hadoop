@@ -1046,20 +1046,19 @@ public class LeafQueue implements CSQueue {
   }
   
   private Container getContainer(RMContainer rmContainer, 
-      SchedulerApp application, SchedulerNode node, 
-      Resource capability, Priority priority) {
+      SchedulerApp application, SchedulerNode node, Resource capability) {
     return (rmContainer != null) ? rmContainer.getContainer() :
-      createContainer(application, node, capability, priority);
+      createContainer(application, node, capability);
   }
   
   public Container createContainer(SchedulerApp application, SchedulerNode node, 
-      Resource capability, Priority priority) {
+      Resource capability) {
     Container container = 
           BuilderUtils.newContainer(this.recordFactory,
               application.getApplicationAttemptId(),
               application.getNewContainerId(),
-              node.getNodeID(), node.getHttpAddress(), 
-              capability, priority);
+              node.getNodeID(),
+              node.getHttpAddress(), capability);
 
     // If security is enabled, send the container-tokens too.
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -1100,7 +1099,7 @@ public class LeafQueue implements CSQueue {
 
     // Create the container if necessary
     Container container = 
-        getContainer(rmContainer, application, node, capability, priority);
+        getContainer(rmContainer, application, node, capability);
 
     // Can we allocate a container on this node?
     int availableContainers = 
@@ -1153,17 +1152,14 @@ public class LeafQueue implements CSQueue {
 
   private void reserve(SchedulerApp application, Priority priority, 
       SchedulerNode node, RMContainer rmContainer, Container container) {
+    rmContainer = application.reserve(node, priority, rmContainer, container);
+    node.reserveResource(application, priority, rmContainer);
+    
     // Update reserved metrics if this is the first reservation
     if (rmContainer == null) {
       getMetrics().reserveResource(
           application.getUser(), container.getResource());
     }
-
-    // Inform the application 
-    rmContainer = application.reserve(node, priority, rmContainer, container);
-    
-    // Update the node
-    node.reserveResource(application, priority, rmContainer);
   }
 
   private void unreserve(SchedulerApp application, Priority priority, 

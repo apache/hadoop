@@ -50,10 +50,6 @@
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
   <Match>
-    <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.rmapp\.RMAppImpl.*" />
-    <Bug pattern="BC_UNCONFIRMED_CAST" />
-  </Match>
-  <Match>
     <Class name="~org\.apache\.hadoop\.yarn\.server\.resourcemanager\.rmapp\.attempt\.RMAppAttemptImpl.*" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>

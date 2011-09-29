@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 
@@ -28,15 +24,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
+
 import org.junit.Test;
+import static org.junit.Assert.*;
 
 /** A class for testing quota-related commands */
 public class TestQuota {
@@ -843,14 +841,6 @@ public class TestQuota {
     DFSAdmin admin = new DFSAdmin(conf);
 
     try {
-      
-      //Test for deafult NameSpace Quota
-      long nsQuota = FSImageTestUtil.getNSQuota(cluster.getNameNode()
-          .getNamesystem());
-      assertTrue(
-          "Default namespace quota expected as long max. But the value is :"
-              + nsQuota, nsQuota == Long.MAX_VALUE);
-      
       Path dir = new Path("/test");
       boolean exceededQuota = false;
       ContentSummary c;

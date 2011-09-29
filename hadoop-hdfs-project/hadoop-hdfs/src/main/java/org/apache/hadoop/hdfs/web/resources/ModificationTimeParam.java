@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.web.resources;
 /** Modification time parameter. */
 public class ModificationTimeParam extends LongParam {
   /** Parameter name. */
-  public static final String NAME = "modificationtime";
+  public static final String NAME = "modificationTime";
   /** Default parameter value. */
   public static final String DEFAULT = "-1";
 

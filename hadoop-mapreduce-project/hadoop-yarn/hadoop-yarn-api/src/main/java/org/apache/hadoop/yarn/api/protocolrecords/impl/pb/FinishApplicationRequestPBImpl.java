@@ -19,34 +19,34 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationRequestProtoOrBuilder;
 
 
     
-public class KillApplicationRequestPBImpl extends ProtoBase<KillApplicationRequestProto> implements KillApplicationRequest {
-  KillApplicationRequestProto proto = KillApplicationRequestProto.getDefaultInstance();
-  KillApplicationRequestProto.Builder builder = null;
+public class FinishApplicationRequestPBImpl extends ProtoBase<FinishApplicationRequestProto> implements FinishApplicationRequest {
+  FinishApplicationRequestProto proto = FinishApplicationRequestProto.getDefaultInstance();
+  FinishApplicationRequestProto.Builder builder = null;
   boolean viaProto = false;
   
   private ApplicationId applicationId = null;
   
   
-  public KillApplicationRequestPBImpl() {
-    builder = KillApplicationRequestProto.newBuilder();
+  public FinishApplicationRequestPBImpl() {
+    builder = FinishApplicationRequestProto.newBuilder();
   }
 
-  public KillApplicationRequestPBImpl(KillApplicationRequestProto proto) {
+  public FinishApplicationRequestPBImpl(FinishApplicationRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public KillApplicationRequestProto getProto() {
+  public FinishApplicationRequestProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -69,7 +69,7 @@ public class KillApplicationRequestPBImpl extends ProtoBase<KillApplicationReque
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = KillApplicationRequestProto.newBuilder(proto);
+      builder = FinishApplicationRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -77,7 +77,7 @@ public class KillApplicationRequestPBImpl extends ProtoBase<KillApplicationReque
   
   @Override
   public ApplicationId getApplicationId() {
-    KillApplicationRequestProtoOrBuilder p = viaProto ? proto : builder;
+    FinishApplicationRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.applicationId != null) {
       return this.applicationId;
     }

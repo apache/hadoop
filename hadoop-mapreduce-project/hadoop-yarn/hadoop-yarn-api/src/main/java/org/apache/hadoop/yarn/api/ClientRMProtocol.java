@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.api;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -31,8 +31,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -62,18 +62,14 @@ public interface ClientRMProtocol {
    * <p>The <code>ResourceManager</code> responds with a new, monotonically
    * increasing, {@link ApplicationId} which is used by the client to submit
    * a new application.</p>
-   *
-   * <p>The <code>ResourceManager</code> also responds with details such 
-   * as minimum and maximum resource capabilities in the cluster as specified in
-   * {@link GetNewApplicationResponse}.</p>
-   *
+   * 
    * @param request request to get a new <code>ApplicationId</code>
    * @return new <code>ApplicationId</code> to be used to submit an application
    * @throws YarnRemoteException
    * @see #submitApplication(SubmitApplicationRequest)
    */
-  public GetNewApplicationResponse getNewApplication(
-      GetNewApplicationRequest request)
+  public GetNewApplicationIdResponse getNewApplicationId(
+      GetNewApplicationIdRequest request) 
   throws YarnRemoteException;
   
   /**
@@ -96,7 +92,7 @@ public interface ClientRMProtocol {
    * @param request request to submit a new application
    * @return (empty) response on accepting the submission
    * @throws YarnRemoteException
-   * @see #getNewApplication(GetNewApplicationRequest)
+   * @see #getNewApplicationId(GetNewApplicationIdRequest)
    */
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) 
@@ -106,7 +102,7 @@ public interface ClientRMProtocol {
    * <p>The interface used by clients to request the 
    * <code>ResourceManager</code> to abort submitted application.</p>
    * 
-   * <p>The client, via {@link KillApplicationRequest} provides the
+   * <p>The client, via {@link FinishApplicationRequest} provides the
    * {@link ApplicationId} of the application to be aborted.</p>
    * 
    * <p> In secure mode,the <code>ResourceManager</code> verifies access to the
@@ -121,8 +117,8 @@ public interface ClientRMProtocol {
    * @throws YarnRemoteException
    * @see #getQueueUserAcls(GetQueueUserAclsInfoRequest) 
    */
-  public KillApplicationResponse forceKillApplication(
-      KillApplicationRequest request) 
+  public FinishApplicationResponse finishApplication(
+      FinishApplicationRequest request) 
   throws YarnRemoteException;
 
   /**

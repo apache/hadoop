@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.web.resources;
 /** Access time parameter. */
 public class AccessTimeParam extends LongParam {
   /** Parameter name. */
-  public static final String NAME = "accesstime";
+  public static final String NAME = "accessTime";
   /** Default parameter value. */
   public static final String DEFAULT = "-1";
 

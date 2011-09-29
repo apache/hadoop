@@ -54,13 +54,11 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
-import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
@@ -70,7 +68,7 @@ import org.apache.hadoop.util.VersionInfo;
 public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
   final static public String WEB_UGI_PROPERTY_NAME = DFSConfigKeys.DFS_WEB_UGI_KEY;
-  public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
+  public static final String DELEGATION_PARAMETER_NAME = "delegation";
   public static final String NAMENODE_ADDRESS = "nnaddr";
   static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
                                               "=";
@@ -553,8 +551,7 @@ public class JspHelper {
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
         ugi = id.getUser();
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
-        checkUsername(ugi.getShortUserName(), user);
+        checkUsername(ugi.getUserName(), user);
         ugi.addToken(token);
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
@@ -563,11 +560,13 @@ public class JspHelper {
                                 "authenticated by filter");
         }
         ugi = UserGroupInformation.createRemoteUser(user);
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
         ugi.setAuthenticationMethod(secureAuthMethod);
       }
+
+      checkUsername(user, usernameFromQuery);
+
     } else { // Security's not on, pull from url
       ugi = usernameFromQuery == null?
           getDefaultWebUser(conf) // not specified in request
@@ -580,18 +579,10 @@ public class JspHelper {
     return ugi;
   }
 
-  /**
-   * Expected user name should be a short name.
-   */
   private static void checkUsername(final String expected, final String name
       ) throws IOException {
-    if (name == null) {
-      return;
-    }
-    KerberosName u = new KerberosName(name);
-    String shortName = u.getShortName();
-    if (!shortName.equals(expected)) {
-      throw new IOException("Usernames not matched: name=" + shortName
+    if (name != null && !name.equals(expected)) {
+      throw new IOException("Usernames not matched: name=" + name
           + " != expected=" + expected);
     }
   }

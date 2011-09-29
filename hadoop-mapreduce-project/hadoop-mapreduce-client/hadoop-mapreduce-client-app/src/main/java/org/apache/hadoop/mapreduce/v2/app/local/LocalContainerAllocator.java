@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.app.local;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -31,19 +30,15 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMCommunicator;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -68,20 +63,6 @@ public class LocalContainerAllocator extends RMCommunicator
     super(clientService, context);
     this.eventHandler = context.getEventHandler();
     this.appID = context.getApplicationID();
-  }
-
-  @Override
-  protected synchronized void heartbeat() throws Exception {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
-        this.applicationAttemptId, this.lastResponseID, super
-            .getApplicationProgress(), new ArrayList<ResourceRequest>(),
-        new ArrayList<ContainerId>());
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
-    AMResponse response = allocateResponse.getAMResponse();
-    if (response.getReboot()) {
-      // TODO
-      LOG.info("Event from RM: shutting down Application Master");
-    }
   }
 
   @Override

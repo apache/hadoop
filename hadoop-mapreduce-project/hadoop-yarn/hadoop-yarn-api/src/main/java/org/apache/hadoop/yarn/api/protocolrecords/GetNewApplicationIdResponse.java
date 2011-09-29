@@ -24,17 +24,16 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
  * <p>The response sent by the <code>ResourceManager</code> to the client for 
  * a request to a new {@link ApplicationId} for submitting applications.</p>
  * 
- * @see ClientRMProtocol#getNewApplication(GetNewApplicationRequest)
+ * @see ClientRMProtocol#getNewApplicationId(GetNewApplicationIdRequest)
  */
 @Public
 @Stable
-public interface GetNewApplicationResponse {
+public interface GetNewApplicationIdResponse {
   /**
    * Get the <em>new</em> <code>ApplicationId</code> allocated by the 
    * <code>ResourceManager</code>.
@@ -48,30 +47,4 @@ public interface GetNewApplicationResponse {
   @Private
   @Unstable
   public abstract void setApplicationId(ApplicationId applicationId);
-  
-  /**
-   * Get the minimum capability for any {@link Resource} allocated by the 
-   * <code>ResourceManager</code> in the cluster.
-   * @return minimum capability of allocated resources in the cluster
-   */
-  @Public
-  @Stable
-  public Resource getMinimumResourceCapability();
-  
-  @Private
-  @Unstable
-  public void setMinimumResourceCapability(Resource capability);
-  
-  /**
-   * Get the maximum capability for any {@link Resource} allocated by the 
-   * <code>ResourceManager</code> in the cluster.
-   * @return maximum capability of allocated resources in the cluster
-   */
-  @Public
-  @Stable
-  public Resource getMaximumResourceCapability();
-  
-  @Private
-  @Unstable
-  public void setMaximumResourceCapability(Resource capability); 
 }

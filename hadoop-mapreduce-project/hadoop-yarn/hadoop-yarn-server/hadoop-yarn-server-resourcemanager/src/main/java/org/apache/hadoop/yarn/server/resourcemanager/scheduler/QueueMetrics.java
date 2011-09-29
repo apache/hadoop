@@ -32,8 +32,10 @@ import static org.apache.hadoop.metrics2.lib.Interns.info;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.Self;
 import static org.apache.hadoop.yarn.server.resourcemanager.resource.Resources.*;
 
 import org.slf4j.LoggerFactory;
@@ -279,57 +281,5 @@ public class QueueMetrics {
     if (parent != null) {
       parent.unreserveResource(user, res);
     }
-  }
-  
-  public int getAppsSubmitted() {
-    return appsSubmitted.value();
-  }
-  
-  public int getAppsRunning() {
-    return appsRunning.value();
-  }
-  
-  public int getAppsPending() {
-    return appsPending.value();
-  }
-  
-  public int getAppsCompleted() {
-    return appsCompleted.value();
-  }
-  
-  public int getAppsKilled() {
-    return appsKilled.value();
-  }
-  
-  public int getAppsFailed() {
-    return appsFailed.value();
-  }
-
-  public int getAllocatedGB() {
-    return allocatedGB.value();
-  }
-
-  public int getAllocatedContainers() {
-    return allocatedContainers.value();
-  }
-  
-  public int getAvailableGB() {
-    return availableGB.value();
-  }  
-
-  public int getPendingGB() {
-    return pendingGB.value();
-  }
-
-  public int getPendingContainers() {
-    return pendingContainers.value();
-  }
-  
-  public int getReservedGB() {
-    return reservedGB.value();
-  }
-
-  public int getReservedContainers() {
-    return reservedContainers.value();
   }
 }

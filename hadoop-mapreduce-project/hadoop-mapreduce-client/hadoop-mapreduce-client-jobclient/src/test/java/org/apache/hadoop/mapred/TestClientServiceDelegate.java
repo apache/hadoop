@@ -109,7 +109,7 @@ public class TestClientServiceDelegate {
     ClientServiceDelegate clientServiceDelegate = getClientServiceDelegate(
         null, getRMDelegate());
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
-    Assert.assertEquals("N/A", jobStatus.getUsername());
+    Assert.assertEquals("Unknown User", jobStatus.getUsername());
     Assert.assertEquals(JobStatus.State.PREP, jobStatus.getState());
 
     //RM has app report and job History Server is not configured
@@ -145,13 +145,6 @@ public class TestClientServiceDelegate {
         .newRecord(ApplicationReport.class);
     applicationReport.setState(ApplicationState.SUCCEEDED);
     applicationReport.setUser("root");
-    applicationReport.setHost("N/A");
-    applicationReport.setName("N/A");
-    applicationReport.setQueue("N/A");
-    applicationReport.setStartTime(0);
-    applicationReport.setFinishTime(0);
-    applicationReport.setTrackingUrl("N/A");
-    applicationReport.setDiagnostics("N/A");
     return applicationReport;
   }
 

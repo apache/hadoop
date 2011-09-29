@@ -90,12 +90,6 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-        <version>${yarn.version}</version>
-        <type>test-jar</type> 
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-core</artifactId>
         <version>${hadoop-mapreduce.version}</version>
       </dependency>

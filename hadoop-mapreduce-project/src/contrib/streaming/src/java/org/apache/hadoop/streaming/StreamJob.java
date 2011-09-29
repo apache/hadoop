@@ -22,10 +22,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -45,7 +43,6 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -280,25 +277,19 @@ public class StreamJob implements Tool {
       if (values != null && values.length > 0) {
         LOG.warn("-file option is deprecated, please use generic option" +
         		" -files instead.");
-
-        String fileList = null;
+        StringBuilder unpackRegex = new StringBuilder(
+          config_.getPattern(MRJobConfig.JAR_UNPACK_PATTERN,
+                             JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern());
         for (String file : values) {
           packageFiles_.add(file);
-          try {
-            URI pathURI = new URI(file);
-            Path path = new Path(pathURI);
-            FileSystem localFs = FileSystem.getLocal(config_);
-            String finalPath = path.makeQualified(localFs).toString();
-            fileList = fileList == null ? finalPath : fileList + "," + finalPath;
-          } catch (Exception e) {
-            throw new IllegalArgumentException(e);
-          }
+          String fname = new File(file).getName();
+          unpackRegex.append("|(?:").append(Pattern.quote(fname)).append(")");
         }
-        config_.set("tmpfiles", config_.get("tmpfiles", "") +
-                                  (fileList == null ? "" : fileList));
+        config_.setPattern(MRJobConfig.JAR_UNPACK_PATTERN,
+                           Pattern.compile(unpackRegex.toString()));
         validate(packageFiles_);
       }
-
+         
       String fsName = cmdLine.getOptionValue("dfs");
       if (null != fsName){
         LOG.warn("-dfs option is deprecated, please use -fs instead.");

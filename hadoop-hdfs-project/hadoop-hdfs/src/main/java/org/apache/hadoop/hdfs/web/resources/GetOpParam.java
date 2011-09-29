@@ -21,15 +21,15 @@ import java.net.HttpURLConnection;
 
 /** Http GET operation parameter. */
 public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
+  /** Parameter name. */
+  public static final String NAME = "getOp";
+
   /** Get operations. */
   public static enum Op implements HttpOpParam.Op {
     OPEN(HttpURLConnection.HTTP_OK),
-    GETFILEBLOCKLOCATIONS(HttpURLConnection.HTTP_OK),
 
     GETFILESTATUS(HttpURLConnection.HTTP_OK),
     LISTSTATUS(HttpURLConnection.HTTP_OK),
-
-    GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK),
 
     NULL(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 

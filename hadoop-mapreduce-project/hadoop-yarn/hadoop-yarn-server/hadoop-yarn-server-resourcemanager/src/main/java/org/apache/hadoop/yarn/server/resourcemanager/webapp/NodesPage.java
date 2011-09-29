@@ -76,7 +76,7 @@ class NodesPage extends RmView {
             // TODO: FIXME Vinodkv
 //            td(String.valueOf(ni.getUsedResource().getMemory())).
 //            td(String.valueOf(ni.getAvailableResource().getMemory())).
-            td("n/a")._();
+            _();
       }
       tbody._()._();
     }
@@ -100,7 +100,7 @@ class NodesPage extends RmView {
         // rack, nodeid, host, healthStatus, health update ts, health report,
         // containers, memused, memavail
         append(", aoColumns:[null, null, null, null, null, null, ").
-        append("{sType:'title-numeric', bSearchable:false}]}").
+        append("{bSearchable:false},{bSearchable:false},{bSearchable:false}]}").
         toString();
   }
 }

@@ -2,12 +2,6 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
-  INCOMPATIBLE CHANGES
-   
-   HADOOP-7542. Change Configuration XML format to 1.1 to add support for
-                serializing additional characters. This requires XML1.1
-                support in the XML parser (Christopher Egner via harsh)
-
   IMPROVEMENTS
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
@@ -19,11 +13,6 @@ Trunk (unreleased changes)
 
     HADOOP-7635. RetryInvocationHandler should release underlying resources on
                  close (atm)
-    
-    HADOOP-7668. Add a NetUtils method that can tell if an InetAddress 
-    belongs to local host. (suresh)
-
-    HADOOP-7687 Make getProtocolSignature public  (sanjay)
 
   BUGS
 
@@ -33,16 +22,6 @@ Trunk (unreleased changes)
     HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
 
     HADOOP-7641. Add Apache License to template config files (Eric Yang via atm)
-
-    HADOOP-7621. alfredo config should be in a file not readable by users
-                 (Alejandro Abdelnur via atm)
-    
-    HADOOP-7669  Fix newly introduced release audit warning. 
-                 (Uma Maheswara Rao G via stevel)
-    
-    HADOOP-6220. HttpServer wraps InterruptedExceptions by IOExceptions if interrupted 
-                 in startup (stevel)
-                 
 
 Release 0.23.0 - Unreleased
 
@@ -308,6 +287,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7430. Improve error message when moving to trash fails due to 
     quota issue. (Ravi Prakash via mattf)
 
+    HADOOP-7457. Remove out-of-date Chinese language documentation.
+    (Jakob Homan via eli)
+
     HADOOP-7444. Add Checksum API to verify and calculate checksums "in bulk"
     (todd)
 
@@ -406,13 +388,6 @@ Release 0.23.0 - Unreleased
     HADOOP-7599. Script improvements to setup a secure Hadoop cluster
     (Eric Yang via ddas)
 
-    HADOOP-7639. Enhance HttpServer to allow passing path-specs for filtering,
-    so that servers like Yarn WebApp can get filtered the paths served by
-    their own injected servlets. (Thomas Graves via vinodkv)
-
-    HADOOP-7575. Enhanced LocalDirAllocator to support fully-qualified
-    paths. (Jonathan Eagles via vinodkv)
-
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -422,9 +397,6 @@ Release 0.23.0 - Unreleased
     code. (todd)
 
   BUG FIXES
-
-    HADOOP-7630. hadoop-metrics2.properties should have a property *.period 
-    set to a default value for metrics. (Eric Yang via mattf)
 
     HADOOP-7327. FileSystem.listStatus() throws NullPointerException instead of
     IOException upon access permission failure. (mattf)
@@ -630,9 +602,6 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7631. Fixes a config problem to do with running streaming jobs
     (Eric Yang via ddas)
-
-    HADOOP-7662. Fixed logs servlet to use the pathspec '/*' instead of '/'
-    for correct filtering. (Thomas Graves via vinodkv)
 
 Release 0.22.0 - Unreleased
 
@@ -1148,11 +1117,6 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7568. SequenceFile should not print into stdout.
     (Plamen Jeliazkov via shv)
-
-    HADOOP-7663. Fix TestHDFSTrash failure. (Mayank Bansal via shv)
-
-    HADOOP-7457. Remove out-of-date Chinese language documentation.
-    (Jakob Homan via eli)
 
 Release 0.21.1 - Unreleased
 

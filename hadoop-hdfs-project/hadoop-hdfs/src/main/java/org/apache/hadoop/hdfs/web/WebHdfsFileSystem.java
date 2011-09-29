@@ -27,12 +27,9 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -48,7 +45,6 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
@@ -58,9 +54,7 @@ import org.apache.hadoop.hdfs.web.resources.DstPathParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.GroupParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
-import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
-import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
 import org.apache.hadoop.hdfs.web.resources.OwnerParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
@@ -69,16 +63,13 @@ import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenameOptionSetParam;
-import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
@@ -91,17 +82,9 @@ public class WebHdfsFileSystem extends HftpFileSystem {
 
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
 
-  private final UserGroupInformation ugi;
+  private UserGroupInformation ugi;
   private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   protected Path workingDir;
-
-  {
-    try {
-      ugi = UserGroupInformation.getCurrentUser();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
 
   @Override
   public synchronized void initialize(URI uri, Configuration conf
@@ -109,6 +92,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     super.initialize(uri, conf);
     setConf(conf);
 
+    ugi = UserGroupInformation.getCurrentUser();
     this.workingDir = getHomeDirectory();
   }
 
@@ -179,11 +163,11 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     }
   }
 
-  URL toUrl(final HttpOpParam.Op op, final Path fspath,
+  private URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
     final String path = "/" + PATH_PREFIX
-        + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
+        + makeQualified(fspath).toUri().getPath();
     final String query = op.toQueryString()
         + '&' + new UserParam(ugi)
         + Param.toSortedString("&", parameters);
@@ -411,42 +395,5 @@ public class WebHdfsFileSystem extends HftpFileSystem {
       statuses[i] = makeQualified(JsonUtil.toFileStatus(m), f);
     }
     return statuses;
-  }
-
-  @Override
-  public Token<DelegationTokenIdentifier> getDelegationToken(final String renewer
-      ) throws IOException {
-    final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
-    final Map<String, Object> m = run(op, null, new RenewerParam(renewer));
-    final Token<DelegationTokenIdentifier> token = JsonUtil.toDelegationToken(m); 
-    token.setService(new Text(getCanonicalServiceName()));
-    return token;
-  }
-
-  @Override
-  public List<Token<?>> getDelegationTokens(final String renewer
-      ) throws IOException {
-    final Token<?>[] t = {getDelegationToken(renewer)};
-    return Arrays.asList(t);
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(final FileStatus status,
-      final long offset, final long length) throws IOException {
-    if (status == null) {
-      return null;
-    }
-    return getFileBlockLocations(status.getPath(), offset, length);
-  }
-
-  @Override
-  public BlockLocation[] getFileBlockLocations(final Path p, 
-      final long offset, final long length) throws IOException {
-    statistics.incrementReadOps(1);
-
-    final HttpOpParam.Op op = GetOpParam.Op.GETFILEBLOCKLOCATIONS;
-    final Map<String, Object> m = run(op, p, new OffsetParam(offset),
-        new LengthParam(length));
-    return DFSUtil.locatedBlocks2Locations(JsonUtil.toLocatedBlocks(m));
   }
 }

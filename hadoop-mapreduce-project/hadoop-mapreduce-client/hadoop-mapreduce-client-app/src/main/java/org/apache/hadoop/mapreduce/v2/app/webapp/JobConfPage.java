@@ -44,7 +44,6 @@ public class JobConfPage extends AppView {
     set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
         : join("Configuration for MapReduce Job ", $(JOB_ID)));
     commonPreHead(html);
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
     set(DATATABLES_ID, "conf");
     set(initID(DATATABLES, "conf"), confTableInit());
     set(postInitID(DATATABLES, "conf"), confPostTableInit());

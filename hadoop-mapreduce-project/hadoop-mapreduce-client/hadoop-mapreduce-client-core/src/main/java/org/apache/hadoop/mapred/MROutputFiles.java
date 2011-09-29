@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 
 /**
  * Manipulate the working area for the transient store for maps and reduces.
@@ -55,7 +54,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getOutputFile()
       throws IOException {
-    return lDirAlloc.getLocalPathToRead(MRJobConfig.OUTPUT + Path.SEPARATOR
+    return lDirAlloc.getLocalPathToRead(Constants.OUTPUT + Path.SEPARATOR
         + MAP_OUTPUT_FILENAME_STRING, getConf());
   }
 
@@ -69,7 +68,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getOutputFileForWrite(long size)
       throws IOException {
-    return lDirAlloc.getLocalPathForWrite(MRJobConfig.OUTPUT + Path.SEPARATOR
+    return lDirAlloc.getLocalPathForWrite(Constants.OUTPUT + Path.SEPARATOR
         + MAP_OUTPUT_FILENAME_STRING, size, getConf());
   }
 
@@ -90,7 +89,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getOutputIndexFile()
       throws IOException {
-    return lDirAlloc.getLocalPathToRead(MRJobConfig.OUTPUT + Path.SEPARATOR
+    return lDirAlloc.getLocalPathToRead(Constants.OUTPUT + Path.SEPARATOR
         + MAP_OUTPUT_FILENAME_STRING + MAP_OUTPUT_INDEX_SUFFIX_STRING,
         getConf());
   }
@@ -105,7 +104,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getOutputIndexFileForWrite(long size)
       throws IOException {
-    return lDirAlloc.getLocalPathForWrite(MRJobConfig.OUTPUT + Path.SEPARATOR
+    return lDirAlloc.getLocalPathForWrite(Constants.OUTPUT + Path.SEPARATOR
         + MAP_OUTPUT_FILENAME_STRING + MAP_OUTPUT_INDEX_SUFFIX_STRING,
         size, getConf());
   }
@@ -129,7 +128,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getSpillFile(int spillNumber)
       throws IOException {
-    return lDirAlloc.getLocalPathToRead(MRJobConfig.OUTPUT + "/spill"
+    return lDirAlloc.getLocalPathToRead(Constants.OUTPUT + "/spill"
         + spillNumber + ".out", getConf());
   }
 
@@ -144,7 +143,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getSpillFileForWrite(int spillNumber, long size)
       throws IOException {
-    return lDirAlloc.getLocalPathForWrite(MRJobConfig.OUTPUT + "/spill"
+    return lDirAlloc.getLocalPathForWrite(Constants.OUTPUT + "/spill"
         + spillNumber + ".out", size, getConf());
   }
 
@@ -158,7 +157,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getSpillIndexFile(int spillNumber)
       throws IOException {
-    return lDirAlloc.getLocalPathToRead(MRJobConfig.OUTPUT + "/spill"
+    return lDirAlloc.getLocalPathToRead(Constants.OUTPUT + "/spill"
         + spillNumber + ".out.index", getConf());
   }
 
@@ -173,7 +172,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public Path getSpillIndexFileForWrite(int spillNumber, long size)
       throws IOException {
-    return lDirAlloc.getLocalPathForWrite(MRJobConfig.OUTPUT + "/spill"
+    return lDirAlloc.getLocalPathForWrite(Constants.OUTPUT + "/spill"
         + spillNumber + ".out.index", size, getConf());
   }
 
@@ -188,7 +187,7 @@ public class MROutputFiles extends MapOutputFile {
   public Path getInputFile(int mapId)
       throws IOException {
     return lDirAlloc.getLocalPathToRead(String.format(
-        REDUCE_INPUT_FILE_FORMAT_STRING, MRJobConfig.OUTPUT, Integer
+        REDUCE_INPUT_FILE_FORMAT_STRING, Constants.OUTPUT, Integer
             .valueOf(mapId)), getConf());
   }
 
@@ -205,7 +204,7 @@ public class MROutputFiles extends MapOutputFile {
                                    long size)
       throws IOException {
     return lDirAlloc.getLocalPathForWrite(String.format(
-        REDUCE_INPUT_FILE_FORMAT_STRING, MRJobConfig.OUTPUT, mapId.getId()),
+        REDUCE_INPUT_FILE_FORMAT_STRING, Constants.OUTPUT, mapId.getId()),
         size, getConf());
   }
 
@@ -213,7 +212,7 @@ public class MROutputFiles extends MapOutputFile {
   @Override
   public void removeAll()
       throws IOException {
-    ((JobConf)getConf()).deleteLocalFiles(MRJobConfig.OUTPUT);
+    ((JobConf)getConf()).deleteLocalFiles(Constants.OUTPUT);
   }
 
   @Override

@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
  * {@link YarnConfiguration#RM_AM_MAX_RETRIES}. For specific 
  * implementation take a look at {@link RMAppAttemptImpl}.
  */
-public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
+public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent>{
 
   /**
    * Get the application attempt id for this {@link RMAppAttempt}.
@@ -79,7 +79,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * Diagnostics information for the application attempt.
    * @return diagnostics information for the application attempt.
    */
-  String getDiagnostics();
+  StringBuilder getDiagnostics();
 
   /**
    * Progress for the application attempt.

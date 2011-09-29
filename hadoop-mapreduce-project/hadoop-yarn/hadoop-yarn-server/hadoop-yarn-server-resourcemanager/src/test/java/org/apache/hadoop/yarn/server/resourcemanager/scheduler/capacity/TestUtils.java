@@ -161,13 +161,11 @@ public class TestUtils {
   }
   
   public static Container getMockContainer(
-      ContainerId containerId, NodeId nodeId, 
-      Resource resource, Priority priority) {
+      ContainerId containerId, NodeId nodeId, Resource resource) {
     Container container = mock(Container.class);
     when(container.getId()).thenReturn(containerId);
     when(container.getNodeId()).thenReturn(nodeId);
     when(container.getResource()).thenReturn(resource);
-    when(container.getPriority()).thenReturn(priority);
     return container;
   }
 }

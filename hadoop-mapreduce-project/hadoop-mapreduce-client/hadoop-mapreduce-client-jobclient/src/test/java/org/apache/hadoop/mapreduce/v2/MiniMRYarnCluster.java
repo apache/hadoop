@@ -43,15 +43,9 @@ import org.apache.hadoop.yarn.service.Service;
  */
 public class MiniMRYarnCluster extends MiniYARNCluster {
 
-  public static final String HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME =
-  "hadoop-mapreduce-client-app-0.24.0-SNAPSHOT.jar";
-  
-  public static final String YARN_MAPREDUCE_APP_JAR_PATH =
-  "$YARN_HOME/modules/" + HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;
-
   public static final String APPJAR =
     "../hadoop-mapreduce-client-app/target/"
-        + HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;
+        + MRConstants.HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;
 
   private static final Log LOG = LogFactory.getLog(MiniMRYarnCluster.class);
   private JobHistoryServer historyServer;

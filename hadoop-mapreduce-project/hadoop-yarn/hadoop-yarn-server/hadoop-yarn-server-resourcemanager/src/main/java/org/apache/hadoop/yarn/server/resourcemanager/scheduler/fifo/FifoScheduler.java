@@ -291,7 +291,7 @@ public class FifoScheduler implements ResourceScheduler {
   
   @SuppressWarnings("unchecked")
   private synchronized void addApplication(ApplicationAttemptId appAttemptId,
-      String user) {
+      String queueName, String user) {
     // TODO: Fix store
     SchedulerApp schedulerApp = 
         new SchedulerApp(appAttemptId, user, DEFAULT_QUEUE, 
@@ -528,8 +528,7 @@ public class FifoScheduler implements ResourceScheduler {
                 application.getApplicationAttemptId(),
                 application.getNewContainerId(),
                 node.getRMNode().getNodeID(),
-                node.getRMNode().getHttpAddress(), 
-                capability, priority);
+                node.getRMNode().getHttpAddress(), capability);
         
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
@@ -628,7 +627,7 @@ public class FifoScheduler implements ResourceScheduler {
     {
       AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
       addApplication(appAddedEvent.getApplicationAttemptId(), appAddedEvent
-          .getUser());
+          .getQueue(), appAddedEvent.getUser());
     }
     break;
     case APP_REMOVED:

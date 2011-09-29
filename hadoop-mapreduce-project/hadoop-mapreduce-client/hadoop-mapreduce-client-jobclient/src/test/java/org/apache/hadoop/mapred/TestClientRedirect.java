@@ -68,8 +68,8 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -78,8 +78,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -245,7 +245,7 @@ public class TestClientRedirect {
     }
 
     @Override
-    public GetNewApplicationResponse getNewApplication(GetNewApplicationRequest request) throws YarnRemoteException {
+    public GetNewApplicationIdResponse getNewApplicationId(GetNewApplicationIdRequest request) throws YarnRemoteException {
       return null;
     }
     
@@ -267,13 +267,6 @@ public class TestClientRedirect {
       application.setHost(split[0]);
       application.setRpcPort(Integer.parseInt(split[1]));
       application.setUser("TestClientRedirect-user");
-      application.setName("N/A");
-      application.setQueue("N/A");
-      application.setStartTime(0);
-      application.setFinishTime(0);
-      application.setTrackingUrl("N/A");
-      application.setDiagnostics("N/A");
-
       GetApplicationReportResponse response = recordFactory
           .newRecordInstance(GetApplicationReportResponse.class);
       response.setApplicationReport(application);
@@ -288,9 +281,9 @@ public class TestClientRedirect {
     }
 
     @Override
-    public KillApplicationResponse forceKillApplication(
-        KillApplicationRequest request) throws YarnRemoteException {
-      return recordFactory.newRecordInstance(KillApplicationResponse.class);
+    public FinishApplicationResponse finishApplication(
+        FinishApplicationRequest request) throws YarnRemoteException {
+      return null;
     }
 
     @Override
@@ -451,7 +444,7 @@ public class TestClientRedirect {
     @Override
     public KillJobResponse killJob(KillJobRequest request)
         throws YarnRemoteException {
-      return recordFactory.newRecordInstance(KillJobResponse.class);
+      return null;
     }
 
     @Override

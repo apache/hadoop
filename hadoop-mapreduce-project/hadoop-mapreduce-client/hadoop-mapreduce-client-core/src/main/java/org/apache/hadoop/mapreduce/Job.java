@@ -1239,8 +1239,7 @@ public class Job extends JobContextImpl implements JobContext {
     if (success) {
       LOG.info("Job " + jobId + " completed successfully");
     } else {
-      LOG.info("Job " + jobId + " failed with state " + status.getState() + 
-          " due to: " + status.getFailureInfo());
+      LOG.info("Job " + jobId + " failed with state " + status.getState());
     }
     Counters counters = getCounters();
     if (counters != null) {

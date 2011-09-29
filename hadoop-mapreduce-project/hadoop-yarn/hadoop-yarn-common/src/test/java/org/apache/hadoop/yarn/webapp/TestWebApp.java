@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.WebApp;
@@ -146,32 +145,6 @@ public class TestWebApp {
 
   @Test public void testCreate() {
     WebApp app = WebApps.$for(this).start();
-    app.stop();
-  }
-
-  @Test public void testServePaths() {
-    WebApp app = WebApps.$for("test", this).start();
-    assertEquals("/test", app.getRedirectPath());
-    String[] expectedPaths = { "/test", "/test/*" };
-    String[] pathSpecs = app.getServePathSpecs();
-     
-    assertEquals(2, pathSpecs.length);
-    for(int i = 0; i < expectedPaths.length; i++) {
-      assertTrue(ArrayUtils.contains(pathSpecs, expectedPaths[i]));
-    }
-    app.stop();
-  }
-
-  @Test public void testServePathsNoName() {
-    WebApp app = WebApps.$for("", this).start();
-    assertEquals("/", app.getRedirectPath());
-    String[] expectedPaths = { "/*" };
-    String[] pathSpecs = app.getServePathSpecs();
-     
-    assertEquals(1, pathSpecs.length);
-    for(int i = 0; i < expectedPaths.length; i++) {
-      assertTrue(ArrayUtils.contains(pathSpecs, expectedPaths[i]));
-    }
     app.stop();
   }
 

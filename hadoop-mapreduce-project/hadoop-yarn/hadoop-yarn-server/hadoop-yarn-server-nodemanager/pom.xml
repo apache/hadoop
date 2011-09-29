@@ -103,39 +103,6 @@
         <activeByDefault>true</activeByDefault>
       </activation>
     </profile>
-    <profile>
-      <id>visualize</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>1.2</version>
-            <executions>
-              <execution>
-                <phase>compile</phase>
-                <goals>
-                  <goal>java</goal>
-                </goals>
-                <configuration>
-                  <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
-                  <arguments>
-                    <argument>NodeManager</argument>
-                    <argument>org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl,
-                       org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl,
-                       org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalizedResource</argument>
-                    <argument>NodeManager.gv</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
   </profiles>
 
   <build>

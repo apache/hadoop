@@ -30,6 +30,7 @@ clean and test: mvn clean install
 run selected test after compile: mvn test -Dtest=TestClassName (combined: mvn clean install -Dtest=TestClassName)
 create runnable binaries after install: mvn assembly:assembly (combined: mvn clean install assembly:assembly)
 
+
 Eclipse Projects
 ----------------
 http://maven.apache.org/guides/mini/guide-ide-eclipse.html
@@ -70,16 +71,3 @@ hadoop-yarn-server - Implementation of the hadoop-yarn-api
 	hadoop-yarn-server-common - APIs shared between resourcemanager and nodemanager
 	hadoop-yarn-server-nodemanager (TaskTracker replacement)
 	hadoop-yarn-server-resourcemanager (JobTracker replacement)
-
-Utilities for understanding the code
-------------------------------------
-Almost all of the yarn components as well as the mapreduce framework use
-state-machines for all the data objects. To understand those central pieces of
-the code, a visual representation of the state-machines helps much. You can first
-convert the state-machines into graphviz(.gv) format by
-running:
-   mvn compile -Pvisualize
-Then you can use the dot program for generating directed graphs and convert the above
-.gv files to images. The graphviz package has the needed dot program and related
-utilites.For e.g., to generate png files you can run:
-   dot -Tpng NodeManager.gv > NodeManager.png

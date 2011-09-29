@@ -84,7 +84,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     super.init(conf);
     String bindAddress =
       conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS);
+          YarnConfiguration.RM_ADMIN_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
     adminAcl = 
       new AccessControlList(

@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  *     </li>
  *     <li>HTTP uri of the node.</li>
  *     <li>{@link Resource} allocated to the container.</li>
- *     <li>{@link Priority} at which the container was allocated.</li>
  *     <li>{@link ContainerState} of the container.</li>
  *     <li>
  *       {@link ContainerToken} of the container, used to securely verify 
@@ -112,18 +111,6 @@ public interface Container extends Comparable<Container> {
   @Private
   @Unstable
   void setResource(Resource resource);
-
-  /**
-   * Get the <code>Priority</code> at which the <code>Container</code> was
-   * allocated.
-   * @return <code>Priority</code> at which the <code>Container</code> was
-   *         allocated
-   */
-  Priority getPriority();
-  
-  @Private
-  @Unstable
-  void setPriority(Priority priority);
   
   /**
    * Get the current <code>ContainerState</code> of the container.

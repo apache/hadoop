@@ -113,14 +113,6 @@ public class WebApps {
         };
       }
       webapp.setName(name);
-      String basePath = "/" + name;
-      webapp.setRedirectPath(basePath);
-      if (basePath.equals("/")) { 
-        webapp.addServePathSpec("/*");
-      }  else {
-        webapp.addServePathSpec(basePath);
-        webapp.addServePathSpec(basePath + "/*");
-      }
       if (conf == null) {
         conf = new Configuration();
       }
@@ -150,8 +142,7 @@ public class WebApps {
           }
         }
         HttpServer server =
-            new HttpServer(name, bindAddress, port, findPort, conf, 
-            webapp.getServePathSpecs());
+            new HttpServer(name, bindAddress, port, findPort, conf);
         server.addGlobalFilter("guice", GuiceFilter.class.getName(), null);
         webapp.setConf(conf);
         webapp.setHttpServer(server);

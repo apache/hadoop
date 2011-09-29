@@ -76,9 +76,6 @@
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
 
     <commons-daemon.version>1.0.3</commons-daemon.version>
-    
-    <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
-    <test.build.data>${test.build.dir}</test.build.data>
   </properties>
 
   <dependencyManagement>
@@ -559,25 +556,6 @@
               <goal>enforce</goal>
             </goals>
             <phase>pre-site</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>create-testdirs</id>
-            <phase>validate</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="${test.build.dir}"/>
-                <mkdir dir="${test.build.data}"/>
-              </target>
-            </configuration>
           </execution>
         </executions>
       </plugin>

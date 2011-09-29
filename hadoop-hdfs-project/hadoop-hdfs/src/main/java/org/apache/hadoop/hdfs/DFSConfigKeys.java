@@ -244,6 +244,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY = "dfs.corruptfilesreturned.max";
   public static final int     DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
 
+  // HA related configuration
+  public static final String DFS_HA_NAMENODE_IDS_KEY = "dfs.ha.namenode.ids";
+  public static final String DFS_HA_NAMENODE_IDS_DEFAULT = "";
 
   // property for fsimage compression
   public static final String DFS_IMAGE_COMPRESS_KEY = "dfs.image.compress";

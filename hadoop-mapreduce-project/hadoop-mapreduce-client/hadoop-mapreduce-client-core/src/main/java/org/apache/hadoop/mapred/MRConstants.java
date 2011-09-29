@@ -17,16 +17,11 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-
 /*******************************
  * Some handy constants
  * 
  *******************************/
-@Private
-@Unstable
-public interface MRConstants {
+interface MRConstants {
   //
   // Timeouts, constants
   //
@@ -58,6 +53,5 @@ public interface MRConstants {
    */
   public static final String FOR_REDUCE_TASK = "for-reduce-task";
   
-  /** Used in MRv1, mostly in TaskTracker code **/
   public static final String WORKDIR = "work";
 }

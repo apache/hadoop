@@ -321,10 +321,6 @@ public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {
      super.setJobACLs(acls);
    }
 
-   public synchronized void setFailureInfo(String failureInfo) {
-     super.setFailureInfo(failureInfo);
-   }
-   
   /**
    * Set the priority of the job, defaulting to NORMAL.
    * @param jp new job priority

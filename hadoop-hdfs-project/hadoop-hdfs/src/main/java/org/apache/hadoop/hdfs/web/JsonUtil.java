@@ -17,31 +17,19 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.mortbay.util.ajax.JSON;
 
 /** JSON Utilities */
 public class JsonUtil {
-  private static class ThreadLocalMap extends ThreadLocal<Map<String, Object>> {
+  private static final ThreadLocal<Map<String, Object>> jsonMap
+      = new ThreadLocal<Map<String, Object>>() {
     @Override
     protected Map<String, Object> initialValue() {
       return new TreeMap<String, Object>();
@@ -53,54 +41,7 @@ public class JsonUtil {
       m.clear();
       return m;
     }
-  }
-
-  private static final ThreadLocalMap jsonMap = new ThreadLocalMap();
-  private static final ThreadLocalMap tokenMap = new ThreadLocalMap();
-  private static final ThreadLocalMap datanodeInfoMap = new ThreadLocalMap();
-  private static final ThreadLocalMap extendedBlockMap = new ThreadLocalMap();
-  private static final ThreadLocalMap locatedBlockMap = new ThreadLocalMap();
-
-  private static final DatanodeInfo[] EMPTY_DATANODE_INFO_ARRAY = {};
-
-  /** Convert a token object to a Json string. */
-  public static String toJsonString(final Token<? extends TokenIdentifier> token
-      ) throws IOException {
-    if (token == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = tokenMap.get();
-    m.put("urlString", token.encodeToUrlString());
-    return JSON.toString(m);
-  }
-
-  /** Convert a Json map to a Token. */
-  public static Token<? extends TokenIdentifier> toToken(
-      final Map<?, ?> m) throws IOException {
-    if (m == null) {
-      return null;
-    }
-
-    final Token<DelegationTokenIdentifier> token
-        = new Token<DelegationTokenIdentifier>();
-    token.decodeFromUrlString((String)m.get("urlString"));
-    return token;
-  }
-
-  /** Convert a Json map to a Token of DelegationTokenIdentifier. */
-  @SuppressWarnings("unchecked")
-  public static Token<DelegationTokenIdentifier> toDelegationToken(
-      final Map<?, ?> m) throws IOException {
-    return (Token<DelegationTokenIdentifier>)toToken(m);
-  }
-
-  /** Convert a Json map to a Token of BlockTokenIdentifier. */
-  @SuppressWarnings("unchecked")
-  public static Token<BlockTokenIdentifier> toBlockToken(
-      final Map<?, ?> m) throws IOException {
-    return (Token<BlockTokenIdentifier>)toToken(m);
-  }
+  };
 
   /** Convert an exception object to a Json string. */
   public static String toJsonString(final Exception e) {
@@ -136,10 +77,11 @@ public class JsonUtil {
 
   /** Convert a HdfsFileStatus object to a Json string. */
   public static String toJsonString(final HdfsFileStatus status) {
+    final Map<String, Object> m = jsonMap.get();
     if (status == null) {
-      return null;
+      m.put("isNull", true);
     } else {
-      final Map<String, Object> m = jsonMap.get();
+      m.put("isNull", false);
       m.put("localName", status.getLocalName());
       m.put("isDir", status.isDir());
       m.put("isSymlink", status.isSymlink());
@@ -155,8 +97,8 @@ public class JsonUtil {
       m.put("modificationTime", status.getModificationTime());
       m.put("blockSize", status.getBlockSize());
       m.put("replication", status.getReplication());
-      return JSON.toString(m);
     }
+    return JSON.toString(m);
   }
 
   @SuppressWarnings("unchecked")
@@ -164,9 +106,9 @@ public class JsonUtil {
     return (Map<String, Object>) JSON.parse(jsonString);
   }
 
-  /** Convert a Json map to a HdfsFileStatus object. */
+  /** Convert a Json string to a HdfsFileStatus object. */
   public static HdfsFileStatus toFileStatus(final Map<String, Object> m) {
-    if (m == null) {
+    if ((Boolean)m.get("isNull")) {
       return null;
     }
 
@@ -187,215 +129,5 @@ public class JsonUtil {
     return new HdfsFileStatus(len, isDir, replication, blockSize, mTime, aTime,
         permission, owner, group,
         symlink, DFSUtil.string2Bytes(localName));
-  }
-
-  /** Convert a LocatedBlock to a Json string. */
-  public static String toJsonString(final ExtendedBlock extendedblock) {
-    if (extendedblock == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = extendedBlockMap.get();
-    m.put("blockPoolId", extendedblock.getBlockPoolId());
-    m.put("blockId", extendedblock.getBlockId());
-    m.put("numBytes", extendedblock.getNumBytes());
-    m.put("generationStamp", extendedblock.getGenerationStamp());
-    return JSON.toString(m);
-  }
-
-  /** Convert a Json map to an ExtendedBlock object. */
-  public static ExtendedBlock toExtendedBlock(final Map<?, ?> m) {
-    if (m == null) {
-      return null;
-    }
-    
-    final String blockPoolId = (String)m.get("blockPoolId");
-    final long blockId = (Long)m.get("blockId");
-    final long numBytes = (Long)m.get("numBytes");
-    final long generationStamp = (Long)m.get("generationStamp");
-    return new ExtendedBlock(blockPoolId, blockId, numBytes, generationStamp);
-  }
-  
-  /** Convert a DatanodeInfo to a Json string. */
-  public static String toJsonString(final DatanodeInfo datanodeinfo) {
-    if (datanodeinfo == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = datanodeInfoMap.get();
-    m.put("name", datanodeinfo.getName());
-    m.put("storageID", datanodeinfo.getStorageID());
-    m.put("infoPort", datanodeinfo.getInfoPort());
-
-    m.put("ipcPort", datanodeinfo.getIpcPort());
-
-    m.put("capacity", datanodeinfo.getCapacity());
-    m.put("dfsUsed", datanodeinfo.getDfsUsed());
-    m.put("remaining", datanodeinfo.getRemaining());
-    m.put("blockPoolUsed", datanodeinfo.getBlockPoolUsed());
-    m.put("lastUpdate", datanodeinfo.getLastUpdate());
-    m.put("xceiverCount", datanodeinfo.getXceiverCount());
-    m.put("networkLocation", datanodeinfo.getNetworkLocation());
-    m.put("hostName", datanodeinfo.getHostName());
-    m.put("adminState", datanodeinfo.getAdminState().name());
-    return JSON.toString(m);
-  }
-
-  /** Convert a Json map to an DatanodeInfo object. */
-  public static DatanodeInfo toDatanodeInfo(final Map<?, ?> m) {
-    if (m == null) {
-      return null;
-    }
-
-    return new DatanodeInfo(
-        (String)m.get("name"),
-        (String)m.get("storageID"),
-        (int)(long)(Long)m.get("infoPort"),
-        (int)(long)(Long)m.get("ipcPort"),
-
-        (Long)m.get("capacity"),
-        (Long)m.get("dfsUsed"),
-        (Long)m.get("remaining"),
-        (Long)m.get("blockPoolUsed"),
-        (Long)m.get("lastUpdate"),
-        (int)(long)(Long)m.get("xceiverCount"),
-        (String)m.get("networkLocation"),
-        (String)m.get("hostName"),
-        AdminStates.valueOf((String)m.get("adminState")));
-  }
-
-  /** Convert a DatanodeInfo[] to a Json string. */
-  public static String toJsonString(final DatanodeInfo[] array
-      ) throws IOException {
-    if (array == null) {
-      return null;
-    } else if (array.length == 0) {
-      return "[]";
-    } else {
-      final StringBuilder b = new StringBuilder().append('[').append(
-          toJsonString(array[0]));
-      for(int i = 1; i < array.length; i++) {
-        b.append(", ").append(toJsonString(array[i]));
-      }
-      return b.append(']').toString();
-    }
-  }
-
-  /** Convert an Object[] to a DatanodeInfo[]. */
-  public static DatanodeInfo[] toDatanodeInfoArray(final Object[] objects) {
-    if (objects == null) {
-      return null;
-    } else if (objects.length == 0) {
-      return EMPTY_DATANODE_INFO_ARRAY;
-    } else {
-      final DatanodeInfo[] array = new DatanodeInfo[objects.length];
-      for(int i = 0; i < array.length; i++) {
-        array[i] = (DatanodeInfo)toDatanodeInfo((Map<?, ?>) objects[i]);
-      }
-      return array;
-    }
-  }
-
-  /** Convert a LocatedBlock to a Json string. */
-  public static String toJsonString(final LocatedBlock locatedblock
-      ) throws IOException {
-    if (locatedblock == null) {
-      return null;
-    }
- 
-    final Map<String, Object> m = locatedBlockMap.get();
-    m.put("blockToken", toJsonString(locatedblock.getBlockToken()));
-    m.put("isCorrupt", locatedblock.isCorrupt());
-    m.put("startOffset", locatedblock.getStartOffset());
-    m.put("block", toJsonString(locatedblock.getBlock()));
-
-    m.put("locations", toJsonString(locatedblock.getLocations()));
-    return JSON.toString(m);
-  }
-
-  /** Convert a Json map to LocatedBlock. */
-  public static LocatedBlock toLocatedBlock(final Map<?, ?> m) throws IOException {
-    if (m == null) {
-      return null;
-    }
-
-    final ExtendedBlock b = toExtendedBlock((Map<?, ?>)JSON.parse((String)m.get("block")));
-    final DatanodeInfo[] locations = toDatanodeInfoArray(
-        (Object[])JSON.parse((String)m.get("locations")));
-    final long startOffset = (Long)m.get("startOffset");
-    final boolean isCorrupt = (Boolean)m.get("isCorrupt");
-
-    final LocatedBlock locatedblock = new LocatedBlock(b, locations, startOffset, isCorrupt);
-    locatedblock.setBlockToken(toBlockToken((Map<?, ?>)JSON.parse((String)m.get("blockToken"))));
-    return locatedblock;
-  }
-
-  /** Convert a LocatedBlock[] to a Json string. */
-  public static String toJsonString(final List<LocatedBlock> array
-      ) throws IOException {
-    if (array == null) {
-      return null;
-    } else if (array.size() == 0) {
-      return "[]";
-    } else {
-      final StringBuilder b = new StringBuilder().append('[').append(
-          toJsonString(array.get(0)));
-      for(int i = 1; i < array.size(); i++) {
-        b.append(",\n  ").append(toJsonString(array.get(i)));
-      }
-      return b.append(']').toString();
-    }
-  }
-
-  /** Convert an Object[] to a List of LocatedBlock. 
-   * @throws IOException */
-  public static List<LocatedBlock> toLocatedBlockList(final Object[] objects
-      ) throws IOException {
-    if (objects == null) {
-      return null;
-    } else if (objects.length == 0) {
-      return Collections.emptyList();
-    } else {
-      final List<LocatedBlock> list = new ArrayList<LocatedBlock>(objects.length);
-      for(int i = 0; i < objects.length; i++) {
-        list.add((LocatedBlock)toLocatedBlock((Map<?, ?>)objects[i]));
-      }
-      return list;
-    }
-  }
-
-  /** Convert LocatedBlocks to a Json string. */
-  public static String toJsonString(final LocatedBlocks locatedblocks
-      ) throws IOException {
-    if (locatedblocks == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = jsonMap.get();
-    m.put("fileLength", locatedblocks.getFileLength());
-    m.put("isUnderConstruction", locatedblocks.isUnderConstruction());
-
-    m.put("locatedBlocks", toJsonString(locatedblocks.getLocatedBlocks()));
-    m.put("lastLocatedBlock", toJsonString(locatedblocks.getLastLocatedBlock()));
-    m.put("isLastBlockComplete", locatedblocks.isLastBlockComplete());
-    return JSON.toString(m);
-  }
-
-  /** Convert a Json map to LocatedBlock. */
-  public static LocatedBlocks toLocatedBlocks(final Map<String, Object> m
-      ) throws IOException {
-    if (m == null) {
-      return null;
-    }
-    
-    final long fileLength = (Long)m.get("fileLength");
-    final boolean isUnderConstruction = (Boolean)m.get("isUnderConstruction");
-    final List<LocatedBlock> locatedBlocks = toLocatedBlockList(
-        (Object[])JSON.parse((String) m.get("locatedBlocks")));
-    final LocatedBlock lastLocatedBlock = toLocatedBlock(
-        (Map<?, ?>)JSON.parse((String)m.get("lastLocatedBlock")));
-    final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
-    return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
-        lastLocatedBlock, isLastBlockComplete);
   }
 }

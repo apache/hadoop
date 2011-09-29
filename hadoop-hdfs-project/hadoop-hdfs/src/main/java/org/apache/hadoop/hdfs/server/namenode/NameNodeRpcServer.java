@@ -66,7 +66,6 @@ import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -146,17 +145,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
       serviceRpcServer = null;
       serviceRPCAddress = null;
     }
-    // Add all the RPC protocols that the namenode implements
-    this.server = RPC.getServer(ClientProtocol.class, this,
+    this.server = RPC.getServer(NamenodeProtocols.class, this,
                                 socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf, 
                                 namesystem.getDelegationTokenSecretManager());
-    this.server.addProtocol(DatanodeProtocol.class, this);
-    this.server.addProtocol(NamenodeProtocol.class, this);
-    this.server.addProtocol(RefreshAuthorizationPolicyProtocol.class, this);
-    this.server.addProtocol(RefreshUserMappingsProtocol.class, this);
-    this.server.addProtocol(GetUserMappingsProtocol.class, this);
-    
 
     // set service-level authorization security policy
     if (serviceAuthEnabled =
@@ -979,11 +971,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   private static String getClientMachine() {
-    String clientMachine = NamenodeWebHdfsMethods.getRemoteAddress();
-    if (clientMachine == null) { //not a web client
-      clientMachine = Server.getRemoteAddress();
-    }
-    if (clientMachine == null) { //not a RPC client
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) {
       clientMachine = "";
     }
     return clientMachine;

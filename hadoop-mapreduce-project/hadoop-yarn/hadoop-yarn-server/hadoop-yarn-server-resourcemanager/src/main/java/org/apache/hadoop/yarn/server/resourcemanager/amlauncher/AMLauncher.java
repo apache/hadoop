@@ -136,7 +136,7 @@ public class AMLauncher implements Runnable {
     containerMgrProxy.stopContainer(stopRequest);
   }
 
-  protected ContainerManager getContainerMgrProxy(
+  private ContainerManager getContainerMgrProxy(
       final ApplicationId applicationID) throws IOException {
 
     Container container = application.getMasterContainer();
@@ -173,11 +173,23 @@ public class AMLauncher implements Runnable {
     // Construct the actual Container
     ContainerLaunchContext container = 
         applicationMasterContext.getAMContainerSpec();
-    LOG.info("Command to launch container "
-        + containerID
-        + " : "
-        + StringUtils.arrayToString(container.getCommands().toArray(
-            new String[0])));
+    StringBuilder mergedCommand = new StringBuilder();
+    String failCount = Integer.toString(application.getAppAttemptId()
+        .getAttemptId());
+    List<String> commandList = new ArrayList<String>();
+    for (String str : container.getCommands()) {
+      // This is out-right wrong. AM FAIL count should be passed via env.
+      String result =
+          str.replaceFirst(ApplicationConstants.AM_FAIL_COUNT_STRING,
+              failCount);
+      mergedCommand.append(result).append(" ");
+      commandList.add(result);
+    }
+    container.setCommands(commandList);
+    /** add the failed count to the app master command line */
+   
+    LOG.info("Command to launch container " + 
+        containerID + " : " + mergedCommand);
     
     // Finalize the container
     container.setContainerId(containerID);
@@ -191,11 +203,6 @@ public class AMLauncher implements Runnable {
       ContainerLaunchContext container)
       throws IOException {
     Map<String, String> environment = container.getEnvironment();
-
-    // Set the AppAttemptId to be consumable by the AM.
-    environment.put(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV,
-        application.getAppAttemptId().toString());
-
     if (UserGroupInformation.isSecurityEnabled()) {
       // TODO: Security enabled/disabled info should come from RM.
 

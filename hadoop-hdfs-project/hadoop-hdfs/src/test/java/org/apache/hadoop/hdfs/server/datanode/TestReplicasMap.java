@@ -17,24 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
-
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.junit.Before;
+import static org.junit.Assert.*;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
  * Unit test for ReplicasMap class
  */
 public class TestReplicasMap {
-  private final ReplicasMap map = new ReplicasMap(TestReplicasMap.class);
-  private final String bpid = "BP-TEST";
-  private final  Block block = new Block(1234, 1234, 1234);
+  private static final ReplicasMap map = new ReplicasMap(TestReplicasMap.class);
+  private static final String bpid = "BP-TEST";
+  private static final  Block block = new Block(1234, 1234, 1234);
   
-  @Before
-  public void setup() {
+  @BeforeClass
+  public static void setup() {
     map.add(bpid, new FinalizedReplica(block, null, null));
   }
   

@@ -31,78 +31,17 @@ script=`basename "$this"`
 bin=`cd "$bin"; pwd`
 this="$bin/$script"
 
-# Check if HADOOP_HOME AND JAVA_HOME is set.
-if [ -z "$HADOOP_HOME" ] && [ -z "$HADOOP_PREFIX" ] ; then
-  echo "HADOOP_HOME or HADOOP_PREFIX environment variable should be defined"
+# Check if HADOOP_PREFIX AND JAVA_HOME is set.
+if [ -z $HADOOP_PREFIX ] ; then
+  echo "HADOOP_PREFIX environment variable not defined"
   exit -1;
 fi
 
-if [ -z "$JAVA_HOME" ] ; then
+if [ -z $JAVA_HOME ] ; then
   echo "JAVA_HOME environment variable not defined"
   exit -1;
 fi
 
-if [ -z "$HADOOP_PREFIX" ]; then
-  hadoopVersion=`$HADOOP_HOME/bin/hadoop version | awk 'BEGIN { RS = "" ; FS = "\n" } ; { print $1 }' | awk '{print $2}'`
-else
-  hadoopVersion=`$HADOOP_PREFIX/bin/hadoop version | awk 'BEGIN { RS = "" ; FS = "\n" } ; { print $1 }' | awk '{print $2}'`
-fi
+hadoopVersion=`$HADOOP_PREFIX/bin/hadoop version | grep Hadoop | awk '{print $2}'`
 
-# so that filenames w/ spaces are handled correctly in loops below
-IFS=
-
-# for releases, add core hadoop jar to CLASSPATH
-if [ -e $HADOOP_PREFIX/share/hadoop/hadoop-core-* ]; then
-  for f in $HADOOP_PREFIX/share/hadoop/hadoop-core-*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
-  done
-
-  # add libs to CLASSPATH
-  for f in $HADOOP_PREFIX/share/hadoop/lib/*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
-  done
-else
-  # tarball layout
-  if [ -e $HADOOP_HOME/hadoop-core-* ]; then
-    for f in $HADOOP_HOME/hadoop-core-*.jar; do
-      CLASSPATH=${CLASSPATH}:$f;
-    done
-  fi
-  if [ -e $HADOOP_HOME/build/hadoop-core-* ]; then 
-    for f in $HADOOP_HOME/build/hadoop-core-*.jar; do
-      CLASSPATH=${CLASSPATH}:$f;
-    done
-  fi
-  for f in $HADOOP_HOME/lib/*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
-  done
-
-  if [ -d "$HADOOP_HOME/build/ivy/lib/Hadoop/common" ]; then
-    for f in $HADOOP_HOME/build/ivy/lib/Hadoop/common/*.jar; do
-      CLASSPATH=${CLASSPATH}:$f;
-    done
-  fi
-fi
-
-# Set the Vaidya home
-if [ -d "$HADOOP_PREFIX/share/hadoop/contrib/vaidya/" ]; then
-  VAIDYA_HOME=$HADOOP_PREFIX/share/hadoop/contrib/vaidya/
-fi
-if [ -d "$HADOOP_HOME/contrib/vaidya" ]; then
-  VAIDYA_HOME=$HADOOP_HOME/contrib/vaidya/
-fi
-if [ -d "$HADOOP_HOME/build/contrib/vaidya" ]; then
-  VAIDYA_HOME=$HADOOP_HOME/build/contrib/vaidya/
-fi
-
-# add user-specified CLASSPATH last
-if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; then
-  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
-fi
-
-# restore ordinary behaviour
-unset IFS
-
-echo "$CLASSPATH"
-
-$JAVA_HOME/bin/java -Xmx1024m -classpath $VAIDYA_HOME/hadoop-vaidya-${hadoopVersion}.jar:${CLASSPATH} org.apache.hadoop.vaidya.postexdiagnosis.PostExPerformanceDiagnoser $@
+$JAVA_HOME/bin/java -Xmx1024m -classpath $HADOOP_PREFIX/hadoop-${hadoopVersion}-core.jar:$HADOOP_PREFIX/contrib/vaidya/hadoop-${hadoopVersion}-vaidya.jar:$HADOOP_PREFIX/lib/commons-logging-1.0.4.jar:${CLASSPATH} org.apache.hadoop.vaidya.postexdiagnosis.PostExPerformanceDiagnoser $@

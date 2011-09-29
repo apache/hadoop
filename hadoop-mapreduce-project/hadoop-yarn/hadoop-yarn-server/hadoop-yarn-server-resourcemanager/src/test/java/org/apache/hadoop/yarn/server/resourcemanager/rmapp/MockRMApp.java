@@ -162,7 +162,6 @@ public class MockRMApp implements RMApp {
     this.diagnostics  = new StringBuilder(diag);
   }
 
-  @Override
   public void handle(RMAppEvent event) {
   }
 

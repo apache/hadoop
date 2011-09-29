@@ -38,7 +38,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MockAM {
@@ -129,7 +128,7 @@ public class MockAM {
     req.setHostName(resource);
     req.setNumContainers(containers);
     Priority pri = Records.newRecord(Priority.class);
-    pri.setPriority(priority);
+    pri.setPriority(1);
     req.setPriority(pri);
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(memory);
@@ -140,8 +139,11 @@ public class MockAM {
   public AMResponse allocate(
       List<ResourceRequest> resourceRequest, List<ContainerId> releases) 
       throws Exception {
-    AllocateRequest req = BuilderUtils.newAllocateRequest(attemptId,
-        ++responseId, 0F, resourceRequest, releases);
+    AllocateRequest req = Records.newRecord(AllocateRequest.class);
+    req.setResponseId(++responseId);
+    req.setApplicationAttemptId(attemptId);
+    req.addAllAsks(resourceRequest);
+    req.addAllReleases(releases);
     AllocateResponse resp = amRMProtocol.allocate(req);
     return resp.getAMResponse();
   }

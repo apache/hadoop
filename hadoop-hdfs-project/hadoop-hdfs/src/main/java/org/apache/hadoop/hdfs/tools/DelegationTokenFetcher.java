@@ -149,9 +149,7 @@ public class DelegationTokenFetcher {
                 DataInputStream in = new DataInputStream(
                     new ByteArrayInputStream(token.getIdentifier()));
                 id.readFields(in);
-                if(LOG.isDebugEnabled()) {
-                  LOG.debug("Token (" + id + ") for " + token.getService());
-                }
+                System.out.println("Token (" + id + ") for " + token.getService());
               }
               return null;
             }
@@ -162,28 +160,22 @@ public class DelegationTokenFetcher {
                 for (Token<?> token : readTokens(tokenFile, conf)) {
                   result = renewDelegationToken(webUrl,
                       (Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                	  LOG.debug("Renewed token via " + webUrl + " for "
-                          + token.getService() + " until: " + new Date(result));
-                  }
+                  System.out.println("Renewed token via " + webUrl + " for "
+                      + token.getService() + " until: " + new Date(result));
                 }
               } else if (cancel) {
                 for (Token<?> token : readTokens(tokenFile, conf)) {
                   cancelDelegationToken(webUrl,
                       (Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                    LOG.debug("Cancelled token via " + webUrl + " for "
-                	    + token.getService());
-                  }
+                  System.out.println("Cancelled token via " + webUrl + " for "
+                      + token.getService());
                 }
               } else {
                 Credentials creds = getDTfromRemote(webUrl, renewer);
                 creds.writeTokenStorageFile(tokenFile, conf);
                 for (Token<?> token : creds.getAllTokens()) {
-                  if(LOG.isDebugEnabled()) {	
-                    LOG.debug("Fetched token via " + webUrl + " for "
-                        + token.getService() + " into " + tokenFile);
-                  }
+                  System.out.println("Fetched token via " + webUrl + " for "
+                      + token.getService() + " into " + tokenFile);
                 }
               }
             } else {
@@ -192,30 +184,24 @@ public class DelegationTokenFetcher {
                 for (Token<?> token : readTokens(tokenFile, conf)) {
                   ((DistributedFileSystem) fs)
                       .cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                    LOG.debug("Cancelled token for "
-                        + token.getService());
-                  }
+                  System.out.println("Cancelled token for "
+                      + token.getService());
                 }
               } else if (renew) {
                 long result;
                 for (Token<?> token : readTokens(tokenFile, conf)) {
                   result = ((DistributedFileSystem) fs)
                       .renewDelegationToken((Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                    LOG.debug("Renewed token for " + token.getService()
-                        + " until: " + new Date(result));
-                  }
+                  System.out.println("Renewed token for " + token.getService()
+                      + " until: " + new Date(result));
                 }
               } else {
                 Token<?> token = fs.getDelegationToken(renewer);
                 Credentials cred = new Credentials();
                 cred.addToken(token.getService(), token);
                 cred.writeTokenStorageFile(tokenFile, conf);
-                if(LOG.isDebugEnabled()) {
-                  LOG.debug("Fetched token for " + token.getService()
-                      + " into " + tokenFile);
-                }
+                System.out.println("Fetched token for " + token.getService()
+                    + " into " + tokenFile);
               }
             }
             return null;
@@ -235,11 +221,6 @@ public class DelegationTokenFetcher {
       } else {
         url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC);
       }
-      
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Retrieving token from: " + url);
-      }
-      
       URL remoteURL = new URL(url.toString());
       SecurityUtil.fetchServiceTicket(remoteURL);
       URLConnection connection = remoteURL.openConnection();

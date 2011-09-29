@@ -475,10 +475,7 @@ else
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
   if [ ! -e ${HADOOP_CONF_DIR}/capacity-scheduler.xml ]; then
-    template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
-  fi
-  if [ ! -e ${HADOOP_CONF_DIR}/hadoop-metrics2.properties ]; then
-    cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
+    template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
   fi
   if [ ! -e ${HADOOP_CONF_DIR}/log4j.properties ]; then
     cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties

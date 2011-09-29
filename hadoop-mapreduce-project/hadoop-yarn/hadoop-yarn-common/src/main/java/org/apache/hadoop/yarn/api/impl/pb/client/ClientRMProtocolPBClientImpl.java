@@ -25,6 +25,8 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -33,16 +35,16 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetAllApplicationsRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetAllApplicationsResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetApplicationReportRequestPBImpl;
@@ -51,28 +53,27 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterMetricsReque
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterMetricsResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterNodesRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetClusterNodesResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNewApplicationRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNewApplicationResponsePBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNewApplicationIdRequestPBImpl;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetNewApplicationIdResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueInfoRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueInfoResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueUserAclsInfoRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetQueueUserAclsInfoResponsePBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.KillApplicationRequestPBImpl;
-import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.KillApplicationResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SubmitApplicationRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.SubmitApplicationResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
 import org.apache.hadoop.yarn.proto.ClientRMProtocol.ClientRMProtocolService;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetAllApplicationsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterMetricsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetClusterNodesRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueInfoRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationIdRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueUserAclsInfoRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SubmitApplicationRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueInfoRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetQueueInfoResponseProto;
 
 import com.google.protobuf.ServiceException;
 
@@ -87,11 +88,11 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   }
   
   @Override
-  public KillApplicationResponse forceKillApplication(
-      KillApplicationRequest request) throws YarnRemoteException {
-    KillApplicationRequestProto requestProto = ((KillApplicationRequestPBImpl)request).getProto();
+  public FinishApplicationResponse finishApplication(
+      FinishApplicationRequest request) throws YarnRemoteException {
+    FinishApplicationRequestProto requestProto = ((FinishApplicationRequestPBImpl)request).getProto();
     try {
-      return new KillApplicationResponsePBImpl(proxy.forceKillApplication(null, requestProto));
+      return new FinishApplicationResponsePBImpl(proxy.finishApplication(null, requestProto));
     } catch (ServiceException e) {
       if (e.getCause() instanceof YarnRemoteException) {
         throw (YarnRemoteException)e.getCause();
@@ -138,11 +139,11 @@ public class ClientRMProtocolPBClientImpl implements ClientRMProtocol {
   }
 
   @Override
-  public GetNewApplicationResponse getNewApplication(
-      GetNewApplicationRequest request) throws YarnRemoteException {
-    GetNewApplicationRequestProto requestProto = ((GetNewApplicationRequestPBImpl)request).getProto();
+  public GetNewApplicationIdResponse getNewApplicationId(
+      GetNewApplicationIdRequest request) throws YarnRemoteException {
+    GetNewApplicationIdRequestProto requestProto = ((GetNewApplicationIdRequestPBImpl)request).getProto();
     try {
-      return new GetNewApplicationResponsePBImpl(proxy.getNewApplication(null, requestProto));
+      return new GetNewApplicationIdResponsePBImpl(proxy.getNewApplicationId(null, requestProto));
     } catch (ServiceException e) {
       if (e.getCause() instanceof YarnRemoteException) {
         throw (YarnRemoteException)e.getCause();

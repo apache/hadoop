@@ -320,12 +320,6 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
             + methodName);
       MethodDescriptor methodDescriptor = service.getDescriptorForType()
           .findMethodByName(methodName);
-      if (methodDescriptor == null) {
-        String msg = "Unknown method " + methodName + " called on "
-            + protocol + " protocol.";
-        LOG.warn(msg);
-        return handleException(new IOException(msg));
-      }
       Message prototype = service.getRequestPrototype(methodDescriptor);
       Message param = prototype.newBuilderForType()
           .mergeFrom(rpcRequest.getRequestProto()).build();

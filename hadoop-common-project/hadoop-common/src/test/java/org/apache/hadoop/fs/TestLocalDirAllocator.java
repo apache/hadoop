@@ -20,48 +20,40 @@ package org.apache.hadoop.fs;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
+import junit.framework.TestCase;
 
 /** This test LocalDirAllocator works correctly;
- * Every test case uses different buffer dirs to
+ * Every test case uses different buffer dirs to 
  * enforce the AllocatorPerContext initialization.
  * This test does not run on Cygwin because under Cygwin
  * a directory can be created in a read-only directory
  * which breaks this test.
- */
-@RunWith(Parameterized.class)
-public class TestLocalDirAllocator {
+ */ 
+public class TestLocalDirAllocator extends TestCase {
   final static private Configuration conf = new Configuration();
   final static private String BUFFER_DIR_ROOT = "build/test/temp";
-  final static private String ABSOLUTE_DIR_ROOT;
-  final static private String QUALIFIED_DIR_ROOT;
   final static private Path BUFFER_PATH_ROOT = new Path(BUFFER_DIR_ROOT);
   final static private File BUFFER_ROOT = new File(BUFFER_DIR_ROOT);
-  final static private String CONTEXT = "fs.client.buffer.dir";
+  final static private String BUFFER_DIR[] = new String[] {
+    BUFFER_DIR_ROOT+"/tmp0",  BUFFER_DIR_ROOT+"/tmp1", BUFFER_DIR_ROOT+"/tmp2",
+    BUFFER_DIR_ROOT+"/tmp3", BUFFER_DIR_ROOT+"/tmp4", BUFFER_DIR_ROOT+"/tmp5",
+    BUFFER_DIR_ROOT+"/tmp6"};
+  final static private Path BUFFER_PATH[] = new Path[] {
+    new Path(BUFFER_DIR[0]), new Path(BUFFER_DIR[1]), new Path(BUFFER_DIR[2]),
+    new Path(BUFFER_DIR[3]), new Path(BUFFER_DIR[4]), new Path(BUFFER_DIR[5]),
+    new Path(BUFFER_DIR[6])};
+  final static private String CONTEXT = "dfs.client.buffer.dir";
   final static private String FILENAME = "block";
-  final static private LocalDirAllocator dirAllocator =
+  final static private LocalDirAllocator dirAllocator = 
     new LocalDirAllocator(CONTEXT);
   static LocalFileSystem localFs;
   final static private boolean isWindows =
     System.getProperty("os.name").startsWith("Windows");
   final static int SMALL_FILE_SIZE = 100;
-  final static private String RELATIVE = "/RELATIVE";
-  final static private String ABSOLUTE = "/ABSOLUTE";
-  final static private String QUALIFIED = "/QUALIFIED";
-  final private String ROOT;
-  final private String PREFIX;
-
   static {
     try {
       localFs = FileSystem.getLocal(conf);
@@ -71,214 +63,170 @@ public class TestLocalDirAllocator {
       e.printStackTrace();
       System.exit(-1);
     }
-
-    ABSOLUTE_DIR_ROOT = new Path(localFs.getWorkingDirectory(),
-        BUFFER_DIR_ROOT).toUri().getPath();
-    QUALIFIED_DIR_ROOT = new Path(localFs.getWorkingDirectory(),
-        BUFFER_DIR_ROOT).toUri().toString();
-  }
-
-  public TestLocalDirAllocator(String root, String prefix) {
-    ROOT = root;
-    PREFIX = prefix;
-  }
-
-  @Parameters
-  public static Collection<Object[]> params() {
-    Object [][] data = new Object[][] {
-      { BUFFER_DIR_ROOT, RELATIVE },
-      { ABSOLUTE_DIR_ROOT, ABSOLUTE },
-      { QUALIFIED_DIR_ROOT, QUALIFIED }
-    };
-
-    return Arrays.asList(data);
   }
 
   private static void rmBufferDirs() throws IOException {
     assertTrue(!localFs.exists(BUFFER_PATH_ROOT) ||
         localFs.delete(BUFFER_PATH_ROOT, true));
   }
-
-  private static void validateTempDirCreation(String dir) throws IOException {
+  
+  private void validateTempDirCreation(int i) throws IOException {
     File result = createTempFile(SMALL_FILE_SIZE);
-    assertTrue("Checking for " + dir + " in " + result + " - FAILED!",
-        result.getPath().startsWith(new Path(dir, FILENAME).toUri().getPath()));
+    assertTrue("Checking for " + BUFFER_DIR[i] + " in " + result + " - FAILED!", 
+        result.getPath().startsWith(new File(BUFFER_DIR[i], FILENAME).getPath()));
   }
-
-  private static File createTempFile() throws IOException {
-    return createTempFile(-1);
+  
+  private File createTempFile() throws IOException {
+    File result = dirAllocator.createTmpFileForWrite(FILENAME, -1, conf);
+    result.delete();
+    return result;
   }
-
-  private static File createTempFile(long size) throws IOException {
+  
+  private File createTempFile(long size) throws IOException {
     File result = dirAllocator.createTmpFileForWrite(FILENAME, size, conf);
     result.delete();
     return result;
   }
-
-  private String buildBufferDir(String dir, int i) {
-    return dir + PREFIX + i;
-  }
-
-  /** Two buffer dirs. The first dir does not exist & is on a read-only disk;
+  
+  /** Two buffer dirs. The first dir does not exist & is on a read-only disk; 
    * The second dir exists & is RW
    * @throws Exception
    */
-  @Test
   public void test0() throws Exception {
     if (isWindows) return;
-    String dir0 = buildBufferDir(ROOT, 0);
-    String dir1 = buildBufferDir(ROOT, 1);
     try {
-      conf.set(CONTEXT, dir0 + "," + dir1);
-      assertTrue(localFs.mkdirs(new Path(dir1)));
+      conf.set(CONTEXT, BUFFER_DIR[0]+","+BUFFER_DIR[1]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[1]));
       BUFFER_ROOT.setReadOnly();
-      validateTempDirCreation(dir1);
-      validateTempDirCreation(dir1);
+      validateTempDirCreation(1);
+      validateTempDirCreation(1);
     } finally {
       Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
       rmBufferDirs();
     }
   }
-
-  /** Two buffer dirs. The first dir exists & is on a read-only disk;
+    
+  /** Two buffer dirs. The first dir exists & is on a read-only disk; 
    * The second dir exists & is RW
    * @throws Exception
    */
-  @Test
   public void test1() throws Exception {
     if (isWindows) return;
-    String dir1 = buildBufferDir(ROOT, 1);
-    String dir2 = buildBufferDir(ROOT, 2);
     try {
-      conf.set(CONTEXT, dir1 + "," + dir2);
-      assertTrue(localFs.mkdirs(new Path(dir2)));
+      conf.set(CONTEXT, BUFFER_DIR[1]+","+BUFFER_DIR[2]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[2]));
       BUFFER_ROOT.setReadOnly();
-      validateTempDirCreation(dir2);
-      validateTempDirCreation(dir2);
+      validateTempDirCreation(2);
+      validateTempDirCreation(2);
     } finally {
       Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
       rmBufferDirs();
     }
   }
   /** Two buffer dirs. Both do not exist but on a RW disk.
-   * Check if tmp dirs are allocated in a round-robin
+   * Check if tmp dirs are allocated in a round-robin 
    */
-  @Test
   public void test2() throws Exception {
     if (isWindows) return;
-    String dir2 = buildBufferDir(ROOT, 2);
-    String dir3 = buildBufferDir(ROOT, 3);
     try {
-      conf.set(CONTEXT, dir2 + "," + dir3);
+      conf.set(CONTEXT, BUFFER_DIR[2]+","+BUFFER_DIR[3]);
 
       // create the first file, and then figure the round-robin sequence
       createTempFile(SMALL_FILE_SIZE);
       int firstDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 2 : 3;
       int secondDirIdx = (firstDirIdx == 2) ? 3 : 2;
-
+      
       // check if tmp dirs are allocated in a round-robin manner
-      validateTempDirCreation(buildBufferDir(ROOT, firstDirIdx));
-      validateTempDirCreation(buildBufferDir(ROOT, secondDirIdx));
-      validateTempDirCreation(buildBufferDir(ROOT, firstDirIdx));
+      validateTempDirCreation(firstDirIdx);
+      validateTempDirCreation(secondDirIdx);
+      validateTempDirCreation(firstDirIdx);
     } finally {
       rmBufferDirs();
     }
   }
 
-  /** Two buffer dirs. Both exists and on a R/W disk.
+  /** Two buffer dirs. Both exists and on a R/W disk. 
    * Later disk1 becomes read-only.
    * @throws Exception
    */
-  @Test
   public void test3() throws Exception {
     if (isWindows) return;
-    String dir3 = buildBufferDir(ROOT, 3);
-    String dir4 = buildBufferDir(ROOT, 4);
     try {
-      conf.set(CONTEXT, dir3 + "," + dir4);
-      assertTrue(localFs.mkdirs(new Path(dir3)));
-      assertTrue(localFs.mkdirs(new Path(dir4)));
-
-      // Create the first small file
+      conf.set(CONTEXT, BUFFER_DIR[3]+","+BUFFER_DIR[4]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[3]));
+      assertTrue(localFs.mkdirs(BUFFER_PATH[4]));
+      
+      // create the first file with size, and then figure the round-robin sequence
       createTempFile(SMALL_FILE_SIZE);
 
-      // Determine the round-robin sequence
       int nextDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 3 : 4;
-      validateTempDirCreation(buildBufferDir(ROOT, nextDirIdx));
+      validateTempDirCreation(nextDirIdx);
 
       // change buffer directory 2 to be read only
-      new File(new Path(dir4).toUri().getPath()).setReadOnly();
-      validateTempDirCreation(dir3);
-      validateTempDirCreation(dir3);
+      new File(BUFFER_DIR[4]).setReadOnly();
+      validateTempDirCreation(3);
+      validateTempDirCreation(3);
     } finally {
       rmBufferDirs();
     }
   }
-
+  
   /**
    * Two buffer dirs, on read-write disk.
-   *
+   * 
    * Try to create a whole bunch of files.
    *  Verify that they do indeed all get created where they should.
-   *
+   *  
    *  Would ideally check statistical properties of distribution, but
    *  we don't have the nerve to risk false-positives here.
-   *
+   * 
    * @throws Exception
    */
   static final int TRIALS = 100;
-  @Test
   public void test4() throws Exception {
     if (isWindows) return;
-    String dir5 = buildBufferDir(ROOT, 5);
-    String dir6 = buildBufferDir(ROOT, 6);
     try {
 
-      conf.set(CONTEXT, dir5 + "," + dir6);
-      assertTrue(localFs.mkdirs(new Path(dir5)));
-      assertTrue(localFs.mkdirs(new Path(dir6)));
-
+      conf.set(CONTEXT, BUFFER_DIR[5]+","+BUFFER_DIR[6]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[5]));
+      assertTrue(localFs.mkdirs(BUFFER_PATH[6]));
+        
       int inDir5=0, inDir6=0;
       for(int i = 0; i < TRIALS; ++i) {
         File result = createTempFile();
-        if(result.getPath().startsWith(
-              new Path(dir5, FILENAME).toUri().getPath())) {
+        if(result.getPath().startsWith(new File(BUFFER_DIR[5], FILENAME).getPath())) {
           inDir5++;
-        } else if(result.getPath().startsWith(
-              new Path(dir6, FILENAME).toUri().getPath())) {
+        } else  if(result.getPath().startsWith(new File(BUFFER_DIR[6], FILENAME).getPath())) {
           inDir6++;
         }
         result.delete();
       }
-
-      assertTrue(inDir5 + inDir6 == TRIALS);
-
+      
+      assertTrue( inDir5 + inDir6 == TRIALS);
+        
     } finally {
       rmBufferDirs();
     }
   }
-
-  /** Two buffer dirs. The first dir does not exist & is on a read-only disk;
+  
+  /** Two buffer dirs. The first dir does not exist & is on a read-only disk; 
    * The second dir exists & is RW
    * getLocalPathForWrite with checkAccess set to false should create a parent
    * directory. With checkAccess true, the directory should not be created.
    * @throws Exception
    */
-  @Test
   public void testLocalPathForWriteDirCreation() throws IOException {
-    String dir0 = buildBufferDir(ROOT, 0);
-    String dir1 = buildBufferDir(ROOT, 1);
     try {
-      conf.set(CONTEXT, dir0 + "," + dir1);
-      assertTrue(localFs.mkdirs(new Path(dir1)));
+      conf.set(CONTEXT, BUFFER_DIR[0] + "," + BUFFER_DIR[1]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[1]));
       BUFFER_ROOT.setReadOnly();
       Path p1 =
-        dirAllocator.getLocalPathForWrite("p1/x", SMALL_FILE_SIZE, conf);
+          dirAllocator.getLocalPathForWrite("p1/x", SMALL_FILE_SIZE, conf);
       assertTrue(localFs.getFileStatus(p1.getParent()).isDirectory());
 
       Path p2 =
-        dirAllocator.getLocalPathForWrite("p2/x", SMALL_FILE_SIZE, conf,
-            false);
+          dirAllocator.getLocalPathForWrite("p2/x", SMALL_FILE_SIZE, conf,
+              false);
       try {
         localFs.getFileStatus(p2.getParent());
       } catch (Exception e) {
@@ -289,26 +237,5 @@ public class TestLocalDirAllocator {
       rmBufferDirs();
     }
   }
-
-  /** Test no side effect files are left over. After creating a temp
-   * temp file, remove both the temp file and its parent. Verify that
-   * no files or directories are left over as can happen when File objects
-   * are mistakenly created from fully qualified path strings.
-   * @throws IOException
-   */
-  @Test
-  public void testNoSideEffects() throws IOException {
-    if (isWindows) return;
-    String dir = buildBufferDir(ROOT, 0);
-    try {
-      conf.set(CONTEXT, dir);
-      File result = dirAllocator.createTmpFileForWrite(FILENAME, -1, conf);
-      assertTrue(result.delete());
-      assertTrue(result.getParentFile().delete());
-      assertFalse(new File(dir).exists());
-    } finally {
-      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
-      rmBufferDirs();
-    }
-  }
+  
 }

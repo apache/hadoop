@@ -26,7 +26,6 @@ import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -45,9 +44,6 @@ public abstract class WebApp extends ServletModule {
   public enum HTTP { GET, POST, HEAD, PUT, DELETE };
 
   private volatile String name;
-  private volatile List<String> servePathSpecs = new ArrayList<String>(); 
-  // path to redirect to if user goes to "/"
-  private volatile String redirectPath;
   private volatile Configuration conf;
   private volatile HttpServer httpServer;
   private volatile GuiceFilter guiceFilter;
@@ -102,22 +98,6 @@ public abstract class WebApp extends ServletModule {
 
   public String name() { return this.name; }
 
-  void addServePathSpec(String path) { this.servePathSpecs.add(path); }
-
-  public String[] getServePathSpecs() { 
-    return this.servePathSpecs.toArray(new String[this.servePathSpecs.size()]);
-  }
-
-  /**
-   * Set a path to redirect the user to if they just go to "/". For 
-   * instance "/" goes to "/yarn/apps". This allows the filters to 
-   * more easily differentiate the different webapps.
-   * @param path  the path to redirect to
-   */
-  void setRedirectPath(String path) { this.redirectPath = path; }
-
-  public String getRedirectPath() { return this.redirectPath; }
-
   void setHostClass(Class<?> cls) {
     router.setHostClass(cls);
   }
@@ -129,10 +109,7 @@ public abstract class WebApp extends ServletModule {
   @Override
   public void configureServlets() {
     setup();
-    serve("/", "/__stop").with(Dispatcher.class);
-    for (String path : this.servePathSpecs) {
-      serve(path).with(Dispatcher.class);
-    }
+    serve("/", "/__stop", StringHelper.join('/', name, '*')).with(Dispatcher.class);
   }
 
   /**

@@ -29,8 +29,6 @@ public interface JobReport {
   public abstract long getFinishTime();
   public abstract String getUser();
   public abstract String getJobName();
-  public abstract String getTrackingUrl();
-  public abstract String getDiagnostics();
 
   public abstract void setJobId(JobId jobId);
   public abstract void setJobState(JobState jobState);
@@ -42,6 +40,4 @@ public interface JobReport {
   public abstract void setFinishTime(long finishTime);
   public abstract void setUser(String user);
   public abstract void setJobName(String jobName);
-  public abstract void setTrackingUrl(String trackingUrl);
-  public abstract void setDiagnostics(String diagnostics);
 }

@@ -264,15 +264,9 @@ public class LocalDirAllocator {
             Path tmpDir = new Path(localDirs[i]);
             if(localFS.mkdirs(tmpDir)|| localFS.exists(tmpDir)) {
               try {
-
-                File tmpFile = tmpDir.isAbsolute()
-                  ? new File(localFS.makeQualified(tmpDir).toUri())
-                  : new File(localDirs[i]);
-
-                DiskChecker.checkDir(tmpFile);
-                dirs.add(tmpFile.getPath());
-                dfList.add(new DF(tmpFile, 30000));
-
+                DiskChecker.checkDir(new File(localDirs[i]));
+                dirs.add(localDirs[i]);
+                dfList.add(new DF(new File(localDirs[i]), 30000));
               } catch (DiskErrorException de) {
                 LOG.warn( localDirs[i] + " is not writable\n", de);
               }

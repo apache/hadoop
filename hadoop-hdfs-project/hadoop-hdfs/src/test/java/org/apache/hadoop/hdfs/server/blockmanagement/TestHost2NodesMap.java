@@ -18,34 +18,31 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import junit.framework.TestCase;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.Host2NodesMap;
 
-public class TestHost2NodesMap {
-  private Host2NodesMap map = new Host2NodesMap();
-  private final DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
+public class TestHost2NodesMap extends TestCase {
+  static private Host2NodesMap map = new Host2NodesMap();
+  private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
     new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
     new DatanodeDescriptor(new DatanodeID("h2:5020"), "/d1/r1"),
     new DatanodeDescriptor(new DatanodeID("h3:5020"), "/d1/r2"),
     new DatanodeDescriptor(new DatanodeID("h3:5030"), "/d1/r2"),
   };
-  private final DatanodeDescriptor NULL_NODE = null; 
-  private final DatanodeDescriptor NODE = new DatanodeDescriptor(new DatanodeID("h3:5040"),
-      "/d1/r4");
+  private final static DatanodeDescriptor NULL_NODE = null; 
+  private final static DatanodeDescriptor NODE = 
+    new DatanodeDescriptor(new DatanodeID("h3:5040"), "/d1/r4");
 
-  @Before
-  public void setup() {
+  static {
     for(DatanodeDescriptor node:dataNodes) {
       map.add(node);
     }
     map.add(NULL_NODE);
   }
   
-  @Test
   public void testContains() throws Exception {
     for(int i=0; i<dataNodes.length; i++) {
       assertTrue(map.contains(dataNodes[i]));
@@ -54,7 +51,6 @@ public class TestHost2NodesMap {
     assertFalse(map.contains(NODE));
   }
 
-  @Test
   public void testGetDatanodeByHost() throws Exception {
     assertTrue(map.getDatanodeByHost("h1")==dataNodes[0]);
     assertTrue(map.getDatanodeByHost("h2")==dataNodes[1]);
@@ -63,7 +59,6 @@ public class TestHost2NodesMap {
     assertTrue(null==map.getDatanodeByHost("h4"));
   }
 
-  @Test
   public void testGetDatanodeByName() throws Exception {
     assertTrue(map.getDatanodeByName("h1:5020")==dataNodes[0]);
     assertTrue(map.getDatanodeByName("h1:5030")==null);
@@ -76,7 +71,6 @@ public class TestHost2NodesMap {
     assertTrue(map.getDatanodeByName(null)==null);
   }
 
-  @Test
   public void testRemove() throws Exception {
     assertFalse(map.remove(NODE));
     

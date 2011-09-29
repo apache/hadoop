@@ -240,30 +240,6 @@ implements ApplicationReport {
     return proto;
   }
 
-  @Override
-  public long getStartTime() {
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getStartTime();
-  }
-
-  @Override
-  public void setStartTime(long startTime) {
-    maybeInitBuilder();
-    builder.setStartTime(startTime);
-  }
-
-  @Override
-  public long getFinishTime() {
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getFinishTime();
-  }
-
-  @Override
-  public void setFinishTime(long finishTime) {
-    maybeInitBuilder();
-    builder.setFinishTime(finishTime);
-  }
-
   private void mergeLocalToBuilder() {
     if (this.applicationId != null
         && !((ApplicationIdPBImpl) this.applicationId).getProto().equals(
@@ -302,5 +278,17 @@ implements ApplicationReport {
   private ApplicationIdPBImpl convertFromProtoFormat(
       ApplicationIdProto applicationId) {
     return new ApplicationIdPBImpl(applicationId);
+  }
+
+  @Override
+  public long getStartTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getStartTime();
+  }
+
+  @Override
+  public void setStartTime(long startTime) {
+    maybeInitBuilder();
+    builder.setStartTime(startTime);
   }
 }

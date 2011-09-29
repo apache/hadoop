@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.util;
 
 import static org.apache.hadoop.yarn.util.StringHelper._split;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.NumberFormat;
@@ -46,8 +45,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 public class ConverterUtils {
 
   public static final String APPLICATION_PREFIX = "application";
-  public static final String CONTAINER_PREFIX = "container";
-  public static final String APPLICATION_ATTEMPT_PREFIX = "appattempt";
 
   /**
    * return a hadoop path from a given url
@@ -135,12 +132,14 @@ public class ConverterUtils {
   }
 
   private static ApplicationAttemptId toApplicationAttemptId(
-      Iterator<String> it) throws NumberFormatException {
-    ApplicationId appId = Records.newRecord(ApplicationId.class);
+      RecordFactory recordFactory,
+      Iterator<String> it) {
+    ApplicationId appId =
+        recordFactory.newRecordInstance(ApplicationId.class);
     appId.setClusterTimestamp(Long.parseLong(it.next()));
     appId.setId(Integer.parseInt(it.next()));
-    ApplicationAttemptId appAttemptId = Records
-        .newRecord(ApplicationAttemptId.class);
+    ApplicationAttemptId appAttemptId =
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);
     appAttemptId.setAttemptId(Integer.parseInt(it.next()));
     return appAttemptId;
@@ -150,35 +149,16 @@ public class ConverterUtils {
     return cId.toString();
   }
 
-  public static ContainerId toContainerId(String containerIdStr)
-      throws IOException {
+  public static ContainerId toContainerId(RecordFactory recordFactory,
+      String containerIdStr) {
     Iterator<String> it = _split(containerIdStr).iterator();
-    if (!it.next().equals(CONTAINER_PREFIX)) {
-      throw new IOException("Invalid ContainerId prefix: " + containerIdStr);
-    }
-    try {
-      ApplicationAttemptId appAttemptID = toApplicationAttemptId(it);
-      ContainerId containerId = Records.newRecord(ContainerId.class);
-      containerId.setApplicationAttemptId(appAttemptID);
-      containerId.setId(Integer.parseInt(it.next()));
-      return containerId;
-    } catch (NumberFormatException n) {
-      throw new IOException("Invalid ContainerId: " + containerIdStr, n);
-    }
-  }
-
-  public static ApplicationAttemptId toApplicationAttemptId(
-      String applicationAttmeptIdStr) throws IOException {
-    Iterator<String> it = _split(applicationAttmeptIdStr).iterator();
-    if (!it.next().equals(APPLICATION_ATTEMPT_PREFIX)) {
-      throw new IOException("Invalid AppAttemptId prefix: "
-          + applicationAttmeptIdStr);
-    }
-    try {
-      return toApplicationAttemptId(it);
-    } catch (NumberFormatException n) {
-      throw new IOException("Invalid AppAttemptId: "
-          + applicationAttmeptIdStr, n);
-    }
+    it.next(); // prefix. TODO: Validate container prefix
+    ApplicationAttemptId appAttemptID = 
+        toApplicationAttemptId(recordFactory, it);
+    ContainerId containerId =
+        recordFactory.newRecordInstance(ContainerId.class);
+    containerId.setApplicationAttemptId(appAttemptID);
+    containerId.setId(Integer.parseInt(it.next()));
+    return containerId;
   }
 }

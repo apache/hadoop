@@ -55,7 +55,6 @@ public class TestMiniMRClasspath extends TestCase {
       file.close();
     }
     FileSystem.setDefaultUri(conf, fs.getUri());
-    conf.set(JTConfig.FRAMEWORK_NAME, JTConfig.CLASSIC_FRAMEWORK_NAME);
     conf.set(JTConfig.JT_IPC_ADDRESS, jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
@@ -122,7 +121,6 @@ public class TestMiniMRClasspath extends TestCase {
       file.close();
     }
     FileSystem.setDefaultUri(conf, uri);
-    conf.set(JTConfig.FRAMEWORK_NAME, JTConfig.CLASSIC_FRAMEWORK_NAME);
     conf.set(JTConfig.JT_IPC_ADDRESS, jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);

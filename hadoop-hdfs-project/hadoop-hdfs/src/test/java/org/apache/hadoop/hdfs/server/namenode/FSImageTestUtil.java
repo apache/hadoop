@@ -412,11 +412,4 @@ public abstract class FSImageTestUtil {
   public static FSImage getFSImage(NameNode node) {
     return node.getFSImage();
   }
-
-  /**
-   * get NameSpace quota.
-   */
-  public static long getNSQuota(FSNamesystem ns) {
-    return ns.dir.rootDir.getNsQuota();
-  }
 }

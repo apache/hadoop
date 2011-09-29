@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred.pipes;
 
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -27,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import javax.crypto.SecretKey;
 
@@ -113,6 +111,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     if (interpretor != null) {
       cmd.add(interpretor);
     }
+
     String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
     if (!new File(executable).canExecute()) {
       // LinuxTaskController sets +x permissions on all distcache files already.
@@ -130,7 +129,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     long logLength = TaskLog.getTaskLogLength(conf);
     cmd = TaskLog.captureOutAndError(null, cmd, stdout, stderr, logLength,
                                      false);
-    
+
     process = runClient(cmd, env);
     clientSocket = serverSocket.accept();
     

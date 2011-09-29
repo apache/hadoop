@@ -83,7 +83,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
@@ -241,8 +240,12 @@ public class TestContainerTokenSecretManager {
     ask.add(rr);
     ArrayList<ContainerId> release = new ArrayList<ContainerId>();
     
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
-        appAttempt.getAppAttemptId(), 0, 0F, ask, release);
+    AllocateRequest allocateRequest =
+        recordFactory.newRecordInstance(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(appAttempt.getAppAttemptId());
+    allocateRequest.setResponseId(0);
+    allocateRequest.addAllAsks(ask);
+    allocateRequest.addAllReleases(release);
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
         .getAMResponse().getAllocatedContainers();
 

@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 
 /**
  * Keeps the data structures to send container requests to RM.
@@ -108,11 +107,15 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info("maxTaskFailuresPerNode is " + maxTaskFailuresPerNode);
   }
 
+  protected abstract void heartbeat() throws Exception;
+
   protected AMResponse makeRemoteRequest() throws YarnRemoteException {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
-        applicationAttemptId, lastResponseID, super.getApplicationProgress(),
-        new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
-            release));
+    AllocateRequest allocateRequest = recordFactory
+        .newRecordInstance(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(applicationAttemptId);
+    allocateRequest.setResponseId(lastResponseID);
+    allocateRequest.addAllAsks(new ArrayList<ResourceRequest>(ask));
+    allocateRequest.addAllReleases(new ArrayList<ContainerId>(release));
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
     AMResponse response = allocateResponse.getAMResponse();
     lastResponseID = response.getResponseId();

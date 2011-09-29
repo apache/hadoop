@@ -37,16 +37,11 @@ public class LocalClientProtocolProvider extends ClientProtocolProvider {
     if (framework != null && !framework.equals("local")) {
       return null;
     }
-    String tracker = conf.get(JTConfig.JT_IPC_ADDRESS, "local");
-    if ("local".equals(tracker)) {
+    if ("local".equals(conf.get(JTConfig.JT_IPC_ADDRESS, "local"))) {
       conf.setInt("mapreduce.job.maps", 1);
       return new LocalJobRunner(conf);
-    } else {
-
-      throw new IOException("Invalid \"" + JTConfig.JT_IPC_ADDRESS
-          + "\" configuration value for LocalJobRunner : \""
-          + tracker + "\"");
     }
+    return null;
   }
 
   @Override

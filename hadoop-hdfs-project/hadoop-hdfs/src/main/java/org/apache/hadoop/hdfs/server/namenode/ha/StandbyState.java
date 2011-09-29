@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import java.io.IOException;
-
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
@@ -39,30 +37,22 @@ public class StandbyState extends HAState {
   }
 
   @Override
-  public void setState(HAContext context, HAState s) throws ServiceFailedException {
+  public void setState(NameNode nn, HAState s) throws ServiceFailedException {
     if (s == NameNode.ACTIVE_STATE) {
-      setStateInternal(context, s);
+      setStateInternal(nn, s);
       return;
     }
-    super.setState(context, s);
+    super.setState(nn, s);
   }
 
   @Override
-  public void enterState(HAContext context) throws ServiceFailedException {
-    try {
-      context.startStandbyServices();
-    } catch (IOException e) {
-      throw new ServiceFailedException("Failed to start standby services", e);
-    }
+  protected void enterState(NameNode nn) throws ServiceFailedException {
+    // TODO:HA
   }
 
   @Override
-  public void exitState(HAContext context) throws ServiceFailedException {
-    try {
-      context.stopStandbyServices();
-    } catch (IOException e) {
-      throw new ServiceFailedException("Failed to stop standby services", e);
-    }
+  protected void exitState(NameNode nn) throws ServiceFailedException {
+    // TODO:HA
   }
 }
 

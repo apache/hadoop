@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
@@ -251,10 +250,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
 
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 
           null) {
-        String message = "Application with id " + applicationId
-            + " is already present! Cannot add a duplicate!";
-        LOG.info(message);
-        throw RPCUtil.getRemoteException(message);
+        LOG.info("Application with id " + applicationId + 
+            " is already present! Cannot add a duplicate!");
+        // don't send event through dispatcher as it will be handled by app 
+        // already present with this id.
+        application.handle(new RMAppRejectedEvent(applicationId,
+            "Application with this id is already present! " +
+            "Cannot add a duplicate!"));
       } else {
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.START));

@@ -27,7 +27,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HealthCheckFailedException;
@@ -38,13 +37,15 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
-import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -53,6 +54,9 @@ import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
@@ -167,18 +171,19 @@ public class NameNode {
     }
   }
     
+
+
   public static final int DEFAULT_PORT = 8020;
+
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
   
   protected FSNamesystem namesystem; 
-  protected final Configuration conf;
   protected NamenodeRole role;
   private HAState state;
   private final boolean haEnabled;
-  private final HAContext haContext;
 
   
   /** httpServer */
@@ -307,11 +312,12 @@ public class NameNode {
    * Given a configuration get the address of the service rpc server
    * If the service rpc is not configured returns null
    */
-  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) {
+  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf)
+    throws IOException {
     return NameNode.getServiceAddress(conf, false);
   }
 
-  protected InetSocketAddress getRpcServerAddress(Configuration conf) {
+  protected InetSocketAddress getRpcServerAddress(Configuration conf) throws IOException {
     return getAddress(conf);
   }
   
@@ -374,6 +380,7 @@ public class NameNode {
    * @param conf the configuration
    */
   protected void initialize(Configuration conf) throws IOException {
+    initializeGenericKeys(conf);
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
 
@@ -389,7 +396,7 @@ public class NameNode {
       throw e;
     }
 
-    startCommonServices(conf);
+    activate(conf);
   }
   
   /**
@@ -423,10 +430,19 @@ public class NameNode {
     } 
   }
 
-  /** Start the services common to active and standby states */
-  private void startCommonServices(Configuration conf) throws IOException {
-    namesystem.startCommonServices(conf);
+  /**
+   * Activate name-node servers and threads.
+   */
+  void activate(Configuration conf) throws IOException {
+    if ((isRole(NamenodeRole.NAMENODE))
+        && (UserGroupInformation.isSecurityEnabled())) {
+      namesystem.activateSecretManager();
+    }
+    namesystem.activate(conf);
+    startHttpServer(conf);
     rpcServer.start();
+    startTrashEmptier(conf);
+    
     plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
         ServicePlugin.class);
     for (ServicePlugin p: plugins) {
@@ -436,29 +452,13 @@ public class NameNode {
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
+    
     LOG.info(getRole() + " up at: " + rpcServer.getRpcAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
-      LOG.info(getRole() + " service server is up at: "
-          + rpcServer.getServiceRpcAddress());
+      LOG.info(getRole() + " service server is up at: " + rpcServer.getServiceRpcAddress()); 
     }
-    startHttpServer(conf);
   }
-  
-  private void stopCommonServices() {
-    if(namesystem != null) namesystem.close();
-    if(rpcServer != null) rpcServer.stop();
-    if (plugins != null) {
-      for (ServicePlugin p : plugins) {
-        try {
-          p.stop();
-        } catch (Throwable t) {
-          LOG.warn("ServicePlugin " + p + " could not be stopped", t);
-        }
-      }
-    }   
-    stopHttpServer();
-  }
-  
+
   private void startTrashEmptier(Configuration conf) throws IOException {
     long trashInterval 
       = conf.getLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 
@@ -470,25 +470,10 @@ public class NameNode {
     this.emptier.start();
   }
   
-  private void stopTrashEmptier() {
-    if (this.emptier != null) {
-      emptier.interrupt();
-      emptier = null;
-    }
-  }
-  
   private void startHttpServer(final Configuration conf) throws IOException {
     httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
     httpServer.start();
     setHttpServerAddress(conf);
-  }
-  
-  private void stopHttpServer() {
-    try {
-      if (httpServer != null) httpServer.stop();
-    } catch (Exception e) {
-      LOG.error("Exception while stopping httpserver", e);
-    }
   }
 
   /**
@@ -516,34 +501,20 @@ public class NameNode {
    * <code>zero</code> in the conf.
    * 
    * @param conf  confirguration
-   * @throws IOException on error
+   * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
     this(conf, NamenodeRole.NAMENODE);
   }
 
   protected NameNode(Configuration conf, NamenodeRole role) 
-      throws IOException {
-    this.conf = conf;
+      throws IOException { 
     this.role = role;
     this.haEnabled = DFSUtil.isHAEnabled(conf);
-    this.haContext = new NameNodeHAContext();
+    this.state = !haEnabled ? ACTIVE_STATE : STANDBY_STATE;
     try {
-      initializeGenericKeys(conf, getNameServiceId(conf));
       initialize(conf);
-      if (!haEnabled) {
-        state = ACTIVE_STATE;
-      } else {
-        state = STANDBY_STATE;;
-      }
-      state.enterState(haContext);
     } catch (IOException e) {
-      this.stop();
-      throw e;
-    } catch (ServiceFailedException e) {
-      this.stop();
-      throw new IOException("Service failed to start", e);
-    } catch (HadoopIllegalArgumentException e) {
       this.stop();
       throw e;
     }
@@ -557,7 +528,6 @@ public class NameNode {
     try {
       this.rpcServer.join();
     } catch (InterruptedException ie) {
-      LOG.info("Caught interrupted exception " + ie);
     }
   }
 
@@ -570,12 +540,23 @@ public class NameNode {
         return;
       stopRequested = true;
     }
-    try {
-      state.exitState(haContext);
-    } catch (ServiceFailedException e) {
-      LOG.info("Encountered exception while exiting state " + e);
+    if (plugins != null) {
+      for (ServicePlugin p : plugins) {
+        try {
+          p.stop();
+        } catch (Throwable t) {
+          LOG.warn("ServicePlugin " + p + " could not be stopped", t);
+        }
+      }
     }
-    stopCommonServices();
+    try {
+      if (httpServer != null) httpServer.stop();
+    } catch (Exception e) {
+      LOG.error("Exception while stopping httpserver", e);
+    }
+    if(namesystem != null) namesystem.close();
+    if(emptier != null) emptier.interrupt();
+    if(rpcServer != null) rpcServer.stop();
     if (metrics != null) {
       metrics.shutdown();
     }
@@ -840,16 +821,16 @@ public class NameNode {
    * @param conf
    *          Configuration object to lookup specific key and to set the value
    *          to the key passed. Note the conf object is modified
-   * @param nameserviceId name service Id
    * @see DFSUtil#setGenericConf(Configuration, String, String...)
    */
-  public static void initializeGenericKeys(Configuration conf, String
-      nameserviceId) {
+  public static void initializeGenericKeys(Configuration conf) {
+    final String nameserviceId = DFSUtil.getNameServiceId(conf);
     if ((nameserviceId == null) || nameserviceId.isEmpty()) {
       return;
     }
     
     DFSUtil.setGenericConf(conf, nameserviceId, NAMESERVICE_SPECIFIC_KEYS);
+    
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
@@ -857,14 +838,6 @@ public class NameNode {
     }
   }
     
-  /** 
-   * Get the name service Id for the node
-   * @return name service Id or null if federation is not configured
-   */
-  protected String getNameServiceId(Configuration conf) {
-    return DFSUtil.getNamenodeNameServiceId(conf);
-  }
-  
   /**
    */
   public static void main(String argv[]) throws Exception {
@@ -891,56 +864,27 @@ public class NameNode {
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
-    state.setState(haContext, ACTIVE_STATE);
+    state.setState(this, ACTIVE_STATE);
   }
   
   synchronized void transitionToStandby() throws ServiceFailedException {
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
-    state.setState(haContext, STANDBY_STATE);
+    state.setState(this, STANDBY_STATE);
   }
   
   /** Check if an operation of given category is allowed */
   protected synchronized void checkOperation(final OperationCategory op)
       throws UnsupportedActionException {
-    state.checkOperation(haContext, op);
+    state.checkOperation(this, op);
   }
   
-  /**
-   * Class used as expose {@link NameNode} as context to {@link HAState}
-   */
-  private class NameNodeHAContext implements HAContext {
-    @Override
-    public void setState(HAState s) {
-      state = s;
-    }
-
-    @Override
-    public HAState getState() {
-      return state;
-    }
-
-    @Override
-    public void startActiveServices() throws IOException {
-      namesystem.startActiveServices();
-      startTrashEmptier(conf);
-    }
-
-    @Override
-    public void stopActiveServices() throws IOException {
-      namesystem.stopActiveServices();
-      stopTrashEmptier();
-    }
-
-    @Override
-    public void startStandbyServices() throws IOException {
-      // TODO:HA Start reading editlog from active
-    }
-
-    @Override
-    public void stopStandbyServices() throws IOException {
-      // TODO:HA Stop reading editlog from active
-    }
+  public synchronized HAState getState() {
+    return state;
+  }
+  
+  public synchronized void setState(final HAState s) {
+    state = s;
   }
 }

@@ -18,21 +18,20 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 
-import java.io.IOException;
-
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -54,30 +53,22 @@ public class ContainerPage extends NMView implements NMWebParams {
 
   public static class ContainerBlock extends HtmlBlock implements NMWebParams {
 
+    private final Configuration conf;
     private final Context nmContext;
+    private final RecordFactory recordFactory;
 
     @Inject
-    public ContainerBlock(Context nmContext) {
+    public ContainerBlock(Configuration conf, Context nmContext) {
+      this.conf = conf;
       this.nmContext = nmContext;
+      this.recordFactory = RecordFactoryProvider.getRecordFactory(this.conf);
     }
 
     @Override
     protected void render(Block html) {
-      ContainerId containerID;
-      try {
-        containerID = ConverterUtils.toContainerId($(CONTAINER_ID));
-      } catch (IOException e) {
-        html.p()._("Invalid containerId " + $(CONTAINER_ID))._();
-        return;
-      }
-
-      DIV<Hamlet> div = html.div("#content");
+      ContainerId containerID =
+        ConverterUtils.toContainerId(this.recordFactory, $(CONTAINER_ID));
       Container container = this.nmContext.getContainers().get(containerID);
-      if (container == null) {
-        div.h1("Unknown Container. Container might have completed, "
-                + "please go back to the previous page and retry.")._();
-        return;
-      }
       ContainerStatus containerData = container.cloneAndGetContainerStatus();
       int exitCode = containerData.getExitStatus();
       String exiStatus = 

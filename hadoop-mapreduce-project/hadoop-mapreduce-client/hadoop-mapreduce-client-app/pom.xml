@@ -57,12 +57,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
     </dependency>
   </dependencies>
@@ -119,41 +113,4 @@
       </plugin>
     </plugins>
   </build>
-
-  <profiles>
-    <profile>
-      <id>visualize</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>1.2</version>
-            <executions>
-              <execution>
-                <phase>compile</phase>
-                <goals>
-                  <goal>java</goal>
-                </goals>
-                <configuration>
-                  <classpathScope>test</classpathScope>
-                  <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
-                  <arguments>
-                    <argument>MapReduce</argument>
-                    <argument>org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl,
-                      org.apache.hadoop.mapreduce.v2.app.job.impl.TaskImpl,
-                      org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl</argument>
-                    <argument>MapReduce.gv</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

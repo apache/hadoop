@@ -39,14 +39,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -167,7 +167,7 @@ public class MRApps extends Apps {
     return TaskAttemptStateUI.valueOf(attemptStateStr);
   }
 
-  private static void setMRFrameworkClasspath(
+  public static void setInitialClasspath(
       Map<String, String> environment) throws IOException {
     InputStream classpathFileStream = null;
     BufferedReader reader = null;
@@ -182,17 +182,30 @@ public class MRApps extends Apps {
       reader = new BufferedReader(new InputStreamReader(classpathFileStream));
       String cp = reader.readLine();
       if (cp != null) {
-        addToEnvironment(environment, Environment.CLASSPATH.name(), cp.trim());
+        addToClassPath(environment, cp.trim());
       }
       // Put the file itself on classpath for tasks.
-      addToEnvironment(
-          environment,
-          Environment.CLASSPATH.name(),
+      addToClassPath(environment,
           thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile());
 
-      // Add standard Hadoop classes
-      for (String c : ApplicationConstants.APPLICATION_CLASSPATH) {
-        addToEnvironment(environment, Environment.CLASSPATH.name(), c);
+      // If runtime env is different.
+      if (System.getenv().get("YARN_HOME") != null) {
+        ShellCommandExecutor exec =
+            new ShellCommandExecutor(new String[] {
+                System.getenv().get("YARN_HOME") + "/bin/yarn",
+            "classpath" });
+        exec.execute();
+        addToClassPath(environment, exec.getOutput().trim());
+      }
+
+      // Get yarn mapreduce-app classpath
+      if (System.getenv().get("HADOOP_MAPRED_HOME")!= null) {
+        ShellCommandExecutor exec =
+            new ShellCommandExecutor(new String[] {
+                System.getenv().get("HADOOP_MAPRED_HOME") + "/bin/mapred",
+            "classpath" });
+        exec.execute();
+        addToClassPath(environment, exec.getOutput().trim());
       }
     } finally {
       if (classpathFileStream != null) {
@@ -204,35 +217,20 @@ public class MRApps extends Apps {
     }
     // TODO: Remove duplicates.
   }
-  
-  private static final String SYSTEM_PATH_SEPARATOR = 
-      System.getProperty("path.separator");
 
-  public static void addToEnvironment(
-      Map<String, String> environment, 
-      String variable, String value) {
-    String val = environment.get(variable);
-    if (val == null) {
-      val = value;
+  public static void addToClassPath(
+      Map<String, String> environment, String fileName) {
+    String classpath = environment.get(CLASSPATH);
+    if (classpath == null) {
+      classpath = fileName;
     } else {
-      val = val + SYSTEM_PATH_SEPARATOR + value;
+      classpath = classpath + ":" + fileName;
     }
-    environment.put(variable, val);
+    environment.put(CLASSPATH, classpath);
   }
 
-  public static void setClasspath(Map<String, String> environment) 
-      throws IOException {
-    MRApps.addToEnvironment(
-        environment, 
-        Environment.CLASSPATH.name(), 
-        MRJobConfig.JOB_JAR);
-    MRApps.addToEnvironment(
-        environment, 
-        Environment.CLASSPATH.name(),
-        Environment.PWD.$() + Path.SEPARATOR + "*");
-    MRApps.setMRFrameworkClasspath(environment);
-  }
-  
+  public static final String CLASSPATH = "CLASSPATH";
+
   private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
     return new Path(
@@ -243,7 +241,7 @@ public class MRApps extends Apps {
   public static String getJobFile(Configuration conf, String user, 
       org.apache.hadoop.mapreduce.JobID jobId) {
     Path jobFile = new Path(MRApps.getStagingAreaDir(conf, user),
-        jobId.toString() + Path.SEPARATOR + MRJobConfig.JOB_CONF_FILE);
+        jobId.toString() + Path.SEPARATOR + MRConstants.JOB_CONF_FILE);
     return jobFile.toString();
   }
   
@@ -262,11 +260,12 @@ public class MRApps extends Apps {
 
   public static void setupDistributedCache( 
       Configuration conf, 
-      Map<String, LocalResource> localResources) 
+      Map<String, LocalResource> localResources,
+      Map<String, String> env) 
   throws IOException {
     
     // Cache archives
-    parseDistributedCacheArtifacts(conf, localResources,  
+    parseDistributedCacheArtifacts(conf, localResources, env, 
         LocalResourceType.ARCHIVE, 
         DistributedCache.getCacheArchives(conf), 
         parseTimeStamps(DistributedCache.getArchiveTimestamps(conf)), 
@@ -276,7 +275,7 @@ public class MRApps extends Apps {
     
     // Cache files
     parseDistributedCacheArtifacts(conf, 
-        localResources,  
+        localResources, env, 
         LocalResourceType.FILE, 
         DistributedCache.getCacheFiles(conf),
         parseTimeStamps(DistributedCache.getFileTimestamps(conf)),
@@ -291,6 +290,7 @@ public class MRApps extends Apps {
   private static void parseDistributedCacheArtifacts(
       Configuration conf,
       Map<String, LocalResource> localResources,
+      Map<String, String> env,
       LocalResourceType type,
       URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[], 
       Path[] pathsToPutOnClasspath) throws IOException {
@@ -339,6 +339,9 @@ public class MRApps extends Apps {
                   : LocalResourceVisibility.PRIVATE,
                 sizes[i], timestamps[i])
         );
+        if (classPaths.containsKey(u.getPath())) {
+          MRApps.addToClassPath(env, linkName);
+        }
       }
     }
   }
@@ -354,42 +357,6 @@ public class MRApps extends Apps {
       result[i] = Long.parseLong(strs[i]);
     }
     return result;
-  }
-
-  public static void setEnvFromInputString(Map<String, String> env,
-      String envString) {
-    if (envString != null && envString.length() > 0) {
-      String childEnvs[] = envString.split(",");
-      for (String cEnv : childEnvs) {
-        String[] parts = cEnv.split("="); // split on '='
-        String value = env.get(parts[0]);
-  
-        if (value != null) {
-          // Replace $env with the child's env constructed by NM's
-          // For example: LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp
-          value = parts[1].replace("$" + parts[0], value);
-        } else {
-          // example PATH=$PATH:/tmp
-          value = System.getenv(parts[0]);
-          if (value != null) {
-            // the env key is present in the tt's env
-            value = parts[1].replace("$" + parts[0], value);
-          } else {
-            // check for simple variable substitution
-            // for e.g. ROOT=$HOME
-            String envValue = System.getenv(parts[1].substring(1)); 
-            if (envValue != null) {
-              value = envValue;
-            } else {
-              // the env key is note present anywhere .. simply set it
-              // example X=$X:/tmp or X=/tmp
-              value = parts[1].replace("$" + parts[0], "");
-            }
-          }
-        }
-        addToEnvironment(env, parts[0], value);
-      }
-    }
   }
   
 

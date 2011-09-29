@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.Credentials;
@@ -59,7 +60,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
@@ -105,22 +105,10 @@ public class YARNRunner implements ClientProtocol {
    * @param resMgrDelegate the resourcemanager client handle.
    */
   public YARNRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate) {
-   this(conf, resMgrDelegate, new ClientCache(conf, resMgrDelegate));
-  }
-  
-  /**
-   * Similar to {@link YARNRunner#YARNRunner(Configuration, ResourceMgrDelegate)} 
-   * but allowing injecting {@link ClientCache}. Enable mocking and testing.
-   * @param conf the configuration object
-   * @param resMgrDelegate the resource manager delegate 
-   * @param clientCache the client cache object.
-   */
-  public YARNRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate,
-      ClientCache clientCache) {
     this.conf = conf;
     try {
       this.resMgrDelegate = resMgrDelegate;
-      this.clientCache = clientCache;
+      this.clientCache = new ClientCache(this.conf, resMgrDelegate);
       this.defaultFileContext = FileContext.getFileContext(this.conf);
     } catch (UnsupportedFileSystemException ufe) {
       throw new RuntimeException("Error in instantiating YarnClient", ufe);
@@ -222,7 +210,7 @@ public class YARNRunner implements ClientProtocol {
 
     // Upload only in security mode: TODO
     Path applicationTokensFile =
-        new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
+        new Path(jobSubmitDir, MRConstants.APPLICATION_TOKENS_FILE);
     try {
       ts.writeTokenStorageFile(applicationTokensFile, conf);
     } catch (IOException e) {
@@ -238,9 +226,7 @@ public class YARNRunner implements ClientProtocol {
     
     ApplicationReport appMaster = resMgrDelegate
         .getApplicationReport(applicationId);
-    String diagnostics = 
-        (appMaster == null ? 
-            "application report is null" : appMaster.getDiagnostics());
+    String diagnostics = (appMaster == null ? "application report is null" : appMaster.getDiagnostics());
     if (appMaster == null || appMaster.getState() == ApplicationState.FAILED 
         || appMaster.getState() == ApplicationState.KILLED) {
       throw new IOException("Failed to run job : " + 
@@ -277,7 +263,7 @@ public class YARNRunner implements ClientProtocol {
     Map<String, LocalResource> localResources =
         new HashMap<String, LocalResource>();
     
-    Path jobConfPath = new Path(jobSubmitDir, MRJobConfig.JOB_CONF_FILE);
+    Path jobConfPath = new Path(jobSubmitDir, MRConstants.JOB_CONF_FILE);
     
     URL yarnUrlForJobSubmitDir = ConverterUtils
         .getYarnUrlFromPath(defaultFileContext.getDefaultFileSystem()
@@ -286,13 +272,13 @@ public class YARNRunner implements ClientProtocol {
     LOG.debug("Creating setup context, jobSubmitDir url is "
         + yarnUrlForJobSubmitDir);
 
-    localResources.put(MRJobConfig.JOB_CONF_FILE,
+    localResources.put(MRConstants.JOB_CONF_FILE,
         createApplicationResource(defaultFileContext,
             jobConfPath));
     if (jobConf.get(MRJobConfig.JAR) != null) {
-      localResources.put(MRJobConfig.JOB_JAR,
+      localResources.put(MRConstants.JOB_JAR,
           createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, MRJobConfig.JOB_JAR)));
+              new Path(jobSubmitDir, MRConstants.JOB_JAR)));
     } else {
       // Job jar may be null. For e.g, for pipes, the job jar is the hadoop
       // mapreduce jar itself which is already on the classpath.
@@ -301,12 +287,10 @@ public class YARNRunner implements ClientProtocol {
     }
     
     // TODO gross hack
-    for (String s : new String[] { 
-        MRJobConfig.JOB_SPLIT, 
-        MRJobConfig.JOB_SPLIT_METAINFO,
-        MRJobConfig.APPLICATION_TOKENS_FILE }) {
+    for (String s : new String[] { "job.split", "job.splitmetainfo",
+        MRConstants.APPLICATION_TOKENS_FILE }) {
       localResources.put(
-          MRJobConfig.JOB_SUBMIT_DIR + "/" + s,
+          MRConstants.JOB_SUBMIT_DIR + "/" + s,
           createApplicationResource(defaultFileContext, 
               new Path(jobSubmitDir, s)));
     }
@@ -320,24 +304,22 @@ public class YARNRunner implements ClientProtocol {
     }
 
     // Setup the command to run the AM
+    String javaHome = "$JAVA_HOME";
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
-    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-    
-    long logSize = TaskLog.getTaskLogLength(new JobConf(conf));
-    vargs.add("-Dlog4j.configuration=container-log4j.properties");
-    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "="
-        + ApplicationConstants.LOG_DIR_EXPANSION_VAR);
-    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
+    vargs.add(javaHome + "/bin/java");
+    vargs.add("-Dhadoop.root.logger="
+        + conf.get(MRJobConfig.MR_AM_LOG_OPTS,
+            MRJobConfig.DEFAULT_MR_AM_LOG_OPTS) + ",console");
     
     vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));
 
-    vargs.add(MRJobConfig.APPLICATION_MASTER_CLASS);
-    vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + 
-        Path.SEPARATOR + ApplicationConstants.STDOUT);
-    vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + 
-        Path.SEPARATOR + ApplicationConstants.STDERR);
-
+    vargs.add("org.apache.hadoop.mapreduce.v2.app.MRAppMaster");
+    vargs.add(String.valueOf(applicationId.getClusterTimestamp()));
+    vargs.add(String.valueOf(applicationId.getId()));
+    vargs.add(ApplicationConstants.AM_FAIL_COUNT_STRING);
+    vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout");
+    vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr");
 
     Vector<String> vargsFinal = new Vector<String>(8);
     // Final commmand
@@ -350,13 +332,15 @@ public class YARNRunner implements ClientProtocol {
     LOG.info("Command to launch container for ApplicationMaster is : "
         + mergedCommand);
     
-    // Setup the CLASSPATH in environment 
-    // i.e. add { job jar, CWD, Hadoop jars} to classpath.
+    // Setup the environment - Add { job jar, MR app jar } to classpath.
     Map<String, String> environment = new HashMap<String, String>();
-    MRApps.setClasspath(environment);
-    
+    MRApps.setInitialClasspath(environment);
+    MRApps.addToClassPath(environment, MRConstants.JOB_JAR);
+    MRApps.addToClassPath(environment,
+        MRConstants.YARN_MAPREDUCE_APP_JAR_PATH);
+
     // Parse distributed cache
-    MRApps.setupDistributedCache(jobConf, localResources);
+    MRApps.setupDistributedCache(jobConf, localResources, environment);
 
     // Setup ContainerLaunchContext for AM container
     ContainerLaunchContext amContainer =
@@ -441,35 +425,9 @@ public class YARNRunner implements ClientProtocol {
 
   @Override
   public void killJob(JobID arg0) throws IOException, InterruptedException {
-    /* check if the status is not running, if not send kill to RM */
-    JobStatus status = clientCache.getClient(arg0).getJobStatus(arg0);
-    if (status.getState() != JobStatus.State.RUNNING) {
-      resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
-      return;
-    } 
-    
-    try {
-      /* send a kill to the AM */
-      clientCache.getClient(arg0).killJob(arg0);
-      long currentTimeMillis = System.currentTimeMillis();
-      long timeKillIssued = currentTimeMillis;
-      while ((currentTimeMillis < timeKillIssued + 10000L) && (status.getState()
-          != JobStatus.State.KILLED)) {
-          try {
-            Thread.sleep(1000L);
-          } catch(InterruptedException ie) {
-            /** interrupted, just break */
-            break;
-          }
-          currentTimeMillis = System.currentTimeMillis();
-          status = clientCache.getClient(arg0).getJobStatus(arg0);
-      }
-    } catch(IOException io) {
-      LOG.debug("Error when checking for application status", io);
-    }
-    if (status.getState() != JobStatus.State.KILLED) {
-      resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
-    }
+    if (!clientCache.getClient(arg0).killJob(arg0)) {
+    resMgrDelegate.killApplication(TypeConverter.toYarn(arg0).getAppId());
+  }
   }
 
   @Override

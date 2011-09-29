@@ -21,6 +21,9 @@ import java.net.HttpURLConnection;
 
 /** Http POST operation parameter. */
 public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
+  /** Parameter name. */
+  public static final String NAME = "putOp";
+
   /** Put operations. */
   public static enum Op implements HttpOpParam.Op {
     CREATE(true, HttpURLConnection.HTTP_CREATED),

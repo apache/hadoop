@@ -41,7 +41,6 @@ import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapreduce.MRConfig;
-import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 /**
@@ -561,7 +560,7 @@ public class BackupStore<K,V> {
 
     private Writer<K,V> createSpillFile() throws IOException {
       Path tmp =
-          new Path(MRJobConfig.OUTPUT + "/backup_" + tid.getId() + "_"
+          new Path(Constants.OUTPUT + "/backup_" + tid.getId() + "_"
               + (spillNumber++) + ".out");
 
       LOG.info("Created file: " + tmp);

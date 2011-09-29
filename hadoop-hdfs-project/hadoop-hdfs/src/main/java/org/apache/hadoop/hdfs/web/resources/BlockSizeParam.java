@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 /** Block size parameter. */
 public class BlockSizeParam extends LongParam {
   /** Parameter name. */
-  public static final String NAME = "blocksize";
+  public static final String NAME = "blockSize";
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 

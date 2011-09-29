@@ -58,7 +58,7 @@ public class TestConfiguration extends TestCase {
   }
   
   private void startConfig() throws IOException{
-    out.write("<?xml version=\"1.1\"?>\n");
+    out.write("<?xml version=\"1.0\"?>\n");
     out.write("<configuration>\n");
   }
 
@@ -221,18 +221,6 @@ public class TestConfiguration extends TestCase {
     assertEquals("this  contains a comment", conf.get("my.comment"));
   }
   
-  public void testControlAInValue() throws IOException {
-    out = new BufferedWriter(new FileWriter(CONFIG));
-    startConfig();
-    appendProperty("my.char", "&#1;");
-    appendProperty("my.string", "some&#1;string");
-    endConfig();
-    Path fileResource = new Path(CONFIG);
-    conf.addResource(fileResource);
-    assertEquals("\u0001", conf.get("my.char"));
-    assertEquals("some\u0001string", conf.get("my.string"));
-  }
-
   public void testTrim() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -310,7 +298,7 @@ public class TestConfiguration extends TestCase {
     conf.writeXml(baos);
     String result = baos.toString();
     assertTrue("Result has proper header", result.startsWith(
-        "<?xml version=\"1.1\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>"));
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>"));
     assertTrue("Result has proper footer", result.endsWith("</configuration>"));
   }
   

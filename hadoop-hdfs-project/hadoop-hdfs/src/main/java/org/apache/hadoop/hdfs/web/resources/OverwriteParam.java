@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-/** Overwrite parameter. */
+/** Recursive parameter. */
 public class OverwriteParam extends BooleanParam {
   /** Parameter name. */
   public static final String NAME = "overwrite";

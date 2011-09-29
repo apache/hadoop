@@ -402,7 +402,7 @@ public class TestMRJobs {
       // both should be reachable via the class loader.
       Assert.assertNotNull(cl.getResource("distributed.jar.inside2"));
       Assert.assertNotNull(cl.getResource("distributed.jar.inside3"));
-      Assert.assertNotNull(cl.getResource("distributed.jar.inside4"));
+      Assert.assertNull(cl.getResource("distributed.jar.inside4"));
 
       // Check that the symlink for the renaming was created in the cwd;
       File symlinkFile = new File("distributed.first.symlink");

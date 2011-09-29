@@ -96,8 +96,7 @@ public class TestMulitipleNNDataBlockScanner {
 
       String bpidToShutdown = cluster.getNamesystem(2).getBlockPoolId();
       for (int i = 0; i < 2; i++) {
-        String nsId = DFSUtil.getNamenodeNameServiceId(cluster
-            .getConfiguration(i));
+        String nsId = DFSUtil.getNameServiceId(cluster.getConfiguration(i));
         namenodesBuilder.append(nsId);
         namenodesBuilder.append(",");
       }
@@ -117,7 +116,7 @@ public class TestMulitipleNNDataBlockScanner {
         LOG.info(ex.getMessage());
       }
 
-      namenodesBuilder.append(DFSUtil.getNamenodeNameServiceId(cluster
+      namenodesBuilder.append(DFSUtil.getNameServiceId(cluster
           .getConfiguration(2)));
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, namenodesBuilder
           .toString());

@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 
@@ -32,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
  * look at {@link RMAppImpl} for its implementation. This interface 
  * exposes methods to access various updates in application status/report.
  */
-public interface RMApp extends EventHandler<RMAppEvent> {
+public interface RMApp extends EventHandler<RMAppEvent>{
 
   /**
    * The application id for this {@link RMApp}.

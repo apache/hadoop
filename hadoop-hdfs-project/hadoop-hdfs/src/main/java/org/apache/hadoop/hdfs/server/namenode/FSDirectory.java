@@ -120,7 +120,7 @@ public class FSDirectory implements Closeable {
     this.cond = dirLock.writeLock().newCondition();
     rootDir = new INodeDirectoryWithQuota(INodeDirectory.ROOT_NAME,
         ns.createFsOwnerPermissions(new FsPermission((short)0755)),
-        Long.MAX_VALUE, UNKNOWN_DISK_SPACE);
+        Integer.MAX_VALUE, UNKNOWN_DISK_SPACE);
     this.fsImage = fsImage;
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);

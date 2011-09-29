@@ -29,7 +29,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.hadoop.HadoopIllegalArgumentException;
+import junit.framework.Assert;
+
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -39,7 +40,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+
 
 public class TestDFSUtil {
   /**
@@ -74,141 +76,79 @@ public class TestDFSUtil {
       }
     }
 
-    assertTrue("expected 1 corrupt files but got " + corruptCount,
-        corruptCount == 1);
-
+    assertTrue("expected 1 corrupt files but got " + corruptCount, 
+               corruptCount == 1);
+    
     // test an empty location
     bs = DFSUtil.locatedBlocks2Locations(new LocatedBlocks());
     assertEquals(0, bs.length);
   }
 
-
-  private Configuration setupAddress(String key) {
+  /** 
+   * Test for
+   * {@link DFSUtil#getNameServiceIds(Configuration)}
+   * {@link DFSUtil#getNameServiceId(Configuration)}
+   * {@link DFSUtil#getNNServiceRpcAddresses(Configuration)}
+   */
+  @Test
+  public void testMultipleNamenodes() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICES, "nn1");
-    conf.set(DFSUtil.getNameServiceIdKey(key, "nn1"), "localhost:9000");
-    return conf;
-  }
-
-  /**
-   * Test {@link DFSUtil#getNamenodeNameServiceId(Configuration)} to ensure
-   * nameserviceId from the configuration returned
-   */
-  @Test
-  public void getNameServiceId() {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICE_ID, "nn1");
-    assertEquals("nn1", DFSUtil.getNamenodeNameServiceId(conf));
-  }
-  
-  /**
-   * Test {@link DFSUtil#getNameNodeNameServiceId(Configuration)} to ensure
-   * nameserviceId for namenode is determined based on matching the address with
-   * local node's address
-   */
-  @Test
-  public void getNameNodeNameServiceId() {
-    Configuration conf = setupAddress(DFS_NAMENODE_RPC_ADDRESS_KEY);
-    assertEquals("nn1", DFSUtil.getNamenodeNameServiceId(conf));
-  }
-
-  /**
-   * Test {@link DFSUtil#getBackupNameServiceId(Configuration)} to ensure
-   * nameserviceId for backup node is determined based on matching the address
-   * with local node's address
-   */
-  @Test
-  public void getBackupNameServiceId() {
-    Configuration conf = setupAddress(DFS_NAMENODE_BACKUP_ADDRESS_KEY);
-    assertEquals("nn1", DFSUtil.getBackupNameServiceId(conf));
-  }
-
-  /**
-   * Test {@link DFSUtil#getSecondaryNameServiceId(Configuration)} to ensure
-   * nameserviceId for backup node is determined based on matching the address
-   * with local node's address
-   */
-  @Test
-  public void getSecondaryNameServiceId() {
-    Configuration conf = setupAddress(DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY);
-    assertEquals("nn1", DFSUtil.getSecondaryNameServiceId(conf));
-  }
-
-  /**
-   * Test {@link DFSUtil#getNameServiceId(Configuration, String))} to ensure
-   * exception is thrown when multiple rpc addresses match the local node's
-   * address
-   */
-  @Test(expected = HadoopIllegalArgumentException.class)
-  public void testGetNameServiceIdException() {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICES, "nn1,nn2");
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
-        "localhost:9000");
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
-        "localhost:9001");
-    DFSUtil.getNamenodeNameServiceId(conf);
-    fail("Expected exception is not thrown");
-  }
-
-  /**
-   * Test {@link DFSUtil#getNameServiceIds(Configuration)}
-   */
-  @Test
-  public void testGetNameServiceIds() {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICES, "nn1,nn2");
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "nn1,nn2");
+    
+    // Test - The configured nameserviceIds are returned
     Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
     Iterator<String> it = nameserviceIds.iterator();
     assertEquals(2, nameserviceIds.size());
     assertEquals("nn1", it.next().toString());
     assertEquals("nn2", it.next().toString());
-  }
-
-  /**
-   * Test for {@link DFSUtil#getNNServiceRpcAddresses(Configuration)}
-   * {@link DFSUtil#getNameServiceIdFromAddress(Configuration, InetSocketAddress, String...)
-   * (Configuration)}
-   */
-  @Test
-  public void testMultipleNamenodes() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICES, "nn1,nn2");
+    
+    // Tests default nameserviceId is returned
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, "nn1");
+    assertEquals("nn1", DFSUtil.getNameServiceId(conf));
+    
     // Test - configured list of namenodes are returned
     final String NN1_ADDRESS = "localhost:9000";
     final String NN2_ADDRESS = "localhost:9001";
     final String NN3_ADDRESS = "localhost:9002";
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
-        NN1_ADDRESS);
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
-        NN2_ADDRESS);
-
-    Collection<InetSocketAddress> nnAddresses = DFSUtil
-        .getNNServiceRpcAddresses(conf);
+    conf.set(DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"), NN1_ADDRESS);
+    conf.set(DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"), NN2_ADDRESS);
+    
+    Collection<InetSocketAddress> nnAddresses = 
+      DFSUtil.getNNServiceRpcAddresses(conf);
     assertEquals(2, nnAddresses.size());
     Iterator<InetSocketAddress> iterator = nnAddresses.iterator();
+    assertEquals(2, nameserviceIds.size());
     InetSocketAddress addr = iterator.next();
     assertEquals("localhost", addr.getHostName());
     assertEquals(9000, addr.getPort());
     addr = iterator.next();
     assertEquals("localhost", addr.getHostName());
     assertEquals(9001, addr.getPort());
-
+    
     // Test - can look up nameservice ID from service address
-    checkNameServiceId(conf, NN1_ADDRESS, "nn1");
-    checkNameServiceId(conf, NN2_ADDRESS, "nn2");
-    checkNameServiceId(conf, NN3_ADDRESS, null);
+    InetSocketAddress testAddress1 = NetUtils.createSocketAddr(NN1_ADDRESS);
+    String nameserviceId = DFSUtil.getNameServiceIdFromAddress(
+        conf, testAddress1,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    assertEquals("nn1", nameserviceId);
+    InetSocketAddress testAddress2 = NetUtils.createSocketAddr(NN2_ADDRESS);
+    nameserviceId = DFSUtil.getNameServiceIdFromAddress(
+        conf, testAddress2,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    assertEquals("nn2", nameserviceId);
+    InetSocketAddress testAddress3 = NetUtils.createSocketAddr(NN3_ADDRESS);
+    nameserviceId = DFSUtil.getNameServiceIdFromAddress(
+        conf, testAddress3,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    assertNull(nameserviceId);
   }
-
-  public void checkNameServiceId(Configuration conf, String addr,
-      String expectedNameServiceId) {
-    InetSocketAddress s = NetUtils.createSocketAddr(addr);
-    String nameserviceId = DFSUtil.getNameServiceIdFromAddress(conf, s,
-        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
-    assertEquals(expectedNameServiceId, nameserviceId);
-  }
-
-  /**
+  
+  /** 
    * Test for
    * {@link DFSUtil#isDefaultNamenodeAddress(Configuration, InetSocketAddress, String...)}
    */
@@ -217,25 +157,27 @@ public class TestDFSUtil {
     HdfsConfiguration conf = new HdfsConfiguration();
     final String DEFAULT_ADDRESS = "localhost:9000";
     final String NN2_ADDRESS = "localhost:9001";
-    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, DEFAULT_ADDRESS);
-
+    conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, DEFAULT_ADDRESS);
+    
     InetSocketAddress testAddress1 = NetUtils.createSocketAddr(DEFAULT_ADDRESS);
     boolean isDefault = DFSUtil.isDefaultNamenodeAddress(conf, testAddress1,
-        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
     assertTrue(isDefault);
     InetSocketAddress testAddress2 = NetUtils.createSocketAddr(NN2_ADDRESS);
     isDefault = DFSUtil.isDefaultNamenodeAddress(conf, testAddress2,
-        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
     assertFalse(isDefault);
   }
-
+  
   /** Tests to ensure default namenode is used as fallback */
   @Test
   public void testDefaultNamenode() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     final String hdfs_default = "hdfs://localhost:9999/";
-    conf.set(FS_DEFAULT_NAME_KEY, hdfs_default);
-    // If DFS_FEDERATION_NAMESERVICES is not set, verify that
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, hdfs_default);
+    // If DFSConfigKeys.DFS_FEDERATION_NAMESERVICES is not set, verify that 
     // default namenode address is returned.
     List<InetSocketAddress> addrList = DFSUtil.getNNServiceRpcAddresses(conf);
     assertEquals(1, addrList.size());
@@ -249,26 +191,26 @@ public class TestDFSUtil {
   @Test
   public void testConfModification() throws IOException {
     final HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICES, "nn1");
-    conf.set(DFS_FEDERATION_NAMESERVICE_ID, "nn1");
-    final String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
-
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "nn1");
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, "nn1");
+    final String nameserviceId = DFSUtil.getNameServiceId(conf);
+    
     // Set the nameservice specific keys with nameserviceId in the config key
     for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
       // Note: value is same as the key
       conf.set(DFSUtil.getNameServiceIdKey(key, nameserviceId), key);
     }
-
+    
     // Initialize generic keys from specific keys
-    NameNode.initializeGenericKeys(conf, nameserviceId);
-
+    NameNode.initializeGenericKeys(conf);
+    
     // Retrieve the keys without nameserviceId and Ensure generic keys are set
     // to the correct value
     for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
       assertEquals(key, conf.get(key));
     }
   }
-
+  
   /**
    * Tests for empty configuration, an exception is thrown from
    * {@link DFSUtil#getNNServiceRpcAddresses(Configuration)}
@@ -296,16 +238,16 @@ public class TestDFSUtil {
     } catch (IOException expected) {
     }
   }
-
+  
   @Test
-  public void testGetServerInfo() {
+  public void testGetServerInfo(){
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
     String httpsport = DFSUtil.getInfoServer(null, conf, true);
-    assertEquals("0.0.0.0:50470", httpsport);
+    Assert.assertEquals("0.0.0.0:50470", httpsport);
     String httpport = DFSUtil.getInfoServer(null, conf, false);
-    assertEquals("0.0.0.0:50070", httpport);
+    Assert.assertEquals("0.0.0.0:50070", httpport);
   }
 
 }

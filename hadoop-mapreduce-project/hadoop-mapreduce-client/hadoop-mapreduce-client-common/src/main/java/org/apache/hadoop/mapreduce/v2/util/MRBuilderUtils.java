@@ -19,25 +19,27 @@
 package org.apache.hadoop.mapreduce.v2.util;
 
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
-import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 public class MRBuilderUtils {
 
+  private static final RecordFactory recordFactory = RecordFactoryProvider
+      .getRecordFactory(null);
+
   public static JobId newJobId(ApplicationId appId, int id) {
-    JobId jobId = Records.newRecord(JobId.class);
+    JobId jobId = recordFactory.newRecordInstance(JobId.class);
     jobId.setAppId(appId);
     jobId.setId(id);
     return jobId;
   }
 
   public static TaskId newTaskId(JobId jobId, int id, TaskType taskType) {
-    TaskId taskId = Records.newRecord(TaskId.class);
+    TaskId taskId = recordFactory.newRecordInstance(TaskId.class);
     taskId.setJobId(jobId);
     taskId.setId(id);
     taskId.setTaskType(taskType);
@@ -46,27 +48,9 @@ public class MRBuilderUtils {
 
   public static TaskAttemptId newTaskAttemptId(TaskId taskId, int attemptId) {
     TaskAttemptId taskAttemptId =
-        Records.newRecord(TaskAttemptId.class);
+        recordFactory.newRecordInstance(TaskAttemptId.class);
     taskAttemptId.setTaskId(taskId);
     taskAttemptId.setId(attemptId);
     return taskAttemptId;
-  }
-
-  public static JobReport newJobReport(JobId jobId, String jobName,
-      String userName, JobState state, long startTime, long finishTime,
-      float setupProgress, float mapProgress, float reduceProgress,
-      float cleanupProgress) {
-    JobReport report = Records.newRecord(JobReport.class);
-    report.setJobId(jobId);
-    report.setJobName(jobName);
-    report.setUser(userName);
-    report.setJobState(state);
-    report.setStartTime(startTime);
-    report.setFinishTime(finishTime);
-    report.setSetupProgress(setupProgress);
-    report.setCleanupProgress(cleanupProgress);
-    report.setMapProgress(mapProgress);
-    report.setReduceProgress(reduceProgress);
-    return report;
   }
 }
