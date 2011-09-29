@@ -21,13 +21,13 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
-import org.apache.hadoop.mapreduce.v2.app.webapp.CountersBlock;
+import org.apache.hadoop.mapreduce.v2.app.webapp.SingleCounterBlock;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 /**
  * Render the counters page
  */
-public class HsCountersPage extends HsView {
+public class HsSingleCounterPage extends HsView {
 
   /*
    * (non-Javadoc)
@@ -41,29 +41,29 @@ public class HsCountersPage extends HsView {
       activeNav = "1";
     }
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:"+activeNav+"}");
-    set(DATATABLES_SELECTOR, "#counters .dt-counters");
-    set(initSelector(DATATABLES),
-        "{bJQueryUI:true, sDom:'t', iDisplayLength:-1}");
+    set(DATATABLES_ID, "singleCounter");
+    set(initID(DATATABLES, "singleCounter"), counterTableInit());
+    setTableStyles(html, "singleCounter");
   }
 
-  /*
-   * (non-Javadoc)
-   * @see org.apache.hadoop.yarn.webapp.view.TwoColumnLayout#postHead(org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML)
+  /**
+   * @return The end of a javascript map that is the jquery datatable 
+   * configuration for the jobs table.  the Jobs table is assumed to be
+   * rendered by the class returned from {@link #content()} 
    */
-  @Override protected void postHead(Page.HTML<_> html) {
-    html.
-      style("#counters, .dt-counters { table-layout: fixed }",
-            "#counters th { overflow: hidden; vertical-align: middle }",
-            "#counters .dataTables_wrapper { min-height: 1em }",
-            "#counters .group { width: 15em }",
-            "#counters .name { width: 30em }");
+  private String counterTableInit() {
+    return tableInit().
+        append(", aoColumnDefs:[").
+        append("{'sType':'title-numeric', 'aTargets': [ 1 ] }").
+        append("]}").
+        toString();
   }
-
+  
   /**
    * The content of this page is the CountersBlock now.
    * @return CountersBlock.class
    */
   @Override protected Class<? extends SubView> content() {
-    return CountersBlock.class;
+    return SingleCounterBlock.class;
   }
 }

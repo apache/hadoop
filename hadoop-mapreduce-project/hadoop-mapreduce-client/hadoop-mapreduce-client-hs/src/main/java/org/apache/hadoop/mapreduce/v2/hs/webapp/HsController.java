@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AppController;
@@ -57,7 +59,7 @@ public class HsController extends AppController {
    * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#countersPage()
    */
   @Override
-  protected Class<? extends View> countersPage() {
+  public Class<? extends View> countersPage() {
     return HsCountersPage.class;
   }
   
@@ -108,7 +110,16 @@ public class HsController extends AppController {
   public void jobCounters() {
     super.jobCounters();
   }
-
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#taskCounters()
+   */
+  @Override
+  public void taskCounters() {
+    super.taskCounters();
+  }
+  
   /*
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#tasks()
@@ -156,5 +167,32 @@ public class HsController extends AppController {
    */
   public void about() {
     render(aboutPage());
+  }
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#singleCounterPage()
+   */
+  @Override
+  protected Class<? extends View> singleCounterPage() {
+    return HsSingleCounterPage.class;
+  }
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#singleJobCounter()
+   */
+  @Override
+  public void singleJobCounter() throws IOException{
+    super.singleJobCounter();
+  }
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.webapp.AppController#singleTaskCounter()
+   */
+  @Override
+  public void singleTaskCounter() throws IOException{
+    super.singleTaskCounter();
   }
 }

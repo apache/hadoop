@@ -292,6 +292,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3099. Add docs for setting up a single node MRv2 cluster.
     (mahadev)
 
+    MAPREDUCE-3001. Added task-specific counters to AppMaster and JobHistory
+    web-UIs. (Robert Joseph Evans via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

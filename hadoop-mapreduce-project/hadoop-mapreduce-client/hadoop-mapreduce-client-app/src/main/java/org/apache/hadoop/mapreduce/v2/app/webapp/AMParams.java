@@ -28,4 +28,6 @@ public interface AMParams {
   static final String TASK_ID = "task.id";
   static final String TASK_TYPE = "task.type";
   static final String ATTEMPT_STATE = "attempt.state";
+  static final String COUNTER_GROUP = "counter.group";
+  static final String COUNTER_NAME = "counter.name";
 }
