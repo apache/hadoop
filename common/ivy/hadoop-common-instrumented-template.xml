@@ -122,6 +122,13 @@
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
       <version>1.5.3</version>
+      <exclusions>
+        <exclusion>
+          <!-- Don't pull in Avro's version of SLF4J.-->
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.avro</groupId>
@@ -137,6 +144,11 @@
           <!-- Exclude Avro's version of ant since it conflicts with Jetty's.-->
           <groupId>org.apache.ant</groupId>
           <artifactId>ant</artifactId>
+        </exclusion>
+        <exclusion>
+          <!-- Don't pull in Avro's version of SLF4J.-->
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
