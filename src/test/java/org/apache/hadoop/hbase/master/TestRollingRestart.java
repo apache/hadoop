@@ -210,7 +210,11 @@ public class TestRollingRestart {
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
     log("Waiting for no more RIT");
-    blockUntilNoRIT(zkw, master);
+    long start = System.currentTimeMillis();
+    do {
+      blockUntilNoRIT(zkw, master);
+    } while (getNumberOfOnlineRegions(cluster) < numRegions 
+        && System.currentTimeMillis()-start < 60000);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
@@ -345,12 +349,17 @@ public class TestRollingRestart {
     return null;
   }
 
-  private void assertRegionsAssigned(MiniHBaseCluster cluster,
-      Set<String> expectedRegions) throws IOException {
+  private int getNumberOfOnlineRegions(MiniHBaseCluster cluster) {
     int numFound = 0;
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       numFound += rst.getRegionServer().getNumberOfOnlineRegions();
     }
+    return numFound;
+  }
+  
+  private void assertRegionsAssigned(MiniHBaseCluster cluster,
+      Set<String> expectedRegions) throws IOException {
+    int numFound = getNumberOfOnlineRegions(cluster);
     if (expectedRegions.size() > numFound) {
       log("Expected to find " + expectedRegions.size() + " but only found"
           + " " + numFound);

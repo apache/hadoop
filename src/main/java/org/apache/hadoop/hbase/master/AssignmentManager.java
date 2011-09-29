@@ -1461,6 +1461,7 @@ public class AssignmentManager extends ZooKeeperListener {
             LOG.error(errorMsg, t);
             return;
           }
+        }
         LOG.warn("Failed assignment of " +
           state.getRegion().getRegionNameAsString() + " to " +
           plan.getDestination() + ", trying to assign elsewhere instead; " +
@@ -1477,7 +1478,6 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
-   }
   }
 
   private void debugLog(HRegionInfo region, String string) {
