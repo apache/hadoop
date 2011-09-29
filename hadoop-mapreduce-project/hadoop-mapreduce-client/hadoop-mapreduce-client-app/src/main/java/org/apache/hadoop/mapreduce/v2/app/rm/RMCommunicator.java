@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,6 +28,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
@@ -42,17 +42,12 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -64,7 +59,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
 /**
  * Registers/unregisters to RM and sends heartbeats to RM.
  */
-public class RMCommunicator extends AbstractService  {
+public abstract class RMCommunicator extends AbstractService  {
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
@@ -74,7 +69,7 @@ public class RMCommunicator extends AbstractService  {
   protected EventHandler eventHandler;
   protected AMRMProtocol scheduler;
   private final ClientService clientService;
-  private int lastResponseID;
+  protected int lastResponseID;
   private Resource minContainerCapability;
   private Resource maxContainerCapability;
 
@@ -119,6 +114,34 @@ public class RMCommunicator extends AbstractService  {
 
   protected Job getJob() {
     return job;
+  }
+
+  /**
+   * Get the appProgress. Can be used only after this component is started.
+   * @return the appProgress.
+   */
+  protected float getApplicationProgress() {
+    // For now just a single job. In future when we have a DAG, we need an
+    // aggregate progress.
+    JobReport report = this.job.getReport();
+    float setupWeight = 0.05f;
+    float cleanupWeight = 0.05f;
+    float mapWeight = 0.0f;
+    float reduceWeight = 0.0f;
+    int numMaps = this.job.getTotalMaps();
+    int numReduces = this.job.getTotalReduces();
+    if (numMaps == 0 && numReduces == 0) {
+    } else if (numMaps == 0) {
+      reduceWeight = 0.9f;
+    } else if (numReduces == 0) {
+      mapWeight = 0.9f;
+    } else {
+      mapWeight = reduceWeight = 0.45f;
+    }
+    return (report.getSetupProgress() * setupWeight
+        + report.getCleanupProgress() * cleanupWeight
+        + report.getMapProgress() * mapWeight + report.getReduceProgress()
+        * reduceWeight);
   }
 
   protected void register() {
@@ -262,18 +285,5 @@ public class RMCommunicator extends AbstractService  {
     });
   }
 
-  protected synchronized void heartbeat() throws Exception {
-    AllocateRequest allocateRequest =
-        recordFactory.newRecordInstance(AllocateRequest.class);
-    allocateRequest.setApplicationAttemptId(applicationAttemptId);
-    allocateRequest.setResponseId(lastResponseID);
-    allocateRequest.addAllAsks(new ArrayList<ResourceRequest>());
-    allocateRequest.addAllReleases(new ArrayList<ContainerId>());
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
-    AMResponse response = allocateResponse.getAMResponse();
-    if (response.getReboot()) {
-      LOG.info("Event from RM: shutting down Application Master");
-    }
-  }
-
+  protected abstract void heartbeat() throws Exception;
 }

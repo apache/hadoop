@@ -37,8 +37,11 @@ public interface ApplicationConstants {
   public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
     "AppClientTokenEnv";
 
-  // TODO: Weird. This is part of AM command line. Instead it should be a env.
-  public static final String AM_FAIL_COUNT_STRING = "<FAILCOUNT>";
+  /**
+   * The environmental variable for APPLICATION_ATTEMPT_ID. Set in
+   * ApplicationMaster's environment only.
+   */
+  public static final String APPLICATION_ATTEMPT_ID_ENV = "APPLICATION_ATTEMPT_ID";
 
   public static final String CONTAINER_TOKEN_FILE_ENV_NAME =
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;
@@ -46,4 +49,117 @@ public interface ApplicationConstants {
   public static final String LOCAL_DIR_ENV = "YARN_LOCAL_DIRS";
 
   public static final String LOG_DIR_EXPANSION_VAR = "<LOG_DIR>";
+
+  public static final String STDERR = "stderr";
+
+  public static final String STDOUT = "stdout";
+  
+  /**
+   * Classpath for typical applications.
+   */
+  public static final String[] APPLICATION_CLASSPATH =
+      new String[] {
+        "$HADOOP_CONF_DIR",
+        "$HADOOP_COMMON_HOME/share/hadoop/common/*",
+        "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
+        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
+        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
+        "$YARN_HOME/modules/*",
+        "$YARN_HOME/lib/*"
+      };
+  
+  /**
+   * Environment for Applications.
+   * 
+   * Some of the environment variables for applications are <em>final</em> 
+   * i.e. they cannot be modified by the applications.
+   */
+  public enum Environment {
+    /**
+     * $USER
+     * Final, non-modifiable.
+     */
+    USER("USER"),
+    
+    /**
+     * $LOGNAME
+     * Final, non-modifiable.
+     */
+    LOGNAME("LOGNAME"),
+    
+    /**
+     * $HOME
+     * Final, non-modifiable.
+     */
+    HOME("HOME"),
+    
+    /**
+     * $PWD
+     * Final, non-modifiable.
+     */
+    PWD("PWD"),
+    
+    /**
+     * $PATH
+     */
+    PATH("PATH"),
+    
+    /**
+     * $SHELL
+     */
+    SHELL("SHELL"),
+    
+    /**
+     * $JAVA_HOME
+     */
+    JAVA_HOME("JAVA_HOME"),
+    
+    /**
+     * $CLASSPATH
+     */
+    CLASSPATH("CLASSPATH"),
+    
+    /**
+     * $LD_LIBRARY_PATH
+     */
+    LD_LIBRARY_PATH("LD_LIBRARY_PATH"),
+    
+    /**
+     * $HADOOP_CONF_DIR
+     * Final, non-modifiable.
+     */
+    HADOOP_CONF_DIR("HADOOP_CONF_DIR"),
+    
+    /**
+     * $HADOOP_COMMON_HOME
+     */
+    HADOOP_COMMON_HOME("HADOOP_COMMON_HOME"),
+    
+    /**
+     * $HADOOP_HDFS_HOME
+     */
+    HADOOP_HDFS_HOME("HADOOP_HDFS_HOME"),
+    
+    /**
+     * $YARN_HOME
+     */
+    YARN_HOME("YARN_HOME");
+
+    private final String variable;
+    private Environment(String variable) {
+      this.variable = variable;
+    }
+    
+    public String key() {
+      return variable;
+    }
+    
+    public String toString() {
+      return variable;
+    }
+    
+    public String $() {
+      return "$" + variable;
+    }
+  }
 }

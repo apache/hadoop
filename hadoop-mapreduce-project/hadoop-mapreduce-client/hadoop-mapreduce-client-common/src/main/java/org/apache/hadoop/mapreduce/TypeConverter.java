@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -280,15 +281,27 @@ public class TypeConverter {
   }
   
   public static org.apache.hadoop.mapred.JobStatus fromYarn(
-      JobReport jobreport, String jobFile, String trackingUrl) {
+      JobReport jobreport, String jobFile) {
     JobPriority jobPriority = JobPriority.NORMAL;
-    return new org.apache.hadoop.mapred.JobStatus(fromYarn(jobreport.getJobId()),
-        jobreport.getSetupProgress(), jobreport.getMapProgress(),
-        jobreport.getReduceProgress(), jobreport.getCleanupProgress(),
-        fromYarn(jobreport.getJobState()),
-        jobPriority, jobreport.getUser(), jobreport.getJobName(),
-        jobFile, trackingUrl);
+    org.apache.hadoop.mapred.JobStatus jobStatus =
+        new org.apache.hadoop.mapred.JobStatus(fromYarn(jobreport.getJobId()),
+            jobreport.getSetupProgress(), jobreport.getMapProgress(),
+            jobreport.getReduceProgress(), jobreport.getCleanupProgress(),
+            fromYarn(jobreport.getJobState()),
+            jobPriority, jobreport.getUser(), jobreport.getJobName(),
+            jobFile, jobreport.getTrackingUrl());
+    jobStatus.setFailureInfo(jobreport.getDiagnostics());
+    return jobStatus;
   }
+  
+  public static org.apache.hadoop.mapreduce.QueueState fromYarn(
+      QueueState state) {
+    org.apache.hadoop.mapreduce.QueueState qState = 
+      org.apache.hadoop.mapreduce.QueueState.getState(
+        state.toString().toLowerCase());
+    return qState;
+  }
+
   
   public static int fromYarn(JobState state) {
     switch (state) {
@@ -412,6 +425,7 @@ public class TypeConverter {
       );
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
     jobStatus.setStartTime(application.getStartTime());
+    jobStatus.setFailureInfo(application.getDiagnostics());
     return jobStatus;
   }
 
@@ -431,9 +445,9 @@ public class TypeConverter {
   
   public static QueueInfo fromYarn(org.apache.hadoop.yarn.api.records.QueueInfo 
       queueInfo, Configuration conf) {
-    return new QueueInfo(queueInfo.getQueueName(), 
-        queueInfo.toString(), QueueState.RUNNING, 
-        TypeConverter.fromYarnApps(queueInfo.getApplications(), conf));
+    return new QueueInfo(queueInfo.getQueueName(),queueInfo.toString(),
+        fromYarn(queueInfo.getQueueState()), TypeConverter.fromYarnApps(
+        queueInfo.getApplications(), conf));
   }
   
   public static QueueInfo[] fromYarnQueueInfo(

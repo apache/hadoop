@@ -101,7 +101,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   public synchronized void init(Configuration conf) {
     this.rmAddress =
         conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-            YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS);
     this.heartBeatInterval =
         conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
             YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);

@@ -19,27 +19,27 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetNewApplicationIdRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationResponseProto;
 
 
     
-public class GetNewApplicationIdRequestPBImpl extends ProtoBase<GetNewApplicationIdRequestProto> implements GetNewApplicationIdRequest {
-  GetNewApplicationIdRequestProto proto = GetNewApplicationIdRequestProto.getDefaultInstance();
-  GetNewApplicationIdRequestProto.Builder builder = null;
+public class KillApplicationResponsePBImpl extends ProtoBase<KillApplicationResponseProto> implements KillApplicationResponse {
+  KillApplicationResponseProto proto = KillApplicationResponseProto.getDefaultInstance();
+  KillApplicationResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  public GetNewApplicationIdRequestPBImpl() {
-    builder = GetNewApplicationIdRequestProto.newBuilder();
+  public KillApplicationResponsePBImpl() {
+    builder = KillApplicationResponseProto.newBuilder();
   }
 
-  public GetNewApplicationIdRequestPBImpl(GetNewApplicationIdRequestProto proto) {
+  public KillApplicationResponsePBImpl(KillApplicationResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
   
-  public GetNewApplicationIdRequestProto getProto() {
+  public KillApplicationResponseProto getProto() {
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -47,7 +47,7 @@ public class GetNewApplicationIdRequestPBImpl extends ProtoBase<GetNewApplicatio
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = GetNewApplicationIdRequestProto.newBuilder(proto);
+      builder = KillApplicationResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }

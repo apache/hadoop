@@ -48,6 +48,10 @@ message ResourceProto {
   optional int32 memory = 1;
 }
 
+message PriorityProto {
+  optional int32 priority = 1;
+}
+
 enum ContainerStateProto {
   C_NEW = 1;
   C_RUNNING = 2;
@@ -66,9 +70,10 @@ message ContainerProto {
   optional NodeIdProto nodeId = 2;
   optional string node_http_address = 3;
   optional ResourceProto resource = 4;
-  optional ContainerStateProto state = 5;
-  optional ContainerTokenProto container_token = 6;
-  optional ContainerStatusProto container_status = 7;
+  optional PriorityProto priority = 5;
+  optional ContainerStateProto state = 6;
+  optional ContainerTokenProto container_token = 7;
+  optional ContainerStatusProto container_status = 8;
 }
 
 enum ApplicationStateProto {
@@ -140,6 +145,7 @@ message ApplicationReportProto {
   optional string trackingUrl = 11;
   optional string diagnostics = 12 [default = "N/A"];
   optional int64 startTime = 13;
+  optional int64 finishTime = 14;
 }
 
 message NodeIdProto {
@@ -252,10 +258,6 @@ message ContainerStatusProto {
 ////////////////////////////////////////////////////////////////////////
 ////// From common//////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
-message PriorityProto {
-  optional int32 priority = 1;
-}
-
 message StringURLMapProto {
   optional string key = 1;
   optional URLProto value = 2;

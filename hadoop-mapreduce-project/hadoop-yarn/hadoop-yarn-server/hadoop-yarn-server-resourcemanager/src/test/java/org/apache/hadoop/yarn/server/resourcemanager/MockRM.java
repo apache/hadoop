@@ -22,9 +22,9 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -74,11 +74,17 @@ public class MockRM extends ResourceManager {
     Assert.assertEquals("App state is not correct (timedout)",
         finalState, app.getState());
   }
+  
+  // get new application id 
+  public GetNewApplicationResponse getNewAppId() throws Exception {
+    ClientRMProtocol client = getClientRMService();
+    return client.getNewApplication(Records.newRecord(GetNewApplicationRequest.class));	  
+  }
 
   //client
   public RMApp submitApp(int masterMemory) throws Exception {
     ClientRMProtocol client = getClientRMService();
-    GetNewApplicationIdResponse resp = client.getNewApplicationId(Records.newRecord(GetNewApplicationIdRequest.class));
+    GetNewApplicationResponse resp = client.getNewApplication(Records.newRecord(GetNewApplicationRequest.class));
     ApplicationId appId = resp.getApplicationId();
     
     SubmitApplicationRequest req = Records.newRecord(SubmitApplicationRequest.class);
@@ -89,7 +95,7 @@ public class MockRM extends ResourceManager {
     sub.setUser("");
     ContainerLaunchContext clc = 
         Records.newRecord(ContainerLaunchContext.class);
-    Resource capability = Records.newRecord(Resource.class);
+    Resource capability = Records.newRecord(Resource.class);    
     capability.setMemory(masterMemory);
     clc.setResource(capability);
     sub.setAMContainerSpec(clc);
@@ -109,9 +115,9 @@ public class MockRM extends ResourceManager {
 
   public void killApp(ApplicationId appId) throws Exception {
     ClientRMProtocol client = getClientRMService();
-    FinishApplicationRequest req = Records.newRecord(FinishApplicationRequest.class);
+    KillApplicationRequest req = Records.newRecord(KillApplicationRequest.class);
     req.setApplicationId(appId);
-    client.finishApplication(req);
+    client.forceKillApplication(req);
   }
 
   //from AMLauncher
@@ -195,6 +201,7 @@ public class MockRM extends ResourceManager {
     };
   }
 
+  @Override
   protected AdminService createAdminService() {
     return new AdminService(getConfig(), scheduler, getRMContext(), 
         this.nodesListManager){

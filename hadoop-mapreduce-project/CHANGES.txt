@@ -29,6 +29,8 @@ Trunk (unreleased changes)
     findBugs, correct links to findBugs artifacts and no links to the
     artifacts when there are no warnings. (Tom White via vinodkv).
 
+    MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -69,6 +71,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2037. Capture intermediate progress, CPU and memory usage for
     tasks. (Dick King via acmurthy) 
+
+    MAPREDUCE-2930. Added the ability to be able to generate graphs from the
+    state-machine definitions. (Binglin Chang via vinodkv)
 
   IMPROVEMENTS
 
@@ -307,6 +312,15 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2726. Added job-file to the AM and JobHistoryServer web
     interfaces. (Jeffrey Naisbitt via vinodkv)
 
+    MAPREDUCE-3055. Simplified ApplicationAttemptId passing to
+    ApplicationMaster via environment variable. (vinodkv)
+
+    MAPREDUCE-3092. Removed a special comparator for JobIDs in JobHistory as
+    JobIDs are already comparable. (Devaraj K via vinodkv)
+
+    MAPREDUCE-3099. Add docs for setting up a single node MRv2 cluster.
+    (mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
@@ -317,6 +331,9 @@ Release 0.23.0 - Unreleased
     TaskAttemptContexts. (todd)
 
     MAPREDUCE-901. Efficient framework counters. (llu via acmurthy)
+
+    MAPREDUCE-2880. Improve classpath-construction for mapreduce AM and
+    containers. (Arun C Murthy via vinodkv)
 
   BUG FIXES
 
@@ -1369,6 +1386,91 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3040. Fixed extra copy of Configuration in
     YarnClientProtocolProvider and ensured MiniMRYarnCluster sets JobHistory
     configuration for tests. (acmurthy) 
+
+    MAPREDUCE-3018. Fixed -file option for streaming. (mahadev via acmurthy) 
+
+    MAPREDUCE-3036. Fixed metrics for reserved resources in CS. (Robert Evans
+    via acmurthy)
+
+    MAPREDUCE-2998. Fixed a bug in TaskAttemptImpl which caused it to fork
+    bin/mapred too many times. (vinodkv via acmurthy)
+
+    MAPREDUCE-3023. Fixed clients to display queue state correctly. (Ravi
+    Prakash via acmurthy) 
+
+    MAPREDUCE-2970. Fixed NPEs in corner cases with different configurations
+    for mapreduce.framework.name. (Venu Gopala Rao via vinodkv)
+
+    MAPREDUCE-3062. Fixed default RMAdmin address. (Chris Riccomini
+    via acmurthy) 
+
+    MAPREDUCE-3066. Fixed default ResourceTracker address for the NodeManager. 
+    (Chris Riccomini via acmurthy) 
+
+    MAPREDUCE-3044. Pipes jobs stuck without making progress. (mahadev)
+
+    MAPREDUCE-2754. Fixed MR AM stdout, stderr and syslog to redirect to
+    correct log-files. (Ravi Teja Ch N V via vinodkv)
+
+    MAPREDUCE-3073. Fixed build issues in MR1. (mahadev via acmurthy)
+
+    MAPREDUCE-2691. Increase threadpool size for launching containers in
+    MapReduce ApplicationMaster. (vinodkv via acmurthy)
+
+
+    MAPREDUCE-2990. Fixed display of NodeHealthStatus. (Subroto Sanyal via
+    acmurthy) 
+
+    MAPREDUCE-3053. Better diagnostic message for unknown methods in ProtoBuf
+    RPCs. (vinodkv via acmurthy)
+
+    MAPREDUCE-2952. Fixed ResourceManager/MR-client to consume diagnostics
+    for AM failures in a couple of corner cases. (Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3064. 27 unit test failures with Invalid 
+    "mapreduce.jobtracker.address" configuration value for 
+    JobTracker: "local" (Venu Gopala Rao via mahadev)
+
+    MAPREDUCE-3090. Fix MR AM to use ApplicationAttemptId rather than
+    (ApplicationId, startCount) consistently. (acmurthy)  
+
+    MAPREDUCE-2646. Fixed AMRMProtocol to return containers based on
+    priority. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3031. Proper handling of killed containers to prevent stuck
+    containers/AMs on an external kill signal. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-2984. Better error message for displaying completed containers.
+    (Devaraj K via acmurthy)
+
+    MAPREDUCE-3071. app master configuration web UI link under the Job menu 
+    opens up application menu. (thomas graves  via mahadev)
+
+    MAPREDUCE-3067. Ensure exit-code is set correctly for containers. (Hitesh
+    Shah via acmurthy)
+
+    MAPREDUCE-2999. Fix YARN webapp framework to properly filter servlet
+    paths. (Thomas Graves via vinodkv)
+
+    MAPREDUCE-3095. fairscheduler ivy including wrong version for hdfs.
+    (John George via mahadev)
+
+    MAPREDUCE-3054. Unable to kill submitted jobs. (mahadev)
+
+    MAPREDUCE-3021. Change base urls for RM web-ui. (Thomas Graves via
+    acmurthy) 
+
+    MAPREDUCE-3041. Fixed ClientRMProtocol to provide min/max resource
+    capabilities along-with new ApplicationId for application submission.
+    (Hitesh Shah via acmurthy)
+
+    MAPREDUCE-2843. Fixed the node-table to be completely displayed and making
+    node entries on RM UI to be sortable. (Abhijit Suresh Shingate via vinodkv)
+
+    MAPREDUCE-3110. Fixed TestRPC failure. (vinodkv)
+
+    MAPREDUCE-3078. Ensure MapReduce AM reports progress correctly for
+    displaying on the RM Web-UI. (vinodkv via acmurthy)
 
 Release 0.22.0 - Unreleased
 

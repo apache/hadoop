@@ -357,6 +357,12 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_AUX_SERVICE_FMT =
     NM_PREFIX + "aux-services.%s.class";
 
+  public static final String NM_USER_HOME_DIR =
+      NM_PREFIX + "user-home-dir";
+
+  public static final String DEFAULT_NM_USER_HOME_DIR= "/home/";
+
+
   public static final int INVALID_CONTAINER_EXIT_STATUS = -1000;
   public static final int ABORTED_CONTAINER_EXIT_STATUS = -100;
   
@@ -380,6 +386,6 @@ public class YarnConfiguration extends Configuration {
     // Use apps manager address to figure out the host for webapp
     addr = conf.get(YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS);
     String host = ADDR_SPLITTER.split(addr).iterator().next();
-    return JOINER.join("http://", host, ":", port, "/");
+    return JOINER.join("http://", host, ":", port);
   }
 }

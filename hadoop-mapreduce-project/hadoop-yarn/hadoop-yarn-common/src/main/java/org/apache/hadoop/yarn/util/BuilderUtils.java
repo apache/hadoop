@@ -20,7 +20,9 @@ package org.apache.hadoop.yarn.util;
 
 import java.net.URI;
 import java.util.Comparator;
+import java.util.List;
 
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -184,32 +186,31 @@ public class BuilderUtils {
     return id;
   }
 
-  public static Container clone(Container c) {
-    Container container = recordFactory.newRecordInstance(Container.class);
-    container.setId(c.getId());
-    container.setContainerToken(c.getContainerToken());
-    container.setNodeId(c.getNodeId());
-    container.setNodeHttpAddress(c.getNodeHttpAddress());
-    container.setResource(c.getResource());
-    container.setState(c.getState());
-    return container;
+  public static NodeId newNodeId(String host, int port) {
+    NodeId nodeId = recordFactory.newRecordInstance(NodeId.class);
+    nodeId.setHost(host);
+    nodeId.setPort(port);
+    return nodeId;
   }
 
   public static Container newContainer(RecordFactory recordFactory,
       ApplicationAttemptId appAttemptId, int containerId, NodeId nodeId,
-      String nodeHttpAddress, Resource resource) {
+      String nodeHttpAddress, Resource resource, Priority priority) {
     ContainerId containerID =
         newContainerId(recordFactory, appAttemptId, containerId);
-    return newContainer(containerID, nodeId, nodeHttpAddress, resource);
+    return newContainer(containerID, nodeId, nodeHttpAddress, 
+        resource, priority);
   }
 
   public static Container newContainer(ContainerId containerId,
-      NodeId nodeId, String nodeHttpAddress, Resource resource) {
+      NodeId nodeId, String nodeHttpAddress, 
+      Resource resource, Priority priority) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
     container.setNodeHttpAddress(nodeHttpAddress);
     container.setResource(resource);
+    container.setPriority(priority);
     container.setState(ContainerState.NEW);
     ContainerStatus containerStatus = Records.newRecord(ContainerStatus.class);
     containerStatus.setContainerId(containerId);
@@ -242,7 +243,7 @@ public class BuilderUtils {
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, String user, String queue, String name,
       String host, int rpcPort, String clientToken, ApplicationState state,
-      String diagnostics, String url, long startTime) {
+      String diagnostics, String url, long startTime, long finishTime) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -256,6 +257,7 @@ public class BuilderUtils {
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
+    report.setFinishTime(finishTime);
     return report;
   }
   
@@ -273,5 +275,18 @@ public class BuilderUtils {
     url.setFile(file);
     return url;
   }
-  
+
+  public static AllocateRequest newAllocateRequest(
+      ApplicationAttemptId applicationAttemptId, int responseID,
+      float appProgress, List<ResourceRequest> resourceAsk,
+      List<ContainerId> containersToBeReleased) {
+    AllocateRequest allocateRequest = recordFactory
+        .newRecordInstance(AllocateRequest.class);
+    allocateRequest.setApplicationAttemptId(applicationAttemptId);
+    allocateRequest.setResponseId(responseID);
+    allocateRequest.setProgress(appProgress);
+    allocateRequest.addAllAsks(resourceAsk);
+    allocateRequest.addAllReleases(containersToBeReleased);
+    return allocateRequest;
+  }
 }

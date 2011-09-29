@@ -16,12 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.yarn.api.protocolrecords;
 
-public class Constants {
-  static final String OUTPUT = "output";
-  public static final String HADOOP_WORK_DIR = "HADOOP_WORK_DIR";
-  public static final String JOBFILE = "job.xml";
-  public static final String STDOUT_LOGFILE_ENV = "STDOUT_LOGFILE_ENV";
-  public static final String STDERR_LOGFILE_ENV = "STDERR_LOGFILE_ENV";
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+
+/**
+ * <p>The request sent by clients to get a new {@link ApplicationId} for
+ * submitting an application.</p>
+ * 
+ * @see ClientRMProtocol#getNewApplication(GetNewApplicationRequest)
+ */
+@Public
+@Stable
+public interface GetNewApplicationRequest {
+
 }

@@ -22,7 +22,7 @@ import org.apache.hadoop.fs.Options;
 /** Rename option set parameter. */
 public class RenameOptionSetParam extends EnumSetParam<Options.Rename> {
   /** Parameter name. */
-  public static final String NAME = "renameOptions";
+  public static final String NAME = "renameoptions";
   /** Default parameter value. */
   public static final String DEFAULT = "";
 

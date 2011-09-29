@@ -36,8 +36,8 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -46,8 +46,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationIdResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
@@ -165,11 +165,17 @@ public class ClientRMService extends AbstractService implements
   }
 
   @Override
-  public GetNewApplicationIdResponse getNewApplicationId(
-      GetNewApplicationIdRequest request) throws YarnRemoteException {
-    GetNewApplicationIdResponse response = recordFactory
-        .newRecordInstance(GetNewApplicationIdResponse.class);
+  public GetNewApplicationResponse getNewApplication(
+      GetNewApplicationRequest request) throws YarnRemoteException {
+    GetNewApplicationResponse response = recordFactory
+        .newRecordInstance(GetNewApplicationResponse.class);
     response.setApplicationId(getNewApplicationId());
+    // Pick up min/max resource from scheduler...
+    response.setMinimumResourceCapability(scheduler
+        .getMinimumResourceCapability());
+    response.setMaximumResourceCapability(scheduler
+        .getMaximumResourceCapability());       
+    
     return response;
   }
   
@@ -228,8 +234,8 @@ public class ClientRMService extends AbstractService implements
 
   @SuppressWarnings("unchecked")
   @Override
-  public FinishApplicationResponse finishApplication(
-      FinishApplicationRequest request) throws YarnRemoteException {
+  public KillApplicationResponse forceKillApplication(
+      KillApplicationRequest request) throws YarnRemoteException {
 
     ApplicationId applicationId = request.getApplicationId();
 
@@ -262,8 +268,8 @@ public class ClientRMService extends AbstractService implements
 
     RMAuditLogger.logSuccess(callerUGI.getShortUserName(), 
         AuditConstants.KILL_APP_REQUEST, "ClientRMService" , applicationId);
-    FinishApplicationResponse response = recordFactory
-        .newRecordInstance(FinishApplicationResponse.class);
+    KillApplicationResponse response = recordFactory
+        .newRecordInstance(KillApplicationResponse.class);
     return response;
   }
 

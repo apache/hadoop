@@ -18,17 +18,23 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -113,5 +119,43 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     } catch(AccessControlException e) {
       // also okay for HDFS.
     }    
+  }
+  
+  public void testGetFileBlockLocations() throws IOException {
+    final String f = "/test/testGetFileBlockLocations";
+    createFile(path(f));
+    final BlockLocation[] computed = fs.getFileBlockLocations(new Path(f), 0L, 1L);
+    final BlockLocation[] expected = cluster.getFileSystem().getFileBlockLocations(
+        new Path(f), 0L, 1L);
+    assertEquals(expected.length, computed.length);
+    for(int i = 0; i < computed.length; i++) {
+      assertEquals(expected[i].toString(), computed[i].toString());
+    }
+  }
+
+  public void testCaseInsensitive() throws IOException {
+    final Path p = new Path("/test/testCaseInsensitive");
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fs;
+    final PutOpParam.Op op = PutOpParam.Op.MKDIRS;
+
+    //replace query with mix case letters
+    final URL url = webhdfs.toUrl(op, p);
+    WebHdfsFileSystem.LOG.info("url      = " + url);
+    final URL replaced = new URL(url.toString().replace(op.toQueryString(),
+        "Op=mkDIrs"));
+    WebHdfsFileSystem.LOG.info("replaced = " + replaced);
+
+    //connect with the replaced URL.
+    final HttpURLConnection conn = (HttpURLConnection)replaced.openConnection();
+    conn.setRequestMethod(op.getType().toString());
+    conn.connect();
+    final BufferedReader in = new BufferedReader(new InputStreamReader(
+        conn.getInputStream()));
+    for(String line; (line = in.readLine()) != null; ) {
+      WebHdfsFileSystem.LOG.info("> " + line);
+    }
+
+    //check if the command successes.
+    assertTrue(fs.getFileStatus(p).isDirectory());
   }
 }

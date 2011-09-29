@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.mapreduce.v2.MRConstants;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
@@ -78,6 +77,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -88,6 +88,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * The Map-Reduce Application Master.
@@ -114,8 +115,6 @@ public class MRAppMaster extends CompositeService {
   private Clock clock;
   private final long startTime = System.currentTimeMillis();
   private String appName;
-  private final int startCount;
-  private final ApplicationId appID;
   private final ApplicationAttemptId appAttemptID;
   protected final MRAppMetrics metrics;
   private Set<TaskId> completedTasksFromPreviousRun;
@@ -133,21 +132,16 @@ public class MRAppMaster extends CompositeService {
 
   private Job job;
   
-  public MRAppMaster(ApplicationId applicationId, int startCount) {
-    this(applicationId, new SystemClock(), startCount);
+  public MRAppMaster(ApplicationAttemptId applicationAttemptId) {
+    this(applicationAttemptId, new SystemClock());
   }
 
-  public MRAppMaster(ApplicationId applicationId, Clock clock, int startCount) {
+  public MRAppMaster(ApplicationAttemptId applicationAttemptId, Clock clock) {
     super(MRAppMaster.class.getName());
     this.clock = clock;
-    this.appID = applicationId;
-    this.appAttemptID = RecordFactoryProvider.getRecordFactory(null)
-        .newRecordInstance(ApplicationAttemptId.class);
-    this.appAttemptID.setApplicationId(appID);
-    this.appAttemptID.setAttemptId(startCount);
-    this.startCount = startCount;
+    this.appAttemptID = applicationAttemptId;
     this.metrics = MRAppMetrics.create();
-    LOG.info("Created MRAppMaster for application " + applicationId);
+    LOG.info("Created MRAppMaster for application " + applicationAttemptId);
   }
 
   @Override
@@ -159,9 +153,9 @@ public class MRAppMaster extends CompositeService {
     appName = conf.get(MRJobConfig.JOB_NAME, "<missing app name>");
 
     if (conf.getBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, false)
-         && startCount > 1) {
+         && appAttemptID.getAttemptId() > 1) {
       LOG.info("Recovery is enabled. Will try to recover from previous life.");
-      Recovery recoveryServ = new RecoveryService(appID, clock, startCount);
+      Recovery recoveryServ = new RecoveryService(appAttemptID, clock);
       addIfService(recoveryServ);
       dispatcher = recoveryServ.getDispatcher();
       clock = recoveryServ.getClock();
@@ -243,10 +237,10 @@ public class MRAppMaster extends CompositeService {
         // Read the file-system tokens from the localized tokens-file.
         Path jobSubmitDir = 
             FileContext.getLocalFSFileContext().makeQualified(
-                new Path(new File(MRConstants.JOB_SUBMIT_DIR)
+                new Path(new File(MRJobConfig.JOB_SUBMIT_DIR)
                     .getAbsolutePath()));
         Path jobTokenFile = 
-            new Path(jobSubmitDir, MRConstants.APPLICATION_TOKENS_FILE);
+            new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);
         fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
         LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
             + jobTokenFile);
@@ -264,8 +258,8 @@ public class MRAppMaster extends CompositeService {
     // ////////// End of obtaining the tokens needed by the job. //////////
 
     // create single job
-    Job newJob = new JobImpl(appID, conf, dispatcher.getEventHandler(),
-        taskAttemptListener, jobTokenSecretManager, fsTokens, clock, startCount,
+    Job newJob = new JobImpl(appAttemptID, conf, dispatcher.getEventHandler(),
+        taskAttemptListener, jobTokenSecretManager, fsTokens, clock,
         completedTasksFromPreviousRun, metrics, currentUser.getUserName());
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
@@ -376,11 +370,11 @@ public class MRAppMaster extends CompositeService {
   }
 
   public ApplicationId getAppID() {
-    return appID;
+    return appAttemptID.getApplicationId();
   }
 
   public int getStartCount() {
-    return startCount;
+    return appAttemptID.getAttemptId();
   }
 
   public AppContext getContext() {
@@ -505,7 +499,7 @@ public class MRAppMaster extends CompositeService {
 
     @Override
     public ApplicationId getApplicationID() {
-      return appID;
+      return appAttemptID.getApplicationId();
     }
 
     @Override
@@ -555,9 +549,9 @@ public class MRAppMaster extends CompositeService {
     // It's more test friendly to put it here.
     DefaultMetricsSystem.initialize("MRAppMaster");
 
-    /** create a job event for job intialization */
+    // create a job event for job intialization
     JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
-    /** send init to the job (this does NOT trigger job execution) */
+    // Send init to the job (this does NOT trigger job execution)
     // This is a synchronous call, not an event through dispatcher. We want
     // job-init to be done completely here.
     jobEventDispatcher.handle(initJobEvent);
@@ -648,17 +642,21 @@ public class MRAppMaster extends CompositeService {
 
   public static void main(String[] args) {
     try {
-      //Configuration.addDefaultResource("job.xml");
-      ApplicationId applicationId = RecordFactoryProvider
-          .getRecordFactory(null).newRecordInstance(ApplicationId.class);
-      applicationId.setClusterTimestamp(Long.valueOf(args[0]));
-      applicationId.setId(Integer.valueOf(args[1]));
-      int failCount = Integer.valueOf(args[2]);
-      MRAppMaster appMaster = new MRAppMaster(applicationId, failCount);
+      String applicationAttemptIdStr = System
+          .getenv(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV);
+      if (applicationAttemptIdStr == null) {
+        String msg = ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV
+            + " is null";
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+      ApplicationAttemptId applicationAttemptId = ConverterUtils
+          .toApplicationAttemptId(applicationAttemptIdStr);
+      MRAppMaster appMaster = new MRAppMaster(applicationAttemptId);
       Runtime.getRuntime().addShutdownHook(
           new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
-      conf.addResource(new Path(MRConstants.JOB_CONF_FILE));
+      conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
       conf.set(MRJobConfig.USER_NAME, 
           System.getProperty("user.name")); 
       UserGroupInformation.setConfiguration(conf);
