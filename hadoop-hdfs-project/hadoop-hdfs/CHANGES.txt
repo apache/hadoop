@@ -1024,6 +1024,9 @@ Release 0.23.0 - Unreleased
     HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
                execution order of test methods (Laxman via atm)
 
+    HDFS-2345. TestLeaseRecovery2 fails on 0.23 branch (Uma Maheswara Rao G
+               via atm)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
