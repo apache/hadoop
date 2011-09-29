@@ -25,6 +25,9 @@ Trunk (unreleased changes)
 
     HADOOP-7687 Make getProtocolSignature public  (sanjay)
 
+    HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
+    interface introduced in HADOOP-7524.  (cutting)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
@@ -412,9 +415,6 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7575. Enhanced LocalDirAllocator to support fully-qualified
     paths. (Jonathan Eagles via vinodkv)
-
-    HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
-    interface introduced in HADOOP-7524.  (cutting)
 
   OPTIMIZATIONS
   
