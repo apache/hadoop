@@ -635,6 +635,9 @@ Release 0.22.0 - Unreleased
     HDFS-1943. fail to start datanode while start-dfs.sh is executed by root
     user (Wei Yongjun via cos)
 
+    HDFS-2388. Remove ivy dependency on different version of slf4j in avro.
+    (shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

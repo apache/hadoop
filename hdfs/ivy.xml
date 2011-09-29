@@ -61,8 +61,12 @@
     <dependency org="commons-logging" name="commons-logging" rev="${commons-logging.version}" conf="common->master"/>
     <dependency org="commons-daemon" name="commons-daemon" rev="${commons-daemon.version}" conf="common->default" />
     <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
-    <dependency org="org.apache.avro" name="avro" rev="${avro.version}" conf="common->default"/>
-    <dependency org="org.apache.avro" name="avro-compiler" rev="${avro.version}" conf="common->default"/>
+    <dependency org="org.apache.avro" name="avro" rev="${avro.version}" conf="common->default">
+      <exclude module="slf4j-api"/>
+   </dependency>
+    <dependency org="org.apache.avro" name="avro-compiler" rev="${avro.version}" conf="common->default">
+      <exclude module="slf4j-api"/>
+   </dependency>
     <dependency org="com.thoughtworks.paranamer" name="paranamer-ant" rev="${paranamer.version}" conf="common->default"/>
     <dependency org="org.aspectj" name="aspectjrt" rev="${aspectj.version}" conf="common->default"/>
     <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}" conf="common->default"/>
