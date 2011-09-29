@@ -62,8 +62,8 @@ class AppsList implements ToJSON {
       }
       String appID = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
-      String ui = trackingUrl == null ? "UNASSIGNED" :
-          (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
+      String ui = trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
+    	  "UNASSIGNED" : (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
       out.append("[\"");
       appendSortable(out, app.getApplicationId().getId());
       appendLink(out, appID, rc.prefix(), "app", appID).append(_SEP).
@@ -73,7 +73,8 @@ class AppsList implements ToJSON {
           append(app.getState().toString()).append(_SEP);
       appendProgressBar(out, app.getProgress()).append(_SEP);
       appendLink(out, ui, rc.prefix(),
-                 trackingUrl == null ? "#" : "http://", trackingUrl).
+          trackingUrl == null  || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
+            "#" : "http://", trackingUrl).
           append(_SEP).append(escapeJavaScript(escapeHtml(
                               app.getDiagnostics().toString()))).
           append("\"]");

@@ -60,7 +60,7 @@ class AppsBlock extends HtmlBlock {
       String trackingUrl = app.getTrackingUrl();
       String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
           (app.getFinishTime() == 0 ? 
-              "ApplicationMaster URL" : "JobHistory URL");
+              "ApplicationMaster" : "History");
       String percent = String.format("%.1f", app.getProgress() * 100);
       tbody.
         tr().
@@ -79,7 +79,8 @@ class AppsBlock extends HtmlBlock {
               div(_PROGRESSBAR_VALUE).
                 $style(join("width:", percent, '%'))._()._()._().
           td().
-            a(trackingUrl == null ? "#" : join("http://", trackingUrl), ui)._().
+            a(trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
+              "#" : join("http://", trackingUrl), ui)._().
           td(app.getDiagnostics().toString())._();
       if (list.rendering != Render.HTML && ++i >= 20) break;
     }
