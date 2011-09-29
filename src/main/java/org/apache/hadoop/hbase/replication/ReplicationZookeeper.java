@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.ConnectionLossException;
+import org.apache.zookeeper.KeeperException.SessionExpiredException;
 
 /**
  * This class serves as a helper for all things related to zookeeper
@@ -210,8 +213,7 @@ public class ReplicationZookeeper {
    * @param peerClusterId (byte) the cluster to interrogate
    * @return addresses of all region servers
    */
-  public List<ServerName> getSlavesAddresses(String peerClusterId)
-      throws KeeperException {
+  public List<ServerName> getSlavesAddresses(String peerClusterId) {
     if (this.peerClusters.size() == 0) {
       return new ArrayList<ServerName>(0);
     }
@@ -219,7 +221,27 @@ public class ReplicationZookeeper {
     if (peer == null) {
       return new ArrayList<ServerName>(0);
     }
-    peer.setRegionServers(fetchSlavesAddresses(peer.getZkw()));
+    
+    List<ServerName> addresses;
+    try {
+      addresses = fetchSlavesAddresses(peer.getZkw());
+    } catch (KeeperException ke) {
+      if (ke instanceof ConnectionLossException
+          || ke instanceof SessionExpiredException) {
+        LOG.warn(
+            "Lost the ZooKeeper connection for peer " + peer.getClusterKey(),
+            ke);
+        try {
+          peer.reloadZkWatcher();
+        } catch(IOException io) {
+          LOG.warn(
+              "Creation of ZookeeperWatcher failed for peer "
+                  + peer.getClusterKey(), io);
+        }
+      }
+      addresses = Collections.emptyList();
+    }
+    peer.setRegionServers(addresses);
     return peer.getRegionServers();
   }
 
@@ -229,13 +251,9 @@ public class ReplicationZookeeper {
    * @return list of region server addresses or an empty list if the slave
    * is unavailable
    */
-  private List<ServerName> fetchSlavesAddresses(ZooKeeperWatcher zkw) {
-    try {
-      return listChildrenAndGetAsServerNames(zkw, zkw.rsZNode);
-    } catch (KeeperException e) {
-      LOG.warn("Cannot get peer's region server addresses", e);
-      return new ArrayList<ServerName>(0);
-    }
+  private List<ServerName> fetchSlavesAddresses(ZooKeeperWatcher zkw)
+    throws KeeperException {
+    return listChildrenAndGetAsServerNames(zkw, zkw.rsZNode);
   }
 
   /**
@@ -318,10 +336,8 @@ public class ReplicationZookeeper {
       return null;
     }
 
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(otherConf,
-        "connection to cluster: " + peerId, this.abortable);
     return new ReplicationPeer(otherConf, peerId,
-        otherClusterKey, zkw);
+        otherClusterKey);
   }
 
   /**

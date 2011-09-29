@@ -106,6 +106,8 @@ public class ReplicationSource extends Thread
   private HLog.Reader reader;
   // Current position in the log
   private long position = 0;
+  // Last position in the log that we sent to ZooKeeper
+  private long lastLoggedPosition = -1;
   // Path of the current log
   private volatile Path currentPath;
   private FileSystem fs;
@@ -210,10 +212,9 @@ public class ReplicationSource extends Thread
   /**
    * Select a number of peers at random using the ratio. Mininum 1.
    */
-  private void chooseSinks() throws KeeperException {
+  private void chooseSinks() {
     this.currentPeers.clear();
-    List<ServerName> addresses =
-        this.zkHelper.getSlavesAddresses(peerId);
+    List<ServerName> addresses = this.zkHelper.getSlavesAddresses(peerId);
     Set<ServerName> setOfAddr = new HashSet<ServerName>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
     LOG.info("Getting " + nbPeers +
@@ -349,8 +350,11 @@ public class ReplicationSource extends Thread
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
       if (this.isActive() && (gotIOE || currentNbEntries == 0)) {
-        this.manager.logPositionAndCleanOldLogs(this.currentPath,
-            this.peerClusterZnode, this.position, queueRecovered);
+        if (this.lastLoggedPosition != this.position) {
+          this.manager.logPositionAndCleanOldLogs(this.currentPath,
+              this.peerClusterZnode, this.position, queueRecovered);
+          this.lastLoggedPosition = this.position;
+        }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -435,8 +439,6 @@ public class ReplicationSource extends Thread
         Thread.sleep(this.sleepForRetries);
       } catch (InterruptedException e) {
         LOG.error("Interrupted while trying to connect to sinks", e);
-      } catch (KeeperException e) {
-        LOG.error("Error talking to zookeeper, retrying", e);
       }
     }
   }
@@ -592,8 +594,11 @@ public class ReplicationSource extends Thread
         HRegionInterface rrs = getRS();
         LOG.debug("Replicating " + currentNbEntries);
         rrs.replicateLogEntries(Arrays.copyOf(this.entriesArray, currentNbEntries));
-        this.manager.logPositionAndCleanOldLogs(this.currentPath,
-            this.peerClusterZnode, this.position, queueRecovered);
+        if (this.lastLoggedPosition != this.position) {
+          this.manager.logPositionAndCleanOldLogs(this.currentPath,
+              this.peerClusterZnode, this.position, queueRecovered);
+          this.lastLoggedPosition = this.position;
+        }
         this.totalReplicatedEdits += currentNbEntries;
         this.metrics.shippedBatchesRate.inc(1);
         this.metrics.shippedOpsRate.inc(
@@ -627,10 +632,7 @@ public class ReplicationSource extends Thread
           } while (this.isActive() && down );
         } catch (InterruptedException e) {
           LOG.debug("Interrupted while trying to contact the peer cluster");
-        } catch (KeeperException e) {
-          LOG.error("Error talking to zookeeper, retrying", e);
         }
-
       }
     }
   }

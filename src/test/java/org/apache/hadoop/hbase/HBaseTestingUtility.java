@@ -1240,7 +1240,12 @@ public class HBaseTestingUtility {
   }
 
   public void expireSession(ZooKeeperWatcher nodeZK, Server server)
-  throws Exception {
+    throws Exception {
+    expireSession(nodeZK, server, false);
+  }
+
+  public void expireSession(ZooKeeperWatcher nodeZK, Server server,
+      boolean checkStatus) throws Exception {
     Configuration c = new Configuration(this.conf);
     String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 5 * 1000; // 5 seconds
@@ -1257,8 +1262,11 @@ public class HBaseTestingUtility {
 
     Thread.sleep(sleep);
 
-    new HTable(new Configuration(conf), HConstants.META_TABLE_NAME);
+    if (checkStatus) {
+      new HTable(new Configuration(conf), HConstants.META_TABLE_NAME);
+    }
   }
+
 
   /**
    * Get the HBase cluster.

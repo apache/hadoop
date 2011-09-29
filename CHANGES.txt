@@ -306,6 +306,8 @@ Release 0.92.0 - Unreleased
                AssignmentManager (Ming Ma)
    HBASE-4488  Store could miss rows during flush (Lars H via jgray)
    HBASE-4513  NOTICES.txt refers to Facebook for Thrift
+   HBASE-3130  [replication] ReplicationSource can't recover from session
+               expired on remote clusters (Chris Trezzo via JD)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
@@ -539,6 +541,8 @@ Release 0.92.0 - Unreleased
                (Eugene Koontz)
    HBASE-4477  Ability for an application to store metadata into the
                transaction log (dhruba via jgray)
+   HBASE-4499  [replication] Source shouldn't update ZK if it didn't progress
+               (Chris Trezzo via JD)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
