@@ -638,6 +638,8 @@ Release 0.22.0 - Unreleased
     HDFS-2388. Remove ivy dependency on different version of slf4j in avro.
     (shv)
 
+    HDFS-2383. Remove TestDfsOverAvroRpc for 0.22 branch. (shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
