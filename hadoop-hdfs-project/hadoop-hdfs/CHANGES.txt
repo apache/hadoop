@@ -21,7 +21,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+    HADOOP-7524 Change RPC to allow multiple protocols including multuple 
+    versions of the same protocol (sanjay Radia)
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
@@ -49,6 +50,8 @@ Trunk (unreleased changes)
 
     HDFS-2355. Federation: enable using the same configuration file across 
     all the nodes in the cluster. (suresh)
+
+    HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)

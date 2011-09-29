@@ -597,7 +597,7 @@ class DataXceiver extends Receiver implements Runnable {
     try {
       // check if the block exists or not
       blockSender = new BlockSender(block, 0, -1, false, false, false, 
-          datanode);
+          datanode, null);
 
       // set up response stream
       OutputStream baseStream = NetUtils.getOutputStream(
