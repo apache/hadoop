@@ -640,12 +640,13 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * @param familyMap map of family to edits for the given family.
+   * @param put The Put object
+   * @param edit The WALEdit object.
    * @param writeToWAL true if the change should be written to the WAL
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean prePut(final Map<byte[], List<KeyValue>> familyMap,
+  public boolean prePut(Put put, WALEdit edit,
       final boolean writeToWAL) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -653,7 +654,7 @@ public class RegionCoprocessorHost
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).prePut(ctx, familyMap, writeToWAL);
+          ((RegionObserver)env.getInstance()).prePut(ctx, put, edit, writeToWAL);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -667,18 +668,19 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * @param familyMap map of family to edits for the given family.
+   * @param put The Put object
+   * @param edit The WALEdit object.
    * @param writeToWAL true if the change should be written to the WAL
    * @exception IOException Exception
    */
-  public void postPut(final Map<byte[], List<KeyValue>> familyMap,
+  public void postPut(Put put, WALEdit edit,
       final boolean writeToWAL) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postPut(ctx, familyMap, writeToWAL);
+          ((RegionObserver)env.getInstance()).postPut(ctx, put, edit, writeToWAL);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -690,12 +692,13 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * @param familyMap map of family to edits for the given family.
+   * @param delete The Delete object
+   * @param edit The WALEdit object.
    * @param writeToWAL true if the change should be written to the WAL
    * @return true if default processing should be bypassed
    * @exception IOException Exception
    */
-  public boolean preDelete(final Map<byte[], List<KeyValue>> familyMap,
+  public boolean preDelete(Delete delete, WALEdit edit,
       final boolean writeToWAL) throws IOException {
     boolean bypass = false;
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
@@ -703,7 +706,7 @@ public class RegionCoprocessorHost
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).preDelete(ctx, familyMap, writeToWAL);
+          ((RegionObserver)env.getInstance()).preDelete(ctx, delete, edit, writeToWAL);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }
@@ -717,18 +720,19 @@ public class RegionCoprocessorHost
   }
 
   /**
-   * @param familyMap map of family to edits for the given family.
+   * @param delete The Delete object
+   * @param edit The WALEdit object.
    * @param writeToWAL true if the change should be written to the WAL
    * @exception IOException Exception
    */
-  public void postDelete(final Map<byte[], List<KeyValue>> familyMap,
+  public void postDelete(Delete delete, WALEdit edit,
       final boolean writeToWAL) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
         try {
-          ((RegionObserver)env.getInstance()).postDelete(ctx, familyMap, writeToWAL);
+          ((RegionObserver)env.getInstance()).postDelete(ctx, delete, edit, writeToWAL);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         }

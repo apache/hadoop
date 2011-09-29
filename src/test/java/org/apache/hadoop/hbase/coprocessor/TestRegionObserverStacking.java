@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,7 +47,8 @@ public class TestRegionObserverStacking extends TestCase {
     long id;
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+        final Put put, final WALEdit edit,
+        final boolean writeToWAL)
         throws IOException {
       id = System.currentTimeMillis();
       try {
@@ -60,7 +62,8 @@ public class TestRegionObserverStacking extends TestCase {
     long id;
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+        final Put put, final WALEdit edit,
+        final boolean writeToWAL)
         throws IOException {
       id = System.currentTimeMillis();
       try {
@@ -75,7 +78,8 @@ public class TestRegionObserverStacking extends TestCase {
 
     @Override
     public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+        final Put put, final WALEdit edit,
+        final boolean writeToWAL)
         throws IOException {
       id = System.currentTimeMillis();
       try {

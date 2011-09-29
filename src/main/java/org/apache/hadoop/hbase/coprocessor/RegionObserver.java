@@ -267,12 +267,13 @@ public interface RegionObserver extends Coprocessor {
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
    * @param c the environment provided by the region server
-   * @param familyMap map of family to edits for the given family
+   * @param put The Put object
+   * @param edit The WALEdit object that will be written to the wal
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL)
+  void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
+      final Put put, final WALEdit edit, final boolean writeToWAL)
     throws IOException;
 
   /**
@@ -281,12 +282,13 @@ public interface RegionObserver extends Coprocessor {
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
    * @param c the environment provided by the region server
-   * @param familyMap map of family to edits for the given family
+   * @param put The Put object
+   * @param edit The WALEdit object for the wal
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL)
+  void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, 
+      final Put put, final WALEdit edit, final boolean writeToWAL)
     throws IOException;
 
   /**
@@ -297,12 +299,13 @@ public interface RegionObserver extends Coprocessor {
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
    * @param c the environment provided by the region server
-   * @param familyMap map of family to edits for the given family
+   * @param delete The Delete object
+   * @param edit The WALEdit object for the wal
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
-  void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL)
+  void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
+      final Delete delete, final WALEdit edit, final boolean writeToWAL)
     throws IOException;
 
   /**
@@ -311,12 +314,13 @@ public interface RegionObserver extends Coprocessor {
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
    * coprocessors
    * @param c the environment provided by the region server
-   * @param familyMap map of family to edits for the given family
+   * @param delete The Delete object
+   * @param edit The WALEdit object for the wal
    * @param writeToWAL true if the change should be written to the WAL
    * @throws IOException if an error occurred on the coprocessor
    */
   void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+      final Delete delete, final WALEdit edit, final boolean writeToWAL)
     throws IOException;
 
   /**

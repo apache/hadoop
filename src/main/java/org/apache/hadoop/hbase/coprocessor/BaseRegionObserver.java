@@ -133,24 +133,23 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, 
+      final Put put, final WALEdit edit, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> e, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> e, 
+      final Put put, final WALEdit edit, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> e, 
+      final Delete delete, final WALEdit edit, final boolean writeToWAL) throws IOException {
   }
 
   @Override
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
-      throws IOException {
+      final Delete delete, final WALEdit edit, final boolean writeToWAL) throws IOException {
   }
 
   @Override

@@ -33,6 +33,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -255,8 +258,10 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
+      final Put put, final WALEdit edit,
+      final boolean writeToWAL) throws IOException {
+    Map<byte[], List<KeyValue>> familyMap  = put.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -283,8 +288,10 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Put put, final WALEdit edit,
+      final boolean writeToWAL) throws IOException {
+    Map<byte[], List<KeyValue>> familyMap  = put.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -311,8 +318,10 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
+      final Delete delete, final WALEdit edit,
+      final boolean writeToWAL) throws IOException {
+    Map<byte[], List<KeyValue>> familyMap  = delete.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -323,8 +332,10 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, final Map<byte[],
-      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
+  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
+      final Delete delete, final WALEdit edit,
+      final boolean writeToWAL) throws IOException {
+    Map<byte[], List<KeyValue>> familyMap  = delete.getFamilyMap();
     RegionCoprocessorEnvironment e = c.getEnvironment();
     assertNotNull(e);
     assertNotNull(e.getRegion());

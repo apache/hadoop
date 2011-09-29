@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
@@ -108,7 +109,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     public static class BuggyRegionObserver extends SimpleRegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
-                       final Map<byte[], List<KeyValue>> familyMap,
+                       final Put put, final WALEdit edit,
                        final boolean writeToWAL) {
       String tableName =
           c.getEnvironment().getRegion().getRegionInfo().getTableNameAsString();

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -181,8 +182,9 @@ public class TestRegionObserverBypass {
   public static class TestCoprocessor extends BaseRegionObserver {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+        final Put put, final WALEdit edit, final boolean writeToWAL)
         throws IOException {
+      Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
       if (familyMap.containsKey(test)) {
         e.bypass();
       }

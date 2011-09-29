@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
@@ -304,13 +305,15 @@ public class TestMasterReplication {
 
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
-        final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+        final Put put, final WALEdit edit, 
+        final boolean writeToWAL)
         throws IOException {
       nCount++;
     }
     @Override
     public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
-        final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+        final Delete delete, final WALEdit edit, 
+        final boolean writeToWAL)
         throws IOException {
       nDelete++;
     }

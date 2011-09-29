@@ -1402,7 +1402,7 @@ public class HRegion implements HeapSize { // , Writable{
       try {
         // All edits for the given row (across all column families) must happen atomically.
         prepareDelete(delete);
-        delete(delete.getFamilyMap(), delete.getClusterId(), writeToWAL);
+        internalDelete(delete, delete.getClusterId(), writeToWAL);
       } finally {
         if(lockid == null) releaseRowLock(lid);
       }
@@ -1418,9 +1418,25 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public void delete(Map<byte[], List<KeyValue>> familyMap, UUID clusterId,
       boolean writeToWAL) throws IOException {
+    Delete delete = new Delete();
+    delete.setFamilyMap(familyMap);
+    delete.setClusterId(clusterId);
+    delete.setWriteToWAL(writeToWAL);
+    internalDelete(delete, clusterId, writeToWAL);
+  }
+
+  /**
+   * @param familyMap map of family to edits for the given family.
+   * @param writeToWAL
+   * @throws IOException
+   */
+  private void internalDelete(Delete delete, UUID clusterId,
+      boolean writeToWAL) throws IOException {
+    Map<byte[], List<KeyValue>> familyMap = delete.getFamilyMap();
+    WALEdit walEdit = new WALEdit();
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     if (coprocessorHost != null) {
-      if (coprocessorHost.preDelete(familyMap, writeToWAL)) {
+      if (coprocessorHost.preDelete(delete, walEdit, writeToWAL)) {
         return;
       }
     }
@@ -1484,7 +1500,6 @@ public class HRegion implements HeapSize { // , Writable{
         //
         // bunch up all edits across all column families into a
         // single WALEdit.
-        WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
         this.log.append(regionInfo, this.htableDescriptor.getName(),
             walEdit, clusterId, now, this.htableDescriptor);
@@ -1495,7 +1510,7 @@ public class HRegion implements HeapSize { // , Writable{
       flush = isFlushSize(this.addAndGetGlobalMemstoreSize(addedSize));
 
       if (coprocessorHost != null) {
-        coprocessorHost.postDelete(familyMap, writeToWAL);
+        coprocessorHost.postDelete(delete, walEdit, writeToWAL);
       }
     } finally {
       this.updatesLock.readLock().unlock();
@@ -1561,8 +1576,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       try {
         // All edits for the given row (across all column families) must happen atomically.
-        // Coprocessor interception happens in put(Map,boolean)
-        put(put.getFamilyMap(), put.getClusterId(), writeToWAL);
+        internalPut(put, put.getClusterId(), writeToWAL);
       } finally {
         if(lockid == null) releaseRowLock(lid);
       }
@@ -1644,13 +1658,14 @@ public class HRegion implements HeapSize { // , Writable{
   @SuppressWarnings("unchecked")
   private long doMiniBatchPut(
       BatchOperationInProgress<Pair<Put, Integer>> batchOp) throws IOException {
+
+    WALEdit walEdit = new WALEdit();
     /* Run coprocessor pre hook outside of locks to avoid deadlock */
     if (coprocessorHost != null) {
       for (int i = 0; i < batchOp.operations.length; i++) {
         Pair<Put, Integer> nextPair = batchOp.operations[i];
         Put put = nextPair.getFirst();
-        Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
-        if (coprocessorHost.prePut(familyMap, put.getWriteToWAL())) {
+        if (coprocessorHost.prePut(put, walEdit, put.getWriteToWAL())) {
           // pre hook says skip this Put
           // mark as success and skip below
           batchOp.retCodeDetails[i] = new OperationStatus(
@@ -1744,7 +1759,6 @@ public class HRegion implements HeapSize { // , Writable{
       // ------------------------------------
       // STEP 3. Write to WAL
       // ----------------------------------
-      WALEdit walEdit = new WALEdit();
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
@@ -1787,7 +1801,7 @@ public class HRegion implements HeapSize { // , Writable{
             continue;
           }
           Put p = batchOp.operations[i].getFirst();
-          coprocessorHost.postPut(familyMaps[i], p.getWriteToWAL());
+          coprocessorHost.postPut(p, walEdit, p.getWriteToWAL());
         }
       }
 
@@ -1897,11 +1911,11 @@ public class HRegion implements HeapSize { // , Writable{
           // originating cluster. A slave cluster receives the result as a Put
           // or Delete
           if (isPut) {
-            put(((Put)w).getFamilyMap(), HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
+            internalPut(((Put)w), HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
           } else {
             Delete d = (Delete)w;
             prepareDelete(d);
-            delete(d.getFamilyMap(), HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
+            internalDelete(d, HConstants.DEFAULT_CLUSTER_ID, writeToWAL);
           }
           return true;
         }
@@ -1992,21 +2006,27 @@ public class HRegion implements HeapSize { // , Writable{
     familyMap = new HashMap<byte[], List<KeyValue>>();
 
     familyMap.put(family, edits);
-    this.put(familyMap, HConstants.DEFAULT_CLUSTER_ID, true);
+    Put p = new Put();
+    p.setFamilyMap(familyMap);
+    p.setClusterId(HConstants.DEFAULT_CLUSTER_ID);
+    p.setWriteToWAL(true);
+    this.internalPut(p, HConstants.DEFAULT_CLUSTER_ID, true);
   }
 
   /**
    * Add updates first to the hlog (if writeToWal) and then add values to memstore.
    * Warning: Assumption is caller has lock on passed in row.
-   * @param familyMap map of family to edits for the given family.
+   * @param put The Put command
    * @param writeToWAL if true, then we should write to the log
    * @throws IOException
    */
-  private void put(Map<byte[], List<KeyValue>> familyMap, UUID clusterId,
+  private void internalPut(Put put, UUID clusterId,
       boolean writeToWAL) throws IOException {
+    Map<byte[], List<KeyValue>> familyMap = put.getFamilyMap();
+    WALEdit walEdit = new WALEdit();
     /* run pre put hook outside of lock to avoid deadlock */
     if (coprocessorHost != null) {
-      if (coprocessorHost.prePut(familyMap, writeToWAL)) {
+      if (coprocessorHost.prePut(put, walEdit, writeToWAL)) {
         return;
       }
     }
@@ -2025,7 +2045,6 @@ public class HRegion implements HeapSize { // , Writable{
       // for some reason fail to write/sync to commit log, the memstore
       // will contain uncommitted transactions.
       if (writeToWAL) {
-        WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
         this.log.append(regionInfo, this.htableDescriptor.getName(),
             walEdit, clusterId, now, this.htableDescriptor);
@@ -2038,7 +2057,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     if (coprocessorHost != null) {
-      coprocessorHost.postPut(familyMap, writeToWAL);
+      coprocessorHost.postPut(put, walEdit, writeToWAL);
     }
 
     if (flush) {

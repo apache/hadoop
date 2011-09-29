@@ -537,6 +537,8 @@ Release 0.92.0 - Unreleased
    HBASE-4280  [replication] ReplicationSink can deadlock itself via handlers
    HBASE-4014  Coprocessors: Flag the presence of coprocessors in logged exceptions
                (Eugene Koontz)
+   HBASE-4477  Ability for an application to store metadata into the
+               transaction log (dhruba via jgray)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
