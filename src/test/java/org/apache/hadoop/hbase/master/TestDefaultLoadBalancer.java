@@ -20,10 +20,19 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Random;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +50,6 @@ import org.junit.Test;
  */
 public class TestDefaultLoadBalancer {
   private static final Log LOG = LogFactory.getLog(TestDefaultLoadBalancer.class);
-  private static final Random RANDOM = new Random(System.currentTimeMillis());
 
   private static LoadBalancer loadBalancer;
 
@@ -361,10 +369,6 @@ public class TestDefaultLoadBalancer {
       list.add(new ServerAndLoad(e.getKey(), e.getValue().size()));
     }
     return list;
-  }
-
-  private String printMock(Map<ServerName, List<HRegionInfo>> servers) {
-    return printMock(convertToList(servers));
   }
 
   private String printMock(List<ServerAndLoad> balancedCluster) {

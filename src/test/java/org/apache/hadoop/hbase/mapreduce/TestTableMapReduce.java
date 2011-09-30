@@ -29,11 +29,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -41,27 +42,43 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
-public class TestTableMapReduce extends MultiRegionTable {
+public class TestTableMapReduce {
   private static final Log LOG = LogFactory.getLog(TestTableMapReduce.class);
+  private static final HBaseTestingUtility UTIL =
+    new HBaseTestingUtility();
   static final String MULTI_REGION_TABLE_NAME = "mrtest";
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
 
-  /** constructor */
-  public TestTableMapReduce() {
-    super(Bytes.toString(INPUT_FAMILY));
-    desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    HTableDescriptor desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
     desc.addFamily(new HColumnDescriptor(OUTPUT_FAMILY));
+    UTIL.startMiniCluster();
+    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+    admin.createTable(desc, HBaseTestingUtility.KEYS);
+    UTIL.startMiniMapReduceCluster();
+  }
+
+  @AfterClass
+  public static void afterClass() throws IOException {
+    UTIL.shutdownMiniMapReduceCluster();
+    UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -109,14 +126,15 @@ public class TestTableMapReduce extends MultiRegionTable {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testMultiRegionTable()
   throws IOException, InterruptedException, ClassNotFoundException {
-    runTestOnTable(new HTable(new Configuration(conf), MULTI_REGION_TABLE_NAME));
+    runTestOnTable(new HTable(new Configuration(UTIL.getConfiguration()),
+      MULTI_REGION_TABLE_NAME));
   }
 
   private void runTestOnTable(HTable table)
   throws IOException, InterruptedException, ClassNotFoundException {
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
     Job job = null;
     try {
       LOG.info("Before map/reduce startup");
@@ -140,7 +158,6 @@ public class TestTableMapReduce extends MultiRegionTable {
       verify(Bytes.toString(table.getTableName()));
     } finally {
       table.close();
-      mrCluster.shutdown();
       if (job != null) {
         FileUtil.fullyDelete(
           new File(job.getConfiguration().get("hadoop.tmp.dir")));
@@ -149,10 +166,10 @@ public class TestTableMapReduce extends MultiRegionTable {
   }
 
   private void verify(String tableName) throws IOException {
-    HTable table = new HTable(new Configuration(conf), tableName);
+    HTable table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
     boolean verified = false;
-    long pause = conf.getLong("hbase.client.pause", 5 * 1000);
-    int numRetries = conf.getInt("hbase.client.retries.number", 5);
+    long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
+    int numRetries = UTIL.getConfiguration().getInt("hbase.client.retries.number", 5);
     for (int i = 0; i < numRetries; i++) {
       try {
         LOG.info("Verification attempt #" + i);

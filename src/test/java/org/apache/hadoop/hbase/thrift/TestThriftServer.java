@@ -19,24 +19,31 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
+import static org.junit.Assert.*;
+
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Unit testing for ThriftServer.HBaseHandler, a part of the
  * org.apache.hadoop.hbase.thrift package.
  */
-public class TestThriftServer extends HBaseClusterTestCase {
-
+public class TestThriftServer {
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final int MAXVERSIONS = 3;
   private static ByteBuffer $bb(String i) {
     return ByteBuffer.wrap(Bytes.toBytes(i));
   }
@@ -51,6 +58,16 @@ public class TestThriftServer extends HBaseClusterTestCase {
   private static ByteBuffer valueBname = $bb("valueB");
   private static ByteBuffer valueCname = $bb("valueC");
   private static ByteBuffer valueDname = $bb("valueD");
+
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    UTIL.startMiniCluster();
+  }
+
+  @AfterClass
+  public static void afterClass() throws IOException {
+    UTIL.shutdownMiniCluster();
+  }
 
   /**
    * Runs all of the tests under a single JUnit test method.  We
@@ -76,8 +93,10 @@ public class TestThriftServer extends HBaseClusterTestCase {
    *
    * @throws Exception
    */
+  @Test
   public void doTestTableCreateDrop() throws Exception {
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(this.conf);
+    ThriftServer.HBaseHandler handler =
+      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
 
     // Create/enable/disable/delete tables, ensure methods act correctly
     assertEquals(handler.getTableNames().size(), 0);
@@ -109,7 +128,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableMutations() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(this.conf);
+    ThriftServer.HBaseHandler handler =
+      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply a few Mutations to rowA
@@ -173,7 +193,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableTimestampsAndColumns() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(this.conf);
+    ThriftServer.HBaseHandler handler =
+      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -251,7 +272,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
    */
   public void doTestTableScanners() throws Exception {
     // Setup
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(this.conf);
+    ThriftServer.HBaseHandler handler =
+      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
 
     // Apply timestamped Mutations to rowA
@@ -318,7 +340,8 @@ public class TestThriftServer extends HBaseClusterTestCase {
    * @throws Exception
    */
   public void doTestGetTableRegions() throws Exception {
-    ThriftServer.HBaseHandler handler = new ThriftServer.HBaseHandler(this.conf);
+    ThriftServer.HBaseHandler handler =
+      new ThriftServer.HBaseHandler(UTIL.getConfiguration());
     handler.createTable(tableAname, getColumnDescriptors());
     int regionCount = handler.getTableRegions(tableAname).size();
     assertEquals("empty table should have only 1 region, " +

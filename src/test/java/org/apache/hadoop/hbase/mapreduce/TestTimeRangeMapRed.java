@@ -32,11 +32,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -47,13 +49,19 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class TestTimeRangeMapRed extends HBaseClusterTestCase {
-
+public class TestTimeRangeMapRed {
   private final static Log log = LogFactory.getLog(TestTimeRangeMapRed.class);
+  private static final HBaseTestingUtility UTIL =
+    new HBaseTestingUtility();
+  private HBaseAdmin admin;
 
   private static final byte [] KEY = Bytes.toBytes("row1");
   private static final NavigableMap<Long, Boolean> TIMESTAMP =
@@ -74,26 +82,28 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
   static final byte[] FAMILY_NAME = Bytes.toBytes("text");
   static final byte[] COLUMN_NAME = Bytes.toBytes("input");
 
-  protected HTableDescriptor desc;
-  protected HTable table;
-
-  public TestTimeRangeMapRed() {
-    super();
-    System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
-    conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
-    this.setOpenMetaTable(true);
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    System.setProperty("hadoop.log.dir",
+      UTIL.getConfiguration().get("hadoop.log.dir"));
+    UTIL.getConfiguration().set("mapred.output.dir",
+      UTIL.getConfiguration().get("hadoop.tmp.dir"));
+    UTIL.startMiniCluster();
   }
 
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
-    desc = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
-    col.setMaxVersions(Integer.MAX_VALUE);
-    desc.addFamily(col);
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-    table = new HTable(conf, desc.getName());
+  @AfterClass
+  public static void afterClass() throws Exception {
+    UTIL.shutdownMiniCluster();
+  }
+
+  @Before
+  public void before() throws MasterNotRunningException, ZooKeeperConnectionException {
+    this.admin = new HBaseAdmin(UTIL.getConfiguration());
+  }
+
+  @After
+  public void after() throws IOException {
+    this.admin.close();
   }
 
   private static class ProcessTimeRangeMapper
@@ -108,7 +118,7 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
         Context context)
     throws IOException {
       List<Long> tsList = new ArrayList<Long>();
-      for (KeyValue kv : result.sorted()) {
+      for (KeyValue kv : result.list()) {
         tsList.add(kv.getTimestamp());
       }
 
@@ -134,17 +144,23 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
         e.printStackTrace();
       }
     }
-
   }
 
+  @Test
   public void testTimeRangeMapRed()
   throws IOException, InterruptedException, ClassNotFoundException {
-    prepareTest();
+    final HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
+    final HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
+    col.setMaxVersions(Integer.MAX_VALUE);
+    desc.addFamily(col);
+    admin.createTable(desc);
+    HTable table = new HTable(UTIL.getConfiguration(), desc.getName());
+    prepareTest(table);
     runTestOnTable();
-    verify();
+    verify(table);
   }
 
-  private void prepareTest() throws IOException {
+  private void prepareTest(final HTable table) throws IOException {
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
       put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
@@ -155,10 +171,10 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
 
   private void runTestOnTable()
   throws IOException, InterruptedException, ClassNotFoundException {
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+    UTIL.startMiniMapReduceCluster(1);
     Job job = null;
     try {
-      job = new Job(conf, "test123");
+      job = new Job(UTIL.getConfiguration(), "test123");
       job.setOutputFormatClass(NullOutputFormat.class);
       job.setNumReduceTasks(0);
       Scan scan = new Scan();
@@ -172,7 +188,7 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
       // TODO Auto-generated catch block
       e.printStackTrace();
     } finally {
-      mrCluster.shutdown();
+      UTIL.shutdownMiniMapReduceCluster();
       if (job != null) {
         FileUtil.fullyDelete(
           new File(job.getConfiguration().get("hadoop.tmp.dir")));
@@ -180,20 +196,20 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
     }
   }
 
-  private void verify() throws IOException {
+  private void verify(final HTable table) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
     scan.setMaxVersions(1);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r: scanner) {
-      for (KeyValue kv : r.sorted()) {
+      for (KeyValue kv : r.list()) {
         log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(kv.getFamily())
             + "\t" + Bytes.toString(kv.getQualifier())
             + "\t" + kv.getTimestamp() + "\t" + Bytes.toBoolean(kv.getValue()));
-        assertEquals(TIMESTAMP.get(kv.getTimestamp()), (Boolean)Bytes.toBoolean(kv.getValue()));
+        org.junit.Assert.assertEquals(TIMESTAMP.get(kv.getTimestamp()),
+          (Boolean)Bytes.toBoolean(kv.getValue()));
       }
     }
     scanner.close();
   }
-
 }

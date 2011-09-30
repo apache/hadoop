@@ -22,6 +22,7 @@ Release 0.92.0 - Unreleased
    HBASE-4369  Deprecate HConnection#getZookeeperWatcher in prep for HBASE-1762
    HBASE-4247  Add isAborted method to the Abortable interface
                (Akash Ashok)
+   HBASE-4503  Purge deprecated HBaseClusterTestCase
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

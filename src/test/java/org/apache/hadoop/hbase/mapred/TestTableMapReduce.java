@@ -27,31 +27,38 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
-public class TestTableMapReduce extends MultiRegionTable {
+public class TestTableMapReduce {
   private static final Log LOG =
     LogFactory.getLog(TestTableMapReduce.class.getName());
-
+  private static final HBaseTestingUtility UTIL =
+    new HBaseTestingUtility();
   static final String MULTI_REGION_TABLE_NAME = "mrtest";
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
@@ -61,12 +68,21 @@ public class TestTableMapReduce extends MultiRegionTable {
     OUTPUT_FAMILY
   };
 
-  /** constructor */
-  public TestTableMapReduce() {
-    super(Bytes.toString(INPUT_FAMILY));
-    desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
+  @BeforeClass
+  public static void beforeClass() throws Exception {
+    HTableDescriptor desc = new HTableDescriptor(MULTI_REGION_TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_FAMILY));
     desc.addFamily(new HColumnDescriptor(OUTPUT_FAMILY));
+    UTIL.startMiniCluster();
+    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+    admin.createTable(desc, HBaseTestingUtility.KEYS);
+    UTIL.startMiniMapReduceCluster();
+  }
+
+  @AfterClass
+  public static void afterClass() throws IOException {
+    UTIL.shutdownMiniMapReduceCluster();
+    UTIL.shutdownMiniCluster();
   }
 
   /**
@@ -116,17 +132,16 @@ public class TestTableMapReduce extends MultiRegionTable {
    * Test a map/reduce against a multi-region table
    * @throws IOException
    */
+  @Test
   public void testMultiRegionTable() throws IOException {
-    runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
+    runTestOnTable(new HTable(UTIL.getConfiguration(), MULTI_REGION_TABLE_NAME));
   }
 
   private void runTestOnTable(HTable table) throws IOException {
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
-
     JobConf jobConf = null;
     try {
       LOG.info("Before map/reduce startup");
-      jobConf = new JobConf(conf, TestTableMapReduce.class);
+      jobConf = new JobConf(UTIL.getConfiguration(), TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
       jobConf.setNumReduceTasks(1);
       TableMapReduceUtil.initTableMapJob(Bytes.toString(table.getTableName()),
@@ -142,7 +157,6 @@ public class TestTableMapReduce extends MultiRegionTable {
       // verify map-reduce results
       verify(Bytes.toString(table.getTableName()));
     } finally {
-      mrCluster.shutdown();
       if (jobConf != null) {
         FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
       }
@@ -150,10 +164,10 @@ public class TestTableMapReduce extends MultiRegionTable {
   }
 
   private void verify(String tableName) throws IOException {
-    HTable table = new HTable(conf, tableName);
+    HTable table = new HTable(UTIL.getConfiguration(), tableName);
     boolean verified = false;
-    long pause = conf.getLong("hbase.client.pause", 5 * 1000);
-    int numRetries = conf.getInt("hbase.client.retries.number", 5);
+    long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
+    int numRetries = UTIL.getConfiguration().getInt("hbase.client.retries.number", 5);
     for (int i = 0; i < numRetries; i++) {
       try {
         LOG.info("Verification attempt #" + i);
@@ -171,7 +185,7 @@ public class TestTableMapReduce extends MultiRegionTable {
         // continue
       }
     }
-    assertTrue(verified);
+    org.junit.Assert.assertTrue(verified);
   }
 
   /**
@@ -234,7 +248,7 @@ public class TestTableMapReduce extends MultiRegionTable {
                 r.getRow() + ", first value=" + first + ", second value=" +
                 second);
           }
-          fail();
+          org.junit.Assert.fail();
         }
       }
     } finally {

@@ -26,32 +26,44 @@ import java.net.URL;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
  * they serve pages.
  */
-public class TestInfoServers extends HBaseClusterTestCase {
+public class TestInfoServers {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
+  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @Override
-  protected void preHBaseClusterSetup() {
+  @BeforeClass
+  public static void beforeClass() throws Exception {
     // The info servers do not run in tests by default.
     // Set them to ephemeral ports so they will start
-    conf.setInt("hbase.master.info.port", 0);
-    conf.setInt("hbase.regionserver.info.port", 0);
+    UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
+    UTIL.getConfiguration().setInt("hbase.regionserver.info.port", 0);
+    UTIL.startMiniCluster();
+  }
+
+  @AfterClass
+  public static void afterClass() throws IOException {
+    UTIL.shutdownMiniCluster();
   }
 
   /**
    * @throws Exception
    */
+  @Test
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
-    new HTable(conf, ".META.");
-    int port = cluster.getMaster().getInfoServer().getPort();
+    new HTable(UTIL.getConfiguration(), ".META.");
+    int port = UTIL.getHbaseCluster().getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "master-status");
-    port = cluster.getRegionServerThreads().get(0).getRegionServer().
+    port = UTIL.getHbaseCluster().getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "rs-status");
@@ -64,13 +76,14 @@ public class TestInfoServers extends HBaseClusterTestCase {
    * TestMasterStatusServlet, but those are true unit tests
    * whereas this uses a cluster.
    */
+  @Test
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
-    new HTable(conf, ".META.");
-    int port = cluster.getMaster().getInfoServer().getPort();
+    new HTable(UTIL.getConfiguration(), ".META.");
+    int port = UTIL.getHbaseCluster().getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/master-status"), "META");
-    port = cluster.getRegionServerThreads().get(0).getRegionServer().
+    port = UTIL.getHbaseCluster().getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/rs-status"), "META");
@@ -89,9 +102,7 @@ public class TestInfoServers extends HBaseClusterTestCase {
     }
     bis.close();
     String content = sb.toString();
-    if (!content.contains(expected)) {
-      fail("Didn't have expected string '" + expected + "'. Content:\n"
-        + content);
-    }
+    assertTrue("expected=" + expected + ", content=" + content,
+      content.contains(expected));
   }
 }
