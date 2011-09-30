@@ -1135,7 +1135,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         new JobInitedEvent(job.oldJobId,
              job.startTime,
              job.numMapTasks, job.numReduceTasks,
-             job.getState().toString()); //Will transition to state running. Currently in INITED
+             job.getState().toString(),
+             job.isUber()); //Will transition to state running. Currently in INITED
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jie));
       JobInfoChangeEvent jice = new JobInfoChangeEvent(job.oldJobId,
           job.submitTime, job.startTime);

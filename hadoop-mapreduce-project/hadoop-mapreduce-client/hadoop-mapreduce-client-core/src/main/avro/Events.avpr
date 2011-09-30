@@ -64,7 +64,8 @@
           {"name": "launchTime", "type": "long"},
           {"name": "totalMaps", "type": "int"},
           {"name": "totalReduces", "type": "int"},
-          {"name": "jobStatus", "type": "string"}
+          {"name": "jobStatus", "type": "string"},
+          {"name": "uberized", "type": "boolean"}
       ]
      },
 

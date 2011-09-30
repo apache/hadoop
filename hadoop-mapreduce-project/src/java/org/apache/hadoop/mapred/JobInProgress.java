@@ -697,7 +697,8 @@ public class JobInProgress {
     JobInitedEvent jie = new JobInitedEvent(
         profile.getJobID(),  this.launchTime,
         numMapTasks, numReduceTasks,
-        JobStatus.getJobRunState(JobStatus.PREP));
+        JobStatus.getJobRunState(JobStatus.PREP),
+        false);
     
     jobHistory.logEvent(jie, jobId);
    
