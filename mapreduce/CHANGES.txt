@@ -613,6 +613,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-3026. Fix NPE in mapred queue -list with hierarchical queues.
     (Mayank Bansal via shv)
 
+    MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
+    (Ming Ma via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
