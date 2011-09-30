@@ -88,6 +88,9 @@ Trunk (unreleased changes)
 
     HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
 
+    HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
+    not include multiple methods of the same name. (cutting)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

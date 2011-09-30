@@ -874,13 +874,13 @@ public class DFSClient implements java.io.Closeable {
   }
   /**
    * Rename file or directory.
-   * @see ClientProtocol#rename(String, String, Options.Rename...)
+   * @see ClientProtocol#rename2(String, String, Options.Rename...)
    */
   public void rename(String src, String dst, Options.Rename... options)
       throws IOException {
     checkOpen();
     try {
-      namenode.rename(src, dst, options);
+      namenode.rename2(src, dst, options);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      DSQuotaExceededException.class,

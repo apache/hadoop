@@ -257,7 +257,7 @@ public class NamenodeWebHdfsMethods {
         final String js = JsonUtil.toJsonString(PutOpParam.Op.RENAME, b);
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       } else {
-        np.rename(fullpath, dstPath.getValue(),
+        np.rename2(fullpath, dstPath.getValue(),
             s.toArray(new Options.Rename[s.size()]));
         return Response.ok().type(MediaType.APPLICATION_JSON).build();
       }
