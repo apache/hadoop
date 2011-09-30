@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import java.io.IOException;
 import java.util.NavigableSet;
 
 /**
@@ -122,8 +123,10 @@ public class ScanQueryMatcher {
    *
    * @param kv KeyValue to check
    * @return The match code instance.
+   * @throws IOException in case there is an internal consistency problem
+   *      caused by a data corruption.
    */
-  public MatchCode match(KeyValue kv) {
+  public MatchCode match(KeyValue kv) throws IOException {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }

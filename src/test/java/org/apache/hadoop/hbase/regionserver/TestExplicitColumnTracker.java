@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
@@ -42,7 +43,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
   private void runTest(int maxVersions,
                        TreeSet<byte[]> trackColumns,
                        List<byte[]> scannerColumns,
-                       List<MatchCode> expected) {
+                       List<MatchCode> expected) throws IOException {
     ColumnTracker exp = new ExplicitColumnTracker(
       trackColumns, 0, maxVersions, Long.MAX_VALUE);
 
@@ -66,7 +67,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     }
   }
 
-  public void testGet_SingleVersion(){
+  public void testGet_SingleVersion() throws IOException{
     if(PRINT){
       System.out.println("SingleVersion");
     }
@@ -95,7 +96,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     runTest(maxVersions, columns, scanner, expected);
   }
 
-  public void testGet_MultiVersion(){
+  public void testGet_MultiVersion() throws IOException{
     if(PRINT){
       System.out.println("\nMultiVersion");
     }
@@ -154,7 +155,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
   /**
    * hbase-2259
    */
-  public void testStackOverflow(){
+  public void testStackOverflow() throws IOException{
     int maxVersions = 1;
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < 100000; i++) {
@@ -178,7 +179,7 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
   /**
    * Regression test for HBASE-2545
    */
-  public void testInfiniteLoop() {
+  public void testInfiniteLoop() throws IOException {
     TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
     columns.addAll(Arrays.asList(new byte[][] {
       col2, col3, col5 }));

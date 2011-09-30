@@ -255,12 +255,25 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     }
 
     KeyValue kv;
+    KeyValue prevKV = null;
     List<KeyValue> results = new ArrayList<KeyValue>();
+
+    // Only do a sanity-check if store and comparator are available.
+    KeyValue.KVComparator comparator =
+        store != null ? store.getComparator() : null;
+
     LOOP: while((kv = this.heap.peek()) != null) {
       // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
       KeyValue copyKv = kv.shallowCopy();
+      // Check that the heap gives us KVs in an increasing order.
+      if (prevKV != null && comparator != null
+          && comparator.compare(prevKV, kv) > 0) {
+        throw new IOException("Key " + prevKV + " followed by a " +
+            "smaller key " + kv + " in cf " + store);
+      }
+      prevKV = copyKv;
       ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
-      //DebugPrint.println("SS peek kv = " + kv + " with qcode = " + qcode);
+
       switch(qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:

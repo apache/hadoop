@@ -311,6 +311,8 @@ Release 0.92.0 - Unreleased
    HBASE-4212  TestMasterFailover fails occasionally (Gao Jinchao)
    HBASE-4412  No need to retry scan operation on the same server in case of
                RegionServerStoppedException (Ming Ma)
+   HBASE-4476  Compactions must fail if column tracker gets columns out of order
+               (Mikhail Bautin)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
