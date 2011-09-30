@@ -42,14 +42,16 @@ public class JobInitedEvent implements HistoryEvent {
    * @param totalMaps
    * @param totalReduces
    * @param jobStatus
+   * @param uberized True if the job's map and reduce stages were combined
    */
   public JobInitedEvent(JobID id, long launchTime, int totalMaps,
-                        int totalReduces, String jobStatus) {
+                        int totalReduces, String jobStatus, boolean uberized) {
     datum.jobid = new Utf8(id.toString());
     datum.launchTime = launchTime;
     datum.totalMaps = totalMaps;
     datum.totalReduces = totalReduces;
     datum.jobStatus = new Utf8(jobStatus);
+    datum.uberized = uberized;
   }
 
   JobInitedEvent() { }
@@ -67,9 +69,10 @@ public class JobInitedEvent implements HistoryEvent {
   public int getTotalReduces() { return datum.totalReduces; }
   /** Get the status */
   public String getStatus() { return datum.jobStatus.toString(); }
- /** Get the event type */
+  /** Get the event type */
   public EventType getEventType() {
     return EventType.JOB_INITED;
   }
-
+  /** Get whether the job's map and reduce stages were combined */
+  public boolean getUberized() { return datum.uberized; }
 }

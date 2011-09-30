@@ -125,10 +125,12 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
       String status = line.get("JOB_STATUS");
       String totalMaps = line.get("TOTAL_MAPS");
       String totalReduces = line.get("TOTAL_REDUCES");
+      String uberized = line.get("UBERIZED");
 
       if (launchTime != null && totalMaps != null && totalReduces != null) {
         return new JobInitedEvent(jobID, Long.parseLong(launchTime), Integer
-            .parseInt(totalMaps), Integer.parseInt(totalReduces), status);
+            .parseInt(totalMaps), Integer.parseInt(totalReduces), status,
+            Boolean.parseBoolean(uberized));
       }
 
       return null;

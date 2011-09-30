@@ -290,8 +290,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public boolean isUber() {
-    LOG.warn("isUber is not yet implemented");
-    return false;
+    return jobInfo.getUberized();
   }
 
   @Override

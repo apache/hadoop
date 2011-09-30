@@ -95,6 +95,8 @@ public class TestJobHistoryParsing {
         2, jobInfo.getFinishedMaps());
     Assert.assertEquals("incorrect finishedReduces ",
         1, jobInfo.getFinishedReduces());
+    Assert.assertEquals("incorrect uberized ",
+        job.isUber(), jobInfo.getUberized());
     int totalTasks = jobInfo.getAllTasks().size();
     Assert.assertEquals("total number of tasks is incorrect  ", 3, totalTasks);
 
