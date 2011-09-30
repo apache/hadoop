@@ -374,6 +374,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7575. Enhanced LocalDirAllocator to support fully-qualified
     paths. (Jonathan Eagles via vinodkv)
 
+    HADOOP-7469  Add a standard handler for socket connection problems which
+                 improves diagnostics (Uma Maheswara Rao G  and stevel via stevel)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

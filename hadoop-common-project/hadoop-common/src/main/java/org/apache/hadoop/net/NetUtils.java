@@ -20,12 +20,15 @@ package org.apache.hadoop.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.NoRouteToHostException;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
@@ -54,6 +57,13 @@ public class NetUtils {
   
   private static Map<String, String> hostToResolved = 
                                      new HashMap<String, String>();
+  /** text to point users elsewhere: {@value} */
+  private static final String FOR_MORE_DETAILS_SEE
+      = " For more details see:  ";
+  /** text included in wrapped exceptions if the host is null: {@value} */
+  public static final String UNKNOWN_HOST = "(unknown)";
+  /** Base URL of the Hadoop Wiki: {@value} */
+  public static final String HADOOP_WIKI = "http://wiki.apache.org/hadoop/";
 
   /**
    * Get the socket factory for the given class according to its
@@ -515,5 +525,120 @@ public class NetUtils {
       }
     } catch (UnknownHostException ignore) { }
     return addr;
+  }
+
+  /**
+   * Take an IOException , the local host port and remote host port details and
+   * return an IOException with the input exception as the cause and also
+   * include the host details. The new exception provides the stack trace of the
+   * place where the exception is thrown and some extra diagnostics information.
+   * If the exception is BindException or ConnectException or
+   * UnknownHostException or SocketTimeoutException, return a new one of the
+   * same type; Otherwise return an IOException.
+   *
+   * @param destHost target host (nullable)
+   * @param destPort target port
+   * @param localHost local host (nullable)
+   * @param localPort local port
+   * @param exception the caught exception.
+   * @return an exception to throw
+   */
+  public static IOException wrapException(final String destHost,
+                                          final int destPort,
+                                          final String localHost,
+                                          final int localPort,
+                                          final IOException exception) {
+    if (exception instanceof BindException) {
+      return new BindException(
+          "Problem binding to ["
+              + localHost
+              + ":"
+              + localPort
+              + "] "
+              + exception
+              + ";"
+              + see("BindException"));
+    } else if (exception instanceof ConnectException) {
+      // connection refused; include the host:port in the error
+      return (ConnectException) new ConnectException(
+          "Call From "
+              + localHost
+              + " to "
+              + destHost
+              + ":"
+              + destPort
+              + " failed on connection exception: "
+              + exception
+              + ";"
+              + see("ConnectionRefused"))
+          .initCause(exception);
+    } else if (exception instanceof UnknownHostException) {
+      return (UnknownHostException) new UnknownHostException(
+          "Invalid host name: "
+              + getHostDetailsAsString(destHost, destPort, localHost)
+              + exception
+              + ";"
+              + see("UnknownHost"))
+          .initCause(exception);
+    } else if (exception instanceof SocketTimeoutException) {
+      return (SocketTimeoutException) new SocketTimeoutException(
+          "Call From "
+              + localHost + " to " + destHost + ":" + destPort
+              + " failed on socket timeout exception: " + exception
+              + ";"
+              + see("SocketTimeout"))
+          .initCause(exception);
+    } else if (exception instanceof NoRouteToHostException) {
+      return (NoRouteToHostException) new NoRouteToHostException(
+          "No Route to Host from  "
+              + localHost + " to " + destHost + ":" + destPort
+              + " failed on socket timeout exception: " + exception
+              + ";"
+              + see("NoRouteToHost"))
+          .initCause(exception);
+    }
+    else {
+      return (IOException) new IOException("Failed on local exception: "
+                                               + exception
+                                               + "; Host Details : "
+                                               + getHostDetailsAsString(destHost, destPort, localHost))
+          .initCause(exception);
+
+    }
+  }
+
+  private static String see(final String entry) {
+    return FOR_MORE_DETAILS_SEE + HADOOP_WIKI + entry;
+  }
+
+  /**
+   * Get the host details as a string
+   * @param destHost destinatioon host (nullable)
+   * @param destPort destination port
+   * @param localHost local host (nullable)
+   * @return a string describing the destination host:port and the local host
+   */
+  private static String getHostDetailsAsString(final String destHost,
+                                               final int destPort,
+                                               final String localHost) {
+    StringBuilder hostDetails = new StringBuilder(27);
+    hostDetails.append("local host is: ")
+        .append(quoteHost(localHost))
+        .append("; ");
+    hostDetails.append("destination host is: \"").append(quoteHost(destHost))
+        .append(":")
+        .append(destPort).append("; ");
+    return hostDetails.toString();
+  }
+
+  /**
+   * Quote a hostname if it is not null
+   * @param hostname the hostname; nullable
+   * @return a quoted hostname or {@link #UNKNOWN_HOST} if the hostname is null
+   */
+  private static String quoteHost(final String hostname) {
+    return (hostname != null) ?
+        ("\"" + hostname + "\"")
+        : UNKNOWN_HOST;
   }
 }

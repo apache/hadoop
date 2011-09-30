@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.net;
 
+import junit.framework.AssertionFailedError;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
+import java.net.BindException;
 import java.net.Socket;
 import java.net.ConnectException;
 import java.net.SocketException;
@@ -29,6 +34,12 @@ import java.net.UnknownHostException;
 import org.apache.hadoop.conf.Configuration;
 
 public class TestNetUtils {
+
+  private static final Log LOG = LogFactory.getLog(TestNetUtils.class);
+  private static final int DEST_PORT = 4040;
+  private static final String DEST_PORT_NAME = Integer.toString(DEST_PORT);
+  private static final int LOCAL_PORT = 8080;
+  private static final String LOCAL_PORT_NAME = Integer.toString(LOCAL_PORT);
 
   /**
    * Test that we can't accidentally connect back to the connecting socket due
@@ -87,5 +98,101 @@ public class TestNetUtils {
     } catch (UnknownHostException e) {
       fail("NetUtils.verifyHostnames threw unexpected UnknownHostException");
     }
+  }
+
+  @Test
+  public void testWrapConnectException() throws Throwable {
+    IOException e = new ConnectException("failed");
+    IOException wrapped = verifyExceptionClass(e, ConnectException.class);
+    assertInException(wrapped, "failed");
+    assertWikified(wrapped);
+    assertInException(wrapped, "localhost");
+    assertRemoteDetailsIncluded(wrapped);
+    assertInException(wrapped, "/ConnectionRefused");
+  }
+
+  @Test
+  public void testWrapBindException() throws Throwable {
+    IOException e = new BindException("failed");
+    IOException wrapped = verifyExceptionClass(e, BindException.class);
+    assertInException(wrapped, "failed");
+    assertLocalDetailsIncluded(wrapped);
+    assertNotInException(wrapped, DEST_PORT_NAME);
+    assertInException(wrapped, "/BindException");
+  }
+
+  @Test
+  public void testWrapUnknownHostException() throws Throwable {
+    IOException e = new UnknownHostException("failed");
+    IOException wrapped = verifyExceptionClass(e, UnknownHostException.class);
+    assertInException(wrapped, "failed");
+    assertWikified(wrapped);
+    assertInException(wrapped, "localhost");
+    assertRemoteDetailsIncluded(wrapped);
+    assertInException(wrapped, "/UnknownHost");
+  }
+
+  private void assertRemoteDetailsIncluded(IOException wrapped)
+      throws Throwable {
+    assertInException(wrapped, "desthost");
+    assertInException(wrapped, DEST_PORT_NAME);
+  }
+
+  private void assertLocalDetailsIncluded(IOException wrapped)
+      throws Throwable {
+    assertInException(wrapped, "localhost");
+    assertInException(wrapped, LOCAL_PORT_NAME);
+  }
+
+  private void assertWikified(Exception e) throws Throwable {
+    assertInException(e, NetUtils.HADOOP_WIKI);
+  }
+
+  private void assertInException(Exception e, String text) throws Throwable {
+    String message = extractExceptionMessage(e);
+    if (!(message.contains(text))) {
+      throw new AssertionFailedError("Wrong text in message "
+                                         + "\"" + message + "\""
+                                         + " expected \"" + text + "\"")
+          .initCause(e);
+    }
+  }
+
+  private String extractExceptionMessage(Exception e) throws Throwable {
+    assertNotNull("Null Exception", e);
+    String message = e.getMessage();
+    if (message == null) {
+      throw new AssertionFailedError("Empty text in exception " + e)
+          .initCause(e);
+    }
+    return message;
+  }
+
+  private void assertNotInException(Exception e, String text)
+      throws Throwable{
+    String message = extractExceptionMessage(e);
+    if (message.contains(text)) {
+      throw new AssertionFailedError("Wrong text in message "
+                                         + "\"" + message + "\""
+                                         + " did not expect \"" + text + "\"")
+          .initCause(e);
+    }
+  }
+
+  private IOException verifyExceptionClass(IOException e,
+                                           Class expectedClass)
+      throws Throwable {
+    assertNotNull("Null Exception", e);
+    IOException wrapped =
+        NetUtils.wrapException("desthost", DEST_PORT,
+                               "localhost", LOCAL_PORT,
+                               e);
+    LOG.info(wrapped.toString(), wrapped);
+    if(!(wrapped.getClass().equals(expectedClass))) {
+      throw new AssertionFailedError("Wrong exception class; expected "
+                                         + expectedClass
+                                         + " got " + wrapped.getClass() + ": " + wrapped).initCause(wrapped);
+    }
+    return wrapped;
   }
 }
