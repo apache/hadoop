@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.Compression;
+import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -59,9 +60,10 @@ public class TestMultiColumnScanner {
 
   private static final Log LOG = LogFactory.getLog(TestMultiColumnScanner.class);
 
-  private static final String FAMILY = "CF";
-  private static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
-  private static final int MAX_VERSIONS = 50;
+  private static final String TABLE_NAME = "TestMultiColumnScanner";
+  static final String FAMILY = "CF";
+  static final byte[] FAMILY_BYTES = Bytes.toBytes(FAMILY);
+  static final int MAX_VERSIONS = 50;
 
   /**
    * The size of the column qualifier set used. Increasing this parameter
@@ -84,7 +86,13 @@ public class TestMultiColumnScanner {
       Integer.MAX_VALUE, BIG_LONG, Long.MAX_VALUE - 1 };
 
   /** The probability that a column is skipped in a store file. */
-  private static final double COLUMN_SKIP_PROBABILITY = 0.7;
+  private static final double COLUMN_SKIP_IN_STORE_FILE_PROB = 0.7;
+
+  /** The probability of skipping a column in a single row */
+  private static final double COLUMN_SKIP_IN_ROW_PROB = 0.1;
+
+  /** The probability of skipping a column everywhere */
+  private static final double COLUMN_SKIP_EVERYWHERE_PROB = 0.1;
 
   /** The probability to delete a row/column pair */
   private static final double DELETE_PROBABILITY = 0.02;
@@ -122,16 +130,7 @@ public class TestMultiColumnScanner {
 
   @Test
   public void testMultiColumnScanner() throws IOException {
-    String table = "TestMultiColumnScanner";
-    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY_BYTES, MAX_VERSIONS,
-        comprAlgo.getName(), HColumnDescriptor.DEFAULT_IN_MEMORY,
-        HColumnDescriptor.DEFAULT_BLOCKCACHE, HColumnDescriptor.DEFAULT_TTL,
-        bloomType.toString());
-    HTableDescriptor htd = new HTableDescriptor(table);
-    htd.addFamily(hcd);
-    HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
-    HRegion region = HRegion.createHRegion(info,
-        HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration(), htd);
+    HRegion region = createRegion(TABLE_NAME, comprAlgo, bloomType);
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<KeyValue>();
@@ -142,11 +141,30 @@ public class TestMultiColumnScanner {
     Map<String, Long> lastDelTimeMap = new HashMap<String, Long>();
 
     Random rand = new Random(29372937L);
+    Set<String> rowQualSkip = new HashSet<String>();
+
+    // Skip some columns in some rows. We need to test scanning over a set
+    // of columns when some of the columns are not there.
+    for (String row : rows)
+      for (String qual : qualifiers)
+        if (rand.nextDouble() < COLUMN_SKIP_IN_ROW_PROB) {
+          LOG.info("Skipping " + qual + " in row " + row);
+          rowQualSkip.add(rowQualKey(row, qual));
+        }
+
+    // Also skip some columns in all rows.
+    for (String qual : qualifiers)
+      if (rand.nextDouble() < COLUMN_SKIP_EVERYWHERE_PROB) {
+        LOG.info("Skipping " + qual + " in all rows");
+        for (String row : rows)
+          rowQualSkip.add(rowQualKey(row, qual));
+      }
+
     for (int iFlush = 0; iFlush < NUM_FLUSHES; ++iFlush) {
       for (String qual : qualifiers) {
         // This is where we decide to include or not include this column into
         // this store file, regardless of row and timestamp.
-        if (rand.nextDouble() < COLUMN_SKIP_PROBABILITY)
+        if (rand.nextDouble() < COLUMN_SKIP_IN_STORE_FILE_PROB)
           continue;
 
         byte[] qualBytes = Bytes.toBytes(qual);
@@ -154,7 +172,8 @@ public class TestMultiColumnScanner {
           Put p = new Put(Bytes.toBytes(row));
           for (long ts : TIMESTAMPS) {
             String value = createValue(row, qual, ts);
-            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts, value);
+            KeyValue kv = KeyValueTestUtil.create(row, FAMILY, qual, ts,
+                value);
             assertEquals(kv.getTimestamp(), ts);
             p.add(kv);
             String keyAsString = kv.toString();
@@ -241,10 +260,31 @@ public class TestMultiColumnScanner {
         }
       }
     }
-    assertTrue("This test is supposed to delete at least some row/column "
-        + "pairs", lastDelTimeMap.size() > 0);
-    LOG.info("Number of row/col pairs deleted at least once: "
-        + lastDelTimeMap.size());
+    assertTrue("This test is supposed to delete at least some row/column " +
+        "pairs", lastDelTimeMap.size() > 0);
+    LOG.info("Number of row/col pairs deleted at least once: " +
+       lastDelTimeMap.size());
+    region.close();
+  }
+
+  static HRegion createRegion(String tableName,
+      Compression.Algorithm comprAlgo, BloomType bloomType)
+      throws IOException {
+    HColumnDescriptor hcd =
+      new HColumnDescriptor(FAMILY_BYTES, MAX_VERSIONS,
+          comprAlgo.getName(),
+          HColumnDescriptor.DEFAULT_IN_MEMORY,
+          HColumnDescriptor.DEFAULT_BLOCKCACHE,
+          HColumnDescriptor.DEFAULT_TTL,
+          bloomType.toString());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(hcd);
+    HRegionInfo info =
+        new HRegionInfo(Bytes.toBytes(tableName), null, null, false);
+    HRegion region = HRegion.createHRegion(
+        info, HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration(),
+        htd);
+    return region;
   }
 
   private static String getRowQualStr(KeyValue kv) {
@@ -269,7 +309,11 @@ public class TestMultiColumnScanner {
         kv.getQualifierLength());
   }
 
-  private static String createValue(String row, String qual, long ts) {
+  private static String rowQualKey(String row, String qual) {
+    return row + "_" + qual;
+  }
+
+  static String createValue(String row, String qual, long ts) {
     return "value_for_" + row + "_" + qual + "_" + ts;
   }
 

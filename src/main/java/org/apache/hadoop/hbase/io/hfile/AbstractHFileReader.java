@@ -351,4 +351,8 @@ public abstract class AbstractHFileReader implements HFile.Reader {
     return fsBlockReader;
   }
 
+  public Path getPath() {
+    return path;
+  }
+
 }

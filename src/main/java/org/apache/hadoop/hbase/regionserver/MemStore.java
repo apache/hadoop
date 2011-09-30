@@ -632,7 +632,7 @@ public class MemStore implements HeapSize {
    * map and snapshot.
    * This behaves as if it were a real scanner but does not maintain position.
    */
-  protected class MemStoreScanner implements KeyValueScanner {
+  protected class MemStoreScanner extends AbstractKeyValueScanner {
     // Next row information for either kvset or snapshot
     private KeyValue kvsetNextRow = null;
     private KeyValue snapshotNextRow = null;

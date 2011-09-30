@@ -546,6 +546,8 @@ Release 0.92.0 - Unreleased
                transaction log (dhruba via jgray)
    HBASE-4499  [replication] Source shouldn't update ZK if it didn't progress
                (Chris Trezzo via JD)
+   HBASE-2794  Utilize ROWCOL bloom filter if multiple columns within same family
+               are requested in a Get (Mikhail Bautin)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

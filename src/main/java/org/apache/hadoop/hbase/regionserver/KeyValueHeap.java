@@ -46,6 +46,30 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
   private KVScannerComparator comparator;
 
   /**
+   * A helper enum that knows how to call the correct seek function within a
+   * {@link KeyValueScanner}.
+   */
+  public enum SeekType {
+    NORMAL {
+      @Override
+      public boolean seek(KeyValueScanner scanner, KeyValue kv,
+          boolean forward) throws IOException {
+        return forward ? scanner.reseek(kv) : scanner.seek(kv);
+      }
+    },
+    EXACT {
+      @Override
+      public boolean seek(KeyValueScanner scanner, KeyValue kv,
+          boolean forward) throws IOException {
+        return scanner.seekExactly(kv, forward);
+      }
+    };
+
+    public abstract boolean seek(KeyValueScanner scanner, KeyValue kv,
+        boolean forward) throws IOException;
+  }
+
+  /**
    * Constructor.  This KeyValueHeap will handle closing of passed in
    * KeyValueScanners.
    * @param scanners
@@ -210,54 +234,53 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    * @return true if KeyValues exist at or after specified key, false if not
    * @throws IOException
    */
+  @Override
   public boolean seek(KeyValue seekKey) throws IOException {
-    if (this.current == null) {
-      return false;
-    }
-    this.heap.add(this.current);
-    this.current = null;
-
-    KeyValueScanner scanner;
-    while((scanner = this.heap.poll()) != null) {
-      KeyValue topKey = scanner.peek();
-      if(comparator.getComparator().compare(seekKey, topKey) <= 0) { // Correct?
-        // Top KeyValue is at-or-after Seek KeyValue
-        this.current = scanner;
-        return true;
-      }
-      if(!scanner.seek(seekKey)) {
-        scanner.close();
-      } else {
-        this.heap.add(scanner);
-      }
-    }
-    // Heap is returning empty, scanner is done
-    return false;
+    return generalizedSeek(seekKey, SeekType.NORMAL, false);
   }
 
+  /**
+   * This function is identical to the {@link #seek(KeyValue)} function except
+   * that scanner.seek(seekKey) is changed to scanner.reseek(seekKey).
+   */
+  @Override
   public boolean reseek(KeyValue seekKey) throws IOException {
-    //This function is very identical to the seek(KeyValue) function except that
-    //scanner.seek(seekKey) is changed to scanner.reseek(seekKey)
-    if (this.current == null) {
+    return generalizedSeek(seekKey, SeekType.NORMAL, true);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public boolean seekExactly(KeyValue seekKey, boolean forward)
+      throws IOException {
+    return generalizedSeek(seekKey, SeekType.EXACT, forward);
+  }
+
+  private boolean generalizedSeek(KeyValue seekKey, SeekType seekType,
+      boolean forward) throws IOException {
+    if (current == null) {
       return false;
     }
-    this.heap.add(this.current);
-    this.current = null;
+    heap.add(current);
+    current = null;
 
     KeyValueScanner scanner;
-    while ((scanner = this.heap.poll()) != null) {
+    while ((scanner = heap.poll()) != null) {
       KeyValue topKey = scanner.peek();
       if (comparator.getComparator().compare(seekKey, topKey) <= 0) {
         // Top KeyValue is at-or-after Seek KeyValue
-        this.current = scanner;
+        current = scanner;
         return true;
       }
-      if (!scanner.reseek(seekKey)) {
+      
+      if (!seekType.seek(scanner, seekKey, forward)) {
         scanner.close();
       } else {
-        this.heap.add(scanner);
+        heap.add(scanner);
       }
     }
+
     // Heap is returning empty, scanner is done
     return false;
   }
@@ -272,5 +295,9 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
   @Override
   public long getSequenceID() {
     return 0;
+  }
+
+  KeyValueScanner getCurrentForTesting() {
+    return current;
   }
 }

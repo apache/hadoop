@@ -1740,6 +1740,23 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Similar to {@link #createLastOnRow(byte[], int, int, byte[], int, int,
+   * byte[], int, int)} but creates the last key on the row/column of this KV
+   * (the value part of the returned KV is always empty). Used in creating
+   * "fake keys" for the multi-column Bloom filter optimization to skip the
+   * row/column we already know is not in the file.
+   * @param kv the key-value pair to take row and column from
+   * @return the last key on the row/column of the given key-value pair
+   */
+  public KeyValue createLastOnRowCol() {
+    return new KeyValue(
+        bytes, getRowOffset(), getRowLength(),
+        bytes, getFamilyOffset(), getFamilyLength(),
+        bytes, getQualifierOffset(), getQualifierLength(),
+        HConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
+  }
+
+  /**
    * @param b
    * @return A KeyValue made of a byte array that holds the key-only part.
    * Needed to convert hfile index members to KeyValues.

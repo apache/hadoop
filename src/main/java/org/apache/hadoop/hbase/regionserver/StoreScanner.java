@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
@@ -71,10 +72,14 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     // pass columns = try to filter out unnecessary ScanFiles
     List<KeyValueScanner> scanners = getScanners(scan, columns);
 
-    // Seek all scanners to the start of the Row (or if the exact maching row key does not
-    // exist, then to the start of the next matching Row).
-    for(KeyValueScanner scanner : scanners) {
-      scanner.seek(matcher.getStartKey());
+    // Seek all scanners to the start of the Row (or if the exact matching row
+    // key does not exist, then to the start of the next matching Row).
+    if (matcher.isExactColumnQuery()) {
+      for (KeyValueScanner scanner : scanners)
+        scanner.seekExactly(matcher.getStartKey(), false);
+    } else {
+      for (KeyValueScanner scanner : scanners)
+        scanner.seek(matcher.getStartKey());
     }
 
     // Combine all seeked scanners with a heap
@@ -406,11 +411,31 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
   public synchronized boolean reseek(KeyValue kv) throws IOException {
     //Heap cannot be null, because this is only called from next() which
     //guarantees that heap will never be null before this call.
-    return this.heap.reseek(kv);
+    return matcher.isExactColumnQuery() ? heap.seekExactly(kv, true) : 
+        heap.reseek(kv);
   }
 
   @Override
   public long getSequenceID() {
     return 0;
+  }
+
+  @Override
+  public boolean seekExactly(KeyValue kv, boolean forward) throws IOException {
+    throw new NotImplementedException();
+  }
+
+  /**
+   * Used in testing.
+   * @return all scanners in no particular order
+   */
+  List<KeyValueScanner> getAllScannersForTesting() {
+    List<KeyValueScanner> allScanners = new ArrayList<KeyValueScanner>();
+    KeyValueScanner current = heap.getCurrentForTesting();
+    if (current != null)
+      allScanners.add(current);
+    for (KeyValueScanner scanner : heap.getHeap())
+      allScanners.add(scanner);
+    return allScanners;
   }
 }

@@ -1071,12 +1071,95 @@ public class StoreFile {
       }
     }
 
+    /**
+     * Checks whether the given scan passes the Bloom filter (if present). Only
+     * checks Bloom filters for single-row or single-row-column scans. Bloom
+     * filter checking for multi-gets is implemented as part of the store
+     * scanner system (see {@link StoreFileScanner#seekExactly}) and uses
+     * the lower-level API {@link #passesBloomFilter(byte[], int, int, byte[],
+     * int, int)}.
+     *
+     * @param scan the scan specification. Used to determine the row, and to
+     *          check whether this is a single-row ("get") scan.
+     * @param columns the set of columns. Only used for row-column Bloom
+     *          filters.
+     * @return true if the scan with the given column set passes the Bloom
+     *         filter, or if the Bloom filter is not applicable for the scan.
+     *         False if the Bloom filter is applicable and the scan fails it.
+     */
     private boolean passesBloomFilter(Scan scan,
         final SortedSet<byte[]> columns) {
-      if (!scan.isGetScan())
+      // Multi-column non-get scans will use Bloom filters through the
+      // lower-level API function that this function calls.
+      if (!scan.isGetScan()) {
+        return true;
+      }
+
+      byte[] row = scan.getStartRow();
+      switch (this.bloomFilterType) {
+        case ROW:
+          return passesBloomFilter(row, 0, row.length, null, 0, 0);
+
+        case ROWCOL:
+          if (columns != null && columns.size() == 1) {
+            byte[] column = columns.first();
+            return passesBloomFilter(row, 0, row.length, column, 0, 
+                column.length);
+          }
+
+          // For multi-column queries the Bloom filter is checked from the
+          // seekExact operation.
+          return true;
+
+        default:
+          return true;
+      }      
+    }
+
+    /**
+     * A method for checking Bloom filters. Called directly from
+     * {@link StoreFileScanner} in case of a multi-column query.
+     *
+     * @param row
+     * @param rowOffset
+     * @param rowLen
+     * @param col
+     * @param colOffset
+     * @param colLen
+     * @return
+     */
+    public boolean passesBloomFilter(byte[] row, int rowOffset, int rowLen,
+        byte[] col, int colOffset, int colLen) {
+      if (bloomFilter == null)
         return true;
 
+      byte[] key;
+      switch (bloomFilterType) { 
+        case ROW:
+          if (col != null) {
+            throw new RuntimeException("Row-only Bloom filter called with " +
+                "column specified");
+          }
+          if (rowOffset != 0 || rowLen != row.length) {
+              throw new AssertionError("For row-only Bloom filters the row "
+                  + "must occupy the whole array");
+          }
+          key = row;
+          break;
+
+        case ROWCOL:
+          key = bloomFilter.createBloomKey(row, rowOffset, rowLen, col,
+              colOffset, colLen);
+          break;
+
+        default:
+          return true;
+      }
+
+      // Cache Bloom filter as a local variable in case it is set to null by
+      // another thread on an IO error.
       BloomFilter bloomFilter = this.bloomFilter;
+
       if (bloomFilter == null) {
         return true;
       }
@@ -1084,26 +1167,6 @@ public class StoreFile {
       // Empty file?
       if (reader.getTrailer().getEntryCount() == 0)
         return false;
-
-      byte[] row = scan.getStartRow();
-      byte[] key;
-      switch (this.bloomFilterType) {
-        case ROW:
-          key = row;
-          break;
-
-        case ROWCOL:
-          if (columns != null && columns.size() == 1) {
-            byte[] column = columns.first();
-            key = bloomFilter.createBloomKey(row, 0, row.length,
-                column, 0, column.length);
-            break;
-          }
-          return true;
-
-        default:
-          return true;
-      }
 
       try {
         boolean shouldCheckBloom;
@@ -1279,6 +1342,10 @@ public class StoreFile {
 
     HFile.Reader getHFileReader() {
       return reader;
+    }
+
+    void disableBloomFilterForTesting() {
+      bloomFilter = null;
     }
   }
 

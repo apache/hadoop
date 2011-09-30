@@ -210,6 +210,8 @@ public class TestKeyValueHeap extends HBaseTestCase {
   }
 
   private static class Scanner extends CollectionBackedScanner {
+    private Iterator<KeyValue> iter;
+    private KeyValue current;
     private boolean closed = false;
 
     public Scanner(List<KeyValue> list) {

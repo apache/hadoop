@@ -318,6 +318,8 @@ public class HFile {
      * version. Knows nothing about how that metadata is structured.
      */
      DataInput getBloomFilterMetadata() throws IOException;
+
+     Path getPath();
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,

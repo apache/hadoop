@@ -2816,6 +2816,10 @@ public class HRegion implements HeapSize { // , Writable{
       }
       this.filterClosed = true;
     }
+
+    KeyValueHeap getStoreHeapForTesting() {
+      return storeHeap;
+    }
   }
 
   // Utility methods

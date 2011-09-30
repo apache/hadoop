@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -166,5 +167,33 @@ class StoreFileScanner implements KeyValueScanner {
   @Override
   public long getSequenceID() {
     return reader.getSequenceID();
+  }
+
+  @Override
+  public boolean seekExactly(KeyValue kv, boolean forward)
+      throws IOException {
+    if (reader.getBloomFilterType() != StoreFile.BloomType.ROWCOL ||
+        kv.getRowLength() == 0 || kv.getQualifierLength() == 0) {
+      return forward ? reseek(kv) : seek(kv);
+    }
+
+    boolean isInBloom = reader.passesBloomFilter(kv.getBuffer(),
+        kv.getRowOffset(), kv.getRowLength(), kv.getBuffer(),
+        kv.getQualifierOffset(), kv.getQualifierLength());
+    if (isInBloom) {
+      // This row/column might be in this store file. Do a normal seek.
+      return forward ? reseek(kv) : seek(kv);
+    }
+
+    // Create a fake key/value, so that this scanner only bubbles up to the top
+    // of the KeyValueHeap in StoreScanner after we scanned this row/column in
+    // all other store files. The query matcher will then just skip this fake
+    // key/value and the store scanner will progress to the next column.
+    cur = kv.createLastOnRowCol();
+    return true;
+  }
+
+  Reader getReaderForTesting() {
+    return reader;
   }
 }

@@ -48,13 +48,23 @@ public interface KeyValueScanner {
 
   /**
    * Reseek the scanner at or after the specified KeyValue.
-   * This method is guaranteed to seek to or before the required key only if the
+   * This method is guaranteed to seek at or after the required key only if the
    * key comes after the current position of the scanner. Should not be used
    * to seek to a key which may come before the current position.
    * @param key seek value (should be non-null)
    * @return true if scanner has values left, false if end of scanner
    */
   public boolean reseek(KeyValue key) throws IOException;
+
+  /**
+   * Similar to {@link #seek} (or {@link #reseek} if forward is true) but only
+   * does a seek operation after checking that it is really necessary for the
+   * row/column combination specified by the kv parameter. This function was
+   * added to avoid unnecessary disk seeks on multi-column get queries using
+   * Bloom filter checking. Should only be used for queries where the set of
+   * columns is specified exactly.
+   */
+  public boolean seekExactly(KeyValue kv, boolean forward) throws IOException;
 
   /**
    * Get the sequence id associated with this KeyValueScanner. This is required
