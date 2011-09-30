@@ -351,7 +351,7 @@ public class ClientRMService extends AbstractService implements
     report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
     org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport schedulerNodeReport = scheduler
         .getNodeReport(rmNode.getNodeID());
-    report.setUsed(schedulerNodeReport.getUsedResources());
+    report.setUsed(schedulerNodeReport.getUsedResource());
     report.setNumContainers(schedulerNodeReport.getNumContainers());
     return report;
   }

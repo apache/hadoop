@@ -136,6 +136,10 @@ public class SchedulerApp {
     return this.appSchedulingInfo.getResource(priority);
   }
 
+  /**
+   * Is this application pending?
+   * @return true if it is else false.
+   */
   public boolean isPending() {
     return this.appSchedulingInfo.isPending();
   }
@@ -144,6 +148,10 @@ public class SchedulerApp {
     return this.appSchedulingInfo.getQueueName();
   }
 
+  /**
+   * Get the list of live containers
+   * @return All of the live containers
+   */
   public synchronized Collection<RMContainer> getLiveContainers() {
     return new ArrayList<RMContainer>(liveContainers.values());
   }
@@ -419,7 +427,11 @@ public class SchedulerApp {
     return Math.min(((float)requiredResources / clusterNodes), 1.0f);
   }
 
-  public synchronized List<RMContainer> getAllReservedContainers() {
+  /**
+   * Get the list of reserved containers
+   * @return All of the reserved containers.
+   */
+  public synchronized List<RMContainer> getReservedContainers() {
     List<RMContainer> reservedContainers = new ArrayList<RMContainer>();
     for (Map.Entry<Priority, Map<NodeId, RMContainer>> e : 
       this.reservedContainers.entrySet()) {
@@ -447,5 +459,4 @@ public class SchedulerApp {
   public Queue getQueue() {
     return queue;
   }
-
 }
