@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -285,6 +286,13 @@ public class FifoScheduler implements ResourceScheduler {
     return applications.get(applicationAttemptId);
   }
 
+  @Override
+  public SchedulerAppReport getSchedulerAppInfo(
+      ApplicationAttemptId applicationAttemptId) {
+    SchedulerApp app = getApplication(applicationAttemptId);
+    return app == null ? null : new SchedulerAppReport(app);
+  }
+  
   private SchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }
@@ -762,14 +770,18 @@ public class FifoScheduler implements ResourceScheduler {
   @Override
   public synchronized SchedulerNodeReport getNodeReport(NodeId nodeId) {
     SchedulerNode node = getNode(nodeId);
-    return new SchedulerNodeReport(
-        node.getUsedResource(), node.getNumContainers());
+    return node == null ? null : new SchedulerNodeReport(node);
   }
   
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
         getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
+  }
+
+  @Override
+  public QueueMetrics getRootQueueMetrics() {
+    return DEFAULT_QUEUE.getMetrics();
   }
 
 }

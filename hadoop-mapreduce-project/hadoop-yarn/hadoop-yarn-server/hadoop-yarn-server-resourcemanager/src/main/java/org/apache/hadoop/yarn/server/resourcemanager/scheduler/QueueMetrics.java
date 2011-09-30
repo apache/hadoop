@@ -280,27 +280,27 @@ public class QueueMetrics {
       parent.unreserveResource(user, res);
     }
   }
-  
+
   public int getAppsSubmitted() {
     return appsSubmitted.value();
   }
-  
+
   public int getAppsRunning() {
     return appsRunning.value();
   }
-  
+
   public int getAppsPending() {
     return appsPending.value();
   }
-  
+
   public int getAppsCompleted() {
     return appsCompleted.value();
   }
-  
+
   public int getAppsKilled() {
     return appsKilled.value();
   }
-  
+
   public int getAppsFailed() {
     return appsFailed.value();
   }
@@ -312,7 +312,7 @@ public class QueueMetrics {
   public int getAllocatedContainers() {
     return allocatedContainers.value();
   }
-  
+
   public int getAvailableGB() {
     return availableGB.value();
   }  

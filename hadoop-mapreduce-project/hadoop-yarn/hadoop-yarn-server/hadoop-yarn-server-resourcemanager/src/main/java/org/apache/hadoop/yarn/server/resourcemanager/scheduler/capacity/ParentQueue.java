@@ -141,7 +141,7 @@ public class ParentQueue implements CSQueue {
         maximumCapacity, absoluteMaxCapacity, state, acls);
     
     this.queueComparator = comparator;
-    this.childQueues = new TreeSet<CSQueue>(comparator);
+    this.childQueues = new TreeSet<CSQueue>(queueComparator);
 
     LOG.info("Initialized parent-queue " + queueName + 
         " name=" + queueName + 

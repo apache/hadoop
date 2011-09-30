@@ -1455,6 +1455,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2996. Add uber-ness information to JobHistory. (Jonathan Eagles
     via acmurthy)
 
+    MAPREDUCE-3050. Add ability to get resource usage information for
+    applications and nodes. (Robert Evans via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
