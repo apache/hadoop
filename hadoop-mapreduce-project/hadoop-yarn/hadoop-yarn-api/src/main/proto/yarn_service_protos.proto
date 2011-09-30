@@ -42,7 +42,7 @@ message FinishApplicationMasterRequestProto {
   optional ApplicationAttemptIdProto application_attempt_id = 1;
   optional string diagnostics = 2;
   optional string tracking_url = 3;
-  optional string final_state = 4;
+  optional FinalApplicationStatusProto final_application_status = 4;
 }
 
 message FinishApplicationMasterResponseProto {
@@ -115,7 +115,7 @@ message GetClusterNodesRequestProto {
 }
 
 message GetClusterNodesResponseProto {
-  repeated NodeReportProto nodeReports = 1; 
+  repeated NodeReportProto nodeReports = 1;
 }
 
 message GetQueueInfoRequestProto {
@@ -133,7 +133,7 @@ message GetQueueUserAclsInfoRequestProto {
 }
 
 message GetQueueUserAclsInfoResponseProto {
-  repeated QueueUserACLInfoProto queueUserAcls = 1; 
+  repeated QueueUserACLInfoProto queueUserAcls = 1;
 }
 
 //////////////////////////////////////////////////////

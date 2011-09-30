@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -192,10 +193,15 @@ public class TestRMAppTransitions {
   }
 
   private static void assertAppState(RMAppState state, RMApp application) {
-    Assert.assertEquals("application state should have been" + state, 
+    Assert.assertEquals("application state should have been " + state, 
         state, application.getState());
   }
 
+  private static void assertFinalAppStatus(FinalApplicationStatus status, RMApp application) {
+    Assert.assertEquals("Final application status should have been " + status, 
+        status, application.getFinalApplicationStatus());
+  }
+  
   // test to make sure times are set when app finishes
   private static void assertTimesAtFinish(RMApp application) {
     assertStartTimeSet(application);
@@ -208,6 +214,7 @@ public class TestRMAppTransitions {
   private static void assertKilled(RMApp application) {
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
+    assertFinalAppStatus(FinalApplicationStatus.KILLED, application);
     StringBuilder diag = application.getDiagnostics();
     Assert.assertEquals("application diagnostics is not correct",
         "Application killed by user.", diag.toString());
@@ -224,6 +231,7 @@ public class TestRMAppTransitions {
   private static void assertFailed(RMApp application, String regex) {
     assertTimesAtFinish(application);
     assertAppState(RMAppState.FAILED, application);
+    assertFinalAppStatus(FinalApplicationStatus.FAILED, application);
     StringBuilder diag = application.getDiagnostics();
     Assert.assertTrue("application diagnostics is not correct",
         diag.toString().matches(regex));
@@ -261,6 +269,7 @@ public class TestRMAppTransitions {
     application.handle(event);
     assertStartTimeSet(application);
     assertAppState(RMAppState.RUNNING, application);
+    assertFinalAppStatus(FinalApplicationStatus.UNDEFINED, application);
     return application;
   }
 
@@ -273,6 +282,8 @@ public class TestRMAppTransitions {
     application.handle(event);
     assertAppState(RMAppState.FINISHED, application);
     assertTimesAtFinish(application);
+    // finished without a proper unregister implies failed
+    assertFinalAppStatus(FinalApplicationStatus.FAILED, application);
     return application;
   }
 

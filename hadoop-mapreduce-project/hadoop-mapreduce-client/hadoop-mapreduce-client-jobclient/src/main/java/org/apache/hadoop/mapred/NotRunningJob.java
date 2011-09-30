@@ -22,8 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -55,40 +53,36 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class NotRunningJob implements MRClientProtocol {
 
-  private static final Log LOG = LogFactory.getLog(NotRunningJob.class);
-  
-  private RecordFactory recordFactory = 
+  private RecordFactory recordFactory =
     RecordFactoryProvider.getRecordFactory(null);
-  
+
   private final JobState jobState;
   private final ApplicationReport applicationReport;
-  
-  
+
+
   private ApplicationReport getUnknownApplicationReport() {
-    ApplicationReport unknown = 
-        recordFactory.newRecordInstance(ApplicationReport.class);
-    unknown.setUser("N/A");
-    unknown.setHost("N/A");
-    unknown.setName("N/A");
-    unknown.setQueue("N/A");
-    unknown.setStartTime(0);
-    unknown.setFinishTime(0);
-    unknown.setTrackingUrl("N/A");
-    unknown.setDiagnostics("N/A");
-    LOG.info("getUnknownApplicationReport");
-    return unknown;
+    ApplicationId unknownAppId = recordFactory.newRecordInstance(ApplicationId.class);
+
+    // Setting AppState to NEW and finalStatus to UNDEFINED as they are never used 
+    // for a non running job
+    return BuilderUtils.newApplicationReport(unknownAppId, "N/A", "N/A", "N/A", "N/A", 0, "", 
+        YarnApplicationState.NEW, "N/A", "N/A", 0, 0, FinalApplicationStatus.UNDEFINED);    
   }
-  
+
   NotRunningJob(ApplicationReport applicationReport, JobState jobState) {
-    this.applicationReport = 
-        (applicationReport ==  null) ? 
+    this.applicationReport =
+        (applicationReport ==  null) ?
             getUnknownApplicationReport() : applicationReport;
     this.jobState = jobState;
   }
@@ -96,7 +90,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public FailTaskAttemptResponse failTaskAttempt(
       FailTaskAttemptRequest request) throws YarnRemoteException {
-    FailTaskAttemptResponse resp = 
+    FailTaskAttemptResponse resp =
       recordFactory.newRecordInstance(FailTaskAttemptResponse.class);
     return resp;
   }
@@ -104,7 +98,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public GetCountersResponse getCounters(GetCountersRequest request)
       throws YarnRemoteException {
-    GetCountersResponse resp = 
+    GetCountersResponse resp =
       recordFactory.newRecordInstance(GetCountersResponse.class);
     Counters counters = recordFactory.newRecordInstance(Counters.class);
     counters.addAllCounterGroups(new HashMap<String, CounterGroup>());
@@ -115,7 +109,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request)
       throws YarnRemoteException {
-    GetDiagnosticsResponse resp = 
+    GetDiagnosticsResponse resp =
       recordFactory.newRecordInstance(GetDiagnosticsResponse.class);
     resp.addDiagnostics("");
     return resp;
@@ -135,7 +129,7 @@ public class NotRunningJob implements MRClientProtocol {
     jobReport.setTrackingUrl(applicationReport.getTrackingUrl());
     jobReport.setFinishTime(applicationReport.getFinishTime());
 
-    GetJobReportResponse resp = 
+    GetJobReportResponse resp =
         recordFactory.newRecordInstance(GetJobReportResponse.class);
     resp.setJobReport(jobReport);
     return resp;
@@ -145,7 +139,7 @@ public class NotRunningJob implements MRClientProtocol {
   public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(
       GetTaskAttemptCompletionEventsRequest request)
       throws YarnRemoteException {
-    GetTaskAttemptCompletionEventsResponse resp = 
+    GetTaskAttemptCompletionEventsResponse resp =
       recordFactory.newRecordInstance(GetTaskAttemptCompletionEventsResponse.class);
     resp.addAllCompletionEvents(new ArrayList<TaskAttemptCompletionEvent>());
     return resp;
@@ -161,7 +155,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
       throws YarnRemoteException {
-    GetTaskReportResponse resp = 
+    GetTaskReportResponse resp =
       recordFactory.newRecordInstance(GetTaskReportResponse.class);
     TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
     report.setTaskId(request.getTaskId());
@@ -176,7 +170,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request)
       throws YarnRemoteException {
-    GetTaskReportsResponse resp = 
+    GetTaskReportsResponse resp =
       recordFactory.newRecordInstance(GetTaskReportsResponse.class);
     resp.addAllTaskReports(new ArrayList<TaskReport>());
     return resp;
@@ -185,7 +179,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public KillJobResponse killJob(KillJobRequest request)
       throws YarnRemoteException {
-    KillJobResponse resp = 
+    KillJobResponse resp =
       recordFactory.newRecordInstance(KillJobResponse.class);
     return resp;
   }
@@ -193,7 +187,7 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public KillTaskResponse killTask(KillTaskRequest request)
       throws YarnRemoteException {
-    KillTaskResponse resp = 
+    KillTaskResponse resp =
       recordFactory.newRecordInstance(KillTaskResponse.class);
     return resp;
   }
@@ -201,9 +195,9 @@ public class NotRunningJob implements MRClientProtocol {
   @Override
   public KillTaskAttemptResponse killTaskAttempt(
       KillTaskAttemptRequest request) throws YarnRemoteException {
-    KillTaskAttemptResponse resp = 
+    KillTaskAttemptResponse resp =
       recordFactory.newRecordInstance(KillTaskAttemptResponse.class);
     return resp;
   }
-  
+
 }

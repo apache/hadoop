@@ -23,24 +23,22 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.QueueInfoProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
 
 
-    
-public class RegisterApplicationMasterResponsePBImpl 
-extends ProtoBase<RegisterApplicationMasterResponseProto> 
+public class RegisterApplicationMasterResponsePBImpl
+extends ProtoBase<RegisterApplicationMasterResponseProto>
 implements RegisterApplicationMasterResponse {
-  RegisterApplicationMasterResponseProto proto = 
+  RegisterApplicationMasterResponseProto proto =
     RegisterApplicationMasterResponseProto.getDefaultInstance();
   RegisterApplicationMasterResponseProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private Resource minimumResourceCapability;
   private Resource maximumResourceCapability;
-  
+
   public RegisterApplicationMasterResponsePBImpl() {
     builder = RegisterApplicationMasterResponseProto.newBuilder();
   }
@@ -49,16 +47,16 @@ implements RegisterApplicationMasterResponse {
     this.proto = proto;
     viaProto = true;
   }
-  
+
   public RegisterApplicationMasterResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
-  
+
   private void mergeLocalToProto() {
-    if (viaProto) 
+    if (viaProto)
       maybeInitBuilder();
     mergeLocalToBuilder();
     proto = builder.build();
@@ -94,7 +92,7 @@ implements RegisterApplicationMasterResponse {
     if (!p.hasMaximumCapability()) {
       return null;
     }
-    
+
     this.maximumResourceCapability = convertFromProtoFormat(p.getMaximumCapability());
     return this.maximumResourceCapability;
   }
@@ -109,7 +107,7 @@ implements RegisterApplicationMasterResponse {
     if (!p.hasMinimumCapability()) {
       return null;
     }
-    
+
     this.minimumResourceCapability = convertFromProtoFormat(p.getMinimumCapability());
     return this.minimumResourceCapability;
   }
@@ -140,4 +138,4 @@ implements RegisterApplicationMasterResponse {
     return ((ResourcePBImpl)resource).getProto();
   }
 
-}  
+}

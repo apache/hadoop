@@ -75,7 +75,7 @@ public class ApplicationMasterService extends AbstractService implements
       new ConcurrentHashMap<ApplicationAttemptId, AMResponse>();
   private final AMResponse reboot = recordFactory.newRecordInstance(AMResponse.class);
   private final RMContext rmContext;
-  
+
   public ApplicationMasterService(RMContext rmContext,
       ApplicationTokenSecretManager appTokenManager, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
@@ -105,12 +105,12 @@ public class ApplicationMasterService extends AbstractService implements
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
           serverConf, this.appTokenManager,
-          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
+          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();
   }
-  
+
   @Override
   public RegisterApplicationMasterResponse registerApplicationMaster(
       RegisterApplicationMasterRequest request) throws YarnRemoteException {
@@ -123,7 +123,7 @@ public class ApplicationMasterService extends AbstractService implements
       String message = "Application doesn't exist in cache "
           + applicationAttemptId;
       LOG.error(message);
-      RMAuditLogger.logFailure(this.rmContext.getRMApps().get(appID).getUser(), 
+      RMAuditLogger.logFailure(this.rmContext.getRMApps().get(appID).getUser(),
           AuditConstants.REGISTER_AM, message, "ApplicationMasterService",
           "Error in registering application master", appID,
           applicationAttemptId);
@@ -141,7 +141,7 @@ public class ApplicationMasterService extends AbstractService implements
               .getHost(), request.getRpcPort(), request.getTrackingUrl()));
 
       RMAuditLogger.logSuccess(this.rmContext.getRMApps().get(appID).getUser(),
-          AuditConstants.REGISTER_AM, "ApplicationMasterService", appID, 
+          AuditConstants.REGISTER_AM, "ApplicationMasterService", appID,
           applicationAttemptId);
 
       // Pick up min/max resource from scheduler...
@@ -176,7 +176,7 @@ public class ApplicationMasterService extends AbstractService implements
 
       rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
-              .getTrackingUrl(), request.getFinalState(), request
+              .getTrackingUrl(), request.getFinalApplicationStatus(), request
               .getDiagnostics()));
 
       FinishApplicationMasterResponse response = recordFactory
@@ -225,7 +225,7 @@ public class ApplicationMasterService extends AbstractService implements
       List<ContainerId> release = request.getReleaseList();
 
       // Send new requests to appAttempt.
-      Allocation allocation = 
+      Allocation allocation =
           this.rScheduler.allocate(appAttemptId, ask, release);
 
       RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());

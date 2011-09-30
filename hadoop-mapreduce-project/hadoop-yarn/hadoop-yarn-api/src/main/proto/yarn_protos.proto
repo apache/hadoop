@@ -76,14 +76,20 @@ message ContainerProto {
   optional ContainerStatusProto container_status = 8;
 }
 
-enum ApplicationStateProto {
+enum YarnApplicationStateProto {
   NEW = 1;
   SUBMITTED = 2;
   RUNNING = 3;
-  RESTARTING = 4;
-  SUCCEEDED = 5;
-  FAILED = 6;
-  KILLED = 7; 
+  FINISHED = 4;
+  FAILED = 5;
+  KILLED = 6;
+}
+
+enum FinalApplicationStatusProto {
+  APP_UNDEFINED = 0;
+  APP_SUCCEEDED = 1;
+  APP_FAILED = 2;
+  APP_KILLED = 3;
 }
 
 message ApplicationStatusProto {
@@ -98,7 +104,7 @@ message ApplicationMasterProto {
   optional int32 rpc_port = 3;
   optional string trackingUrl = 4;
   optional ApplicationStatusProto status = 5;
-  optional ApplicationStateProto state = 6;
+  optional YarnApplicationStateProto state = 6;
   optional string client_token = 7;
   optional int32 containerCount = 8;
   optional int32 amFailCount = 9;
@@ -107,7 +113,7 @@ message ApplicationMasterProto {
 
 message URLProto {
   optional string scheme = 1;
-  optional string host = 2; 
+  optional string host = 2;
   optional int32 port = 3;
   optional string file = 4;
 }
@@ -140,12 +146,13 @@ message ApplicationReportProto {
   optional int32 rpc_port = 6;
   optional string client_token = 7;
   optional ApplicationStatusProto status = 8;
-  optional ApplicationStateProto state = 9;
+  optional YarnApplicationStateProto yarn_application_state = 9;
   optional ContainerProto masterContainer = 10;
   optional string trackingUrl = 11;
   optional string diagnostics = 12 [default = "N/A"];
   optional int64 startTime = 13;
   optional int64 finishTime = 14;
+  optional FinalApplicationStatusProto final_application_status = 15;
 }
 
 message NodeIdProto {
@@ -195,7 +202,7 @@ message AMResponseProto {
 message ApplicationSubmissionContextProto {
   optional ApplicationIdProto application_id = 1;
   optional string application_name = 2 [default = "N/A"];
-  optional string user = 3; 
+  optional string user = 3;
   optional string queue = 4 [default = "default"];
   optional PriorityProto priority = 5;
   optional ContainerLaunchContextProto am_container_spec = 6;

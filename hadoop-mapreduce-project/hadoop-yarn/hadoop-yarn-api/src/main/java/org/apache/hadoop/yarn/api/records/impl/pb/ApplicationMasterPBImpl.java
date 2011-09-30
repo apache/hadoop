@@ -19,31 +19,28 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import java.util.List;
-
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationMasterProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationMasterProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
-    
 public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> implements ApplicationMaster {
   ApplicationMasterProto proto = ApplicationMasterProto.getDefaultInstance();
   ApplicationMasterProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private ApplicationId applicationId = null;
   private ApplicationStatus applicationStatus = null;
-  
-  
+
+
   public ApplicationMasterPBImpl() {
     builder = ApplicationMasterProto.newBuilder();
   }
@@ -52,9 +49,9 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     this.proto = proto;
     viaProto = true;
   }
-  
+
   public ApplicationMasterProto getProto() {
-  
+
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -72,24 +69,24 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
   }
 
   private void mergeLocalToProto() {
-    if (viaProto) 
+    if (viaProto)
       maybeInitBuilder();
     mergeLocalToBuilder();
     proto = builder.build();
-    
+
     viaProto = true;
   }
-  
+
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ApplicationMasterProto.newBuilder(proto);
     }
     viaProto = false;
   }
-    
-  
+
+
   @Override
-  public ApplicationState getState() {
+  public YarnApplicationState getState() {
     ApplicationMasterProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasState()) {
       return null;
@@ -98,7 +95,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
   }
 
   @Override
-  public void setState(ApplicationState state) {
+  public void setState(YarnApplicationState state) {
     maybeInitBuilder();
     if (state == null) {
       builder.clearState();
@@ -124,7 +121,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     }
     builder.setHost((host));
   }
-  
+
   @Override
   public ApplicationId getApplicationId() {
     ApplicationMasterProtoOrBuilder p = viaProto ? proto : builder;
@@ -135,7 +132,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
       return null;
     }
     applicationId = convertFromProtoFormat(p.getApplicationId());
-    
+
     return applicationId;
   }
 
@@ -145,7 +142,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     if (applicationId == null)
       builder.clearApplicationId();
     this.applicationId = applicationId;
-    
+
   }
   @Override
   public int getRpcPort() {
@@ -179,7 +176,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
       return null;
     }
     this.applicationStatus = convertFromProtoFormat(p.getStatus());
-    
+
     return this.applicationStatus;
   }
 
@@ -189,7 +186,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     if (status == null)
       builder.clearStatus();
     this.applicationStatus = status;
-    
+
   }
   @Override
   public String getClientToken() {
@@ -209,7 +206,7 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     }
     builder.setClientToken((clientToken));
   }
-  
+
   @Override
   public int getAMFailCount() {
     ApplicationMasterProtoOrBuilder p = viaProto ? proto : builder;
@@ -250,11 +247,11 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     builder.setDiagnostics(diagnostics);
   }
 
-  private ApplicationStateProto convertToProtoFormat(ApplicationState e) {
+  private YarnApplicationStateProto convertToProtoFormat(YarnApplicationState e) {
     return ProtoUtils.convertToProtoFormat(e);
   }
 
-  private ApplicationState convertFromProtoFormat(ApplicationStateProto e) {
+  private YarnApplicationState convertFromProtoFormat(YarnApplicationStateProto e) {
     return ProtoUtils.convertFromProtoFormat(e);
   }
 
@@ -274,4 +271,4 @@ public class ApplicationMasterPBImpl extends ProtoBase<ApplicationMasterProto> i
     return ((ApplicationStatusPBImpl)t).getProto();
   }
 
-}  
+}

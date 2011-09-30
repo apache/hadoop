@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -75,7 +76,7 @@ public abstract class RMCommunicator extends AbstractService  {
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
-  
+
   private final AppContext context;
   private Job job;
 
@@ -146,7 +147,7 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected void register() {
     //Register
-    String host = 
+    String host =
       clientService.getBindAddress().getAddress().getHostAddress();
     try {
       RegisterApplicationMasterRequest request =
@@ -155,7 +156,7 @@ public abstract class RMCommunicator extends AbstractService  {
       request.setHost(host);
       request.setRpcPort(clientService.getBindAddress().getPort());
       request.setTrackingUrl(host + ":" + clientService.getHttpPort());
-      RegisterApplicationMasterResponse response = 
+      RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();
       maxContainerCapability = response.getMaximumResourceCapability();
@@ -169,29 +170,29 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected void unregister() {
     try {
-      String finalState = "RUNNING";
+      FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
       if (job.getState() == JobState.SUCCEEDED) {
-        finalState = "SUCCEEDED";
+        finishState = FinalApplicationStatus.SUCCEEDED;
       } else if (job.getState() == JobState.KILLED) {
-        finalState = "KILLED";
+        finishState = FinalApplicationStatus.KILLED;
       } else if (job.getState() == JobState.FAILED
           || job.getState() == JobState.ERROR) {
-        finalState = "FAILED";
+        finishState = FinalApplicationStatus.FAILED;
       }
       StringBuffer sb = new StringBuffer();
       for (String s : job.getDiagnostics()) {
         sb.append(s).append("\n");
       }
       LOG.info("Setting job diagnostics to " + sb.toString());
-      
-      String historyUrl = JobHistoryUtils.getHistoryUrl(getConfig(), 
+
+      String historyUrl = JobHistoryUtils.getHistoryUrl(getConfig(),
           context.getApplicationID());
       LOG.info("History url is " + historyUrl);
 
       FinishApplicationMasterRequest request =
           recordFactory.newRecordInstance(FinishApplicationMasterRequest.class);
       request.setAppAttemptId(this.applicationAttemptId);
-      request.setFinalState(finalState.toString());
+      request.setFinishApplicationStatus(finishState);
       request.setDiagnostics(sb.toString());
       request.setTrackingUrl(historyUrl);
       scheduler.finishApplicationMaster(request);
@@ -203,7 +204,7 @@ public abstract class RMCommunicator extends AbstractService  {
   protected Resource getMinContainerCapability() {
     return minContainerCapability;
   }
-  
+
   protected Resource getMaxContainerCapability() {
     return maxContainerCapability;
   }

@@ -32,7 +32,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -65,7 +65,7 @@ public class TestAMLaunchFailure {
 //  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 //  ApplicationsManagerImpl asmImpl;
 //  YarnScheduler scheduler = new DummyYarnScheduler();
-//  ApplicationTokenSecretManager applicationTokenSecretManager = 
+//  ApplicationTokenSecretManager applicationTokenSecretManager =
 //    new ApplicationTokenSecretManager();
 //  private ClientRMService clientService;
 //
@@ -98,7 +98,7 @@ public class TestAMLaunchFailure {
 //        , ApplicationStore appStore)
 //        throws IOException {
 //      // TODO Auto-generated method stub
-//      
+//
 //    }
 //
 //    @Override
@@ -199,7 +199,7 @@ public class TestAMLaunchFailure {
 //    conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 3000L);
 //    conf.setInt(RMConfig.AM_MAX_RETRIES, 1);
 //    asmImpl.init(conf);
-//    asmImpl.start();  
+//    asmImpl.start();
 //  }
 //
 //  @After
@@ -221,7 +221,7 @@ public class TestAMLaunchFailure {
 //        .newRecordInstance(SubmitApplicationRequest.class);
 //    request.setApplicationSubmissionContext(submissionContext);
 //    clientService.submitApplication(request);
-//    AppAttempt application = context.getApplications().get(appID); 
+//    AppAttempt application = context.getApplications().get(appID);
 //
 //    while (application.getState() != ApplicationState.FAILED) {
 //      LOG.info("Waiting for application to go to FAILED state."

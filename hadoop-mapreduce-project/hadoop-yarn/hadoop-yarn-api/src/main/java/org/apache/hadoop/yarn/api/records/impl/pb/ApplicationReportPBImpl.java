@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
-public class ApplicationReportPBImpl extends ProtoBase<ApplicationReportProto> 
+public class ApplicationReportPBImpl extends ProtoBase<ApplicationReportProto>
 implements ApplicationReport {
   ApplicationReportProto proto = ApplicationReportProto.getDefaultInstance();
   ApplicationReportProto.Builder builder = null;
@@ -39,7 +41,7 @@ implements ApplicationReport {
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
   }
-  
+
   public ApplicationReportPBImpl(ApplicationReportProto proto) {
     this.proto = proto;
     viaProto = true;
@@ -87,12 +89,12 @@ implements ApplicationReport {
   }
 
   @Override
-  public ApplicationState getState() {
+  public YarnApplicationState getYarnApplicationState() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasState()) {
+    if (!p.hasYarnApplicationState()) {
       return null;
     }
-    return convertFromProtoFormat(p.getState());
+    return convertFromProtoFormat(p.getYarnApplicationState());
   }
 
   @Override
@@ -139,6 +141,27 @@ implements ApplicationReport {
   }
 
   @Override
+  public long getStartTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getStartTime();
+  }
+
+  @Override
+  public long getFinishTime() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getFinishTime();
+  }
+
+  @Override
+  public FinalApplicationStatus getFinalApplicationStatus() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasFinalApplicationStatus()) {
+      return null;
+    }	
+    return convertFromProtoFormat(p.getFinalApplicationStatus());
+  }
+
+  @Override
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
     if (applicationId == null)
@@ -177,13 +200,13 @@ implements ApplicationReport {
   }
 
   @Override
-  public void setState(ApplicationState state) {
+  public void setYarnApplicationState(YarnApplicationState state) {
     maybeInitBuilder();
     if (state == null) {
-      builder.clearState();
+      builder.clearYarnApplicationState();
       return;
     }
-    builder.setState(convertToProtoFormat(state));
+    builder.setYarnApplicationState(convertToProtoFormat(state));
   }
 
   @Override
@@ -233,35 +256,33 @@ implements ApplicationReport {
   }
 
   @Override
-  public ApplicationReportProto getProto() {
-    mergeLocalToProto();
-    proto = viaProto ? proto : builder.build();
-    viaProto = true;
-    return proto;
-  }
-
-  @Override
-  public long getStartTime() {
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getStartTime();
-  }
-
-  @Override
   public void setStartTime(long startTime) {
     maybeInitBuilder();
     builder.setStartTime(startTime);
   }
 
   @Override
-  public long getFinishTime() {
-    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getFinishTime();
-  }
-
-  @Override
   public void setFinishTime(long finishTime) {
     maybeInitBuilder();
     builder.setFinishTime(finishTime);
+  }
+
+  @Override
+  public void setFinalApplicationStatus(FinalApplicationStatus finishState) {
+    maybeInitBuilder();
+    if (finishState == null) {
+      builder.clearFinalApplicationStatus();
+      return;
+    }
+    builder.setFinalApplicationStatus(convertToProtoFormat(finishState));
+  }
+
+  @Override
+  public ApplicationReportProto getProto() {
+    mergeLocalToProto();
+    proto = viaProto ? proto : builder.build();
+    viaProto = true;
+    return proto;
   }
 
   private void mergeLocalToBuilder() {
@@ -291,16 +312,25 @@ implements ApplicationReport {
     return ((ApplicationIdPBImpl) t).getProto();
   }
 
-  private ApplicationState convertFromProtoFormat(ApplicationStateProto s) {
-    return ProtoUtils.convertFromProtoFormat(s);
-  }
-
-  private ApplicationStateProto convertToProtoFormat(ApplicationState s) {
-    return ProtoUtils.convertToProtoFormat(s);
-  }
-
   private ApplicationIdPBImpl convertFromProtoFormat(
       ApplicationIdProto applicationId) {
     return new ApplicationIdPBImpl(applicationId);
   }
+
+  private YarnApplicationState convertFromProtoFormat(YarnApplicationStateProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
+  private YarnApplicationStateProto convertToProtoFormat(YarnApplicationState s) {
+    return ProtoUtils.convertToProtoFormat(s);
+  }
+
+  private FinalApplicationStatus convertFromProtoFormat(FinalApplicationStatusProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
+  private FinalApplicationStatusProto convertToProtoFormat(FinalApplicationStatus s) {
+    return ProtoUtils.convertToProtoFormat(s);
+  }
+
 }

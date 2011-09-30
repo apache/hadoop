@@ -324,6 +324,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3001. Added task-specific counters to AppMaster and JobHistory
     web-UIs. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3098. Fixed RM and MR AM to report YarnApplicationState and
+    application's FinalStatus separately. (Hitesh Shah via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
