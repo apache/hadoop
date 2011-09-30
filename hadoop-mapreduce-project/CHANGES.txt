@@ -2072,6 +2072,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2991. queueinfo.jsp fails to show queue status for Capacity 
     scheduler if queue names contain special symbols. (Priyo Mustafi via shv)
 
+    MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
+    (Ming Ma via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
