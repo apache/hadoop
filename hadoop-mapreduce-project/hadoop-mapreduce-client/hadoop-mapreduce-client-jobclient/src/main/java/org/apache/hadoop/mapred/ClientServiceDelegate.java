@@ -25,6 +25,7 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -86,6 +87,7 @@ public class ClientServiceDelegate {
   private MRClientProtocol realProxy = null;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static String UNKNOWN_USER = "Unknown User";
+  private String trackingUrl;
 
   public ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm, 
       JobID jobId, MRClientProtocol historyServerProxy) {
@@ -129,6 +131,9 @@ public class ClientServiceDelegate {
     // Possibly allow nulls through the PB tunnel, otherwise deal with an exception
     // and redirect to the history server.
     ApplicationReport application = rm.getApplicationReport(appId);
+    if (application != null) {
+      trackingUrl = application.getTrackingUrl();
+    }
     String serviceAddr = null;
     while (application == null || ApplicationState.RUNNING.equals(application.getState())) {
       if (application == null) {
@@ -334,9 +339,14 @@ public class ClientServiceDelegate {
     request.setJobId(jobId);
     JobReport report = ((GetJobReportResponse) invoke("getJobReport", 
         GetJobReportRequest.class, request)).getJobReport();
-    String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID); 
-
-    return TypeConverter.fromYarn(report, jobFile);
+    if (StringUtils.isEmpty(report.getJobFile())) {
+      String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID);
+      report.setJobFile(jobFile);
+    }
+    String historyTrackingUrl = report.getTrackingUrl();
+    return TypeConverter.fromYarn(report, "http://"
+        + (StringUtils.isNotEmpty(historyTrackingUrl) ? historyTrackingUrl
+            : trackingUrl));
   }
 
   public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)

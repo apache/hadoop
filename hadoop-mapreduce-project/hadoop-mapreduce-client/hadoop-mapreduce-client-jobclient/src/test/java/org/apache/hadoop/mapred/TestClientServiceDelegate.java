@@ -124,6 +124,26 @@ public class TestClientServiceDelegate {
     Assert.assertEquals(JobStatus.State.SUCCEEDED, jobStatus.getState());
   }
 
+  
+  @Test
+  public void testJobReportFromHistoryServer() throws Exception {                                 
+    MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);                           
+    when(historyServerProxy.getJobReport(getJobReportRequest())).thenReturn(                      
+        getJobReportResponseFromHistoryServer());                                                 
+    ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);                                     
+    when(rm.getApplicationReport(TypeConverter.toYarn(oldJobId).getAppId()))                      
+    .thenReturn(null);                                                                        
+    ClientServiceDelegate clientServiceDelegate = getClientServiceDelegate(                       
+        historyServerProxy, rm);
+
+    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);                           
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
+    Assert.assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
+    Assert.assertEquals(1.0f, jobStatus.getMapProgress());                                        
+    Assert.assertEquals(1.0f, jobStatus.getReduceProgress());                                     
+  }
+
   private GetJobReportRequest getJobReportRequest() {
     GetJobReportRequest request = Records.newRecord(GetJobReportRequest.class);
     request.setJobId(jobId);
@@ -170,4 +190,17 @@ public class TestClientServiceDelegate {
     return clientServiceDelegate;
   }
 
+  private GetJobReportResponse getJobReportResponseFromHistoryServer() {
+    GetJobReportResponse jobReportResponse = Records                                              
+        .newRecord(GetJobReportResponse.class);                                                   
+    JobReport jobReport = Records.newRecord(JobReport.class);                                     
+    jobReport.setJobId(jobId);                                                                    
+    jobReport.setJobState(JobState.SUCCEEDED);                                                    
+    jobReport.setMapProgress(1.0f);
+    jobReport.setReduceProgress(1.0f);
+    jobReport.setJobFile("TestJobFilePath");
+    jobReport.setTrackingUrl("TestTrackingUrl");
+    jobReportResponse.setJobReport(jobReport);
+    return jobReportResponse;
+  }
 }

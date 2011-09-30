@@ -55,7 +55,7 @@ public class MRBuilderUtils {
   public static JobReport newJobReport(JobId jobId, String jobName,
       String userName, JobState state, long startTime, long finishTime,
       float setupProgress, float mapProgress, float reduceProgress,
-      float cleanupProgress) {
+      float cleanupProgress, String jobFile) {
     JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(jobId);
     report.setJobName(jobName);
@@ -67,6 +67,7 @@ public class MRBuilderUtils {
     report.setCleanupProgress(cleanupProgress);
     report.setMapProgress(mapProgress);
     report.setReduceProgress(reduceProgress);
+    report.setJobFile(jobFile);
     return report;
   }
 }
