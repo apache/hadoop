@@ -462,8 +462,6 @@ public class Job extends JobContextImpl implements JobContext {
     sb.append(status.getReduceProgress()).append("\n");
     sb.append("Job state: ");
     sb.append(status.getState()).append("\n");
-    sb.append("history URL: ");
-    sb.append(status.getHistoryFile()).append("\n");
     sb.append("retired: ").append(status.isRetired()).append("\n");
     sb.append("reason for failure: ").append(reasonforFailure);
     return sb.toString();

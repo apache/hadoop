@@ -590,12 +590,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (getState() == JobState.NEW) {
         return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
             startTime, finishTime, setupProgress, 0.0f,
-            0.0f, cleanupProgress);
+            0.0f, cleanupProgress, remoteJobConfFile.toString());
       }
 
       return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
           startTime, finishTime, setupProgress, computeProgress(mapTasks),
-          computeProgress(reduceTasks), cleanupProgress);
+          computeProgress(reduceTasks), cleanupProgress, remoteJobConfFile.toString());
     } finally {
       readLock.unlock();
     }

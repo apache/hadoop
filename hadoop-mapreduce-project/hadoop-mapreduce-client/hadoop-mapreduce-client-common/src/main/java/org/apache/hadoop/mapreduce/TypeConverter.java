@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobPriority;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
@@ -280,16 +281,14 @@ public class TypeConverter {
     return yCntrs;
   }
   
-  public static org.apache.hadoop.mapred.JobStatus fromYarn(
-      JobReport jobreport, String jobFile) {
+  public static JobStatus fromYarn(JobReport jobreport, String trackingUrl) {
     JobPriority jobPriority = JobPriority.NORMAL;
-    org.apache.hadoop.mapred.JobStatus jobStatus =
-        new org.apache.hadoop.mapred.JobStatus(fromYarn(jobreport.getJobId()),
-            jobreport.getSetupProgress(), jobreport.getMapProgress(),
-            jobreport.getReduceProgress(), jobreport.getCleanupProgress(),
-            fromYarn(jobreport.getJobState()),
-            jobPriority, jobreport.getUser(), jobreport.getJobName(),
-            jobFile, jobreport.getTrackingUrl());
+    JobStatus jobStatus = new org.apache.hadoop.mapred.JobStatus(
+        fromYarn(jobreport.getJobId()), jobreport.getSetupProgress(), jobreport
+            .getMapProgress(), jobreport.getReduceProgress(), jobreport
+            .getCleanupProgress(), fromYarn(jobreport.getJobState()),
+        jobPriority, jobreport.getUser(), jobreport.getJobName(), jobreport
+            .getJobFile(), trackingUrl);
     jobStatus.setFailureInfo(jobreport.getDiagnostics());
     return jobStatus;
   }

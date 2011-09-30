@@ -1446,6 +1446,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3114. Fixed invalid ApplicationURL on RM WebUI. (Subroto Sanyal
     via vinodkv)
 
+    MAPREDUCE-2791. Added missing info on 'job -status' output. (Devaraj K via
+    acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
