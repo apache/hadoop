@@ -51,8 +51,6 @@ import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -70,6 +68,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -227,20 +226,11 @@ public abstract class Server {
                           int backlog) throws IOException {
     try {
       socket.bind(address, backlog);
-    } catch (BindException e) {
-      BindException bindException = new BindException("Problem binding to " + address
-                                                      + " : " + e.getMessage());
-      bindException.initCause(e);
-      throw bindException;
     } catch (SocketException e) {
-      // If they try to bind to a different host's address, give a better
-      // error message.
-      if ("Unresolved address".equals(e.getMessage())) {
-        throw new UnknownHostException("Invalid hostname for server: " + 
-                                       address.getHostName());
-      } else {
-        throw e;
-      }
+      throw NetUtils.wrapException(null,
+          0,
+          address.getHostName(),
+          address.getPort(), e);
     }
   }
   

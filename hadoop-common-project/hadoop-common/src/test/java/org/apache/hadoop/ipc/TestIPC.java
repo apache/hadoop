@@ -23,7 +23,6 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 
@@ -270,7 +269,7 @@ public class TestIPC {
       fail("Expected an exception to have been thrown");
     } catch (IOException e) {
       String message = e.getMessage();
-      String addressText = address.toString();
+      String addressText = address.getHostName() + ":" + address.getPort();
       assertTrue("Did not find "+addressText+" in "+message,
               message.contains(addressText));
       Throwable cause=e.getCause();

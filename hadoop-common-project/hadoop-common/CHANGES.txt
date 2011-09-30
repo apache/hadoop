@@ -27,6 +27,9 @@ Trunk (unreleased changes)
 
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
     interface introduced in HADOOP-7524.  (cutting)
+    
+    HADOOP-7469  Add a standard handler for socket connection problems which
+                 improves diagnostics (Uma Maheswara Rao G  and stevel via stevel)
 
   BUGS
 
