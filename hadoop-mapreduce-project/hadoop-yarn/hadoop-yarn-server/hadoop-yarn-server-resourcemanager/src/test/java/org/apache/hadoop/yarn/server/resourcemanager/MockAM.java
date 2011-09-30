@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -47,11 +47,11 @@ public class MockAM {
   private final ApplicationAttemptId attemptId;
   private final RMContext context;
   private final AMRMProtocol amRMProtocol;
-  
+
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
   private final List<ContainerId> releases = new ArrayList<ContainerId>();
 
-  MockAM(RMContext context, AMRMProtocol amRMProtocol, 
+  MockAM(RMContext context, AMRMProtocol amRMProtocol,
       ApplicationAttemptId attemptId) {
     this.context = context;
     this.amRMProtocol = amRMProtocol;
@@ -85,7 +85,7 @@ public class MockAM {
     amRMProtocol.registerApplicationMaster(req);
   }
 
-  public void addRequests(String[] hosts, int memory, int priority, 
+  public void addRequests(String[] hosts, int memory, int priority,
       int containers) throws Exception {
     requests.addAll(createReq(hosts, memory, priority, containers));
   }
@@ -97,33 +97,33 @@ public class MockAM {
     return response;
   }
 
-  public AMResponse allocate( 
-      String host, int memory, int numContainers, 
+  public AMResponse allocate(
+      String host, int memory, int numContainers,
       List<ContainerId> releases) throws Exception {
-    List reqs = createReq(new String[]{host}, memory, 1, numContainers);
+    List<ResourceRequest> reqs = createReq(new String[]{host}, memory, 1, numContainers);
     return allocate(reqs, releases);
   }
 
-  public List<ResourceRequest> createReq(String[] hosts, int memory, int priority, 
+  public List<ResourceRequest> createReq(String[] hosts, int memory, int priority,
       int containers) throws Exception {
     List<ResourceRequest> reqs = new ArrayList<ResourceRequest>();
     for (String host : hosts) {
-      ResourceRequest hostReq = createResourceReq(host, memory, priority, 
+      ResourceRequest hostReq = createResourceReq(host, memory, priority,
           containers);
       reqs.add(hostReq);
-      ResourceRequest rackReq = createResourceReq("default-rack", memory, 
+      ResourceRequest rackReq = createResourceReq("default-rack", memory,
           priority, containers);
       reqs.add(rackReq);
     }
-    
-    ResourceRequest offRackReq = createResourceReq("*", memory, priority, 
+
+    ResourceRequest offRackReq = createResourceReq("*", memory, priority,
         containers);
     reqs.add(offRackReq);
     return reqs;
-    
+
   }
 
-  public ResourceRequest createResourceReq(String resource, int memory, int priority, 
+  public ResourceRequest createResourceReq(String resource, int memory, int priority,
       int containers) throws Exception {
     ResourceRequest req = Records.newRecord(ResourceRequest.class);
     req.setHostName(resource);
@@ -138,7 +138,7 @@ public class MockAM {
   }
 
   public AMResponse allocate(
-      List<ResourceRequest> resourceRequest, List<ContainerId> releases) 
+      List<ResourceRequest> resourceRequest, List<ContainerId> releases)
       throws Exception {
     AllocateRequest req = BuilderUtils.newAllocateRequest(attemptId,
         ++responseId, 0F, resourceRequest, releases);
@@ -151,7 +151,7 @@ public class MockAM {
     FinishApplicationMasterRequest req = Records.newRecord(FinishApplicationMasterRequest.class);
     req.setAppAttemptId(attemptId);
     req.setDiagnostics("");
-    req.setFinalState("");
+    req.setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
     req.setTrackingUrl("");
     amRMProtocol.finishApplicationMaster(req);
   }

@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -52,7 +53,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEve
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -199,6 +202,7 @@ public class TestRMAppAttemptTransitions {
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertNull(applicationAttempt.getFinalApplicationStatus());
   }
 
   /**
@@ -212,6 +216,7 @@ public class TestRMAppAttemptTransitions {
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertNull(applicationAttempt.getFinalApplicationStatus());
     
     // Check events
     verify(masterService).
@@ -230,6 +235,7 @@ public class TestRMAppAttemptTransitions {
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertNull(applicationAttempt.getFinalApplicationStatus());
     
     // Check events
     verify(application).handle(any(RMAppRejectedEvent.class));
@@ -247,6 +253,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(amContainer, applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertNull(applicationAttempt.getFinalApplicationStatus());
   }
 
   /**
@@ -259,6 +266,7 @@ public class TestRMAppAttemptTransitions {
     assertNull(applicationAttempt.getMasterContainer());
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
+    assertNull(applicationAttempt.getFinalApplicationStatus());
     
     // Check events
     verify(application).handle(any(RMAppEvent.class));
@@ -299,6 +307,49 @@ public class TestRMAppAttemptTransitions {
     verify(application, times(2)).handle(any(RMAppFailedAttemptEvent.class));
   }
 
+  /**
+   * {@link RMAppAttemptState#LAUNCH}
+   */
+  private void testAppAttemptLaunchedState(Container container) {
+    assertEquals(RMAppAttemptState.LAUNCHED, 
+        applicationAttempt.getAppAttemptState());
+    assertEquals(container, applicationAttempt.getMasterContainer());
+    
+    // TODO - need to add more checks relevant to this state
+  }
+
+  /**
+   * {@link RMAppAttemptState#RUNNING}
+   */
+  private void testAppAttemptRunningState(Container container,
+      String host, int rpcPort, String trackingUrl) {
+    assertEquals(RMAppAttemptState.RUNNING, 
+        applicationAttempt.getAppAttemptState());
+    assertEquals(container, applicationAttempt.getMasterContainer());
+    assertEquals(host, applicationAttempt.getHost());
+    assertEquals(rpcPort, applicationAttempt.getRpcPort());
+    assertEquals(trackingUrl, applicationAttempt.getTrackingUrl());
+    
+    // TODO - need to add more checks relevant to this state
+  }
+
+  /**
+   * {@link RMAppAttemptState#FINISHED}
+   */
+  private void testAppAttemptFinishedState(Container container,
+      FinalApplicationStatus finalStatus, 
+      String trackingUrl, 
+      String diagnostics) {
+    assertEquals(RMAppAttemptState.FINISHED, 
+        applicationAttempt.getAppAttemptState());
+    assertEquals(diagnostics, applicationAttempt.getDiagnostics());
+    assertEquals(trackingUrl, applicationAttempt.getTrackingUrl());
+    assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
+    assertEquals(container, applicationAttempt.getMasterContainer());
+    assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
+  }
+  
+  
   private void submitApplicationAttempt() {
     ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
     applicationAttempt.handle(
@@ -339,6 +390,27 @@ public class TestRMAppAttemptTransitions {
     
     return container;
   }
+  
+  private void launchApplicationAttempt(Container container) {
+    applicationAttempt.handle(
+        new RMAppAttemptEvent(applicationAttempt.getAppAttemptId(), 
+            RMAppAttemptEventType.LAUNCHED));
+
+    testAppAttemptLaunchedState(container);    
+  }
+  
+  private void runApplicationAttempt(Container container,
+      String host, 
+      int rpcPort, 
+      String trackingUrl) {
+    applicationAttempt.handle(
+        new RMAppAttemptRegistrationEvent(
+            applicationAttempt.getAppAttemptId(),
+            host, rpcPort, trackingUrl));
+    
+    testAppAttemptRunningState(container, host, rpcPort, trackingUrl);
+  }
+    
 
   @Test
   public void testNewToKilled() {
@@ -398,6 +470,39 @@ public class TestRMAppAttemptTransitions {
             applicationAttempt.getAppAttemptId(), 
             diagnostics));
     testAppAttemptFailedState(amContainer, diagnostics);
+  }
+  
+  @Test 
+  public void testUnregisterToKilledFinish() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 9999, "oldtrackingurl");
+    String trackingUrl = "newtrackingurl";
+    String diagnostics = "Killed by user";
+    FinalApplicationStatus finalStatus = FinalApplicationStatus.KILLED;
+    applicationAttempt.handle(
+        new RMAppAttemptUnregistrationEvent(
+            applicationAttempt.getAppAttemptId(), 
+            trackingUrl, finalStatus, diagnostics));
+    testAppAttemptFinishedState(amContainer, finalStatus,
+        trackingUrl, diagnostics);
+  }
+  
+  
+  @Test 
+  public void testUnregisterToSuccessfulFinish() {
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 9999, "oldtrackingurl");
+    String trackingUrl = "mytrackingurl";
+    String diagnostics = "Successful";
+    FinalApplicationStatus finalStatus = FinalApplicationStatus.SUCCEEDED;
+    applicationAttempt.handle(
+        new RMAppAttemptUnregistrationEvent(
+            applicationAttempt.getAppAttemptId(), 
+            trackingUrl, finalStatus, diagnostics));
+    testAppAttemptFinishedState(amContainer, finalStatus,
+        trackingUrl, diagnostics);
   }
   
 }

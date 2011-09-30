@@ -89,9 +89,8 @@ public class RmController extends Controller {
     ResponseInfo info = info("Application Overview").
       _("User:", app.getUser()).
       _("Name:", app.getName()).
-      _("State:", (app.getState() == RMAppState.FINISHED ?
-        app.getAMFinalState() : app.getState().toString())
-      ).
+      _("State:", app.getState().toString()).
+      _("FinalStatus:", app.getFinalApplicationStatus().toString()).
       _("Started:", Times.format(app.getStartTime())).
       _("Elapsed:", StringUtils.formatTime(
         Times.elapsed(app.getStartTime(), app.getFinishTime()))).

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -28,8 +29,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 
 /**
- * The read interface to an Application in the ResourceManager. Take a 
- * look at {@link RMAppImpl} for its implementation. This interface 
+ * The read interface to an Application in the ResourceManager. Take a
+ * look at {@link RMAppImpl} for its implementation. This interface
  * exposes methods to access various updates in application status/report.
  */
 public interface RMApp extends EventHandler<RMAppEvent> {
@@ -68,7 +69,7 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   RMAppAttempt getRMAppAttempt(ApplicationAttemptId appAttemptId);
 
   /**
-   * Each Application is submitted to a queue decided by {@link 
+   * Each Application is submitted to a queue decided by {@link
    * ApplicationSubmissionContext#setQueue(String)}.
    * This method returns the queue to which an application was submitted.
    * @return the queue to which the application was submitted to.
@@ -76,7 +77,7 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   String getQueue();
 
   /**
-   * The name of the application as set in {@link 
+   * The name of the application as set in {@link
    * ApplicationSubmissionContext#setApplicationName(String)}.
    * @return the name of the application.
    */
@@ -85,7 +86,7 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   /**
    * {@link RMApp} can have multiple application attempts {@link RMAppAttempt}.
    * This method returns the current {@link RMAppAttempt}.
-   * @return the current {@link RMAppAttempt} 
+   * @return the current {@link RMAppAttempt}
    */
   RMAppAttempt getCurrentAppAttempt();
 
@@ -96,7 +97,7 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   ApplicationReport createAndGetApplicationReport();
 
   /**
-   * Application level metadata is stored in {@link ApplicationStore} whicn 
+   * Application level metadata is stored in {@link ApplicationStore} whicn
    * can persist the information.
    * @return the {@link ApplicationStore}  for this {@link RMApp}.
    */
@@ -125,12 +126,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the diagnostics information for the application master.
    */
   StringBuilder getDiagnostics();
-  
+
   /**
-   * The final state of the AM when unregistering as in 
-   * {@link FinishApplicationMasterRequest#setFinalState(String)}.
-   * @return the final state of the AM as set in 
-   * {@link FinishApplicationMasterRequest#setFinalState(String)}.
+   * The final finish state of the AM when unregistering as in
+   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
+   * @return the final finish state of the AM as set in
+   * {@link FinishApplicationMasterRequest#setFinishApplicationStatus(FinalApplicationStatus)}.
    */
-  String getAMFinalState();
+  FinalApplicationStatus getFinalApplicationStatus();
 }

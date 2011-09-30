@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.MockApps;
@@ -167,8 +168,8 @@ public class MockRMApp implements RMApp {
   }
 
   @Override
-  public String getAMFinalState() {
-    return "UNKNOWN";
+  public FinalApplicationStatus getFinalApplicationStatus() {
+    return FinalApplicationStatus.UNDEFINED;
   };
 
 }

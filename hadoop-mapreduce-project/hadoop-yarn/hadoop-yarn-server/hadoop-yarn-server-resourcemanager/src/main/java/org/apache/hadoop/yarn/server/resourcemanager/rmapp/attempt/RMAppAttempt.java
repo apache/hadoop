@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -32,8 +33,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 
 /**
  * Interface to an Application Attempt in the Resource Manager.
- * A {@link RMApp} can have multiple app attempts based on 
- * {@link YarnConfiguration#RM_AM_MAX_RETRIES}. For specific 
+ * A {@link RMApp} can have multiple app attempts based on
+ * {@link YarnConfiguration#RM_AM_MAX_RETRIES}. For specific
  * implementation take a look at {@link RMAppAttemptImpl}.
  */
 public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
@@ -49,7 +50,7 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return the state {@link RMAppAttemptState} of this {@link RMAppAttempt}
    */
   RMAppAttemptState getAppAttemptState();
-  
+
   /**
    * The host on which the {@link RMAppAttempt} is running/ran on.
    * @return the host on which the {@link RMAppAttempt} ran/is running on.
@@ -88,11 +89,12 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   float getProgress();
 
   /**
-   * The final state set by the AM.
-   * @return the final state that is set by the AM when unregistering itself.
+   * The final status set by the AM.
+   * @return the final status that is set by the AM when unregistering itself. Can return a null 
+   * if the AM has not unregistered itself. 
    */
-  String getAMFinalState();
-  
+  FinalApplicationStatus getFinalApplicationStatus();
+
   /**
    * Nodes on which the containers for this {@link RMAppAttempt} ran.
    * @return the set of nodes that ran any containers from this {@link RMAppAttempt}
@@ -100,16 +102,16 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
   Set<NodeId> getRanNodes();
 
   /**
-   * Return a list of the last set of finished containers, resetting the 
+   * Return a list of the last set of finished containers, resetting the
    * finished containers to empty.
    * @return the list of just finished containers, re setting the finished containers.
    */
   List<ContainerStatus> pullJustFinishedContainers();
 
   /**
-   * Return the list of last set of finished containers. This does not reset the 
+   * Return the list of last set of finished containers. This does not reset the
    * finished containers.
-   * @return the list of just finished contianers, this does not reset the 
+   * @return the list of just finished contianers, this does not reset the
    * finished containers.
    */
   List<ContainerStatus> getJustFinishedContainers();

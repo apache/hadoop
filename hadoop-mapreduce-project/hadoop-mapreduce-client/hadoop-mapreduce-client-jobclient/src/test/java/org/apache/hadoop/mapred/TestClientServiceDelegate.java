@@ -32,8 +32,9 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -163,7 +164,7 @@ public class TestClientServiceDelegate {
   private ApplicationReport getApplicationReport() {
     ApplicationReport applicationReport = Records
         .newRecord(ApplicationReport.class);
-    applicationReport.setState(ApplicationState.SUCCEEDED);
+    applicationReport.setYarnApplicationState(YarnApplicationState.FINISHED);
     applicationReport.setUser("root");
     applicationReport.setHost("N/A");
     applicationReport.setName("N/A");
@@ -172,6 +173,7 @@ public class TestClientServiceDelegate {
     applicationReport.setFinishTime(0);
     applicationReport.setTrackingUrl("N/A");
     applicationReport.setDiagnostics("N/A");
+    applicationReport.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
     return applicationReport;
   }
 

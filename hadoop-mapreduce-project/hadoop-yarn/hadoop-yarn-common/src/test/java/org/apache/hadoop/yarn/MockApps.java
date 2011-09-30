@@ -24,7 +24,8 @@ import java.util.List;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Iterators;
@@ -39,8 +40,8 @@ public class MockApps {
       "I18nApp<☯>");
   static final Iterator<String> USERS = Iterators.cycle("dorothy", "tinman",
       "scarecrow", "glinda", "nikko", "toto", "winkie", "zeke", "gulch");
-  static final Iterator<ApplicationState> STATES = Iterators.cycle(
-      ApplicationState.values());
+  static final Iterator<YarnApplicationState> STATES = Iterators.cycle(
+      YarnApplicationState.values());
   static final Iterator<String> QUEUES = Iterators.cycle("a.a1", "a.a2",
       "b.b1", "b.b2", "b.b3", "c.c1.c11", "c.c1.c12", "c.c1.c13",
       "c.c2", "c.c3", "c.c4");
@@ -74,46 +75,47 @@ public class MockApps {
 
   public static ApplicationReport newApp(int i) {
     final ApplicationId id = newAppID(i);
-    final ApplicationState state = newAppState();
+    final YarnApplicationState state = newAppState();
     final String user = newUserName();
     final String name = newAppName();
     final String queue = newQueue();
+    final FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
     return new ApplicationReport() {
       @Override public ApplicationId getApplicationId() { return id; }
       @Override public String getUser() { return user; }
       @Override public String getName() { return name; }
-      @Override public ApplicationState getState() { return state; }
+      @Override public YarnApplicationState getYarnApplicationState() { return state; }
       @Override public String getQueue() { return queue; }
       @Override public String getTrackingUrl() { return ""; }
-      @Override
+      @Override public FinalApplicationStatus getFinalApplicationStatus() { return finishState; }
       public void setApplicationId(ApplicationId applicationId) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public void setTrackingUrl(String url) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public void setName(String name) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public void setQueue(String queue) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
-      public void setState(ApplicationState state) {
+      public void setYarnApplicationState(YarnApplicationState state) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public void setUser(String user) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public String getDiagnostics() {
@@ -123,7 +125,7 @@ public class MockApps {
       @Override
       public void setDiagnostics(String diagnostics) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public String getHost() {
@@ -133,7 +135,7 @@ public class MockApps {
       @Override
       public void setHost(String host) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public int getRpcPort() {
@@ -143,7 +145,7 @@ public class MockApps {
       @Override
       public void setRpcPort(int rpcPort) {
         // TODO Auto-generated method stub
-        
+
       }
       @Override
       public String getClientToken() {
@@ -153,9 +155,8 @@ public class MockApps {
       @Override
       public void setClientToken(String clientToken) {
         // TODO Auto-generated method stub
-        
+
       }
-      
       @Override
       public long getStartTime() {
         // TODO Auto-generated method stub
@@ -175,7 +176,11 @@ public class MockApps {
       @Override
       public void setFinishTime(long finishTime) {
         // TODO Auto-generated method stub
-        
+
+      }
+      @Override
+      public void setFinalApplicationStatus(FinalApplicationStatus finishState) {
+		// TODO Auto-generated method stub
       }
     };
   }
@@ -194,9 +199,10 @@ public class MockApps {
     return id;
   }
 
-  public static ApplicationState newAppState() {
+  public static YarnApplicationState newAppState() {
     synchronized(STATES) {
       return STATES.next();
     }
   }
+
 }

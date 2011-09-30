@@ -21,23 +21,24 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProtoOrBuilder;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
-    
 public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplicationMasterRequestProto> implements FinishApplicationMasterRequest {
   FinishApplicationMasterRequestProto proto = FinishApplicationMasterRequestProto.getDefaultInstance();
   FinishApplicationMasterRequestProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private ApplicationAttemptId appAttemptId = null;
-  
-  
+
+
   public FinishApplicationMasterRequestPBImpl() {
     builder = FinishApplicationMasterRequestProto.newBuilder();
   }
@@ -46,7 +47,7 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
     this.proto = proto;
     viaProto = true;
   }
-  
+
   public FinishApplicationMasterRequestProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
@@ -61,7 +62,7 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
   }
 
   private void mergeLocalToProto() {
-    if (viaProto) 
+    if (viaProto)
       maybeInitBuilder();
     mergeLocalToBuilder();
     proto = builder.build();
@@ -74,8 +75,7 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
     }
     viaProto = false;
   }
-    
-  
+
   @Override
   public ApplicationAttemptId getApplicationAttemptId() {
     FinishApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
@@ -92,7 +92,7 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
   @Override
   public void setAppAttemptId(ApplicationAttemptId applicationAttemptId) {
     maybeInitBuilder();
-    if (applicationAttemptId == null) 
+    if (applicationAttemptId == null)
       builder.clearApplicationAttemptId();
     this.appAttemptId = applicationAttemptId;
   }
@@ -122,15 +122,22 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
   }
 
   @Override
-  public String getFinalState() {
+  public FinalApplicationStatus getFinalApplicationStatus() {
     FinishApplicationMasterRequestProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getFinalState();
+    if (!p.hasFinalApplicationStatus()) {
+      return null;
+    }	
+    return convertFromProtoFormat(p.getFinalApplicationStatus());
   }
 
   @Override
-  public void setFinalState(String state) {
+  public void setFinishApplicationStatus(FinalApplicationStatus finishState) {
     maybeInitBuilder();
-    builder.setFinalState(state);
+    if (finishState == null) {
+      builder.clearFinalApplicationStatus();
+      return;
+    }
+    builder.setFinalApplicationStatus(convertToProtoFormat(finishState));
   }
 
   private ApplicationAttemptIdPBImpl convertFromProtoFormat(ApplicationAttemptIdProto p) {
@@ -141,6 +148,13 @@ public class FinishApplicationMasterRequestPBImpl extends ProtoBase<FinishApplic
     return ((ApplicationAttemptIdPBImpl)t).getProto();
   }
 
+  private FinalApplicationStatus convertFromProtoFormat(FinalApplicationStatusProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
+  private FinalApplicationStatusProto convertToProtoFormat(FinalApplicationStatus s) {
+    return ProtoUtils.convertToProtoFormat(s);
+  }
 
 
-}  
+}

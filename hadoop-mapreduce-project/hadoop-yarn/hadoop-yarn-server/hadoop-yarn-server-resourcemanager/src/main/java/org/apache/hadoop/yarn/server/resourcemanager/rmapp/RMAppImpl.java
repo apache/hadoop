@@ -32,9 +32,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -94,7 +95,7 @@ public class RMAppImpl implements RMApp {
   private static final StateMachineFactory<RMAppImpl,
                                            RMAppState,
                                            RMAppEventType,
-                                           RMAppEvent> stateMachineFactory 
+                                           RMAppEvent> stateMachineFactory
                                = new StateMachineFactory<RMAppImpl,
                                            RMAppState,
                                            RMAppEventType,
@@ -160,7 +161,7 @@ public class RMAppImpl implements RMApp {
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
-      ApplicationStore appStore, 
+      ApplicationStore appStore,
       YarnScheduler scheduler, ApplicationMasterService masterService) {
 
     this.applicationId = applicationId;
@@ -194,18 +195,23 @@ public class RMAppImpl implements RMApp {
   }
 
   @Override
-  public String getAMFinalState() {
+  public FinalApplicationStatus getFinalApplicationStatus() {
     this.readLock.lock();
     try {
-      if (currentAttempt != null) {
-        return currentAttempt.getAMFinalState();
+      // finish state is obtained based on the state machine's current state 
+      // as a fall-back in case the application has not been unregistered 
+      // ( or if the app never unregistered itself )
+      // when the report is requested
+      if (currentAttempt != null 
+          && currentAttempt.getFinalApplicationStatus() != null) {
+        return currentAttempt.getFinalApplicationStatus();   
       }
-      return "UNKNOWN";
+      return createFinalApplicationStatus(this.stateMachine.getCurrentState());
     } finally {
       this.readLock.unlock();
     }
   }
-  
+
   @Override
   public RMAppState getState() {
     this.readLock.lock();
@@ -273,25 +279,43 @@ public class RMAppImpl implements RMApp {
     return this.appStore;
   }
 
-  private ApplicationState createApplicationState(RMAppState rmAppState) {
+  private YarnApplicationState createApplicationState(RMAppState rmAppState) {
     switch(rmAppState) {
     case NEW:
-      return ApplicationState.NEW;
+      return YarnApplicationState.NEW;
     case SUBMITTED:
     case ACCEPTED:
-      return ApplicationState.SUBMITTED;
+      return YarnApplicationState.SUBMITTED;
     case RUNNING:
-      return ApplicationState.RUNNING;
+      return YarnApplicationState.RUNNING;
     case FINISHED:
-      return ApplicationState.SUCCEEDED;
+      return YarnApplicationState.FINISHED;
     case KILLED:
-      return ApplicationState.KILLED;
+      return YarnApplicationState.KILLED;
     case FAILED:
-      return ApplicationState.FAILED;
+      return YarnApplicationState.FAILED;
     }
     throw new YarnException("Unknown state passed!");
   }
 
+  private FinalApplicationStatus createFinalApplicationStatus(RMAppState state) {
+    switch(state) {
+    case NEW:
+    case SUBMITTED:
+    case ACCEPTED:
+    case RUNNING:
+      return FinalApplicationStatus.UNDEFINED;    
+    // finished without a proper final state is the same as failed  
+    case FINISHED:
+    case FAILED:
+      return FinalApplicationStatus.FAILED;
+    case KILLED:
+      return FinalApplicationStatus.KILLED;
+    }
+    throw new YarnException("Unknown state passed!");
+  }
+
+  
   @Override
   public ApplicationReport createAndGetApplicationReport() {
     this.readLock.lock();
@@ -301,6 +325,7 @@ public class RMAppImpl implements RMApp {
       String trackingUrl = "N/A";
       String host = "N/A";
       int rpcPort = -1;
+      FinalApplicationStatus finishState = getFinalApplicationStatus();
       if (this.currentAttempt != null) {
         trackingUrl = this.currentAttempt.getTrackingUrl();
         clientToken = this.currentAttempt.getClientToken();
@@ -310,8 +335,8 @@ public class RMAppImpl implements RMApp {
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
-          this.diagnostics.toString(), trackingUrl, 
-          this.startTime, this.finishTime);
+          this.diagnostics.toString(), trackingUrl,
+          this.startTime, this.finishTime, finishState);
     } finally {
       this.readLock.unlock();
     }
@@ -432,7 +457,7 @@ public class RMAppImpl implements RMApp {
     @SuppressWarnings("unchecked")
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.handler.handle(new RMAppAttemptEvent(app.currentAttempt.getAppAttemptId(), 
+      app.handler.handle(new RMAppAttemptEvent(app.currentAttempt.getAppAttemptId(),
           RMAppAttemptEventType.KILL));
       super.transition(app, event);
     }
@@ -465,7 +490,7 @@ public class RMAppImpl implements RMApp {
       }
       app.finishTime = System.currentTimeMillis();
       app.handler.handle(
-          new RMAppManagerEvent(app.applicationId, 
+          new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));
     };
   }
@@ -481,7 +506,7 @@ public class RMAppImpl implements RMApp {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
-      
+
       RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent)event);
       if (app.attempts.size() == app.maxRetries) {
         String msg = "Application " + app.getApplicationId()
@@ -495,7 +520,7 @@ public class RMAppImpl implements RMApp {
         return RMAppState.FAILED;
       }
 
-      app.createNewAttempt();     
+      app.createNewAttempt();
       return initialState;
     }
 

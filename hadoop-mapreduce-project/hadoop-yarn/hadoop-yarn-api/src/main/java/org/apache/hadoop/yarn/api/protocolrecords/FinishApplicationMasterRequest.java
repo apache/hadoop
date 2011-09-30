@@ -22,15 +22,16 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 
 /**
- * <p>The finalization request sent by the <code>ApplicationMaster</code> to 
+ * <p>The finalization request sent by the <code>ApplicationMaster</code> to
  * inform the <code>ResourceManager</code> about its completion.</p>
- * 
+ *
  * <p>The final request includes details such:
  *   <ul>
  *     <li>
- *         {@link ApplicationAttemptId} being managed by the 
+ *         {@link ApplicationAttemptId} being managed by the
  *         <code>ApplicationMaster</code>
  *     </li>
  *     <li>Final state of the <code>ApplicationMaster</code></li>
@@ -47,19 +48,19 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 public interface FinishApplicationMasterRequest {
 
   /**
-   * Get the <code>ApplicationAttemptId</code> being managed by the 
+   * Get the <code>ApplicationAttemptId</code> being managed by the
    * <code>ApplicationMaster</code>.
-   * @return <code>ApplicationAttemptId</code> being managed by the 
+   * @return <code>ApplicationAttemptId</code> being managed by the
    *         <code>ApplicationMaster</code>
    */
   @Public
   @Stable
   ApplicationAttemptId getApplicationAttemptId();
-  
+
   /**
-   * Set the <code>ApplicationAttemptId</code> being managed by the 
+   * Set the <code>ApplicationAttemptId</code> being managed by the
    * <code>ApplicationMaster</code>.
-   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed 
+   * @param applicationAttemptId <code>ApplicationAttemptId</code> being managed
    *                             by the <code>ApplicationMaster</code>
    */
   @Public
@@ -72,15 +73,15 @@ public interface FinishApplicationMasterRequest {
    */
   @Public
   @Stable
-  String getFinalState();
-  
+  FinalApplicationStatus getFinalApplicationStatus();
+
   /**
-   * Set <em>final state</em> of the <code>ApplicationMaster</code>
-   * @param finalState <em>final state</em> of the <code>ApplicationMaster</code>
+   * Set the <em>finish state</em> of the <code>ApplicationMaster</code>
+   * @param finishState <em>finish state</em> of the <code>ApplicationMaster</code>
    */
   @Public
   @Stable
-  void setFinalState(String finalState);
+  void setFinishApplicationStatus(FinalApplicationStatus finishState);
 
   /**
    * Get <em>diagnostic information</em> on application failure.
@@ -89,7 +90,7 @@ public interface FinishApplicationMasterRequest {
   @Public
   @Stable
   String getDiagnostics();
-  
+
   /**
    * Set <em>diagnostic information</em> on application failure.
    * @param diagnostics <em>diagnostic information</em> on application failure
@@ -105,10 +106,10 @@ public interface FinishApplicationMasterRequest {
   @Public
   @Stable
   String getTrackingUrl();
-  
+
   /**
    * Set the <em>tracking URL</em>for the <code>ApplicationMaster</code>
-   * @param url <em>tracking URL</em>for the 
+   * @param url <em>tracking URL</em>for the
    *                   <code>ApplicationMaster</code>
    */
   @Public

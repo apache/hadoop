@@ -88,7 +88,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -107,17 +108,17 @@ public class TestClientRedirect {
   private static final Log LOG = LogFactory.getLog(TestClientRedirect.class);
   private static final String RMADDRESS = "0.0.0.0:8054";
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  
+
   private static final String AMHOSTADDRESS = "0.0.0.0:10020";
   private static final String HSHOSTADDRESS = "0.0.0.0:10021";
-  private volatile boolean amContact = false; 
+  private volatile boolean amContact = false;
   private volatile boolean hsContact = false;
   private volatile boolean amRunning = false;
   private volatile boolean amRestarting = false;
 
   @Test
   public void testRedirect() throws Exception {
-    
+
     Configuration conf = new YarnConfiguration();
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     conf.set(YarnConfiguration.RM_ADDRESS, RMADDRESS);
@@ -125,7 +126,7 @@ public class TestClientRedirect {
     RMService rmService = new RMService("test");
     rmService.init(conf);
     rmService.start();
-  
+
     AMService amService = new AMService();
     amService.init(conf);
     amService.start(conf);
@@ -134,16 +135,16 @@ public class TestClientRedirect {
     HistoryService historyService = new HistoryService();
     historyService.init(conf);
     historyService.start(conf);
-  
+
     LOG.info("services started");
     Cluster cluster = new Cluster(conf);
     org.apache.hadoop.mapreduce.JobID jobID =
       new org.apache.hadoop.mapred.JobID("201103121733", 1);
-    org.apache.hadoop.mapreduce.Counters counters = 
+    org.apache.hadoop.mapreduce.Counters counters =
         cluster.getJob(jobID).getCounters();
     validateCounters(counters);
     Assert.assertTrue(amContact);
-   
+
     LOG.info("Sleeping for 5 seconds before stop for" +
     " the client socket to not get EOF immediately..");
     Thread.sleep(5000);
@@ -155,17 +156,17 @@ public class TestClientRedirect {
     LOG.info("Sleeping for 5 seconds after stop for" +
     		" the server to exit cleanly..");
     Thread.sleep(5000);
-    
+
     amRestarting = true;
     // Same client
     //results are returned from fake (not started job)
     counters = cluster.getJob(jobID).getCounters();
     Assert.assertEquals(0, counters.countCounters());
     Job job = cluster.getJob(jobID);
-    org.apache.hadoop.mapreduce.TaskID taskId = 
+    org.apache.hadoop.mapreduce.TaskID taskId =
       new org.apache.hadoop.mapreduce.TaskID(jobID, TaskType.MAP, 0);
     TaskAttemptID tId = new TaskAttemptID(taskId, 0);
-    
+
     //invoke all methods to check that no exception is thrown
     job.killJob();
     job.killTask(tId);
@@ -175,25 +176,25 @@ public class TestClientRedirect {
     job.getTaskDiagnostics(tId);
     job.getTaskReports(TaskType.MAP);
     job.getTrackingURL();
-    
+
     amRestarting = false;
     amService = new AMService();
     amService.init(conf);
     amService.start(conf);
     amRunning = true;
     amContact = false; //reset
-    
+
     counters = cluster.getJob(jobID).getCounters();
     validateCounters(counters);
     Assert.assertTrue(amContact);
-    
+
     amRunning = false;
 
     // Same client
     counters = cluster.getJob(jobID).getCounters();
     validateCounters(counters);
     Assert.assertTrue(hsContact);
-    
+
     rmService.stop();
     historyService.stop();
   }
@@ -248,7 +249,7 @@ public class TestClientRedirect {
     public GetNewApplicationResponse getNewApplication(GetNewApplicationRequest request) throws YarnRemoteException {
       return null;
     }
-    
+
     @Override
     public GetApplicationReportResponse getApplicationReport(
         GetApplicationReportRequest request) throws YarnRemoteException {
@@ -256,12 +257,14 @@ public class TestClientRedirect {
       ApplicationReport application = recordFactory
           .newRecordInstance(ApplicationReport.class);
       application.setApplicationId(applicationId);
+      application.setFinalApplicationStatus(FinalApplicationStatus.UNDEFINED);
       if (amRunning) {
-        application.setState(ApplicationState.RUNNING);
+        application.setYarnApplicationState(YarnApplicationState.RUNNING);
       } else if (amRestarting) {
-        application.setState(ApplicationState.SUBMITTED);
+        application.setYarnApplicationState(YarnApplicationState.SUBMITTED);
       } else {
-        application.setState(ApplicationState.SUCCEEDED);
+        application.setYarnApplicationState(YarnApplicationState.FINISHED);
+        application.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
       }
       String[] split = AMHOSTADDRESS.split(":");
       application.setHost(split[0]);
@@ -339,7 +342,7 @@ public class TestClientRedirect {
    }
   }
 
-  class AMService extends AbstractService 
+  class AMService extends AbstractService
       implements MRClientProtocol {
     private InetSocketAddress bindAddress;
     private Server server;
@@ -347,7 +350,7 @@ public class TestClientRedirect {
     public AMService() {
       this(AMHOSTADDRESS);
     }
-    
+
     public AMService(String hostAddress) {
       super("AMService");
       this.hostAddress = hostAddress;

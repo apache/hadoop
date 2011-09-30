@@ -20,24 +20,26 @@ package org.apache.hadoop.yarn.util;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationStateProto;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.ByteString;
 
 public class ProtoUtils {
-  
-  
+
+
   /*
    * ContainerState
    */
@@ -48,18 +50,29 @@ public class ProtoUtils {
   public static ContainerState convertFromProtoFormat(ContainerStateProto e) {
     return ContainerState.valueOf(e.name().replace(CONTAINER_STATE_PREFIX, ""));
   }
-  
+
 
   /*
-   * ApplicationState
+   * YarnApplicationState
    */
-  public static ApplicationStateProto convertToProtoFormat(ApplicationState e) {
-    return ApplicationStateProto.valueOf(e.name());
+  public static YarnApplicationStateProto convertToProtoFormat(YarnApplicationState e) {
+    return YarnApplicationStateProto.valueOf(e.name());
   }
-  public static ApplicationState convertFromProtoFormat(ApplicationStateProto e) {
-    return ApplicationState.valueOf(e.name());
+  public static YarnApplicationState convertFromProtoFormat(YarnApplicationStateProto e) {
+    return YarnApplicationState.valueOf(e.name());
   }
-  
+
+  /*
+   * FinalApplicationStatus
+   */
+  private static String FINAL_APPLICATION_STATUS_PREFIX = "APP_";
+  public static FinalApplicationStatusProto convertToProtoFormat(FinalApplicationStatus e) {
+    return FinalApplicationStatusProto.valueOf(FINAL_APPLICATION_STATUS_PREFIX + e.name());
+  }
+  public static FinalApplicationStatus convertFromProtoFormat(FinalApplicationStatusProto e) {
+    return FinalApplicationStatus.valueOf(e.name().replace(FINAL_APPLICATION_STATUS_PREFIX, ""));
+  }
+
   /*
    * LocalResourceType
    */
@@ -69,7 +82,7 @@ public class ProtoUtils {
   public static LocalResourceType convertFromProtoFormat(LocalResourceTypeProto e) {
     return LocalResourceType.valueOf(e.name());
   }
-  
+
   /*
    * LocalResourceVisibility
    */
@@ -79,7 +92,7 @@ public class ProtoUtils {
   public static LocalResourceVisibility convertFromProtoFormat(LocalResourceVisibilityProto e) {
     return LocalResourceVisibility.valueOf(e.name());
   }
-  
+
   /*
    * ByteBuffer
    */
@@ -98,7 +111,7 @@ public class ProtoUtils {
     byteBuffer.position(oldPos);
     return bs;
   }
-  
+
   /*
    * QueueState
    */
@@ -109,7 +122,7 @@ public class ProtoUtils {
   public static QueueState convertFromProtoFormat(QueueStateProto e) {
     return QueueState.valueOf(e.name().replace(QUEUE_STATE_PREFIX, ""));
   }
-  
+
   /*
    * QueueACL
    */

@@ -24,9 +24,10 @@ import java.util.List;
 
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -69,12 +70,12 @@ public class BuilderUtils {
     }
   }
 
-  public static class ResourceRequestComparator 
+  public static class ResourceRequestComparator
   implements java.util.Comparator<org.apache.hadoop.yarn.api.records.ResourceRequest> {
     @Override
     public int compare(org.apache.hadoop.yarn.api.records.ResourceRequest r1,
         org.apache.hadoop.yarn.api.records.ResourceRequest r2) {
-      
+
       // Compare priority, host and capability
       int ret = r1.getPriority().compareTo(r2.getPriority());
       if (ret == 0) {
@@ -198,12 +199,12 @@ public class BuilderUtils {
       String nodeHttpAddress, Resource resource, Priority priority) {
     ContainerId containerID =
         newContainerId(recordFactory, appAttemptId, containerId);
-    return newContainer(containerID, nodeId, nodeHttpAddress, 
+    return newContainer(containerID, nodeId, nodeHttpAddress,
         resource, priority);
   }
 
   public static Container newContainer(ContainerId containerId,
-      NodeId nodeId, String nodeHttpAddress, 
+      NodeId nodeId, String nodeHttpAddress,
       Resource resource, Priority priority) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
@@ -242,8 +243,9 @@ public class BuilderUtils {
 
   public static ApplicationReport newApplicationReport(
       ApplicationId applicationId, String user, String queue, String name,
-      String host, int rpcPort, String clientToken, ApplicationState state,
-      String diagnostics, String url, long startTime, long finishTime) {
+      String host, int rpcPort, String clientToken, YarnApplicationState state,
+      String diagnostics, String url, long startTime, long finishTime,
+      FinalApplicationStatus finalStatus) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -253,20 +255,21 @@ public class BuilderUtils {
     report.setHost(host);
     report.setRpcPort(rpcPort);
     report.setClientToken(clientToken);
-    report.setState(state);
+    report.setYarnApplicationState(state);
     report.setDiagnostics(diagnostics);
     report.setTrackingUrl(url);
     report.setStartTime(startTime);
     report.setFinishTime(finishTime);
+    report.setFinalApplicationStatus(finalStatus);
     return report;
   }
-  
+
   public static Resource newResource(int memory) {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);
     return resource;
   }
-  
+
   public static URL newURL(String scheme, String host, int port, String file) {
     URL url = recordFactory.newRecordInstance(URL.class);
     url.setScheme(scheme);

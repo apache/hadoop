@@ -50,6 +50,7 @@ class AppsBlock extends HtmlBlock {
             th(".name", "Name").
             th(".queue", "Queue").
             th(".state", "State").
+            th(".finalstatus", "FinalStatus").
             th(".progress", "Progress").
             th(".ui", "Tracking UI").
             th(".note", "Note")._()._().
@@ -70,8 +71,8 @@ class AppsBlock extends HtmlBlock {
           td(app.getUser().toString()).
           td(app.getName().toString()).
           td(app.getQueue().toString()).
-          td(app.getState() == RMAppState.FINISHED ? app.getAMFinalState() : 
-            app.getState().toString()).
+          td(app.getState().toString()).
+          td(app.getFinalApplicationStatus().toString()).
           td().
             br().$title(percent)._(). // for sorting
             div(_PROGRESSBAR).

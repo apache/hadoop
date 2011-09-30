@@ -28,7 +28,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -62,7 +62,7 @@ public class TestSchedulerNegotiator {
 //  private SchedulerNegotiator schedulerNegotiator;
 //  private DummyScheduler scheduler;
 //  private final int testNum = 99999;
-//  
+//
 //  private final RMContext context = new RMContextImpl(new MemStore());
 //  AppAttemptImpl masterInfo;
 //  private EventHandler handler;
@@ -79,13 +79,13 @@ public class TestSchedulerNegotiator {
 //      containers.add(container);
 //      return new Allocation(containers, Resources.none());
 //    }
-//  
-//  
+//
+//
 //    @Override
 //    public void nodeUpdate(RMNode nodeInfo,
 //        Map<String, List<Container>> containers) {
 //    }
-//    
+//
 //    @Override
 //    public void removeNode(RMNode node) {
 //    }
@@ -142,7 +142,7 @@ public class TestSchedulerNegotiator {
 //      return null;
 //    }
 //  }
-//  
+//
 //  @Before
 //  public void setUp() {
 //    scheduler = new DummyScheduler();
@@ -153,12 +153,12 @@ public class TestSchedulerNegotiator {
 //    context.getDispatcher().init(conf);
 //    context.getDispatcher().start();
 //  }
-//  
+//
 //  @After
 //  public void tearDown() {
 //    schedulerNegotiator.stop();
 //  }
-//  
+//
 //  public void waitForState(ApplicationState state, AppAttemptImpl info) {
 //    int count = 0;
 //    while (info.getState() != state && count < 100) {
@@ -184,7 +184,7 @@ public class TestSchedulerNegotiator {
 //    submissionContext.setApplicationId(recordFactory.newRecordInstance(ApplicationId.class));
 //    submissionContext.getApplicationId().setClusterTimestamp(System.currentTimeMillis());
 //    submissionContext.getApplicationId().setId(1);
-//    
+//
 //    masterInfo = new AppAttemptImpl(this.context, this.conf, "dummy",
 //        submissionContext, "dummyClientToken", StoreFactory
 //            .createVoidAppStore(), new AMLivelinessMonitor(context
