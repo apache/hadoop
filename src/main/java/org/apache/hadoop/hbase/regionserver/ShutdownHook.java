@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,7 +36,7 @@ import org.apache.hadoop.hbase.util.Threads;
  * Manage regionserver shutdown hooks.
  * @see #install(Configuration, FileSystem, Stoppable, Thread)
  */
-class ShutdownHook {
+public class ShutdownHook {
   private static final Log LOG = LogFactory.getLog(ShutdownHook.class);
   private static final String CLIENT_FINALIZER_DATA_METHOD = "clientFinalizer";
 
@@ -48,6 +50,13 @@ class ShutdownHook {
    * hook. Default is 30 seconds.
    */
   public static final String FS_SHUTDOWN_HOOK_WAIT = "hbase.fs.shutdown.hook.wait";
+
+  /**
+   * A place for keeping track of all the filesystem shutdown hooks that need
+   * to be executed after the last regionserver referring to a given filesystem
+   * stops. We keep track of the # of regionserver references in values of the map.
+   */
+  private final static Map<Thread, Integer> fsShutdownHooks = new HashMap<Thread, Integer>();
 
   /**
    * Install a shutdown hook that calls stop on the passed Stoppable
@@ -68,7 +77,7 @@ class ShutdownHook {
    * @param threadToJoin After calling stop on <code>stop</code> will then
    * join this thread.
    */
-  static void install(final Configuration conf, final FileSystem fs,
+  public static void install(final Configuration conf, final FileSystem fs,
       final Stoppable stop, final Thread threadToJoin) {
     Thread fsShutdownHook = suppressHdfsShutdownHook(fs);
     Thread t = new ShutdownHookThread(conf, stop, threadToJoin, fsShutdownHook);
@@ -103,10 +112,18 @@ class ShutdownHook {
         this.stop.stop("Shutdown hook");
         Threads.shutdown(this.threadToJoin);
         if (this.fsShutdownHook != null) {
-          LOG.info("Starting fs shutdown hook thread.");
-          this.fsShutdownHook.start();
-          Threads.shutdown(this.fsShutdownHook,
-            this.conf.getLong(FS_SHUTDOWN_HOOK_WAIT, 30000));
+          synchronized (fsShutdownHooks) {
+            int refs = fsShutdownHooks.get(fsShutdownHook);
+            if (refs == 1) {
+              LOG.info("Starting fs shutdown hook thread.");
+              this.fsShutdownHook.start();
+              Threads.shutdown(this.fsShutdownHook,
+              this.conf.getLong(FS_SHUTDOWN_HOOK_WAIT, 30000));
+            }
+            if (refs > 0) {
+              fsShutdownHooks.put(fsShutdownHook, refs - 1);
+            }
+          }
         }
       }
       LOG.info("Shutdown hook finished.");
@@ -171,9 +188,14 @@ class ShutdownHook {
       if (hdfsClientFinalizer == null) {
         throw new RuntimeException("Client finalizer is null, can't suppress!");
       }
-      if (!Runtime.getRuntime().removeShutdownHook(hdfsClientFinalizer)) {
+      if (!fsShutdownHooks.containsKey(hdfsClientFinalizer) &&
+          !Runtime.getRuntime().removeShutdownHook(hdfsClientFinalizer)) {
         throw new RuntimeException("Failed suppression of fs shutdown hook: " +
           hdfsClientFinalizer);
+      }
+      synchronized (fsShutdownHooks) {
+        Integer refs = fsShutdownHooks.get(hdfsClientFinalizer);
+        fsShutdownHooks.put(hdfsClientFinalizer, refs == null ? 1 : refs + 1);
       }
       return hdfsClientFinalizer;
     } catch (NoSuchFieldException nsfe) {

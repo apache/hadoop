@@ -314,6 +314,8 @@ Release 0.92.0 - Unreleased
                RegionServerStoppedException (Ming Ma)
    HBASE-4476  Compactions must fail if column tracker gets columns out of order
                (Mikhail Bautin)
+   HBASE-4209  The HBase hbase-daemon.sh SIGKILLs master when stopping it
+               (Roman Shaposhnik)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

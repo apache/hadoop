@@ -26,8 +26,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.ShutdownHook;
 
 /**
  * Utility used running a cluster all in the one JVM.
@@ -171,7 +173,7 @@ public class JVMClusterUtil {
    * @return Address to use contacting primary master.
    */
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
-      final List<JVMClusterUtil.RegionServerThread> regionservers) {
+      final List<JVMClusterUtil.RegionServerThread> regionservers) throws IOException {
     if (masters != null) {
       for (JVMClusterUtil.MasterThread t : masters) {
         t.start();
@@ -179,6 +181,9 @@ public class JVMClusterUtil {
     }
     if (regionservers != null) {
       for (JVMClusterUtil.RegionServerThread t: regionservers) {
+        HRegionServer hrs = t.getRegionServer();
+        ShutdownHook.install(hrs.getConfiguration(), FileSystem.get(hrs
+                .getConfiguration()), hrs, t);
         t.start();
       }
     }

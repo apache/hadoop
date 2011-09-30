@@ -412,7 +412,7 @@ public class LocalHBaseCluster {
   /**
    * Start the cluster.
    */
-  public void startup() {
+  public void startup() throws IOException {
     JVMClusterUtil.startup(this.masterThreads, this.regionThreads);
   }
 
