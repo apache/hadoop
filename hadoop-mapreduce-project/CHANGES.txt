@@ -75,6 +75,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2930. Added the ability to be able to generate graphs from the
     state-machine definitions. (Binglin Chang via vinodkv)
 
+    MAPREDUCE-2719. Add a simple, DistributedShell, application to illustrate
+    alternate frameworks on YARN. (Hitesh Shah via acmurthy)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
