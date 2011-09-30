@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1201,7 +1202,8 @@ public class HTable implements HTableInterface, Closeable {
               }
             } else {
               Throwable cause = e.getCause();
-              if (cause == null || !(cause instanceof NotServingRegionException)) {
+              if (cause == null || (!(cause instanceof NotServingRegionException)
+                  && !(cause instanceof RegionServerStoppedException))) {
                 throw e;
               }
             }

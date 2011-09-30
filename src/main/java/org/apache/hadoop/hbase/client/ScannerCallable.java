@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 
 
@@ -87,6 +88,11 @@ public class ScannerCallable extends ServerCallable<Result[]> {
           // Throw a DNRE so that we break out of cycle of calling NSRE
           // when what we need is to open scanner against new location.
           // Attach NSRE to signal client that it needs to resetup scanner.
+          throw new DoNotRetryIOException("Reset scanner", ioe);
+        } else if (ioe instanceof RegionServerStoppedException) {
+          // Throw a DNRE so that we break out of cycle of calling RSSE
+          // when what we need is to open scanner against new location.
+          // Attach RSSE to signal client that it needs to resetup scanner.
           throw new DoNotRetryIOException("Reset scanner", ioe);
         } else {
           // The outer layers will retry

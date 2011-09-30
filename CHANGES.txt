@@ -309,6 +309,8 @@ Release 0.92.0 - Unreleased
    HBASE-3130  [replication] ReplicationSource can't recover from session
                expired on remote clusters (Chris Trezzo via JD)
    HBASE-4212  TestMasterFailover fails occasionally (Gao Jinchao)
+   HBASE-4412  No need to retry scan operation on the same server in case of
+               RegionServerStoppedException (Ming Ma)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
