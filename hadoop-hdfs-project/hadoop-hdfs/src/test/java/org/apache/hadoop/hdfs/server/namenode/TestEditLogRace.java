@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.log4j.Level;
 
@@ -356,7 +357,7 @@ public class TestEditLogRace {
       FSImage fsimage = namesystem.getFSImage();
       FSEditLog editLog = fsimage.getEditLog();
 
-      FSEditLog.JournalAndStream jas = editLog.getJournals().get(0);
+      JournalAndStream jas = editLog.getJournals().get(0);
       EditLogFileOutputStream spyElos =
           spy((EditLogFileOutputStream)jas.getCurrentStream());
       jas.setCurrentStreamForTests(spyElos);

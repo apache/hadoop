@@ -53,6 +53,8 @@ Trunk (unreleased changes)
 
     HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
 
+    HDFS-2158. Add JournalSet to manage the set of journals. (jitendra)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

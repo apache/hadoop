@@ -54,7 +54,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     this.nnRegistration = nnReg;
     InetSocketAddress bnAddress =
       NetUtils.createSocketAddr(bnRegistration.getAddress());
-    Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
       this.backupNode =
         RPC.getProxy(JournalProtocol.class,
@@ -67,16 +66,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
   }
   
-  @Override // JournalStream
-  public String getName() {
-    return bnRegistration.getAddress();
-  }
-
-  @Override // JournalStream
-  public JournalType getType() {
-    return JournalType.BACKUP;
-  }
-
   @Override // EditLogOutputStream
   void write(FSEditLogOp op) throws IOException {
     doubleBuf.writeOp(op);
@@ -139,16 +128,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       backupNode.journal(nnRegistration,
           firstTxToFlush, numReadyTxns, data);
     }
-  }
-
-  /**
-   * There is no persistent storage. Therefore length is 0.<p>
-   * Length is used to check when it is large enough to start a checkpoint.
-   * This criteria should not be used for backup streams.
-   */
-  @Override // EditLogOutputStream
-  long length() throws IOException {
-    return 0;
   }
 
   /**
