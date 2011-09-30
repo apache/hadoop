@@ -1493,6 +1493,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3050. Add ability to get resource usage information for
     applications and nodes. (Robert Evans via acmurthy) 
 
+    MAPREDUCE-3113. Ensure bin/yarn and bin/yarn-daemon.sh identify the root
+    of the install properly. (Xie Xianshan via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
