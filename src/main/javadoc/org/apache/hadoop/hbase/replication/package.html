@@ -44,7 +44,9 @@ for future developments. The current implementation offers the following
 features:
 
 <ol>
-    <li>Master/Slave replication limited to 1 slave cluster. </li>
+    <li>Master/Slave replication.</li>
+    <li>Master/Master replication.</li>
+    <li>Cyclic replication.</li>
     <li>Replication of scoped families in user tables.</li>
     <li>Start/stop replication stream.</li>
     <li>Supports clusters of different sizes.</li>
@@ -74,6 +76,8 @@ Before trying out replication, make sure to review the following requirements:
     <li>Every table that contains families that are scoped for replication
     should exist on every cluster with the exact same name, same for those
     replicated families.</li>
+    <li>For multiple slaves, Master/Master, or cyclic replication version
+    0.92 or greater is needed.</li>
 </ol>
 
 <p>
@@ -112,6 +116,10 @@ to another.
     Currently, a scope of 0 (default) means that it won't be replicated and a
     scope of 1 means it's going to be. In the future, different scope can be
     used for routing policies.
+    </li>
+    <li>To list all configured peers run the following command in the master's
+    shell
+    <pre>list_peers</pre> (as of version 0.92)
     </li>
 </ol>
 
