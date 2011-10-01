@@ -83,6 +83,9 @@ Release 0.20.205.0 - unreleased
     HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
     (szetszwo)
 
+    HDFS-2348. Support getContentSummary and getFileChecksum in webhdfs.
+    (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-3112. Calling hadoop cli inside mapreduce job leads to errors.
