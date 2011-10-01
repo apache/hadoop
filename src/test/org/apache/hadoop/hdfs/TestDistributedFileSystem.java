@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -242,15 +244,40 @@ public class TestDistributedFileSystem {
     RAN.setSeed(seed);
 
     final Configuration conf = getTestConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.set("slave.host.name", "localhost");
 
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem hdfs = cluster.getFileSystem();
-    final String hftpuri = "hftp://" + conf.get("dfs.http.address");
-    System.out.println("hftpuri=" + hftpuri);
-    final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);
 
-    final String dir = "/filechecksum";
+    final String nnAddr = conf.get("dfs.http.address");
+    final UserGroupInformation current = UserGroupInformation.getCurrentUser();
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        current.getShortUserName() + "x", new String[]{"user"});
+
+    //hftp
+    final String hftpuri = "hftp://" + nnAddr;
+    System.out.println("hftpuri=" + hftpuri);
+    final FileSystem hftp = ugi.doAs(
+        new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return new Path(hftpuri).getFileSystem(conf);
+      }
+    });
+
+    //webhdfs
+    final String webhdfsuri = WebHdfsFileSystem.SCHEME  + "://" + nnAddr;
+    System.out.println("webhdfsuri=" + webhdfsuri);
+    final FileSystem webhdfs = ugi.doAs(
+        new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return new Path(webhdfsuri).getFileSystem(conf);
+      }
+    });
+
+    final Path dir = new Path("/filechecksum");
     final int block_size = 1024;
     final int buffer_size = conf.getInt("io.file.buffer.size", 4096);
     conf.setInt("io.bytes.per.checksum", 512);
@@ -274,7 +301,8 @@ public class TestDistributedFileSystem {
       //compute checksum
       final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
       System.out.println("hdfsfoocs=" + hdfsfoocs);
-      
+
+      //hftp
       final FileChecksum hftpfoocs = hftp.getFileChecksum(foo);
       System.out.println("hftpfoocs=" + hftpfoocs);
 
@@ -282,6 +310,14 @@ public class TestDistributedFileSystem {
       final FileChecksum qfoocs = hftp.getFileChecksum(qualified);
       System.out.println("qfoocs=" + qfoocs);
 
+      //webhdfs
+      final FileChecksum webhdfsfoocs = webhdfs.getFileChecksum(foo);
+      System.out.println("webhdfsfoocs=" + webhdfsfoocs);
+
+      final Path webhdfsqualified = new Path(webhdfsuri + dir, "foo" + n);
+      final FileChecksum webhdfs_qfoocs = webhdfs.getFileChecksum(webhdfsqualified);
+      System.out.println("webhdfs_qfoocs=" + webhdfs_qfoocs);
+      
       //write another file
       final Path bar = new Path(dir, "bar" + n);
       {
@@ -297,24 +333,40 @@ public class TestDistributedFileSystem {
         assertEquals(hdfsfoocs.hashCode(), barhashcode);
         assertEquals(hdfsfoocs, barcs);
 
+        //hftp
         assertEquals(hftpfoocs.hashCode(), barhashcode);
         assertEquals(hftpfoocs, barcs);
 
         assertEquals(qfoocs.hashCode(), barhashcode);
         assertEquals(qfoocs, barcs);
+
+        //webhdfs
+        assertEquals(webhdfsfoocs.hashCode(), barhashcode);
+        assertEquals(webhdfsfoocs, barcs);
+
+        assertEquals(webhdfs_qfoocs.hashCode(), barhashcode);
+        assertEquals(webhdfs_qfoocs, barcs);
       }
 
+      hdfs.setPermission(dir, new FsPermission((short)0));
       { //test permission error on hftp 
-        hdfs.setPermission(new Path(dir), new FsPermission((short)0));
         try {
-          final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
-          final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, "somegroup");
-          hftp2.getFileChecksum(qualified);
+          hftp.getFileChecksum(qualified);
           fail();
         } catch(IOException ioe) {
           FileSystem.LOG.info("GOOD: getting an exception", ioe);
         }
       }
+
+      { //test permission error on webhdfs 
+        try {
+          webhdfs.getFileChecksum(webhdfsqualified);
+          fail();
+        } catch(IOException ioe) {
+          FileSystem.LOG.info("GOOD: getting an exception", ioe);
+        }
+      }
+      hdfs.setPermission(dir, new FsPermission((short)0777));
     }
     cluster.shutdown();
   }

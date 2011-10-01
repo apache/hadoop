@@ -766,7 +766,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @return The checksum 
    * @see DistributedFileSystem#getFileChecksum(Path)
    */
-  MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
+  public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
     return getFileChecksum(src, namenode, socketFactory, socketTimeout);    
   }

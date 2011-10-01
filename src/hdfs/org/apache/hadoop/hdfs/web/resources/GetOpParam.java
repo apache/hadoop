@@ -28,6 +28,8 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
 
     GETFILESTATUS(HttpURLConnection.HTTP_OK),
     LISTSTATUS(HttpURLConnection.HTTP_OK),
+    GETCONTENTSUMMARY(HttpURLConnection.HTTP_OK),
+    GETFILECHECKSUM(HttpURLConnection.HTTP_OK),
 
     GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK),
 

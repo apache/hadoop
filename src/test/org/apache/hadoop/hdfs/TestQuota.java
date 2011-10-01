@@ -20,19 +20,20 @@ package org.apache.hadoop.hdfs;
 import java.io.OutputStream;
 import java.security.PrivilegedExceptionAction;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
-
-import junit.framework.TestCase;
 
 /** A class for testing quota-related commands */
 public class TestQuota extends TestCase {
@@ -746,6 +747,11 @@ public class TestQuota extends TestCase {
     }
   }
 
+  private static void checkContentSummary(final ContentSummary expected,
+      final ContentSummary computed) {
+    assertEquals(expected.toString(), computed.toString());
+  }
+
   /**
    * Violate a space quota using files of size < 1 block. Test that
    * block allocation conservatively assumes that for quota checking
@@ -755,10 +761,16 @@ public class TestQuota extends TestCase {
     Configuration conf = new Configuration();
     final int BLOCK_SIZE = 6 * 1024;
     conf.set("dfs.block.size", Integer.toString(BLOCK_SIZE));
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     DFSAdmin admin = new DFSAdmin(conf);
+
+    final String nnAddr = conf.get("dfs.http.address");
+    final String webhdfsuri = WebHdfsFileSystem.SCHEME  + "://" + nnAddr;
+    System.out.println("webhdfsuri=" + webhdfsuri);
+    final FileSystem webhdfs = new Path(webhdfsuri).getFileSystem(conf);
 
     try {
       Path dir = new Path("/test");
@@ -778,6 +790,7 @@ public class TestQuota extends TestCase {
       DFSTestUtil.createFile(fs, file1, FILE_SIZE, (short)3, 1L);
       DFSTestUtil.waitReplication(fs, file1, (short)3);
       c = fs.getContentSummary(dir);
+      checkContentSummary(c, webhdfs.getContentSummary(dir));
       assertEquals("Quota is half consumed", QUOTA_SIZE / 2,
 		   c.getSpaceConsumed());
 
@@ -808,10 +821,16 @@ public class TestQuota extends TestCase {
     Configuration conf = new Configuration();
     final int BLOCK_SIZE = 6 * 1024;
     conf.set("dfs.block.size", Integer.toString(BLOCK_SIZE));
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     DFSAdmin admin = new DFSAdmin(conf);
+
+    final String nnAddr = conf.get("dfs.http.address");
+    final String webhdfsuri = WebHdfsFileSystem.SCHEME  + "://" + nnAddr;
+    System.out.println("webhdfsuri=" + webhdfsuri);
+    final FileSystem webhdfs = new Path(webhdfsuri).getFileSystem(conf);
 
     try {
       Path dir = new Path("/test");
@@ -845,6 +864,7 @@ public class TestQuota extends TestCase {
 
       // Should account for all 59 files (almost QUOTA_SIZE)
       c = fs.getContentSummary(dir);
+      checkContentSummary(c, webhdfs.getContentSummary(dir));
       assertEquals("Invalid space consumed", 
 		   59 * FILE_SIZE * 3, 
 		   c.getSpaceConsumed());

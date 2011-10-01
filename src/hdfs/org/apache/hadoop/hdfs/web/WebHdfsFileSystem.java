@@ -25,15 +25,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.ByteRangeInputStream;
@@ -423,5 +424,24 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final Map<String, Object> m = run(op, p, new OffsetParam(offset),
         new LengthParam(length));
     return DFSUtil.locatedBlocks2Locations(JsonUtil.toLocatedBlocks(m));
+  }
+
+  @Override
+  public ContentSummary getContentSummary(final Path p) throws IOException {
+    statistics.incrementReadOps(1);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETCONTENTSUMMARY;
+    final Map<String, Object> m = run(op, p);
+    return JsonUtil.toContentSummary(m);
+  }
+
+  @Override
+  public MD5MD5CRC32FileChecksum getFileChecksum(final Path p
+      ) throws IOException {
+    statistics.incrementReadOps(1);
+  
+    final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
+    final Map<String, Object> m = run(op, p);
+    return JsonUtil.toMD5MD5CRC32FileChecksum(m);
   }
 }
