@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -34,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -397,5 +402,74 @@ public class JsonUtil {
     final boolean isLastBlockComplete = (Boolean)m.get("isLastBlockComplete");
     return new LocatedBlocks(fileLength, isUnderConstruction, locatedBlocks,
         lastLocatedBlock, isLastBlockComplete);
+  }
+
+  /** Convert a ContentSummary to a Json string. */
+  public static String toJsonString(final ContentSummary contentsummary
+      ) throws IOException {
+    if (contentsummary == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = jsonMap.get();
+    m.put("length", contentsummary.getLength());
+    m.put("fileCount", contentsummary.getFileCount());
+    m.put("directoryCount", contentsummary.getDirectoryCount());
+    m.put("quota", contentsummary.getQuota());
+    m.put("spaceConsumed", contentsummary.getSpaceConsumed());
+    m.put("spaceQuota", contentsummary.getSpaceQuota());
+    return JSON.toString(m);
+  }
+
+  /** Convert a Json map to a ContentSummary. */
+  public static ContentSummary toContentSummary(final Map<String, Object> m
+      ) throws IOException {
+    if (m == null) {
+      return null;
+    }
+
+    final long length = (Long)m.get("length");
+    final long fileCount = (Long)m.get("fileCount");
+    final long directoryCount = (Long)m.get("directoryCount");
+    final long quota = (Long)m.get("quota");
+    final long spaceConsumed = (Long)m.get("spaceConsumed");
+    final long spaceQuota = (Long)m.get("spaceQuota");
+
+    return new ContentSummary(length, fileCount, directoryCount,
+        quota, spaceConsumed, spaceQuota);
+  }
+
+  /** Convert a MD5MD5CRC32FileChecksum to a Json string. */
+  public static String toJsonString(final MD5MD5CRC32FileChecksum checksum
+      ) throws IOException {
+    if (checksum == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = jsonMap.get();
+    final byte[] bytes = checksum.getBytes();
+    final DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
+    final int bytesPerCRC = in.readInt();
+    final long crcPerBlock = in.readLong();
+    final MD5Hash md5 = MD5Hash.read(in);
+    m.put("bytesPerCRC", bytesPerCRC);
+    m.put("crcPerBlock", crcPerBlock);
+    m.put("md5", "" + md5);
+    return JSON.toString(m);
+  }
+
+  /** Convert a Json map to a MD5MD5CRC32FileChecksum. */
+  public static MD5MD5CRC32FileChecksum toMD5MD5CRC32FileChecksum(
+      final Map<String, Object> m) throws IOException {
+    if (m == null) {
+      return null;
+    }
+
+    final int bytesPerCRC = (int)(long)(Long)m.get("bytesPerCRC");
+    final long crcPerBlock = (Long)m.get("crcPerBlock");
+    final String md5 = (String)m.get("md5");
+
+    return new MD5MD5CRC32FileChecksum(bytesPerCRC, crcPerBlock,
+        new MD5Hash(md5));
   }
 }

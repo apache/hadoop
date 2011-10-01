@@ -33,10 +33,12 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -448,5 +450,24 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final Map<String, Object> m = run(op, p, new OffsetParam(offset),
         new LengthParam(length));
     return DFSUtil.locatedBlocks2Locations(JsonUtil.toLocatedBlocks(m));
+  }
+
+  @Override
+  public ContentSummary getContentSummary(final Path p) throws IOException {
+    statistics.incrementReadOps(1);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETCONTENTSUMMARY;
+    final Map<String, Object> m = run(op, p);
+    return JsonUtil.toContentSummary(m);
+  }
+
+  @Override
+  public MD5MD5CRC32FileChecksum getFileChecksum(final Path p
+      ) throws IOException {
+    statistics.incrementReadOps(1);
+  
+    final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
+    final Map<String, Object> m = run(op, p);
+    return JsonUtil.toMD5MD5CRC32FileChecksum(m);
   }
 }

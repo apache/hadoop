@@ -46,6 +46,7 @@ import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -112,7 +113,9 @@ public class NamenodeWebHdfsMethods {
   private static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset
       ) throws IOException {
-    if (op == GetOpParam.Op.OPEN || op == PostOpParam.Op.APPEND) {
+    if (op == GetOpParam.Op.OPEN
+        || op == GetOpParam.Op.GETFILECHECKSUM
+        || op == PostOpParam.Op.APPEND) {
       final NamenodeProtocols np = namenode.getRpcServer();
       final HdfsFileStatus status = np.getFileInfo(path);
       final long len = status.getLen();
@@ -430,6 +433,18 @@ public class NamenodeWebHdfsMethods {
     {
       final StreamingOutput streaming = getListingStream(np, fullpath);
       return Response.ok(streaming).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETCONTENTSUMMARY:
+    {
+      final ContentSummary contentsummary = np.getContentSummary(fullpath);
+      final String js = JsonUtil.toJsonString(contentsummary);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETFILECHECKSUM:
+    {
+      final URI uri = redirectURI(namenode, ugi, delegation, fullpath,
+          op.getValue(), -1L);
+      return Response.temporaryRedirect(uri).build();
     }
     case GETDELEGATIONTOKEN:
     {
