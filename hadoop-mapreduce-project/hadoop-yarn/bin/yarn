@@ -47,7 +47,7 @@
 #   YARN_ROOT_LOGGER The root appender. Default is INFO,console
 #
 
-bin=`dirname "$0"`
+bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
 . "$bin"/yarn-config.sh
