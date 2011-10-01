@@ -75,21 +75,23 @@ public class TestHBaseFsck {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private List<ERROR_CODE> doFsck(boolean fix) throws Exception {
+  private HBaseFsck doFsck(boolean fix) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.connect();
     fsck.displayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
     fsck.setFixErrors(fix);
     fsck.doWork();
-    return fsck.getErrors().getErrorList();
+    return fsck;
   }
 
-  private void assertNoErrors(List<ERROR_CODE> errs) throws Exception {
+  private void assertNoErrors(HBaseFsck fsck) throws Exception {
+    List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
     assertEquals(0, errs.size());
   }
 
-  private void assertErrors(List<ERROR_CODE> errs, ERROR_CODE[] expectedErrors) {
+  private void assertErrors(HBaseFsck fsck, ERROR_CODE[] expectedErrors) {
+    List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
     assertEquals(Arrays.asList(expectedErrors), errs);
   }
 
@@ -237,10 +239,15 @@ public class TestHBaseFsck {
     assertNoErrors(doFsck(false));
     String table = "tableClean";
     try {
-      setupTable(table);
+      HBaseFsck hbck = doFsck(false);
+      assertNoErrors(hbck);
 
+      setupTable(table);
+      
       // We created 1 table, should be fine
-      assertNoErrors(doFsck(false));
+      hbck = doFsck( false);
+      assertNoErrors(hbck);
+      assertEquals(0, hbck.getOverlapGroups(table).size());
     } finally {
       deleteTable(table);
     }
@@ -263,9 +270,10 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriDupe);
 
-      assertErrors(doFsck(false),
-          new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS,
+      HBaseFsck hbck = doFsck(false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DUPE_STARTKEYS,
             ERROR_CODE.DUPE_STARTKEYS});
+      assertEquals(2, hbck.getOverlapGroups(table).size());
     } finally {
       deleteTable(table);
     }
@@ -286,9 +294,12 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriOverlap);
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
           .waitForAssignment(hriOverlap);
-      assertErrors(doFsck(false), new ERROR_CODE[] {
+
+      HBaseFsck hbck = doFsck(false);
+      assertErrors(hbck, new ERROR_CODE[] {
           ERROR_CODE.OVERLAP_IN_REGION_CHAIN,
           ERROR_CODE.OVERLAP_IN_REGION_CHAIN });
+      assertEquals(3, hbck.getOverlapGroups(table).size());
     } finally {
       deleteTable(table);
     }
@@ -313,8 +324,11 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().disableTable(table);
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("C"), Bytes.toBytes(""));
       TEST_UTIL.getHBaseAdmin().enableTable(table);
-      assertErrors(doFsck(false),
-          new ERROR_CODE[] { ERROR_CODE.HOLE_IN_REGION_CHAIN });
+
+      HBaseFsck hbck = doFsck(false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.HOLE_IN_REGION_CHAIN });
+      // holes are separate from overlap groups
+      assertEquals(0, hbck.getOverlapGroups(table).size());
     } finally {
       deleteTable(table);
     }

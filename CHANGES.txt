@@ -682,6 +682,8 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4506  [hbck] Allow HBaseFsck to be instantiated without connecting
                (Jonathan Hsieh)
+   HBASE-4509  [hbck] Improve region map output
+               (Jonathan Hsieh)
 
 Release 0.90.4 - August 10, 2011
 
