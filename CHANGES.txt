@@ -659,6 +659,7 @@ Release 0.90.5 - Unreleased
                (Lars Hofhansl)
    HBASE-4295  rowcounter does not return the correct number of rows in
                certain circumstances (David Revell)
+   HBASE-4515  User.getCurrent() can fail to initialize the current user
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
