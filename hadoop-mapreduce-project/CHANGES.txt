@@ -301,6 +301,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3098. Fixed RM and MR AM to report YarnApplicationState and
     application's FinalStatus separately. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-2889. Added documentation for writing new YARN applications.
+    (Hitesh Shah via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
