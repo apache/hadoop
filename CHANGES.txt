@@ -250,6 +250,8 @@ Release 0.20.205.0 - 2011.09.28
     HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
 
+    HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
@@ -490,8 +492,6 @@ Release 0.20.204.0 - 2011-8-25
     HDFS-2218. Disable TestHdfsProxy.testHdfsProxyInterface in automated test 
     suite for 0.20-security-204 release. (Matt Foley)
     
-    HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
-
   IMPROVEMENTS
 
     HADOOP-7144. Expose JMX metrics via JSON servlet. (Robert Joseph Evans via
