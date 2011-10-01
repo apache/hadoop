@@ -106,7 +106,7 @@ public class HBaseFsck {
   // Empty regioninfo qualifiers in .META.
   private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
   private int numThreads = MAX_NUM_THREADS;
-  private final HBaseAdmin admin;
+  private HBaseAdmin admin;
 
   ThreadPoolExecutor executor; // threads to retrieve data from regionservers
 
@@ -117,18 +117,21 @@ public class HBaseFsck {
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HBaseFsck(Configuration conf)
-    throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+  public HBaseFsck(Configuration conf) throws MasterNotRunningException,
+      ZooKeeperConnectionException, IOException {
     this.conf = conf;
-
-    admin = new HBaseAdmin(conf);
-    status = admin.getMaster().getClusterStatus();
-    connection = admin.getConnection();
 
     numThreads = conf.getInt("hbasefsck.numthreads", numThreads);
     executor = new ThreadPoolExecutor(0, numThreads,
-          THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>());
+        THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>());
+  }
+
+  public void connect() throws MasterNotRunningException,
+      ZooKeeperConnectionException {
+    admin = new HBaseAdmin(conf);
+    status = admin.getMaster().getClusterStatus();
+    connection = admin.getConnection();
   }
 
   /**
@@ -1337,11 +1340,11 @@ public class HBaseFsck {
    * @param args
    * @throws Exception
    */
-  public static void main(String [] args) throws Exception {
+  public static void main(String[] args) throws Exception {
 
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
-    conf.set("fs.defaultFS", conf.get("hbase.rootdir"));
+    conf.set("fs.defaultFS", conf.get(HConstants.HBASE_DIR));
     HBaseFsck fsck = new HBaseFsck(conf);
     long sleepBeforeRerun = DEFAULT_SLEEP_BEFORE_RERUN;
 
@@ -1389,6 +1392,7 @@ public class HBaseFsck {
       }
     }
     // do the real work of fsck
+    fsck.connect();
     int code = fsck.doWork();
     // If we have changed the HBase state it is better to run fsck again
     // to see if we haven't broken something else in the process.

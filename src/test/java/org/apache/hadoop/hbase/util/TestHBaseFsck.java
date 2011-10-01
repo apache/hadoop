@@ -77,6 +77,7 @@ public class TestHBaseFsck {
 
   private List<ERROR_CODE> doFsck(boolean fix) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
+    fsck.connect();
     fsck.displayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
     fsck.setFixErrors(fix);

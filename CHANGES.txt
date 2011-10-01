@@ -660,6 +660,8 @@ Release 0.90.5 - Unreleased
    HBASE-4295  rowcounter does not return the correct number of rows in
                certain circumstances (David Revell)
    HBASE-4515  User.getCurrent() can fail to initialize the current user
+   HBASE-4506  [hbck] Allow HBaseFsck to be instantiated without connecting
+               (Jonathan Hsieh)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
