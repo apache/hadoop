@@ -37,8 +37,7 @@ import org.apache.hadoop.hbase.util.IdLock;
 /**
  * {@link HFile} reader for version 2.
  */
-public class HFileReaderV2 extends AbstractHFileReader implements
-    HFileBlock.BasicReader {
+public class HFileReaderV2 extends AbstractHFileReader {
 
   private static final Log LOG = LogFactory.getLog(HFileReaderV2.class);
 
@@ -203,23 +202,6 @@ public class HFileReaderV2 extends AbstractHFileReader implements
   }
 
   /**
-   * Implements the "basic block reader" API, used mainly by
-   * {@link HFileBlockIndex.BlockIndexReader} in
-   * {@link HFileBlockIndex.BlockIndexReader#seekToDataBlock(byte[], int, int,
-   * HFileBlock)} in a random-read access pattern.
-   */
-  @Override
-  public HFileBlock readBlockData(long offset, long onDiskSize,
-      int uncompressedSize, boolean pread) throws IOException {
-    if (onDiskSize >= Integer.MAX_VALUE) {
-      throw new IOException("Invalid on-disk size: " + onDiskSize);
-    }
-
-    // Assuming we are not doing a compaction.
-    return readBlock(offset, (int) onDiskSize, true, pread, false);
-  }
-
-  /**
    * Read in a file block.
    *
    * @param dataBlockOffset offset to read.
@@ -231,7 +213,7 @@ public class HFileReaderV2 extends AbstractHFileReader implements
    * @throws IOException
    */
   @Override
-  public HFileBlock readBlock(long dataBlockOffset, int onDiskBlockSize,
+  public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
       boolean cacheBlock, boolean pread, final boolean isCompaction)
       throws IOException {
     if (dataBlockIndexReader == null) {
@@ -498,9 +480,11 @@ public class HFileReaderV2 extends AbstractHFileReader implements
      */
     private int seekTo(byte[] key, int offset, int length, boolean rewind)
         throws IOException {
-      HFileBlock seekToBlock =
-        ((HFileReaderV2) reader).getDataBlockIndexReader().seekToDataBlock(
-            key, offset, length, block);
+      HFileBlockIndex.BlockIndexReader indexReader =
+          reader.getDataBlockIndexReader();
+      HFileBlock seekToBlock = indexReader.seekToDataBlock(key, offset, length,
+          block, cacheBlocks, pread, isCompaction);
+
       if (seekToBlock == null) {
         // This happens if the key e.g. falls before the beginning of the file.
         return -1;
@@ -665,10 +649,9 @@ public class HFileReaderV2 extends AbstractHFileReader implements
     @Override
     public boolean seekBefore(byte[] key, int offset, int length)
         throws IOException {
-      HFileReaderV2 reader2 = (HFileReaderV2) reader;
       HFileBlock seekToBlock =
-          reader2.getDataBlockIndexReader().seekToDataBlock(
-              key, offset, length, block);
+          reader.getDataBlockIndexReader().seekToDataBlock(key, offset,
+              length, block, cacheBlocks, pread, isCompaction);
       if (seekToBlock == null) {
         return false;
       }
@@ -686,8 +669,9 @@ public class HFileReaderV2 extends AbstractHFileReader implements
         // It is important that we compute and pass onDiskSize to the block
         // reader so that it does not have to read the header separately to
         // figure out the size.
-        seekToBlock = reader2.fsBlockReader.readBlockData(previousBlockOffset,
-            seekToBlock.getOffset() - previousBlockOffset, -1, pread);
+        seekToBlock = reader.readBlock(previousBlockOffset,
+            seekToBlock.getOffset() - previousBlockOffset, cacheBlocks,
+            pread, isCompaction);
 
         // TODO shortcut: seek forward in this block to the last key of the
         // block.

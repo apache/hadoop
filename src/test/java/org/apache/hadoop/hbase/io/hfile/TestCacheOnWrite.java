@@ -163,8 +163,13 @@ public class TestCacheOnWrite {
         new EnumMap<BlockType, Integer>(BlockType.class);
 
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
-      HFileBlock block = reader.readBlockData(offset, prevBlock == null ? -1
-          : prevBlock.getNextBlockOnDiskSizeWithHeader(), -1, false);
+      long onDiskSize = -1;
+      if (prevBlock != null) {
+         onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
+      }
+      // Flags: cache the block, use pread, this is not a compaction.
+      HFileBlock block = reader.readBlock(offset, onDiskSize, true, true,
+          false);
       String blockCacheKey = HFile.getBlockCacheKey(reader.getName(), offset);
       boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());

@@ -643,7 +643,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
   }
 
   @Override
-  public HFileBlock readBlock(long offset, int onDiskBlockSize,
+  public HFileBlock readBlock(long offset, long onDiskBlockSize,
       boolean cacheBlock, boolean pread, boolean isCompaction) {
     throw new UnsupportedOperationException();
   }

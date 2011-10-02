@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -121,37 +122,36 @@ public class TestHFileBlockIndex {
    * A wrapper around a block reader which only caches the results of the last
    * operation. Not thread-safe.
    */
-  private static class BlockReaderWrapper implements HFileBlock.BasicReader {
+  private static class BlockReaderWrapper implements HFile.CachingBlockReader {
 
-    private HFileBlock.BasicReader realReader;
+    private HFileBlock.FSReader realReader;
     private long prevOffset;
     private long prevOnDiskSize;
-    private long prevUncompressedSize;
     private boolean prevPread;
     private HFileBlock prevBlock;
 
     public int hitCount = 0;
     public int missCount = 0;
 
-    public BlockReaderWrapper(HFileBlock.BasicReader realReader) {
+    public BlockReaderWrapper(HFileBlock.FSReader realReader) {
       this.realReader = realReader;
     }
 
     @Override
-    public HFileBlock readBlockData(long offset, long onDiskSize,
-        int uncompressedSize, boolean pread) throws IOException {
+    public HFileBlock readBlock(long offset, long onDiskSize,
+        boolean cacheBlock, boolean pread, boolean isCompaction)
+        throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize &&
-          uncompressedSize == prevUncompressedSize && pread == prevPread) {
+          pread == prevPread) {
         hitCount += 1;
         return prevBlock;
       }
 
       missCount += 1;
       prevBlock = realReader.readBlockData(offset, onDiskSize,
-          uncompressedSize, pread);
+          -1, pread);
       prevOffset = offset;
       prevOnDiskSize = onDiskSize;
-      prevUncompressedSize = uncompressedSize;
       prevPread = pread;
 
       return prevBlock;
@@ -182,7 +182,8 @@ public class TestHFileBlockIndex {
     for (byte[] key : keys) {
       assertTrue(key != null);
       assertTrue(indexReader != null);
-      HFileBlock b = indexReader.seekToDataBlock(key, 0, key.length, null);
+      HFileBlock b = indexReader.seekToDataBlock(key, 0, key.length, null,
+          true, true, false);
       if (Bytes.BYTES_RAWCOMPARATOR.compare(key, firstKeyInFile) < 0) {
         assertTrue(b == null);
         ++i;

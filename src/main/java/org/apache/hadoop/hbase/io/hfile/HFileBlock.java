@@ -921,11 +921,9 @@ public class HFileBlock implements Cacheable {
     DataInputStream nextBlockAsStream(BlockType blockType) throws IOException;
   }
 
-  /**
-   * Just the basic ability to read blocks, providing optional hints of
-   * on-disk-size and/or uncompressed size.
-   */
-  public interface BasicReader {
+  /** A full-fledged reader with iteration ability. */
+  public interface FSReader {
+
     /**
      * Reads the block at the given offset in the file with the given on-disk
      * size and uncompressed size.
@@ -939,10 +937,6 @@ public class HFileBlock implements Cacheable {
      */
     HFileBlock readBlockData(long offset, long onDiskSize,
         int uncompressedSize, boolean pread) throws IOException;
-  }
-
-  /** A full-fledged reader with an iteration ability. */
-  public interface FSReader extends BasicReader {
 
     /**
      * Creates a block iterator over the given portion of the {@link HFile}.

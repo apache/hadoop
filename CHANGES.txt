@@ -316,6 +316,7 @@ Release 0.92.0 - Unreleased
                (Mikhail Bautin)
    HBASE-4209  The HBase hbase-daemon.sh SIGKILLs master when stopping it
                (Roman Shaposhnik)
+   HBASE-4496  HFile V2 does not honor setCacheBlocks when scanning (Lars and Mikhail)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
