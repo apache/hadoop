@@ -132,7 +132,7 @@ mv ${RPM_BUILD_DIR}/%{_final_name}/share/* ${RPM_BUILD_DIR}%{_share_dir}
 rm -rf ${RPM_BUILD_DIR}/%{_final_name}/etc
 
 %pre
-getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -r hadoop
+getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 123 -r hadoop
 
 %post
 bash ${RPM_INSTALL_PREFIX0}/sbin/update-hadoop-env.sh \
