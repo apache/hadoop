@@ -1472,6 +1472,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3137. Fix broken merge of MAPREDUCE-2179. (Hitesh Shah via
     acmurthy) 
 
+    MAPREDUCE-2792. Replace usage of node ip-addresses with hostnames.
+    (vinodkv via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

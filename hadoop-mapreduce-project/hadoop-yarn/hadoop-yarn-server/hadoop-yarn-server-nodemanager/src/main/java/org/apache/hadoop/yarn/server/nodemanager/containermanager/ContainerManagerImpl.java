@@ -21,7 +21,9 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import static org.apache.hadoop.yarn.service.Service.STATE.STARTED;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
@@ -36,6 +38,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
@@ -99,7 +102,6 @@ public class ContainerManagerImpl extends CompositeService implements
   final Context context;
   private final ContainersMonitor containersMonitor;
   private Server server;
-  private InetSocketAddress cmBindAddressStr;
   private final ResourceLocalizationService rsrcLocalizationSrvc;
   private final ContainersLauncher containersLauncher;
   private final AuxServices auxiluaryServices;
@@ -144,7 +146,7 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(this.containersMonitor);
 
     LogAggregationService logAggregationService =
-        createLogAggregationService(this.deletionService);
+        createLogAggregationService(this.context, this.deletionService);
     addService(logAggregationService);
 
     dispatcher.register(ContainerEventType.class,
@@ -159,9 +161,9 @@ public class ContainerManagerImpl extends CompositeService implements
     addService(dispatcher);
   }
 
-  protected LogAggregationService createLogAggregationService(
+  protected LogAggregationService createLogAggregationService(Context context,
       DeletionService deletionService) {
-    return new LogAggregationService(deletionService);
+    return new LogAggregationService(context, deletionService);
   }
 
   public ContainersMonitor getContainersMonitor() {
@@ -180,28 +182,35 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
-  public void init(Configuration conf) {
-    cmBindAddressStr = NetUtils.createSocketAddr(
-        conf.get(YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS));
-    super.init(conf);
-  }
-
-  @Override
   public void start() {
 
     // Enqueue user dirs in deletion context
 
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration cmConf = new Configuration(getConfig());
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
+
+    InetSocketAddress initialAddress = NetUtils.createSocketAddr(conf.get(
+        YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS));
+
+    Configuration cmConf = new Configuration(conf);
     cmConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
         ContainerManagerSecurityInfo.class, SecurityInfo.class);
     server =
-        rpc.getServer(ContainerManager.class, this, cmBindAddressStr, cmConf,
+        rpc.getServer(ContainerManager.class, this, initialAddress, cmConf,
             this.containerTokenSecretManager,
             cmConf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
                 YarnConfiguration.DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT));
-    LOG.info("ContainerManager started at " + cmBindAddressStr);
     server.start();
+    InetAddress hostNameResolved = null;
+    try {
+      hostNameResolved = InetAddress.getLocalHost();
+    } catch (UnknownHostException e) {
+      throw new YarnException(e);
+    }
+    this.context.getNodeId().setHost(hostNameResolved.getCanonicalHostName());
+    this.context.getNodeId().setPort(server.getPort());
+    LOG.info("ContainerManager started at "
+        + this.context.getNodeId().toString());
     super.start();
   }
 

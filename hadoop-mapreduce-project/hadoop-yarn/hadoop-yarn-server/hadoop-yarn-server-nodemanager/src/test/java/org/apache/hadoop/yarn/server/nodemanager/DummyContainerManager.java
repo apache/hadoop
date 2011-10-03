@@ -144,9 +144,9 @@ public class DummyContainerManager extends ContainerManagerImpl {
   }
 
   @Override
-  protected LogAggregationService createLogAggregationService(
+  protected LogAggregationService createLogAggregationService(Context context, 
       DeletionService deletionService) {
-    return new LogAggregationService(deletionService) {
+    return new LogAggregationService(context, deletionService) {
       @Override
       public void handle(LogAggregatorEvent event) {
         switch (event.getType()) {

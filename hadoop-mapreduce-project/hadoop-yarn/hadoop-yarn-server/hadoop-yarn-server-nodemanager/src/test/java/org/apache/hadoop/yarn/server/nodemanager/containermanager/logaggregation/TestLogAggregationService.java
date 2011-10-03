@@ -98,7 +98,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService =
-        new LogAggregationService(this.delSrvc);
+        new LogAggregationService(this.context, this.delSrvc);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -146,7 +146,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService =
-        new LogAggregationService(this.delSrvc);
+        new LogAggregationService(this.context, this.delSrvc);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -179,7 +179,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
     LogAggregationService logAggregationService =
-        new LogAggregationService(this.delSrvc);
+        new LogAggregationService(this.context, this.delSrvc);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 

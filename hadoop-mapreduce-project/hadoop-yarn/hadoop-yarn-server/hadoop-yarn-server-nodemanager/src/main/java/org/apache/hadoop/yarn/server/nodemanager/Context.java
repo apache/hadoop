@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
@@ -31,6 +32,13 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
  * NodeManager.
  */
 public interface Context {
+
+  /**
+   * Return the nodeId. Usable only when the ContainerManager is started.
+   * 
+   * @return the NodeId
+   */
+  NodeId getNodeId();
 
   ConcurrentMap<ApplicationId, Application> getApplications();
 
