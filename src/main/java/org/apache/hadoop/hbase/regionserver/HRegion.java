@@ -1335,7 +1335,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  protected RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
+  protected RegionScanner getScanner(Scan scan,
+      List<KeyValueScanner> additionalScanners) throws IOException {
     startRegionOperation();
     this.readRequestsCount.increment();
     try {
@@ -1347,7 +1348,6 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
       return instantiateRegionScanner(scan, additionalScanners);
-
     } finally {
       closeRegionOperation();
     }
@@ -2427,10 +2427,10 @@ public class HRegion implements HeapSize { // , Writable{
   //////////////////////////////////////////////////////////////////////////////
 
   /** Make sure this is a valid row for the HRegion */
-  private void checkRow(final byte [] row, String op) throws IOException {
+  void checkRow(final byte [] row, String op) throws IOException {
     if(!rowIsInRange(regionInfo, row)) {
       throw new WrongRegionException("Requested row out of range for " +
-          op + "on HRegion " + this + ", startKey='" +
+          op + " on HRegion " + this + ", startKey='" +
           Bytes.toStringBinary(regionInfo.getStartKey()) + "', getEndKey()='" +
           Bytes.toStringBinary(regionInfo.getEndKey()) + "', row='" +
           Bytes.toStringBinary(row) + "'");
@@ -3369,6 +3369,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException read exceptions
    */
   public Result get(final Get get, final Integer lockid) throws IOException {
+    checkRow(get.getRow(), "Get");
     // Verify families are all valid
     if (get.hasFamilies()) {
       for (byte [] family: get.familySet()) {

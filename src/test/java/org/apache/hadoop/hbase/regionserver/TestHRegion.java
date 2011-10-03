@@ -2792,6 +2792,24 @@ public class TestHRegion extends HBaseTestCase {
     flushThread.checkNoError();
   }
 
+  public void testHolesInMeta() throws Exception {
+    String method = "testHolesInMeta";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    initHRegion(tableName, Bytes.toBytes("x"), Bytes.toBytes("z"), method,
+        HBaseConfiguration.create(), family);
+    byte[] rowNotServed = Bytes.toBytes("a");
+    Get g = new Get(rowNotServed);
+    try {
+      region.get(g, null);
+      fail();
+    } catch (WrongRegionException x) {
+      // OK
+    }
+    byte[] row = Bytes.toBytes("y");
+    g = new Get(row);
+    region.get(g, null);
+  }
 
   public void testIndexesScanWithOneDeletedRow() throws IOException {
     byte[] tableName = Bytes.toBytes("testIndexesScanWithOneDeletedRow");
@@ -3142,13 +3160,19 @@ public class TestHRegion extends HBaseTestCase {
   }
 
   private void initHRegion (byte [] tableName, String callingMethod,
-    Configuration conf, byte [] ... families)
-  throws IOException{
+      Configuration conf, byte [] ... families)
+    throws IOException{
+    initHRegion(tableName, null, null, callingMethod, conf, families);
+  }
+
+  private void initHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
+      String callingMethod, Configuration conf, byte[]... families)
+      throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for(byte [] family : families) {
       htd.addFamily(new HColumnDescriptor(family));
     }
-    HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
+    HRegionInfo info = new HRegionInfo(htd.getName(), startKey, stopKey, false);
     Path path = new Path(DIR + callingMethod);
     if (fs.exists(path)) {
       if (!fs.delete(path, true)) {
