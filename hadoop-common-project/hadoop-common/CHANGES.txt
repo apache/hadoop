@@ -24,6 +24,9 @@ Trunk (unreleased changes)
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
     interface introduced in HADOOP-7524.  (cutting)
 
+	HADOOP-7716 RPC protocol registration on SS does not log the protocol name
+	(only the class which may be different) (sanjay)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
