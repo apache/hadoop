@@ -1501,6 +1501,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3113. Ensure bin/yarn and bin/yarn-daemon.sh identify the root
     of the install properly. (Xie Xianshan via acmurthy) 
 
+    MAPREDUCE-2792. Replace usage of node ip-addresses with hostnames.
+    (vinodkv via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

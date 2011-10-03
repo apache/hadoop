@@ -104,7 +104,7 @@ public class TestNodeStatusUpdater {
       Resource resource = request.getResource();
       LOG.info("Registering " + nodeId.toString());
       try {
-        Assert.assertEquals(InetAddress.getLocalHost().getHostAddress()
+        Assert.assertEquals(InetAddress.getLocalHost().getCanonicalHostName()
             + ":12345", nodeId.toString());
       } catch (UnknownHostException e) {
         Assert.fail(e.getMessage());

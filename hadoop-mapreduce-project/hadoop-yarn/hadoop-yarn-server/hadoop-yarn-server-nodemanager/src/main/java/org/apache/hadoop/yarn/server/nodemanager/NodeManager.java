@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -48,6 +49,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.WebServer;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.util.Records;
 
 public class NodeManager extends CompositeService {
   private static final Log LOG = LogFactory.getLog(NodeManager.class);
@@ -161,6 +163,7 @@ public class NodeManager extends CompositeService {
 
   public static class NMContext implements Context {
 
+    private final NodeId nodeId = Records.newRecord(NodeId.class);
     private final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
     private final ConcurrentMap<ContainerId, Container> containers =
@@ -173,6 +176,14 @@ public class NodeManager extends CompositeService {
       this.nodeHealthStatus.setIsNodeHealthy(true);
       this.nodeHealthStatus.setHealthReport("Healthy");
       this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
+    }
+
+    /**
+     * Usable only after ContainerManager is started.
+     */
+    @Override
+    public NodeId getNodeId() {
+      return this.nodeId;
     }
 
     @Override

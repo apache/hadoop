@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.Lock;
@@ -47,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -83,7 +86,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.api.records.QueueState;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -543,16 +545,21 @@ public class FifoScheduler implements ResourceScheduler {
         if (UserGroupInformation.isSecurityEnabled()) {
           ContainerToken containerToken =
               recordFactory.newRecordInstance(ContainerToken.class);
+          NodeId nodeId = container.getNodeId();
           ContainerTokenIdentifier tokenidentifier =
             new ContainerTokenIdentifier(container.getId(),
-                container.getNodeId().toString(), container.getResource());
+                nodeId.toString(), container.getResource());
           containerToken.setIdentifier(
               ByteBuffer.wrap(tokenidentifier.getBytes()));
           containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
           containerToken.setPassword(
               ByteBuffer.wrap(containerTokenSecretManager
                   .createPassword(tokenidentifier)));
-          containerToken.setService(container.getNodeId().toString());
+          // RPC layer client expects ip:port as service for tokens
+          InetSocketAddress addr = NetUtils.createSocketAddr(
+              nodeId.getHost(), nodeId.getPort());
+          containerToken.setService(addr.getAddress().getHostAddress() + ":"
+              + addr.getPort());
           container.setContainerToken(containerToken);
         }
         

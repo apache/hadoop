@@ -44,7 +44,8 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private String nmHostName;
   private Resource resource;
 
-  public ContainerTokenIdentifier(ContainerId containerID, String hostName, Resource r) {
+  public ContainerTokenIdentifier(ContainerId containerID, String hostName,
+      Resource r) {
     this.containerId = containerID;
     this.nmHostName = hostName;
     this.resource = r;

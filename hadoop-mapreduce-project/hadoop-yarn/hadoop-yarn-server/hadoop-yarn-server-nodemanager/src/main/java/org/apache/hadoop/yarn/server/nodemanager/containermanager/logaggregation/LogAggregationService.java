@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -42,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -53,6 +52,7 @@ public class LogAggregationService extends AbstractService implements
   private static final Log LOG = LogFactory
       .getLog(LogAggregationService.class);
 
+  private final Context context;
   private final DeletionService deletionService;
 
   private String[] localRootLogDirs;
@@ -63,8 +63,10 @@ public class LogAggregationService extends AbstractService implements
 
   private final ExecutorService threadPool;
 
-  public LogAggregationService(DeletionService deletionService) {
+  public LogAggregationService(Context context,
+      DeletionService deletionService) {
     super(LogAggregationService.class.getName());
+    this.context = context;
     this.deletionService = deletionService;
     this.appLogAggregators =
         new ConcurrentHashMap<ApplicationId, AppLogAggregator>();
@@ -82,16 +84,9 @@ public class LogAggregationService extends AbstractService implements
 
   @Override
   public synchronized void start() {
-    String address =
-        getConfig().get(YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS);
-    InetSocketAddress cmBindAddress = NetUtils.createSocketAddr(address);
-    try {
-      this.nodeFile =
-          InetAddress.getLocalHost().getHostAddress() + "_"
-              + cmBindAddress.getPort();
-    } catch (UnknownHostException e) {
-      throw new YarnException(e);
-    }
+    // NodeId is only available during start, the following cannot be moved
+    // anywhere else.
+    this.nodeFile = this.context.getNodeId().toString();
     super.start();
   }
 
