@@ -1077,6 +1077,39 @@ Release 0.23.0 - Unreleased
                (todd)
     HDFS-2027. Image inspector should return finalized logs before unfinalized
                logs. (todd)
+    HDFS-2074. Determine edit log validity by truly reading and validating
+               transactions. (todd)
+    HDFS-2085. Finalize in-progress edit logs at startup. (todd)
+    HDFS-2026. SecondaryNameNode should properly handle the case where the
+               NameNode is reformatted. (todd)
+    HDFS-2077. Address checkpoint upload when one of the storage dirs is failed
+               (todd)
+    HDFS-2078. NameNode should not clear directory when restoring removed
+               storage. (todd)
+    HDFS-2088. Move edits log archiving logic into FSEditLog/JournalManager
+               (todd)
+    HDFS-2093. Handle case where an entirely empty log is left during NN crash
+               (todd)
+    HDFS-2102. Zero-pad edits filename to make them lexically sortable. (Ivan
+               Kelly via todd)
+    HDFS-2010. Fix NameNode to exit if all edit streams become inaccessible.
+               (atm via todd)
+    HDFS-2123. Checkpoint interval should be based on txn count, not size.
+               (todd)
+    HDFS-1979. Fix backupnode for new edits/image layout. (todd)
+    HDFS-2101. Fix remaining unit tests for new storage filenames. (todd)
+    HDFS-2133. Address remaining TODOs and pre-merge cleanup on HDFS-1073
+               branch.  (todd)
+    HDFS-1780. Reduce need to rewrite FSImage on startup. (todd)
+    HDFS-2104. Add a flag to the 2NN to format its checkpoint dirs on startup.
+               (todd)
+    HDFS-2135. Fix regression of HDFS-1955 in HDFS-1073 branch. (todd)
+    HDFS-2160. Fix CreateEditsLog test tool in HDFS-1073 branch. (todd)
+    HDFS-2168. Reenable TestEditLog.testFailedOpen and fix exposed bug. (todd)
+    HDFS-2169. Clean up TestCheckpoint and remove TODOs (todd)
+    HDFS-2170. Address remaining TODOs in HDFS-1073 branch. (todd)
+    HDFS-2172. Address findbugs and javadoc warnings in HDFS-1073 branch. 
+               (todd)
 
 Release 0.22.0 - Unreleased
 
