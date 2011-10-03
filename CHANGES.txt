@@ -554,6 +554,8 @@ Release 0.92.0 - Unreleased
                (Chris Trezzo via JD)
    HBASE-2794  Utilize ROWCOL bloom filter if multiple columns within same family
                are requested in a Get (Mikhail Bautin)
+   HBASE-4526  special case for stopping master in hbase-daemon.sh is no longer
+               required (Roman Shaposhnik)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

@@ -153,13 +153,8 @@ case $startStop in
       # kill -0 == see if the PID exists 
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
-        if [ "$command" = "master" ]; then
-          echo "`date` Killing $command" >> $loglog
-          kill -9 `cat $pid` > /dev/null 2>&1
-        else
-          echo "`date` Killing $command" >> $loglog
-          kill `cat $pid` > /dev/null 2>&1
-        fi
+        echo "`date` Killing $command" >> $loglog
+        kill `cat $pid` > /dev/null 2>&1
         while kill -0 `cat $pid` > /dev/null 2>&1; do
           echo -n "."
           sleep 1;
