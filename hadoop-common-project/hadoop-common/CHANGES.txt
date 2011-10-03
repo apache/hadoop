@@ -605,6 +605,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7662. Fixed logs servlet to use the pathspec '/*' instead of '/'
     for correct filtering. (Thomas Graves via vinodkv)
 
+    HADOOP-7691. Fixed conflict uid for install packages. (Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
