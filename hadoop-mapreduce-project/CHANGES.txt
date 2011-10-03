@@ -333,6 +333,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2889. Added documentation for writing new YARN applications.
     (Hitesh Shah via acmurthy) 
 
+    MAPREDUCE-3134. Added documentation the CapacityScheduler. (acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

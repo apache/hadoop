@@ -45,3 +45,5 @@ Hadoop MapReduce Next Generation
 
   * {{{./WritingYarnApplications.html}Writing Yarn Applications}}
 
+  * {{{./CapacityScheduler.html}Capacity Scheduler}}
+
