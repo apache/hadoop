@@ -213,9 +213,6 @@ public class ExecutorService {
 
   Executor getExecutor(String name) {
     Executor executor = this.executorMap.get(name);
-    if (executor == null) {
-      LOG.debug("Executor service [" + name + "] not found in " + this.executorMap);
-    }
     return executor;
   }
 
@@ -231,7 +228,16 @@ public class ExecutorService {
   }
 
   public void submit(final EventHandler eh) {
-    getExecutor(getExecutorServiceType(eh.getEventType())).submit(eh);
+    Executor executor = getExecutor(getExecutorServiceType(eh.getEventType()));
+    if (executor == null) {
+      // This happens only when events are submitted after shutdown() was
+      // called, so dropping them should be "ok" since it means we're
+      // shutting down.
+      LOG.error("Cannot submit [" + eh + "] because the executor is missing." +
+        " Is this process shutting down?");
+    } else {
+      executor.submit(eh);
+    }
   }
 
   /**

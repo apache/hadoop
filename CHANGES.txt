@@ -665,6 +665,7 @@ Release 0.90.5 - Unreleased
    HBASE-4295  rowcounter does not return the correct number of rows in
                certain circumstances (David Revell)
    HBASE-4515  User.getCurrent() can fail to initialize the current user
+   HBASE-4473  NPE when executors are down but events are still coming in
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
