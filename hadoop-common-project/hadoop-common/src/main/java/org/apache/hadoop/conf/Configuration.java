@@ -1632,10 +1632,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     try {
       doc =
         DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-
-      // Allow a broader set of control characters to appear in job confs.
-      // cf https://issues.apache.org/jira/browse/MAPREDUCE-109 
-      doc.setXmlVersion( "1.1" );
     } catch (ParserConfigurationException pe) {
       throw new IOException(pe);
     }

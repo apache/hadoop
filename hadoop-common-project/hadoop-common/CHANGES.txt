@@ -4,10 +4,6 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
    
-   HADOOP-7542. Change Configuration XML format to 1.1 to add support for
-                serializing additional characters. This requires XML1.1
-                support in the XML parser (Christopher Egner via harsh)
-
   IMPROVEMENTS
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
