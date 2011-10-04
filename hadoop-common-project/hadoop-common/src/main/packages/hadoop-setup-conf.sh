@@ -402,9 +402,9 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/commons-logging.properties ${HADOOP_CONF_DIR}/commons-logging.properties
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
-  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
-  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
-  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
 
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
@@ -448,9 +448,9 @@ else
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
-  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
-  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
-  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
   
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
   chmod 755 ${HADOOP_CONF_DIR}/hadoop-env.sh
