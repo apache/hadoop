@@ -22,7 +22,6 @@ package org.apache.hadoop.hdfs.security.token.delegation;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
