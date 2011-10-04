@@ -155,31 +155,42 @@ public class HftpFileSystem extends FileSystem {
     this.hftpURI = createUri(name.getScheme(), nnAddr);
     
     if (UserGroupInformation.isSecurityEnabled()) {
-      Token<?> token = selectHftpDelegationToken();
-      if (token == null) {
-        token = selectHdfsDelegationToken();
-      }   
-      //since we don't already have a token, go get one over https
-      if (token == null) {
-        token = getDelegationToken(null);
-        // security might be disabled
-        if (token != null) {
-          setDelegationToken(token);
-          renewer.addTokenToRenew(this);
-          LOG.debug("Created new DT for " + token.getService());
-        }
+      initDelegationToken();
+    }
+  }
+  
+  protected void initDelegationToken() throws IOException {
+    // look for hftp token, then try hdfs
+    Token<?> token = selectHftpDelegationToken();
+    if (token == null) {
+      token = selectHdfsDelegationToken();
+    }   
+
+    //since we don't already have a token, go get one over https
+    boolean createdToken = false;
+    if (token == null) {
+      token = getDelegationToken(null);
+      createdToken = (token != null);
+    }
+
+    // security might be disabled
+    if (token != null) {
+      setDelegationToken(token);
+      if (createdToken) {
+        renewer.addTokenToRenew(this);
+        LOG.debug("Created new DT for " + token.getService());
       } else {
         LOG.debug("Found existing DT for " + token.getService());        
       }
     }
   }
 
-  private Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
+  protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
     Text serviceName = SecurityUtil.buildTokenService(nnSecureAddr);
     return hftpTokenSelector.selectToken(serviceName, ugi.getTokens());      
   }
   
-  private Token<DelegationTokenIdentifier> selectHdfsDelegationToken() {
+  protected Token<DelegationTokenIdentifier> selectHdfsDelegationToken() {
     // this guesses the remote cluster's rpc service port.
     // the current token design assumes it's the same as the local cluster's
     // rpc port unless a config key is set.  there should be a way to automatic
@@ -212,7 +223,7 @@ public class HftpFileSystem extends FileSystem {
     return uri;
   }
 
-  private <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+  protected <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
     renewToken = token;
     // emulate the 203 usage of the tokens
     // by setting the kind and service as if they were hdfs tokens
