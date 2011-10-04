@@ -658,6 +658,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7711. Fixed recursive sourcing of HADOOP_OPTS environment
     variables (Arpit Gupta via Eric Yang)
 
+    HADOOP-7681. Fixed security and hdfs audit log4j properties
+    (Arpit Gupta via Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
