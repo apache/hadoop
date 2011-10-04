@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -79,7 +80,6 @@ import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -137,9 +137,8 @@ public class NamenodeWebHdfsMethods {
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, request.getUserPrincipal().getName());
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
-    t.setService(new Text(SecurityUtil.buildDTServiceName(
-        NameNode.getUri(namenode.getNameNodeAddress()),
-        NameNode.DEFAULT_PORT)));
+    t.setKind(WebHdfsFileSystem.TOKEN_KIND);
+    SecurityUtil.setTokenService(t, namenode.getNameNodeAddress());
     return t;
   }
 
@@ -265,6 +264,21 @@ public class NamenodeWebHdfsMethods {
     case SETTIMES:
     {
       namenode.setTimes(fullpath, modificationTime.getValue(), accessTime.getValue());
+      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+    }
+    case RENEWDELEGATIONTOKEN:
+    {
+      final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
+      token.decodeFromUrlString(delegation.getValue());
+      final long expiryTime = namenode.renewDelegationToken(token);
+      final String js = JsonUtil.toJsonString(PutOpParam.Op.RENEWDELEGATIONTOKEN, expiryTime);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case CANCELDELEGATIONTOKEN:
+    {
+      final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
+      token.decodeFromUrlString(delegation.getValue());
+      namenode.cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_JSON).build();
     }
     default:
