@@ -664,6 +664,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7681. Fixed security and hdfs audit log4j properties
     (Arpit Gupta via Eric Yang)
 
+    HADOOP-7708. Fixed hadoop-setup-conf.sh to handle config files
+    consistently.  (Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
