@@ -182,7 +182,12 @@ public class StoreFile {
   // Used making file ids.
   private final static Random rand = new Random();
   private final Configuration conf;
-  private final BloomType bloomType;
+
+  /**
+   * Bloom filter type specified in column family configuration. Does not
+   * necessarily correspond to the Bloom filter type present in the HFile.
+   */
+  private final BloomType cfBloomType;
 
   // the last modification time stamp
   private long modificationTimeStamp = 0L;
@@ -195,14 +200,18 @@ public class StoreFile {
    * @param p  The path of the file.
    * @param blockcache  <code>true</code> if the block cache is enabled.
    * @param conf  The current configuration.
-   * @param bt The bloom type to use for this store file
+   * @param cfBloomType The bloom type to use for this store file as specified
+   *          by column family configuration. This may or may not be the same
+   *          as the Bloom filter type actually present in the HFile, because
+   *          column family configuration might change. If this is
+   *          {@link BloomType#NONE}, the existing Bloom filter is ignored.
    * @throws IOException When opening the reader fails.
    */
   StoreFile(final FileSystem fs,
             final Path p,
             final boolean blockcache,
             final Configuration conf,
-            final BloomType bt,
+            final BloomType cfBloomType,
             final boolean inMemory)
       throws IOException {
     this.conf = conf;
@@ -214,14 +223,13 @@ public class StoreFile {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
     }
-    // ignore if the column family config says "no bloom filter"
-    // even if there is one in the hfile.
+
     if (BloomFilterFactory.isBloomEnabled(conf)) {
-      this.bloomType = bt;
+      this.cfBloomType = cfBloomType;
     } else {
       LOG.info("Ignoring bloom filter check for file " + path + ": " +
-          "bloomType=" + bt + " (disabled in config)");
-      this.bloomType = BloomType.NONE;
+          "cfBloomType=" + cfBloomType + " (disabled in config)");
+      this.cfBloomType = BloomType.NONE;
     }
 
     // cache the modification time stamp of this store file
@@ -495,8 +503,9 @@ public class StoreFile {
 
     computeHDFSBlockDistribution();
 
-    // Load up indices and fileinfo.
+    // Load up indices and fileinfo. This also loads Bloom filter type.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
+
     // Read in our metadata.
     byte [] b = metadataMap.get(MAX_SEQ_ID_KEY);
     if (b != null) {
@@ -528,8 +537,18 @@ public class StoreFile {
       this.majorCompaction = new AtomicBoolean(false);
     }
 
-    if (this.bloomType != BloomType.NONE) {
-      this.reader.loadBloomfilter();
+    BloomType hfileBloomType = reader.getBloomFilterType();
+    if (cfBloomType != BloomType.NONE) {
+      reader.loadBloomfilter();
+      if (hfileBloomType != cfBloomType) {
+        LOG.info("HFile Bloom filter type for "
+            + reader.getHFileReader().getName() + ": " + hfileBloomType
+            + ", but " + cfBloomType + " specified in column family "
+            + "configuration");
+      }
+    } else if (hfileBloomType != BloomType.NONE) {
+      LOG.info("Bloom filter turned off by CF config for "
+          + reader.getHFileReader().getName());
     }
 
     try {
@@ -893,6 +912,9 @@ public class StoreFile {
             break;
           case NONE:
             newKey = false;
+            break;
+          default:
+            throw new IOException("Invalid Bloom filter type: " + bloomType);
           }
         }
         if (newKey) {
@@ -924,7 +946,8 @@ public class StoreFile {
             bloomKeyLen = bloomKey.length;
             break;
           default:
-            throw new IOException("Invalid Bloom filter type: " + bloomType);
+            throw new IOException("Invalid Bloom filter type: " + bloomType +
+                " (ROW or ROWCOL expected)");
           }
           bloomFilterWriter.add(bloomKey, bloomKeyOffset, bloomKeyLen);
           if (lastBloomKey != null
