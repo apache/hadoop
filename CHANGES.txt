@@ -386,6 +386,9 @@ Release 0.20.205.0 - unreleased
     HADOOP-7710. Added hadoop-setup-application.sh for creating 
     application directory (Arpit Gupta via Eric Yang)
 
+    HADOOP-7708. Fixed hadoop-setup-conf.sh to handle config file
+    consistently.  (Eric Yang)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
