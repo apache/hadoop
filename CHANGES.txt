@@ -380,6 +380,9 @@ Release 0.20.205.0 - unreleased
     HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
     hdfs-site.xml.  (szetszwo)
 
+    HADOOP-7710. Added hadoop-setup-application.sh for creating 
+    application directory (Arpit Gupta via Eric Yang)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES
