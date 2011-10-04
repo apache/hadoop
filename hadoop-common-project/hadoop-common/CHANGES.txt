@@ -616,6 +616,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7684. Added init.d script for jobhistory server and
     secondary namenode. (Eric Yang)
 
+    HADOOP-7715. Removed unnecessary security logger configuration. (Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
