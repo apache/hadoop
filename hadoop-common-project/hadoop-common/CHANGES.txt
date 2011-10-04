@@ -647,6 +647,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7658. Fixed HADOOP_SECURE_DN_USER environment variable in 
     hadoop-evn.sh (Eric Yang)
 
+    HADOOP-7684. Added init.d script for jobhistory server and
+    secondary namenode. (Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
