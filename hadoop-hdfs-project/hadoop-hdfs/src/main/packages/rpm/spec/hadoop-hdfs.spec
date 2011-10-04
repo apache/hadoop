@@ -144,8 +144,8 @@ mv ${RPM_BUILD_DIR}/%{_final_name}/share/* ${RPM_BUILD_DIR}%{_share_dir}
 rm -rf ${RPM_BUILD_DIR}/%{_final_name}/etc
 
 %pre
-getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -r hadoop
-/usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r --groups hadoop --home %{_var_dir}/hdfs hdfs 2> /dev/null || :
+getent group hadoop 2>/dev/null >/dev/null || /usr/sbin/groupadd -g 123 -r hadoop
+/usr/sbin/useradd --comment "Hadoop HDFS" -u 201 --shell /bin/bash -M -r --groups hadoop --home %{_var_dir}/hdfs hdfs 2> /dev/null || :
 
 %post
 bash ${RPM_INSTALL_PREFIX0}/sbin/update-hdfs-env.sh \

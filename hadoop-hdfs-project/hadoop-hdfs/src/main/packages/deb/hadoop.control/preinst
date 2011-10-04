@@ -15,4 +15,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-/usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r --groups hadoop --home /var/lib/hadoop/hdfs hdfs 2> /dev/null || :
+/usr/sbin/useradd --comment "Hadoop HDFS" -u 201 --shell /bin/bash -M -r --groups hadoop --home /var/lib/hadoop/hdfs hdfs 2> /dev/null || :
