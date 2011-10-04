@@ -180,7 +180,9 @@ public class StreamJob implements Tool {
 
   void preProcessArgs() {
     verbose_ = false;
-    addTaskEnvironment_ = "";
+    // Unset HADOOP_ROOT_LOGGER in case streaming job
+    // invokes additional hadoop commands.
+    addTaskEnvironment_ = "HADOOP_ROOT_LOGGER=";
   }
 
   void postProcessArgs() throws IOException {
