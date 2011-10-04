@@ -655,6 +655,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7685. Improved directory ownership check function in 
     hadoop-setup-conf.sh. (Eric Yang)
 
+    HADOOP-7711. Fixed recursive sourcing of HADOOP_OPTS environment
+    variables (Arpit Gupta via Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
