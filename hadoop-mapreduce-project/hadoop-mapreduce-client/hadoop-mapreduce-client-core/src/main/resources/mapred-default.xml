@@ -1174,7 +1174,7 @@
 
 <property>
   <name>yarn.app.mapreduce.am.staging-dir</name>
-  <value>/tmp/hadoop-yarn/${user.name}/staging</value>
+  <value>/tmp/hadoop-yarn/staging</value>
   <description>The staging dir used while submitting jobs.
   </description>
 </property>
