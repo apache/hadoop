@@ -76,6 +76,9 @@ check_permission() {
 
 template_generator() {
   REGEX='(\$\{[a-zA-Z_][a-zA-Z_0-9]*\})'
+  if [ -e $2 ]; then
+    mv -f $2 "$2.bak"
+  fi
   cat $1 |
   while read line ; do
     while [[ "$line" =~ $REGEX ]] ; do
@@ -391,46 +394,6 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   chmod 755 ${HADOOP_LOG_DIR}/${HADOOP_MR_USER}
   chown ${HADOOP_MR_USER}:${HADOOP_GROUP} ${HADOOP_LOG_DIR}/${HADOOP_MR_USER}
 
-  if [ -e ${HADOOP_CONF_DIR}/core-site.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/core-site.xml ${HADOOP_CONF_DIR}/core-site.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/hdfs-site.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/hdfs-site.xml ${HADOOP_CONF_DIR}/hdfs-site.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred-site.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred-site.xml ${HADOOP_CONF_DIR}/mapred-site.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/hadoop-env.sh ]; then
-    mv -f ${HADOOP_CONF_DIR}/hadoop-env.sh ${HADOOP_CONF_DIR}/hadoop-env.sh.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/hadoop-policy.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/hadoop-policy.xml ${HADOOP_CONF_DIR}/hadoop-policy.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred-queue-acls.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/commons-logging.properties ]; then
-    mv -f ${HADOOP_CONF_DIR}/commons-logging.properties ${HADOOP_CONF_DIR}/commons-logging.properties.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/taskcontroller.cfg  ]; then
-    mv -f ${HADOOP_CONF_DIR}/taskcontroller.cfg  ${HADOOP_CONF_DIR}/taskcontroller.cfg.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/slaves  ]; then
-    mv -f ${HADOOP_CONF_DIR}/slaves  ${HADOOP_CONF_DIR}/slaves.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/dfs.include  ]; then
-    mv -f ${HADOOP_CONF_DIR}/dfs.include  ${HADOOP_CONF_DIR}/dfs.include.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/dfs.exclude  ]; then
-    mv -f ${HADOOP_CONF_DIR}/dfs.exclude  ${HADOOP_CONF_DIR}/dfs.exclude.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred.include  ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred.include  ${HADOOP_CONF_DIR}/mapred.include.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred.exclude  ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred.exclude  ${HADOOP_CONF_DIR}/mapred.exclude.bak
-  fi
-
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/core-site.xml ${HADOOP_CONF_DIR}/core-site.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hdfs-site.xml ${HADOOP_CONF_DIR}/hdfs-site.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-site.xml ${HADOOP_CONF_DIR}/mapred-site.xml
@@ -439,6 +402,9 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/commons-logging.properties ${HADOOP_CONF_DIR}/commons-logging.properties
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
+  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
+  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
 
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
@@ -482,15 +448,9 @@ else
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
-  if [ ! -e ${HADOOP_CONF_DIR}/capacity-scheduler.xml ]; then
-    template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
-  fi
-  if [ ! -e ${HADOOP_CONF_DIR}/hadoop-metrics2.properties ]; then
-    cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
-  fi
-  if [ ! -e ${HADOOP_CONF_DIR}/log4j.properties ]; then
-    cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
-  fi
+  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
+  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
   
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
   chmod 755 ${HADOOP_CONF_DIR}/hadoop-env.sh
@@ -523,6 +483,12 @@ else
   echo "${HADOOP_CONF_DIR}/hdfs-site.xml"
   echo "${HADOOP_CONF_DIR}/mapred-site.xml"
   echo "${HADOOP_CONF_DIR}/hadoop-env.sh"
+  echo "${HADOOP_CONF_DIR}/hadoop-policy.xml"
+  echo "${HADOOP_CONF_DIR}/commons-logging.properties"
+  echo "${HADOOP_CONF_DIR}/taskcontroller.cfg"
+  echo "${HADOOP_CONF_DIR}/capacity-scheduler.xml"
+  echo "${HADOOP_CONF_DIR}/log4j.properties"
+  echo "${HADOOP_CONF_DIR}/hadoop-metrics2.properties"
   echo
   echo " to ${HADOOP_CONF_DIR} on all nodes, and proceed to run hadoop-setup-hdfs.sh on namenode."
 fi
