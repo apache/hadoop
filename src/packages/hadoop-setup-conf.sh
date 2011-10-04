@@ -51,6 +51,9 @@ usage: $0 <parameters>
      --taskscheduler=org.apache.hadoop.mapred.JobQueueTaskScheduler  Set task scheduler
      --datanodes=hostname1,hostname2,...                             SET the datanodes
      --tasktrackers=hostname1,hostname2,...                          SET the tasktrackers
+     --dfs-webhdfs-enabled=false|true                                Enable webhdfs
+     --dfs-support-append=false|true                                 Enable append
+     --hadoop-proxy-users='user1:groups:hosts;user2:groups:hosts'    Setup proxy users for hadoop
   "
   exit 1
 }
@@ -90,6 +93,78 @@ template_generator() {
   done
 }
 
+#########################################
+# Function to modify a value of a field in an xml file
+# Params: $1 is the file with full path; $2 is the property, $3 is the new value
+#########################################
+function addPropertyToXMLConf
+{
+  #read the file name with full path
+  local file=$1
+  #get the property name
+  local property=$2
+  #get what value should be set for that
+  local propValue=$3
+  #get the description
+  local desc=$4
+  #get the value for the final tag
+  local finalVal=$5
+
+  #create the property text, make sure the / are escaped
+  propText="<property>\n<name>$property<\/name>\n<value>$propValue<\/value>"
+  #if description is not empty add it
+  if [ ! -z $desc ]
+  then
+    propText="${propText}<description>$desc<\/description>\n"
+  fi
+  
+  #if final is not empty add it
+  if [ ! -z $finalVal ]
+  then
+    propText="${propText}final>$finalVal<\/final>\n"
+  fi
+
+  #add the ending tag
+  propText="${propText}<\/property>\n"
+
+  #add the property to the file
+  endText="<\/configuration>"
+  #add the text using sed at the end of the file
+  sed -i "s|$endText|$propText$endText|" $file
+}
+
+##########################################
+# Function to setup up the proxy user settings
+#########################################
+function setupProxyUsers
+{
+  #if hadoop proxy users are sent, setup hadoop proxy
+  if [ ! -z $HADOOP_PROXY_USERS ]
+  then
+    oldIFS=$IFS
+    IFS=';'
+    #process each proxy config
+    for proxy in $HADOOP_PROXY_USERS
+    do
+      #get the user, group and hosts information for each proxy
+      IFS=':'
+      arr=($proxy)
+      user="${arr[0]}"
+      groups="${arr[1]}"
+      hosts="${arr[2]}"
+      #determine the property names and values
+      proxy_groups_property="hadoop.proxyuser.${user}.groups"
+      proxy_groups_val="$groups"
+      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_groups_property" "$proxy_groups_val"
+      proxy_hosts_property="hadoop.proxyuser.${user}.hosts"
+      proxy_hosts_val="$hosts"
+      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_hosts_property" "$proxy_hosts_val"
+      IFS=';'
+    done
+    IFS=$oldIFS
+  fi
+}
+
 OPTS=$(getopt \
   -n $0 \
   -o '' \
@@ -118,6 +193,9 @@ OPTS=$(getopt \
   -l 'kinit-location:' \
   -l 'datanodes:' \
   -l 'tasktrackers:' \
+  -l 'dfs-webhdfs-enabled:' \
+  -l 'hadoop-proxy-users:' \
+  -l 'dfs-support-append:' \
   -o 'h' \
   -- "$@") 
   
@@ -236,6 +314,18 @@ while true ; do
       TASKTRACKERS=$2; shift 2
       AUTOMATED=1
       TASKTRACKERS=$(echo $TASKTRACKERS | tr ',' ' ')
+      ;;
+    --dfs-webhdfs-enabled)
+      DFS_WEBHDFS_ENABLED=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --hadoop-proxy-users)
+      HADOOP_PROXY_USERS=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --dfs-support-append)
+      DFS_SUPPORT_APPEND=$2; shift 2
+      AUTOMATED=1
       ;;
     --)
       shift ; break
@@ -406,6 +496,9 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
   template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
 
+  #setup up the proxy users
+  setupProxyUsers
+
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
@@ -449,6 +542,9 @@ else
   template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
   template_generator ${HADOOP_PREFIX}/share/hadoop/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
+
+  #setup up the proxy users
+  setupProxyUsers
 
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
   chmod 755 ${HADOOP_CONF_DIR}/hadoop-env.sh
