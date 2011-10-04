@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -656,14 +657,29 @@ public class MRAppMaster extends CompositeService {
           new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
       conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
-      conf.set(MRJobConfig.USER_NAME, 
-          System.getProperty("user.name")); 
-      UserGroupInformation.setConfiguration(conf);
-      appMaster.init(conf);
-      appMaster.start();
+      String jobUserName = System
+          .getenv(ApplicationConstants.Environment.USER.name());
+      conf.set(MRJobConfig.USER_NAME, jobUserName);
+      initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);
       System.exit(1);
     }
-  } 
+  }
+
+  protected static void initAndStartAppMaster(final MRAppMaster appMaster,
+      final YarnConfiguration conf, String jobUserName) throws IOException,
+      InterruptedException {
+    UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation appMasterUgi = UserGroupInformation
+        .createRemoteUser(jobUserName);
+    appMasterUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        appMaster.init(conf);
+        appMaster.start();
+        return null;
+      }
+    });
+  }
 }
