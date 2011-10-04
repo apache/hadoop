@@ -607,6 +607,8 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7691. Fixed conflict uid for install packages. (Eric Yang)
 
+    HADOOP-7603. Set hdfs, mapred uid, and hadoop uid to fixed numbers. (Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
