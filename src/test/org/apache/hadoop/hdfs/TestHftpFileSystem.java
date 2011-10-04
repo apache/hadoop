@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -26,11 +25,6 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -211,75 +205,5 @@ public class TestHftpFileSystem {
         "127.0.0.1:789",
         fs.getCanonicalServiceName()
     );
-  }
-
-  Token<DelegationTokenIdentifier> hftpToken;
-  Token<DelegationTokenIdentifier> hdfsToken;
-  Token<DelegationTokenIdentifier> gotToken;
-  
-  class StubbedHftpFileSystem extends HftpFileSystem {
-    @Override
-    protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
-      return hftpToken;
-    }
-    
-    @Override
-    protected Token<DelegationTokenIdentifier> selectHdfsDelegationToken() {
-      return hdfsToken;
-    }
-    
-    @Override
-    public Token<DelegationTokenIdentifier> getDelegationToken(String renewer) {
-      return makeDummyToken("new");
-    }
-    
-    @SuppressWarnings("unchecked")
-    @Override
-    protected <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
-      gotToken = (Token<DelegationTokenIdentifier>) token;
-    }
-  }
-  
-  static Token<DelegationTokenIdentifier> makeDummyToken(String kind) {
-    Token<DelegationTokenIdentifier> token = new Token();
-    token.setKind(new Text(kind));
-    return token;
-  }
-  
-  @Before
-  public void resetTokens() {
-    hftpToken = hdfsToken = gotToken = null;
-  }
-  
-  @Test
-  public void testHftpWithNoTokens() throws IOException {
-    new StubbedHftpFileSystem().initDelegationToken();
-    assertNotNull(gotToken);
-    assertEquals(new Text("new"), gotToken.getKind());
-    
-  }
-  @Test
-  public void testHftpWithHftpToken() throws IOException {
-    hftpToken = makeDummyToken("hftp");
-    new StubbedHftpFileSystem().initDelegationToken();
-    assertNotNull(gotToken);
-    assertEquals(gotToken, hftpToken);
-  }
-  
-  @Test
-  public void testHftpWithHdfsToken() throws IOException {
-    hdfsToken = makeDummyToken("hdfs");
-    new StubbedHftpFileSystem().initDelegationToken();
-    assertNotNull(gotToken);
-    assertEquals(gotToken, hdfsToken);
-  }
-
-  @Test
-  public void testHftpWithHftpAndHdfsToken() throws IOException {
-    hftpToken = makeDummyToken("hftp");
-    hdfsToken = makeDummyToken("hdfs");
-    new StubbedHftpFileSystem().initDelegationToken();
-    assertNotNull(gotToken);
-    assertEquals(gotToken, hftpToken);
   }
 }

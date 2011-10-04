@@ -254,8 +254,6 @@ Release 0.20.205.0 - 2011.09.28
 
     HADOOP-7715. Removed unnecessary security logger configuration. (Eric Yang)
 
-    HDFS-2392. Dist with hftp is failing again. (Daryn Sharp via jitendra)
-
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
