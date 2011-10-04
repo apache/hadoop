@@ -306,6 +306,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3134. Added documentation the CapacityScheduler. (acmurthy) 
 
+    MAPREDUCE-3138. Add a utility to help applications bridge changes in 
+    Context Objects APIs due to MAPREDUCE-954. (omalley via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
