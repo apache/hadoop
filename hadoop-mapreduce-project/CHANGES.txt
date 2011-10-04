@@ -1478,6 +1478,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2792. Replace usage of node ip-addresses with hostnames.
     (vinodkv via acmurthy) 
 
+    MAPREDUCE-3112. Fixed recursive sourcing of HADOOP_OPTS environment
+    variable. (Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
