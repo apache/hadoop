@@ -473,4 +473,6 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_V2_CHILD_CLASS = 
       "org.apache.hadoop.mapred.YarnChild";
 
+  public static final String APPLICATION_ATTEMPT_ID =
+      "mapreduce.job.application.attempt.id";
 }

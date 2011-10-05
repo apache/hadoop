@@ -315,6 +315,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2907. Changed log level for various messages in ResourceManager
     from INFO to DEBUG. (Ravi Prakash via vinodkv)
 
+    MAPREDUCE-2702. Added a new API in OutputCommitter for recovering
+    the outputs of tasks from a crashed job so as to support MR Application
+    Master recovery. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
