@@ -595,7 +595,7 @@ public class FifoScheduler implements ResourceScheduler {
     // Process completed containers
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
-      LOG.info("DEBUG --- Container FINISHED: " + containerId);
+      LOG.debug("Container FINISHED: " + containerId);
       containerCompleted(getRMContainer(containerId), 
           completedContainer, RMContainerEventType.FINISHED);
     }

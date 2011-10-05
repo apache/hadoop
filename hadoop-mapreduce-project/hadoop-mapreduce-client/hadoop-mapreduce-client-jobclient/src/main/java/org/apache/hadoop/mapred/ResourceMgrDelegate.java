@@ -258,7 +258,7 @@ public class ResourceMgrDelegate {
     String user = 
       UserGroupInformation.getCurrentUser().getShortUserName();
     Path path = MRApps.getStagingAreaDir(conf, user);
-    LOG.info("DEBUG --- getStagingAreaDir: dir=" + path);
+    LOG.debug("getStagingAreaDir: dir=" + path);
     return path.toString();
   }
 

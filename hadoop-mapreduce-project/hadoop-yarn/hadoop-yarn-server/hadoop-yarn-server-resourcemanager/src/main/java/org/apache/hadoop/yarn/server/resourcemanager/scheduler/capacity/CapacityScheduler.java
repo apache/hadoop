@@ -464,21 +464,25 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
       if (!ask.isEmpty()) {
 
-        LOG.info("DEBUG --- allocate: pre-update" +
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("allocate: pre-update" +
             " applicationAttemptId=" + applicationAttemptId + 
             " application=" + application);
+        }
         application.showRequests();
   
         // Update application requests
         application.updateResourceRequests(ask);
   
-        LOG.info("DEBUG --- allocate: post-update");
+        LOG.debug("allocate: post-update");
         application.showRequests();
       }
 
-      LOG.info("DEBUG --- allocate:" +
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("allocate:" +
           " applicationAttemptId=" + applicationAttemptId + 
           " #ask=" + ask.size());
+      }
 
       return new Allocation(
           application.pullNewlyAllocatedContainers(), 
@@ -547,14 +551,16 @@ implements ResourceScheduler, CapacitySchedulerContext {
     // Process completed containers
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
-      LOG.info("DEBUG --- Container FINISHED: " + containerId);
+      LOG.debug("Container FINISHED: " + containerId);
       completedContainer(getRMContainer(containerId), 
           completedContainer, RMContainerEventType.FINISHED);
     }
 
     // Now node data structures are upto date and ready for scheduling.
-    LOG.info("DEBUG -- Node being looked for scheduling " + nm
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Node being looked for scheduling " + nm
         + " availableResource: " + node.getAvailableResource());
+    }
 
     // Assign new containers...
     // 1. Check for reserved applications
