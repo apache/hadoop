@@ -60,6 +60,11 @@ public class TestMergeTool extends HBaseTestCase {
   public void setUp() throws Exception {
     // Set the timeout down else this test will take a while to complete.
     this.conf.setLong("hbase.zookeeper.recoverable.waittime", 1000);
+    // Make it so we try and connect to a zk that is not there (else we might
+    // find a zk ensemble put up by another concurrent test and this will
+    // mess up this test.  Choose unlikely port. Default test port is 21818.
+    // Default zk port is 2181.
+    this.conf.setInt("hbase.zookeeper.property.clientPort", 10001);
 
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
