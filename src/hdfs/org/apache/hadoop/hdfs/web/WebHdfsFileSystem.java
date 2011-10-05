@@ -363,7 +363,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = PutOpParam.Op.MKDIRS;
     final Map<String, Object> json = run(op, f,
         new PermissionParam(applyUMask(permission)));
-    return (Boolean)json.get(op.toString());
+    return (Boolean)json.get("boolean");
   }
 
   @Override
@@ -372,7 +372,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
     final Map<String, Object> json = run(op, src,
         new DstPathParam(makeQualified(dst).toUri().getPath()));
-    return (Boolean)json.get(op.toString());
+    return (Boolean)json.get("boolean");
   }
 
   @Override
@@ -402,7 +402,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = PutOpParam.Op.SETREPLICATION;
     final Map<String, Object> json = run(op, p,
         new ReplicationParam(replication));
-    return (Boolean)json.get(op.toString());
+    return (Boolean)json.get("boolean");
   }
 
   @Override
@@ -464,7 +464,7 @@ public class WebHdfsFileSystem extends FileSystem
   public boolean delete(Path f, boolean recursive) throws IOException {
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETE;
     final Map<String, Object> json = run(op, f, new RecursiveParam(recursive));
-    return (Boolean)json.get(op.toString());
+    return (Boolean)json.get("boolean");
   }
 
   @Override
@@ -481,7 +481,9 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
 
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
-    final Object[] array = run(op, f);
+    final Map<?, ?> json  = run(op, f);
+    final Object[] array = (Object[])json.get(
+        HdfsFileStatus[].class.getSimpleName());
 
     //convert FileStatus
     final FileStatus[] statuses = new FileStatus[array.length];
@@ -528,7 +530,7 @@ public class WebHdfsFileSystem extends FileSystem
     delegationToken = token;
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
     final Map<String, Object> m = run(op, null);
-    return (Long)m.get(op.toString());
+    return (Long)m.get("long");
   }
 
   private synchronized void cancelDelegationToken(final Token<?> token
