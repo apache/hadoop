@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -46,6 +48,8 @@ import org.junit.Test;
 import com.google.common.collect.Lists;
 
 public class TestServerCustomProtocol {
+  private static final Log LOG = LogFactory.getLog(TestServerCustomProtocol.class);
+
   /* Test protocol */
   private static interface PingProtocol extends CoprocessorProtocol {
     public String ping();
@@ -325,6 +329,13 @@ public class TestServerCustomProtocol {
   throws Exception {
     HRegionLocation loc = table.getRegionLocation(row);
     byte[] region = loc.getRegionInfo().getRegionName();
+    StringBuffer resultsKeyStr = new StringBuffer();
+    for (Map.Entry<byte [], String> e: results.entrySet()) {
+      resultsKeyStr.append(Bytes.toString(e.getKey()));
+      resultsKeyStr.append(", ");
+    }
+    LOG.info("ResultsKeyStr=" + resultsKeyStr);
+    
     assertTrue("Results should contain region " +
         Bytes.toStringBinary(region)+" for row '"+Bytes.toStringBinary(row)+"'",
         results.containsKey(region));
