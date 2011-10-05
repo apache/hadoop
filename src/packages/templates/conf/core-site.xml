@@ -33,13 +33,13 @@
     <name>hadoop.security.auth_to_local</name>
     <value>
 	RULE:[2:$1@$0]([jt]t@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
-        RULE:[2:$1@$0](hm@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
-        RULE:[2:$1@$0](rs@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
         RULE:[2:$1@$0]([nd]n@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
         RULE:[2:$1@$0](mapred@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
         RULE:[2:$1@$0](hdfs@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
         RULE:[2:$1@$0](mapredqa@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
         RULE:[2:$1@$0](hdfsqa@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
+        RULE:[2:$1@$0](hm@.*${KERBEROS_REALM})s/.*/${HBASE_USER}/
+        RULE:[2:$1@$0](rs@.*${KERBEROS_REALM})s/.*/${HBASE_USER}/
         DEFAULT
     </value>
     <description></description>
