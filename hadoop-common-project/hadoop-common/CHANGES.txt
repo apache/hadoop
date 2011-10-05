@@ -48,6 +48,9 @@ Trunk (unreleased changes)
     HADOOP-7703. Improved excpetion handling of shutting down web server.
     (Devaraj K via Eric Yang)
 
+    HADOOP-7704. Reduce number of object created by JMXJsonServlet.
+    (Devaraj K via Eric Yang)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
