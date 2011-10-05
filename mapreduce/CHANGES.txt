@@ -616,6 +616,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
     (Ming Ma via shv)
 
+    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via
+    acmurthy)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

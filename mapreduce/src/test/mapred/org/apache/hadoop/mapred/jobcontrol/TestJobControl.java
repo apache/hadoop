@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.mapred.jobcontrol;
 
+import static org.mockito.Mockito.*;
+
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobID;
 
 /**
  * This class performs unit test for Job/JobControl classes.
@@ -191,7 +194,21 @@ public class TestJobControl extends junit.framework.TestCase {
   public void testJobControl() throws Exception {
     doJobControlTest();
   }
-    
+  
+  public void testGetAssignedJobId() throws Exception {
+    JobConf jc = new JobConf();
+    Job j = new Job(jc);
+    //Just make sure no exception is thrown
+    assertNull(j.getAssignedJobID());
+    org.apache.hadoop.mapreduce.Job mockjob = mock(org.apache.hadoop.mapreduce.Job.class);
+    org.apache.hadoop.mapreduce.JobID jid = new org.apache.hadoop.mapreduce.JobID("test",0);
+    when(mockjob.getJobID()).thenReturn(jid);
+    j.setJob(mockjob);
+    JobID expected = new JobID("test",0);
+    assertEquals(expected, j.getAssignedJobID());
+    verify(mockjob).getJobID();
+  }
+  
   public static void main(String[] args) {
     TestJobControl test = new TestJobControl();
     try {

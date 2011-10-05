@@ -68,7 +68,11 @@ public class Job extends ControlledJob {
    * mapred framework.
    */
   public JobID getAssignedJobID() {
-    return (JobID)super.getMapredJobID();
+    org.apache.hadoop.mapreduce.JobID temp = super.getMapredJobID();
+    if(temp == null) {
+      return null;
+    }
+    return JobID.downgrade(temp);
   }
 
   /**
