@@ -223,7 +223,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   public static InetSocketAddress getAddress(Configuration conf) {
-    return getAddress(FileSystem.getDefaultUri(conf).getAuthority());
+    return getAddress(FileSystem.getDefaultUri(conf).toString());
   }
 
   public static URI getUri(InetSocketAddress namenode) {

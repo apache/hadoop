@@ -91,6 +91,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    HDFS-2358. NPE when the default filesystem's uri has no authority.
+    (Daryn Sharp via mattf)
+
     MAPREDUCE-3112. Calling hadoop cli inside mapreduce job leads to errors.
     (Eric Yang via mattf)
 
