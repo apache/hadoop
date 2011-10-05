@@ -724,10 +724,8 @@ public class Client {
         YarnConfiguration.RM_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADDRESS));		
     LOG.info("Connecting to ResourceManager at " + rmAddress);
-    Configuration appsManagerServerConf = new Configuration(conf);
-    appsManagerServerConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-        ClientRMSecurityInfo.class, SecurityInfo.class);
-    applicationsManager = ((ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class, rmAddress, appsManagerServerConf));		
+    applicationsManager = ((ClientRMProtocol) rpc.getProxy(
+        ClientRMProtocol.class, rmAddress, conf));
   }		
 
   /**

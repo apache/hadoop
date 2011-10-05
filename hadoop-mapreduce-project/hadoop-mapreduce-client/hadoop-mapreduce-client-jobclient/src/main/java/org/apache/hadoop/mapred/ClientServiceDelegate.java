@@ -243,13 +243,9 @@ public class ClientServiceDelegate {
     realProxy = currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
       @Override
       public MRClientProtocol run() {
-        Configuration myConf = new Configuration(conf);
-        myConf.setClass(
-            YarnConfiguration.YARN_SECURITY_INFO,
-            SchedulerSecurityInfo.class, SecurityInfo.class);
-        YarnRPC rpc = YarnRPC.create(myConf);
+        YarnRPC rpc = YarnRPC.create(conf);
         return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
-            NetUtils.createSocketAddr(serviceAddr), myConf);
+            NetUtils.createSocketAddr(serviceAddr), conf);
       }
     });
     LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);

@@ -341,6 +341,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3138. Add a utility to help applications bridge changes in 
     Context Objects APIs due to MAPREDUCE-954. (omalley via acmurthy)
 
+    MAPREDUCE-3013. Removed YarnConfiguration.YARN_SECURITY_INFO and its usage
+    as it doesn't affect security any more. (vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

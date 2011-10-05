@@ -227,13 +227,10 @@ public class ResourceLocalizationService extends CompositeService
   }
 
   Server createServer() {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration conf = new Configuration(getConfig()); // Clone to separate
-                                                         // sec-info classes
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
     LocalizerTokenSecretManager secretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      conf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-          LocalizerSecurityInfo.class, SecurityInfo.class);
       secretManager = new LocalizerTokenSecretManager();
     }
     

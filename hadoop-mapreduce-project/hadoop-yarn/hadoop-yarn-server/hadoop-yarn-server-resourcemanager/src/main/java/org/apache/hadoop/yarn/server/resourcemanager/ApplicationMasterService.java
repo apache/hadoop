@@ -98,14 +98,12 @@ public class ApplicationMasterService extends AbstractService implements
 
   @Override
   public void start() {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration serverConf = new Configuration(getConfig());
-    serverConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-        SchedulerSecurityInfo.class, SecurityInfo.class);
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
-          serverConf, this.appTokenManager,
-          serverConf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT,
+          conf, this.appTokenManager,
+          conf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();

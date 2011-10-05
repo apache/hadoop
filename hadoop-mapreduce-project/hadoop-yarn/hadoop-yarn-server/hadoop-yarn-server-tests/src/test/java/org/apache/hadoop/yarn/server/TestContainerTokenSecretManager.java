@@ -209,9 +209,6 @@ public class TestContainerTokenSecretManager {
     appToken.setService(new Text(schedulerAddressString));
     currentUser.addToken(appToken);
 
-    conf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        SchedulerSecurityInfo.class, SecurityInfo.class);
     AMRMProtocol scheduler =
         currentUser.doAs(new PrivilegedAction<AMRMProtocol>() {
           @Override
@@ -271,9 +268,6 @@ public class TestContainerTokenSecretManager {
                 containerToken.getKind()), new Text(
                 containerToken.getService()));
     currentUser.addToken(token);
-    conf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        ContainerManagerSecurityInfo.class, SecurityInfo.class);
     currentUser.doAs(new PrivilegedAction<Void>() {
       @Override
       public Void run() {

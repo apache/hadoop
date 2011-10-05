@@ -44,14 +44,7 @@ public class YarnConfiguration extends Configuration {
   /** ACL of who can modify this application.*/
   public static final String APPLICATION_ACL_MODIFY_APP =
     "yarn.app.acl.modify-job";
-  
-  /** 
-   * Security info class This is an internal config set and
-   * read by YARN itself.
-   */
-  public static final String YARN_SECURITY_INFO = 
-    "yarn.security.info.class";
-  
+
   /** Delay before deleting resource to ease debugging of NM issues */
   public static final String DEBUG_NM_DELETE_DELAY_SEC =
     YarnConfiguration.NM_PREFIX + "delete.debug-delay-sec";

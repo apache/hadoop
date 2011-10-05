@@ -114,15 +114,9 @@ public class ContainerLocalizer {
   }
 
   LocalizationProtocol getProxy(final InetSocketAddress nmAddr) {
-    Configuration localizerConf = new Configuration();
-    YarnRPC rpc = YarnRPC.create(localizerConf);
-    if (UserGroupInformation.isSecurityEnabled()) {
-      localizerConf.setClass(
-          YarnConfiguration.YARN_SECURITY_INFO,
-          LocalizerSecurityInfo.class, SecurityInfo.class);
-    }
+    YarnRPC rpc = YarnRPC.create(conf);
     return (LocalizationProtocol)
-      rpc.getProxy(LocalizationProtocol.class, nmAddr, localizerConf);
+      rpc.getProxy(LocalizationProtocol.class, nmAddr, conf);
   }
 
   public int runLocalization(final InetSocketAddress nmAddr)

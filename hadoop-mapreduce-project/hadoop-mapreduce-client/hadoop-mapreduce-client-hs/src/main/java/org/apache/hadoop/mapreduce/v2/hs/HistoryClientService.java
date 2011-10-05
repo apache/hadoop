@@ -101,12 +101,9 @@ public class HistoryClientService extends AbstractService {
   }
 
   public void start() {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration conf = new Configuration(getConfig());
-    conf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        ClientHSSecurityInfo.class, SecurityInfo.class);
-    initializeWebApp(getConfig());
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
+    initializeWebApp(conf);
     String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
     InetSocketAddress address = NetUtils.createSocketAddr(serviceAddr);
