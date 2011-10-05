@@ -319,6 +319,9 @@ Release 0.23.0 - Unreleased
     the outputs of tasks from a crashed job so as to support MR Application
     Master recovery. (Sharad Agarwal and Arun C Murthy via vinodkv)
 
+    MAPREDUCE-2738. Added the missing cluster level statisticss on the RM web
+    UI. (Robert Joseph Evans via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

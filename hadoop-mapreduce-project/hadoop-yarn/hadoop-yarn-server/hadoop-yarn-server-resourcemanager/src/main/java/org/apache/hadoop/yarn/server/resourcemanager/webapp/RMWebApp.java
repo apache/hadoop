@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 public class RMWebApp extends WebApp {
   static final String APP_ID = "app.id";
   static final String QUEUE_NAME = "queue.name";
+  static final String NODE_STATE = "node.state";
 
   private final ResourceManager rm;
 
@@ -44,9 +45,9 @@ public class RMWebApp extends WebApp {
       bind(RMContext.class).toInstance(rm.getRMContext());
     }
     route("/", RmController.class);
-    route("/nodes", RmController.class, "nodes");
+    route(pajoin("/nodes", NODE_STATE), RmController.class, "nodes");
     route("/apps", RmController.class);
-    route("/cluster", RmController.class, "info");
+    route("/cluster", RmController.class, "about");
     route(pajoin("/app", APP_ID), RmController.class, "app");
     route("/scheduler", RmController.class, "scheduler");
     route(pajoin("/queue", QUEUE_NAME), RmController.class, "queue");

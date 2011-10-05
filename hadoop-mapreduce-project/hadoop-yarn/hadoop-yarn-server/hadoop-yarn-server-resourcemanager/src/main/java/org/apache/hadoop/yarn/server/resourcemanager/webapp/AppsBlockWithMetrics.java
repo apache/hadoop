@@ -18,16 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.yarn.webapp.SubView;
-import org.apache.hadoop.yarn.webapp.view.InfoBlock;
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-public class InfoPage extends RmView {
-
-  @Override protected void preHead(Page.HTML<_> html) {
-    commonPreHead(html);
-  }
-
-  @Override protected Class<? extends SubView> content() {
-    return InfoBlock.class;
+/**
+ * Renders a block for the applications with metrics information.
+ */
+class AppsBlockWithMetrics extends HtmlBlock {
+  @Override public void render(Block html) {
+    html._(MetricsOverviewTable.class);
+    html._(AppsBlock.class);
   }
 }

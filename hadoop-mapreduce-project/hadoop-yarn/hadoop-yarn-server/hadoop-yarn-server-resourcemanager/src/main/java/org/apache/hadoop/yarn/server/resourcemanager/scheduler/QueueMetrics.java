@@ -110,7 +110,7 @@ public class QueueMetrics {
         "Metrics for queue: " + queueName, metrics);
   }
 
-  synchronized QueueMetrics getUserMetrics(String userName) {
+  public synchronized QueueMetrics getUserMetrics(String userName) {
     if (users == null) {
       return null;
     }

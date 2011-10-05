@@ -17,13 +17,19 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
 
 /**
  * This tests the NodesPage block table that it should contain the table body
@@ -33,23 +39,36 @@ public class TestNodesPage {
 
   @Test
   public void testNodesBlockRender() throws Exception {
-    int numberOfRacks = 2;
-    int numberOfNodesPerRack = 2;
+    final int numberOfRacks = 2;
+    final int numberOfNodesPerRack = 2;
     // Number of Actual Table Headers for NodesPage.NodesBlock might change in
     // future. In that case this value should be adjusted to the new value.
-    int numberOfActualTableHeaders = 7;
+    final int numberOfThInMetricsTable = 9;
+    final int numberOfActualTableHeaders = 10;
 
-    PrintWriter writer = WebAppTests.testBlock(
-        NodesBlock.class,
-        RMContext.class,
-        TestRMWebApp.mockRMContext(3, numberOfRacks, numberOfNodesPerRack,
-            8 * TestRMWebApp.GiB)).getInstance(PrintWriter.class);
+    Injector injector = WebAppTests.createMockInjector(RMContext.class,
+        TestRMWebApp.mockRMContext(3, numberOfRacks, numberOfNodesPerRack, 8*TestRMWebApp.GiB),
+        new Module() {
+      @Override
+      public void configure(Binder binder) {
+        try {
+          binder.bind(ResourceManager.class).toInstance(TestRMWebApp.mockRm(3,
+              numberOfRacks, numberOfNodesPerRack, 8*TestRMWebApp.GiB));
+        } catch (IOException e) {
+          throw new IllegalStateException(e);
+        }
+      }
+    });
+    injector.getInstance(NodesBlock.class).render();
+    PrintWriter writer = injector.getInstance(PrintWriter.class);
+    WebAppTests.flushOutput(injector);
 
-    Mockito.verify(writer, Mockito.times(numberOfActualTableHeaders)).print(
+    Mockito.verify(writer, Mockito.times(numberOfActualTableHeaders + 
+        numberOfThInMetricsTable)).print(
         "<th");
     Mockito.verify(
         writer,
         Mockito.times(numberOfRacks * numberOfNodesPerRack
-            * numberOfActualTableHeaders)).print("<td");
+            * numberOfActualTableHeaders + numberOfThInMetricsTable)).print("<td");
   }
 }

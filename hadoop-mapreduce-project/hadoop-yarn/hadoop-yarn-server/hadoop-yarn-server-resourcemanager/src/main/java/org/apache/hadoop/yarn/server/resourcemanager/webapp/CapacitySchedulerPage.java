@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 class CapacitySchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
@@ -96,6 +95,7 @@ class CapacitySchedulerPage extends RmView {
 
     @Override
     public void render(Block html) {
+      html._(MetricsOverviewTable.class);
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").
           div(".ui-widget-header.ui-corner-top").
