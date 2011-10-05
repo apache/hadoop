@@ -1865,6 +1865,9 @@ public class AssignmentManager extends ZooKeeperListener {
     // Get all available servers
     List<ServerName> servers = serverManager.getOnlineServersList();
 
+    // If there are no servers we need not proceed with region assignment.
+    if(servers.isEmpty()) return;
+
     // Scan META for all user regions, skipping any disabled tables
     Map<HRegionInfo, ServerName> allRegions =
       MetaReader.fullScan(catalogTracker, this.zkTable.getDisabledTables(), true);

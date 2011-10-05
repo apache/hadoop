@@ -325,6 +325,8 @@ Release 0.92.0 - Unreleased
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
+   HBASE-4512  JVMClusterUtil throwing wrong exception when master thread cannot be created (Ram)
+   HBASE-4479  TestMasterFailover failure in Hbase-0.92#17 (Ram)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
