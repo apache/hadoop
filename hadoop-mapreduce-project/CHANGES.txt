@@ -360,9 +360,6 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. (Robert Evans via
     acmurthy) 
 
-    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via
-    acmurthy) 
-
     MAPREDUCE-1978. Rumen TraceBuilder should provide recursive
     input folder scanning.
 
@@ -2100,6 +2097,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
     (Ming Ma via shv)
+
+    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via
+    acmurthy) 
 
 Release 0.21.1 - Unreleased
 
