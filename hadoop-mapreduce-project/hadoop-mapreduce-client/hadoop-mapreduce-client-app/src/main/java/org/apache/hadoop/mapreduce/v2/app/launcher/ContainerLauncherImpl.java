@@ -91,17 +91,11 @@ public class ContainerLauncherImpl extends AbstractService implements
 
   @Override
   public synchronized void init(Configuration conf) {
-    // Clone configuration for this component so that the SecurityInfo setting
-    // doesn't affect the original configuration
-    Configuration myLocalConfig = new Configuration(conf);
-    myLocalConfig.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        ContainerManagerSecurityInfo.class, SecurityInfo.class);
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     this.limitOnPoolSize = conf.getInt(
         MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT,
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT);
-    super.init(myLocalConfig);
+    super.init(conf);
   }
 
   public void start() {

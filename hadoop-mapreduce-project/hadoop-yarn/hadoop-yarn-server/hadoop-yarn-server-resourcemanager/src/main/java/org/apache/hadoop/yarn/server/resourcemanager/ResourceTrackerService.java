@@ -109,15 +109,12 @@ public class ResourceTrackerService extends AbstractService implements
     super.start();
     // ResourceTrackerServer authenticates NodeManager via Kerberos if
     // security is enabled, so no secretManager.
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration rtServerConf = new Configuration(getConfig());
-    rtServerConf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        RMNMSecurityInfoClass.class, SecurityInfo.class);
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
     this.server =
       rpc.getServer(ResourceTracker.class, this, resourceTrackerAddress,
-          rtServerConf, null,
-          rtServerConf.getInt(YarnConfiguration.RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT, 
+          conf, null,
+          conf.getInt(YarnConfiguration.RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT));
     this.server.start();
 

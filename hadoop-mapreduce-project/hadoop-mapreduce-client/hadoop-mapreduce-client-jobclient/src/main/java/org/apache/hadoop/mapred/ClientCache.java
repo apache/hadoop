@@ -80,17 +80,14 @@ public class ClientCache {
       return null;
     }
     LOG.info("Connecting to HistoryServer at: " + serviceAddr);
-    final Configuration myConf = new Configuration(conf);
-    myConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-        ClientHSSecurityInfo.class, SecurityInfo.class);
-    final YarnRPC rpc = YarnRPC.create(myConf);
+    final YarnRPC rpc = YarnRPC.create(conf);
     LOG.info("Connected to HistoryServer at: " + serviceAddr);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
     return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
       @Override
       public MRClientProtocol run() {
         return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
-            NetUtils.createSocketAddr(serviceAddr), myConf);
+            NetUtils.createSocketAddr(serviceAddr), conf);
       }
     });
   }

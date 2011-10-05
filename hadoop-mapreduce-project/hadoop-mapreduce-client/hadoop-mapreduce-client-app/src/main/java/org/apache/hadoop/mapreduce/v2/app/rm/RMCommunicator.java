@@ -247,7 +247,7 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected AMRMProtocol createSchedulerProxy() {
     final YarnRPC rpc = YarnRPC.create(getConfig());
-    final Configuration conf = new Configuration(getConfig());
+    final Configuration conf = getConfig();
     final String serviceAddr = conf.get(
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
@@ -260,9 +260,6 @@ public abstract class RMCommunicator extends AbstractService  {
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      conf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-          SchedulerSecurityInfo.class, SecurityInfo.class);
-
       String tokenURLEncodedStr = System.getenv().get(
           ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
       LOG.debug("AppMasterToken is " + tokenURLEncodedStr);

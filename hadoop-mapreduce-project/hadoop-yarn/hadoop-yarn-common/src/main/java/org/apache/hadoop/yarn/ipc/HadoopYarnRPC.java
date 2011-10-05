@@ -46,13 +46,10 @@ public class HadoopYarnRPC extends YarnRPC {
   @Override
   public Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf) {
-    Configuration myConf = new Configuration(conf);
     LOG.info("Creating a HadoopYarnRpc proxy for protocol " + protocol);
-    LOG.debug("Configured SecurityInfo class name is "
-        + myConf.get(YarnConfiguration.YARN_SECURITY_INFO));
-    RPC.setProtocolEngine(myConf, protocol, AvroSpecificRpcEngine.class);
+    RPC.setProtocolEngine(conf, protocol, AvroSpecificRpcEngine.class);
     try {
-      return RPC.getProxy(protocol, 1, addr, myConf);
+      return RPC.getProxy(protocol, 1, addr, conf);
     } catch (IOException e) {
       throw new YarnException(e);
     }
@@ -65,8 +62,6 @@ public class HadoopYarnRPC extends YarnRPC {
       int numHandlers) {
     LOG.info("Creating a HadoopYarnRpc server for protocol " + protocol + 
         " with " + numHandlers + " handlers");
-    LOG.info("Configured SecurityInfo class name is "
-        + conf.get(YarnConfiguration.YARN_SECURITY_INFO));
     RPC.setProtocolEngine(conf, protocol, AvroSpecificRpcEngine.class);
     final RPC.Server hadoopServer;
     try {

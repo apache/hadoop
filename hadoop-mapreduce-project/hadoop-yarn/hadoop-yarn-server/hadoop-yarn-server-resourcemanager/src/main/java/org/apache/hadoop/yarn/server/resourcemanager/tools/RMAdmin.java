@@ -23,7 +23,6 @@ import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityInfo;
@@ -148,11 +147,6 @@ public class RMAdmin extends Configured implements Tool {
       conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
           YarnConfiguration.RM_ADMIN_ADDRESS);
     final YarnRPC rpc = YarnRPC.create(conf);
-    
-    if (UserGroupInformation.isSecurityEnabled()) {
-      conf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-          AdminSecurityInfo.class, SecurityInfo.class);
-    }
     
     RMAdminProtocol adminProtocol =
       getUGI(conf).doAs(new PrivilegedAction<RMAdminProtocol>() {

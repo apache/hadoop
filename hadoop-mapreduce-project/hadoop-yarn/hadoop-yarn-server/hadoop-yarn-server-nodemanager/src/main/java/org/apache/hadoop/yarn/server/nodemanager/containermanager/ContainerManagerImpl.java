@@ -192,13 +192,10 @@ public class ContainerManagerImpl extends CompositeService implements
     InetSocketAddress initialAddress = NetUtils.createSocketAddr(conf.get(
         YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS));
 
-    Configuration cmConf = new Configuration(conf);
-    cmConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-        ContainerManagerSecurityInfo.class, SecurityInfo.class);
     server =
-        rpc.getServer(ContainerManager.class, this, initialAddress, cmConf,
+        rpc.getServer(ContainerManager.class, this, initialAddress, conf,
             this.containerTokenSecretManager,
-            cmConf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
+            conf.getInt(YarnConfiguration.NM_CONTAINER_MGR_THREAD_COUNT, 
                 YarnConfiguration.DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT));
     server.start();
     InetAddress hostNameResolved = null;
