@@ -33,9 +33,6 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     SETPERMISSION(false, HttpURLConnection.HTTP_OK),
     SETTIMES(false, HttpURLConnection.HTTP_OK),
     
-    RENEWDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK),
-    CANCELDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK),
-    
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
     final boolean doOutput;
