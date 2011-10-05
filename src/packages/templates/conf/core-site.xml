@@ -38,6 +38,8 @@
         RULE:[2:$1@$0](hdfs@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
         RULE:[2:$1@$0](mapredqa@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
         RULE:[2:$1@$0](hdfsqa@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
+        RULE:[2:$1@$0](hm@.*${KERBEROS_REALM})s/.*/${HBASE_USER}/
+        RULE:[2:$1@$0](rs@.*${KERBEROS_REALM})s/.*/${HBASE_USER}/
         DEFAULT
     </value>
     <description></description>

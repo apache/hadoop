@@ -54,6 +54,7 @@ usage: $0 <parameters>
      --dfs-webhdfs-enabled=false|true                                Enable webhdfs
      --dfs-support-append=false|true                                 Enable append
      --hadoop-proxy-users='user1:groups:hosts;user2:groups:hosts'    Setup proxy users for hadoop
+     --hbase-user=hbase                                              User which hbase is running as. Defaults to hbase
   "
   exit 1
 }
@@ -196,6 +197,7 @@ OPTS=$(getopt \
   -l 'dfs-webhdfs-enabled:' \
   -l 'hadoop-proxy-users:' \
   -l 'dfs-support-append:' \
+  -l 'hbase-user:' \
   -o 'h' \
   -- "$@") 
   
@@ -327,6 +329,10 @@ while true ; do
       DFS_SUPPORT_APPEND=$2; shift 2
       AUTOMATED=1
       ;;
+    --hbase-user)
+      HBASE_USER=$2; shift 2
+      AUTOMATED=1
+      ;;
     --)
       shift ; break
       ;;
@@ -355,6 +361,9 @@ HADOOP_REPLICATION=${HADOOP_RELICATION:-3}
 HADOOP_TASK_SCHEDULER=${HADOOP_TASK_SCHEDULER:-org.apache.hadoop.mapred.JobQueueTaskScheduler}
 HADOOP_HDFS_USER=${HADOOP_HDFS_USER:-hdfs}
 HADOOP_MR_USER=${HADOOP_MR_USER:-mr}
+DFS_WEBHDFS_ENABLED=${DFS_WEBHDFS_ENABLED:-false}
+DFS_SUPPORT_APPEND=${DFS_SUPPORT_APPEND:-false}
+HBASE_USER=${HBASE_USER:-hbase}
 KEYTAB_DIR=${KEYTAB_DIR:-/etc/security/keytabs}
 HDFS_KEYTAB=${HDFS_KEYTAB:-/home/hdfs/hdfs.keytab}
 MR_KEYTAB=${MR_KEYTAB:-/home/mr/mr.keytab}
