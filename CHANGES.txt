@@ -362,6 +362,9 @@ Release 0.20.205.0 - 2011.09.28
     HADOOP-7720. Added parameter for HBase user to setup config script.
     (Arpit Gupta via Eric Yang)
 
+    HDFS-2395. Add a root element in the JSON responses of webhdfs.
+    (szetszwo)
+
 Release 0.20.204.0 - 2011-8-25
 
   NEW FEATURES

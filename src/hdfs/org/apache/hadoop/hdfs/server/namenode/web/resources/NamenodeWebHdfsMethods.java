@@ -236,19 +236,19 @@ public class NamenodeWebHdfsMethods {
     case MKDIRS:
     {
       final boolean b = namenode.mkdirs(fullpath, permission.getFsPermission());
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.MKDIRS, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case RENAME:
     {
       final boolean b = namenode.rename(fullpath, dstPath.getValue());
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.RENAME, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case SETREPLICATION:
     {
       final boolean b = namenode.setReplication(fullpath, replication.getValue());
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.SETREPLICATION, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case SETOWNER:
@@ -271,7 +271,7 @@ public class NamenodeWebHdfsMethods {
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegation.getValue());
       final long expiryTime = namenode.renewDelegationToken(token);
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.RENEWDELEGATIONTOKEN, expiryTime);
+      final String js = JsonUtil.toJsonString("long", expiryTime);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case CANCELDELEGATIONTOKEN:
@@ -476,7 +476,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintStream out = new PrintStream(outstream);
-        out.print('[');
+        out.println("{\"" + HdfsFileStatus[].class.getSimpleName() + "\":[");
 
         final HdfsFileStatus[] partial = first.getPartialListing();
         if (partial.length > 0) {
@@ -495,7 +495,7 @@ public class NamenodeWebHdfsMethods {
           }
         }
         
-        out.println(']');
+        out.println("]}");
       }
     };
   }
@@ -531,7 +531,7 @@ public class NamenodeWebHdfsMethods {
         case DELETE:
         {
           final boolean b = namenode.delete(fullpath, recursive.getValue());
-          final String js = JsonUtil.toJsonString(DeleteOpParam.Op.DELETE, b);
+          final String js = JsonUtil.toJsonString("boolean", b);
           return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
         }
         default:
