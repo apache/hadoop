@@ -51,6 +51,9 @@ Release 0.20.205.0 - 2011.09.28
     HDFS-2385. Support renew and cancel delegation tokens in webhdfs.
     (szetszwo)
 
+    MAPREDUCE-2777. Backport of MAPREDUCE-220 and MAPREDUCE-2469. Includes adding 
+    cumulative CPU usage and total heap usage to task conters. (amarrk)
+
   BUG FIXES
 
     MAPREDUCE-3112. Calling hadoop cli inside mapreduce job leads to errors.
