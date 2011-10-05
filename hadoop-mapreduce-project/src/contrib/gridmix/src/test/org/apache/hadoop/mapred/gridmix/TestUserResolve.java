@@ -106,7 +106,7 @@ public class TestUserResolve {
     // Check if the error message is as expected for non existent
     // user resource file.
     fs.delete(usersFilePath, false);
-    String expectedErrorMsg = "File " + userRsrc + " does not exist.";
+    String expectedErrorMsg = "File " + userRsrc + " does not exist";
     validateBadUsersFile(rslv, userRsrc, expectedErrorMsg);
 
     // Check if the error message is as expected for empty user resource file

@@ -22,6 +22,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-2950. [Gridmix] TestUserResolve fails in trunk. 
+                    (Ravi Gummadi via amarrk)
+
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
     ResourceUsageMatcher. (amarrk)
 
