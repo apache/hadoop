@@ -302,7 +302,8 @@ public class AvroUtil {
   // TODO(hammer): Pick one: Timestamp or TimeStamp
   static public AResult resultToAResult(Result result) {
     AResult aresult = new AResult();
-    aresult.row = ByteBuffer.wrap(result.getRow());
+    byte[] row = result.getRow();
+    aresult.row = ByteBuffer.wrap(row != null ? row : new byte[1]);
     Schema s = Schema.createArray(AResultEntry.SCHEMA$);
     GenericData.Array<AResultEntry> entries = null;
     List<KeyValue> resultKeyValues = result.list();

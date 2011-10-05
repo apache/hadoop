@@ -319,7 +319,9 @@ Release 0.92.0 - Unreleased
    HBASE-4496  HFile V2 does not honor setCacheBlocks when scanning (Lars and Mikhail)
    HBASE-4531  hbase-4454 failsafe broke mvn site; back it out or fix
                (Akash Ashok)
-   HBASE-4334 HRegion.get never validates row (Lars Hofhansl)
+   HBASE-4334  HRegion.get never validates row (Lars Hofhansl)
+   HBASE-4494  AvroServer:: get fails with NPE on a non-existent row 
+               (Kay Kay)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
