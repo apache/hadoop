@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.net.URI;
@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Before;
@@ -53,15 +52,15 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hftp://localhost");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(HftpFileSystem.DEFAULT_PORT, fs.getDefaultPort());
-    assertEquals(HftpFileSystem.DEFAULT_SECURE_PORT, fs.getDefaultSecurePort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     URI fsUri = fs.getUri();
     assertEquals(uri.getHost(), fsUri.getHost());
-    assertEquals(HftpFileSystem.DEFAULT_PORT, fsUri.getPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fsUri.getPort());
     
     assertEquals(
-        "127.0.0.1:"+HftpFileSystem.DEFAULT_SECURE_PORT,
+        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
         fs.getCanonicalServiceName()
     );
   }
@@ -94,15 +93,15 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hftp://localhost:123");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(HftpFileSystem.DEFAULT_PORT, fs.getDefaultPort());
-    assertEquals(HftpFileSystem.DEFAULT_SECURE_PORT, fs.getDefaultSecurePort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     URI fsUri = fs.getUri();
     assertEquals(uri.getHost(), fsUri.getHost());
     assertEquals(uri.getPort(), fsUri.getPort());
     
     assertEquals(
-        "127.0.0.1:"+HftpFileSystem.DEFAULT_SECURE_PORT,
+        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
         fs.getCanonicalServiceName()
     );
   }
@@ -137,15 +136,15 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hsftp://localhost");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(HsftpFileSystem.DEFAULT_SECURE_PORT, fs.getDefaultPort());
-    assertEquals(HsftpFileSystem.DEFAULT_SECURE_PORT, fs.getDefaultSecurePort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     URI fsUri = fs.getUri();
     assertEquals(uri.getHost(), fsUri.getHost());
-    assertEquals(HsftpFileSystem.DEFAULT_SECURE_PORT, fsUri.getPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fsUri.getPort());
     
     assertEquals(
-        "127.0.0.1:"+HsftpFileSystem.DEFAULT_SECURE_PORT,
+        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
         fs.getCanonicalServiceName()
     );
   }
@@ -178,8 +177,8 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hsftp://localhost:123");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(HsftpFileSystem.DEFAULT_SECURE_PORT, fs.getDefaultPort());
-    assertEquals(HsftpFileSystem.DEFAULT_SECURE_PORT, fs.getDefaultSecurePort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     URI fsUri = fs.getUri();
     assertEquals(uri.getHost(), fsUri.getHost());
@@ -235,13 +234,13 @@ public class TestHftpFileSystem {
     
     @SuppressWarnings("unchecked")
     @Override
-    protected <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+    public <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
       gotToken = (Token<DelegationTokenIdentifier>) token;
     }
   }
   
   static Token<DelegationTokenIdentifier> makeDummyToken(String kind) {
-    Token<DelegationTokenIdentifier> token = new Token();
+    Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
     token.setKind(new Text(kind));
     return token;
   }
