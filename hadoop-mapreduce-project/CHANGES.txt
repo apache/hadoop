@@ -1526,6 +1526,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3056. Changed the default staging directory to not include
     user.name to prevent issues with non-secure mode. (Devaraj K via vinodkv)
 
+    MAPREDUCE-2913. Fixed TestMRJobs.testFailingMapper to assert the correct
+    TaskCompletionEventStatus. (Jonathan Eagles via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
