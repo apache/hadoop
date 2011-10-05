@@ -344,6 +344,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3013. Removed YarnConfiguration.YARN_SECURITY_INFO and its usage
     as it doesn't affect security any more. (vinodkv)
 
+    MAPREDUCE-2907. Changed log level for various messages in ResourceManager
+    from INFO to DEBUG. (Ravi Prakash via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

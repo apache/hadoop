@@ -991,10 +991,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       String user = 
         UserGroupInformation.getCurrentUser().getShortUserName();
       Path path = MRApps.getStagingAreaDir(job.conf, user);
-      LOG.info("DEBUG --- startJobs:"
-          + " parent="
-          + path + " child="
-          + oldJobIDString);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("startJobs: parent=" + path + " child=" + oldJobIDString);
+      }
 
       job.remoteJobSubmitDir =
           FileSystem.get(job.conf).makeQualified(

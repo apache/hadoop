@@ -164,9 +164,10 @@ public class Application {
     if (requests == null) {
       requests = new HashMap<String, ResourceRequest>();
       this.requests.put(priority, requests);
-      LOG.info("DEBUG --- Added" +
-      		" priority=" + priority + 
-      		" application=" + applicationId);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Added priority=" + priority + " application="
+          + applicationId);
+      }
     }
     
     final Resource capability = requestSpec.get(priority);
@@ -182,9 +183,10 @@ public class Application {
     LOG.info("Added task " + task.getTaskId() + " to application " + 
         applicationId + " at priority " + priority);
     
-    LOG.info("DEBUG --- addTask:" +
-    		" application=" + applicationId + 
-    		" #asks=" + ask.size());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("addTask: application=" + applicationId
+        + " #asks=" + ask.size());
+    }
     
     // Create resource requests
     for (String host : task.getHosts()) {
@@ -245,23 +247,24 @@ public class Application {
         org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
             request)); // clone to ensure the RM doesn't manipulate the same obj
     
-    LOG.info("DEBUG --- addResourceRequest:" +
-    		" applicationId=" + applicationId.getId() +
-    		" priority=" + priority.getPriority() + 
-        " resourceName=" + resourceName + 
-        " capability=" + capability +
-        " numContainers=" + request.getNumContainers() + 
-        " #asks=" + ask.size());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("addResourceRequest: applicationId=" + applicationId.getId()
+        + " priority=" + priority.getPriority()
+        + " resourceName=" + resourceName + " capability=" + capability
+        + " numContainers=" + request.getNumContainers()
+        + " #asks=" + ask.size());
+    }
   }
   
   public synchronized List<Container> getResources() throws IOException {
-    LOG.info("DEBUG --- getResources begin:" +
-        " application=" + applicationId + 
-        " #ask=" + ask.size());
-    for (ResourceRequest request : ask) {
-      LOG.info("DEBUG --- getResources:" +
-          " application=" + applicationId + 
-          " ask-request=" + request);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("getResources begin:" + " application=" + applicationId
+        + " #ask=" + ask.size());
+
+      for (ResourceRequest request : ask) {
+        LOG.debug("getResources:" + " application=" + applicationId
+          + " ask-request=" + request);
+      }
     }
     
     // Get resources from the ResourceManager
@@ -280,9 +283,10 @@ public class Application {
     // Clear state for next interaction with ResourceManager
     ask.clear();
     
-    LOG.info("DEBUG --- getResources() for " + applicationId + ":" +
-    		" ask=" + ask.size() + 
-    		" recieved=" + containers.size());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("getResources() for " + applicationId + ":"
+        + " ask=" + ask.size() + " recieved=" + containers.size());
+    }
     
     return containers;
   }
@@ -353,22 +357,22 @@ public class Application {
       NodeType type, Task task) {
     if (type == NodeType.NODE_LOCAL) {
       for (String host : task.getHosts()) {
-        LOG.info("DEBUG --- updateResourceRequests:" +
-            " application=" + applicationId +
-        		" type=" + type + 
-        		" host=" + host + 
-        		" request=" + ((requests == null) ? "null" : requests.get(host)));
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("updateResourceRequests:" + " application=" + applicationId
+            + " type=" + type + " host=" + host
+            + " request=" + ((requests == null) ? "null" : requests.get(host)));
+        }
         updateResourceRequest(requests.get(host));
       }
     }
     
     if (type == NodeType.NODE_LOCAL || type == NodeType.RACK_LOCAL) {
       for (String rack : task.getRacks()) {
-        LOG.info("DEBUG --- updateResourceRequests:" +
-            " application=" + applicationId +
-            " type=" + type + 
-            " rack=" + rack + 
-            " request=" + ((requests == null) ? "null" : requests.get(rack)));
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("updateResourceRequests:" + " application=" + applicationId
+            + " type=" + type + " rack=" + rack
+            + " request=" + ((requests == null) ? "null" : requests.get(rack)));
+        }
         updateResourceRequest(requests.get(rack));
       }
     }
@@ -378,9 +382,10 @@ public class Application {
             org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode.ANY)
             );
     
-    LOG.info("DEBUG --- updateResourceRequests:" +
-        " application=" + applicationId +
-    		" #asks=" + ask.size());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("updateResourceRequests:" + " application=" + applicationId
+        + " #asks=" + ask.size());
+    }
   }
   
   private void updateResourceRequest(ResourceRequest request) {
@@ -392,9 +397,10 @@ public class Application {
         org.apache.hadoop.yarn.util.BuilderUtils.newResourceRequest(
         request)); // clone to ensure the RM doesn't manipulate the same obj
 
-    LOG.info("DEBUG --- updateResourceRequest:" +
-        " application=" + applicationId +
-    		" request=" + request);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("updateResourceRequest:" + " application=" + applicationId
+        + " request=" + request);
+    }
   }
 
   private ContainerLaunchContext createCLC(Container container) {

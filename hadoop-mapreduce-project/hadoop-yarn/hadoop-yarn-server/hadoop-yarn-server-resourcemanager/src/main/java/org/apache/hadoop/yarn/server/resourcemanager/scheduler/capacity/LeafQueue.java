@@ -184,9 +184,10 @@ public class LeafQueue implements CSQueue {
         maxActiveApplications, maxActiveApplicationsPerUser,
         state, acls);
 
-    LOG.info("DEBUG --- LeafQueue:" +
-        " name=" + queueName + 
-        ", fullname=" + getQueuePath());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("LeafQueue:" + " name=" + queueName
+        + ", fullname=" + getQueuePath());
+    }
 
     this.pendingApplications = 
         new TreeSet<SchedulerApp>(applicationComparator);
@@ -673,9 +674,10 @@ public class LeafQueue implements CSQueue {
   public synchronized Resource 
   assignContainers(Resource clusterResource, SchedulerNode node) {
 
-    LOG.info("DEBUG --- assignContainers:" +
-        " node=" + node.getHostName() + 
-        " #applications=" + activeApplications.size());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("assignContainers: node=" + node.getHostName()
+        + " #applications=" + activeApplications.size());
+    }
     
     // Check for reserved resources
     RMContainer reservedContainer = node.getReservedContainer();
@@ -689,8 +691,10 @@ public class LeafQueue implements CSQueue {
     // Try to assign containers to applications in order
     for (SchedulerApp application : activeApplications) {
       
-      LOG.info("DEBUG --- pre-assignContainers for application "
-          + application.getApplicationId());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("pre-assignContainers for application "
+        + application.getApplicationId());
+      }
       application.showRequests();
 
       synchronized (application) {
@@ -750,8 +754,10 @@ public class LeafQueue implements CSQueue {
         }
       }
 
-      LOG.info("DEBUG --- post-assignContainers for application "
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("post-assignContainers for application "
           + application.getApplicationId());
+      }
       application.showRequests();
     }
   
@@ -1094,11 +1100,10 @@ public class LeafQueue implements CSQueue {
       SchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer) {
     if (LOG.isDebugEnabled()) {
-      LOG.info("DEBUG --- assignContainers:" +
-          " node=" + node.getHostName() + 
-          " application=" + application.getApplicationId().getId() + 
-          " priority=" + priority.getPriority() + 
-          " request=" + request + " type=" + type);
+      LOG.debug("assignContainers: node=" + node.getHostName()
+        + " application=" + application.getApplicationId().getId()
+        + " priority=" + priority.getPriority()
+        + " request=" + request + " type=" + type);
     }
     Resource capability = request.getCapability();
 
