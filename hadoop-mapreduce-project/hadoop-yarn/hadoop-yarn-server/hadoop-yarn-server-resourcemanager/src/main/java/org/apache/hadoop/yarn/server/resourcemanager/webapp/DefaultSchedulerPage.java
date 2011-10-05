@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.google.inject.Inject;
-import com.google.inject.servlet.RequestScoped;
 
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
@@ -35,7 +34,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 class DefaultSchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
@@ -76,8 +74,9 @@ class DefaultSchedulerPage extends RmView {
       int nodeContainers   = 0;
 
       for (RMNode ni : this.rmContext.getRMNodes().values()) {
-        usedNodeMem += fs.getUsedResource(ni.getNodeID()).getMemory();
-        availNodeMem += fs.getAvailableResource(ni.getNodeID()).getMemory();
+        SchedulerNodeReport report = fs.getNodeReport(ni.getNodeID());
+        usedNodeMem += report.getUsedResource().getMemory();
+        availNodeMem += report.getAvailableResource().getMemory();
         totNodeMem += ni.getTotalCapability().getMemory();
         nodeContainers += fs.getNodeReport(ni.getNodeID()).getNumContainers();
       }
@@ -109,6 +108,7 @@ class DefaultSchedulerPage extends RmView {
 
     @Override
     public void render(Block html) {
+      html._(MetricsOverviewTable.class);
       UL<DIV<DIV<Hamlet>>> ul = html.
         div("#cs-wrapper.ui-widget").
           div(".ui-widget-header.ui-corner-top").

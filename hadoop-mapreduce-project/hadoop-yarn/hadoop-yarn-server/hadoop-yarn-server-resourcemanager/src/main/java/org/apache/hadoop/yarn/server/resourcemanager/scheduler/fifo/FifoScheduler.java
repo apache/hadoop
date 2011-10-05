@@ -173,14 +173,6 @@ public class FifoScheduler implements ResourceScheduler {
     }
   };
 
-  public synchronized Resource getUsedResource(NodeId nodeId) {
-    return getNode(nodeId).getUsedResource();
-  }
-
-  public synchronized Resource getAvailableResource(NodeId nodeId) {
-    return getNode(nodeId).getAvailableResource();
-  }
-
   @Override
   public Resource getMinimumResourceCapability() {
     return minimumAllocation;
@@ -718,6 +710,9 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Inform the node
     node.releaseContainer(container);
+    
+    // Update total usage
+    Resources.subtractFrom(usedResource, container.getResource());
 
     LOG.info("Application " + applicationAttemptId + 
         " released container " + container.getId() +

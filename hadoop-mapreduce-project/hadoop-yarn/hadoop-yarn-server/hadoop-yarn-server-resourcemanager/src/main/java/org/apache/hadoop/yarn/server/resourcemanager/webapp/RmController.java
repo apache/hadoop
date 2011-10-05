@@ -22,8 +22,9 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.APP_
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.QUEUE_NAME;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -35,7 +36,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 
@@ -50,25 +50,15 @@ public class RmController extends Controller {
     setTitle("Applications");
   }
 
-  public void info() {
+  public void about() {
     setTitle("About the Cluster");
-    long ts = ResourceManager.clusterTimeStamp;
-    ResourceManager rm = getInstance(ResourceManager.class);
-    info("Cluster overview").
-      _("Cluster ID:", ts).
-      _("ResourceManager state:", rm.getServiceState()).
-      _("ResourceManager started on:", Times.format(ts)).
-      _("ResourceManager version:", YarnVersionInfo.getBuildVersion() +
-          " on " + YarnVersionInfo.getDate()).
-      _("Hadoop version:", VersionInfo.getBuildVersion() +
-          " on " + VersionInfo.getDate());
-    render(InfoPage.class);
+    render(AboutPage.class);
   }
 
   public void app() {
     String aid = $(APP_ID);
     if (aid.isEmpty()) {
-      setStatus(response().SC_BAD_REQUEST);
+      setStatus(HttpServletResponse.SC_BAD_REQUEST);
       setTitle("Bad request: requires application ID");
       return;
     }
@@ -77,7 +67,7 @@ public class RmController extends Controller {
     RMApp app = context.getRMApps().get(appID);
     if (app == null) {
       // TODO: handle redirect to jobhistory server
-      setStatus(response().SC_NOT_FOUND);
+      setStatus(HttpServletResponse.SC_NOT_FOUND);
       setTitle("Application not found: "+ aid);
       return;
     }
@@ -107,7 +97,7 @@ public class RmController extends Controller {
     } else {
       info._("AM container logs:", "AM not yet registered with RM");
     }
-    render(InfoPage.class);
+    render(AboutPage.class);
   }
 
   public void nodes() {
