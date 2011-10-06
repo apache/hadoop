@@ -1034,44 +1034,55 @@ public abstract class FSUtils {
 
   /**
    * Called when we are creating a table to write out the tables' descriptor.
-   * 
    * @param fs
    * @param hTableDescriptor
    * @param tableDir
+   * @param forceCreation True if we are to force creation
    * @throws IOException
    */
   private static void writeTableDescriptor(FileSystem fs,
       HTableDescriptor hTableDescriptor, Path tableDir, boolean forceCreation)
-      throws IOException {
+  throws IOException {
     // Create in tmpdir and then move into place in case we crash after
     // create but before close. If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
     // registered in NN.
     Path tableInfoPath = new Path(tableDir, HConstants.TABLEINFO_NAME);
     Path tmpPath = new Path(new Path(tableDir, ".tmp"),
-        HConstants.TABLEINFO_NAME);
+      HConstants.TABLEINFO_NAME + "." + System.currentTimeMillis());
     LOG.info("TableInfoPath = " + tableInfoPath + " tmpPath = " + tmpPath);
     try {
       writeHTD(fs, tmpPath, hTableDescriptor);
     } catch (IOException e) {
       LOG.error("Unable to write the tabledescriptor in the path" + tmpPath
           + ".", e);
+      fs.delete(tmpPath, true);
       throw e;
     }
-    if (forceCreation) {
-      if (!fs.delete(tableInfoPath, false)) {
-        String errMsg = "Unable to delete " + tableInfoPath
-            + " while forcefully writing the table descriptor.";
+    // TODO: The below is less than ideal and likely error prone.  There is a
+    // better rename in hadoops after 0.20 that takes rename options (this has
+    // its own issues according to mighty Todd in that old readers may fail
+    // as we cross the renme transition) but until then, we have this
+    // forceCreation flag which does a delete and then we rename so there is a
+    // hole.  Need to fix.
+    try {
+      if (forceCreation) {
+        if (!fs.delete(tableInfoPath, false)) {
+          String errMsg = "Unable to delete " + tableInfoPath
+              + " while forcefully writing the table descriptor.";
+          LOG.error(errMsg);
+          throw new IOException(errMsg);
+        }
+      }
+      if (!fs.rename(tmpPath, tableInfoPath)) {
+        String errMsg = "Unable to rename " + tmpPath + " to " + tableInfoPath;
         LOG.error(errMsg);
         throw new IOException(errMsg);
+      } else {
+        LOG.info("TableDescriptor stored. TableInfoPath = " + tableInfoPath);
       }
-    }
-    if (!fs.rename(tmpPath, tableInfoPath)) {
-      String errMsg = "Unable to rename " + tmpPath + " to " + tableInfoPath;
-      LOG.error(errMsg);
-      throw new IOException(errMsg);
-    } else {
-      LOG.info("TableDescriptor stored. TableInfoPath = " + tableInfoPath);
+    } finally {
+      fs.delete(tmpPath, true);
     }
   }
 
@@ -1087,9 +1098,9 @@ public abstract class FSUtils {
   throws IOException {
     Path tableInfoPath =
       getTableInfoPath(rootdir, hTableDescriptor.getNameAsString());
-    writeHTD(fs, tableInfoPath, hTableDescriptor);
-    LOG.info("updateHTableDescriptor. Updated tableinfo in HDFS under " +
-      tableInfoPath + " For HTD => " + hTableDescriptor.toString());
+    writeTableDescriptor(fs, hTableDescriptor, tableInfoPath.getParent(), true);
+    LOG.info("Updated tableinfo=" + tableInfoPath + " to " +
+      hTableDescriptor.toString());
   }
 
   private static void writeHTD(final FileSystem fs, final Path p,
