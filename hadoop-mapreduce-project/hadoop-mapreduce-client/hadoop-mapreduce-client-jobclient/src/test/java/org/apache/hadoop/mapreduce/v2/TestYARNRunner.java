@@ -64,10 +64,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -77,25 +77,25 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- * Test YarnRunner and make sure the client side plugin works 
+ * Test YarnRunner and make sure the client side plugin works
  * fine
  */
 public class TestYARNRunner extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestYARNRunner.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
- 
+
   private YARNRunner yarnRunner;
   private ResourceMgrDelegate resourceMgrDelegate;
   private YarnConfiguration conf;
   private ClientCache clientCache;
   private ApplicationId appId;
   private JobID jobId;
-  private File testWorkDir = 
+  private File testWorkDir =
       new File("target", TestYARNRunner.class.getName());
   private ApplicationSubmissionContext submissionContext;
   private  ClientServiceDelegate clientDelegate;
   private static final String failString = "Rejected job";
- 
+
   @Before
   public void setUp() throws Exception {
     resourceMgrDelegate = mock(ResourceMgrDelegate.class);
@@ -115,7 +115,7 @@ public class TestYARNRunner extends TestCase {
         }
         ).when(yarnRunner).createApplicationSubmissionContext(any(Configuration.class),
             any(String.class), any(Credentials.class));
-    
+
     appId = recordFactory.newRecordInstance(ApplicationId.class);
     appId.setClusterTimestamp(System.currentTimeMillis());
     appId.setId(1);
@@ -125,13 +125,13 @@ public class TestYARNRunner extends TestCase {
     }
     testWorkDir.mkdirs();
    }
-  
-  
+
+
   @Test
   public void testJobKill() throws Exception {
     clientDelegate = mock(ClientServiceDelegate.class);
-    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new 
-        org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f, 
+    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new
+        org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f,
             State.PREP, JobPriority.HIGH, "tmp", "tmp", "tmp", "tmp"));
     when(clientDelegate.killJob(any(JobID.class))).thenReturn(true);
     doAnswer(
@@ -145,13 +145,13 @@ public class TestYARNRunner extends TestCase {
         ).when(clientCache).getClient(any(JobID.class));
     yarnRunner.killJob(jobId);
     verify(resourceMgrDelegate).killApplication(appId);
-    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new 
-        org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f, 
+    when(clientDelegate.getJobStatus(any(JobID.class))).thenReturn(new
+        org.apache.hadoop.mapreduce.JobStatus(jobId, 0f, 0f, 0f, 0f,
             State.RUNNING, JobPriority.HIGH, "tmp", "tmp", "tmp", "tmp"));
     yarnRunner.killJob(jobId);
     verify(clientDelegate).killJob(jobId);
   }
-  
+
   @Test
   public void testJobSubmissionFailure() throws Exception {
     when(resourceMgrDelegate.submitApplication(any(ApplicationSubmissionContext.class))).
@@ -159,7 +159,7 @@ public class TestYARNRunner extends TestCase {
     ApplicationReport report = mock(ApplicationReport.class);
     when(report.getApplicationId()).thenReturn(appId);
     when(report.getDiagnostics()).thenReturn(failString);
-    when(report.getState()).thenReturn(ApplicationState.FAILED);
+    when(report.getYarnApplicationState()).thenReturn(YarnApplicationState.FAILED);
     when(resourceMgrDelegate.getApplicationReport(appId)).thenReturn(report);
     Credentials credentials = new Credentials();
     File jobxml = new File(testWorkDir, "job.xml");
@@ -167,13 +167,13 @@ public class TestYARNRunner extends TestCase {
     conf.writeXml(out);
     out.close();
     try {
-      yarnRunner.submitJob(jobId, testWorkDir.getAbsolutePath().toString(), credentials); 
+      yarnRunner.submitJob(jobId, testWorkDir.getAbsolutePath().toString(), credentials);
     } catch(IOException io) {
       LOG.info("Logging exception:", io);
       assertTrue(io.getLocalizedMessage().contains(failString));
     }
   }
-  
+
   @Test
   public void testResourceMgrDelegate() throws Exception {
     /* we not want a mock of resourcemgr deleagte */
@@ -184,19 +184,19 @@ public class TestYARNRunner extends TestCase {
     .thenReturn(null);
     delegate.killApplication(appId);
     verify(clientRMProtocol).forceKillApplication(any(KillApplicationRequest.class));
-    
+
     /* make sure getalljobs calls get all applications */
     when(clientRMProtocol.getAllApplications(any(GetAllApplicationsRequest.class))).
     thenReturn(recordFactory.newRecordInstance(GetAllApplicationsResponse.class));
     delegate.getAllJobs();
     verify(clientRMProtocol).getAllApplications(any(GetAllApplicationsRequest.class));
-    
+
     /* make sure getapplication report is called */
     when(clientRMProtocol.getApplicationReport(any(GetApplicationReportRequest.class)))
     .thenReturn(recordFactory.newRecordInstance(GetApplicationReportResponse.class));
     delegate.getApplicationReport(appId);
     verify(clientRMProtocol).getApplicationReport(any(GetApplicationReportRequest.class));
-    
+
     /* make sure metrics is called */
     GetClusterMetricsResponse clusterMetricsResponse = recordFactory.newRecordInstance
         (GetClusterMetricsResponse.class);
@@ -206,7 +206,7 @@ public class TestYARNRunner extends TestCase {
     .thenReturn(clusterMetricsResponse);
     delegate.getClusterMetrics();
     verify(clientRMProtocol).getClusterMetrics(any(GetClusterMetricsRequest.class));
-    
+
     when(clientRMProtocol.getClusterNodes(any(GetClusterNodesRequest.class))).
     thenReturn(recordFactory.newRecordInstance(GetClusterNodesResponse.class));
     delegate.getActiveTrackers();
@@ -227,7 +227,7 @@ public class TestYARNRunner extends TestCase {
     thenReturn(queueInfoResponse);
     delegate.getQueues();
     verify(clientRMProtocol).getQueueInfo(any(GetQueueInfoRequest.class));
-    
+
     GetQueueUserAclsInfoResponse aclResponse = recordFactory.newRecordInstance(
         GetQueueUserAclsInfoResponse.class);
     when(clientRMProtocol.getQueueUserAcls(any(GetQueueUserAclsInfoRequest.class)))

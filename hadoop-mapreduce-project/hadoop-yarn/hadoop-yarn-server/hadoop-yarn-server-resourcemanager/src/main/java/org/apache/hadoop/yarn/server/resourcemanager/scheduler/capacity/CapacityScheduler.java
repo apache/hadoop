@@ -58,8 +58,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -128,10 +130,15 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   public CapacityScheduler() {}
 
+  @Override
+  public QueueMetrics getRootQueueMetrics() {
+    return root.getMetrics();
+  }
+
   public CSQueue getRootQueue() {
     return root;
   }
-
+  
   @Override
   public CapacitySchedulerConfiguration getConfiguration() {
     return conf;
@@ -150,14 +157,6 @@ implements ResourceScheduler, CapacitySchedulerContext {
   @Override
   public Resource getMaximumResourceCapability() {
     return maximumAllocation;
-  }
-
-  public synchronized Resource getUsedResource(NodeId nodeId) {
-    return nodes.get(nodeId).getUsedResource();
-  }
-
-  public synchronized Resource getAvailableResource(NodeId nodeId) {
-    return nodes.get(nodeId).getAvailableResource();
   }
 
   public synchronized int getNumClusterNodes() {
@@ -401,7 +400,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
     
      // Release all reserved containers
-    for (RMContainer rmContainer : application.getAllReservedContainers()) {
+    for (RMContainer rmContainer : application.getReservedContainers()) {
       completedContainer(rmContainer, 
           SchedulerUtils.createAbnormalContainerStatus(
               rmContainer.getContainerId(), 
@@ -465,21 +464,25 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
       if (!ask.isEmpty()) {
 
-        LOG.info("DEBUG --- allocate: pre-update" +
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("allocate: pre-update" +
             " applicationAttemptId=" + applicationAttemptId + 
             " application=" + application);
+        }
         application.showRequests();
   
         // Update application requests
         application.updateResourceRequests(ask);
   
-        LOG.info("DEBUG --- allocate: post-update");
+        LOG.debug("allocate: post-update");
         application.showRequests();
       }
 
-      LOG.info("DEBUG --- allocate:" +
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("allocate:" +
           " applicationAttemptId=" + applicationAttemptId + 
           " #ask=" + ask.size());
+      }
 
       return new Allocation(
           application.pullNewlyAllocatedContainers(), 
@@ -548,14 +551,16 @@ implements ResourceScheduler, CapacitySchedulerContext {
     // Process completed containers
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
-      LOG.info("DEBUG --- Container FINISHED: " + containerId);
+      LOG.debug("Container FINISHED: " + containerId);
       completedContainer(getRMContainer(containerId), 
           completedContainer, RMContainerEventType.FINISHED);
     }
 
     // Now node data structures are upto date and ready for scheduling.
-    LOG.info("DEBUG -- Node being looked for scheduling " + nm
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Node being looked for scheduling " + nm
         + " availableResource: " + node.getAvailableResource());
+    }
 
     // Assign new containers...
     // 1. Check for reserved applications
@@ -733,6 +738,13 @@ implements ResourceScheduler, CapacitySchedulerContext {
     return applications.get(applicationAttemptId);
   }
 
+  @Override
+  public SchedulerAppReport getSchedulerAppInfo(
+      ApplicationAttemptId applicationAttemptId) {
+    SchedulerApp app = getApplication(applicationAttemptId);
+    return app == null ? null : new SchedulerAppReport(app);
+  }
+  
   @Lock(Lock.NoLock.class)
   SchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
@@ -764,8 +776,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
   @Override
   public SchedulerNodeReport getNodeReport(NodeId nodeId) {
     SchedulerNode node = getNode(nodeId);
-    return new SchedulerNodeReport(
-        node.getUsedResource(), node.getNumContainers());
+    return node == null ? null : new SchedulerNodeReport(node);
   }
   
 }

@@ -52,7 +52,7 @@ public class RmView extends TwoColumnLayout {
 
   @Override
   protected Class<? extends SubView> content() {
-    return AppsBlock.class;
+    return AppsBlockWithMetrics.class;
   }
 
   private String appsTableInit() {
@@ -60,7 +60,7 @@ public class RmView extends TwoColumnLayout {
     // id, user, name, queue, state, progress, ui, note
     StringBuilder init = tableInit().
         append(", aoColumns:[{sType:'title-numeric'}, null, null, null, null,").
-        append("{sType:'title-numeric', bSearchable:false}, null, null]");
+        append("null,{sType:'title-numeric', bSearchable:false}, null, null]");
     String rows = $("rowlimit");
     int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);
     if (list.apps.size() < rowLimit) {

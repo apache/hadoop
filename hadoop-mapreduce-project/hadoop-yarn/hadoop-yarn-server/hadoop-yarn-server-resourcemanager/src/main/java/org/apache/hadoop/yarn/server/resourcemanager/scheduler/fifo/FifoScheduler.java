@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.Lock;
@@ -47,6 +49,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -70,6 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
@@ -82,7 +86,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.yarn.api.records.QueueState;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -169,14 +172,6 @@ public class FifoScheduler implements ResourceScheduler {
       return Collections.singletonList(queueUserAclInfo);
     }
   };
-
-  public synchronized Resource getUsedResource(NodeId nodeId) {
-    return getNode(nodeId).getUsedResource();
-  }
-
-  public synchronized Resource getAvailableResource(NodeId nodeId) {
-    return getNode(nodeId).getAvailableResource();
-  }
 
   @Override
   public Resource getMinimumResourceCapability() {
@@ -285,6 +280,13 @@ public class FifoScheduler implements ResourceScheduler {
     return applications.get(applicationAttemptId);
   }
 
+  @Override
+  public SchedulerAppReport getSchedulerAppInfo(
+      ApplicationAttemptId applicationAttemptId) {
+    SchedulerApp app = getApplication(applicationAttemptId);
+    return app == null ? null : new SchedulerAppReport(app);
+  }
+  
   private SchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }
@@ -535,16 +537,21 @@ public class FifoScheduler implements ResourceScheduler {
         if (UserGroupInformation.isSecurityEnabled()) {
           ContainerToken containerToken =
               recordFactory.newRecordInstance(ContainerToken.class);
+          NodeId nodeId = container.getNodeId();
           ContainerTokenIdentifier tokenidentifier =
             new ContainerTokenIdentifier(container.getId(),
-                container.getNodeId().toString(), container.getResource());
+                nodeId.toString(), container.getResource());
           containerToken.setIdentifier(
               ByteBuffer.wrap(tokenidentifier.getBytes()));
           containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
           containerToken.setPassword(
               ByteBuffer.wrap(containerTokenSecretManager
                   .createPassword(tokenidentifier)));
-          containerToken.setService(container.getNodeId().toString());
+          // RPC layer client expects ip:port as service for tokens
+          InetSocketAddress addr = NetUtils.createSocketAddr(
+              nodeId.getHost(), nodeId.getPort());
+          containerToken.setService(addr.getAddress().getHostAddress() + ":"
+              + addr.getPort());
           container.setContainerToken(containerToken);
         }
         
@@ -580,7 +587,7 @@ public class FifoScheduler implements ResourceScheduler {
     // Process completed containers
     for (ContainerStatus completedContainer : completedContainers) {
       ContainerId containerId = completedContainer.getContainerId();
-      LOG.info("DEBUG --- Container FINISHED: " + containerId);
+      LOG.debug("Container FINISHED: " + containerId);
       containerCompleted(getRMContainer(containerId), 
           completedContainer, RMContainerEventType.FINISHED);
     }
@@ -703,6 +710,9 @@ public class FifoScheduler implements ResourceScheduler {
 
     // Inform the node
     node.releaseContainer(container);
+    
+    // Update total usage
+    Resources.subtractFrom(usedResource, container.getResource());
 
     LOG.info("Application " + applicationAttemptId + 
         " released container " + container.getId() +
@@ -762,14 +772,18 @@ public class FifoScheduler implements ResourceScheduler {
   @Override
   public synchronized SchedulerNodeReport getNodeReport(NodeId nodeId) {
     SchedulerNode node = getNode(nodeId);
-    return new SchedulerNodeReport(
-        node.getUsedResource(), node.getNumContainers());
+    return node == null ? null : new SchedulerNodeReport(node);
   }
   
   private RMContainer getRMContainer(ContainerId containerId) {
     SchedulerApp application = 
         getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
+  }
+
+  @Override
+  public QueueMetrics getRootQueueMetrics() {
+    return DEFAULT_QUEUE.getMetrics();
   }
 
 }

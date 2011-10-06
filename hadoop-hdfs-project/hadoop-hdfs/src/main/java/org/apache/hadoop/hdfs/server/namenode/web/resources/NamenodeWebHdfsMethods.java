@@ -46,6 +46,7 @@ import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -112,7 +113,9 @@ public class NamenodeWebHdfsMethods {
   private static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset
       ) throws IOException {
-    if (op == GetOpParam.Op.OPEN || op == PostOpParam.Op.APPEND) {
+    if (op == GetOpParam.Op.OPEN
+        || op == GetOpParam.Op.GETFILECHECKSUM
+        || op == PostOpParam.Op.APPEND) {
       final NamenodeProtocols np = namenode.getRpcServer();
       final HdfsFileStatus status = np.getFileInfo(path);
       final long len = status.getLen();
@@ -245,7 +248,7 @@ public class NamenodeWebHdfsMethods {
     case MKDIRS:
     {
       final boolean b = np.mkdirs(fullpath, permission.getFsPermission(), true);
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.MKDIRS, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case RENAME:
@@ -254,10 +257,10 @@ public class NamenodeWebHdfsMethods {
       if (s.isEmpty()) {
         @SuppressWarnings("deprecation")
         final boolean b = np.rename(fullpath, dstPath.getValue());
-        final String js = JsonUtil.toJsonString(PutOpParam.Op.RENAME, b);
+        final String js = JsonUtil.toJsonString("boolean", b);
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       } else {
-        np.rename(fullpath, dstPath.getValue(),
+        np.rename2(fullpath, dstPath.getValue(),
             s.toArray(new Options.Rename[s.size()]));
         return Response.ok().type(MediaType.APPLICATION_JSON).build();
       }
@@ -265,7 +268,7 @@ public class NamenodeWebHdfsMethods {
     case SETREPLICATION:
     {
       final boolean b = np.setReplication(fullpath, replication.getValue());
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.SETREPLICATION, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case SETOWNER:
@@ -431,6 +434,18 @@ public class NamenodeWebHdfsMethods {
       final StreamingOutput streaming = getListingStream(np, fullpath);
       return Response.ok(streaming).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETCONTENTSUMMARY:
+    {
+      final ContentSummary contentsummary = np.getContentSummary(fullpath);
+      final String js = JsonUtil.toJsonString(contentsummary);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETFILECHECKSUM:
+    {
+      final URI uri = redirectURI(namenode, ugi, delegation, fullpath,
+          op.getValue(), -1L);
+      return Response.temporaryRedirect(uri).build();
+    }
     case GETDELEGATIONTOKEN:
     {
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
@@ -467,7 +482,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintStream out = new PrintStream(outstream);
-        out.print('[');
+        out.println("{\"" + HdfsFileStatus[].class.getSimpleName() + "\":[");
 
         final HdfsFileStatus[] partial = first.getPartialListing();
         if (partial.length > 0) {
@@ -486,7 +501,7 @@ public class NamenodeWebHdfsMethods {
           }
         }
         
-        out.println(']');
+        out.println("]}");
       }
     };
   }
@@ -522,7 +537,7 @@ public class NamenodeWebHdfsMethods {
         case DELETE:
         {
           final boolean b = namenode.getRpcServer().delete(fullpath, recursive.getValue());
-          final String js = JsonUtil.toJsonString(DeleteOpParam.Op.DELETE, b);
+          final String js = JsonUtil.toJsonString("boolean", b);
           return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
         }
         default:

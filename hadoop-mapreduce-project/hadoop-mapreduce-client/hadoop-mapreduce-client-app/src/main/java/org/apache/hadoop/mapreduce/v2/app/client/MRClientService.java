@@ -114,7 +114,7 @@ public class MRClientService extends AbstractService
   }
 
   public void start() {
-    Configuration conf = new Configuration(getConfig()); // Just for not messing up sec-info class config
+    Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress address = NetUtils.createSocketAddr("0.0.0.0:0");
     InetAddress hostNameResolved = null;
@@ -134,9 +134,6 @@ public class MRClientService extends AbstractService
       ApplicationTokenIdentifier identifier =
           new ApplicationTokenIdentifier(this.appContext.getApplicationID());
       secretManager.setMasterKey(identifier, bytes);
-      conf.setClass(
-          YarnConfiguration.YARN_SECURITY_INFO,
-          SchedulerSecurityInfo.class, SecurityInfo.class); // Same for now.
     }
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,

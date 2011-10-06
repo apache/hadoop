@@ -19,9 +19,13 @@ Trunk (unreleased changes)
     HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
     (szetszwo)
 
+    HDFS-2348. Support getContentSummary and getFileChecksum in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
-    HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+    HADOOP-7524 Change RPC to allow multiple protocols including multuple 
+    versions of the same protocol (sanjay Radia)
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
@@ -49,6 +53,13 @@ Trunk (unreleased changes)
 
     HDFS-2355. Federation: enable using the same configuration file across 
     all the nodes in the cluster. (suresh)
+
+    HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
+
+    HDFS-2158. Add JournalSet to manage the set of journals. (jitendra)
+
+    HDFS-2395. Add a root element in the JSON responses of webhdfs.
+    (szetszwo)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
@@ -82,6 +93,9 @@ Trunk (unreleased changes)
     info on the console with security enabled. (Arpit Gupta via suresh)
 
     HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
+
+    HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
+    not include multiple methods of the same name. (cutting)
 
 Release 0.23.0 - Unreleased
 
@@ -1145,6 +1159,39 @@ Release 0.23.0 - Unreleased
                (todd)
     HDFS-2027. Image inspector should return finalized logs before unfinalized
                logs. (todd)
+    HDFS-2074. Determine edit log validity by truly reading and validating
+               transactions. (todd)
+    HDFS-2085. Finalize in-progress edit logs at startup. (todd)
+    HDFS-2026. SecondaryNameNode should properly handle the case where the
+               NameNode is reformatted. (todd)
+    HDFS-2077. Address checkpoint upload when one of the storage dirs is failed
+               (todd)
+    HDFS-2078. NameNode should not clear directory when restoring removed
+               storage. (todd)
+    HDFS-2088. Move edits log archiving logic into FSEditLog/JournalManager
+               (todd)
+    HDFS-2093. Handle case where an entirely empty log is left during NN crash
+               (todd)
+    HDFS-2102. Zero-pad edits filename to make them lexically sortable. (Ivan
+               Kelly via todd)
+    HDFS-2010. Fix NameNode to exit if all edit streams become inaccessible.
+               (atm via todd)
+    HDFS-2123. Checkpoint interval should be based on txn count, not size.
+               (todd)
+    HDFS-1979. Fix backupnode for new edits/image layout. (todd)
+    HDFS-2101. Fix remaining unit tests for new storage filenames. (todd)
+    HDFS-2133. Address remaining TODOs and pre-merge cleanup on HDFS-1073
+               branch.  (todd)
+    HDFS-1780. Reduce need to rewrite FSImage on startup. (todd)
+    HDFS-2104. Add a flag to the 2NN to format its checkpoint dirs on startup.
+               (todd)
+    HDFS-2135. Fix regression of HDFS-1955 in HDFS-1073 branch. (todd)
+    HDFS-2160. Fix CreateEditsLog test tool in HDFS-1073 branch. (todd)
+    HDFS-2168. Reenable TestEditLog.testFailedOpen and fix exposed bug. (todd)
+    HDFS-2169. Clean up TestCheckpoint and remove TODOs (todd)
+    HDFS-2170. Address remaining TODOs in HDFS-1073 branch. (todd)
+    HDFS-2172. Address findbugs and javadoc warnings in HDFS-1073 branch. 
+               (todd)
 
 Release 0.22.0 - Unreleased
 

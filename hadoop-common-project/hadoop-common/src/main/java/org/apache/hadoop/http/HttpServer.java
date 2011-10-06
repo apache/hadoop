@@ -210,7 +210,7 @@ public class HttpServer implements FilterContainer {
     webServer.setHandler(contexts);
 
     webAppContext = new WebAppContext();
-    webAppContext.setDisplayName("WepAppsContext");
+    webAppContext.setDisplayName(name);
     webAppContext.setContextPath("/");
     webAppContext.setWar(appDir + "/" + name);
     webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
@@ -696,8 +696,44 @@ public class HttpServer implements FilterContainer {
    * stop the server
    */
   public void stop() throws Exception {
-    listener.close();
-    webServer.stop();
+    MultiException exception = null;
+    try {
+      listener.close();
+    } catch (Exception e) {
+      LOG.error("Error while stopping listener for webapp"
+          + webAppContext.getDisplayName(), e);
+      exception = addMultiException(exception, e);
+    }
+
+    try {
+      // clear & stop webAppContext attributes to avoid memory leaks.
+      webAppContext.clearAttributes();
+      webAppContext.stop();
+    } catch (Exception e) {
+      LOG.error("Error while stopping web app context for webapp "
+          + webAppContext.getDisplayName(), e);
+      exception = addMultiException(exception, e);
+    }
+    try {
+      webServer.stop();
+    } catch (Exception e) {
+      LOG.error("Error while stopping web server for webapp "
+          + webAppContext.getDisplayName(), e);
+      exception = addMultiException(exception, e);
+    }
+
+    if (exception != null) {
+      exception.ifExceptionThrow();
+    }
+
+  }
+
+  private MultiException addMultiException(MultiException exception, Exception e) {
+    if(exception == null){
+      exception = new MultiException();
+    }
+    exception.add(e);
+    return exception;
   }
 
   public void join() throws InterruptedException {

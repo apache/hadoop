@@ -250,7 +250,7 @@ public class HsTaskPage extends HsView {
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
     //override the nav config from commonPReHead
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
     //Set up the java script and CSS for the attempts table
     set(DATATABLES_ID, "attempts");
     set(initID(DATATABLES, "attempts"), attemptsTableInit());

@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -75,7 +75,7 @@ public class TestAMRestart {
 //  private static final Log LOG = LogFactory.getLog(TestAMRestart.class);
 //  ApplicationsManagerImpl appImpl;
 //  RMContext asmContext = new RMContextImpl(new MemStore());
-//  ApplicationTokenSecretManager appTokenSecretManager = 
+//  ApplicationTokenSecretManager appTokenSecretManager =
 //    new ApplicationTokenSecretManager();
 //  DummyResourceScheduler scheduler;
 //  private ClientRMService clientRMService;
@@ -90,7 +90,7 @@ public class TestAMRestart {
 //  int launcherLaunchCalled = 0;
 //  int launcherCleanupCalled = 0;
 //  private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-//  
+//
 //  private class ExtApplicationsManagerImpl extends ApplicationsManagerImpl {
 //    public ExtApplicationsManagerImpl(
 //        ApplicationTokenSecretManager applicationTokenSecretManager,
@@ -115,7 +115,7 @@ public class TestAMRestart {
 //            LOG.info("DEBUG -- waiting for launch");
 //            synchronized(launchNotify) {
 //              while (launchNotify.get() == 0) {
-//                try { 
+//                try {
 //                  launchNotify.wait();
 //                } catch (InterruptedException e) {
 //                }
@@ -151,11 +151,11 @@ public class TestAMRestart {
 //  }
 //
 //  private class DummyResourceScheduler implements ResourceScheduler {
-//   
+//
 //    @Override
 //    public void removeNode(RMNode node) {
 //    }
-//    
+//
 //    @Override
 //    public Allocation allocate(ApplicationId applicationId,
 //        List<ResourceRequest> ask, List<Container> release) throws IOException {
@@ -222,7 +222,7 @@ public class TestAMRestart {
 //
 //    @Override
 //    public void nodeUpdate(RMNode nodeInfo,
-//        Map<String, List<Container>> containers) {      
+//        Map<String, List<Container>> containers) {
 //    }
 //
 //    @Override
@@ -253,7 +253,7 @@ public class TestAMRestart {
 //    asmContext.getDispatcher().start();
 //    asmContext.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
 //    appImpl = new ExtApplicationsManagerImpl(appTokenSecretManager, scheduler, asmContext);
-//    
+//
 //    conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 1000L);
 //    conf.setInt(RMConfig.AM_MAX_RETRIES, maxFailures);
 //    appImpl.init(conf);
@@ -261,7 +261,7 @@ public class TestAMRestart {
 //
 //    this.clientRMService = new ClientRMService(asmContext, appImpl
 //        .getAmLivelinessMonitor(), appImpl.getClientToAMSecretManager(),
-//        scheduler); 
+//        scheduler);
 //    this.clientRMService.init(conf);
 //  }
 //
@@ -269,7 +269,7 @@ public class TestAMRestart {
 //  public void tearDown() {
 //  }
 //
-//  private void waitForFailed(AppAttempt application, ApplicationState 
+//  private void waitForFailed(AppAttempt application, ApplicationState
 //      finalState) throws Exception {
 //    int count = 0;
 //    while(application.getState() != finalState && count < 10) {
@@ -292,7 +292,7 @@ public class TestAMRestart {
 //        .newRecordInstance(SubmitApplicationRequest.class);
 //    request.setApplicationSubmissionContext(subContext);
 //    clientRMService.submitApplication(request);
-//    AppAttempt application = asmContext.getApplications().get(appID); 
+//    AppAttempt application = asmContext.getApplications().get(appID);
 //    synchronized (schedulerNotify) {
 //      while(schedulerNotify.get() == 0) {
 //        schedulerNotify.wait();

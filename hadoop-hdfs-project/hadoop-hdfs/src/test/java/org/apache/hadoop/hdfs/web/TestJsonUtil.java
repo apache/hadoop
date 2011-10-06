@@ -17,14 +17,16 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import java.util.Map;
+
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mortbay.util.ajax.JSON;
 
 public class TestJsonUtil {
   static FileStatus toFileStatus(HdfsFileStatus f, String parent) {
@@ -46,7 +48,7 @@ public class TestJsonUtil {
     System.out.println("fstatus = " + fstatus);
     final String json = JsonUtil.toJsonString(status);
     System.out.println("json    = " + json.replace(",", ",\n  "));
-    final HdfsFileStatus s2 = JsonUtil.toFileStatus(JsonUtil.parse(json));
+    final HdfsFileStatus s2 = JsonUtil.toFileStatus((Map<?, ?>)JSON.parse(json));
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);

@@ -547,7 +547,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override // ClientProtocol
-  public void rename(String src, String dst, Options.Rename... options)
+  public void rename2(String src, String dst, Options.Rename... options)
       throws IOException {
     nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
@@ -559,13 +559,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
     namesystem.renameTo(src, dst, options);
     metrics.incrFilesRenamed();
-  }
-
-  @Deprecated
-  @Override // ClientProtocol
-  public boolean delete(String src) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
-    return delete(src, true);
   }
 
   @Override // ClientProtocol

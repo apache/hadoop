@@ -141,7 +141,7 @@ public class ParentQueue implements CSQueue {
         maximumCapacity, absoluteMaxCapacity, state, acls);
     
     this.queueComparator = comparator;
-    this.childQueues = new TreeSet<CSQueue>(comparator);
+    this.childQueues = new TreeSet<CSQueue>(queueComparator);
 
     LOG.info("Initialized parent-queue " + queueName + 
         " name=" + queueName + 
@@ -197,7 +197,9 @@ public class ParentQueue implements CSQueue {
     
     this.childQueues.clear();
     this.childQueues.addAll(childQueues);
-    LOG.info("DEBUG --- setChildQueues: " + getChildQueuesToPrint());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("setChildQueues: " + getChildQueuesToPrint());
+    }
   }
   
   @Override
@@ -497,8 +499,10 @@ public class ParentQueue implements CSQueue {
     Resource assigned = Resources.createResource(0);
 
     while (canAssign(node)) {
-      LOG.info("DEBUG --- Trying to assign containers to child-queue of " + 
-          getQueueName());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to assign containers to child-queue of "
+          + getQueueName());
+      }
       
       // Are we over maximum-capacity for this queue?
       if (!assignToQueue(clusterResource)) {
@@ -527,11 +531,12 @@ public class ParentQueue implements CSQueue {
         break;
       }
 
-      LOG.info("DEBUG ---" +
-      		" parentQ=" + getQueueName() + 
-      		" assignedSoFarInThisIteration=" + assigned + 
-      		" utilization=" + getUtilization());
-      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("ParentQ=" + getQueueName()
+          + " assignedSoFarInThisIteration=" + assigned
+          + " utilization=" + getUtilization());
+      }
+
       // Do not assign more than one container if this isn't the root queue
       if (!rootQueue) {
         break;
@@ -571,13 +576,15 @@ public class ParentQueue implements CSQueue {
     // Try to assign to most 'under-served' sub-queue
     for (Iterator<CSQueue> iter=childQueues.iterator(); iter.hasNext();) {
       CSQueue childQueue = iter.next();
-      LOG.info("DEBUG --- Trying to assign to" +
-      		" queue: " + childQueue.getQueuePath() + 
-      		" stats: " + childQueue);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
+          + " stats: " + childQueue);
+      }
       assigned = childQueue.assignContainers(cluster, node);
-      LOG.info("DEBUG --- Assignedto" +
-          " queue: " + childQueue.getQueuePath() + 
-          " stats: " + childQueue + " --> " + assigned.getMemory());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Assignedto queue: " + childQueue.getQueuePath()
+          + " stats: " + childQueue + " --> " + assigned.getMemory());
+      }
 
       // If we do assign, remove the queue and re-insert in-order to re-sort
       if (Resources.greaterThan(assigned, Resources.none())) {
@@ -602,8 +609,10 @@ public class ParentQueue implements CSQueue {
     return sb.toString();
   }
   void printChildQueues() {
-    LOG.info("DEBUG --- printChildQueues - queue: " + getQueuePath() + 
-        " child-queues: " + getChildQueuesToPrint());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("printChildQueues - queue: " + getQueuePath()
+        + " child-queues: " + getChildQueuesToPrint());
+    }
   }
   
   @Override

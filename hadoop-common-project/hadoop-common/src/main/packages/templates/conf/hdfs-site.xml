@@ -263,4 +263,14 @@
       excluded.
     </description>
   </property>
+  <property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>${DFS_WEBHDFS_ENABLED}</value>
+    <description>Enable or disable webhdfs. Defaults to false</description>
+  </property>
+  <property>
+    <name>dfs.support.append</name>
+    <value>${DFS_SUPPORT_APPEND}</value>
+    <description>Enable or disable append. Defaults to false</description>
+  </property>
 </configuration>

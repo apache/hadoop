@@ -91,13 +91,9 @@ public class ResourceMgrDelegate {
             YarnConfiguration.RM_ADDRESS,
             YarnConfiguration.DEFAULT_RM_ADDRESS));
     LOG.info("Connecting to ResourceManager at " + rmAddress);
-    Configuration appsManagerServerConf = new Configuration(this.conf);
-    appsManagerServerConf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        ClientRMSecurityInfo.class, SecurityInfo.class);
     applicationsManager =
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
-            rmAddress, appsManagerServerConf);
+            rmAddress, this.conf);
     LOG.info("Connected to ResourceManager at " + rmAddress);
   }
   
@@ -262,7 +258,7 @@ public class ResourceMgrDelegate {
     String user = 
       UserGroupInformation.getCurrentUser().getShortUserName();
     Path path = MRApps.getStagingAreaDir(conf, user);
-    LOG.info("DEBUG --- getStagingAreaDir: dir=" + path);
+    LOG.debug("getStagingAreaDir: dir=" + path);
     return path.toString();
   }
 

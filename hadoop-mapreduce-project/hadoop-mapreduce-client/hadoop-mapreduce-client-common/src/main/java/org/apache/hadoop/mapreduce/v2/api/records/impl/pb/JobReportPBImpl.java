@@ -229,7 +229,19 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     maybeInitBuilder();
     builder.setDiagnostics(diagnostics);
   }
+  
+  @Override
+  public String getJobFile() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getJobFile();
+  }
 
+  @Override
+  public void setJobFile(String jobFile) {
+    maybeInitBuilder();
+    builder.setJobFile(jobFile);
+  }
+  
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
     return new JobIdPBImpl(p);
   }

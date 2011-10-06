@@ -194,12 +194,11 @@ public class NodeManager implements ContainerManager {
     Resources.subtractFrom(available, containerLaunchContext.getResource());
     Resources.addTo(used, containerLaunchContext.getResource());
     
-    LOG.info("DEBUG --- startContainer:" +
-        " node=" + containerManagerAddress +
-        " application=" + applicationId + 
-        " container=" + container +
-        " available=" + available +
-        " used=" + used);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("startContainer:" + " node=" + containerManagerAddress
+        + " application=" + applicationId + " container=" + container
+        + " available=" + available + " used=" + used);
+    }
 
     StartContainerResponse response = recordFactory.newRecordInstance(StartContainerResponse.class);
     return response;
@@ -254,12 +253,11 @@ public class NodeManager implements ContainerManager {
     Resources.addTo(available, container.getResource());
     Resources.subtractFrom(used, container.getResource());
 
-    LOG.info("DEBUG --- stopContainer:" +
-        " node=" + containerManagerAddress +
-        " application=" + applicationId + 
-        " container=" + containerID +
-        " available=" + available +
-        " used=" + used);
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("stopContainer:" + " node=" + containerManagerAddress
+        + " application=" + applicationId + " container=" + containerID
+        + " available=" + available + " used=" + used);
+    }
 
     StopContainerResponse response = recordFactory.newRecordInstance(StopContainerResponse.class);
     return response;

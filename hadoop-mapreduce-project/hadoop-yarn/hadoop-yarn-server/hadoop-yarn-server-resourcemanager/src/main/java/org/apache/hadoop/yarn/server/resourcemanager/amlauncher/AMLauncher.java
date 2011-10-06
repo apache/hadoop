@@ -92,12 +92,9 @@ public class AMLauncher implements Runnable {
       ApplicationTokenSecretManager applicationTokenSecretManager,
       ClientToAMSecretManager clientToAMSecretManager, Configuration conf) {
     this.application = application;
-    this.conf = new Configuration(conf); // Just not to touch the sec-info class
+    this.conf = conf;
     this.applicationTokenSecretManager = applicationTokenSecretManager;
     this.clientToAMSecretManager = clientToAMSecretManager;
-    this.conf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        ContainerManagerSecurityInfo.class, SecurityInfo.class);
     this.eventType = eventType;
     this.handler = rmContext.getDispatcher().getEventHandler();
   }

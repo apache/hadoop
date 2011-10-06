@@ -92,15 +92,12 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   }
 
   public void start() {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration serverConf = new Configuration(getConfig());
-    serverConf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        SchedulerSecurityInfo.class, SecurityInfo.class);
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
     this.server =
       rpc.getServer(RMAdminProtocol.class, this, masterServiceAddress,
-          serverConf, null,
-          serverConf.getInt(YarnConfiguration.RM_ADMIN_CLIENT_THREAD_COUNT, 
+          conf, null,
+          conf.getInt(YarnConfiguration.RM_ADMIN_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();

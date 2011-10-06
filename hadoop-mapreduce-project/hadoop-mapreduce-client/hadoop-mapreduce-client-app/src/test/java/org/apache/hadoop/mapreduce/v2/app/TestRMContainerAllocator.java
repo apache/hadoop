@@ -116,7 +116,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING,
-            0, 0, 0, 0, 0, 0));
+            0, 0, 0, 0, 0, 0, "jobfile"));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -193,7 +193,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING,
-            0, 0, 0, 0, 0, 0));
+            0, 0, 0, 0, 0, 0, "jobfile"));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -259,7 +259,7 @@ public class TestRMContainerAllocator {
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING,
-            0, 0, 0, 0, 0, 0));
+            0, 0, 0, 0, 0, 0, "jobfile"));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -373,7 +373,7 @@ public class TestRMContainerAllocator {
     public JobReport getReport() {
       return MRBuilderUtils.newJobReport(this.jobId, "job", "user",
           JobState.RUNNING, 0, 0, this.setupProgress, this.mapProgress,
-          this.reduceProgress, this.cleanupProgress);
+          this.reduceProgress, this.cleanupProgress, "jobfile");
     }
   }
 

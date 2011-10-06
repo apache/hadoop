@@ -4,10 +4,6 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
    
-   HADOOP-7542. Change Configuration XML format to 1.1 to add support for
-                serializing additional characters. This requires XML1.1
-                support in the XML parser (Christopher Egner via harsh)
-
   IMPROVEMENTS
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
@@ -21,9 +17,18 @@ Trunk (unreleased changes)
                  close (atm)
     
     HADOOP-7668. Add a NetUtils method that can tell if an InetAddress 
-    belongs to local host. (suresh)
+                 belongs to local host. (suresh)
 
     HADOOP-7687 Make getProtocolSignature public  (sanjay)
+
+    HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
+                 interface introduced in HADOOP-7524.  (cutting)
+
+	  HADOOP-7716. RPC protocol registration on SS does not log the protocol name
+	               (only the class which may be different) (sanjay)
+
+    HADOOP-7717. Move handling of concurrent client fail-overs to
+                 RetryInvocationHandler (atm)
 
   BUGS
 
@@ -42,7 +47,12 @@ Trunk (unreleased changes)
     
     HADOOP-6220. HttpServer wraps InterruptedExceptions by IOExceptions if interrupted 
                  in startup (stevel)
-                 
+
+    HADOOP-7703. Improved excpetion handling of shutting down web server.
+    (Devaraj K via Eric Yang)
+
+    HADOOP-7704. Reduce number of object created by JMXJsonServlet.
+    (Devaraj K via Eric Yang)
 
 Release 0.23.0 - Unreleased
 
@@ -413,6 +423,18 @@ Release 0.23.0 - Unreleased
     HADOOP-7575. Enhanced LocalDirAllocator to support fully-qualified
     paths. (Jonathan Eagles via vinodkv)
 
+    HADOOP-7469  Add a standard handler for socket connection problems which
+                 improves diagnostics (Uma Maheswara Rao G  and stevel via stevel)
+
+    HADOOP-7710. Added hadoop-setup-application.sh for creating 
+    application directory (Arpit Gupta via Eric Yang)
+
+    HADOOP-7707. Added toggle for dfs.support.append, webhdfs and hadoop proxy
+    user to setup config script. (Arpit Gupta via Eric Yang)
+
+    HADOOP-7720. Added parameter for HBase user to setup config script.
+    (Arpit Gupta via Eric Yang)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -633,6 +655,31 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7662. Fixed logs servlet to use the pathspec '/*' instead of '/'
     for correct filtering. (Thomas Graves via vinodkv)
+
+    HADOOP-7691. Fixed conflict uid for install packages. (Eric Yang)
+
+    HADOOP-7603. Set hdfs, mapred uid, and hadoop uid to fixed numbers. 
+    (Eric Yang)
+
+    HADOOP-7658. Fixed HADOOP_SECURE_DN_USER environment variable in 
+    hadoop-evn.sh (Eric Yang)
+
+    HADOOP-7684. Added init.d script for jobhistory server and
+    secondary namenode. (Eric Yang)
+
+    HADOOP-7715. Removed unnecessary security logger configuration. (Eric Yang)
+
+    HADOOP-7685. Improved directory ownership check function in 
+    hadoop-setup-conf.sh. (Eric Yang)
+
+    HADOOP-7711. Fixed recursive sourcing of HADOOP_OPTS environment
+    variables (Arpit Gupta via Eric Yang)
+
+    HADOOP-7681. Fixed security and hdfs audit log4j properties
+    (Arpit Gupta via Eric Yang)
+
+    HADOOP-7708. Fixed hadoop-setup-conf.sh to handle config files
+    consistently.  (Eric Yang)
 
 Release 0.22.0 - Unreleased
 

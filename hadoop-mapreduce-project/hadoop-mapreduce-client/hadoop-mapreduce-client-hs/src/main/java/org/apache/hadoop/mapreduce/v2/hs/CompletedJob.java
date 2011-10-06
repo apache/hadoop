@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
@@ -96,9 +97,11 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setFinishTime(jobInfo.getFinishTime());
     report.setJobName(jobInfo.getJobname());
     report.setUser(jobInfo.getUsername());
-    //TODO Possibly populate job progress. Never used.
-    //report.setMapProgress(progress) 
-    //report.setReduceProgress(progress)
+    report.setMapProgress((float) getCompletedMaps() / getTotalMaps());
+    report.setReduceProgress((float) getCompletedReduces() / getTotalReduces());
+    report.setJobFile(confFile.toString());
+    report.setTrackingUrl(JobHistoryUtils.getHistoryUrl(conf, TypeConverter
+        .toYarn(TypeConverter.fromYarn(jobId)).getAppId()));
   }
 
   @Override
@@ -287,8 +290,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public boolean isUber() {
-    LOG.warn("isUber is not yet implemented");
-    return false;
+    return jobInfo.getUberized();
   }
 
   @Override

@@ -20,13 +20,19 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import org.apache.hadoop.yarn.webapp.SubView;
 
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 public class CountersPage extends AppView {
 
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
+    String tid = $(TASK_ID);
+    String activeNav = "3";
+    if(tid == null || tid.isEmpty()) {
+      activeNav = "2";
+    }
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:"+activeNav+"}");
     set(DATATABLES_SELECTOR, "#counters .dt-counters");
     set(initSelector(DATATABLES),
         "{bJQueryUI:true, sDom:'t', iDisplayLength:-1}");
@@ -35,9 +41,9 @@ public class CountersPage extends AppView {
   @Override protected void postHead(Page.HTML<_> html) {
     html.
       style("#counters, .dt-counters { table-layout: fixed }",
-            "#counters th { overflow: hidden; vertical-align: center }",
+            "#counters th { overflow: hidden; vertical-align: middle }",
             "#counters .dataTables_wrapper { min-height: 1em }",
-            "#counters .group { width: 10em }",
+            "#counters .group { width: 15em }",
             "#counters .name { width: 30em }");
   }
 

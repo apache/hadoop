@@ -145,6 +145,7 @@ message JobReportProto {
   optional string jobName = 10;
   optional string trackingUrl = 11;
   optional string diagnostics = 12;
+  optional string jobFile = 13;
 }
 
 enum TaskAttemptCompletionEventStatusProto {

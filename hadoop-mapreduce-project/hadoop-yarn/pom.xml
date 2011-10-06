@@ -424,5 +424,7 @@
     <module>hadoop-yarn-api</module>
     <module>hadoop-yarn-common</module>
     <module>hadoop-yarn-server</module>
+    <module>hadoop-yarn-applications</module>
+    <module>hadoop-yarn-site</module>
   </modules>
 </project>

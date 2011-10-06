@@ -67,9 +67,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 68: Add Balancer Bandwidth Command protocol
+   * 69: Eliminate overloaded method names.
    */
-  public static final long versionID = 68L;
+  public static final long versionID = 69L;
   
   ///////////////////////////////////////
   // File contents
@@ -419,27 +419,12 @@ public interface ClientProtocol extends VersionedProtocol {
    *           <code>dst</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  public void rename(String src, String dst, Options.Rename... options)
+  public void rename2(String src, String dst, Options.Rename... options)
       throws AccessControlException, DSQuotaExceededException,
       FileAlreadyExistsException, FileNotFoundException,
       NSQuotaExceededException, ParentNotDirectoryException, SafeModeException,
       UnresolvedLinkException, IOException;
   
-  /**
-   * Delete the given file or directory from the file system.
-   * <p>
-   * Any blocks belonging to the deleted files will be garbage-collected.
-   * 
-   * @param src existing name.
-   * @return true only if the existing file or directory was actually removed 
-   * from the file system. 
-   * @throws UnresolvedLinkException if <code>src</code> contains a symlink. 
-   * @deprecated use {@link #delete(String, boolean)} istead.
-   */
-  @Deprecated
-  public boolean delete(String src) 
-      throws IOException, UnresolvedLinkException;
-
   /**
    * Delete the given file or directory from the file system.
    * <p>

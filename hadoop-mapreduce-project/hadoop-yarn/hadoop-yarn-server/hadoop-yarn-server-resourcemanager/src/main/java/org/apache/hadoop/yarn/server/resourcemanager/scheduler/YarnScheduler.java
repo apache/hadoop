@@ -21,8 +21,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -57,7 +58,6 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   /**
    * Get acls for queues for current user.
    * @return acls for queues for current user
-   * @throws IOException
    */
   @Public
   @Stable
@@ -99,28 +99,27 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   /**
    * Get node resource usage report.
    * @param nodeId
-   * @return the {@link SchedulerNodeReport} for the node
+   * @return the {@link SchedulerNodeReport} for the node or null
+   * if nodeId does not point to a defined node.
    */
-  @Private
+  @LimitedPrivate("yarn")
   @Stable
   public SchedulerNodeReport getNodeReport(NodeId nodeId);
   
   /**
-   * Get used resources on the node
-   * @param nodeId node
-   * @return used resources on the node
+   * Get the Scheduler app for a given app attempt Id.
+   * @param appAttemptId the id of the application attempt
+   * @return SchedulerApp for this given attempt.
    */
-  @Private
+  @LimitedPrivate("yarn")
   @Stable
-  Resource getUsedResource(NodeId nodeId);
+  SchedulerAppReport getSchedulerAppInfo(ApplicationAttemptId appAttemptId);
 
   /**
-   * Get available resources on the node
-   * @param nodeId node
-   * @return available resources on the node
+   * Get the root queue for the scheduler.
+   * @return the root queue for the scheduler.
    */
-  @Private
-  @Stable
-  Resource getAvailableResource(NodeId nodeId);
-  
+  @LimitedPrivate("yarn")
+  @Evolving
+  QueueMetrics getRootQueueMetrics();
 }

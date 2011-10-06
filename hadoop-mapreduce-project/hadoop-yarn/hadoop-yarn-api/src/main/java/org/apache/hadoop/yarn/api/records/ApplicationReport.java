@@ -36,13 +36,13 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  *     <li>Host on which the <code>ApplicationMaster</code>is running.</li>
  *     <li>RPC port of the <code>ApplicationMaster</code>.</li>
  *     <li>Tracking URL.</li>
- *     <li>{@link ApplicationState} of the application.</li>
+ *     <li>{@link YarnApplicationState} of the application.</li>
  *     <li>Diagnostic information in case of errors.</li>
  *     <li>Start time of the application.</li>
  *     <li>Client token of the application (if security is enabled).</li>
  *   </ul>
  * </p>
- * 
+ *
  * @see ClientRMProtocol#getApplicationReport(org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest)
  */
 @Public
@@ -56,7 +56,7 @@ public interface ApplicationReport {
   @Public
   @Stable
   ApplicationId getApplicationId();
-  
+
   @Private
   @Unstable
   void setApplicationId(ApplicationId applicationId);
@@ -68,7 +68,7 @@ public interface ApplicationReport {
   @Public
   @Stable
   String getUser();
-  
+
   @Private
   @Unstable
   void setUser(String user);
@@ -80,7 +80,7 @@ public interface ApplicationReport {
   @Public
   @Stable
   String getQueue();
-  
+
   @Private
   @Unstable
   void setQueue(String queue);
@@ -92,21 +92,21 @@ public interface ApplicationReport {
   @Public
   @Stable
   String getName();
-  
+
   @Private
   @Unstable
   void setName(String name);
 
   /**
-   * Get the <em>host</em> on which the <code>ApplicationMaster</code> 
+   * Get the <em>host</em> on which the <code>ApplicationMaster</code>
    * is running.
-   * @return <em>host</em> on which the <code>ApplicationMaster</code> 
+   * @return <em>host</em> on which the <code>ApplicationMaster</code>
    *         is running
    */
   @Public
   @Stable
   String getHost();
-  
+
   @Private
   @Unstable
   void setHost(String host);
@@ -118,47 +118,47 @@ public interface ApplicationReport {
   @Public
   @Stable
   int getRpcPort();
-  
+
   @Private
   @Unstable
   void setRpcPort(int rpcPort);
 
   /**
-   * Get the <em>client token</em> for communicating with the 
+   * Get the <em>client token</em> for communicating with the
    * <code>ApplicationMaster</code>.
-   * @return <em>client token</em> for communicating with the 
+   * @return <em>client token</em> for communicating with the
    * <code>ApplicationMaster</code>
    */
   @Public
   @Stable
   String getClientToken();
-  
+
   @Private
   @Unstable
   void setClientToken(String clientToken);
 
   /**
-   * Get the <code>ApplicationState</code> of the application.
-   * @return <code>ApplicationState</code> of the application
+   * Get the <code>YarnApplicationState</code> of the application.
+   * @return <code>YarnApplicationState</code> of the application
    */
   @Public
   @Stable
-  ApplicationState getState();
-  
+  YarnApplicationState getYarnApplicationState();
+
   @Private
   @Unstable
-  void setState(ApplicationState state);
+  void setYarnApplicationState(YarnApplicationState state);
 
   /**
-   * Get  the <em>diagnositic information</em> of the application in case of 
+   * Get  the <em>diagnositic information</em> of the application in case of
    * errors.
-   * @return <em>diagnositic information</em> of the application in case 
+   * @return <em>diagnositic information</em> of the application in case
    *         of errors
    */
   @Public
   @Stable
   String getDiagnostics();
-  
+
   @Private
   @Unstable
   void setDiagnostics(String diagnostics);
@@ -170,11 +170,11 @@ public interface ApplicationReport {
   @Public
   @Stable
   String getTrackingUrl();
-  
+
   @Private
   @Unstable
   void setTrackingUrl(String url);
-  
+
   /**
    * Get the <em>start time</em> of the application.
    * @return <em>start time</em> of the application
@@ -182,7 +182,7 @@ public interface ApplicationReport {
   @Public
   @Stable
   long getStartTime();
-  
+
   @Private
   @Unstable
   void setStartTime(long startTime);
@@ -194,8 +194,21 @@ public interface ApplicationReport {
   @Public
   @Stable
   long getFinishTime();
-  
+
   @Private
   @Unstable
   void setFinishTime(long finishTime);
+
+
+  /**
+   * Get the <em>final finish status</em> of the application.
+   */
+  @Public
+  @Stable
+  FinalApplicationStatus getFinalApplicationStatus();
+
+  @Private
+  @Unstable
+  void setFinalApplicationStatus(FinalApplicationStatus finishState);
+
 }

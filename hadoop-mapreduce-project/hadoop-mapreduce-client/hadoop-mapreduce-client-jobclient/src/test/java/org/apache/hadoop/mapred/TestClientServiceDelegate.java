@@ -32,8 +32,9 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -124,6 +125,26 @@ public class TestClientServiceDelegate {
     Assert.assertEquals(JobStatus.State.SUCCEEDED, jobStatus.getState());
   }
 
+  
+  @Test
+  public void testJobReportFromHistoryServer() throws Exception {                                 
+    MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);                           
+    when(historyServerProxy.getJobReport(getJobReportRequest())).thenReturn(                      
+        getJobReportResponseFromHistoryServer());                                                 
+    ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);                                     
+    when(rm.getApplicationReport(TypeConverter.toYarn(oldJobId).getAppId()))                      
+    .thenReturn(null);                                                                        
+    ClientServiceDelegate clientServiceDelegate = getClientServiceDelegate(                       
+        historyServerProxy, rm);
+
+    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);                           
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
+    Assert.assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
+    Assert.assertEquals(1.0f, jobStatus.getMapProgress());                                        
+    Assert.assertEquals(1.0f, jobStatus.getReduceProgress());                                     
+  }
+
   private GetJobReportRequest getJobReportRequest() {
     GetJobReportRequest request = Records.newRecord(GetJobReportRequest.class);
     request.setJobId(jobId);
@@ -143,7 +164,7 @@ public class TestClientServiceDelegate {
   private ApplicationReport getApplicationReport() {
     ApplicationReport applicationReport = Records
         .newRecord(ApplicationReport.class);
-    applicationReport.setState(ApplicationState.SUCCEEDED);
+    applicationReport.setYarnApplicationState(YarnApplicationState.FINISHED);
     applicationReport.setUser("root");
     applicationReport.setHost("N/A");
     applicationReport.setName("N/A");
@@ -152,6 +173,7 @@ public class TestClientServiceDelegate {
     applicationReport.setFinishTime(0);
     applicationReport.setTrackingUrl("N/A");
     applicationReport.setDiagnostics("N/A");
+    applicationReport.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
     return applicationReport;
   }
 
@@ -170,4 +192,17 @@ public class TestClientServiceDelegate {
     return clientServiceDelegate;
   }
 
+  private GetJobReportResponse getJobReportResponseFromHistoryServer() {
+    GetJobReportResponse jobReportResponse = Records                                              
+        .newRecord(GetJobReportResponse.class);                                                   
+    JobReport jobReport = Records.newRecord(JobReport.class);                                     
+    jobReport.setJobId(jobId);                                                                    
+    jobReport.setJobState(JobState.SUCCEEDED);                                                    
+    jobReport.setMapProgress(1.0f);
+    jobReport.setReduceProgress(1.0f);
+    jobReport.setJobFile("TestJobFilePath");
+    jobReport.setTrackingUrl("TestTrackingUrl");
+    jobReportResponse.setJobReport(jobReport);
+    return jobReportResponse;
+  }
 }

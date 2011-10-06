@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -44,21 +44,21 @@ import org.junit.Test;
 
 /**
  * A test case that tests the expiry of the application master.
- * More tests can be added to this. 
+ * More tests can be added to this.
  */
 public class TestApplicationMasterExpiry {
 //  private static final Log LOG = LogFactory.getLog(TestApplicationMasterExpiry.class);
 //  private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-//  
+//
 //  private final RMContext context = new RMContextImpl(new MemStore());
 //  private AMLivelinessMonitor amLivelinessMonitor;
-//  
+//
 //  @Before
 //  public void setUp() {
 //    new DummyApplicationTracker();
 //    new DummySN();
 //    new DummyLauncher();
-//    new ApplicationEventTypeListener(); 
+//    new ApplicationEventTypeListener();
 //    Configuration conf = new Configuration();
 //    context.getDispatcher().register(ApplicationEventType.class,
 //        new ResourceManager.ApplicationEventDispatcher(context));
@@ -70,7 +70,7 @@ public class TestApplicationMasterExpiry {
 //    amLivelinessMonitor.init(conf);
 //    amLivelinessMonitor.start();
 //  }
-//  
+//
 //  private class DummyApplicationTracker implements EventHandler<ASMEvent<ApplicationTrackerEventType>> {
 //    DummyApplicationTracker() {
 //      context.getDispatcher().register(ApplicationTrackerEventType.class, this);
@@ -79,10 +79,10 @@ public class TestApplicationMasterExpiry {
 //    public void handle(ASMEvent<ApplicationTrackerEventType> event) {
 //    }
 //  }
-//  
+//
 //  private AtomicInteger expiry = new AtomicInteger();
 //  private boolean expired = false;
-//  
+//
 //  private class ApplicationEventTypeListener implements
 //      EventHandler<ApplicationEvent> {
 //    ApplicationEventTypeListener() {
@@ -100,7 +100,7 @@ public class TestApplicationMasterExpiry {
 //      }
 //    }
 //  }
-// 
+//
 //  private class DummySN implements EventHandler<ASMEvent<SNEventType>> {
 //    DummySN() {
 //      context.getDispatcher().register(SNEventType.class, this);
@@ -109,7 +109,7 @@ public class TestApplicationMasterExpiry {
 //    public void handle(ASMEvent<SNEventType> event) {
 //    }
 //  }
-//  
+//
 //  private class DummyLauncher implements EventHandler<ASMEvent<AMLauncherEventType>> {
 //    DummyLauncher() {
 //      context.getDispatcher().register(AMLauncherEventType.class, this);
@@ -118,8 +118,8 @@ public class TestApplicationMasterExpiry {
 //    public void handle(ASMEvent<AMLauncherEventType> event) {
 //    }
 //  }
-//  
-//  private void waitForState(AppAttempt application, ApplicationState 
+//
+//  private void waitForState(AppAttempt application, ApplicationState
 //      finalState) throws Exception {
 //    int count = 0;
 //    while(application.getState() != finalState && count < 10) {

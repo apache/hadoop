@@ -302,6 +302,7 @@ public class JobHistoryParser {
     info.launchTime = event.getLaunchTime();
     info.totalMaps = event.getTotalMaps();
     info.totalReduces = event.getTotalReduces();
+    info.uberized = event.getUberized();
   }
 
   private void handleJobInfoChangeEvent(JobInfoChangeEvent event) {
@@ -346,6 +347,7 @@ public class JobHistoryParser {
     Map<JobACL, AccessControlList> jobACLs;
     
     Map<TaskID, TaskInfo> tasksMap;
+    boolean uberized;
     
     /** Create a job info object where job information will be stored
      * after a parse
@@ -373,7 +375,8 @@ public class JobHistoryParser {
       System.out.println("MAP_COUNTERS:" + mapCounters.toString());
       System.out.println("REDUCE_COUNTERS:" + reduceCounters.toString());
       System.out.println("TOTAL_COUNTERS: " + totalCounters.toString());
-      
+      System.out.println("UBERIZED: " + uberized);
+
       for (TaskInfo ti: tasksMap.values()) {
         ti.printAll();
       }
@@ -421,6 +424,8 @@ public class JobHistoryParser {
     /** @return the priority of this job */
     public String getPriority() { return priority.toString(); }
     public Map<JobACL, AccessControlList> getJobACLs() { return jobACLs; }
+    /** @return the uberized status of this job */
+    public boolean getUberized() { return uberized; }
   }
   
   /**

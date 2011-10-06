@@ -45,12 +45,9 @@ public class HadoopYarnProtoRPC extends YarnRPC {
   @Override
   public Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf) {
-    Configuration myConf = new Configuration(conf);
     LOG.info("Creating a HadoopYarnProtoRpc proxy for protocol " + protocol);
-    LOG.debug("Configured SecurityInfo class name is "
-        + myConf.get(YarnConfiguration.YARN_SECURITY_INFO));
-    
-    return RpcFactoryProvider.getClientFactory(myConf).getClient(protocol, 1, addr, myConf);
+    return RpcFactoryProvider.getClientFactory(conf).getClient(protocol, 1,
+        addr, conf);
   }
 
   @Override
@@ -60,8 +57,6 @@ public class HadoopYarnProtoRPC extends YarnRPC {
       int numHandlers) {
     LOG.info("Creating a HadoopYarnProtoRpc server for protocol " + protocol + 
         " with " + numHandlers + " handlers");
-    LOG.info("Configured SecurityInfo class name is "
-        + conf.get(YarnConfiguration.YARN_SECURITY_INFO));
     
     final RPC.Server hadoopServer;
     hadoopServer = 

@@ -31,6 +31,7 @@ public interface JobReport {
   public abstract String getJobName();
   public abstract String getTrackingUrl();
   public abstract String getDiagnostics();
+  public abstract String getJobFile();
 
   public abstract void setJobId(JobId jobId);
   public abstract void setJobState(JobState jobState);
@@ -44,4 +45,5 @@ public interface JobReport {
   public abstract void setJobName(String jobName);
   public abstract void setTrackingUrl(String trackingUrl);
   public abstract void setDiagnostics(String diagnostics);
+  public abstract void setJobFile(String jobFile);
 }

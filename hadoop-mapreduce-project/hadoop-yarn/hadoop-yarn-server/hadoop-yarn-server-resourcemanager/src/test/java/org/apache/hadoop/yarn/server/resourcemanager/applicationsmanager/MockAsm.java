@@ -22,10 +22,11 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -69,7 +70,7 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
-    public ApplicationState getState() {
+    public YarnApplicationState getState() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -119,7 +120,7 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
-    public void setState(ApplicationState state) {
+    public void setState(YarnApplicationState state) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -207,11 +208,11 @@ public abstract class MockAsm extends MockApps {
     }
     @Override
     public void handle(RMAppEvent event) {
-      throw new UnsupportedOperationException("Not supported yet.");      
+      throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public String getAMFinalState() {
+    public FinalApplicationStatus getFinalApplicationStatus() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }
@@ -274,9 +275,14 @@ public abstract class MockAsm extends MockApps {
       public float getProgress() {
         return (float)Math.random();
       }
+      @Override
+      public FinalApplicationStatus getFinalApplicationStatus() {
+        return FinalApplicationStatus.UNDEFINED;
+      }
+      
     };
   }
-  
+
   public static List<RMApp> newApplications(int n) {
     List<RMApp> list = Lists.newArrayList();
     for (int i = 0; i < n; ++i) {

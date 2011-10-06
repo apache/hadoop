@@ -26,17 +26,13 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.webapp.AMParams;
 import org.apache.hadoop.mapreduce.v2.app.webapp.TestAMWebApp;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -92,6 +88,7 @@ public class TestHSWebApp {
       return jobs; // OK
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public EventHandler getEventHandler() {
       return null;
@@ -169,6 +166,18 @@ public class TestHSWebApp {
   @Test public void testConfView() {
     LOG.info("HsConfPage");
     WebAppTests.testPage(HsConfPage.class, AppContext.class,
+                         new TestAppContext());
+  }
+  
+  @Test public void testAboutView() {
+    LOG.info("HsAboutPage");
+    WebAppTests.testPage(HsAboutPage.class, AppContext.class,
+                         new TestAppContext());
+  }
+  
+  @Test public void testSingleCounterView() {
+    LOG.info("HsSingleCounterPage");
+    WebAppTests.testPage(HsSingleCounterPage.class, AppContext.class,
                          new TestAppContext());
   }
 }

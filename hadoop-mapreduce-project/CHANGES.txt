@@ -22,6 +22,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-2950. [Gridmix] TestUserResolve fails in trunk. 
+                    (Ravi Gummadi via amarrk)
+
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
     ResourceUsageMatcher. (amarrk)
 
@@ -74,6 +77,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2930. Added the ability to be able to generate graphs from the
     state-machine definitions. (Binglin Chang via vinodkv)
+
+    MAPREDUCE-2719. Add a simple, DistributedShell, application to illustrate
+    alternate frameworks on YARN. (Hitesh Shah via acmurthy)
 
   IMPROVEMENTS
 
@@ -321,6 +327,33 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3099. Add docs for setting up a single node MRv2 cluster.
     (mahadev)
 
+    MAPREDUCE-3001. Added task-specific counters to AppMaster and JobHistory
+    web-UIs. (Robert Joseph Evans via vinodkv)
+
+    MAPREDUCE-3098. Fixed RM and MR AM to report YarnApplicationState and
+    application's FinalStatus separately. (Hitesh Shah via vinodkv)
+
+    MAPREDUCE-2889. Added documentation for writing new YARN applications.
+    (Hitesh Shah via acmurthy) 
+
+    MAPREDUCE-3134. Added documentation the CapacityScheduler. (acmurthy) 
+
+    MAPREDUCE-3138. Add a utility to help applications bridge changes in 
+    Context Objects APIs due to MAPREDUCE-954. (omalley via acmurthy)
+
+    MAPREDUCE-3013. Removed YarnConfiguration.YARN_SECURITY_INFO and its usage
+    as it doesn't affect security any more. (vinodkv)
+
+    MAPREDUCE-2907. Changed log level for various messages in ResourceManager
+    from INFO to DEBUG. (Ravi Prakash via vinodkv)
+
+    MAPREDUCE-2702. Added a new API in OutputCommitter for recovering
+    the outputs of tasks from a crashed job so as to support MR Application
+    Master recovery. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
+    MAPREDUCE-2738. Added the missing cluster level statisticss on the RM web
+    UI. (Robert Joseph Evans via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
@@ -341,9 +374,6 @@ Release 0.23.0 - Unreleased
     (Vinay Kumar Thota via amarrk)
 
     MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. (Robert Evans via
-    acmurthy) 
-
-    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via
     acmurthy) 
 
     MAPREDUCE-1978. Rumen TraceBuilder should provide recursive
@@ -1472,6 +1502,33 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3078. Ensure MapReduce AM reports progress correctly for
     displaying on the RM Web-UI. (vinodkv via acmurthy)
 
+    MAPREDUCE-3114. Fixed invalid ApplicationURL on RM WebUI. (Subroto Sanyal
+    via vinodkv)
+
+    MAPREDUCE-2791. Added missing info on 'job -status' output. (Devaraj K via
+    acmurthy)
+
+    MAPREDUCE-2996. Add uber-ness information to JobHistory. (Jonathan Eagles
+    via acmurthy)
+
+    MAPREDUCE-3050. Add ability to get resource usage information for
+    applications and nodes. (Robert Evans via acmurthy) 
+
+    MAPREDUCE-3113. Ensure bin/yarn and bin/yarn-daemon.sh identify the root
+    of the install properly. (Xie Xianshan via acmurthy) 
+
+    MAPREDUCE-2792. Replace usage of node ip-addresses with hostnames.
+    (vinodkv via acmurthy) 
+
+    MAPREDUCE-3112. Fixed recursive sourcing of HADOOP_OPTS environment
+    variable. (Eric Yang)
+
+    MAPREDUCE-3056. Changed the default staging directory to not include
+    user.name to prevent issues with non-secure mode. (Devaraj K via vinodkv)
+
+    MAPREDUCE-2913. Fixed TestMRJobs.testFailingMapper to assert the correct
+    TaskCompletionEventStatus. (Jonathan Eagles via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -2056,6 +2113,12 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-2991. queueinfo.jsp fails to show queue status for Capacity 
     scheduler if queue names contain special symbols. (Priyo Mustafi via shv)
+
+    MAPREDUCE-2779. JobSplitWriter.java can't handle large job.split file.
+    (Ming Ma via shv)
+
+    MAPREDUCE-2531. Fixed jobcontrol to downgrade JobID. (Robert Evans via
+    acmurthy) 
 
 Release 0.21.1 - Unreleased
 

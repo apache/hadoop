@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -57,7 +56,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.Records;
 
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
@@ -69,16 +67,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final Context context;
   private final Dispatcher dispatcher;
 
+  private NodeId nodeId;
   private ContainerTokenSecretManager containerTokenSecretManager;
   private long heartBeatInterval;
   private ResourceTracker resourceTracker;
   private String rmAddress;
   private Resource totalResource;
-  private String containerManagerBindAddress;
-  private String hostName;
-  private int containerManagerPort;
   private int httpPort;
-  private NodeId nodeId;
   private byte[] secretKeyBytes = new byte[0];
   private boolean isStopped;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -114,24 +109,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   @Override
   public void start() {
-    String cmBindAddressStr =
-        getConfig().get(YarnConfiguration.NM_ADDRESS,
-            YarnConfiguration.DEFAULT_NM_ADDRESS);
-    InetSocketAddress cmBindAddress =
-        NetUtils.createSocketAddr(cmBindAddressStr);
+
+    // NodeManager is the last service to start, so NodeId is available.
+    this.nodeId = this.context.getNodeId();
+
     String httpBindAddressStr =
       getConfig().get(YarnConfiguration.NM_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     InetSocketAddress httpBindAddress =
       NetUtils.createSocketAddr(httpBindAddressStr);
     try {
-      this.hostName = InetAddress.getLocalHost().getHostAddress();
-      this.containerManagerPort = cmBindAddress.getPort();
+      //      this.hostName = InetAddress.getLocalHost().getCanonicalHostName();
       this.httpPort = httpBindAddress.getPort();
-      this.containerManagerBindAddress =
-          this.hostName + ":" + this.containerManagerPort;
-      LOG.info("Configured ContainerManager Address is "
-          + this.containerManagerBindAddress);
       // Registration has to be in start so that ContainerManager can get the
       // perNM tokens needed to authenticate ContainerTokens.
       registerWithRM();
@@ -150,14 +139,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   }
 
   protected ResourceTracker getRMClient() {
-    YarnRPC rpc = YarnRPC.create(getConfig());
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress rmAddress = NetUtils.createSocketAddr(this.rmAddress);
-    Configuration rmClientConf = new Configuration(getConfig());
-    rmClientConf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        RMNMSecurityInfoClass.class, SecurityInfo.class);
     return (ResourceTracker) rpc.getProxy(ResourceTracker.class, rmAddress,
-        rmClientConf);
+        conf);
   }
 
   private void registerWithRM() throws YarnRemoteException {
@@ -165,9 +151,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     LOG.info("Connected to ResourceManager at " + this.rmAddress);
     
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
-    this.nodeId = Records.newRecord(NodeId.class);
-    this.nodeId.setHost(this.hostName);
-    this.nodeId.setPort(this.containerManagerPort);
     request.setHttpPort(this.httpPort);
     request.setResource(this.totalResource);
     request.setNodeId(this.nodeId);
@@ -183,17 +166,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       // It is expected that status updater is started by this point and
       // RM gives the shared secret in registration during StatusUpdater#start().
       this.containerTokenSecretManager.setSecretKey(
-          this.getContainerManagerBindAddress(),
+          this.nodeId.toString(),
           this.getRMNMSharedSecret());
     }
-    LOG.info("Registered with ResourceManager as " + this.containerManagerBindAddress
+    LOG.info("Registered with ResourceManager as " + this.nodeId
         + " with total resource of " + this.totalResource);
 
-  }
-
-  @Override
-  public String getContainerManagerBindAddress() {
-    return this.containerManagerBindAddress;
   }
 
   @Override
@@ -230,8 +208,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
     nodeStatus.setContainersStatuses(containersStatuses);
 
-    LOG.debug(this.containerManagerBindAddress + " sending out status for " + numActiveContainers
-        + " containers");
+    LOG.debug(this.nodeId + " sending out status for "
+        + numActiveContainers + " containers");
 
     NodeHealthStatus nodeHealthStatus = this.context.getNodeHealthStatus();
     if (this.healthChecker != null) {

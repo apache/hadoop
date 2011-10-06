@@ -50,6 +50,7 @@ class AppsBlock extends HtmlBlock {
             th(".name", "Name").
             th(".queue", "Queue").
             th(".state", "State").
+            th(".finalstatus", "FinalStatus").
             th(".progress", "Progress").
             th(".ui", "Tracking UI").
             th(".note", "Note")._()._().
@@ -60,7 +61,7 @@ class AppsBlock extends HtmlBlock {
       String trackingUrl = app.getTrackingUrl();
       String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
           (app.getFinishTime() == 0 ? 
-              "ApplicationMaster URL" : "JobHistory URL");
+              "ApplicationMaster" : "History");
       String percent = String.format("%.1f", app.getProgress() * 100);
       tbody.
         tr().
@@ -70,8 +71,8 @@ class AppsBlock extends HtmlBlock {
           td(app.getUser().toString()).
           td(app.getName().toString()).
           td(app.getQueue().toString()).
-          td(app.getState() == RMAppState.FINISHED ? app.getAMFinalState() : 
-            app.getState().toString()).
+          td(app.getState().toString()).
+          td(app.getFinalApplicationStatus().toString()).
           td().
             br().$title(percent)._(). // for sorting
             div(_PROGRESSBAR).
@@ -79,7 +80,8 @@ class AppsBlock extends HtmlBlock {
               div(_PROGRESSBAR_VALUE).
                 $style(join("width:", percent, '%'))._()._()._().
           td().
-            a(trackingUrl == null ? "#" : join("http://", trackingUrl), ui)._().
+            a(trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
+              "#" : join("http://", trackingUrl), ui)._().
           td(app.getDiagnostics().toString())._();
       if (list.rendering != Render.HTML && ++i >= 20) break;
     }

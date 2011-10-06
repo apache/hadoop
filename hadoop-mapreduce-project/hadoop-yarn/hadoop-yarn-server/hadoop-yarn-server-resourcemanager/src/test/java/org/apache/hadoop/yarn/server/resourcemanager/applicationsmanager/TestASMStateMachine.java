@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -152,7 +152,7 @@ public class TestASMStateMachine {
 //    }
 //  }
 //
-//  private void waitForState( ApplicationState 
+//  private void waitForState( ApplicationState
 //      finalState, AppAttemptImpl masterInfo) throws Exception {
 //    int count = 0;
 //    while(masterInfo.getState() != finalState && count < 10) {
@@ -160,10 +160,10 @@ public class TestASMStateMachine {
 //      count++;
 //    }
 //    Assert.assertEquals(finalState, masterInfo.getState());
-//  } 
-//  
-//  /* Test the state machine. 
-//   * 
+//  }
+//
+//  /* Test the state machine.
+//   *
 //   */
 //  @Test
 //  public void testStateMachine() throws Exception {
@@ -211,6 +211,6 @@ public class TestASMStateMachine {
 //    /* check if expiry doesnt make it failed */
 //    handler.handle(new ApplicationEvent(ApplicationEventType.EXPIRE,
 //        masterInfo.getApplicationID()));
-//    Assert.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());   
+//    Assert.assertEquals(ApplicationState.COMPLETED, masterInfo.getState());
 //  }
 }

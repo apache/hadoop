@@ -51,6 +51,10 @@ usage: $0 <parameters>
      --taskscheduler=org.apache.hadoop.mapred.JobQueueTaskScheduler  Set task scheduler
      --datanodes=hostname1,hostname2,...                             SET the datanodes
      --tasktrackers=hostname1,hostname2,...                          SET the tasktrackers
+     --dfs-webhdfs-enabled=false|true                                Enable webhdfs
+     --dfs-support-append=false|true                                 Enable append
+     --hadoop-proxy-users='user1:groups:hosts;user2:groups:hosts'    Setup proxy users for hadoop
+     --hbase-user=hbase                                              User which hbase is running as. Defaults to hbase
   "
   exit 1
 }
@@ -60,9 +64,11 @@ check_permission() {
   OWNER="0"
   RESULT=0
   while [ "$TARGET" != "/" ]; do
-    PARENT=`dirname $TARGET`
-    NAME=`basename $TARGET`
-    OWNER=`ls -ln $PARENT | grep $NAME| awk '{print $3}'`
+    if [ "`uname`" = "Darwin" ]; then
+      OWNER=`stat -f %u $TARGET`
+    else
+      OWNER=`stat -c %u $TARGET`
+    fi
     if [ "$OWNER" != "0" ]; then
       RESULT=1
       break
@@ -74,6 +80,9 @@ check_permission() {
 
 template_generator() {
   REGEX='(\$\{[a-zA-Z_][a-zA-Z_0-9]*\})'
+  if [ -e $2 ]; then
+    mv -f $2 "$2.bak"
+  fi
   cat $1 |
   while read line ; do
     while [[ "$line" =~ $REGEX ]] ; do
@@ -83,6 +92,78 @@ template_generator() {
     done
     echo $line >> $2
   done
+}
+
+#########################################
+# Function to modify a value of a field in an xml file
+# Params: $1 is the file with full path; $2 is the property, $3 is the new value
+#########################################
+function addPropertyToXMLConf
+{
+  #read the file name with full path
+  local file=$1
+  #get the property name
+  local property=$2
+  #get what value should be set for that
+  local propValue=$3
+  #get the description
+  local desc=$4
+  #get the value for the final tag
+  local finalVal=$5
+
+  #create the property text, make sure the / are escaped
+  propText="<property>\n<name>$property<\/name>\n<value>$propValue<\/value>"
+  #if description is not empty add it
+  if [ ! -z $desc ]
+  then
+    propText="${propText}<description>$desc<\/description>\n"
+  fi
+  
+  #if final is not empty add it
+  if [ ! -z $finalVal ]
+  then
+    propText="${propText}final>$finalVal<\/final>\n"
+  fi
+
+  #add the ending tag
+  propText="${propText}<\/property>\n"
+
+  #add the property to the file
+  endText="<\/configuration>"
+  #add the text using sed at the end of the file
+  sed -i "s|$endText|$propText$endText|" $file
+}
+
+##########################################
+# Function to setup up the proxy user settings
+#########################################
+function setupProxyUsers
+{
+  #if hadoop proxy users are sent, setup hadoop proxy
+  if [ ! -z $HADOOP_PROXY_USERS ]
+  then
+    oldIFS=$IFS
+    IFS=';'
+    #process each proxy config
+    for proxy in $HADOOP_PROXY_USERS
+    do
+      #get the user, group and hosts information for each proxy
+      IFS=':'
+      arr=($proxy)
+      user="${arr[0]}"
+      groups="${arr[1]}"
+      hosts="${arr[2]}"
+      #determine the property names and values
+      proxy_groups_property="hadoop.proxyuser.${user}.groups"
+      proxy_groups_val="$groups"
+      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_groups_property" "$proxy_groups_val"
+      proxy_hosts_property="hadoop.proxyuser.${user}.hosts"
+      proxy_hosts_val="$hosts"
+      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_hosts_property" "$proxy_hosts_val"
+      IFS=';'
+    done
+    IFS=$oldIFS
+  fi
 }
 
 OPTS=$(getopt \
@@ -113,6 +194,10 @@ OPTS=$(getopt \
   -l 'kinit-location:' \
   -l 'datanodes:' \
   -l 'tasktrackers:' \
+  -l 'dfs-webhdfs-enabled:' \
+  -l 'hadoop-proxy-users:' \
+  -l 'dfs-support-append:' \
+  -l 'hbase-user:' \
   -o 'h' \
   -- "$@") 
   
@@ -232,6 +317,22 @@ while true ; do
       AUTOMATED=1
       TASKTRACKERS=$(echo $TASKTRACKERS | tr ',' ' ')
       ;;
+    --dfs-webhdfs-enabled)
+      DFS_WEBHDFS_ENABLED=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --hadoop-proxy-users)
+      HADOOP_PROXY_USERS=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --dfs-support-append)
+      DFS_SUPPORT_APPEND=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --hbase-user)
+      HBASE_USER=$2; shift 2
+      AUTOMATED=1
+      ;;
     --)
       shift ; break
       ;;
@@ -247,6 +348,7 @@ AUTOSETUP=${AUTOSETUP:-1}
 JAVA_HOME=${JAVA_HOME:-/usr/java/default}
 HADOOP_GROUP=${HADOOP_GROUP:-hadoop}
 HADOOP_NN_HOST=${HADOOP_NN_HOST:-`hostname`}
+HADOOP_SNN_HOST=${HADOOP_SNN_HOST:-`hostname`}
 HADOOP_NN_DIR=${HADOOP_NN_DIR:-/var/lib/hadoop/hdfs/namenode}
 HADOOP_DN_DIR=${HADOOP_DN_DIR:-/var/lib/hadoop/hdfs/datanode}
 HADOOP_JT_HOST=${HADOOP_JT_HOST:-`hostname`}
@@ -259,9 +361,14 @@ HADOOP_REPLICATION=${HADOOP_RELICATION:-3}
 HADOOP_TASK_SCHEDULER=${HADOOP_TASK_SCHEDULER:-org.apache.hadoop.mapred.JobQueueTaskScheduler}
 HADOOP_HDFS_USER=${HADOOP_HDFS_USER:-hdfs}
 HADOOP_MR_USER=${HADOOP_MR_USER:-mr}
+DFS_WEBHDFS_ENABLED=${DFS_WEBHDFS_ENABLED:-false}
+DFS_SUPPORT_APPEND=${DFS_SUPPORT_APPEND:-false}
+HBASE_USER=${HBASE_USER:-hbase}
 KEYTAB_DIR=${KEYTAB_DIR:-/etc/security/keytabs}
 HDFS_KEYTAB=${HDFS_KEYTAB:-/home/hdfs/hdfs.keytab}
 MR_KEYTAB=${MR_KEYTAB:-/home/mr/mr.keytab}
+DFS_WEBHDFS_ENABLED=${DFS_WEBHDFS_ENABLED:-false}
+DFS_SUPPORT_APPEND=${DFS_SUPPORT_APPEND:-false}
 KERBEROS_REALM=${KERBEROS_REALM:-KERBEROS.EXAMPLE.COM}
 SECURITY_TYPE=${SECURITY_TYPE:-simple}
 KINIT=${KINIT:-/usr/kerberos/bin/kinit}
@@ -270,12 +377,17 @@ if [ "${SECURITY_TYPE}" = "kerberos" ]; then
   HADOOP_DN_ADDR="0.0.0.0:1019"
   HADOOP_DN_HTTP_ADDR="0.0.0.0:1022"
   SECURITY="true"
+  HADOOP_SECURE_DN_USER=${HADOOP_HDFS_USER}
 else
   TASK_CONTROLLER="org.apache.hadoop.mapred.DefaultTaskController"
-  HADDOP_DN_ADDR="0.0.0.0:50010"
+  HADOOP_DN_ADDR="0.0.0.0:50010"
   HADOOP_DN_HTTP_ADDR="0.0.0.0:50075"
   SECURITY="false"
+  HADOOP_SECURE_DN_USER=""
 fi
+
+#unset env vars
+unset HADOOP_CLIENT_OPTS HADOOP_NAMENODE_OPTS HADOOP_JOBTRACKER_OPTS HADOOP_TASKTRACKER_OPTS HADOOP_DATANODE_OPTS HADOOP_SECONDARYNAMENODE_OPTS HADOOP_JAVA_PLATFORM_OPTS
 
 if [ "${AUTOMATED}" != "1" ]; then
   echo "Setup Hadoop Configuration"
@@ -383,46 +495,6 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   chmod 755 ${HADOOP_LOG_DIR}/${HADOOP_MR_USER}
   chown ${HADOOP_MR_USER}:${HADOOP_GROUP} ${HADOOP_LOG_DIR}/${HADOOP_MR_USER}
 
-  if [ -e ${HADOOP_CONF_DIR}/core-site.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/core-site.xml ${HADOOP_CONF_DIR}/core-site.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/hdfs-site.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/hdfs-site.xml ${HADOOP_CONF_DIR}/hdfs-site.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred-site.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred-site.xml ${HADOOP_CONF_DIR}/mapred-site.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/hadoop-env.sh ]; then
-    mv -f ${HADOOP_CONF_DIR}/hadoop-env.sh ${HADOOP_CONF_DIR}/hadoop-env.sh.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/hadoop-policy.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/hadoop-policy.xml ${HADOOP_CONF_DIR}/hadoop-policy.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred-queue-acls.xml ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/commons-logging.properties ]; then
-    mv -f ${HADOOP_CONF_DIR}/commons-logging.properties ${HADOOP_CONF_DIR}/commons-logging.properties.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/taskcontroller.cfg  ]; then
-    mv -f ${HADOOP_CONF_DIR}/taskcontroller.cfg  ${HADOOP_CONF_DIR}/taskcontroller.cfg.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/slaves  ]; then
-    mv -f ${HADOOP_CONF_DIR}/slaves  ${HADOOP_CONF_DIR}/slaves.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/dfs.include  ]; then
-    mv -f ${HADOOP_CONF_DIR}/dfs.include  ${HADOOP_CONF_DIR}/dfs.include.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/dfs.exclude  ]; then
-    mv -f ${HADOOP_CONF_DIR}/dfs.exclude  ${HADOOP_CONF_DIR}/dfs.exclude.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred.include  ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred.include  ${HADOOP_CONF_DIR}/mapred.include.bak
-  fi
-  if [ -e ${HADOOP_CONF_DIR}/mapred.exclude  ]; then
-    mv -f ${HADOOP_CONF_DIR}/mapred.exclude  ${HADOOP_CONF_DIR}/mapred.exclude.bak
-  fi
-
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/core-site.xml ${HADOOP_CONF_DIR}/core-site.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hdfs-site.xml ${HADOOP_CONF_DIR}/hdfs-site.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-site.xml ${HADOOP_CONF_DIR}/mapred-site.xml
@@ -431,7 +503,13 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/commons-logging.properties ${HADOOP_CONF_DIR}/commons-logging.properties
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
 
+  #setup up the proxy users
+  setupProxyUsers
+  
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
@@ -474,15 +552,12 @@ else
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/mapred-queue-acls.xml ${HADOOP_CONF_DIR}/mapred-queue-acls.xml
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/taskcontroller.cfg ${HADOOP_CONF_DIR}/taskcontroller.cfg
   template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
-  if [ ! -e ${HADOOP_CONF_DIR}/capacity-scheduler.xml ]; then
-    template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
-  fi
-  if [ ! -e ${HADOOP_CONF_DIR}/hadoop-metrics2.properties ]; then
-    cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
-  fi
-  if [ ! -e ${HADOOP_CONF_DIR}/log4j.properties ]; then
-    cp ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
-  fi
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/capacity-scheduler.xml ${HADOOP_CONF_DIR}/capacity-scheduler.xml
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/log4j.properties ${HADOOP_CONF_DIR}/log4j.properties
+  template_generator ${HADOOP_PREFIX}/share/hadoop/common/templates/conf/hadoop-metrics2.properties ${HADOOP_CONF_DIR}/hadoop-metrics2.properties
+  
+  #setup up the proxy users
+  setupProxyUsers
   
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
   chmod 755 ${HADOOP_CONF_DIR}/hadoop-env.sh
@@ -515,6 +590,12 @@ else
   echo "${HADOOP_CONF_DIR}/hdfs-site.xml"
   echo "${HADOOP_CONF_DIR}/mapred-site.xml"
   echo "${HADOOP_CONF_DIR}/hadoop-env.sh"
+  echo "${HADOOP_CONF_DIR}/hadoop-policy.xml"
+  echo "${HADOOP_CONF_DIR}/commons-logging.properties"
+  echo "${HADOOP_CONF_DIR}/taskcontroller.cfg"
+  echo "${HADOOP_CONF_DIR}/capacity-scheduler.xml"
+  echo "${HADOOP_CONF_DIR}/log4j.properties"
+  echo "${HADOOP_CONF_DIR}/hadoop-metrics2.properties"
   echo
   echo " to ${HADOOP_CONF_DIR} on all nodes, and proceed to run hadoop-setup-hdfs.sh on namenode."
 fi

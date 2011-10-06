@@ -125,16 +125,13 @@ public class ClientRMService extends AbstractService implements
   public void start() {
     // All the clients to appsManager are supposed to be authenticated via
     // Kerberos if security is enabled, so no secretManager.
-    YarnRPC rpc = YarnRPC.create(getConfig());
-    Configuration clientServerConf = new Configuration(getConfig());
-    clientServerConf.setClass(
-        YarnConfiguration.YARN_SECURITY_INFO,
-        ClientRMSecurityInfo.class, SecurityInfo.class);
+    Configuration conf = getConfig();
+    YarnRPC rpc = YarnRPC.create(conf);
     this.server =   
       rpc.getServer(ClientRMProtocol.class, this,
             clientBindAddress,
-            clientServerConf, null,
-            clientServerConf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT, 
+            conf, null,
+            conf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT, 
                 YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT));
     this.server.start();
     super.start();
@@ -351,7 +348,7 @@ public class ClientRMService extends AbstractService implements
     report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
     org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport schedulerNodeReport = scheduler
         .getNodeReport(rmNode.getNodeID());
-    report.setUsed(schedulerNodeReport.getUsedResources());
+    report.setUsed(schedulerNodeReport.getUsedResource());
     report.setNumContainers(schedulerNodeReport.getNumContainers());
     return report;
   }

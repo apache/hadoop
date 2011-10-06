@@ -388,8 +388,9 @@ public class WritableRpcEngine implements RpcEngine {
       }
       protocolImplMap.put(new ProtoNameVer(protocolName, version),
           new ProtoClassProtoImpl(protocolClass, protocolImpl)); 
-      LOG.info("ProtocolImpl=" + protocolImpl.getClass().getName() + 
-          " protocolClass=" + protocolClass.getName() + " version=" + version);
+      LOG.info("Protocol Name = " + protocolName +  " version=" + version +
+          " ProtocolImpl=" + protocolImpl.getClass().getName() + 
+          " protocolClass=" + protocolClass.getName());
     }
     
     private static class VerProtocolImpl {
@@ -555,7 +556,7 @@ public class WritableRpcEngine implements RpcEngine {
 
  
     @Override
-    public <PROTO extends VersionedProtocol, IMPL extends PROTO> Server
+    public <PROTO, IMPL extends PROTO> Server
       addProtocol(
         Class<PROTO> protocolClass, IMPL protocolImpl) throws IOException {
       registerProtocolAndImpl(protocolClass, protocolImpl);

@@ -24,10 +24,10 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -48,7 +47,9 @@ import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 
 import com.google.common.collect.Maps;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 
 public class TestRMWebApp {
   static final int GiB = 1024; // MiB
@@ -62,14 +63,36 @@ public class TestRMWebApp {
 
   @Test public void testView() {
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
-                                               mockRMContext(3, 1, 2, 8*GiB));
+        mockRMContext(3, 1, 2, 8*GiB),
+        new Module() {
+      @Override
+      public void configure(Binder binder) {
+        try {
+          binder.bind(ResourceManager.class).toInstance(mockRm(3, 1, 2, 8*GiB));
+        } catch (IOException e) {
+          throw new IllegalStateException(e);
+        }
+      }
+    });
     injector.getInstance(RmView.class).render();
     WebAppTests.flushOutput(injector);
   }
 
   @Test public void testNodesPage() {
-    WebAppTests.testPage(NodesPage.class, RMContext.class,
-                         mockRMContext(3, 1, 2, 8*GiB));
+    Injector injector = WebAppTests.createMockInjector(RMContext.class,
+        mockRMContext(3, 1, 2, 8*GiB),
+        new Module() {
+      @Override
+      public void configure(Binder binder) {
+        try {
+          binder.bind(ResourceManager.class).toInstance(mockRm(3, 1, 2, 8*GiB));
+        } catch (IOException e) {
+          throw new IllegalStateException(e);
+        }
+      }
+    });
+    injector.getInstance(NodesPage.class).render();
+    WebAppTests.flushOutput(injector);
   }
 
   public static RMContext mockRMContext(int numApps, int racks, int numNodes,
@@ -99,8 +122,7 @@ public class TestRMWebApp {
   }
 
   public static ResourceManager mockRm(int apps, int racks, int nodes,
-                                       int mbsPerNode)
-  throws Exception {
+                                       int mbsPerNode) throws IOException {
     ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mockRMContext(apps, racks, nodes,
         mbsPerNode);
@@ -110,7 +132,7 @@ public class TestRMWebApp {
     return rm;
   }
 
-  public static CapacityScheduler mockCapacityScheduler() throws Exception {
+  public static CapacityScheduler mockCapacityScheduler() throws IOException {
     // stolen from TestCapacityScheduler
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);

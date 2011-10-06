@@ -22,26 +22,26 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
 /**
- * Ennumeration of various states of an <code>Application</code>.
+ * Ennumeration of various states of an <code>ApplicationMaster</code>.
  */
 @Public
 @Stable
-public enum ApplicationState {
+public enum YarnApplicationState {
   /** Application which was just created. */
-  NEW, 
-  
+  NEW,
+
   /** Application which has been submitted. */
-  SUBMITTED, 
-  
+  SUBMITTED,
+
   /** Application which is currently running. */
-  RUNNING, 
-  
-  /** Application which completed successfully. */
-  SUCCEEDED, 
-  
+  RUNNING,
+
+  /** Application which finished successfully. */
+  FINISHED,
+
   /** Application which failed. */
-  FAILED, 
-  
+  FAILED,
+
   /** Application which was terminated by a user or admin. */
   KILLED
 }

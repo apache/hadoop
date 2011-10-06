@@ -22,38 +22,38 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
- * <em>For internal use only...</em> 
+ * <em>For internal use only...</em>
  */
 @Private
 @Unstable
 public interface ApplicationMaster {
   ApplicationId getApplicationId();
   void setApplicationId(ApplicationId appId);
-  
+
   String getHost();
   void setHost(String host);
-  
+
   int getRpcPort();
   void setRpcPort(int rpcPort);
-  
+
   String getTrackingUrl();
   void setTrackingUrl(String url);
-  
+
   ApplicationStatus getStatus();
   void setStatus(ApplicationStatus status);
-  
-  ApplicationState getState();
-  void setState(ApplicationState state);
-  
+
+  YarnApplicationState getState();
+  void setState(YarnApplicationState state);
+
   String getClientToken();
   void setClientToken(String clientToken);
-  
+
   int getAMFailCount();
   void setAMFailCount(int amFailCount);
-  
+
   int getContainerCount();
   void setContainerCount(int containerCount);
-  
+
   String getDiagnostics();
   void setDiagnostics(String diagnostics);
 }

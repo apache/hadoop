@@ -21,7 +21,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
@@ -35,11 +35,11 @@ public class TestTypeConverter {
   @Test
   public void testFromYarn() throws Exception {
     int appStartTime = 612354;
-    ApplicationState state = ApplicationState.RUNNING;
+    YarnApplicationState state = YarnApplicationState.RUNNING;
     ApplicationId applicationId = new ApplicationIdPBImpl();
     ApplicationReportPBImpl applicationReport = new ApplicationReportPBImpl();
     applicationReport.setApplicationId(applicationId);
-    applicationReport.setState(state);
+    applicationReport.setYarnApplicationState(state);
     applicationReport.setStartTime(appStartTime);
     applicationReport.setUser("TestTypeConverter-user");
     JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
@@ -56,7 +56,7 @@ public class TestTypeConverter {
     ApplicationReport mockReport = mock(ApplicationReport.class);
     when(mockReport.getTrackingUrl()).thenReturn("dummy-tracking-url");
     when(mockReport.getApplicationId()).thenReturn(mockAppId);
-    when(mockReport.getState()).thenReturn(ApplicationState.KILLED);
+    when(mockReport.getYarnApplicationState()).thenReturn(YarnApplicationState.KILLED);
     when(mockReport.getUser()).thenReturn("dummy-user");
     when(mockReport.getQueue()).thenReturn("dummy-queue");
     String jobFile = "dummy-path/job.xml";
