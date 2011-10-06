@@ -324,6 +324,7 @@ Release 0.92.0 - Unreleased
                (Kay Kay)
    HBASE-4481  TestMergeTool failed in 0.92 build 20
    HBASE-4386  Fix a potential NPE in TaskMonitor (todd)
+   HBASE-4402  Retaining locality after restart broken
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -46,7 +47,10 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Sets;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -576,20 +580,71 @@ public class DefaultLoadBalancer implements LoadBalancer {
    */
   public Map<ServerName, List<HRegionInfo>> retainAssignment(
       Map<HRegionInfo, ServerName> regions, List<ServerName> servers) {
+    // Group all of the old assignments by their hostname.
+    // We can't group directly by ServerName since the servers all have
+    // new start-codes.
+    
+    // Group the servers by their hostname. It's possible we have multiple
+    // servers on the same host on different ports.
+    ArrayListMultimap<String, ServerName> serversByHostname =
+        ArrayListMultimap.create();
+    for (ServerName server : servers) {
+      serversByHostname.put(server.getHostname(), server);
+    }
+    
+    // Now come up with new assignments
     Map<ServerName, List<HRegionInfo>> assignments =
       new TreeMap<ServerName, List<HRegionInfo>>();
+    
     for (ServerName server : servers) {
       assignments.put(server, new ArrayList<HRegionInfo>());
     }
-    for (Map.Entry<HRegionInfo, ServerName> region : regions.entrySet()) {
-      ServerName sn = region.getValue();
-      if (sn != null && servers.contains(sn)) {
-        assignments.get(sn).add(region.getKey());
+    
+    // Collection of the hostnames that used to have regions
+    // assigned, but for which we no longer have any RS running
+    // after the cluster restart.
+    Set<String> oldHostsNoLongerPresent = Sets.newTreeSet();
+    
+    int numRandomAssignments = 0;
+    int numRetainedAssigments = 0;
+    for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
+      HRegionInfo region = entry.getKey();
+      ServerName oldServerName = entry.getValue();
+      List<ServerName> localServers = new ArrayList<ServerName>();
+      if (oldServerName != null) {
+        localServers = serversByHostname.get(oldServerName.getHostname());
+      }
+      if (localServers.isEmpty()) {
+        // No servers on the new cluster match up with this hostname,
+        // assign randomly.
+        ServerName randomServer = servers.get(RANDOM.nextInt(servers.size()));
+        assignments.get(randomServer).add(region);
+        numRandomAssignments++;
+        if (oldServerName != null) oldHostsNoLongerPresent.add(oldServerName.getHostname());
+      } else if (localServers.size() == 1) {
+        // the usual case - one new server on same host
+        assignments.get(localServers.get(0)).add(region);
+        numRetainedAssigments++;
       } else {
-        int size = assignments.size();
-        assignments.get(servers.get(RANDOM.nextInt(size))).add(region.getKey());
+        // multiple new servers in the cluster on this same host
+        int size = localServers.size();
+        ServerName target = localServers.get(RANDOM.nextInt(size));
+        assignments.get(target).add(region);
+        numRetainedAssigments++;
       }
     }
+    
+    String randomAssignMsg = "";
+    if (numRandomAssignments > 0) {
+      randomAssignMsg = numRandomAssignments + " regions were assigned " +
+      		"to random hosts, since the old hosts for these regions are no " +
+      		"longer present in the cluster. These hosts were:\n  " +
+          Joiner.on("\n  ").join(oldHostsNoLongerPresent);
+    }
+    
+    LOG.info("Reassigned " + regions.size() + " regions. " +
+        numRetainedAssigments + " retained the pre-restart assignment. " +
+        randomAssignMsg);
     return assignments;
   }
 

@@ -620,7 +620,7 @@ public class AssignmentManager extends ZooKeeperListener {
           (System.currentTimeMillis() - 15000);
       LOG.debug("Handling transition=" + data.getEventType() +
         ", server=" + data.getOrigin() + ", region=" +
-          prettyPrintedRegionName +
+          (prettyPrintedRegionName == null? "null": prettyPrintedRegionName)  +
           (lateEvent? ", which is more than 15 seconds late" : ""));
       RegionState regionState = regionsInTransition.get(encodedName);
       switch (data.getEventType()) {

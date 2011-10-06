@@ -277,7 +277,12 @@ public class TestDefaultLoadBalancer {
     Map<HRegionInfo, ServerName> existing =
       new TreeMap<HRegionInfo, ServerName>();
     for (int i = 0; i < regions.size(); i++) {
-      existing.put(regions.get(i), servers.get(i % servers.size()).getServerName());
+      ServerName sn = servers.get(i % servers.size()).getServerName();
+      // The old server would have had same host and port, but different
+      // start code!
+      ServerName snWithOldStartCode =
+        new ServerName(sn.getHostname(), sn.getPort(), sn.getStartcode() - 10);
+      existing.put(regions.get(i), snWithOldStartCode);
     }
     List<ServerName> listOfServerNames = getListOfServerNames(servers);
     Map<ServerName, List<HRegionInfo>> assignment =
@@ -296,9 +301,9 @@ public class TestDefaultLoadBalancer {
     // Remove two of the servers that were previously there
     List<ServerAndLoad> servers3 =
       new ArrayList<ServerAndLoad>(servers);
-    servers3.remove(servers3.size()-1);
-    servers3.remove(servers3.size()-2);
-    listOfServerNames = getListOfServerNames(servers2);
+    servers3.remove(0);
+    servers3.remove(0);
+    listOfServerNames = getListOfServerNames(servers3);
     assignment = loadBalancer.retainAssignment(existing, listOfServerNames);
     assertRetainedAssignment(existing, listOfServerNames, assignment);
   }
@@ -338,13 +343,20 @@ public class TestDefaultLoadBalancer {
     assertEquals(existing.size(), assignedRegions.size());
 
     // Verify condition 2, if server had existing assignment, must have same
-    Set<ServerName> onlineAddresses = new TreeSet<ServerName>();
-    for (ServerName s : servers) onlineAddresses.add(s);
+    Set<String> onlineHostNames = new TreeSet<String>();
+    for (ServerName s : servers) {
+      onlineHostNames.add(s.getHostname());
+    }
+    
     for (Map.Entry<ServerName, List<HRegionInfo>> a : assignment.entrySet()) {
+      ServerName assignedTo = a.getKey();
       for (HRegionInfo r : a.getValue()) {
         ServerName address = existing.get(r);
-        if (address != null && onlineAddresses.contains(address)) {
-          assertTrue(a.getKey().equals(address));
+        if (address != null && onlineHostNames.contains(address.getHostname())) {
+          // this region was prevously assigned somewhere, and that
+          // host is still around, then it should be re-assigned on the
+          // same host
+          assertEquals(address.getHostname(), assignedTo.getHostname());
         }
       }
     }
@@ -470,7 +482,7 @@ public class TestDefaultLoadBalancer {
       ServerName sn = this.serverQueue.poll();
       return new ServerAndLoad(sn, numRegionsPerServer);
     }
-    String host = "127.0.0.1";
+    String host = "server" + rand.nextInt(100000);
     int port = rand.nextInt(60000);
     long startCode = rand.nextLong();
     ServerName sn = new ServerName(host, port, startCode);
