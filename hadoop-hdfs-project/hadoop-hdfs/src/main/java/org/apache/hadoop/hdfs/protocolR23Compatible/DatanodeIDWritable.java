@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.protocol;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -25,7 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.Writable;
 
 /**
  * DatanodeID is composed of the data node 
@@ -34,27 +34,65 @@ import org.apache.hadoop.io.WritableComparable;
  * 
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class DatanodeID implements WritableComparable<DatanodeID> {
-  public static final DatanodeID[] EMPTY_ARRAY = {}; 
+@InterfaceStability.Stable
+public class DatanodeIDWritable implements Writable {
+  public static final DatanodeIDWritable[] EMPTY_ARRAY = {}; 
 
   public String name;      /// hostname:portNumber
   public String storageID; /// unique per cluster storageID
   protected int infoPort;     /// the port where the infoserver is running
   public int ipcPort;     /// the port where the ipc server is running
 
+  
+  static public DatanodeIDWritable[] 
+      convertDatanodeID(org.apache.hadoop.hdfs.protocol.DatanodeID[] did) {
+    if (did == null) return null;
+    final int len = did.length;
+    DatanodeIDWritable[] result = new DatanodeIDWritable[len];
+    for (int i = 0; i < len; ++i) {
+      result[i] = convertDatanodeID(did[i]);
+    }
+    return result;
+  }
+  
+  static public org.apache.hadoop.hdfs.protocol.DatanodeID[] 
+      convertDatanodeID(DatanodeIDWritable[] did) {
+    if (did == null) return null;
+    final int len = did.length;
+    org.apache.hadoop.hdfs.protocol.DatanodeID[] result = new org.apache.hadoop.hdfs.protocol.DatanodeID[len];
+    for (int i = 0; i < len; ++i) {
+      result[i] = convertDatanodeID(did[i]);
+    }
+    return result;
+  }
+  
+  static public org.apache.hadoop.hdfs.protocol.DatanodeID convertDatanodeID(
+      DatanodeIDWritable did) {
+    if (did == null) return null;
+    return new org.apache.hadoop.hdfs.protocol.DatanodeID(
+        did.getName(), did.getStorageID(), did.getInfoPort(), did.getIpcPort());
+    
+  }
+  
+  public static DatanodeIDWritable convertDatanodeID(org.apache.hadoop.hdfs.protocol.DatanodeID from) {
+    return new DatanodeIDWritable(from.getName(),
+        from.getStorageID(),
+        from.getInfoPort(),
+        from.getIpcPort());
+  }
+  
   /** Equivalent to DatanodeID(""). */
-  public DatanodeID() {this("");}
+  public DatanodeIDWritable() {this("");}
 
   /** Equivalent to DatanodeID(nodeName, "", -1, -1). */
-  public DatanodeID(String nodeName) {this(nodeName, "", -1, -1);}
+  public DatanodeIDWritable(String nodeName) {this(nodeName, "", -1, -1);}
 
   /**
    * DatanodeID copy constructor
    * 
    * @param from
    */
-  public DatanodeID(DatanodeID from) {
+  public DatanodeIDWritable(DatanodeIDWritable from) {
     this(from.getName(),
         from.getStorageID(),
         from.getInfoPort(),
@@ -68,7 +106,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    * @param infoPort info server port 
    * @param ipcPort ipc server port
    */
-  public DatanodeID(String nodeName, String storageID,
+  public DatanodeIDWritable(String nodeName, String storageID,
       int infoPort, int ipcPort) {
     this.name = nodeName;
     this.storageID = storageID;
@@ -143,56 +181,22 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     return Integer.parseInt(name.substring(colon+1));
   }
 
-  public boolean equals(Object to) {
-    if (this == to) {
-      return true;
-    }
-    if (!(to instanceof DatanodeID)) {
-      return false;
-    }
-    return (name.equals(((DatanodeID)to).getName()) &&
-            storageID.equals(((DatanodeID)to).getStorageID()));
-  }
-  
-  public int hashCode() {
-    return name.hashCode()^ storageID.hashCode();
-  }
   
   public String toString() {
     return name;
-  }
-  
-  /**
-   * Update fields when a new registration request comes in.
-   * Note that this does not update storageID.
-   */
-  public void updateRegInfo(DatanodeID nodeReg) {
-    name = nodeReg.getName();
-    infoPort = nodeReg.getInfoPort();
-    ipcPort = nodeReg.getIpcPort();
-    // update any more fields added in future.
-  }
-    
-  /** Comparable.
-   * Basis of compare is the String name (host:portNumber) only.
-   * @param that
-   * @return as specified by Comparable.
-   */
-  public int compareTo(DatanodeID that) {
-    return name.compareTo(that.getName());
-  }
+  }    
 
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     DeprecatedUTF8.writeString(out, name);
     DeprecatedUTF8.writeString(out, storageID);
     out.writeShort(infoPort);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     name = DeprecatedUTF8.readString(in);
     storageID = DeprecatedUTF8.readString(in);

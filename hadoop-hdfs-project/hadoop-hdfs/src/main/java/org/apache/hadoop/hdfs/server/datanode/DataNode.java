@@ -123,6 +123,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DNTransferAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeProtocolServerSideTranslatorR23;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -576,8 +577,13 @@ public class DataNode extends Configured
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
         conf.get("dfs.datanode.ipc.address"));
     
-    // Add all the RPC protocols that the Datanode implements
-    ipcServer = RPC.getServer(ClientDatanodeProtocol.class, this, ipcAddr.getHostName(),
+    // Add all the RPC protocols that the Datanode implements    
+    ClientDatanodeProtocolServerSideTranslatorR23 
+        clientDatanodeProtocolServerTranslator = 
+          new ClientDatanodeProtocolServerSideTranslatorR23(this);
+    ipcServer = RPC.getServer(
+      org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class,
+      clientDatanodeProtocolServerTranslator, ipcAddr.getHostName(),
                               ipcAddr.getPort(), 
                               conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
                                           DFS_DATANODE_HANDLER_COUNT_DEFAULT), 

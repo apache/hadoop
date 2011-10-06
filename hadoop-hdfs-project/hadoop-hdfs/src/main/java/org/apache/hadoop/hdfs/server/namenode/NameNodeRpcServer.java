@@ -56,6 +56,8 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeProtocolServerSideTranslatorR23;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
@@ -143,10 +145,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
       serviceRPCAddress = null;
     }
     // Add all the RPC protocols that the namenode implements
-    this.server = RPC.getServer(ClientProtocol.class, this,
-                                socAddr.getHostName(), socAddr.getPort(),
-                                handlerCount, false, conf, 
-                                namesystem.getDelegationTokenSecretManager());
+    ClientNamenodeProtocolServerSideTranslatorR23 clientProtocolServerTranslator = 
+        new ClientNamenodeProtocolServerSideTranslatorR23(this);
+    this.server = RPC.getServer(
+            org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol.class,
+            clientProtocolServerTranslator, socAddr.getHostName(),
+            socAddr.getPort(), handlerCount, false, conf,
+            namesystem.getDelegationTokenSecretManager());
     this.server.addProtocol(DatanodeProtocol.class, this);
     this.server.addProtocol(NamenodeProtocol.class, this);
     this.server.addProtocol(RefreshAuthorizationPolicyProtocol.class, this);
@@ -210,7 +215,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
     if (protocol.equals(ClientProtocol.class.getName())) {
-      return ClientProtocol.versionID; 
+      throw new IOException("Old Namenode Client protocol is not supported:" + 
+      protocol + "Switch your clientside to " + ClientNamenodeWireProtocol.class); 
     } else if (protocol.equals(DatanodeProtocol.class.getName())){
       return DatanodeProtocol.versionID;
     } else if (protocol.equals(NamenodeProtocol.class.getName())){

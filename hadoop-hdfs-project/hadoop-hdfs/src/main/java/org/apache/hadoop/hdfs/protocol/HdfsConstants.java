@@ -30,7 +30,16 @@ public final class HdfsConstants {
   /* Hidden constructor */
   private HdfsConstants() {
   }
-
+  
+  /**
+   * HDFS Protocol Names:  
+   */
+  public static final String CLIENT_NAMENODE_PROTOCOL_NAME = 
+      "org.apache.hadoop.hdfs.protocol.ClientProtocol";
+  public static final String CLIENT_DATANODE_PROTOCOL_NAME = 
+      "org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol";
+  
+  
   public static int MIN_BLOCKS_FOR_WRITE = 5;
 
   // Long that indicates "leave current quota unchanged"
