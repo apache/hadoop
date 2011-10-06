@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
@@ -99,6 +100,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Nullable
+  @Idempotent
   public LocatedBlocks getBlockLocations(String src,
                                          long offset,
                                          long length) 
@@ -249,7 +251,7 @@ public interface ClientProtocol extends VersionedProtocol {
       UnresolvedLinkException, IOException;
 
   /**
-   * The client can give up on a blcok by calling abandonBlock().
+   * The client can give up on a block by calling abandonBlock().
    * The client can then
    * either obtain a new block, or complete or abandon the file.
    * Any partial writes to the block will be discarded.
@@ -721,6 +723,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException If an I/O error occurred        
    */
   @Nullable
+  @Idempotent
   public HdfsFileStatus getFileInfo(String src) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
 

@@ -106,8 +106,7 @@ public class DistributedFileSystem extends FileSystem {
       throw new IOException("Incomplete HDFS URI, no host: "+ uri);
     }
 
-    InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
-    this.dfs = new DFSClient(namenode, conf, statistics);
+    this.dfs = new DFSClient(uri, conf, statistics);
     this.uri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
     this.workingDir = getHomeDirectory();
   }

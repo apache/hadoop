@@ -267,7 +267,7 @@ public class NameNode {
    * @param filesystemURI
    * @return address of file system
    */
-  static InetSocketAddress getAddress(URI filesystemURI) {
+  public static InetSocketAddress getAddress(URI filesystemURI) {
     String authority = filesystemURI.getAuthority();
     if (authority == null) {
       throw new IllegalArgumentException(String.format(

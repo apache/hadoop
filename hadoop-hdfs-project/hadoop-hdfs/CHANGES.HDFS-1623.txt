@@ -9,3 +9,5 @@ HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
 HDFS-1974. Introduce active and standy states to the namenode. (suresh)
 
 HDFS-2407. getServerDefaults and getStats don't check operation category (atm)
+
+HDFS-1973. HA: HDFS clients must handle namenode failover and switch over to the new active namenode. (atm)

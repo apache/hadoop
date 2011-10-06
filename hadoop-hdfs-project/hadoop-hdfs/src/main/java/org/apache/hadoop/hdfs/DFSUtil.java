@@ -617,15 +617,19 @@ public class DFSUtil {
   }
 
   /** Create a {@link NameNode} proxy */
-  public static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
+  public static ClientProtocol createNamenode(InetSocketAddress nameNodeAddr,
       Configuration conf) throws IOException {
-    return createNamenode(createRPCNamenode(nameNodeAddr, conf,
-        UserGroupInformation.getCurrentUser()));
-    
+    return createNamenode(nameNodeAddr, conf, UserGroupInformation.getCurrentUser());
+  }
+  
+  /** Create a {@link NameNode} proxy */
+  public static ClientProtocol createNamenode(InetSocketAddress nameNodeAddr,
+      Configuration conf, UserGroupInformation ugi) throws IOException {
+    return createNamenode(createRPCNamenode(nameNodeAddr, conf, ugi));
   }
 
   /** Create a {@link NameNode} proxy */
-  static ClientProtocol createRPCNamenode(InetSocketAddress nameNodeAddr,
+  public static ClientProtocol createRPCNamenode(InetSocketAddress nameNodeAddr,
       Configuration conf, UserGroupInformation ugi) 
     throws IOException {
     return (ClientProtocol)RPC.getProxy(ClientProtocol.class,
@@ -634,7 +638,7 @@ public class DFSUtil {
   }
 
   /** Create a {@link NameNode} proxy */
-  static ClientProtocol createNamenode(ClientProtocol rpcNamenode)
+  public static ClientProtocol createNamenode(ClientProtocol rpcNamenode)
     throws IOException {
     RetryPolicy createPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
         5, HdfsConstants.LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);

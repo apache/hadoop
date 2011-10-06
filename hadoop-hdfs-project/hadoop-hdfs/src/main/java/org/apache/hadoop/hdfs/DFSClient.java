@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,11 +25,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.URI;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
@@ -87,6 +86,9 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.FailoverProxyProvider;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -96,6 +98,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -199,7 +202,7 @@ public class DFSClient implements java.io.Closeable {
    */
   private final Map<String, DFSOutputStream> filesBeingWritten
       = new HashMap<String, DFSOutputStream>();
-        
+
   /**
    * Same as this(NameNode.getAddress(conf), conf);
    * @see #DFSClient(InetSocketAddress, Configuration)
@@ -209,12 +212,16 @@ public class DFSClient implements java.io.Closeable {
   public DFSClient(Configuration conf) throws IOException {
     this(NameNode.getAddress(conf), conf);
   }
+  
+  public DFSClient(InetSocketAddress address, Configuration conf) throws IOException {
+    this(NameNode.getUri(address), conf);
+  }
 
   /**
    * Same as this(nameNodeAddr, conf, null);
    * @see #DFSClient(InetSocketAddress, Configuration, org.apache.hadoop.fs.FileSystem.Statistics)
    */
-  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf
+  public DFSClient(URI nameNodeAddr, Configuration conf
       ) throws IOException {
     this(nameNodeAddr, conf, null);
   }
@@ -223,17 +230,17 @@ public class DFSClient implements java.io.Closeable {
    * Same as this(nameNodeAddr, null, conf, stats);
    * @see #DFSClient(InetSocketAddress, ClientProtocol, Configuration, org.apache.hadoop.fs.FileSystem.Statistics) 
    */
-  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf,
+  public DFSClient(URI nameNodeAddr, Configuration conf,
                    FileSystem.Statistics stats)
     throws IOException {
     this(nameNodeAddr, null, conf, stats);
   }
-
+  
   /** 
    * Create a new DFSClient connected to the given nameNodeAddr or rpcNamenode.
    * Exactly one of nameNodeAddr or rpcNamenode must be null.
    */
-  DFSClient(InetSocketAddress nameNodeAddr, ClientProtocol rpcNamenode,
+  DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
     // Copy only the required DFSClient configuration
@@ -246,20 +253,45 @@ public class DFSClient implements java.io.Closeable {
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
-    final String authority = nameNodeAddr == null? "null":
-        nameNodeAddr.getHostName() + ":" + nameNodeAddr.getPort();
+    
+    final String authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
     this.leaserenewer = LeaseRenewer.getInstance(authority, ugi, this);
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
+    
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
-    if (nameNodeAddr != null && rpcNamenode == null) {
-      this.namenode = DFSUtil.createNamenode(nameNodeAddr, conf);
-    } else if (nameNodeAddr == null && rpcNamenode != null) {
+    
+    Class<?> failoverProxyProviderClass = getFailoverProxyProviderClass(authority, conf);
+    
+    if (nameNodeUri != null && failoverProxyProviderClass != null) {
+      FailoverProxyProvider failoverProxyProvider = (FailoverProxyProvider)
+          ReflectionUtils.newInstance(failoverProxyProviderClass, conf);
+      this.namenode = (ClientProtocol)RetryProxy.create(ClientProtocol.class,
+          failoverProxyProvider, RetryPolicies.failoverOnNetworkException(1));
+    } else if (nameNodeUri != null && rpcNamenode == null) {
+      this.namenode = DFSUtil.createNamenode(NameNode.getAddress(nameNodeUri), conf);
+    } else if (nameNodeUri == null && rpcNamenode != null) {
       //This case is used for testing.
       this.namenode = rpcNamenode;
     } else {
       throw new IllegalArgumentException(
           "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
-          + "nameNodeAddr=" + nameNodeAddr + ", rpcNamenode=" + rpcNamenode);
+          + "nameNodeAddr=" + nameNodeUri + ", rpcNamenode=" + rpcNamenode);
+    }
+  }
+  
+  private Class<?> getFailoverProxyProviderClass(String authority, Configuration conf)
+      throws IOException {
+    String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + authority;
+    try {
+      return conf.getClass(configKey, null);
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ClassNotFoundException) {
+        throw new IOException("Could not load failover proxy provider class "
+            + conf.get(configKey) + " which is configured for authority " + authority,
+            e);
+      } else {
+        throw e;
+      }
     }
   }
 
