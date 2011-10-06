@@ -19,16 +19,15 @@
  */
 package org.apache.hadoop.hbase.io.hfile.slab;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
-import org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
 import org.apache.hadoop.hbase.io.hfile.slab.SlabCache.SlabStats;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Ignore;
-
-import static org.junit.Assert.*;
 
 /**
  * Basic test of SlabCache. Puts and gets.
@@ -59,36 +58,36 @@ public class TestSlabCache {
     cache.shutdown();
   }
 
-  @Ignore @Test
+  @Test
   public void testElementPlacement() {
-    assertEquals(cache.getHigherBlock((int) BLOCK_SIZE).getKey().intValue(),
-        (int) (BLOCK_SIZE * 11 / 10));
-    assertEquals(cache.getHigherBlock((int) (BLOCK_SIZE * 2)).getKey()
-        .intValue(), (int) (BLOCK_SIZE * 21 / 10));
+    assertEquals(cache.getHigherBlock(BLOCK_SIZE).getKey().intValue(),
+        (BLOCK_SIZE * 11 / 10));
+    assertEquals(cache.getHigherBlock((BLOCK_SIZE * 2)).getKey()
+        .intValue(), (BLOCK_SIZE * 21 / 10));
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheSimple() throws Exception {
     CacheTestUtils.testCacheSimple(cache, BLOCK_SIZE, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreaded() throws Exception {
     CacheTestUtils.testCacheMultiThreaded(cache, BLOCK_SIZE, NUM_THREADS,
         NUM_QUERIES, 0.80);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreadedEviction() throws Exception {
     CacheTestUtils.hammerEviction(cache, BLOCK_SIZE, 10, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   /*Just checks if ranges overlap*/
   public void testStatsArithmetic(){
     SlabStats test = cache.requestStats;
@@ -99,7 +98,7 @@ public class TestSlabCache {
     }
   }
 
-  @Ignore @Test
+  @Test
   public void testHeapSizeChanges(){
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }

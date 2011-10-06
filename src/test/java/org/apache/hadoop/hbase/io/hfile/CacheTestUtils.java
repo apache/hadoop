@@ -19,8 +19,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -102,7 +105,7 @@ public class CacheTestUtils {
       Thread.sleep(10);
     }
     ctx.stop();
-    if ((double) hits.get() / ((double) hits.get() + (double) miss.get()) < passingScore) {
+    if (hits.get() / ((double) hits.get() + (double) miss.get()) < passingScore) {
       fail("Too many nulls returned. Hits: " + hits.get() + " Misses: "
           + miss.get());
     }
@@ -201,7 +204,7 @@ public class CacheTestUtils {
       TestThread t = new MultithreadedTestUtil.RepeatingTestThread(ctx) {
         @Override
         public void doAnAction() throws Exception {
-          for (int j = 0; j < 10; j++) {
+          for (int j = 0; j < 100; j++) {
             String key = "key_" + finalI + "_" + j;
             Arrays.fill(buf, (byte) (finalI * j));
             final ByteArrayCacheable bac = new ByteArrayCacheable(buf);

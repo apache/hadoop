@@ -30,9 +30,10 @@ interface SlabItemEvictionWatcher {
    * SingleSizeSlabCaches.
    *
    * @param key the key of the item being evicted
+   * @param notifier the object notifying the SlabCache of the eviction.
    * @param boolean callAssignedCache whether we should call the cache which the
    *        key was originally assigned to.
    */
-  boolean onEviction(String key, boolean callAssignedCache);
+  void onEviction(String key, Object notifier);
 
 }

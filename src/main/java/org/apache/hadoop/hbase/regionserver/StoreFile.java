@@ -387,11 +387,14 @@ public class StoreFile {
     long cacheSize = (long)(mu.getMax() * cachePercentage);
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HFile.DEFAULT_BLOCKSIZE);
     long offHeapCacheSize = (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0.95) * DirectMemoryUtils.getDirectMemorySize());
+    boolean enableOffHeapCache = conf.getBoolean("hbase.offheapcache.enable", false);
     LOG.info("Allocating LruBlockCache with maximum size " +
       StringUtils.humanReadableInt(cacheSize));
-    if(offHeapCacheSize <= 0) {
+    if(offHeapCacheSize <= 0 || !enableOffHeapCache) {
       hfileBlockCache = new LruBlockCache(cacheSize, DEFAULT_BLOCKSIZE_SMALL);
     } else {
+      LOG.info("Allocating OffHeapCache with maximum size " +
+        StringUtils.humanReadableInt(offHeapCacheSize));
       hfileBlockCache = new DoubleBlockCache(cacheSize, offHeapCacheSize, DEFAULT_BLOCKSIZE_SMALL, blockSize, conf);
     }
     return hfileBlockCache;

@@ -58,8 +58,8 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   private final int blockSize;
   private final CacheStats stats;
   private final SlabItemEvictionWatcher evictionWatcher;
-  private AtomicLong size;
-  private AtomicLong timeSinceLastAccess;
+  private final AtomicLong size;
+  private final AtomicLong timeSinceLastAccess;
   public final static long CACHE_FIXED_OVERHEAD = ClassSize
       .align((2 * Bytes.SIZEOF_INT) + (5 * ClassSize.REFERENCE)
           + +ClassSize.OBJECT);
@@ -87,13 +87,15 @@ public class SingleSizeCache implements BlockCache, HeapSize {
     this.size = new AtomicLong(CACHE_FIXED_OVERHEAD + backingStore.heapSize());
     this.timeSinceLastAccess = new AtomicLong();
 
-    // This evictionListener is called whenever the cache automatically evicts
+    // This evictionListener is called whenever the cache automatically
+    // evicts
     // something.
     MapEvictionListener<String, CacheablePair> listener = new MapEvictionListener<String, CacheablePair>() {
       @Override
       public void onEviction(String key, CacheablePair value) {
         timeSinceLastAccess.set(System.nanoTime()
             - value.recentlyAccessed.get());
+        stats.evict();
         doEviction(key, value);
       }
     };
@@ -106,12 +108,6 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   @Override
   public void cacheBlock(String blockName, Cacheable toBeCached) {
     ByteBuffer storedBlock;
-
-    /*
-     * Spinlock if empty, Guava Mapmaker guarantees that we will not store more
-     * items than the memory we have allocated, but the Slab Allocator may still
-     * be empty if we have not yet completed eviction
-     */
 
     try {
       storedBlock = backingStore.alloc(toBeCached.getSerializedLength());
@@ -171,6 +167,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   public boolean evictBlock(String key) {
     stats.evict();
     CacheablePair evictedBlock = backingMap.remove(key);
+
     if (evictedBlock != null) {
       doEviction(key, evictedBlock);
     }
@@ -200,8 +197,9 @@ public class SingleSizeCache implements BlockCache, HeapSize {
       // Thread A sees the null serializedData, and returns null
       // Thread A calls cacheBlock on the same block, and gets
       // "already cached" since the block is still in backingStore
+
       if (evictionWatcher != null) {
-        evictionWatcher.onEviction(key, false);
+        evictionWatcher.onEviction(key, this);
       }
     }
     stats.evicted();
@@ -210,7 +208,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
 
   public void logStats() {
 
-    long milliseconds = (long) this.timeSinceLastAccess.get() / 1000000;
+    long milliseconds = this.timeSinceLastAccess.get() / 1000000;
 
     LOG.info("For Slab of size " + this.blockSize + ": "
         + this.getOccupiedSize() / this.blockSize

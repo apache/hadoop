@@ -20,8 +20,9 @@
 package org.apache.hadoop.hbase.io.hfile.slab;
 
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
-import org.apache.hadoop.hbase.io.hfile.slab.SingleSizeCache;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Tests SingleSlabCache.
@@ -48,28 +49,28 @@ public class TestSingleSizeCache {
     cache.shutdown();
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheSimple() throws Exception {
     CacheTestUtils.testCacheSimple(cache, BLOCK_SIZE, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreaded() throws Exception {
     CacheTestUtils.testCacheMultiThreaded(cache, BLOCK_SIZE,
         NUM_THREADS, NUM_QUERIES, 0.80);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testCacheMultiThreadedEviction() throws Exception {
     CacheTestUtils.hammerEviction(cache, BLOCK_SIZE, NUM_THREADS, NUM_QUERIES);
   }
 
-  @Ignore @Test
+  @Test
   public void testHeapSizeChanges(){
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
   }

@@ -21,8 +21,8 @@
 package org.apache.hadoop.hbase.io.hfile.slab;
 
 import java.math.BigDecimal;
-import java.util.Map.Entry;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -122,7 +122,9 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
               + sizes.length + " slabs "
               + "offheapslabporportions and offheapslabsizes");
     }
-    /* We use BigDecimals instead of floats because float rounding is annoying */
+    /*
+     * We use BigDecimals instead of floats because float rounding is annoying
+     */
 
     BigDecimal[] parsedProportions = stringArrayToBigDecimalArray(porportions);
     BigDecimal[] parsedSizes = stringArrayToBigDecimalArray(sizes);
@@ -205,12 +207,37 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
     this.successfullyCachedStats.addin(cachedItem.getSerializedLength());
     SingleSizeCache scache = scacheEntry.getValue();
 
-    /*This will throw a runtime exception if we try to cache the same value twice*/
+    /*
+     * This will throw a runtime exception if we try to cache the same value
+     * twice
+     */
     scache.cacheBlock(blockName, cachedItem);
 
-    /*Spinlock, if we're spinlocking, that means an eviction hasn't taken place yet*/
-    while (backingStore.putIfAbsent(blockName, scache) != null) {
-      Thread.yield();
+    /*
+     * If an eviction for this value hasn't taken place yet, we want to wait for
+     * it to take place. See HBase-4330.
+     */
+    SingleSizeCache replace;
+    while ((replace = backingStore.putIfAbsent(blockName, scache)) != null) {
+      synchronized (replace) {
+        /*
+         * With the exception of unit tests, this should happen extremely
+         * rarely.
+         */
+        try {
+          replace.wait();
+        } catch (InterruptedException e) {
+          LOG.warn("InterruptedException on the caching thread: " + e);
+        }
+      }
+    }
+
+    /*
+     * Let the eviction threads know that something has been cached, and let
+     * them try their hand at eviction
+     */
+    synchronized (scache) {
+      scache.notifyAll();
     }
   }
 
@@ -254,25 +281,70 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
    * the evict counter.
    */
   public boolean evictBlock(String key) {
-    stats.evict();
-    return onEviction(key, true);
+    SingleSizeCache cacheEntry = backingStore.get(key);
+    if (cacheEntry == null) {
+      return false;
+    } else {
+      cacheEntry.evictBlock(key);
+      return true;
+    }
   }
 
   @Override
-  public boolean onEviction(String key, boolean callAssignedCache) {
-    SingleSizeCache cacheEntry = backingStore.remove(key);
-    if (cacheEntry == null) {
-      return false;
-    }
-    /* we need to bump up stats.evict, as this call came from the assignedCache. */
-    if (callAssignedCache == false) {
-      stats.evict();
+  public void onEviction(String key, Object notifier) {
+    /*
+     * Without the while loop below, the following can occur:
+     *
+     * Invariant: Anything in SingleSizeCache will have a representation in
+     * SlabCache, and vice-versa.
+     *
+     * Start: Key A is in both SingleSizeCache and SlabCache. Invariant is
+     * satisfied
+     *
+     * Thread A: Caches something, starting eviction of Key A in SingleSizeCache
+     *
+     * Thread B: Checks for Key A -> Returns Gets Null, as eviction has begun
+     *
+     * Thread B: Recaches Key A, gets to SingleSizeCache, does not get the
+     * PutIfAbsentLoop yet...
+     *
+     * Thread C: Caches another key, starting the second eviction of Key A.
+     *
+     * Thread A: does its onEviction, removing the entry of Key A from
+     * SlabCache.
+     *
+     * Thread C: does its onEviction, removing the (blank) entry of Key A from
+     * SlabCache:
+     *
+     * Thread B: goes to putifabsent, and puts its entry into SlabCache.
+     *
+     * Result: SlabCache has an entry for A, while SingleSizeCache has no
+     * entries for A. Invariant is violated.
+     *
+     * What the while loop does, is that, at the end, it GUARANTEES that an
+     * onEviction will remove an entry. See HBase-4482.
+     */
+
+    stats.evict();
+    while ((backingStore.remove(key)) == null) {
+      /* With the exception of unit tests, this should happen extremely rarely. */
+      synchronized (notifier) {
+        try {
+          notifier.wait();
+        } catch (InterruptedException e) {
+          LOG.warn("InterruptedException on the evicting thread: " + e);
+        }
+      }
     }
     stats.evicted();
-    if (callAssignedCache) {
-      cacheEntry.evictBlock(key);
+
+    /*
+     * Now we've evicted something, lets tell the caching threads to try to
+     * cache something.
+     */
+    synchronized (notifier) {
+      notifier.notifyAll();
     }
-    return true;
   }
 
   /**
@@ -346,7 +418,8 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
    *
    */
   static class SlabStats {
-    // the maximum size somebody will ever try to cache, then we multiply by 10
+    // the maximum size somebody will ever try to cache, then we multiply by
+    // 10
     // so we have finer grained stats.
     final int MULTIPLIER = 10;
     final int NUMDIVISIONS = (int) (Math.log(Integer.MAX_VALUE) * MULTIPLIER);
@@ -368,11 +441,11 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
     }
 
     double getUpperBound(int index) {
-      return Math.pow(Math.E, ((double) (index + 0.5) / (double) MULTIPLIER));
+      return Math.pow(Math.E, ((index + 0.5) / MULTIPLIER));
     }
 
     double getLowerBound(int index) {
-      return Math.pow(Math.E, ((double) (index - 0.5) / (double) MULTIPLIER));
+      return Math.pow(Math.E, ((index - 0.5) / MULTIPLIER));
     }
 
     public void logStats() {
