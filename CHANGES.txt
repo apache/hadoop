@@ -301,6 +301,9 @@ Release 0.20.205.0 - unreleased
     HDFS-2408. DFSClient#getNumCurrentReplicas is package private in 205 but
                public in branch-0.20-append (stack via atm)
 
+    HADOOP-7721. dfs.web.authentication.kerberos.principal expects the full 
+    hostname and does not replace _HOST with the hostname. (jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)

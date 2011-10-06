@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web.resources;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.ext.Provider;
@@ -42,11 +43,12 @@ public class UserProvider
     extends AbstractHttpContextInjectable<UserGroupInformation>
     implements InjectableProvider<Context, Type> {
   @Context HttpServletRequest request;
+  @Context ServletContext servletcontext;
 
   @Override
   public UserGroupInformation getValue(final HttpContext context) {
-    final Configuration conf = (Configuration)context.getProperties().get(
-        JspHelper.CURRENT_CONF);
+    final Configuration conf = (Configuration) servletcontext
+        .getAttribute(JspHelper.CURRENT_CONF);
     try {
       return JspHelper.getUGI(request, conf,
           AuthenticationMethod.KERBEROS, false);
