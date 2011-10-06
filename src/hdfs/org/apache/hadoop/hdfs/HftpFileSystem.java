@@ -149,7 +149,7 @@ public class HftpFileSystem extends FileSystem
     this.ugi = UserGroupInformation.getCurrentUser();
     this.nnAddr = getNamenodeAddr(name);
     this.nnSecureAddr = getNamenodeSecureAddr(name);
-    this.hftpURI = createUri(name.getScheme(), nnAddr);
+    this.hftpURI = DFSUtil.createUri(name.getScheme(), nnAddr);
     
     if (UserGroupInformation.isSecurityEnabled()) {
       initDelegationToken();
@@ -192,15 +192,6 @@ public class HftpFileSystem extends FileSystem
         nnAddr, ugi, getConf());
   }
   
-  private static URI createUri(String scheme, InetSocketAddress addr) {
-    URI uri = null;
-    try {
-      uri = new URI(scheme, null, addr.getHostName(), addr.getPort(), null, null, null);
-    } catch (URISyntaxException ue) {
-      throw new IllegalArgumentException(ue);
-    }
-    return uri;
-  }
 
   @Override
   public Token<?> getRenewToken() {
@@ -224,12 +215,12 @@ public class HftpFileSystem extends FileSystem
   @Override
   public synchronized Token<?> getDelegationToken(final String renewer
                                                   ) throws IOException {
-    final String nnHttpUrl = createUri("https", nnSecureAddr).toString();
     try {
       //Renew TGT if needed
       ugi.checkTGTAndReloginFromKeytab();
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
         public Token<?> run() throws IOException {
+          final String nnHttpUrl = DFSUtil.createUri("https", nnSecureAddr).toString();
           Credentials c;
           try {
             c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
@@ -682,7 +673,7 @@ public class HftpFileSystem extends FileSystem
       // use https to renew the token
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       return DelegationTokenFetcher.renewDelegationToken(
-          createUri("https", serviceAddr).toString(),
+          DFSUtil.createUri("https", serviceAddr).toString(),
           (Token<DelegationTokenIdentifier>) token
       );
     }
@@ -696,7 +687,7 @@ public class HftpFileSystem extends FileSystem
       // use https to cancel the token
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       DelegationTokenFetcher.cancelDelegationToken(
-          createUri("https", serviceAddr).toString(), 
+          DFSUtil.createUri("https", serviceAddr).toString(), 
           (Token<DelegationTokenIdentifier>) token
       );
     }
