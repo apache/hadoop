@@ -54,6 +54,9 @@ Trunk (unreleased changes)
     HADOOP-7704. Reduce number of object created by JMXJsonServlet.
     (Devaraj K via Eric Yang)
 
+    HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
+                 error (atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

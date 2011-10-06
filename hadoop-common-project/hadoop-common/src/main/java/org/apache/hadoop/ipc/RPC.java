@@ -489,7 +489,8 @@ public class RPC {
       }
     } else {
       LOG.error("Could not get invocation handler " + invocationHandler +
-          " for proxy " + proxy + ", or invocation handler is not closeable.");
+          " for proxy class " + (proxy == null ? null : proxy.getClass()) +
+          ", or invocation handler is not closeable.");
     }
   }
 
