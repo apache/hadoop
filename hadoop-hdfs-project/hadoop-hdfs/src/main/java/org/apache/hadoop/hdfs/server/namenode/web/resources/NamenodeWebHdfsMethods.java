@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.web.resources;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URI;
@@ -143,7 +142,8 @@ public class NamenodeWebHdfsMethods {
       final NameNode namenode, final UserGroupInformation ugi,
       final String renewer) throws IOException {
     final Credentials c = DelegationTokenSecretManager.createCredentials(
-        namenode, ugi, request.getUserPrincipal().getName());
+        namenode, ugi,
+        renewer != null? renewer: request.getUserPrincipal().getName());
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
     t.setService(new Text(SecurityUtil.buildDTServiceName(
         NameNode.getUri(namenode.getNameNodeAddress()),
@@ -189,7 +189,6 @@ public class NamenodeWebHdfsMethods {
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_JSON})
   public Response put(
-      final InputStream in,
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
@@ -218,7 +217,7 @@ public class NamenodeWebHdfsMethods {
           final AccessTimeParam accessTime,
       @QueryParam(RenameOptionSetParam.NAME) @DefaultValue(RenameOptionSetParam.DEFAULT)
           final RenameOptionSetParam renameOptions
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
@@ -303,7 +302,6 @@ public class NamenodeWebHdfsMethods {
   @Consumes({"*/*"})
   @Produces({MediaType.APPLICATION_JSON})
   public Response post(
-      final InputStream in,
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
@@ -312,7 +310,7 @@ public class NamenodeWebHdfsMethods {
           final PostOpParam op,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
@@ -389,7 +387,7 @@ public class NamenodeWebHdfsMethods {
           final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi

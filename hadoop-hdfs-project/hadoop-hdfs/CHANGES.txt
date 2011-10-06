@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
     not include multiple methods of the same name. (cutting)
 
+    HDFS-2403. NamenodeWebHdfsMethods.generateDelegationToken(..) does not use
+    the renewer parameter.  (szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
