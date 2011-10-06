@@ -3569,7 +3569,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * block is not yet allocated, then this API will return 0 because there are
      * no replicas in the pipeline.
      */
-    int getNumCurrentReplicas() throws IOException {
+    public int getNumCurrentReplicas() throws IOException {
       synchronized(dataQueue) {
         if (nodes == null) {
           return blockReplication;
