@@ -133,32 +133,34 @@ public class JsonUtil {
   }
 
   /** Convert a HdfsFileStatus object to a Json string. */
-  public static String toJsonString(final HdfsFileStatus status) {
+  public static String toJsonString(final HdfsFileStatus status,
+      boolean includeType) {
     if (status == null) {
       return null;
-    } else {
-      final Map<String, Object> m = new TreeMap<String, Object>();
-      m.put("localName", status.getLocalName());
-      m.put("isDir", status.isDir());
-      m.put("len", status.getLen());
-      m.put("owner", status.getOwner());
-      m.put("group", status.getGroup());
-      m.put("permission", toString(status.getPermission()));
-      m.put("accessTime", status.getAccessTime());
-      m.put("modificationTime", status.getModificationTime());
-      m.put("blockSize", status.getBlockSize());
-      m.put("replication", status.getReplication());
-      return toJsonString(HdfsFileStatus.class, m);
     }
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("localName", status.getLocalName());
+    m.put("isDir", status.isDir());
+    m.put("len", status.getLen());
+    m.put("owner", status.getOwner());
+    m.put("group", status.getGroup());
+    m.put("permission", toString(status.getPermission()));
+    m.put("accessTime", status.getAccessTime());
+    m.put("modificationTime", status.getModificationTime());
+    m.put("blockSize", status.getBlockSize());
+    m.put("replication", status.getReplication());
+    return includeType ? toJsonString(HdfsFileStatus.class, m) : 
+      JSON.toString(m);
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
-  public static HdfsFileStatus toFileStatus(final Map<?, ?> json) {
+  public static HdfsFileStatus toFileStatus(final Map<?, ?> json, boolean includesType) {
     if (json == null) {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName());
+    final Map<?, ?> m = includesType ? 
+        (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName()) : json;
     final String localName = (String) m.get("localName");
     final boolean isDir = (Boolean) m.get("isDir");
     final long len = (Long) m.get("len");
@@ -273,7 +275,7 @@ public class JsonUtil {
       return array;
     }
   }
-
+  
   /** Convert a LocatedBlock to a Json map. */
   private static Map<String, Object> toJsonMap(final LocatedBlock locatedblock
       ) throws IOException {

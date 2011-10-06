@@ -91,6 +91,9 @@ Release 0.20.205.0 - unreleased
 
   BUG FIXES
 
+    HDFS-2404. Webhdfs liststatus json response is not correct. 
+    (Suresh Srinivas via mattf)
+
     HDFS-2358. NPE when the default filesystem's uri has no authority.
     (Daryn Sharp via mattf)
 
