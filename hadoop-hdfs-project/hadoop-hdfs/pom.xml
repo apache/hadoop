@@ -329,16 +329,15 @@
                 </condition>
                 <property name="commons.daemon.tar.name"
                           value="commons-daemon-${commons-daemon.version}-bin-${commons.daemon.os.name}-${commons.daemon.os.arch}.tar.gz"/>
-               
-                <property name="commons.daemon.download.dir"
-                          value="${project.build.directory}/downloads/commons-daemon"/>
-                <delete dir="${commons.daemon.download.dir}"/>
-                <mkdir dir="${commons.daemon.download.dir}"/>
+                
+                <mkdir dir="downloads"/>
                 <get src="http://archive.apache.org/dist/commons/daemon/binaries/${commons-daemon.version}/${commons.daemon.os.name}/${commons.daemon.tar.name}"
-                    dest="${commons.daemon.download.dir}/${commons.daemon.tar.name}" verbose="true" skipexisting="true"/>
-                <untar compression="gzip" src="${commons.daemon.download.dir}/${commons.daemon.tar.name}"
-                       dest="${commons.daemon.download.dir}"/>
-                <copy file="${commons.daemon.download.dir}/jsvc"
+                    dest="downloads/${commons.daemon.tar.name}" verbose="true" skipexisting="true"/>
+                <delete dir="${project.build.directory}/commons-daemon.staging"/>
+                <mkdir dir="${project.build.directory}/commons-daemon.staging"/>
+                <untar compression="gzip" src="${basedir}/downloads/${commons.daemon.tar.name}"
+                       dest="${project.build.directory}/commons-daemon.staging"/>
+                <copy file="${project.build.directory}/commons-daemon.staging/jsvc"
                       todir="${project.build.directory}/${project.artifactId}-${project.version}/libexec"
                       verbose="true"/>
                 <chmod perm="ugo+x" type="file">

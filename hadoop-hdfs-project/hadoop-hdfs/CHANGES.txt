@@ -63,6 +63,8 @@ Trunk (unreleased changes)
 
 	HDFS-2181 Separate HDFS Client wire protocol data types (sanjay)
 
+    HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
