@@ -17,7 +17,6 @@
 <h2>Changes since Hadoop 0.20.204.0</h2>
 
 <ul>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-6722">HADOOP-6722</a>.
      Major bug reported by tlipcon and fixed by tlipcon (util)<br>
      <b>NetUtils.connect should check that it hasn&apos;t connected a socket to itself</b><br>
@@ -47,11 +46,6 @@
      Minor improvement reported by tgraves and fixed by tgraves (test)<br>
      <b>backport HADOOP-7008 and HADOOP-7042 to branch-0.20-security</b><br>
      <blockquote>backport HADOOP-7008 and HADOOP-7042 to branch-0.20-security so that we can enable test-patch.sh to have a configured number of acceptable findbugs and javadoc warnings</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7388">HADOOP-7388</a>.
-     Trivial improvement reported by eyang and fixed by eyang <br>
-     <b>Remove definition of HADOOP_HOME and HADOOP_PREFIX from hadoop-env.sh.template</b><br>
-     <blockquote>The file structure layout proposed in HADOOP-6255 was designed to remove the need of using HADOOP_HOME environment to locate hadoop bits.  The file structure layout should be able to map to /usr or system directories, therefore HADOOP_HOME is renamed to HADOOP_PREFIX to be more concise.  HADOOP_PREFIX should not be exported to the user.  If the user use hadoop-setup-single-node.sh or hadoop-setup-conf.sh to configure hadoop, the current scripts put HADOOP_PREFIX/HADOOP_HOME in hadoop-env.sh. ...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7400">HADOOP-7400</a>.
      Major bug reported by gkesavan and fixed by gkesavan (build)<br>
@@ -101,7 +95,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7603">HADOOP-7603</a>.
      Major bug reported by eyang and fixed by eyang <br>
      <b>Set default hdfs, mapred uid, and hadoop group gid for RPM packages</b><br>
-     <blockquote>Hadoop rpm package creates hdfs, mapped users, and hadoop group for automatically setting up pid directory and log directory with proper permission.  The default headless users should have a fixed uid, and gid numbers defined.<br><br>Searched through the standard uid and gid on both Redhat and Debian distro.  It looks like:<br><br>{noformat}<br>uid: 201 for hdfs<br>uid: 202 for mapred<br>gid: 49 for hadoop<br>{noformat}<br><br>would be free for use.</blockquote></li>
+     <blockquote>                                              Set hdfs, mapred uid, and hadoop uid to fixed numbers. (Eric Yang)<br><br>      <br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7610">HADOOP-7610</a>.
      Major bug reported by eyang and fixed by eyang (scripts)<br>
@@ -191,7 +185,7 @@
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7681">HADOOP-7681</a>.
      Minor bug reported by arpitgupta and fixed by arpitgupta (conf)<br>
      <b>log4j.properties is missing properties for security audit and hdfs audit should be changed to info</b><br>
-     <blockquote>log4j.properties defines the security audit and hdfs audit files but is missing properties for security audit which causes security audit logs to not be present and also updates the hdfs audit to log at a WARN level. hdfs-audit logs should be at the INFO level so admin&apos;s/users can track when the namespace got the appropriate change.</blockquote></li>
+     <blockquote>(Arpit Gupta via Eric Yang)<br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7683">HADOOP-7683</a>.
      Minor bug reported by arpitgupta and fixed by arpitgupta <br>
@@ -201,17 +195,52 @@
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7684">HADOOP-7684</a>.
      Major bug reported by eyang and fixed by eyang (scripts)<br>
      <b>jobhistory server and secondarynamenode should have init.d script</b><br>
-     <blockquote>The current set of init.d scripts can start/stop process for:<br><br>namenode<br>datanode<br>jobtracker<br>tasktracker<br><br>It is missing init.d scripts for:<br><br>secondarynamenode<br>jobhistory</blockquote></li>
+     <blockquote>                                              Added init.d script for jobhistory server and secondary namenode. (Eric Yang)<br><br>      <br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7685">HADOOP-7685</a>.
-     Major bug reported by devaraj.k and fixed by devaraj.k (scripts)<br>
+     Major bug reported by devaraj.k and fixed by eyang (scripts)<br>
      <b>Issues with hadoop-common-project\hadoop-common\src\main\packages\hadoop-setup-conf.sh file </b><br>
      <blockquote>hadoop-common-project\hadoop-common\src\main\packages\hadoop-setup-conf.sh has following issues<br>1. check_permission does not work as expected if there are two folders with $NAME as part of their name inside $PARENT<br>e.g. /home/hadoop/conf, /home/hadoop/someconf, <br>The result of `ls -ln $PARENT | grep -w $NAME| awk &apos;{print $3}&apos;` is non zero..it is 0 0 and hence the following if check becomes true.<br>{code:xml}<br>if [ &quot;$OWNER&quot; != &quot;0&quot; ]; then<br>RESULT=1<br>break<br>fi <br>{code}<br><br>2. Spelling mistake<br>{code:xml}<br>H...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7691">HADOOP-7691</a>.
      Major bug reported by gkesavan and fixed by eyang <br>
      <b>hadoop deb pkg should take a diff group id</b><br>
-     <blockquote>ubuntu - 11.04 is using group id 114 for gdm.<br>hadoop deb pkg should pickup a different groupid.</blockquote></li>
+     <blockquote>                                              Fixed conflict uid for install packages. (Eric Yang)<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7707">HADOOP-7707</a>.
+     Major improvement reported by arpitgupta and fixed by arpitgupta (conf)<br>
+     <b>improve config generator to allow users to specify proxy user, turn append on or off, turn webhdfs on or off</b><br>
+     <blockquote>                                              Added toggle for dfs.support.append, webhdfs and hadoop proxy user to setup config script. (Arpit Gupta via Eric Yang)<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7708">HADOOP-7708</a>.
+     Critical bug reported by arpitgupta and fixed by eyang (conf)<br>
+     <b>config generator does not update the properties file if on exists already</b><br>
+     <blockquote>                                              Fixed hadoop-setup-conf.sh to handle config file consistently.  (Eric Yang)<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7710">HADOOP-7710</a>.
+     Major improvement reported by arpitgupta and fixed by arpitgupta <br>
+     <b>create a script to setup application in order to create root directories for application such hbase, hcat, hive etc</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7711">HADOOP-7711</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta (conf)<br>
+     <b>hadoop-env.sh generated from templates has duplicate info</b><br>
+     <blockquote>                                              Fixed recursive sourcing of HADOOP_OPTS environment variables (Arpit Gupta via Eric Yang)<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7715">HADOOP-7715</a>.
+     Major bug reported by arpitgupta and fixed by eyang (conf)<br>
+     <b>see log4j Error when running mr jobs and certain dfs calls</b><br>
+     <blockquote>                                              Removed unnecessary security logger configuration. (Eric Yang)<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7720">HADOOP-7720</a>.
+     Major improvement reported by arpitgupta and fixed by arpitgupta (conf)<br>
+     <b>improve the hadoop-setup-conf.sh to read in the hbase user and setup the configs</b><br>
+     <blockquote>                                              Added parameter for HBase user to setup config script. (Arpit Gupta via Eric Yang)<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7721">HADOOP-7721</a>.
+     Major bug reported by arpitgupta and fixed by jnp <br>
+     <b>dfs.web.authentication.kerberos.principal expects the full hostname and does not replace _HOST with the hostname</b><br>
+     <blockquote></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-142">HDFS-142</a>.
      Blocker bug reported by rangadi and fixed by dhruba <br>
@@ -463,10 +492,20 @@
      <b>TestSleepJob and TestHdfsProxy broken after HDFS-2284</b><br>
      <blockquote>After HDFS-2284, TestSleepJob and TestHdfsProxy are failing.<br>The both work in rev 1167444 and fail in rev 1167663.<br>It will be great if they can be fixed for 205.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2348">HDFS-2348</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Support getContentSummary and getFileChecksum in webhdfs</b><br>
+     <blockquote></blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2356">HDFS-2356</a>.
      Major sub-task reported by szetszwo and fixed by szetszwo <br>
      <b>webhdfs: support case insensitive query parameter names</b><br>
      <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2358">HDFS-2358</a>.
+     Major bug reported by rajsaha and fixed by daryn (name-node)<br>
+     <b>NPE when the default filesystem&apos;s uri has no authority</b><br>
+     <blockquote>                                              Give meaningful error message instead of NPE.<br><br>      <br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2359">HDFS-2359</a>.
      Major bug reported by rajsaha and fixed by jeagles (data-node)<br>
@@ -497,6 +536,31 @@
      Blocker bug reported by sureshms and fixed by sureshms (hdfs client)<br>
      <b>TestFileAppend4 fails in 0.20.205 branch</b><br>
      <blockquote>TestFileAppend4 fails due to change from HDFS-2333. The test uses reflection to get to the method DFSOutputStream#getNumCurrentReplicas(). Since HDFS-2333 patch change this method from public to private, reflection get the method fails resulting in test failures.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2385">HDFS-2385</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Support delegation token renewal in webhdfs</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2392">HDFS-2392</a>.
+     Critical bug reported by rajsaha and fixed by daryn (name-node)<br>
+     <b>Dist with hftp is failing again</b><br>
+     <blockquote>$ hadoop distcp hftp://&lt;NN Hostname&gt;:50070/user/hadoopqa/input1/part-00000 /user/hadoopqa/out3<br>11/09/30 18:57:59 INFO tools.DistCp: srcPaths=[hftp://&lt;NN Hostname&gt;:50070/user/hadoopqa/input1/part-00000]<br>11/09/30 18:57:59 INFO tools.DistCp: destPath=/user/hadoopqa/out3<br>11/09/30 18:58:00 INFO security.TokenCache: Got dt for<br>hftp://&lt;NN Hostname&gt;:50070/user/hadoopqa/input1/part-00000;uri=&lt;NN IP&gt;:50470;t.service=&lt;NN IP&gt;:50470<br>11/09/30 18:58:00 INFO hdfs.DFSClient: Created HDFS_DELEGATION_TOKEN toke...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2395">HDFS-2395</a>.
+     Critical bug reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs api&apos;s should return a root element in the json response</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2404">HDFS-2404</a>.
+     Major bug reported by arpitgupta and fixed by sureshms <br>
+     <b>webhdfs liststatus json response is not correct</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2408">HDFS-2408</a>.
+     Blocker bug reported by stack and fixed by stack (hdfs client)<br>
+     <b>DFSClient#getNumCurrentReplicas is package private in 205 but public in branch-0.20-append</b><br>
+     <blockquote>The below commit broke hdfs-826 for hbase in 205 rc1.  It changes the accessiblity from public to package private on getNumCurrentReplicas and now current shipping hbase&apos;s at least cannot get at this method.<br><br>{code}<br>Revision 1174483 - (view) (download) (annotate) - [select for diffs] <br>Modified Fri Sep 23 01:30:18 2011 UTC (13 days, 4 hours ago) by szetszwo <br>File length: 136876 byte(s) <br>Diff to previous 1174479 (colored)<br>svn merge -c 1171137 from branch-0.20-security for HDFS-2333.<br>{code}<br><br>Her...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1734">MAPREDUCE-1734</a>.
      Blocker improvement reported by tomwhite and fixed by tlipcon (documentation)<br>
@@ -533,20 +597,10 @@
      <b>Inconsistent API JobClient.getQueueAclsForCurrentUser</b><br>
      <blockquote>Client needs access to the current user&apos;s queue name.<br>Public method JobClient.getQueueAclsForCurrentUser() returns QueueAclsInfo[].<br>The QueueAclsInfo class has default access. A public method should not return a package-private class.<br><br>The QueueAclsInfo class, its two constructors, getQueueName, and getOperations methods should be public.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2621">MAPREDUCE-2621</a>.
-     Minor bug reported by sherri_chen and fixed by sherri_chen <br>
-     <b>TestCapacityScheduler fails with &quot;Queue &quot;q1&quot; does not exist&quot;</b><br>
-     <blockquote>{quote}<br>Error Message<br><br>Queue &quot;q1&quot; does not exist<br><br>Stacktrace<br><br>java.io.IOException: Queue &quot;q1&quot; does not exist<br>	at org.apache.hadoop.mapred.JobInProgress.&lt;init&gt;(JobInProgress.java:354)<br>	at org.apache.hadoop.mapred.TestCapacityScheduler$FakeJobInProgress.&lt;init&gt;(TestCapacityScheduler.java:172)<br>	at org.apache.hadoop.mapred.TestCapacityScheduler.submitJob(TestCapacityScheduler.java:794)<br>	at org.apache.hadoop.mapred.TestCapacityScheduler.submitJob(TestCapacityScheduler.java:818)<br>	at org.apache.hadoo...</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2650">MAPREDUCE-2650</a>.
      Major bug reported by sherri_chen and fixed by sherri_chen <br>
      <b>back-port MAPREDUCE-2238 to 0.20-security</b><br>
      <blockquote>Dev had seen the attempt directory permission getting set to 000 or 111 in the CI builds and tests run on dev desktops with 0.20-security.<br>MAPREDUCE-2238 reported and fixed the issue for 0.22.0, back-port to 0.20-security is needed.<br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2651">MAPREDUCE-2651</a>.
-     Major bug reported by bharathm and fixed by bharathm (task-controller)<br>
-     <b>Race condition in Linux Task Controller for job log directory creation</b><br>
-     <blockquote>There is a rare race condition in linux task controller when concurrent task processes tries to create job log directory at the same time. </blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2705">MAPREDUCE-2705</a>.
      Major bug reported by tgraves and fixed by tgraves (tasktracker)<br>
@@ -561,7 +615,12 @@
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2764">MAPREDUCE-2764</a>.
      Major bug reported by daryn and fixed by owen.omalley <br>
      <b>Fix renewal of dfs delegation tokens</b><br>
-     <blockquote>The JT may have issues renewing hftp tokens which disrupt long distcp jobs.  The problem is the JT&apos;s delegation token renewal code is built on brittle assumptions.  The token&apos;s service field contains only the &quot;ip:port&quot; pair.  The renewal process assumes that the scheme must be hdfs.  If that fails due to a {{VersionMismatchException}}, it tries https based on another assumption that it must be hftp if it&apos;s not hdfs.  A number of other exceptions, most commonly {{IOExceptions}}, can be generat...</blockquote></li>
+     <blockquote>                                              Generalizes token renewal and canceling to a common interface and provides a plugin interface for adding renewers for new kinds of tokens. Hftp changed to store the tokens as HFTP and renew them over http.<br><br>      <br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2777">MAPREDUCE-2777</a>.
+     Major new feature reported by jeagles and fixed by amar_kamat <br>
+     <b>Backport MAPREDUCE-220 to Hadoop 20 security branch</b><br>
+     <blockquote>                    Adds cumulative cpu usage and total heap usage to task counters. This is a backport of &lt;a href=&quot;/jira/browse/MAPREDUCE-220&quot; title=&quot;Collecting cpu and memory usage for MapReduce tasks&quot;&gt;&lt;strike&gt;MAPREDUCE-220&lt;/strike&gt;&lt;/a&gt; and &lt;a href=&quot;/jira/browse/MAPREDUCE-2469&quot; title=&quot;Task counters should also report the total heap usage of the task&quot;&gt;&lt;strike&gt;MAPREDUCE-2469&lt;/strike&gt;&lt;/a&gt;.<br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2780">MAPREDUCE-2780</a>.
      Major sub-task reported by daryn and fixed by daryn <br>
