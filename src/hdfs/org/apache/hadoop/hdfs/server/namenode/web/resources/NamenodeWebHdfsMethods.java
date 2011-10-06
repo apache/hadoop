@@ -420,7 +420,7 @@ public class NamenodeWebHdfsMethods {
     case GETFILESTATUS:
     {
       final HdfsFileStatus status = namenode.getFileInfo(fullpath);
-      final String js = JsonUtil.toJsonString(status);
+      final String js = JsonUtil.toJsonString(status, true);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case LISTSTATUS:
@@ -476,22 +476,22 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintStream out = new PrintStream(outstream);
-        out.println("{\"" + HdfsFileStatus[].class.getSimpleName() + "\":[");
+        out.println("{\"" + HdfsFileStatus.class.getSimpleName() + "\":[");
 
         final HdfsFileStatus[] partial = first.getPartialListing();
         if (partial.length > 0) {
-          out.print(JsonUtil.toJsonString(partial[0]));
+          out.print(JsonUtil.toJsonString(partial[0], false));
         }
         for(int i = 1; i < partial.length; i++) {
           out.println(',');
-          out.print(JsonUtil.toJsonString(partial[i]));
+          out.print(JsonUtil.toJsonString(partial[i], false));
         }
 
         for(DirectoryListing curr = first; curr.hasMore(); ) { 
           curr = getDirectoryListing(np, p, curr.getLastName());
           for(HdfsFileStatus s : curr.getPartialListing()) {
             out.println(',');
-            out.print(JsonUtil.toJsonString(s));
+            out.print(JsonUtil.toJsonString(s, false));
           }
         }
         
