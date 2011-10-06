@@ -268,6 +268,9 @@ Release 0.20.205.0 - 2011.09.28
 
     HDFS-2392. Dist with hftp is failing again. (Daryn Sharp via jitendra)
 
+    HDFS-2408. DFSClient#getNumCurrentReplicas is package private in 205 but
+               public in branch-0.20-append (stack via atm)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
