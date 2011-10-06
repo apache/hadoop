@@ -57,6 +57,8 @@ Trunk (unreleased changes)
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
                  error (atm)
 
+    HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
