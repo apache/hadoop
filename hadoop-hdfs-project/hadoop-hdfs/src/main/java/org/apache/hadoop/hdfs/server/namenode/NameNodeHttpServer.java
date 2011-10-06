@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.ServletContext;
 
@@ -108,7 +110,8 @@ public class NameNodeHttpServer {
                 final String name = "SPNEGO";
                 final String classname =  AuthFilter.class.getName();
                 final String pathSpec = "/" + WebHdfsFileSystem.PATH_PREFIX + "/*";
-                defineFilter(webAppContext, name, classname, null,
+                Map<String, String> params = getAuthFilterParams(conf);
+                defineFilter(webAppContext, name, classname, params,
                     new String[]{pathSpec});
                 LOG.info("Added filter '" + name + "' (class=" + classname + ")");
 
@@ -117,6 +120,30 @@ public class NameNodeHttpServer {
                     NamenodeWebHdfsMethods.class.getPackage().getName()
                     + ";" + Param.class.getPackage().getName(), pathSpec);
               }
+            }
+
+            private Map<String, String> getAuthFilterParams(Configuration conf)
+                throws IOException {
+              Map<String, String> params = new HashMap<String, String>();
+              String principalInConf = conf
+                  .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+              if (principalInConf != null && !principalInConf.isEmpty()) {
+                params
+                    .put(
+                        DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+                        SecurityUtil.getServerPrincipal(principalInConf,
+                            infoHost));
+              }
+              String httpKeytab = conf
+                  .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+              if (httpKeytab != null && !httpKeytab.isEmpty()) {
+                params.put(
+                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+                    httpKeytab);
+              }
+              params.put("kerberos.name.rules",
+                  conf.get("hadoop.security.auth_to_local", "DEFAULT"));
+              return params;
             }
           };
 
