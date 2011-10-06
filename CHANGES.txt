@@ -277,6 +277,9 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7721. dfs.web.authentication.kerberos.principal expects the full 
     hostname and does not replace _HOST with the hostname. (jitendra)
 
+    HDFS-2403. NamenodeWebHdfsMethods.generateDelegationToken(..) does not use
+    the renewer parameter.  (szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
