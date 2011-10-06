@@ -595,24 +595,30 @@ public class WebHdfsFileSystem extends FileSystem
     public boolean isManaged(Token<?> token) throws IOException {
       return true;
     }
-  
+
+    private static WebHdfsFileSystem getWebHdfs(
+        final Token<?> token, final Configuration conf
+        ) throws IOException, InterruptedException, URISyntaxException {
+      
+      final InetSocketAddress nnAddr = SecurityUtil.getTokenServiceAddr(token);
+      final URI uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, nnAddr);
+      return (WebHdfsFileSystem)FileSystem.get(uri, conf);
+    }
+
     @Override
     public long renew(final Token<?> token, final Configuration conf
         ) throws IOException, InterruptedException {
       final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
       // update the kerberos credentials, if they are coming from a keytab
       ugi.checkTGTAndReloginFromKeytab();
-  
-      final String uri = WebHdfsFileSystem.SCHEME  + "://"
-          + conf.get("dfs.http.address");
-      final WebHdfsFileSystem webhdfs = ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {
+
+      return ugi.doAs(new PrivilegedExceptionAction<Long>() {
         @Override
-        public WebHdfsFileSystem run() throws Exception {
-          return (WebHdfsFileSystem)FileSystem.get(new URI(uri), conf);
+        public Long run() throws Exception {
+          final WebHdfsFileSystem webhdfs = getWebHdfs(token, conf);
+          return webhdfs.renewDelegationToken(token);
         }
       });
-      
-      return webhdfs.renewDelegationToken(token);
     }
   
     @Override
@@ -622,16 +628,14 @@ public class WebHdfsFileSystem extends FileSystem
       // update the kerberos credentials, if they are coming from a keytab
       ugi.checkTGTAndReloginFromKeytab();
 
-      final String uri = WebHdfsFileSystem.SCHEME  + "://"
-          + conf.get("dfs.http.address");
-      final WebHdfsFileSystem webhdfs = ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
-        public WebHdfsFileSystem run() throws Exception {
-          return (WebHdfsFileSystem)FileSystem.get(new URI(uri), conf);
+        public Void run() throws Exception {
+          final WebHdfsFileSystem webhdfs = getWebHdfs(token, conf);
+          webhdfs.cancelDelegationToken(token);
+          return null;
         }
       });
-
-      webhdfs.cancelDelegationToken(token);
     }
   }
 }

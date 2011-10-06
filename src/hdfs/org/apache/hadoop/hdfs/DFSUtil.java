@@ -19,6 +19,9 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.BlockLocation;
@@ -109,6 +112,16 @@ public class DFSUtil {
       idx++;
     }
     return blkLocations;
+  }
+
+  /** Create a URI from the scheme and address */
+  public static URI createUri(String scheme, InetSocketAddress address) {
+    try {
+      return new URI(scheme, null, address.getHostName(), address.getPort(),
+          null, null, null);
+    } catch (URISyntaxException ue) {
+      throw new IllegalArgumentException(ue);
+    }
   }
 }
 
