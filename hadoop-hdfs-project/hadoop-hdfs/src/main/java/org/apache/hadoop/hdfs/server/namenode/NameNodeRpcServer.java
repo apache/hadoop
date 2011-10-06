@@ -319,6 +319,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // ClientProtocol
   public FsServerDefaults getServerDefaults() throws IOException {
+    nn.checkOperation(OperationCategory.READ);
     return namesystem.getServerDefaults();
   }
 
@@ -634,8 +635,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return namesystem.getFileInfo(src, false);
   }
   
-  @Override
-  public long[] getStats() {
+  @Override // ClientProtocol
+  public long[] getStats() throws IOException {
+    nn.checkOperation(OperationCategory.READ);
     return namesystem.getStats();
   }
 
