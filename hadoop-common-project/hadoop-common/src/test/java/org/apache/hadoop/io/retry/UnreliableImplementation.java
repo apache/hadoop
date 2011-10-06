@@ -141,4 +141,23 @@ public class UnreliableImplementation implements UnreliableInterface {
     }
   }
 
+  @Override
+  public String failsIfIdentifierDoesntMatch(String identifier)
+      throws UnreliableException, StandbyException, IOException {
+    if (this.identifier.equals(identifier)) {
+      return identifier;
+    } else {
+      switch (exceptionToFailWith) {
+      case STANDBY_EXCEPTION:
+        throw new StandbyException(identifier);
+      case UNRELIABLE_EXCEPTION:
+        throw new UnreliableException(identifier);
+      case IO_EXCEPTION:
+        throw new IOException(identifier);
+      default:
+        throw new RuntimeException(identifier);
+      }
+    }
+  }
+
 }
