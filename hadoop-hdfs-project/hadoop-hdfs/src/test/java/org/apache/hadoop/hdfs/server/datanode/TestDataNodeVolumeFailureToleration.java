@@ -234,8 +234,8 @@ public class TestDataNodeVolumeFailureToleration {
     // Fail the current directory since invalid storage directory perms
     // get fixed up automatically on datanode startup.
     File[] dirs = {
-        new File(MiniDFSCluster.getStorageDir(dnIndex, 0), "current"),
-        new File(MiniDFSCluster.getStorageDir(dnIndex, 1), "current") };
+        new File(cluster.getInstanceStorageDir(dnIndex, 0), "current"),
+        new File(cluster.getInstanceStorageDir(dnIndex, 1), "current") };
 
     try {
       for (int i = 0; i < volumesFailed; i++) {
@@ -274,7 +274,7 @@ public class TestDataNodeVolumeFailureToleration {
     final DatanodeManager dm = cluster.getNamesystem().getBlockManager(
     ).getDatanodeManager();
     long origCapacity = DFSTestUtil.getLiveDatanodeCapacity(dm);
-    File dir = new File(MiniDFSCluster.getStorageDir(0, 0), "current");
+    File dir = new File(cluster.getInstanceStorageDir(0, 0), "current");
 
     try {
       prepareDirToFail(dir);

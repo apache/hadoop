@@ -466,7 +466,7 @@ public class TestFsck extends TestCase {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i=0; i<4; i++) {
         for (int j=0; j<=1; j++) {
-          File storageDir = MiniDFSCluster.getStorageDir(i, j);
+          File storageDir = cluster.getInstanceStorageDir(i, j);
           File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
           File[] blocks = data_dir.listFiles();
           if (blocks == null)

@@ -83,7 +83,7 @@ public class TestCrcCorruption {
       // file disallows this Datanode to send data to another datanode.
       // However, a client is alowed access to this block.
       //
-      File storageDir = MiniDFSCluster.getStorageDir(0, 1);
+      File storageDir = cluster.getInstanceStorageDir(0, 1);
       String bpid = cluster.getNamesystem().getBlockPoolId();
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
@@ -142,7 +142,7 @@ public class TestCrcCorruption {
       // Now deliberately corrupt all meta blocks from the second
       // directory of the first datanode
       //
-      storageDir = MiniDFSCluster.getStorageDir(0, 1);
+      storageDir = cluster.getInstanceStorageDir(0, 1);
       data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
       blocks = data_dir.listFiles();
