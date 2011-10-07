@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class Master {
   
@@ -33,20 +34,33 @@ public class Master {
   }
 
   public static String getMasterUserName(Configuration conf) {
-    return conf.get(MRConfig.MASTER_USER_NAME);
+    String framework = conf.get(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+    if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {    
+      return conf.get(MRConfig.MASTER_USER_NAME);
+    } 
+    else {
+      return conf.get(YarnConfiguration.RM_PRINCIPAL);
+    }
   }
   
   public static InetSocketAddress getMasterAddress(Configuration conf) {
-    String jobTrackerStr =
-      conf.get(MRConfig.MASTER_ADDRESS, "localhost:8012");
-    return NetUtils.createSocketAddr(jobTrackerStr);
+    String masterAddress;
+    String framework = conf.get(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+    if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {
+      masterAddress = conf.get(MRConfig.MASTER_ADDRESS, "localhost:8012");
+    } 
+    else {
+      masterAddress = conf.get(YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS);
+    }
+    return NetUtils.createSocketAddr(masterAddress);
   }
 
   public static String getMasterPrincipal(Configuration conf) 
   throws IOException {
-    String jtHostname = getMasterAddress(conf).getHostName();
-    // get jobtracker principal for use as delegation token renewer
-    return SecurityUtil.getServerPrincipal(getMasterUserName(conf), jtHostname);
+    String masterHostname = getMasterAddress(conf).getHostName();
+    // get kerberos principal for use as delegation token renewer
+    return SecurityUtil.getServerPrincipal(getMasterUserName(conf), masterHostname);
   }
   
 }

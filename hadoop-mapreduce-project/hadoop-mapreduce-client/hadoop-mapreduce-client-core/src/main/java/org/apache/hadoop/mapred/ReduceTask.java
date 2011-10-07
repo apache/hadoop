@@ -343,7 +343,7 @@ public class ReduceTask extends Task {
     
     boolean isLocal = false; 
     // local iff framework == classic && master address == local
-    String framework = job.get(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
+    String framework = job.get(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {
     	isLocal = "local".equals(job.get(MRConfig.MASTER_ADDRESS, "local"));        	
     }
