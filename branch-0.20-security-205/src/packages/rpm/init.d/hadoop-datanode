@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# 
+# Starts a Hadoop datanode
+# 
+# chkconfig: 2345 90 10
+# description: Hadoop datanode
+
+source /etc/rc.d/init.d/functions
+source /etc/default/hadoop-env.sh
+
+RETVAL=0
+PIDFILE="${HADOOP_PID_DIR}/hadoop-hdfs-datanode.pid"
+desc="Hadoop datanode daemon"
+HADOOP_PREFIX="/usr"
+
+start() {
+  echo -n $"Starting $desc (hadoop-datanode): "
+  if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+    daemon ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" start datanode
+  else
+    daemon --user hdfs ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" start datanode
+  fi
+  RETVAL=$?
+  echo
+  [ $RETVAL -eq 0 ] && touch /var/lock/subsys/hadoop-datanode
+  return $RETVAL
+}
+
+stop() {
+  echo -n $"Stopping $desc (hadoop-datanode): "
+  if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+    daemon ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" stop datanode
+  else
+    daemon --user hdfs ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh --config "${HADOOP_CONF_DIR}" stop datanode
+  fi
+  RETVAL=$?
+  sleep 5
+  echo
+  [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/hadoop-datanode $PIDFILE
+}
+
+restart() {
+  stop
+  start
+}
+
+checkstatus(){
+  status -p $PIDFILE ${JAVA_HOME}/bin/java
+  RETVAL=$?
+}
+
+condrestart(){
+  [ -e /var/lock/subsys/hadoop-datanode ] && restart || :
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    checkstatus
+    ;;
+  restart)
+    restart
+    ;;
+  condrestart)
+    condrestart
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+    exit 1
+esac
+
+exit $RETVAL

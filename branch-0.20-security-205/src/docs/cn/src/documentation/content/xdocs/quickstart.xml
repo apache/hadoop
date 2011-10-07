@@ -1,0 +1,251 @@
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop快速入门</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>目的</title>
+      <p>这篇文档的目的是帮助你快速完成单机上的Hadoop安装与使用以便你对<a href ="hdfs_design.html">Hadoop分布式文件系统(<acronym title="Hadoop Distributed File System">HDFS</acronym>)</a>和Map-Reduce框架有所体会，比如在HDFS上运行示例程序或简单作业等。</p>
+    </section>
+    <section id="PreReqs">
+      <title>先决条件</title>
+      
+      <section>
+        <title>支持平台</title>
+        
+        <ul>
+          <li>
+                GNU/Linux是产品开发和运行的平台。
+	        Hadoop已在有2000个节点的GNU/Linux主机组成的集群系统上得到验证。
+          </li>
+          <li>
+            Win32平台是作为<em>开发平台</em>支持的。由于分布式操作尚未在Win32平台上充分测试，所以还不作为一个<em>生产平台</em>被支持。
+          </li>
+        </ul>        
+      </section>
+      
+      <section>
+        <title>所需软件</title>
+        <p>Linux和Windows所需软件包括:</p>
+        <ol>
+          <li>
+            Java<sup>TM</sup>1.5.x，必须安装，建议选择Sun公司发行的Java版本。
+          </li>
+          <li>
+            <strong>ssh</strong> 必须安装并且保证 <strong>sshd</strong>一直运行，以便用Hadoop
+	    脚本管理远端Hadoop守护进程。
+          </li>
+        </ol>
+		<p>Windows下的附加软件需求</p>
+          <ol>
+            <li>
+              <a href="http://www.cygwin.com/">Cygwin</a> - 提供上述软件之外的shell支持。 
+            </li>
+          </ol>
+      </section>
+
+      <section>
+        <title>安装软件</title>
+          
+        <p>如果你的集群尚未安装所需软件，你得首先安装它们。</p>
+          
+        <p>以Ubuntu Linux为例:</p>
+        <p>
+          <code>$ sudo apt-get install ssh</code><br/>
+          <code>$ sudo apt-get install rsync</code>
+        </p>
+          
+        <p>在Windows平台上，如果安装cygwin时未安装全部所需软件，则需启动cyqwin安装管理器安装如下软件包：</p>
+        <ul>
+          <li>openssh - <em>Net</em> 类</li>
+        </ul>
+      </section>
+      
+    </section>
+    
+    <section>
+      <title>下载</title>
+      
+      <p>
+        为了获取Hadoop的发行版，从Apache的某个镜像服务器上下载最近的
+        <a href="ext:releases">稳定发行版</a>。</p>
+    </section>
+
+    <section>
+      <title>运行Hadoop集群的准备工作</title>
+      <p>
+        解压所下载的Hadoop发行版。编辑
+        <code>conf/hadoop-env.sh</code>文件，至少需要将<code>JAVA_HOME</code>设置为Java安装根路径。
+      </p>
+
+	  <p>
+	    尝试如下命令：<br/>
+        <code>$ bin/hadoop</code><br/>
+        将会显示<strong>hadoop</strong> 脚本的使用文档。
+      </p>
+      
+      <p>现在你可以用以下三种支持的模式中的一种启动Hadoop集群：
+      </p>
+      <ul>
+        <li>单机模式</li>
+        <li>伪分布式模式</li>
+        <li>完全分布式模式</li>
+      </ul>
+    </section>
+    
+    <section id="Local">
+	    <title>单机模式的操作方法</title>
+      
+      <p>默认情况下，Hadoop被配置成以非分布式模式运行的一个独立Java进程。这对调试非常有帮助。</p>
+      
+      <p>
+        下面的实例将已解压的 <code>conf</code> 目录拷贝作为输入，查找并显示匹配给定正则表达式的条目。输出写入到指定的<code>output</code>目录。
+        <br/>
+        <code>$ mkdir input</code><br/>
+        <code>$ cp conf/*.xml input</code><br/>
+        <code>
+          $ bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'
+        </code><br/>
+        <code>$ cat output/*</code>
+      </p>
+    </section>
+    
+    <section id="PseudoDistributed">
+      <title>伪分布式模式的操作方法</title>
+
+	  <p>Hadoop可以在单节点上以所谓的伪分布式模式运行，此时每一个Hadoop守护进程都作为一个独立的Java进程运行。</p>
+	  
+      <section>
+        <title>配置</title>
+        <p>使用如下的 <code>conf/hadoop-site.xml</code>:</p>
+        <table>
+        <tr><td>&lt;configuration&gt;</td></tr>
+
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;fs.default.name&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9000&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;mapred.job.tracker&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;localhost:9001&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+
+          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;dfs.replication&lt;/name&gt;</td></tr>
+            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</td></tr>
+          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
+
+        <tr><td>&lt;/configuration&gt;</td></tr>
+        </table>
+     </section>
+
+      <section>
+        <title>免密码<em>ssh</em>设置</title>
+        
+        <p>
+          现在确认能否不输入口令就用ssh登录localhost:<br/>
+          <code>$ ssh localhost</code>
+        </p>
+        
+        <p>
+          如果不输入口令就无法用ssh登陆localhost，执行下面的命令：<br/>
+   		  <code>$ ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa</code><br/>
+		  <code>$ cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys</code>
+		</p>
+      </section>
+    
+      <section>
+        <title>执行</title>
+        
+        <p>
+          格式化一个新的分布式文件系统：<br/>
+          <code>$ bin/hadoop namenode -format</code>
+        </p>
+
+		<p>
+		  启动Hadoop守护进程：<br/>
+          <code>$ bin/start-all.sh</code>
+        </p>
+
+        <p>Hadoop守护进程的日志写入到 
+        <code>${HADOOP_LOG_DIR}</code> 目录 (默认是 
+        <code>${HADOOP_HOME}/logs</code>).</p>
+
+        <p>浏览NameNode和JobTracker的网络接口，它们的地址默认为：</p>
+        <ul>
+          <li>
+            <code>NameNode</code> - 
+            <a href="http://localhost:50070/">http://localhost:50070/</a>
+          </li>
+          <li>
+            <code>JobTracker</code> - 
+            <a href="http://localhost:50030/">http://localhost:50030/</a>
+          </li>
+        </ul>
+        
+        <p>
+          将输入文件拷贝到分布式文件系统：<br/>
+		  <code>$ bin/hadoop fs -put conf input</code>
+		</p>
+		
+        <p>
+          运行发行版提供的示例程序：<br/>
+          <code>
+            $ bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'
+          </code>
+        </p>
+        
+        <p>查看输出文件：</p>
+        <p>
+          将输出文件从分布式文件系统拷贝到本地文件系统查看：<br/>
+          <code>$ bin/hadoop fs -get output output</code><br/>
+          <code>$ cat output/*</code>
+        </p>
+        <p> 或者 </p>
+        <p>
+          在分布式文件系统上查看输出文件：<br/>
+          <code>$ bin/hadoop fs -cat output/*</code>
+        </p>
+
+		<p>
+		  完成全部操作后，停止守护进程：<br/>
+		  <code>$ bin/stop-all.sh</code>
+		</p>
+      </section>
+    </section>
+    
+    <section id="FullyDistributed">
+      <title>完全分布式模式的操作方法</title>
+      
+	  <p>关于搭建完全分布式模式的，有实际意义的集群的资料可以在<a href="cluster_setup.html">这里</a>找到。</p>  
+    </section>
+    
+    <p>
+	    <em>Java与JNI是Sun Microsystems, Inc.在美国以及其他国家地区的商标或注册商标。</em>
+    </p>
+    
+  </body>
+  
+</document>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry excluding="org/apache/hadoop/eclipse/server/CopyOfHadoopServer.java" kind="src" path="src/java"/>
+	<classpathentry exported="true" kind="lib" path="classes" sourcepath="classes"/>
+	<classpathentry kind="lib" path="lib/hadoop-core.jar" sourcepath="/hadoop-socks/src/java"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
+	<classpathentry kind="output" path="classes"/>
+</classpath>

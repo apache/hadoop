@@ -1,0 +1,637 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>CapacityScheduler Guide</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>Purpose</title>
+      
+      <p>This document describes the CapacityScheduler, a pluggable 
+      MapReduce scheduler for Hadoop which allows for multiple-tenants to 
+      securely share a large cluster such that their applications are allocated
+      resources in a timely manner under constraints of allocated capacities.
+      </p>
+    </section>
+    
+    <section>
+      <title>Overview</title>
+     
+      <p>The CapacityScheduler is designed to run Hadoop Map-Reduce as a 
+      shared, multi-tenant cluster in an operator-friendly manner while 
+      maximizing the throughput and the utilization of the cluster while
+      running Map-Reduce applications. </p>
+     
+      <p>Traditionally each organization has it own private set of compute 
+      resources that have sufficient capacity to meet the organization's SLA 
+      under peak or near peak conditions. This generally leads to poor average 
+      utilization and the overhead of managing multiple independent clusters, 
+      one per each organization. Sharing clusters between organizations is a 
+      cost-effective manner of running large Hadoop installations since this 
+      allows them to reap benefits of economies of scale without creating 
+      private clusters.  However, organizations are concerned about sharing a 
+      cluster because they are worried about others using the resources that 
+      are critical for their SLAs.</p> 
+
+      <p>The CapacityScheduler is designed to allow sharing a large cluster 
+      while giving  each organization a minimum capacity guarantee. The central 
+      idea is that the available resources in the Hadoop Map-Reduce cluster are 
+      partitioned among multiple organizations who collectively fund the 
+      cluster based on computing needs. There is an added benefit that an 
+      organization can access any excess capacity no being used by others. This 
+      provides elasticity for the organizations in a cost-effective manner.</p> 
+
+      <p>Sharing clusters across organizations necessitates strong support for
+      multi-tenancy since each organization must be guaranteed capacity and 
+      safe-guards to ensure the shared cluster is impervious to single rouge 
+      job or user. The CapacityScheduler provides a stringent set of limits to 
+      ensure that a single job or user or queue cannot consume dispropotionate 
+      amount of resources in the cluster. Also, the JobTracker of the cluster,  
+      in particular, is a precious resource and the CapacityScheduler provides 
+      limits on initialized/pending tasks and jobs from a single user and queue 
+      to ensure fairness and stability of the cluster.</p> 
+
+      <p>The primary abstraction provided by the CapacityScheduler is the 
+      concept of <em>queues</em>. These queues are typically setup by administrators
+      to reflect the economics of the shared cluster.</p>
+    </section>
+    
+    <section>
+      <title>Features</title>
+      
+      <p>The CapacityScheduler supports the following features:</p> 
+      <ul>
+        <li>
+          Capacity Guarantees - Support for multiple queues, where a job is 
+          submitted to a queue.Queues are allocated a fraction of the capacity 
+          of the grid in the sense that a certain capacity of resources will be 
+          at their disposal. All jobs submitted to a queue will have access to 
+          the capacity allocated to the queue. Adminstrators can configure soft 
+          limits and optional hard limits on the capacity allocated to each queue. 
+        </li>
+        <li>
+          Security - Each queue has strict ACLs which controls which users can 
+          submit jobs to individual queues. Also, there are safe-guards to 
+          ensure that users cannot view and/or modify jobs from other users if
+          so desired. Also, per-queue and system administrator roles are 
+          supported.
+        </li>
+        <li>
+          Elasticity - Free resources can be allocated to any queue beyond it's 
+          capacity. When there is demand for these resources from queues running 
+          below capacity at a future point in time, as tasks scheduled on these 
+          resources complete, they will be assigned to jobs on queues 
+          running below the capacity. This ensures that resources are available 
+          in a predictable and elastic manner to queues, thus preventing 
+          artifical silos of resources in the cluster which helps utilization.
+        </li>
+        <li>
+          Multi-tenancy - Comprehensive set of limits are provided to prevent 
+          a single job, user and queue from monpolizing resources of the queue 
+          or the cluster as a whole to ensure that the system, particularly the 
+          JobTracker, isn't overwhelmed by too many tasks or jobs. 
+        </li>
+        <li>
+          Operability - The queue definitions and properties can be changed, 
+          at runtime, by administrators in a secure manner to minimize 
+          disruption to users. Also, a console is provided for users and 
+          administrators to view current allocation of resources to various 
+          queues in the system.
+        </li>
+        <li>
+          Resource-based Scheduling - Support for resource-intensive jobs, 
+          wherein a job can optionally specify higher resource-requirements than 
+          the default, there-by accomodating applications with differing resource
+          requirements. Currently, memory is the the resource requirement 
+          supported.
+        </li>
+        <li>
+          Job Priorities - Queues optionally support job priorities (disabled 
+          by default). Within a queue, jobs with higher priority will have 
+          access to the queue's resources before jobs with lower priority. 
+          However, once a job is running, it will not be preempted for a higher 
+          priority job, <em>premption</em> is on the roadmap is currently not 
+          supported.
+        </li>
+      </ul>
+    </section>
+    
+    <section>
+      <title>Installation</title>
+      
+        <p>The CapacityScheduler is available as a JAR file in the Hadoop
+        tarball under the <em>contrib/capacity-scheduler</em> directory. The name of 
+        the JAR file would be on the lines of hadoop-capacity-scheduler-*.jar.</p>
+        <p>You can also build the Scheduler from source by executing
+        <em>ant package</em>, in which case it would be available under
+        <em>build/contrib/capacity-scheduler</em>.</p>
+        <p>To run the CapacityScheduler in your Hadoop installation, you need 
+        to put it on the <em>CLASSPATH</em>. The easiest way is to copy the 
+        <code>hadoop-capacity-scheduler-*.jar</code> from 
+        to <code>HADOOP_HOME/lib</code>. Alternatively, you can modify 
+        <em>HADOOP_CLASSPATH</em> to include this jar, in 
+        <code>conf/hadoop-env.sh</code>.</p>
+    </section>
+
+    <section>
+      <title>Configuration</title>
+
+      <section>
+        <title>Using the CapacityScheduler</title>
+        <p>
+          To make the Hadoop framework use the CapacityScheduler, set up
+          the following property in the site configuration:</p>
+          <table>
+            <tr>
+              <td>Property</td>
+              <td>Value</td>
+            </tr>
+            <tr>
+              <td>mapred.jobtracker.taskScheduler</td>
+              <td>org.apache.hadoop.mapred.CapacityTaskScheduler</td>
+            </tr>
+          </table>
+      </section>
+
+      <section>
+        <title>Setting up queues</title>
+        <p>
+          You can define multiple queues to which users can submit jobs with
+          the CapacityScheduler. To define multiple queues, you should use the  
+          <em>mapred.queue.names</em> property in 
+          <code>conf/hadoop-site.xml</code>.
+        </p>
+        
+        <p>
+          The CapacityScheduler can be configured with several properties
+          for each queue that control the behavior of the Scheduler. This
+          configuration is in the <em>conf/capacity-scheduler.xml</em>.
+        </p>
+        
+        <p>
+          You can also configure ACLs for controlling which users or groups
+          have access to the queues in <code>conf/mapred-queue-acls.xml</code>.
+        </p>
+        
+        <p>
+          For more details, refer to
+          <a href="cluster_setup.html#Configuring+the+Hadoop+Daemons">Cluster 
+          Setup</a> documentation.
+        </p>
+      </section>
+  
+      <section>
+        <title>Queue properties</title>
+
+        <section>
+        <title>Resource allocation</title>
+        <p>The properties defined for resource allocations to queues and their 
+        descriptions are listed in below:</p>
+
+        <table>
+          <tr><th>Name</th><th>Description</th></tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.capacity</td>
+          	<td>Percentage of the number of slots in the cluster that are made 
+            to be available for jobs in this queue. The sum of capacities 
+            for all queues should be less than or equal 100.</td>
+          </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.maximum-capacity</td>
+            <td>
+                  maximum-capacity defines a limit beyond which a queue cannot
+                  use the capacity of the cluster.This provides a means to limit
+                  how much excess capacity a queue can use. By default, there
+                  is no limit.
+                  The maximum-capacity of a queue can only be greater than or
+                  equal to its minimum capacity.
+                  Default value of -1 implies a queue can use complete capacity
+                  of the cluster.
+
+                  This property could be to curtail certain jobs which are long
+                  running in nature from occupying more than a certain
+                  percentage of the cluster, which in the absence of
+                  pre-emption, could lead to capacity guarantees of other queues
+                  being affected.
+
+                  One important thing to note is that maximum-capacity is a
+                  percentage , so based on the cluster's capacity
+                  it would change. So if large no of nodes or racks get added
+                  to the cluster , maximum Capacity in
+                  absolute terms would increase accordingly.
+                </td>
+          </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.minimum-user-limit-percent</td>
+          	<td>Each queue enforces a limit on the percentage of resources 
+          	allocated to a user at any given time, if there is competition 
+          	for them. This user limit can vary between a minimum and maximum 
+          	value. The former depends on the number of users who have submitted
+          	jobs, and the latter is set to this property value. For example, 
+          	suppose the value of this property is 25. If two users have 
+          	submitted jobs to a queue, no single user can use more than 50% 
+          	of the queue resources. If a third user submits a job, no single 
+          	user can use more than 33% of the queue resources. With 4 or more 
+          	users, no user can use more than 25% of the queue's resources. A 
+          	value of 100 implies no user limits are imposed.</td>
+          </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.user-limit-factor</td>
+            <td>The multiple of the queue capacity which can be configured to 
+              allow a single user to acquire more slots. By default this is set 
+              to 1 which ensure that a single user can never take more than the 
+              queue's configured capacity irrespective of how idle th cluster 
+              is.</td>
+          </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.supports-priority</td>
+            <td>If true, priorities of jobs will be taken into account in scheduling 
+            decisions.</td>
+          </tr>
+        </table>
+   </section>
+   <section>
+        <title>Job initialization</title>
+        <p>Capacity scheduler lazily initializes the jobs before they are
+        scheduled, for reducing the memory footprint on jobtracker. 
+        Following are the parameters, by which you can control the
+        initialization of jobs per-queue.
+        </p>
+        
+        <table>
+          <tr><th>Name</th><th>Description</th></tr>
+          <tr>
+            <td>
+              mapred.capacity-scheduler.maximum-system-jobs
+            </td>
+            <td>
+              Maximum number of jobs in the system which can be initialized,
+              concurrently, by the CapacityScheduler.
+              
+              Individual queue limits on initialized jobs are directly 
+              proportional to their queue capacities.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              mapred.capacity-scheduler.queue.&lt;queue-name&gt;.maximum-initialized-active-tasks
+            </td>
+            <td>
+              The maximum number of tasks, across all jobs in the queue, 
+              which can be initialized concurrently. Once the queue's jobs 
+              exceed this limit they will be queued on disk.             
+            </td>
+          </tr>
+          <tr>
+            <td>
+              mapred.capacity-scheduler.queue.&lt;queue-name&gt;.maximum-initialized-active-tasks-per-user
+            </td>
+            <td>
+              The maximum number of tasks per-user, across all the of the
+              user's jobs in the queue, which can be initialized concurrently. 
+              Once the user's jobs exceed this limit they will be queued on disk.
+            </td>
+          </tr>
+          <tr>
+            <td> 
+              mapred.capacity-scheduler.queue.&lt;queue-name&gt;.init-accept-jobs-factor
+            </td>
+            <td>
+              The multipe of (maximum-system-jobs * queue-capacity) used to
+              determine the number of jobs which are accepted by the scheduler. 
+              The default value is 10. If number of jobs submitted to the queue
+              exceeds this limit, job submission are rejected. 
+            </td>
+          </tr> 
+        </table>
+      </section>   
+      </section>
+      
+      <section>
+        <title>Resource based scheduling</title>
+      
+        <p>The CapacityScheduler supports scheduling of tasks on a
+        <code>TaskTracker</code>(TT) based on a job's memory requirements
+        in terms of RAM and Virtual Memory (VMEM) on the TT node.
+        A TT is conceptually composed of a fixed number of map and reduce
+        slots with fixed slot size across the cluster. A job can ask for one
+        or more slots for each of its component map and/or reduce slots. If a
+        task consumes more memory than configured the TT forcibly kills the task.
+        </p>
+
+        <p>Currently the memory based scheduling is only supported
+        in Linux platform.</p>
+        
+        <p>Additional scheduler-based config 
+        parameters are as follows:</p>
+
+        <table>
+          <tr><th>Name</th><th>Description</th></tr>
+          <tr>
+            <td>mapred.cluster.map.memory.mb</td>
+          	 <td>The size, in terms of virtual memory, of a single map slot
+             in the Map-Reduce framework, used by the scheduler.
+             A job can ask for multiple slots for a single map task via
+             <code>mapred.job.map.memory.mb</code>, upto the limit specified by
+             <code>mapred.cluster.max.map.memory.mb</code>, if the scheduler 
+             supports the feature.
+             The value of -1 indicates that this feature is turned off.
+          	 </td>
+          </tr>
+          <tr>
+            <td>mapred.cluster.reduce.memory.mb</td>
+             <td>The size, in terms of virtual memory, of a single reduce slot
+             in the Map-Reduce framework, used by the scheduler.
+             A job can ask for multiple slots for a single reduce task via
+             <code>mapred.job.reduce.memory.mb</code>, upto the limit specified by
+             <code>mapred.cluster.max.reduce.memory.mb</code>, if the scheduler supports the 
+             feature.The value of -1 indicates that this feature is turned off.
+             </td>
+          </tr>
+          <tr>
+            <td>mapred.cluster.max.map.memory.mb</td>
+            <td>The maximum size, in terms of virtual memory, of a single map
+            task launched by the Map-Reduce framework, used by the scheduler.
+            A job can ask for multiple slots for a single map task via
+            <code>mapred.job.map.memory.mb</code>, upto the limit specified by
+            <code>mapred.cluster.max.map.memory.mb</code>, if the scheduler supports the 
+            feature. The value of -1 indicates that this feature is turned off.
+            </td>
+          </tr>
+          <tr>
+            <td>mapred.cluster.max.reduce.memory.mb</td>
+            <td>The maximum size, in terms of virtual memory, of a single reduce
+            task launched by the Map-Reduce framework, used by the scheduler.
+            A job can ask for multiple slots for a single reduce task via
+            <code>mapred.job.reduce.memory.mb</code>, upto the limit specified by
+            <code>mapred.cluster.max.reduce.memory.mb</code>, if the scheduler supports the 
+            feature. The value of -1 indicates that this feature is turned off.
+            </td>
+          </tr>
+          <tr>
+            <td>mapred.job.map.memory.mb</td>
+            <td>The size, in terms of virtual memory, of a single map task
+            for the job. A job can ask for multiple slots for a single map task, 
+            rounded up to the next multiple of <code>mapred.cluster.map.memory.mb</code> and 
+            upto the limit specified by <code>mapred.cluster.max.map.memory.mb</code>, 
+            if the scheduler supports the feature. The value of -1 indicates 
+            that this feature is turned off iff <code>mapred.cluster.map.memory.mb</code> is 
+            also turned off (-1).</td>
+          </tr>
+          <tr>
+            <td>mapred.job.reduce.memory.mb</td>
+            <td>The size, in terms of virtual memory, of a single reduce task
+            for the job. A job can ask for multiple slots for a single reduce task, 
+            rounded up to the next multiple of <code>mapred.cluster.reduce.memory.mb</code> and 
+            upto the limit specified by <code>mapred.cluster.max.reduce.memory.mb</code>, 
+            if the scheduler supports the feature. The value of -1 indicates 
+            that this feature is turned off iff <code>mapred.cluster.reduce.memory.mb</code> is 
+            also turned off (-1).</td>
+          </tr>
+        </table>
+      </section>
+      
+      <section>
+        <title>Reviewing the configuration of the CapacityScheduler</title>
+        <p>
+          Once the installation and configuration is completed, you can review
+          it after starting the MapReduce cluster from the admin UI.
+        </p>
+        <ul>
+          <li>Start the MapReduce cluster as usual.</li>
+          <li>Open the JobTracker web UI.</li>
+          <li>The queues you have configured should be listed under the <em>Scheduling
+              Information</em> section of the page.</li>
+          <li>The properties for the queues should be visible in the <em>Scheduling
+              Information</em> column against each queue.</li>
+          <li>The /scheduler web-page should show the resource usages of 
+              individual queues.</li>
+        </ul>
+      </section>
+      
+   </section>
+
+  <section>
+    <title>Example</title>
+    <p>Here is a practical example for using CapacityScheduler:</p>
+    <table>
+    <tr>
+    <td>
+<code>&lt;?xml version="1.0"?&gt;</code><br/>
+<br/>
+<code>&lt;configuration&gt;</code><br/>
+<br/>
+<code>  &lt;!-- system limit, across all queues --&gt;</code><br/>
+<br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.maximum-system-jobs&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;3000&lt;/value&gt;</code><br/>
+<code>    &lt;description&gt;Maximum number of jobs in the system which can be initialized,</code><br/>
+<code>     concurrently, by the CapacityScheduler.</code><br/>
+<code>    &lt;/description&gt;    </code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code> </code><br/>
+<code>&lt;!-- queue: queueA --&gt;</code><br/>
+<code> &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.capacity&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;8&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.supports-priority&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;false&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.minimum-user-limit-percent&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.user-limit-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;10&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.maximum-initialized-active-tasks&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;200000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.maximum-initialized-active-tasks-per-user&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueA.init-accept-jobs-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<br/>
+<code>&lt;!-- queue: queueB --&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.capacity&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;2&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.supports-priority&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;false&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.minimum-user-limit-percent&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.user-limit-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.maximum-initialized-active-tasks&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;200000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.maximum-initialized-active-tasks-per-user&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueB.init-accept-jobs-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;10&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<br/>
+<code>&lt;!-- queue: queueC --&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.capacity&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;30&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.supports-priority&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;false&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.minimum-user-limit-percent&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.user-limit-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.maximum-initialized-active-tasks&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;200000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.maximum-initialized-active-tasks-per-user&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueC.init-accept-jobs-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;10&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<br/>
+<code>&lt;!-- queue: queueD --&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.capacity&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.supports-priority&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;false&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.minimum-user-limit-percent&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.user-limit-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.maximum-initialized-active-tasks&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;200000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.maximum-initialized-active-tasks-per-user&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueD.init-accept-jobs-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;10&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<br/>
+<code>&lt;!-- queue: queueE --&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.capacity&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;31&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.supports-priority&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;false&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.minimum-user-limit-percent&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.user-limit-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.maximum-initialized-active-tasks&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;200000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.maximum-initialized-active-tasks-per-user&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueE.init-accept-jobs-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;10&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<br/>
+<code>&lt;!-- queue: queueF --&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.capacity&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;28&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.supports-priority&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;false&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.minimum-user-limit-percent&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;20&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.user-limit-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;1&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.maximum-initialized-active-tasks&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;200000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.maximum-initialized-active-tasks-per-user&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;100000&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<code>  &lt;property&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;name&gt;mapred.capacity-scheduler.queue.queueF.init-accept-jobs-factor&lt;/name&gt;</code><br/>
+<code>    &nbsp;&nbsp;&lt;value&gt;10&lt;/value&gt;</code><br/>
+<code>  &lt;/property&gt;</code><br/>
+<br/>
+<code>&lt;/configuration&gt;</code><br/>
+    </td>
+    </tr>
+    </table>
+  </section>
+  </body>
+  
+</document>

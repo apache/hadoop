@@ -1,0 +1,311 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+package org.apache.hadoop.security;
+
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+public class TestSecurityUtil {
+  public static final Log LOG = LogFactory.getLog(TestSecurityUtil.class);
+
+  @Test
+  public void isOriginalTGTReturnsCorrectValues() {
+    assertTrue(SecurityUtil.isOriginalTGT("krbtgt/foo@foo"));
+    assertTrue(SecurityUtil.isOriginalTGT("krbtgt/foo.bar.bat@foo.bar.bat"));
+    assertFalse(SecurityUtil.isOriginalTGT(null));
+    assertFalse(SecurityUtil.isOriginalTGT("blah"));
+    assertFalse(SecurityUtil.isOriginalTGT(""));
+    assertFalse(SecurityUtil.isOriginalTGT("krbtgt/hello"));
+    assertFalse(SecurityUtil.isOriginalTGT("/@"));
+    assertFalse(SecurityUtil.isOriginalTGT("this@is/notright"));
+    assertFalse(SecurityUtil.isOriginalTGT("krbtgt/foo@FOO"));
+  }
+  
+  private void verify(String original, String hostname, String expected)
+      throws IOException {
+    assertEquals(expected, 
+                 SecurityUtil.getServerPrincipal(original, hostname));
+
+    InetAddress addr = mockAddr(hostname);
+    assertEquals(expected, 
+                 SecurityUtil.getServerPrincipal(original, addr));
+  }
+
+  private InetAddress mockAddr(String reverseTo) {
+    InetAddress mock = Mockito.mock(InetAddress.class);
+    Mockito.doReturn(reverseTo).when(mock).getCanonicalHostName();
+    return mock;
+  }
+  
+  @Test
+  public void testGetServerPrincipal() throws IOException {
+    String service = "hdfs/";
+    String realm = "@REALM";
+    String hostname = "foohost";
+    String userPrincipal = "foo@FOOREALM";
+    String shouldReplace = service + SecurityUtil.HOSTNAME_PATTERN + realm;
+    String replaced = service + hostname + realm;
+    verify(shouldReplace, hostname, replaced);
+    String shouldNotReplace = service + SecurityUtil.HOSTNAME_PATTERN + "NAME"
+        + realm;
+    verify(shouldNotReplace, hostname, shouldNotReplace);
+    verify(userPrincipal, hostname, userPrincipal);
+    // testing reverse DNS lookup doesn't happen
+    InetAddress notUsed = Mockito.mock(InetAddress.class);
+    assertEquals(shouldNotReplace, SecurityUtil.getServerPrincipal(
+        shouldNotReplace, notUsed));
+    Mockito.verify(notUsed, Mockito.never()).getCanonicalHostName();
+  }
+  
+  @Test
+  public void testLocalHostNameForNullOrWild() throws Exception {
+    String local = SecurityUtil.getLocalHostName();
+    assertEquals("hdfs/" + local + "@REALM", SecurityUtil.getServerPrincipal(
+        "hdfs/_HOST@REALM", (String) null));
+    assertEquals("hdfs/" + local + "@REALM", SecurityUtil.getServerPrincipal(
+        "hdfs/_HOST@REALM", "0.0.0.0"));
+  }
+  
+  @Test
+  public void testGetHostFromPrincipal() {
+    assertEquals("host", 
+        SecurityUtil.getHostFromPrincipal("service/host@realm"));
+    assertEquals(null,
+        SecurityUtil.getHostFromPrincipal("service@realm"));
+  }
+
+  @Test
+  public void testBuildDTServiceName() {
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildDTServiceName(URI.create("test://LocalHost"), 123)
+    );
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildDTServiceName(URI.create("test://LocalHost:123"), 456)
+    );
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildDTServiceName(URI.create("test://127.0.0.1"), 123)
+    );
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildDTServiceName(URI.create("test://127.0.0.1:123"), 456)
+    );
+  }
+  
+  @Test
+  public void testBuildTokenServiceSockAddr() {
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildTokenService(new InetSocketAddress("LocalHost", 123)).toString()
+    );
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildTokenService(new InetSocketAddress("127.0.0.1", 123)).toString()
+    );
+    // what goes in, comes out
+    assertEquals("127.0.0.1:123",
+        SecurityUtil.buildTokenService(NetUtils.createSocketAddr("127.0.0.1", 123)).toString()
+    );
+  }
+
+  @Test
+  public void testGoodHostsAndPorts() {
+    InetSocketAddress compare = NetUtils.makeSocketAddr("localhost", 123);
+    runGoodCases(compare, "localhost", 123);
+    runGoodCases(compare, "localhost:", 123);
+    runGoodCases(compare, "localhost:123", 456);
+  }
+  
+  void runGoodCases(InetSocketAddress addr, String host, int port) {
+    assertEquals(addr, NetUtils.createSocketAddr(host, port));
+    assertEquals(addr, NetUtils.createSocketAddr("hdfs://"+host, port));
+    assertEquals(addr, NetUtils.createSocketAddr("hdfs://"+host+"/path", port));
+  }
+  
+  @Test
+  public void testBadHostsAndPorts() {
+    runBadCases("", true);
+    runBadCases(":", false);
+    runBadCases("hdfs/", false);
+    runBadCases("hdfs:/", false);
+    runBadCases("hdfs://", true);
+  }
+  
+  void runBadCases(String prefix, boolean validIfPosPort) {
+    runBadPortPermutes(prefix, false);
+    runBadPortPermutes(prefix+"*", false);
+    runBadPortPermutes(prefix+"localhost", validIfPosPort);
+    runBadPortPermutes(prefix+"localhost:-1", false);
+    runBadPortPermutes(prefix+"localhost:-123", false);
+    runBadPortPermutes(prefix+"localhost:xyz", false);
+    runBadPortPermutes(prefix+"localhost/xyz", validIfPosPort);
+    runBadPortPermutes(prefix+"localhost/:123", validIfPosPort);
+    runBadPortPermutes(prefix+":123", false);
+    runBadPortPermutes(prefix+":xyz", false);
+  }
+
+  void runBadPortPermutes(String arg, boolean validIfPosPort) {
+    int ports[] = { -123, -1, 123 };
+    boolean bad = false;
+    try {
+      NetUtils.createSocketAddr(arg);
+    } catch (IllegalArgumentException e) {
+      bad = true;
+    } finally {
+      assertTrue("should be bad: '"+arg+"'", bad);
+    }
+    for (int port : ports) {
+      if (validIfPosPort && port > 0) continue;
+      
+      bad = false;
+      try {
+        NetUtils.createSocketAddr(arg, port);
+      } catch (IllegalArgumentException e) {
+        bad = true;
+      } finally {
+        assertTrue("should be bad: '"+arg+"' (default port:"+port+")", bad);
+      }
+    }
+  }
+
+  // check that the socket addr has:
+  // 1) the InetSocketAddress has the correct hostname, ie. exact host/ip given
+  // 2) the address is resolved, ie. has an ip
+  // 3,4) the socket's InetAddress has the same hostname, and the correct ip
+  // 5) the port is correct
+  private void
+  verifyValues(InetSocketAddress addr, String host, String ip, int port) {
+    assertTrue(!addr.isUnresolved());
+    // don't know what the standard resolver will return for hostname.
+    // should be host for host; host or ip for ip is ambiguous
+    if (!SecurityUtil.getTokenServiceUseIp()) {
+      assertEquals(host, addr.getHostName());
+      assertEquals(host, addr.getAddress().getHostName());
+    }
+    assertEquals(ip, addr.getAddress().getHostAddress());
+    assertEquals(port, addr.getPort());    
+  }
+
+  // check:
+  // 1) buildTokenService honors use_ip setting
+  // 2) setTokenService & getService works
+  // 3) getTokenServiceAddr decodes to the identical socket addr
+  private void
+  verifyTokenService(InetSocketAddress addr, String host, String ip, int port, boolean useIp) {
+    LOG.info("address:"+addr+" host:"+host+" ip:"+ip+" port:"+port);
+
+    SecurityUtil.setTokenServiceUseIp(useIp);
+    String serviceHost = useIp ? ip : host.toLowerCase();
+    
+    Token token = new Token();
+    Text service = new Text(serviceHost+":"+port);
+    
+    assertEquals(service, SecurityUtil.buildTokenService(addr));
+    SecurityUtil.setTokenService(token, addr);
+    assertEquals(service, token.getService());
+    
+    InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
+    assertNotNull(serviceAddr);
+    verifyValues(serviceAddr, serviceHost, ip, port);
+  }
+
+  // check:
+  // 1) socket addr is created with fields set as expected
+  // 2) token service with ips
+  // 3) token service with the given host or ip
+  private void
+  verifyAddress(InetSocketAddress addr, String host, String ip, int port) {
+    verifyValues(addr, host, ip, port);
+    LOG.info("test that token service uses ip");
+    verifyTokenService(addr, host, ip, port, true);    
+    LOG.info("test that token service uses host");
+    verifyTokenService(addr, host, ip, port, false);
+  }
+
+  // check:
+  // 1-4) combinations of host and port
+  // this will construct a socket addr, verify all the fields, build the
+  // service to verify the use_ip setting is honored, set the token service
+  // based on addr and verify the token service is set correctly, decode
+  // the token service and ensure all the fields of the decoded addr match
+  private void verifyServiceAddr(String host, String ip) {
+    InetSocketAddress addr;
+    int port = 123;
+
+    // test host, port tuple
+    LOG.info("test tuple ("+host+","+port+")");
+    addr = NetUtils.makeSocketAddr(host, port);
+    verifyAddress(addr, host, ip, port);
+
+    // test authority with no default port
+    LOG.info("test authority '"+host+":"+port+"'");
+    addr = NetUtils.createSocketAddr(host+":"+port);
+    verifyAddress(addr, host, ip, port);
+
+    // test authority with a default port, make sure default isn't used
+    LOG.info("test authority '"+host+":"+port+"' with ignored default port");
+    addr = NetUtils.createSocketAddr(host+":"+port, port+1);
+    verifyAddress(addr, host, ip, port);
+
+    // test host-only authority, using port as default port
+    LOG.info("test host:"+host+" port:"+port);
+    addr = NetUtils.createSocketAddr(host, port);
+    verifyAddress(addr, host, ip, port);
+  }
+
+  @Test
+  public void testSocketAddrWithName() {
+    String staticHost = "my";
+    NetUtils.addStaticResolution(staticHost, "localhost");
+    verifyServiceAddr("LocalHost", "127.0.0.1");
+  }
+
+  @Test
+  public void testSocketAddrWithIP() {
+    verifyServiceAddr("127.0.0.1", "127.0.0.1");
+  }
+
+  @Test
+  public void testSocketAddrWithNameToStaticName() {
+    String staticHost = "host1";
+    NetUtils.addStaticResolution(staticHost, "localhost");
+    verifyServiceAddr(staticHost, "127.0.0.1");
+  }
+
+  @Test
+  public void testSocketAddrWithNameToStaticIP() {
+    String staticHost = "host3";
+    NetUtils.addStaticResolution(staticHost, "255.255.255.255");
+    verifyServiceAddr(staticHost, "255.255.255.255");
+  }
+
+  // this is a bizarre case, but it's if a test tries to remap an ip address
+  @Test
+  public void testSocketAddrWithIPToStaticIP() {
+    String staticHost = "1.2.3.4";
+    NetUtils.addStaticResolution(staticHost, "255.255.255.255");
+    verifyServiceAddr(staticHost, "255.255.255.255");
+  }
+}

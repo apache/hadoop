@@ -1,0 +1,385 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop集群搭建</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>目的</title>
+      
+      <p>本文描述了如何安装、配置和管理有实际意义的Hadoop集群，其规模可从几个节点的小集群到几千个节点的超大集群。</p>
+      
+      <p>如果你希望在单机上安装Hadoop玩玩，从<a href="quickstart.html">这里</a>能找到相关细节。</p>
+    </section>
+    
+    <section>
+      <title>先决条件</title>
+      
+      <ol>
+        <li>
+          确保在你集群中的每个节点上都安装了所有<a href="quickstart.html#PreReqs">必需</a>软件。
+        </li>
+        <li>
+          <a href="quickstart.html#下载">获取</a>Hadoop软件包。
+        </li>
+      </ol>
+    </section>
+    
+    <section>
+      <title>安装</title>
+      
+      <p>安装Hadoop集群通常要将安装软件解压到集群内的所有机器上。</p>
+      
+      <p>通常，集群里的一台机器被指定为 
+	 <code>NameNode</code>，另一台不同的机器被指定为<code>JobTracker</code>。这些机器是<em>masters</em>。余下的机器即作为<code>DataNode</code><em>也</em>作为<code>TaskTracker</code>。这些机器是<em>slaves</em>。</p>
+      
+      <p>我们用<code>HADOOP_HOME</code>指代安装的根路径。通常，集群里的所有机器的<code>HADOOP_HOME</code>路径相同。</p>
+    </section>
+    
+    <section>
+      <title>配置</title>
+      
+      <p>接下来的几节描述了如何配置Hadoop集群。</p>
+      
+      <section>
+        <title>配置文件</title>
+        
+        <p>对Hadoop的配置通过<code>conf/</code>目录下的两个重要配置文件完成：</p>
+        <ol>
+          <li>
+            <a href="ext:hadoop-default">hadoop-default.xml</a> - 只读的默认配置。
+          </li>
+          <li>
+            <em>hadoop-site.xml</em> - 集群特有的配置。
+          </li>
+        </ol>
+      
+        <p>要了解更多关于这些配置文件如何影响Hadoop框架的细节，请看<a href="ext:api/org/apache/hadoop/conf/configuration">这里</a>。</p>
+
+        <p>此外，通过设置<code>conf/hadoop-env.sh</code>中的变量为集群特有的值，你可以对<code>bin/</code>目录下的Hadoop脚本进行控制。</p>
+      </section>
+
+      <section>
+        <title>集群配置</title>
+        
+        <p>要配置Hadoop集群，你需要设置Hadoop守护进程的<em>运行环境</em>和Hadoop守护进程的<em>运行参数</em>。</p>
+        
+        <p>Hadoop守护进程指<code>NameNode</code>/<code>DataNode</code> 
+        和<code>JobTracker</code>/<code>TaskTracker</code>。</p>
+
+        <section>
+          <title>配置Hadoop守护进程的运行环境</title>
+
+          <p>管理员可在<code>conf/hadoop-env.sh</code>脚本内对Hadoop守护进程的运行环境做特别指定。</p>  
+          <p>至少，你得设定<code>JAVA_HOME</code>使之在每一远端节点上都被正确设置。</p>
+          <p>管理员可以通过配置选项<code>HADOOP_*_OPTS</code>来分别配置各个守护进程。
+          下表是可以配置的选项。
+          </p>
+          <table>
+          <tr><th>守护进程</th><th>配置选项</th></tr>
+          <tr><td>NameNode</td><td>HADOOP_NAMENODE_OPTS</td></tr>
+          <tr><td>DataNode</td><td>HADOOP_DATANODE_OPTS</td></tr>
+          <tr><td>SecondaryNamenode</td>
+              <td>HADOOP_SECONDARYNAMENODE_OPTS</td></tr>
+          <tr><td>JobTracker</td><td>HADOOP_JOBTRACKER_OPTS</td></tr>
+          <tr><td>TaskTracker</td><td>HADOOP_TASKTRACKER_OPTS</td></tr>
+          </table>
+
+	  <p>例如，配置Namenode时,为了使其能够并行回收垃圾（parallelGC），
+          要把下面的代码加入到<code>hadoop-env.sh</code> :
+          <br/><code>
+          export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC ${HADOOP_NAMENODE_OPTS}"
+          </code><br/></p>
+          <p>其它可定制的常用参数还包括：</p>
+          <ul>
+            <li>
+              <code>HADOOP_LOG_DIR</code> - 守护进程日志文件的存放目录。如果不存在会被自动创建。
+            </li>
+            <li>
+              <code>HADOOP_HEAPSIZE</code> - 最大可用的堆大小，单位为MB。比如，<code>1000MB</code>。
+              这个参数用于设置hadoop守护进程的堆大小。缺省大小是<code>1000MB</code>。
+            </li>
+          </ul>
+        </section>
+        
+        <section>
+          <title>配置Hadoop守护进程的运行参数</title>
+          
+          <p>这部分涉及Hadoop集群的重要参数，这些参数在<code>conf/hadoop-site.xml</code>中指定。</p>
+
+		  <table>
+  		    <tr>
+		      <th>参数</th>
+		      <th>取值</th> 
+		      <th>备注</th>
+		    </tr>
+  		    <tr>
+		      <td>fs.default.name</td>
+                       <td><code>NameNode</code>的URI。</td>
+                       <td><em>hdfs://主机名/</em></td>
+		    </tr>
+		    <tr>
+		      <td>mapred.job.tracker</td>
+		      <td><code>JobTracker</code>的主机（或者IP）和端口。</td>
+		      <td><em>主机:端口</em>。</td>
+		    </tr>
+		    <tr>
+		      <td>dfs.name.dir</td>
+		      <td>
+		        <code>NameNode</code>持久存储名字空间及事务日志的本地文件系统路径。</td>
+		      <td>当这个值是一个逗号分割的目录列表时，nametable数据将会被复制到所有目录中做冗余备份。
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>dfs.data.dir</td>
+		      <td> 
+		        <code>DataNode</code>存放块数据的本地文件系统路径，逗号分割的列表。
+		      </td>
+		      <td>
+		        当这个值是逗号分割的目录列表时，数据将被存储在所有目录下，通常分布在不同设备上。
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>mapred.system.dir</td>
+		      <td>Map/Reduce框架存储系统文件的HDFS路径。比如<code>/hadoop/mapred/system/</code>。
+		      </td>
+		      <td>这个路径是默认文件系统（HDFS）下的路径， 须从服务器和客户端上均可访问。
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>mapred.local.dir</td>
+		      <td>本地文件系统下逗号分割的路径列表，Map/Reduce临时数据存放的地方。
+		      </td>
+		      <td>多路径有助于利用磁盘i/o。</td>
+		    </tr>
+		    <tr>
+		      <td>mapred.tasktracker.{map|reduce}.tasks.maximum</td>
+		      <td>某一<code>TaskTracker</code>上可运行的最大Map/Reduce任务数，这些任务将同时各自运行。
+		      </td>
+		      <td>
+		        默认为2（2个map和2个reduce），可依据硬件情况更改。
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>dfs.hosts/dfs.hosts.exclude</td>
+		      <td>许可/拒绝DataNode列表。</td>
+		      <td>
+		        如有必要，用这个文件控制许可的datanode列表。
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>mapred.hosts/mapred.hosts.exclude</td>
+		      <td>许可/拒绝TaskTracker列表。</td>
+		      <td>
+		        如有必要，用这个文件控制许可的TaskTracker列表。
+		      </td>
+  		    </tr>
+		  </table>
+
+          <p>通常，上述参数被标记为 
+          <a href="ext:api/org/apache/hadoop/conf/configuration/final_parameters">
+          final</a> 以确保它们不被用户应用更改。
+          </p>
+
+          <section>
+            <title>现实世界的集群配置</title>
+            
+            <p>这节罗列在大规模集群上运行<em>sort</em>基准测试(benchmark)时使用到的一些非缺省配置。</p>
+            
+            <ul>
+              <li>
+                <p>运行sort900的一些非缺省配置值，sort900即在900个节点的集群上对9TB的数据进行排序：</p>
+                <table>
+  		          <tr>
+		            <th>参数</th>
+		            <th>取值</th> 
+		            <th>备注</th>
+		          </tr>
+                  <tr>
+                    <td>dfs.block.size</td>
+                    <td>134217728</td>
+                    <td>针对大文件系统，HDFS的块大小取128MB。</td>
+                  </tr>
+                  <tr>
+                    <td>dfs.namenode.handler.count</td>
+                    <td>40</td>
+                    <td>
+                      启动更多的NameNode服务线程去处理来自大量DataNode的RPC请求。
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.reduce.parallel.copies</td>
+                    <td>20</td>
+                    <td>
+			reduce启动更多的并行拷贝器以获取大量map的输出。
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+			为map/reduce子虚拟机使用更大的堆。 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>fs.inmemory.size.mb</td>
+                    <td>200</td>
+                    <td>
+                      为reduce阶段合并map输出所需的内存文件系统分配更多的内存。
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>io.sort.factor</td>
+                    <td>100</td>
+                    <td>文件排序时更多的流将同时被归并。</td>
+                  </tr>
+                  <tr>
+                    <td>io.sort.mb</td>
+                    <td>200</td>
+                    <td>提高排序时的内存上限。</td>
+                  </tr>
+                  <tr>
+                    <td>io.file.buffer.size</td>
+                    <td>131072</td>
+                    <td>SequenceFile中用到的读/写缓存大小。</td>
+                  </tr>
+                </table>
+              </li>
+              <li>
+                <p>运行sort1400和sort2000时需要更新的配置，即在1400个节点上对14TB的数据进行排序和在2000个节点上对20TB的数据进行排序：</p>
+                <table>
+  		          <tr>
+		            <th>参数</th>
+		            <th>取值</th> 
+		            <th>备注</th>
+		          </tr>
+                  <tr>
+                    <td>mapred.job.tracker.handler.count</td>
+                    <td>60</td>
+                    <td>
+                      启用更多的JobTracker服务线程去处理来自大量TaskTracker的RPC请求。
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.reduce.parallel.copies</td>
+                    <td>50</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>tasktracker.http.threads</td>
+                    <td>50</td>
+                    <td>
+                      为TaskTracker的Http服务启用更多的工作线程。reduce通过Http服务获取map的中间输出。
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.child.java.opts</td>
+                    <td>-Xmx1024M</td>
+                    <td>使用更大的堆用于maps/reduces的子虚拟机</td>
+                  </tr>
+                </table>
+              </li>
+            </ul>
+          </section>
+          
+        </section>
+
+        <section>
+          <title>Slaves</title>
+          
+          <p>通常，你选择集群中的一台机器作为<code>NameNode</code>，另外一台不同的机器作为<code>JobTracker</code>。余下的机器即作为<code>DataNode</code>又作为<code>TaskTracker</code>，这些被称之为<em>slaves</em>。</p>
+          
+          <p>在<code>conf/slaves</code>文件中列出所有slave的主机名或者IP地址，一行一个。</p>
+        </section>
+        
+        <section>
+          <title>日志</title>
+          
+          <p>Hadoop使用<a href="http://logging.apache.org/log4j/">Apache log4j</a>来记录日志，它由<a href="http://commons.apache.org/logging/">Apache Commons Logging</a>框架来实现。编辑<code>conf/log4j.properties</code>文件可以改变Hadoop守护进程的日志配置（日志格式等）。</p>
+          
+          <section>
+            <title>历史日志</title>
+            
+	    <p>作业的历史文件集中存放在<code>hadoop.job.history.location</code>，这个也可以是在分布式文件系统下的路径，其默认值为<code>${HADOOP_LOG_DIR}/history</code>。jobtracker的web UI上有历史日志的web UI链接。</p>
+            
+            <p>历史文件在用户指定的目录<code>hadoop.job.history.user.location</code>也会记录一份，这个配置的缺省值为作业的输出目录。这些文件被存放在指定路径下的“_logs/history/”目录中。因此，默认情况下日志文件会在“mapred.output.dir/_logs/history/”下。如果将<code>hadoop.job.history.user.location</code>指定为值<code>none</code>，系统将不再记录此日志。</p>
+            
+            <p>用户可使用以下命令在指定路径下查看历史日志汇总<br/>
+            <code>$ bin/hadoop job -history output-dir</code><br/> 
+            这条命令会显示作业的细节信息，失败和终止的任务细节。 <br/>
+            关于作业的更多细节，比如成功的任务，以及对每个任务的所做的尝试次数等可以用下面的命令查看<br/>
+            <code>$ bin/hadoop job -history all output-dir</code><br/></p> 
+          </section>
+        </section>
+      </section>
+
+      <p>一但全部必要的配置完成，将这些文件分发到所有机器的<code>HADOOP_CONF_DIR</code>路径下，通常是<code>${HADOOP_HOME}/conf</code>。</p>
+    </section>
+    
+    <section>
+      <title>Hadoop的机架感知</title>
+      <p>HDFS和Map/Reduce的组件是能够感知机架的。</p>
+      <p><code>NameNode</code>和<code>JobTracker</code>通过调用管理员配置模块中的API<a href="ext:api/org/apache/hadoop/net/dnstoswitchmapping/resolve">resolve</a>来获取集群里每个slave的<code>机架id</code>。该API将slave的DNS名称（或者IP地址）转换成机架id。使用哪个模块是通过配置项<code>topology.node.switch.mapping.impl</code>来指定的。模块的默认实现会调用<code>topology.script.file.name</code>配置项指定的一个的脚本/命令。 如果topology.script.file.name未被设置，对于所有传入的IP地址，模块会返回<code>/default-rack</code>作为机架id。在Map/Reduce部分还有一个额外的配置项<code>mapred.cache.task.levels</code>，该参数决定cache的级数（在网络拓扑中）。例如，如果默认值是2，会建立两级的cache－ 一级针对主机（主机 -> 任务的映射）另一级针对机架（机架 -> 任务的映射）。
+      </p>
+    </section>
+    
+    <section>
+      <title>启动Hadoop</title>
+      
+      <p>启动Hadoop集群需要启动HDFS集群和Map/Reduce集群。</p>
+
+      <p>
+        格式化一个新的分布式文件系统：<br/>
+        <code>$ bin/hadoop namenode -format</code>
+      </p>
+      
+      <p>
+	在分配的<code>NameNode</code>上，运行下面的命令启动HDFS：<br/>
+        <code>$ bin/start-dfs.sh</code>
+      </p>
+      <p><code>bin/start-dfs.sh</code>脚本会参照<code>NameNode</code>上<code>${HADOOP_CONF_DIR}/slaves</code>文件的内容，在所有列出的slave上启动<code>DataNode</code>守护进程。</p>
+      <p>
+	在分配的<code>JobTracker</code>上，运行下面的命令启动Map/Reduce：<br/>
+        <code>$ bin/start-mapred.sh</code>
+      </p>
+      <p><code>bin/start-mapred.sh</code>脚本会参照<code>JobTracker</code>上<code>${HADOOP_CONF_DIR}/slaves</code>文件的内容，在所有列出的slave上启动<code>TaskTracker</code>守护进程。</p>
+    </section>
+    
+    <section>
+      <title>停止Hadoop</title>
+      
+      <p>
+	在分配的<code>NameNode</code>上，执行下面的命令停止HDFS：<br/>
+        <code>$ bin/stop-dfs.sh</code>
+      </p>
+      <p><code>bin/stop-dfs.sh</code>脚本会参照<code>NameNode</code>上<code>${HADOOP_CONF_DIR}/slaves</code>文件的内容，在所有列出的slave上停止<code>DataNode</code>守护进程。</p>
+      <p>
+	在分配的<code>JobTracker</code>上，运行下面的命令停止Map/Reduce：<br/>
+        <code>$ bin/stop-mapred.sh</code><br/>
+      </p>
+      <p><code>bin/stop-mapred.sh</code>脚本会参照<code>JobTracker</code>上<code>${HADOOP_CONF_DIR}/slaves</code>文件的内容，在所有列出的slave上停止<code>TaskTracker</code>守护进程。</p>
+    </section>
+  </body>
+  
+</document>

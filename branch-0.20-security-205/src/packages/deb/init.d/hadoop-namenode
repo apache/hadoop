@@ -1,0 +1,155 @@
+#! /bin/sh
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+### BEGIN INIT INFO
+# Provides:		hadoop-namenode	
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:		
+# Short-Description:	Apache Hadoop Name Node server
+### END INIT INFO
+
+set -e
+
+# /etc/init.d/hadoop-namenode: start and stop the Apache Hadoop Name Node daemon
+
+test -x /usr/bin/hadoop || exit 0
+( /usr/bin/hadoop 2>&1 | grep -q hadoop ) 2>/dev/null || exit 0
+
+umask 022
+
+if test -f /etc/default/hadoop-env.sh; then
+    . /etc/default/hadoop-env.sh
+fi
+
+. /lib/lsb/init-functions
+
+# Are we running from init?
+run_by_init() {
+    ([ "$previous" ] && [ "$runlevel" ]) || [ "$runlevel" = S ]
+}
+
+check_for_no_start() {
+    # forget it if we're trying to start, and /etc/hadoop/hadoop-namenode_not_to_be_run exists
+    if [ -e /etc/hadoop/hadoop-namenode_not_to_be_run ]; then 
+	if [ "$1" = log_end_msg ]; then
+	    log_end_msg 0
+	fi
+	if ! run_by_init; then
+	    log_action_msg "Apache Hadoop Name Node server not in use (/etc/hadoop/hadoop-namenode_not_to_be_run)"
+	fi
+	exit 0
+    fi
+}
+
+check_privsep_dir() {
+    # Create the PrivSep empty dir if necessary
+    if [ ! -d ${HADOOP_PID_DIR} ]; then
+	mkdir -p ${HADOOP_PID_DIR}
+        chown root:hadoop ${HADOOP_PID_DIR}
+	chmod 0775 ${HADOOP_PID_DIR} 
+    fi
+}
+
+format() {
+    sudo -u hdfs ${HADOOP_PREFIX}/bin/hadoop --config ${HADOOP_CONF_DIR} namenode -format
+}
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/usr/bin"
+export HADOOP_PREFIX="/usr"
+
+case "$1" in
+  start)
+	check_privsep_dir
+	check_for_no_start
+	log_daemon_msg "Starting Apache Hadoop Name Node server" "hadoop-namenode"
+	if start-stop-daemon --start --quiet --oknodo --pidfile ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid -c hdfs -x ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh -- --config ${HADOOP_CONF_DIR} start namenode; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
+	;;
+  stop)
+	log_daemon_msg "Stopping Apache Hadoop Name Node server" "hadoop-namenode"
+	if start-stop-daemon --stop --quiet --oknodo --pidfile ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
+	;;
+  format)
+	log_daemon_msg "Formatting Apache Hadoop Name Node" "hadoop-namenode"
+	format
+	if [ $? -eq 0 ]; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
+	;;
+  restart)
+	check_privsep_dir
+	log_daemon_msg "Restarting Apache Hadoop Name Node server" "hadoop-namenode"
+	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid
+	check_for_no_start log_end_msg
+	if start-stop-daemon --start --quiet --oknodo --pidfile ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid -c hdfs -x ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh -- --config ${HADOOP_CONF_DIR} start namenode; then
+	    log_end_msg 0
+	else
+	    log_end_msg 1
+	fi
+	;;
+
+  try-restart)
+	check_privsep_dir
+	log_daemon_msg "Restarting Apache Hadoop Name Node server" "hadoop-namenode"
+	set +e
+	start-stop-daemon --stop --quiet --retry 30 --pidfile ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid
+	RET="$?"
+	set -e
+	case $RET in
+	    0)
+		# old daemon stopped
+		check_for_no_start log_end_msg
+		if start-stop-daemon --start --quiet --oknodo --pidfile ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid -c hdfs -x ${HADOOP_PREFIX}/sbin/hadoop-daemon.sh -- --config ${HADOOP_CONF_DIR} start namenode; then
+		    log_end_msg 0
+		else
+		    log_end_msg 1
+		fi
+		;;
+	    1)
+		# daemon not running
+		log_progress_msg "(not running)"
+		log_end_msg 0
+		;;
+	    *)
+		# failed to stop
+		log_progress_msg "(failed to stop)"
+		log_end_msg 1
+		;;
+	esac
+	;;
+
+  status)
+	status_of_proc -p ${HADOOP_PID_DIR}/hadoop-hdfs-namenode.pid ${JAVA_HOME}/bin/java hadoop-namenode && exit 0 || exit $?
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/hadoop-namenode {start|stop|restart|try-restart|status}"
+	exit 1
+esac
+
+exit 0

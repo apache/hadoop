@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+<property>
+  <name>mapred.system.dir</name>
+  <value>build/contrib/${contrib.name}/test/system</value>
+</property>
+
+</configuration>

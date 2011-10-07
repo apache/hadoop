@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+
+  <property>
+    <name>local.realm</name>
+    <value>${KERBEROS_REALM}</value>
+  </property>
+
+  <!-- file system properties -->
+
+  <property>
+    <name>fs.default.name</name>
+    <value>hdfs://${HADOOP_NN_HOST}:8020</value>
+    <description>The name of the default file system.  Either the
+      literal string "local" or a host:port for NDFS.
+    </description>
+    <final>true</final>
+  </property>
+
+  <property>
+    <name>fs.trash.interval</name>
+    <value>360</value>
+    <description>Number of minutes between trash checkpoints.
+      If zero, the trash feature is disabled.
+    </description>
+  </property>
+  
+  <property>
+    <name>hadoop.security.auth_to_local</name>
+    <value>
+	RULE:[2:$1@$0]([jt]t@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
+        RULE:[2:$1@$0]([nd]n@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
+        RULE:[2:$1@$0](mapred@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
+        RULE:[2:$1@$0](hdfs@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
+        RULE:[2:$1@$0](mapredqa@.*${KERBEROS_REALM})s/.*/${HADOOP_MR_USER}/
+        RULE:[2:$1@$0](hdfsqa@.*${KERBEROS_REALM})s/.*/${HADOOP_HDFS_USER}/
+        RULE:[2:$1@$0](hm@.*${KERBEROS_REALM})s/.*/${HBASE_USER}/
+        RULE:[2:$1@$0](rs@.*${KERBEROS_REALM})s/.*/${HBASE_USER}/
+        DEFAULT
+    </value>
+    <description></description>
+  </property>
+
+  <property>
+    <name>hadoop.security.authentication</name>
+    <value>${SECURITY_TYPE}</value>
+    <description>
+      Set the authentication for the cluster. Valid values are: simple or
+      kerberos.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.security.authorization</name>
+    <value>${SECURITY}</value>
+    <description>
+      Enable authorization for different protocols.
+    </description>
+  </property>
+
+  <property>
+    <name>hadoop.security.groups.cache.secs</name>
+    <value>14400</value>
+  </property>
+
+  <property>
+    <name>hadoop.kerberos.kinit.command</name>
+    <value>${KINIT}</value>
+  </property>
+
+  <property>
+    <name>hadoop.http.filter.initializers</name>
+    <value>org.apache.hadoop.http.lib.StaticUserWebFilter</value>
+  </property>
+
+</configuration>
