@@ -777,6 +777,15 @@ public class RMAppAttemptImpl implements RMAppAttempt {
             " due to: " +  containerStatus.getDiagnostics() + "." +
             "Failing this attempt.");
 
+        /*
+         * In the case when the AM dies, the trackingUrl is left pointing to the AM's
+         * URL, which shows up in the scheduler UI as a broken link. Setting it here
+         * to empty string will prevent any link from being displayed.
+         * NOTE: don't set trackingUrl to 'null'. That will cause null-pointer exceptions
+         * in the generated proto code.
+         */
+        appAttempt.trackingUrl = "";
+
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);
         return RMAppAttemptState.FAILED;
