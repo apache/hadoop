@@ -442,6 +442,9 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7624. Set things up for a top level hadoop-tools module. (tucu)
 
+    HADOOP-7627. Improve MetricsAsserts to give more understandable output
+    on failure. (todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
