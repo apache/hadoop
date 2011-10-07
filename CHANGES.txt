@@ -280,6 +280,9 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2403. NamenodeWebHdfsMethods.generateDelegationToken(..) does not use
     the renewer parameter.  (szetszwo)
 
+    HADOOP-7724. Fixed hadoop-setup-conf.sh to put proxy user in
+    core-site.xml.  (Arpit Gupta via Eric Yang)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)

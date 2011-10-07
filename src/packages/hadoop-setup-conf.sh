@@ -139,6 +139,7 @@ function addPropertyToXMLConf
 #########################################
 function setupProxyUsers
 {
+  local conf_file="${HADOOP_CONF_DIR}/core-site.xml"
   #if hadoop proxy users are sent, setup hadoop proxy
   if [ ! -z $HADOOP_PROXY_USERS ]
   then
@@ -156,10 +157,10 @@ function setupProxyUsers
       #determine the property names and values
       proxy_groups_property="hadoop.proxyuser.${user}.groups"
       proxy_groups_val="$groups"
-      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_groups_property" "$proxy_groups_val"
+      addPropertyToXMLConf "$conf_file" "$proxy_groups_property" "$proxy_groups_val"
       proxy_hosts_property="hadoop.proxyuser.${user}.hosts"
       proxy_hosts_val="$hosts"
-      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_hosts_property" "$proxy_hosts_val"
+      addPropertyToXMLConf "$conf_file" "$proxy_hosts_property" "$proxy_hosts_val"
       IFS=';'
     done
     IFS=$oldIFS
