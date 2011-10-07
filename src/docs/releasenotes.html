@@ -242,6 +242,11 @@
      <b>dfs.web.authentication.kerberos.principal expects the full hostname and does not replace _HOST with the hostname</b><br>
      <blockquote></blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7724">HADOOP-7724</a>.
+     Major bug reported by gkesavan and fixed by arpitgupta <br>
+     <b>hadoop-setup-conf.sh should put proxy user info into the core-site.xml </b><br>
+     <blockquote>                                              Fixed hadoop-setup-conf.sh to put proxy user in core-site.xml.  (Arpit Gupta via Eric Yang)<br><br>      <br></blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-142">HDFS-142</a>.
      Blocker bug reported by rangadi and fixed by dhruba <br>
      <b>In 0.20, move blocks being written into a blocksBeingWritten directory</b><br>
@@ -552,6 +557,11 @@
      <b>webhdfs api&apos;s should return a root element in the json response</b><br>
      <blockquote></blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2403">HDFS-2403</a>.
+     Major bug reported by szetszwo and fixed by szetszwo <br>
+     <b>The renewer in NamenodeWebHdfsMethods.generateDelegationToken(..) is not used</b><br>
+     <blockquote>Below are some suggestions from Suresh.<br># renewer not used in #generateDelegationToken<br># put() does not use InputStream in and should not throw URISyntaxException<br># post() does not use InputStream in and should not throw URISyntaxException<br># get() should not throw URISyntaxException<br></blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2404">HDFS-2404</a>.
      Major bug reported by arpitgupta and fixed by sureshms <br>
      <b>webhdfs liststatus json response is not correct</b><br>
@@ -561,6 +571,11 @@
      Blocker bug reported by stack and fixed by stack (hdfs client)<br>
      <b>DFSClient#getNumCurrentReplicas is package private in 205 but public in branch-0.20-append</b><br>
      <blockquote>The below commit broke hdfs-826 for hbase in 205 rc1.  It changes the accessiblity from public to package private on getNumCurrentReplicas and now current shipping hbase&apos;s at least cannot get at this method.<br><br>{code}<br>Revision 1174483 - (view) (download) (annotate) - [select for diffs] <br>Modified Fri Sep 23 01:30:18 2011 UTC (13 days, 4 hours ago) by szetszwo <br>File length: 136876 byte(s) <br>Diff to previous 1174479 (colored)<br>svn merge -c 1171137 from branch-0.20-security for HDFS-2333.<br>{code}<br><br>Her...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2411">HDFS-2411</a>.
+     Major bug reported by arpitgupta and fixed by jnp <br>
+     <b>with webhdfs enabled in secure mode the auth to local mappings are not being respected.</b><br>
+     <blockquote></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1734">MAPREDUCE-1734</a>.
      Blocker improvement reported by tomwhite and fixed by tlipcon (documentation)<br>
