@@ -27,7 +27,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -124,19 +123,18 @@ public class ContainerLaunch implements Callable<Integer> {
       FileContext lfs = FileContext.getLocalFSFileContext();
       LocalDirAllocator lDirAllocator =
           new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS); // TODO
+
       Path nmPrivateContainerScriptPath =
           lDirAllocator.getLocalPathForWrite(
-              ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
-                  + appIdStr + Path.SEPARATOR + containerIdStr
-                  + Path.SEPARATOR + CONTAINER_SCRIPT, this.conf);
+              getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+                  + CONTAINER_SCRIPT, this.conf);
       Path nmPrivateTokensPath =
           lDirAllocator.getLocalPathForWrite(
-              ResourceLocalizationService.NM_PRIVATE_DIR
-                  + Path.SEPARATOR
-                  + containerIdStr
+              getContainerPrivateDir(appIdStr, containerIdStr)
                   + Path.SEPARATOR
                   + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
                       containerIdStr), this.conf);
+
       DataOutputStream containerScriptOutStream = null;
       DataOutputStream tokensOutStream = null;
 
@@ -227,6 +225,16 @@ public class ContainerLaunch implements Callable<Integer> {
         new ContainerEvent(launchContext.getContainerId(),
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     return 0;
+  }
+
+  private String getContainerPrivateDir(String appIdStr, String containerIdStr) {
+    return getAppPrivateDir(appIdStr) + Path.SEPARATOR + containerIdStr
+        + Path.SEPARATOR;
+  }
+
+  private String getAppPrivateDir(String appIdStr) {
+    return ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
+        + appIdStr;
   }
 
   private static class ShellScriptBuilder {
