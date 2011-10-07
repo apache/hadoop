@@ -386,6 +386,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7720. Added parameter for HBase user to setup config script.
     (Arpit Gupta via Eric Yang)
 
+    HADOOP-7724. Fixed hadoop-setup-conf.sh to put proxy user in
+    core-site.xml.  (Arpit Gupta via Eric Yang)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
