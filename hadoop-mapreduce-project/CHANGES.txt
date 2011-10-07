@@ -1512,6 +1512,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3033. Ensure Master interface pays attention to classic v/s yarn
     frameworks. (Hitesh Shah via acmurthy)
 
+    MAPREDUCE-2802. Ensure JobHistory filenames have jobId. (Jonathan Eagles
+    via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
