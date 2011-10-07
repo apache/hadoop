@@ -688,6 +688,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7708. Fixed hadoop-setup-conf.sh to handle config files
     consistently.  (Eric Yang)
 
+    HADOOP-7724. Fixed hadoop-setup-conf.sh to put proxy user in
+    core-site.xml.  (Arpit Gupta via Eric Yang)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
