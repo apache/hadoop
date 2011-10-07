@@ -440,6 +440,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7720. Added parameter for HBase user to setup config script.
     (Arpit Gupta via Eric Yang)
 
+    HADOOP-7624. Set things up for a top level hadoop-tools module. (tucu)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
