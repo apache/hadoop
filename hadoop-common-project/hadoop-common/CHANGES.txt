@@ -389,6 +389,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7724. Fixed hadoop-setup-conf.sh to put proxy user in
     core-site.xml.  (Arpit Gupta via Eric Yang)
 
+    HADOOP-7627. Improve MetricsAsserts to give more understandable output
+    on failure. (todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
