@@ -187,6 +187,11 @@ implements ResourceUsageEmulatorPlugin {
   }
   
   @Override
+  public float getProgress() {
+    return Math.min(1f, ((float)getTotalHeapUsageInMB())/targetHeapUsageInMB);
+  }
+  
+  @Override
   public void emulate() throws IOException, InterruptedException {
     if (enabled) {
       float currentProgress = progress.getProgress();

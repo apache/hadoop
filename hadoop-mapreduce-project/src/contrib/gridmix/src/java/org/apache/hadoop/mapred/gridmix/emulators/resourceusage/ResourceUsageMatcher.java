@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred.gridmix.emulators.resourceusage;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +36,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * <p>Note that the order in which the emulators are invoked is same as the 
  * order in which they are configured.
  */
-public class ResourceUsageMatcher {
+public class ResourceUsageMatcher implements Progressive {
   /**
    * Configuration key to set resource usage emulators.
    */
@@ -80,10 +81,31 @@ public class ResourceUsageMatcher {
     }
   }
   
-  public void matchResourceUsage() throws Exception {
+  public void matchResourceUsage() throws IOException, InterruptedException {
     for (ResourceUsageEmulatorPlugin emulator : emulationPlugins) {
       // match the resource usage
       emulator.emulate();
     }
+  }
+  
+  /**
+   * Returns the average progress.
+   */
+  @Override
+  public float getProgress() {
+    if (emulationPlugins.size() > 0) {
+      // return the average progress
+      float progress = 0f;
+      for (ResourceUsageEmulatorPlugin emulator : emulationPlugins) {
+        // consider weighted progress of each emulator
+        progress += emulator.getProgress();
+      }
+
+      return progress / emulationPlugins.size();
+    }
+    
+    // if no emulators are configured then return 1
+    return 1f;
+    
   }
 }

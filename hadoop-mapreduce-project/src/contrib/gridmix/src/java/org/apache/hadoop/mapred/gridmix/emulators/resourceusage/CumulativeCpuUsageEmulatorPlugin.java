@@ -67,7 +67,7 @@ implements ResourceUsageEmulatorPlugin {
   private float emulationInterval; // emulation interval
   private long targetCpuUsage = 0;
   private float lastSeenProgress = 0;
-  private long lastSeenCpuUsageCpuUsage = 0;
+  private long lastSeenCpuUsage = 0;
   
   // Configuration parameters
   public static final String CPU_EMULATION_PROGRESS_INTERVAL = 
@@ -229,6 +229,15 @@ implements ResourceUsageEmulatorPlugin {
     return progress * progress * progress * progress;
   }
   
+  private synchronized long getCurrentCPUUsage() {
+    return monitor.getProcResourceValues().getCumulativeCpuTime();
+  }
+  
+  @Override
+  public float getProgress() {
+    return Math.min(1f, ((float)getCurrentCPUUsage())/targetCpuUsage);
+  }
+  
   @Override
   //TODO Multi-threading for speedup?
   public void emulate() throws IOException, InterruptedException {
@@ -249,10 +258,9 @@ implements ResourceUsageEmulatorPlugin {
         //   Note that (Cc-Cl)/(Pc-Pl) is termed as 'rate' in the following 
         //   section
         
-        long currentCpuUsage = 
-          monitor.getProcResourceValues().getCumulativeCpuTime();
+        long currentCpuUsage = getCurrentCPUUsage();
         // estimate the cpu usage rate
-        float rate = (currentCpuUsage - lastSeenCpuUsageCpuUsage)
+        float rate = (currentCpuUsage - lastSeenCpuUsage)
                      / (currentProgress - lastSeenProgress);
         long projectedUsage = 
           currentCpuUsage + (long)((1 - currentProgress) * rate);
@@ -264,8 +272,7 @@ implements ResourceUsageEmulatorPlugin {
             (long)(targetCpuUsage 
                    * getWeightForProgressInterval(currentProgress));
           
-          while (monitor.getProcResourceValues().getCumulativeCpuTime() 
-                 < currentWeighedTarget) {
+          while (getCurrentCPUUsage() < currentWeighedTarget) {
             emulatorCore.compute();
             // sleep for 100ms
             try {
@@ -281,8 +288,7 @@ implements ResourceUsageEmulatorPlugin {
         // set the last seen progress
         lastSeenProgress = progress.getProgress();
         // set the last seen usage
-        lastSeenCpuUsageCpuUsage = 
-          monitor.getProcResourceValues().getCumulativeCpuTime();
+        lastSeenCpuUsage = getCurrentCPUUsage();
       }
     }
   }
@@ -310,6 +316,6 @@ implements ResourceUsageEmulatorPlugin {
     
     // initialize the states
     lastSeenProgress = 0;
-    lastSeenCpuUsageCpuUsage = 0;
+    lastSeenCpuUsage = 0;
   }
 }

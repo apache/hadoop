@@ -10,6 +10,8 @@ Trunk (unreleased changes)
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+    MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running 
+                    tasks in Gridmix. (amarrk)
 
     MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols
                    including multuple versions of the same protocol (sanjay Radia)
