@@ -24,8 +24,8 @@ Trunk (unreleased changes)
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
                  interface introduced in HADOOP-7524.  (cutting)
 
-	  HADOOP-7716. RPC protocol registration on SS does not log the protocol name
-	               (only the class which may be different) (sanjay)
+    HADOOP-7716. RPC protocol registration on SS does not log the protocol name
+                 (only the class which may be different) (sanjay)
 
     HADOOP-7717. Move handling of concurrent client fail-overs to
                  RetryInvocationHandler (atm)
@@ -48,7 +48,7 @@ Trunk (unreleased changes)
     HADOOP-6220. HttpServer wraps InterruptedExceptions by IOExceptions if interrupted 
                  in startup (stevel)
 
-    HADOOP-7703. Improved excpetion handling of shutting down web server.
+    HADOOP-7703. Improved exception handling of shutting down web server.
     (Devaraj K via Eric Yang)
 
     HADOOP-7704. Reduce number of object created by JMXJsonServlet.
