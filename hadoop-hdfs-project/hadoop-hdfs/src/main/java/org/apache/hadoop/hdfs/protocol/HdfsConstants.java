@@ -26,9 +26,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
  * 
  ************************************/
 @InterfaceAudience.Private
-public final class HdfsConstants {
+public class HdfsConstants {
   /* Hidden constructor */
-  private HdfsConstants() {
+  protected HdfsConstants() {
   }
 
   public static int MIN_BLOCKS_FOR_WRITE = 5;
@@ -63,7 +63,7 @@ public final class HdfsConstants {
   public static final int BYTES_IN_INTEGER = Integer.SIZE / Byte.SIZE;
 
   // SafeMode actions
-  public enum SafeModeAction {
+  public static enum SafeModeAction {
     SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET;
   }
 
