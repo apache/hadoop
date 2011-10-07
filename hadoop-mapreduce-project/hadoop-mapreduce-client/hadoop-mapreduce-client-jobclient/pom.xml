@@ -16,11 +16,12 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${hadoop-mapreduce.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-jobclient</name>
 
   <properties>
