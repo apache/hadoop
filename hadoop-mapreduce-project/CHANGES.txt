@@ -1537,6 +1537,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2783. Fixing RM web-UI to show no tracking-URL when AM
     crashes. (Eric Payne via vinodkv)
 
+    MAPREDUCE-3141. Fix the broken MRAppMaster to work over YARN in security
+    mode.(vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
