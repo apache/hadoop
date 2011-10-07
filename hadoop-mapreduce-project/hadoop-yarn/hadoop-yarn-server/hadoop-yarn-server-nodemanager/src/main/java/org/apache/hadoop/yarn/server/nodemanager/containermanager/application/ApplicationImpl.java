@@ -152,6 +152,7 @@ public class ApplicationImpl implements Application {
   /**
    * Notify services of new application.
    */
+  @SuppressWarnings("unchecked")
   static class AppInitTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
@@ -180,6 +181,7 @@ public class ApplicationImpl implements Application {
     }
   }
 
+  @SuppressWarnings("unchecked")
   static class AppInitDoneTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
@@ -199,6 +201,7 @@ public class ApplicationImpl implements Application {
     }
   }
 
+  @SuppressWarnings("unchecked")
   static class DuplicateAppInitTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
@@ -229,6 +232,7 @@ public class ApplicationImpl implements Application {
     }
   }
 
+  @SuppressWarnings("unchecked")
   void handleAppFinishWithContainersCleanedup() {
     // Delete Application level resources
     this.dispatcher.getEventHandler().handle(
@@ -238,6 +242,7 @@ public class ApplicationImpl implements Application {
     // TODO: Trigger the LogsManager
   }
 
+  @SuppressWarnings("unchecked")
   static class AppFinishTriggeredTransition
       implements
       MultipleArcTransition<ApplicationImpl, ApplicationEvent, ApplicationState> {
@@ -286,6 +291,7 @@ public class ApplicationImpl implements Application {
 
   }
 
+  @SuppressWarnings("unchecked")
   static class AppCompletelyDoneTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override

@@ -199,13 +199,18 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       throws IOException, InterruptedException {
     if (baseDirs == null || baseDirs.length == 0) {
       LOG.info("Deleting absolute path : " + subDir);
-      lfs.delete(subDir, true);
+      if (!lfs.delete(subDir, true)) {
+        //Maybe retry
+        LOG.warn("delete returned false for path: [" + subDir + "]");
+      }
       return;
     }
     for (Path baseDir : baseDirs) {
       Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
       LOG.info("Deleting path : " + del);
-      lfs.delete(del, true);
+      if (!lfs.delete(del, true)) {
+        LOG.warn("delete returned false for path: [" + del + "]");
+      }
     }
   }
 

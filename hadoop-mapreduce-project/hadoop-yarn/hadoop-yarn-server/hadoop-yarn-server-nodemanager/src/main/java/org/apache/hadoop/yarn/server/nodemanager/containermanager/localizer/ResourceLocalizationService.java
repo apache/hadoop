@@ -304,6 +304,7 @@ public class ResourceLocalizationService extends CompositeService
         retain.addResources(t);
         LOG.debug("Resource cleanup " + t.getUser() + ":" + retain);
       }
+      //TODO Check if appRsrcs should also be added to the retention set.
       break;
     case CLEANUP_CONTAINER_RESOURCES:
       ContainerLocalizationCleanupEvent rsrcCleanup =
@@ -336,6 +337,7 @@ public class ResourceLocalizationService extends CompositeService
         delService.delete(userName, containerDir, new Path[] {});
 
         // Delete the nmPrivate container-dir
+        
         Path sysDir = new Path(localDir, NM_PRIVATE_DIR);
         Path appSysDir = new Path(sysDir, appIDStr);
         Path containerSysDir = new Path(appSysDir, containerIDStr);
@@ -762,14 +764,16 @@ public class ResourceLocalizationService extends CompositeService
     @Override
     @SuppressWarnings("unchecked") // dispatcher not typed
     public void run() {
+      Path nmPrivateCTokensPath = null;
       try {
         // Use LocalDirAllocator to get nmPrivateDir
-        Path nmPrivateCTokensPath =
+        nmPrivateCTokensPath =
             localDirsSelector.getLocalPathForWrite(
                 NM_PRIVATE_DIR
                     + Path.SEPARATOR
                     + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
                         localizerId), getConfig());
+
         // 0) init queue, etc.
         // 1) write credentials to private dir
         DataOutputStream tokenOut = null;
@@ -811,6 +815,7 @@ public class ResourceLocalizationService extends CompositeService
         for (LocalizerResourceRequestEvent event : scheduled.values()) {
           event.getResource().unlock();
         }
+        delService.delete(null, nmPrivateCTokensPath, new Path[] {});
       }
     }
 

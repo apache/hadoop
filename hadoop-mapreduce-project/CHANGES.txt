@@ -1540,6 +1540,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3141. Fix the broken MRAppMaster to work over YARN in security
     mode.(vinodkv)
 
+    MAPREDUCE-2751. Modified NodeManager to stop leaving around local files
+    after application finishes. (Siddharth Seth via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

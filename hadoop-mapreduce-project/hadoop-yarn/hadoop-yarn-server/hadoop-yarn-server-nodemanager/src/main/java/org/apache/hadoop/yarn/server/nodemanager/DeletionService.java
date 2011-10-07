@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import static java.util.concurrent.TimeUnit.*;
@@ -125,6 +124,7 @@ public class DeletionService extends AbstractService {
         }
       } else {
         try {
+          LOG.debug("Deleting path: [" + subDir + "] as user: [" + user + "]");
           exec.deleteAsUser(user, subDir, baseDirs);
         } catch (IOException e) {
           LOG.warn("Failed to delete as user " + user, e);

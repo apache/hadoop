@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
@@ -37,6 +40,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
   static final Log LOG = LogFactory.getLog(LocalResourcesTrackerImpl.class);
+  private static final String RANDOM_DIR_REGEX = "-?\\d+";
+  private static final Pattern RANDOM_DIR_PATTERN = Pattern
+      .compile(RANDOM_DIR_REGEX);
 
   private final String user;
   private final Dispatcher dispatcher;
@@ -83,26 +89,42 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
   @Override
   public boolean remove(LocalizedResource rem, DeletionService delService) {
-    // current synchronization guaranteed by crude RLS event for cleanup
+ // current synchronization guaranteed by crude RLS event for cleanup
     LocalizedResource rsrc = localrsrc.get(rem.getRequest());
     if (null == rsrc) {
-      LOG.error("Attempt to remove absent resource: " + rem.getRequest() +
-          " from " + getUser());
+      LOG.error("Attempt to remove absent resource: " + rem.getRequest()
+          + " from " + getUser());
       return true;
     }
     if (rsrc.getRefCount() > 0
-        || ResourceState.DOWNLOADING.equals(rsrc.getState())
-        || rsrc != rem) {
+        || ResourceState.DOWNLOADING.equals(rsrc.getState()) || rsrc != rem) {
       // internal error
-      LOG.error("Attempt to remove resource: " + rsrc + " with non-zero refcount");
+      LOG.error("Attempt to remove resource: " + rsrc
+          + " with non-zero refcount");
       assert false;
       return false;
     }
-    localrsrc.remove(rem.getRequest());
     if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
-      delService.delete(getUser(), rsrc.getLocalPath());
+      delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
     }
     return true;
+  }
+
+
+  /**
+   * Returns the path upto the random directory component.
+   */
+  private Path getPathToDelete(Path localPath) {
+    Path delPath = localPath.getParent();
+    String name = delPath.getName();
+    Matcher matcher = RANDOM_DIR_PATTERN.matcher(name);
+    if (matcher.matches()) {
+      return delPath;
+    } else {
+      LOG.warn("Random directroy component did not match. " +
+      		"Deleting localized path only");
+      return localPath;
+    }
   }
 
   @Override
@@ -114,5 +136,4 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
   public Iterator<LocalizedResource> iterator() {
     return localrsrc.values().iterator();
   }
-
 }

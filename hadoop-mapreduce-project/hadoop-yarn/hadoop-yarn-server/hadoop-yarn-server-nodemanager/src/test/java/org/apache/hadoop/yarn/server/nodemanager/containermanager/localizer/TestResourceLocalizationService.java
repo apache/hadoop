@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import static org.mockito.Mockito.*;
 
@@ -355,7 +356,8 @@ public class TestResourceLocalizationService {
     dispatcher.register(ContainerEventType.class, containerBus);
 
     ContainerExecutor exec = mock(ContainerExecutor.class);
-    DeletionService delService = new DeletionService(exec);
+    DeletionService delServiceReal = new DeletionService(exec);
+    DeletionService delService = spy(delServiceReal);
     delService.init(null);
     delService.start();
 
@@ -407,12 +409,14 @@ public class TestResourceLocalizationService {
       rsrcs.put(LocalResourceVisibility.PRIVATE, Collections.singletonList(req));
       spyService.handle(new ContainerLocalizationRequestEvent(c, rsrcs));
       // Sigh. Thread init of private localizer not accessible
-      Thread.sleep(500);
+      Thread.sleep(1000);
       dispatcher.await();
       String appStr = ConverterUtils.toString(appId);
       String ctnrStr = c.getContainerID().toString();
-      verify(exec).startLocalizer(isA(Path.class), isA(InetSocketAddress.class),
-            eq("user0"), eq(appStr), eq(ctnrStr), isA(List.class));
+      ArgumentCaptor<Path> tokenPathCaptor = ArgumentCaptor.forClass(Path.class);
+      verify(exec).startLocalizer(tokenPathCaptor.capture(), isA(InetSocketAddress.class),
+        eq("user0"), eq(appStr), eq(ctnrStr), isA(List.class));
+      Path localizationTokenPath = tokenPathCaptor.getValue();
 
       // heartbeat from localizer
       LocalResourceStatus rsrcStat = mock(LocalResourceStatus.class);
@@ -454,10 +458,13 @@ public class TestResourceLocalizationService {
         };
       dispatcher.await();
       verify(containerBus).handle(argThat(matchesContainerLoc));
+      
+      // Verify deletion of localization token.
+      verify(delService).delete((String)isNull(), eq(localizationTokenPath));
     } finally {
-      delService.stop();
-      dispatcher.stop();
       spyService.stop();
+      dispatcher.stop();
+      delService.stop();
     }
   }
 
