@@ -65,7 +65,7 @@ public class TestFileCorruption extends TestCase {
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       // Now deliberately remove the blocks
-      File storageDir = MiniDFSCluster.getStorageDir(2, 0);
+      File storageDir = cluster.getInstanceStorageDir(2, 0);
       String bpid = cluster.getNamesystem().getBlockPoolId();
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
@@ -127,11 +127,11 @@ public class TestFileCorruption extends TestCase {
       
       // get the block
       final String bpid = cluster.getNamesystem().getBlockPoolId();
-      File storageDir = MiniDFSCluster.getStorageDir(0, 0);
+      File storageDir = cluster.getInstanceStorageDir(0, 0);
       File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       ExtendedBlock blk = getBlock(bpid, dataDir);
       if (blk == null) {
-        storageDir = MiniDFSCluster.getStorageDir(0, 1);
+        storageDir = cluster.getInstanceStorageDir(0, 1);
         dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         blk = getBlock(bpid, dataDir);
       }

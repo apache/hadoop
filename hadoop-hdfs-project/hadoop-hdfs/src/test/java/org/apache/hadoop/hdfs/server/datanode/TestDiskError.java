@@ -86,9 +86,9 @@ public class TestDiskError {
     cluster.waitActive();
     final int dnIndex = 0;
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = MiniDFSCluster.getStorageDir(dnIndex, 0);
+    File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
     File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = MiniDFSCluster.getStorageDir(dnIndex, 1);
+    storageDir = cluster.getInstanceStorageDir(dnIndex, 1);
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     try {
       // make the data directory of the first datanode to be readonly
@@ -155,9 +155,9 @@ public class TestDiskError {
 
     // the temporary block & meta files should be deleted
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = MiniDFSCluster.getStorageDir(sndNode, 0);
+    File storageDir = cluster.getInstanceStorageDir(sndNode, 0);
     File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = MiniDFSCluster.getStorageDir(sndNode, 1);
+    storageDir = cluster.getInstanceStorageDir(sndNode, 1);
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     while (dir1.listFiles().length != 0 || dir2.listFiles().length != 0) {
       Thread.sleep(100);
