@@ -151,9 +151,6 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
         throw new ServletException("Keytab does not exist: " + keytab);
       }
 
-      String nameRules = config.getProperty(NAME_RULES, "DEFAULT");
-      KerberosName.setRules(nameRules);
-
       Set<Principal> principals = new HashSet<Principal>();
       principals.add(new KerberosPrincipal(principal));
       Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
