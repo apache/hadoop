@@ -1067,7 +1067,7 @@ public abstract class FSUtils {
     // hole.  Need to fix.
     try {
       if (forceCreation) {
-        if (!fs.delete(tableInfoPath, false)) {
+        if (fs.exists(tableInfoPath) && !fs.delete(tableInfoPath, false)) {
           String errMsg = "Unable to delete " + tableInfoPath
               + " while forcefully writing the table descriptor.";
           LOG.error(errMsg);
