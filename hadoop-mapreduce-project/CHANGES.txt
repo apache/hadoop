@@ -1509,6 +1509,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2751. Modified NodeManager to stop leaving around local files
     after application finishes. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3033. Ensure Master interface pays attention to classic v/s yarn
+    frameworks. (Hitesh Shah via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

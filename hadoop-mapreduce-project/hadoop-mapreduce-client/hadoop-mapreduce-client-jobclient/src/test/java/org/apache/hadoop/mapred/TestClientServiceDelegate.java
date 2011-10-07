@@ -186,7 +186,7 @@ public class TestClientServiceDelegate {
   private ClientServiceDelegate getClientServiceDelegate(
       MRClientProtocol historyServerProxy, ResourceMgrDelegate rm) {
     Configuration conf = new YarnConfiguration();
-    conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     ClientServiceDelegate clientServiceDelegate = new ClientServiceDelegate(
         conf, rm, oldJobId, historyServerProxy);
     return clientServiceDelegate;
