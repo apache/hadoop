@@ -1531,6 +1531,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2913. Fixed TestMRJobs.testFailingMapper to assert the correct
     TaskCompletionEventStatus. (Jonathan Eagles via vinodkv)
 
+    MAPREDUCE-2794. [MR-279] Incorrect metrics value for AvailableGB per 
+    queue per user. (John George via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

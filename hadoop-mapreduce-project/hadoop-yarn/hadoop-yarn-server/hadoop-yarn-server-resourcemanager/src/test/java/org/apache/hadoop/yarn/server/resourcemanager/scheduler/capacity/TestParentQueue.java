@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
 import org.junit.After;
@@ -81,6 +82,13 @@ public class TestParentQueue {
     LOG.info("Setup top-level queues a and b");
   }
 
+  private SchedulerApp getMockApplication(int appId, String user) {
+    SchedulerApp application = mock(SchedulerApp.class);
+    doReturn(user).when(application).getUser();
+    doReturn(null).when(application).getHeadroom();
+    return application;
+  }
+
   private void stubQueueAllocation(final CSQueue queue, 
       final Resource clusterResource, final SchedulerNode node, 
       final int allocation) {
@@ -100,7 +108,8 @@ public class TestParentQueue {
           ((ParentQueue)queue).allocateResource(clusterResource, 
               allocatedResource);
         } else {
-          ((LeafQueue)queue).allocateResource(clusterResource, "", 
+          SchedulerApp app1 = getMockApplication(0, "");
+          ((LeafQueue)queue).allocateResource(clusterResource, app1, 
               allocatedResource);
         }
         
