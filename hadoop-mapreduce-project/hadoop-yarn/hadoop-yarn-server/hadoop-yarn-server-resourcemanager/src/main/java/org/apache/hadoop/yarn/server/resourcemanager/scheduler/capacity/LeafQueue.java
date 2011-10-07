@@ -740,7 +740,7 @@ public class LeafQueue implements CSQueue {
 
             // Book-keeping
             allocateResource(clusterResource, 
-                application.getUser(), assignedResource);
+                application, assignedResource);
             
             // Reset scheduling opportunities
             application.resetSchedulingOpportunities(priority);
@@ -810,7 +810,7 @@ public class LeafQueue implements CSQueue {
   private void setUserResourceLimit(SchedulerApp application, 
       Resource resourceLimit) {
     application.setAvailableResourceLimit(resourceLimit);
-    metrics.setAvailableResourcesToUser(application.getUser(), resourceLimit);
+    metrics.setAvailableResourcesToUser(application.getUser(), application.getHeadroom());
   }
   
   private int roundUp(int memory) {
@@ -1216,7 +1216,7 @@ public class LeafQueue implements CSQueue {
 
         // Book-keeping
         releaseResource(clusterResource, 
-            application.getUser(), container.getResource());
+            application, container.getResource());
 
         LOG.info("completedContainer" +
             " container=" + container +
@@ -1234,32 +1234,35 @@ public class LeafQueue implements CSQueue {
   }
 
   synchronized void allocateResource(Resource clusterResource, 
-      String userName, Resource resource) {
+      SchedulerApp application, Resource resource) {
     // Update queue metrics
     Resources.addTo(usedResources, resource);
     updateResource(clusterResource);
     ++numContainers;
 
     // Update user metrics
+    String userName = application.getUser();
     User user = getUser(userName);
     user.assignContainer(resource);
-    
+    metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
     LOG.info(getQueueName() + 
         " used=" + usedResources + " numContainers=" + numContainers + 
         " user=" + userName + " resources=" + user.getConsumedResources());
   }
 
   synchronized void releaseResource(Resource clusterResource, 
-      String userName, Resource resource) {
+      SchedulerApp application, Resource resource) {
     // Update queue metrics
     Resources.subtractFrom(usedResources, resource);
     updateResource(clusterResource);
     --numContainers;
 
     // Update user metrics
+    String userName = application.getUser();
     User user = getUser(userName);
     user.releaseContainer(resource);
-    
+    metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
+      
     LOG.info(getQueueName() + 
         " used=" + usedResources + " numContainers=" + numContainers + 
         " user=" + userName + " resources=" + user.getConsumedResources());
@@ -1282,9 +1285,9 @@ public class LeafQueue implements CSQueue {
         usedResources.getMemory() / (clusterResource.getMemory() * capacity));
     
     Resource resourceLimit = 
-      Resources.createResource((int)queueLimit);
+      Resources.createResource(roundUp((int)queueLimit));
     metrics.setAvailableResourcesToQueue(
-        Resources.subtractFrom(resourceLimit, usedResources));
+      Resources.subtractFrom(resourceLimit, usedResources));
   }
 
   @Override
@@ -1340,7 +1343,7 @@ public class LeafQueue implements CSQueue {
       SchedulerApp application, Container container) {
     // Careful! Locking order is important! 
     synchronized (this) {
-      allocateResource(clusterResource, application.getUser(), container.getResource());
+      allocateResource(clusterResource, application, container.getResource());
     }
     parent.recoverContainer(clusterResource, application, container);
 
