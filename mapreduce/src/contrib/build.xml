@@ -84,8 +84,17 @@
       <property name="hadoop.root" location="${root}/../../../"/>
       <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
       <delete file="${build.contrib.dir}/testsfailed"/>
-    <subant target="test" inheritAll="true">
+    <subant target="test">
       <property name="continueOnFailure" value="true"/>
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="hadoop-hdfs.version" value="${hadoop-hdfs.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
       <fileset dir="." includes="streaming/build.xml"/> 
       <fileset dir="." includes="fairscheduler/build.xml"/> 
       <fileset dir="." includes="capacity-scheduler/build.xml"/>  
@@ -107,7 +116,7 @@
       <property name="hadoop.root" location="${root}/../../../"/>
       <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
       <delete file="${build.contrib.dir}/testsfailed"/>
-      <subant target="test-system" inheritAll="true">
+      <subant target="test-system">
         <property name="continueOnFailure" value="true"/>
         <property name="version" value="${version}"/>
         <property name="hadoop-version" value="${hadoop-common.version}"/>

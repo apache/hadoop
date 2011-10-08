@@ -32,7 +32,7 @@
     <conf name="common" visibility="private" 
       extends="runtime"
       description="artifacts needed to compile/test the application"/>
-    <conf name="test" visibility="private" extends="runtime"/>
+    <conf name="test" visibility="private" extends="common"/>
   </configurations>
 
   <publications>
@@ -70,5 +70,9 @@
                 rev="${log4j.version}" conf="common->master"/>
     <dependency org="org.slf4j" name="slf4j-api" 
                 rev="${slf4j-api.version}" conf="common->master"/>
+    <!-- dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" 
+                conf="common->default"/ -->
+    <dependency org="org.slf4j" name="slf4j-log4j12" 
+                rev="${slf4j-log4j12.version}" conf="common->master"/>
   </dependencies>
 </ivy-module>

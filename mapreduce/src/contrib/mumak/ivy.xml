@@ -55,6 +55,14 @@
       name="log4j"
       rev="${log4j.version}"
       conf="common->master"/>
+    <dependency org="org.slf4j"
+      name="slf4j-api"
+      rev="${slf4j-api.version}" 
+      conf="common->default"/>
+    <dependency org="org.slf4j"
+      name="slf4j-log4j12" 
+      rev="${slf4j-log4j12.version}"
+      conf="common->master"/>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
       rev="${jackson.version}"
