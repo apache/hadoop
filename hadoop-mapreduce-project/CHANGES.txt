@@ -22,9 +22,6 @@ Trunk (unreleased changes)
     MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
     fair scheduler pools. (Ahmed Radwan via todd)
 
-    MAPREDUCE-3003. Publish Yarn and MapReduce artifacts to Maven snapshot 
-    repository. (tucu)
-
   BUG FIXES
 
     MAPREDUCE-2950. [Gridmix] TestUserResolve fails in trunk. 

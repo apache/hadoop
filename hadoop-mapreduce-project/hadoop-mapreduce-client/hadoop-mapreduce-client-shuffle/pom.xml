@@ -16,12 +16,11 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>${hadoop-mapreduce.version}</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-shuffle</name>
 
   <properties>

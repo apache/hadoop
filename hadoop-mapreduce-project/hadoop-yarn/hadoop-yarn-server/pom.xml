@@ -16,12 +16,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>0.24.0-SNAPSHOT</version>
+    <version>${yarn.version}</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server</artifactId>
-  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-yarn-server</name>
   <packaging>pom</packaging>
 
