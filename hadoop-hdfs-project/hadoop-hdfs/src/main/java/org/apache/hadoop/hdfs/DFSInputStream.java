@@ -388,6 +388,8 @@ public class DFSInputStream extends FSInputStream {
     DatanodeInfo chosenNode = null;
     int refetchToken = 1; // only need to get a new access token once
     
+    boolean connectFailedOnce = false;
+
     while (true) {
       //
       // Compute desired block
@@ -409,6 +411,10 @@ public class DFSInputStream extends FSInputStream {
             accessToken,
             offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
             buffersize, verifyChecksum, dfsClient.clientName);
+        if(connectFailedOnce) {
+          DFSClient.LOG.info("Successfully connected to " + targetAddr +
+                             " for block " + blk.getBlockId());
+        }
         return chosenNode;
       } catch (IOException ex) {
         if (ex instanceof InvalidBlockTokenException && refetchToken > 0) {
@@ -428,11 +434,9 @@ public class DFSInputStream extends FSInputStream {
           refetchToken--;
           fetchBlockAt(target);
         } else {
-          DFSClient.LOG.warn("Failed to connect to " + targetAddr
-              + ", add to deadNodes and continue " + ex);
-          if (DFSClient.LOG.isDebugEnabled()) {
-            DFSClient.LOG.debug("Connection failure ", ex);
-          }
+          connectFailedOnce = true;
+          DFSClient.LOG.warn("Failed to connect to " + targetAddr + " for block"
+            + ", add to deadNodes and continue. " + ex, ex);
           // Put chosen node into dead list, continue
           addToDeadNodes(chosenNode);
         }
