@@ -1032,6 +1032,8 @@ Release 0.23.0 - Unreleased
     HDFS-2412. Add backwards-compatibility layer for renamed FSConstants
                class (todd)
 
+    HDFS-2414. Fix TestDFSRollback to avoid spurious failures. (todd)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.

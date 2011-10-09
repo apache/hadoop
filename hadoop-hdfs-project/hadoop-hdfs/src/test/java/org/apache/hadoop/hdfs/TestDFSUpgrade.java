@@ -39,6 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 
 import static org.junit.Assert.*;
@@ -303,7 +304,10 @@ public class TestDFSUpgrade {
       log("NameNode upgrade with corrupt version file", numDirs);
       baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       for (File f : baseDirs) { 
-        UpgradeUtilities.corruptFile(new File (f,"VERSION")); 
+        UpgradeUtilities.corruptFile(
+            new File(f,"VERSION"),
+            "layoutVersion".getBytes(Charsets.UTF_8),
+            "xxxxxxxxxxxxx".getBytes(Charsets.UTF_8));
       }
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
