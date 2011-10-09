@@ -483,9 +483,32 @@ public class ZKUtil {
    */
   public static byte [] getDataAndWatch(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
+    return getDataInternal(zkw, znode, null, true);
+  }
+
+  /**
+   * Get the data at the specified znode and set a watch.
+   *
+   * Returns the data and sets a watch if the node exists.  Returns null and no
+   * watch is set if the node does not exist or there is an exception.
+   *
+   * @param zkw zk reference
+   * @param znode path of node
+   * @param stat object to populate the version of the znode
+   * @return data of the specified znode, or null
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static byte[] getDataAndWatch(ZooKeeperWatcher zkw, String znode,
+      Stat stat) throws KeeperException {
+    return getDataInternal(zkw, znode, stat, true);
+  }
+
+  private static byte[] getDataInternal(ZooKeeperWatcher zkw, String znode, Stat stat,
+      boolean watcherSet)
+      throws KeeperException {
     try {
-      byte [] data = zkw.getRecoverableZooKeeper().getData(znode, zkw, null);
-      logRetrievedMsg(zkw, znode, data, true);
+      byte [] data = zkw.getRecoverableZooKeeper().getData(znode, zkw, stat);
+      logRetrievedMsg(zkw, znode, data, watcherSet);
       return data;
     } catch (KeeperException.NoNodeException e) {
       LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +

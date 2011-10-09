@@ -26,7 +26,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -39,6 +41,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   private final HRegionInfo regionInfo;
   private final ServerName sn;
   private final OpenedPriority priority;
+  private final int expectedVersion;
 
   private enum OpenedPriority {
     ROOT (1),
@@ -56,11 +59,12 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   public OpenedRegionHandler(Server server,
       AssignmentManager assignmentManager, HRegionInfo regionInfo,
-      ServerName sn) {
+      ServerName sn, int expectedVersion) {
     super(server, EventType.RS_ZK_REGION_OPENED);
     this.assignmentManager = assignmentManager;
     this.regionInfo = regionInfo;
     this.sn = sn;
+    this.expectedVersion = expectedVersion;
     if(regionInfo.isRootRegion()) {
       priority = OpenedPriority.ROOT;
     } else if(regionInfo.isMetaRegion()) {
@@ -91,23 +95,21 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   @Override
   public void process() {
-    debugLog(regionInfo, "Handling OPENED event for " +
-      this.regionInfo.getRegionNameAsString() + " from " + this.sn.toString()
-      + "; deleting unassigned node");
-    // Remove region from in-memory transition and unassigned node from ZK
-    try {
-      ZKAssign.deleteOpenedNode(server.getZooKeeper(),
-          regionInfo.getEncodedName());
-    } catch (KeeperException e) {
-      server.abort("Error deleting OPENED node in ZK for transition ZK node ("
-        + regionInfo.getRegionNameAsString() + ")", e);
-    }
     // Code to defend against case where we get SPLIT before region open
     // processing completes; temporary till we make SPLITs go via zk -- 0.92.
-    if (this.assignmentManager.isRegionInTransition(regionInfo) != null) {
-      this.assignmentManager.regionOnline(regionInfo, this.sn);
-      debugLog(regionInfo, "region online: "
-        + regionInfo.getRegionNameAsString() + " on " + this.sn.toString());
+    RegionState regionState = this.assignmentManager.isRegionInTransition(regionInfo);
+    if (regionState != null
+        && regionState.getState().equals(RegionState.State.OPEN)) {
+      if (deleteOpenedNode(expectedVersion)) {
+        // Remove region from in-memory transition and unassigned node from ZK
+        this.assignmentManager.regionOnline(regionInfo, this.sn);
+        debugLog(regionInfo, "The master has opened the region " +
+            regionInfo.getRegionNameAsString() + " that was online on " +
+            this.sn.toString());
+      } else {
+        LOG.error("The znode of region " + regionInfo.getRegionNameAsString() +
+          " could not be deleted.");
+      }
     } else {
       LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
@@ -118,12 +120,29 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
           "Opened region " + regionInfo.getRegionNameAsString() + " but "
           + "this table is disabled, triggering close of region");
       assignmentManager.unassign(regionInfo);
-    } else {
-      debugLog(regionInfo, "Opened region " + regionInfo.getRegionNameAsString() +
-          " on " + this.sn.toString());
     }
   }
-  
+
+  private boolean deleteOpenedNode(int expectedVersion) {
+    debugLog(regionInfo, "Handling OPENED event for " +
+      this.regionInfo.getRegionNameAsString() + " from " + this.sn.toString() +
+      "; deleting unassigned node");
+    try {
+      // delete the opened znode only if the version matches.
+      return ZKAssign.deleteNode(server.getZooKeeper(),
+          regionInfo.getEncodedName(), EventType.RS_ZK_REGION_OPENED, expectedVersion);
+    } catch(KeeperException.NoNodeException e){
+      // Getting no node exception here means that already the region has been opened.
+      LOG.warn("The znode of the region " + regionInfo.getRegionNameAsString() +
+        " would have already been deleted");
+      return false;
+    } catch (KeeperException e) {
+      server.abort("Error deleting OPENED node in ZK (" +
+        regionInfo.getRegionNameAsString() + ")", e);
+    }
+    return false;
+  }
+
   private void debugLog(HRegionInfo region, String string) {
     if (region.isMetaTable() || region.isRootRegion()) {
       LOG.info(string);

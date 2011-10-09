@@ -327,6 +327,7 @@ Release 0.92.0 - Unreleased
    HBASE-4402  Retaining locality after restart broken
    HBASE-4482  Race Condition Concerning Eviction in SlabCache (Li Pi)
    HBASE-4547  TestAdmin failing in 0.92 because .tableinfo not found
+   HBASE-4540  OpenedRegionHandler is not enforcing atomicity of the operation it is performing (Ram)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

@@ -437,9 +437,9 @@ public class ZKAssign {
    *
    * <p>Returns false if the node was not in the proper state but did exist.
    *
-   * <p>This method is used during table disables when a region finishes
-   * successfully closing.  This is the Master acknowledging completion
-   * of the specified regions transition to being closed.
+   * <p>This method is used when a region finishes opening/closing.
+   * The Master acknowledges completion
+   * of the specified regions transition to being closed/opened.
    *
    * @param zkw zk reference
    * @param regionName region to be deleted from zk
@@ -449,6 +449,36 @@ public class ZKAssign {
    */
   public static boolean deleteNode(ZooKeeperWatcher zkw, String regionName,
       EventType expectedState)
+  throws KeeperException, KeeperException.NoNodeException {
+    return deleteNode(zkw, regionName, expectedState, -1);
+  }
+
+  /**
+   * Deletes an existing unassigned node that is in the specified state for the
+   * specified region.
+   *
+   * <p>If a node does not already exist for this region, a
+   * {@link NoNodeException} will be thrown.
+   *
+   * <p>No watcher is set whether this succeeds or not.
+   *
+   * <p>Returns false if the node was not in the proper state but did exist.
+   *
+   * <p>This method is used when a region finishes opening/closing.
+   * The Master acknowledges completion
+   * of the specified regions transition to being closed/opened.
+   *
+   * @param zkw zk reference
+   * @param regionName region to be deleted from zk
+   * @param expectedState state region must be in for delete to complete
+   * @param expectedVersion of the znode that is to be deleted.
+   *        If expectedVersion need not be compared while deleting the znode
+   *        pass -1
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NoNodeException if node does not exist
+   */
+  public static boolean deleteNode(ZooKeeperWatcher zkw, String regionName,
+      EventType expectedState, int expectedVersion)
   throws KeeperException, KeeperException.NoNodeException {
     LOG.debug(zkw.prefix("Deleting existing unassigned " +
       "node for " + regionName + " that is in expected state " + expectedState));
@@ -465,6 +495,12 @@ public class ZKAssign {
       LOG.warn(zkw.prefix("Attempting to delete unassigned " +
         "node " + regionName + " in " + expectedState +
         " state but node is in " + data.getEventType() + " state"));
+      return false;
+    }
+    if (expectedVersion != -1
+        && stat.getVersion() != expectedVersion) {
+      LOG.warn("The node we are trying to delete is not the expected one. " +
+        "Got a version mismatch");
       return false;
     }
     if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
@@ -814,6 +850,32 @@ public class ZKAssign {
     String node = pathOrRegionName.startsWith("/") ?
         pathOrRegionName : getNodeName(zkw, pathOrRegionName);
     byte [] data = ZKUtil.getDataAndWatch(zkw, node);
+    if(data == null) {
+      return null;
+    }
+    return RegionTransitionData.fromBytes(data);
+  }
+
+  /**
+   * Gets the current data in the unassigned node for the specified region name
+   * or fully-qualified path.
+   *
+   * <p>Returns null if the region does not currently have a node.
+   *
+   * <p>Sets a watch on the node if the node exists.
+   *
+   * @param zkw zk reference
+   * @param pathOrRegionName fully-specified path or region name
+   * @param stat object to populate the version.
+   * @return data for the unassigned node
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static RegionTransitionData getDataAndWatch(ZooKeeperWatcher zkw,
+      String pathOrRegionName, Stat stat)
+  throws KeeperException {
+    String node = pathOrRegionName.startsWith("/") ?
+        pathOrRegionName : getNodeName(zkw, pathOrRegionName);
+    byte [] data = ZKUtil.getDataAndWatch(zkw, node, stat);
     if(data == null) {
       return null;
     }
