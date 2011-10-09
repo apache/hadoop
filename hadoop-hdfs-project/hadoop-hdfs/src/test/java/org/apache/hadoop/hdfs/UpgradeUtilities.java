@@ -24,10 +24,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.RandomAccessFile;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.Collections;
 import java.util.zip.CRC32;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +50,10 @@ import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+
+import com.google.common.base.Preconditions;
+import com.google.common.io.Files;
+import com.google.common.primitives.Bytes;
 
 /**
  * This class defines a number of static helper methods used by the
@@ -483,20 +485,26 @@ public class UpgradeUtilities {
    * @throws IllegalArgumentException if the given file is not a file
    * @throws IOException if an IOException occurs while reading or writing the file
    */
-  public static void corruptFile(File file) throws IOException {
+  public static void corruptFile(File file,
+      byte[] stringToCorrupt,
+      byte[] replacement) throws IOException {
+    Preconditions.checkArgument(replacement.length == stringToCorrupt.length);
     if (!file.isFile()) {
       throw new IllegalArgumentException(
-                                         "Given argument is not a file:" + file);
+          "Given argument is not a file:" + file);
     }
-    RandomAccessFile raf = new RandomAccessFile(file,"rws");
-    Random random = new Random();
-    for (long i = 0; i < raf.length(); i++) {
-      raf.seek(i);
-      if (random.nextBoolean()) {
-        raf.writeByte(random.nextInt());
-      }
+    byte[] data = Files.toByteArray(file);
+    int index = Bytes.indexOf(data, stringToCorrupt);
+    if (index == -1) {
+      throw new IOException(
+          "File " + file + " does not contain string " +
+          new String(stringToCorrupt));
     }
-    raf.close();
+
+    for (int i = 0; i < stringToCorrupt.length; i++) {
+      data[index + i] = replacement[i];
+    }
+    Files.write(data, file);
   }
   
   /**
