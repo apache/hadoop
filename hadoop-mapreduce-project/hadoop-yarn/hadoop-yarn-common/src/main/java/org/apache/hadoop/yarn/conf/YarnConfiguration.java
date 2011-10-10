@@ -146,21 +146,10 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "admin.client.thread-count";
   public static final int DEFAULT_RM_ADMIN_CLIENT_THREAD_COUNT = 1;
   
-  /** How often should the RM check that the AM is still alive.*/
-  public static final String RM_AM_LIVENESS_MONITOR_INTERVAL_MS =
-    RM_PREFIX + "amliveliness-monitor.interval-ms";
-  public static final int DEFAULT_RM_AM_LIVENESS_MONITOR_INTERVAL_MS = 1000;
-  
   /** The maximum number of application master retries.*/
   public static final String RM_AM_MAX_RETRIES = 
     RM_PREFIX + "am.max-retries";
   public static final int DEFAULT_RM_AM_MAX_RETRIES = 1;
-  
-  /** How often to check that containers are still alive. */
-  public static final String RM_CONTAINER_LIVENESS_MONITOR_INTERVAL_MS =
-    RM_PREFIX + "container.liveness-monitor.interval-ms";
-  public static final int DEFAULT_RM_CONTAINER_LIVENESS_MONITOR_INTERVAL_MS = 
-    600000;
   
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 
@@ -171,10 +160,10 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "nm.liveness-monitor.expiry-interval-ms";
   public static final int DEFAULT_RM_NM_EXPIRY_INTERVAL_MS = 600000;
   
-  /** How often to check that node managers are still alive.*/
-  public static final String RM_NM_LIVENESS_MONITOR_INTERVAL_MS =
-    RM_PREFIX + "nm.liveness-monitor.interval-ms";
-  public static final int DEFAULT_RM_NM_LIVENESS_MONITOR_INTERVAL_MS = 1000;
+  /** How long to wait until a container is considered dead.*/
+  public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
+    RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
+  public static final int DEFAULT_RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 600000;
   
   /** Path to file with nodes to include.*/
   public static final String RM_NODES_INCLUDE_FILE_PATH = 
