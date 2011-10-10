@@ -253,7 +253,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
   private HdfsFileStatus getHdfsFileStatus(Path f) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETFILESTATUS;
     final Map<String, Object> json = run(op, f);
-    final HdfsFileStatus status = JsonUtil.toFileStatus(json);
+    final HdfsFileStatus status = JsonUtil.toFileStatus(json, true);
     if (status == null) {
       throw new FileNotFoundException("File does not exist: " + f);
     }
@@ -405,14 +405,14 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
     final Map<?, ?> json  = run(op, f);
     final Object[] array = (Object[])json.get(
-        HdfsFileStatus[].class.getSimpleName());
+        HdfsFileStatus.class.getSimpleName());
 
     //convert FileStatus
     final FileStatus[] statuses = new FileStatus[array.length];
     for(int i = 0; i < array.length; i++) {
       @SuppressWarnings("unchecked")
       final Map<String, Object> m = (Map<String, Object>)array[i];
-      statuses[i] = makeQualified(JsonUtil.toFileStatus(m), f);
+      statuses[i] = makeQualified(JsonUtil.toFileStatus(m, false), f);
     }
     return statuses;
   }

@@ -86,11 +86,11 @@ Trunk (unreleased changes)
     there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
 
     HDFS-2330. In NNStorage and FSImagePreTransactionalStorageInspector,
-    IOExceptions of stream closures can mask root exceptions.  (Uma Maheswara
+    IOExceptions of stream closures can mask root exceptions. (Uma Maheswara
     Rao G via szetszwo)
 
     HDFS-46.   Change default namespace quota of root directory from
-    Integer.MAX_VALUE to Long.MAX_VALUE.  (Uma Maheswara Rao G via szetszwo)
+    Integer.MAX_VALUE to Long.MAX_VALUE. (Uma Maheswara Rao G via szetszwo)
 
     HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
     (szetszwo)
@@ -104,9 +104,11 @@ Trunk (unreleased changes)
     not include multiple methods of the same name. (cutting)
 
     HDFS-2403. NamenodeWebHdfsMethods.generateDelegationToken(..) does not use
-    the renewer parameter.  (szetszwo)
+    the renewer parameter. (szetszwo)
 
     HDFS-2409. _HOST in dfs.web.authentication.kerberos.principal. (jitendra)
+
+    HDFS-2404. webhdfs liststatus json response is not correct. (suresh)
 
 Release 0.23.0 - Unreleased
 
