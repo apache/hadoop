@@ -225,6 +225,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-3039. Upgrade to Avro 1.5.3. (Joep Rottinghuis via shv)
 
+    MAPREDUCE-3138. Add a utility to help applications bridge changes in 
+    Context Objects APIs due to MAPREDUCE-954. (omalley via acmurthy)
+
   OPTIMIZATIONS
     
     MAPREDUCE-1354. Enhancements to JobTracker for better performance and
