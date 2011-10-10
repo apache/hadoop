@@ -1546,6 +1546,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2802. Ensure JobHistory filenames have jobId. (Jonathan Eagles
     via acmurthy) 
 
+    MAPREDUCE-2876. Use a different config for ContainerAllocationExpirer.
+    (Anupam Seth via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
