@@ -1549,6 +1549,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2876. Use a different config for ContainerAllocationExpirer.
     (Anupam Seth via acmurthy) 
 
+    MAPREDUCE-3153. Fix TestFileOutputCommitter which was broken by
+    MAPREDUCE-2702. (mahadev via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
