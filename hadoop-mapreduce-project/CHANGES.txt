@@ -1518,6 +1518,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3153. Fix TestFileOutputCommitter which was broken by
     MAPREDUCE-2702. (mahadev via acmurthy) 
 
+    MAPREDUCE-3123. Fix NM to quote symlink names to escape special
+    characters. (Hitesh Shah via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

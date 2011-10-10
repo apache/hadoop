@@ -268,7 +268,7 @@ public class ContainerLaunch implements Callable<Integer> {
       if (dst.toUri().getPath().indexOf('/') != -1) {
         line("mkdir -p ", dst.getParent().toString());
       }
-      line("ln -sf ", src.toUri().getPath(), " ", dst.toString());
+      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
       return this;
     }
   
@@ -349,8 +349,8 @@ public class ContainerLaunch implements Callable<Integer> {
     putEnvIfAbsent(environment, Environment.YARN_HOME.name());
 
   }
-  
-  private static void writeLaunchEnv(OutputStream out,
+    
+  static void writeLaunchEnv(OutputStream out,
       Map<String,String> environment, Map<Path,String> resources,
       List<String> command)
       throws IOException {
