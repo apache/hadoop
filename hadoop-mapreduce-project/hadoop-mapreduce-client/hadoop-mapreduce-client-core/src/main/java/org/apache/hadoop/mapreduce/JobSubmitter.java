@@ -322,6 +322,9 @@ class JobSubmitter {
   JobStatus submitJobInternal(Job job, Cluster cluster) 
   throws ClassNotFoundException, InterruptedException, IOException {
 
+    //validate the jobs output specs 
+    checkSpecs(job);
+    
     Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, 
                                                      job.getConfiguration());
     //configure the command line options correctly on the submitting dfs
@@ -350,8 +353,6 @@ class JobSubmitter {
       copyAndConfigureFiles(job, submitJobDir);
       Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
 
-      checkSpecs(job);
-      
       // Create the splits for the job
       LOG.debug("Creating splits at " + jtFs.makeQualified(submitJobDir));
       int maps = writeSplits(job, submitJobDir);
