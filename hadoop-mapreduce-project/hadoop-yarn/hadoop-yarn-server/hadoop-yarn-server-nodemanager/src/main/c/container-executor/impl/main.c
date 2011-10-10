@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
 
   if (conf_file == NULL) {
     fprintf(LOGFILE, "Configuration file %s not found.\n", orig_conf_file);
+    fflush(LOGFILE);
     return INVALID_CONFIG_FILE;
   }
   if (check_configuration_permissions(conf_file) != 0) {
@@ -89,12 +90,14 @@ int main(int argc, char **argv) {
   char *tt_group = get_value(TT_GROUP_KEY);
   if (tt_group == NULL) {
     fprintf(LOGFILE, "Can't get configured value for %s.\n", TT_GROUP_KEY);
+    fflush(LOGFILE);
     exit(INVALID_CONFIG_FILE);
   }
   struct group *group_info = getgrnam(tt_group);
   if (group_info == NULL) {
     fprintf(LOGFILE, "Can't get group information for %s - %s.\n", tt_group,
             strerror(errno));
+    fflush(LOGFILE);
     exit(INVALID_CONFIG_FILE);
   }
   set_tasktracker_uid(getuid(), group_info->gr_gid);
@@ -105,19 +108,21 @@ int main(int argc, char **argv) {
 
   if (check_taskcontroller_permissions(executable_file) != 0) {
     fprintf(LOGFILE, "Invalid permissions on container-executor binary.\n");
+    fflush(LOGFILE);
     return INVALID_TASKCONTROLLER_PERMISSIONS;
   }
 
   //checks done for user name
   if (argv[optind] == NULL) {
     fprintf(LOGFILE, "Invalid user name \n");
+    fflush(LOGFILE);
     return INVALID_USER_NAME;
   }
   int ret = set_user(argv[optind]);
   if (ret != 0) {
     return ret;
   }
-
+ 
   optind = optind + 1;
   command = atoi(argv[optind++]);
 

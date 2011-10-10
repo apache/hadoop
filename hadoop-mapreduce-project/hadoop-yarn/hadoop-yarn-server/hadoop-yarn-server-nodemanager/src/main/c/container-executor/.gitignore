@@ -16,3 +16,6 @@ libtool
 missing
 container-executor
 test/.deps/
+test-task-controller
+test/.dirstamp
+test/test-task-controller.o

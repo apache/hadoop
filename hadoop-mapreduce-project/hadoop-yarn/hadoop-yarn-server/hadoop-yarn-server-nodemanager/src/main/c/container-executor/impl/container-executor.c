@@ -425,6 +425,7 @@ static struct passwd* get_user_info(const char* user) {
 struct passwd* check_user(const char *user) {
   if (strcmp(user, "root") == 0) {
     fprintf(LOGFILE, "Running as root is not allowed\n");
+    fflush(LOGFILE);
     return NULL;
   }
   char *min_uid_str = get_value(MIN_USERID_KEY);
@@ -435,6 +436,7 @@ struct passwd* check_user(const char *user) {
     if (min_uid_str == end_ptr || *end_ptr != '\0') {
       fprintf(LOGFILE, "Illegal value of %s for %s in configuration\n", 
 	      min_uid_str, MIN_USERID_KEY);
+      fflush(LOGFILE);
       free(min_uid_str);
       return NULL;
     }
@@ -443,11 +445,13 @@ struct passwd* check_user(const char *user) {
   struct passwd *user_info = get_user_info(user);
   if (NULL == user_info) {
     fprintf(LOGFILE, "User %s not found\n", user);
+    fflush(LOGFILE);
     return NULL;
   }
   if (user_info->pw_uid < min_uid) {
     fprintf(LOGFILE, "Requested user %s has id %d, which is below the "
 	    "minimum allowed %d\n", user, user_info->pw_uid, min_uid);
+    fflush(LOGFILE);
     free(user_info);
     return NULL;
   }
@@ -516,8 +520,13 @@ int create_directory_for_user(const char* path) {
   mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP | S_ISGID;
   uid_t user = geteuid();
   gid_t group = getegid();
+  uid_t root = 0;
   int ret = 0;
-  ret = change_effective_user(0, tt_gid);
+
+  if(getuid() == root) {
+    ret = change_effective_user(root, tt_gid);
+  }
+
   if (ret == 0) {
     if (0 == mkdir(path, permissions) || EEXIST == errno) {
       // need to reassert the group sticky bit
@@ -537,6 +546,8 @@ int create_directory_for_user(const char* path) {
     }
   }
   if (change_effective_user(user, group) != 0) {
+    fprintf(LOGFILE, "Failed to change user to %i - %i\n", user, group);
+ 
     ret = -1;
   }
   return ret;

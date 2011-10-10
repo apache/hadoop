@@ -169,11 +169,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     launchCommandObjs.put(containerId, shExec);
     // DEBUG
     LOG.info("launchContainer: " + Arrays.toString(commandArray));
-    String output = shExec.getOutput();
     try {
       shExec.execute();
       if (LOG.isDebugEnabled()) {
-        logOutput(output);
+        logOutput(shExec.getOutput());
       }
     } catch (ExitCodeException e) {
       int exitCode = shExec.getExitCode();
@@ -183,9 +182,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       // container-executor's output
       if (exitCode != 143 && exitCode != 137) {
         LOG.warn("Exception from container-launch : ", e);
-        logOutput(output);
+        logOutput(shExec.getOutput());
         String diagnostics = "Exception from container-launch: \n"
-            + StringUtils.stringifyException(e) + "\n" + output;
+            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
       } else {
@@ -198,7 +197,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Output from LinuxContainerExecutor's launchContainer follows:");
-      logOutput(output);
+      logOutput(shExec.getOutput());
     }
     return 0;
   }

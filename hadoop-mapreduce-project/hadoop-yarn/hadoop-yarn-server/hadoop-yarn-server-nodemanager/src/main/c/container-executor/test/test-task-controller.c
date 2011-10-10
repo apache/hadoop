@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 #include "configuration.h"
-#include "task-controller.h"
+#include "container-executor.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -95,6 +95,12 @@ int write_config_file(char *file_name) {
     fprintf(file, "," TEST_ROOT "/local-%d", i);
   }
   fprintf(file, "\n");
+  fprintf(file, "mapreduce.cluster.local.dir=" TEST_ROOT "/local-1");
+  for(i=2; i < 5; ++i) {
+    fprintf(file, "," TEST_ROOT "/local-%d", i);
+  }
+  fprintf(file, "\n");
+ 
   fprintf(file, "hadoop.log.dir=" TEST_ROOT "/logs\n");
   fclose(file);
   return 0;
@@ -110,7 +116,7 @@ void create_tt_roots() {
       exit(1);
     }
     char buffer[100000];
-    sprintf(buffer, "%s/taskTracker", *tt_root);
+    sprintf(buffer, "%s/usercache", *tt_root);
     if (mkdir(buffer, 0755) != 0) {
       printf("FAIL: Can't create directory %s - %s\n", buffer,
 	     strerror(errno));
@@ -122,19 +128,20 @@ void create_tt_roots() {
 
 void test_get_user_directory() {
   char *user_dir = get_user_directory("/tmp", "user");
-  char *expected = "/tmp/taskTracker/user";
+  char *expected = "/tmp/usercache/user";
   if (strcmp(user_dir, expected) != 0) {
-    printf("test_get_user_directory expected %s got %s\n", user_dir, expected);
+    printf("test_get_user_directory expected %s got %s\n", expected, user_dir);
     exit(1);
   }
   free(user_dir);
 }
 
 void test_get_job_directory() {
-  char *expected = "/tmp/taskTracker/user/appcache/job_200906101234_0001";
+  char *expected = "/tmp/usercache/user/appcache/job_200906101234_0001";
   char *job_dir = (char *) get_job_directory("/tmp", "user",
       "job_200906101234_0001");
   if (strcmp(job_dir, expected) != 0) {
+    printf("test_get_job_directory expected %s got %s\n", expected, job_dir);
     exit(1);
   }
   free(job_dir);
@@ -143,17 +150,18 @@ void test_get_job_directory() {
 void test_get_attempt_directory() {
   char *attempt_dir = get_attempt_work_directory("/tmp", "owen", "job_1",
 						 "attempt_1");
-  char *expected = "/tmp/taskTracker/owen/appcache/job_1/attempt_1/work";
+  char *expected = "/tmp/usercache/owen/appcache/job_1/attempt_1";
   if (strcmp(attempt_dir, expected) != 0) {
     printf("Fail get_attempt_work_directory got %s expected %s\n",
 	   attempt_dir, expected);
+    exit(1);
   }
   free(attempt_dir);
 }
 
 void test_get_task_launcher_file() {
-  char *expected_file = ("/tmp/taskTracker/user/appcache/job_200906101234_0001"
-			 "/taskjvm.sh");
+  char *expected_file = ("/tmp/usercache/user/appcache/job_200906101234_0001"
+			 "/task.sh");
   char *job_dir = get_job_directory("/tmp", "user",
                                     "job_200906101234_0001");
   char *task_file =  get_task_launcher_file(job_dir);
@@ -168,19 +176,10 @@ void test_get_task_launcher_file() {
 
 void test_get_job_log_dir() {
   char *expected = TEST_ROOT "/logs/userlogs/job_200906101234_0001";
-  char *logdir = get_job_log_directory("job_200906101234_0001");
+  char *logdir = get_job_log_directory(TEST_ROOT "/logs/userlogs","job_200906101234_0001");
   if (strcmp(logdir, expected) != 0) {
     printf("Fail get_job_log_dir got %s expected %s\n", logdir, expected);
     exit(1);
-  }
-  free(logdir);
-}
-
-void test_get_task_log_dir() {
-  char *logdir = get_job_log_directory("job_5/task_4");
-  char *expected = TEST_ROOT "/logs/userlogs/job_5/task_4";
-  if (strcmp(logdir, expected) != 0) {
-    printf("FAIL: get_task_log_dir expected %s got %s\n", logdir, expected);
   }
   free(logdir);
 }
@@ -221,7 +220,7 @@ void test_check_configuration_permissions() {
 
 void test_delete_task() {
   if (initialize_user(username)) {
-    printf("FAIL: failed to initialized user %s\n", username);
+    printf("FAIL: failed to initialize user %s\n", username);
     exit(1);
   }
   char* job_dir = get_job_directory(TEST_ROOT "/local-2", username, "job_1");
@@ -254,7 +253,8 @@ void test_delete_task() {
   run(buffer);
 
   // delete task directory
-  int ret = delete_as_user(username, "appcache/job_1/task_1");
+  char * dirs[] = {job_dir, 0};
+  int ret = delete_as_user(username, "task_1" , dirs);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
     exit(1);
@@ -315,7 +315,7 @@ void test_delete_job() {
   run(buffer);
 
   // delete task directory
-  int ret = delete_as_user(username, "appcache/job_2");
+  int ret = delete_as_user(username, job_dir, NULL);
   if (ret != 0) {
     printf("FAIL: return code from delete_as_user is %d\n", ret);
     exit(1);
@@ -349,12 +349,12 @@ void test_delete_user() {
     exit(1);
   }
   char buffer[100000];
-  sprintf(buffer, "%s/local-1/taskTracker/%s", TEST_ROOT, username);
+  sprintf(buffer, "%s/local-1/usercache/%s", TEST_ROOT, username);
   if (access(buffer, R_OK) != 0) {
     printf("FAIL: directory missing before test\n");
     exit(1);
   }
-  if (delete_as_user(username, "") != 0) {
+  if (delete_as_user(username, buffer, NULL) != 0) {
     exit(1);
   }
   if (access(buffer, R_OK) == 0) {
@@ -366,50 +366,6 @@ void test_delete_user() {
     exit(1);
   }
   free(job_dir);
-}
-
-void test_delete_log_directory() {
-  printf("\nTesting delete_log_directory\n");
-  char *job_log_dir = get_job_log_directory("job_1");
-  if (job_log_dir == NULL) {
-    exit(1);
-  }
-  if (create_directory_for_user(job_log_dir) != 0) {
-    exit(1);
-  }
-  free(job_log_dir);
-  char *task_log_dir = get_job_log_directory("job_1/task_2");
-  if (task_log_dir == NULL) {
-    exit(1);
-  }
-  if (mkdirs(task_log_dir, 0700) != 0) {
-    exit(1);
-  }
-  if (access(TEST_ROOT "/logs/userlogs/job_1/task_2", R_OK) != 0) {
-    printf("FAIL: can't access task directory - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (delete_log_directory("job_1/task_2") != 0) {
-    printf("FAIL: can't delete task directory\n");
-    exit(1);
-  }
-  if (access(TEST_ROOT "/logs/userlogs/job_1/task_2", R_OK) == 0) {
-    printf("FAIL: task directory not deleted\n");
-    exit(1);
-  }
-  if (access(TEST_ROOT "/logs/userlogs/job_1", R_OK) != 0) {
-    printf("FAIL: job directory not deleted - %s\n", strerror(errno));
-    exit(1);
-  }
-  if (delete_log_directory("job_1") != 0) {
-    printf("FAIL: can't delete task directory\n");
-    exit(1);
-  }
-  if (access(TEST_ROOT "/logs/userlogs/job_1", R_OK) == 0) {
-    printf("FAIL: job directory not deleted\n");
-    exit(1);
-  }
-  free(task_log_dir);
 }
 
 void run_test_in_child(const char* test_name, void (*func)()) {
@@ -558,8 +514,7 @@ void test_init_job() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_job(username, "job_4", TEST_ROOT "/creds.txt", 
-                       TEST_ROOT "/job.xml", final_pgm) != 0) {
+    if (initialize_job(username, "job_4", TEST_ROOT "/creds.txt", final_pgm) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -593,7 +548,7 @@ void test_init_job() {
     exit(1);
   }
   free(job_dir);
-  job_dir = get_job_log_directory("job_4");
+  job_dir = get_job_log_directory("logs","job_4");
   if (access(job_dir, R_OK) != 0) {
     printf("FAIL: failed to create job log directory %s\n", job_dir);
     exit(1);
@@ -607,6 +562,20 @@ void test_run_task() {
     printf("FAIL: seteuid to root failed - %s\n", strerror(errno));
     exit(1);
   }
+  FILE* creds = fopen(TEST_ROOT "/creds.txt", "w");
+  if (creds == NULL) {
+    printf("FAIL: failed to create credentials file - %s\n", strerror(errno));
+    exit(1);
+  }
+  if (fprintf(creds, "secret key\n") < 0) {
+    printf("FAIL: fprintf failed - %s\n", strerror(errno));
+    exit(1);
+  }
+  if (fclose(creds) != 0) {
+    printf("FAIL: fclose failed - %s\n", strerror(errno));
+    exit(1);
+  }
+
   const char* script_name = TEST_ROOT "/task-script";
   FILE* script = fopen(script_name, "w");
   if (script == NULL) {
@@ -638,7 +607,7 @@ void test_run_task() {
     exit(1);
   } else if (child == 0) {
     if (run_task_as_user(username, "job_4", "task_1", 
-                         task_dir, script_name) != 0) {
+                         task_dir, script_name, TEST_ROOT "creds.txt") != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -666,7 +635,7 @@ void test_run_task() {
     exit(1);
   }
   free(task_dir);
-  task_dir = get_job_log_directory("job_4/task_1");
+  task_dir = get_job_log_directory("logs", "job_4/task_1");
   if (access(task_dir, R_OK) != 0) {
     printf("FAIL: failed to create job log directory %s\n", task_dir);
     exit(1);
@@ -723,9 +692,6 @@ int main(int argc, char **argv) {
 
   test_check_configuration_permissions();
 
-  printf("\nTesting get_task_log_dir()\n");
-  test_get_task_log_dir();
-
   printf("\nTesting delete_task()\n");
   test_delete_task();
 
@@ -735,8 +701,6 @@ int main(int argc, char **argv) {
   test_delete_user();
 
   test_check_user();
-
-  test_delete_log_directory();
 
   // the tests that change user need to be run in a subshell, so that
   // when they change user they don't give up our privs

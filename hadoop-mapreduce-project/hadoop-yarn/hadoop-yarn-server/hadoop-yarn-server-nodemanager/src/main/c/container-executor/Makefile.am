@@ -18,9 +18,9 @@ AM_CFLAGS=-I$(srcdir)/impl -Wall -g -Werror
 
 # Define the programs that need to be built
 bin_PROGRAMS = container-executor
-#check_PROGRAMS = test-task-controller
+check_PROGRAMS = test-task-controller
 
-#TESTS = test-task-controller
+TESTS = test-task-controller
 
 # Define the sources for the common files
 common_SOURCES = impl/configuration.c impl/container-executor.c
@@ -29,4 +29,4 @@ common_SOURCES = impl/configuration.c impl/container-executor.c
 container_executor_SOURCES = $(common_SOURCES) impl/main.c
 
 # Define the sources for the test executable
-#test_task_controller_SOURCES = $(common_SOURCES) test/test-task-controller.c
+test_task_controller_SOURCES = $(common_SOURCES) test/test-task-controller.c

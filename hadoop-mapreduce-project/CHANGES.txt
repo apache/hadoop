@@ -286,6 +286,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2726. Added job-file to the AM and JobHistoryServer web
     interfaces. (Jeffrey Naisbitt via vinodkv)
 
+    MAPREDUCE-2880. Improve classpath-construction for mapreduce AM and
+    containers. (Arun C Murthy via vinodkv)
+
     MAPREDUCE-3055. Simplified ApplicationAttemptId passing to
     ApplicationMaster via environment variable. (vinodkv)
 
@@ -316,8 +319,11 @@ Release 0.23.0 - Unreleased
     the outputs of tasks from a crashed job so as to support MR Application
     Master recovery. (Sharad Agarwal and Arun C Murthy via vinodkv)
 
-    MAPREDUCE-2738. Added the missing cluster level statisticss on the RM web
+    MAPREDUCE-2738. Added the missing cluster level statistics on the RM web
     UI. (Robert Joseph Evans via vinodkv)
+
+    MAPREDUCE-2988. Reenabled TestLinuxContainerExecutor reflecting the
+    current NodeManager code. (Robert Joseph Evans via vinodkv) 
 
   OPTIMIZATIONS
 
@@ -329,9 +335,6 @@ Release 0.23.0 - Unreleased
     TaskAttemptContexts. (todd)
 
     MAPREDUCE-901. Efficient framework counters. (llu via acmurthy)
-
-    MAPREDUCE-2880. Improve classpath-construction for mapreduce AM and
-    containers. (Arun C Murthy via vinodkv)
 
   BUG FIXES
 
