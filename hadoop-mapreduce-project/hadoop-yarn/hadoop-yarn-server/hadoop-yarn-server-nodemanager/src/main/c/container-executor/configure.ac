@@ -18,7 +18,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(linux-container-executor, 1.0.0, yarn-dev@yahoo-inc.com)
+AC_INIT(linux-container-executor, 1.0.0, mapreduce-dev@hadoop.apache.org)
 AC_GNU_SOURCE
 #AC_SYS_LARGEFILE
 

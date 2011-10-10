@@ -1,0 +1,10 @@
+#!/bin/sh
+for PARAM in "$@"
+do
+    echo $PARAM;
+done > params.txt
+if [[ "$2" == "1" ]];
+then
+  cd $5;
+  exec $6;
+fi;

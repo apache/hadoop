@@ -68,18 +68,13 @@ enum errorcodes {
 
 extern struct passwd *user_detail;
 
-// the log file for error messages
+// the log file for messages
 extern FILE *LOGFILE;
 
 // get the executable's filename
 char* get_executable();
 
 int check_taskcontroller_permissions(char *executable_file);
-
-/**
- * delete a given log directory as a user
- */
-int delete_log_directory(const char *log_dir);
 
 // initialize the job directory
 int initialize_job(const char *user, const char *jobid,
@@ -136,9 +131,6 @@ char *get_task_credentials_file(const char* work_dir);
  * Get the job log directory under log_root
  */
 char* get_job_log_directory(const char* log_root, const char* jobid);
-
-char *get_task_log_dir(const char *log_dir, const char *job_id, 
-                       const char *attempt_id);
 
 /**
  * Ensure that the given path and all of the parent directories are created

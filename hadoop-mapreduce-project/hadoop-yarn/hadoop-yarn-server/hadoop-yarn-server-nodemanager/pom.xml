@@ -26,6 +26,7 @@
   <properties>
     <install.file>${project.artifact.file}</install.file>
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
+    <container-executor.conf.dir>/etc/hadoop</container-executor.conf.dir>
   </properties>
 
   <dependencies>
@@ -46,21 +47,23 @@
             <version>1.0-beta-1</version>
             <executions>
               <execution>
-                <id>autoreconf</id>
-                <phase>package</phase>
+                <id>clean</id>
+                <phase>clean</phase>
                 <configuration>
                   <arguments>
                     <argument>-i</argument>
                   </arguments>
                   <workDir>src/main/c/container-executor</workDir>
+                  <destDir>target</destDir>
                 </configuration>
                 <goals>
                   <goal>autoreconf</goal>
+                  <goal>make-clean</goal>
                 </goals>
               </execution>
               <execution>
                 <id>make</id>
-                <phase>package</phase>
+                <phase>compile</phase>
                 <configuration>
                   <workDir>src/main/c/container-executor</workDir>
                   <configureEnvironment>
@@ -79,20 +82,34 @@
                   <prefix>${project.build.outputDirectory}</prefix>
                 </configuration>
                 <goals>
-                  <!-- always clean, to ensure conf dir regenerated -->
-                  <goal>make-clean</goal>
+                  <goal>autoreconf</goal>
                   <goal>configure</goal>
+                  <goal>compile</goal>
                 </goals>
               </execution>
               <execution>
-                <id>install</id>
-                <phase>package</phase>
+                <id>make-test</id>
+                <phase>test</phase>
                 <configuration>
-                  <destDir>/</destDir>
                   <workDir>src/main/c/container-executor</workDir>
+                  <configureEnvironment>
+                    <property>
+                      <name>CFLAGS</name>
+                      <value>-DHADOOP_CONF_DIR=${container-executor.conf.dir}</value>
+                    </property>
+                  </configureEnvironment>
+                  <sources>
+                    <source>
+                      <directory>src/main/c/container-executor</directory>
+                    </source>
+                  </sources>
+                  <workDir>src/main/c/container-executor</workDir>
+                  <destDir>target</destDir>
+                  <prefix>${project.build.outputDirectory}</prefix>
+                  <compileTarget>check</compileTarget>
                 </configuration>
                 <goals>
-                  <goal>make-install</goal>
+                  <goal>compile</goal>
                 </goals>
               </execution>
             </executions>
@@ -145,8 +162,12 @@
         <configuration>
           <systemPropertyVariables>
             <property>
-              <name>container-executor-path</name>
-              <value></value>
+              <name>container-executor.path</name>
+              <value>${container-executor.path}</value>
+            </property>
+            <property>
+              <name>application.submitter</name>
+              <value>${application.submitter}</value>
             </property>
           </systemPropertyVariables>
           <excludes>
