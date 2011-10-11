@@ -9,7 +9,7 @@
   <!-- TODO: this layout is wrong. We need module specific bin files in module specific dirs -->
   <fileSets>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/target/classes/bin</directory>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
         <include>container-executor</include>
