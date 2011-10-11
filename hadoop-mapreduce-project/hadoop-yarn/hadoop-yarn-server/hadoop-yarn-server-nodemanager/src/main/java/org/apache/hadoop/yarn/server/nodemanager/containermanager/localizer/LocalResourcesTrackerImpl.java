@@ -112,7 +112,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
 
 
   /**
-   * Returns the path upto the random directory component.
+   * Returns the path up to the random directory component.
    */
   private Path getPathToDelete(Path localPath) {
     Path delPath = localPath.getParent();
@@ -121,7 +121,7 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
     if (matcher.matches()) {
       return delPath;
     } else {
-      LOG.warn("Random directroy component did not match. " +
+      LOG.warn("Random directory component did not match. " +
       		"Deleting localized path only");
       return localPath;
     }

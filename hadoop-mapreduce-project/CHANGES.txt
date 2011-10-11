@@ -359,6 +359,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2988. Reenabled TestLinuxContainerExecutor reflecting the
     current NodeManager code. (Robert Joseph Evans via vinodkv) 
 
+    MAPREDUCE-3161. Improved some javadocs and fixed some typos in
+    YARN. (Todd Lipcon via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

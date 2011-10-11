@@ -384,11 +384,11 @@ public interface MRJobConfig {
     MR_AM_PREFIX
     + "job.task.estimator.exponential.smooth.lambda-ms";
 
-  public static final long DEFAULT_MR_AM_TASK_ESTIMATOR_SMNOOTH_LAMBDA_MS = 
+  public static final long DEFAULT_MR_AM_TASK_ESTIMATOR_SMOOTH_LAMBDA_MS = 
   1000L * 60;
 
   /** true if the smoothing rate should be exponential.*/
-  public static final String MR_AM_TASK_EXTIMATOR_EXPONENTIAL_RATE_ENABLE =
+  public static final String MR_AM_TASK_ESTIMATOR_EXPONENTIAL_RATE_ENABLE =
     MR_AM_PREFIX + "job.task.estimator.exponential.smooth.rate";
 
   /** The number of threads used to handle task RPC calls.*/
