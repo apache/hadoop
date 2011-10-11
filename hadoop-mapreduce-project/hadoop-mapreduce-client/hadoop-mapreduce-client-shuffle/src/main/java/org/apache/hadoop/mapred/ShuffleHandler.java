@@ -223,6 +223,7 @@ public class ShuffleHandler extends AbstractService
   public void stopApp(ApplicationId appId) {
     JobID jobId = new JobID(Long.toString(appId.getClusterTimestamp()), appId.getId());
     secretManager.removeTokenForJob(jobId.toString());
+    userRsrc.remove(jobId.toString());
   }
 
   @Override

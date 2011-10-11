@@ -42,8 +42,8 @@ public class AuxServices extends AbstractService
 
   private static final Log LOG = LogFactory.getLog(AuxServices.class);
 
-  public final Map<String,AuxiliaryService> serviceMap;
-  public final Map<String,ByteBuffer> serviceMeta;
+  protected final Map<String,AuxiliaryService> serviceMap;
+  protected final Map<String,ByteBuffer> serviceMeta;
 
   public AuxServices() {
     super(AuxServices.class.getName());
@@ -157,20 +157,24 @@ public class AuxServices extends AbstractService
 
   @Override
   public void handle(AuxServicesEvent event) {
-    LOG.info("Got event " + event.getType() + " for service "
-        + event.getServiceID());
-    AuxiliaryService service = serviceMap.get(event.getServiceID());
-    if (null == service) {
-      // TODO kill all containers waiting on Application
-      return;
-    }
+    LOG.info("Got event " + event.getType() + " for appId "
+        + event.getApplicationID());
     switch (event.getType()) {
     case APPLICATION_INIT:
+      LOG.info("Got APPLICATION_INIT for service " + event.getServiceID());
+      AuxiliaryService service = serviceMap.get(event.getServiceID());
+      if (null == service) {
+        LOG.info("service is null");
+        // TODO kill all containers waiting on Application
+        return;
+      }
       service.initApp(event.getUser(), event.getApplicationID(),
           event.getServiceData());
       break;
     case APPLICATION_STOP:
-      service.stopApp(event.getApplicationID());
+      for (AuxiliaryService serv : serviceMap.values()) {
+        serv.stopApp(event.getApplicationID());
+      }
       break;
     default:
       throw new RuntimeException("Unknown type: " + event.getType());

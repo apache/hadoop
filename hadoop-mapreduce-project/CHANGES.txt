@@ -1573,6 +1573,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3020. Fixed TaskAttemptImpl to log the correct node-address for
     a finished Reduce task. (Chackaravarthy via vinodkv)
 
+    MAPREDUCE-2668. Fixed AuxServices to send a signal on application-finish
+    to all the services. (Thomas Graves via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
