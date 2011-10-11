@@ -21,6 +21,7 @@ package org.apache.hadoop.cli;
 import org.apache.hadoop.cli.util.CLITestData.TestCmd;
 import org.apache.hadoop.cli.util.CommandExecutor.Result;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
@@ -36,7 +37,7 @@ public class TestHDFSCLI extends CLITestHelper {
   protected MiniDFSCluster dfsCluster = null;
   protected DistributedFileSystem dfs = null;
   protected String namenode = null;
-  
+
   @Before
   @Override
   public void setUp() throws Exception {
@@ -52,16 +53,24 @@ public class TestHDFSCLI extends CLITestHelper {
                         "/rack2", "/rack3", "/rack4", "/rack4" };
     String [] hosts = {"host1", "host2", "host3", "host4",
                        "host5", "host6", "host7", "host8" };
-    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(8)
-                                                 .racks(racks)
-                                                 .hosts(hosts)
-                                                 .build();
-    
-    namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
-    
+
+    FileSystem fs;
+    namenode = System.getProperty("test.cli.fs.default.name");
+    if (namenode == null) {
+      // Start up the mini dfs cluster
+      dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(8)
+                                                   .racks(racks)
+                                                   .hosts(hosts)
+                                                   .build();
+      namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
+      fs = dfsCluster.getFileSystem();
+    } else {
+      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, namenode);
+      fs = FileSystem.get(conf);
+    }
+
     username = System.getProperty("user.name");
 
-    FileSystem fs = dfsCluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                fs instanceof DistributedFileSystem);
     dfs = (DistributedFileSystem) fs;
@@ -75,10 +84,16 @@ public class TestHDFSCLI extends CLITestHelper {
   @After
   @Override
   public void tearDown() throws Exception {
-    dfs.close();
-    dfsCluster.shutdown();
-    Thread.sleep(2000);
-    super.tearDown();
+    dfs.delete(new Path(testDirAbsolute), true);
+    if (dfsCluster != null) {
+      boolean success = false;
+      dfs.close();
+      dfsCluster.shutdown();
+      success = true;
+      Thread.sleep(2000);
+      assertTrue("Error tearing down Mini DFS cluster", success);
+      super.tearDown();
+    }
   }
 
   @Override

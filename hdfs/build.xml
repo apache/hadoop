@@ -636,6 +636,9 @@
         <syspropertyset id="FaultProbabilityProperties">
           <propertyref regex="fi.*"/>
         </syspropertyset>
+        <syspropertyset id="TestCLIProperties">
+          <propertyref regex="test.cli.*" />
+        </syspropertyset>
         <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
                      value="@{hadoop.conf.dir.deployed}" />
         <formatter type="${test.junit.output.format}" />

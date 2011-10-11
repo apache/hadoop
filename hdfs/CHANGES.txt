@@ -640,6 +640,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-2383. Remove TestDfsOverAvroRpc for 0.22 branch. (shv)
 
+    HDFS-1762. Allow TestHDFSCLI to be run against a cluster (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
