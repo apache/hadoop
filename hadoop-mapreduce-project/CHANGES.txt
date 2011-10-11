@@ -1531,10 +1531,13 @@ Release 0.23.0 - Unreleased
     job submission files to fail fast. (Abhijit Suresh Shingate via acmurthy) 
 
     MAPREDUCE-3158. Fix test failures in MRv1 due to default framework being
-    set to yarn. (Hitesh Shah) 
+    set to yarn. (Hitesh Shah via acmurhty)
 
     MAPREDUCE-3167. container-executor is not being packaged with the assembly
     target. (mahadev)
+
+    MAPREDUCE-3020. Fixed TaskAttemptImpl to log the correct node-address for
+    a finished Reduce task. (Chackaravarthy via vinodkv)
 
 Release 0.22.0 - Unreleased
 
