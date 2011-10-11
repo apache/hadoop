@@ -431,6 +431,20 @@ public class ContainerImpl implements Container {
 
   }
 
+  /**
+   * State transition when a NEW container receives the INIT_CONTAINER
+   * message.
+   * 
+   * If there are resources to localize, sends a
+   * ContainerLocalizationRequest (INIT_CONTAINER_RESOURCES) 
+   * to the ResourceLocalizationManager and enters LOCALIZING state.
+   * 
+   * If there are no resources to localize, sends LAUNCH_CONTAINER event
+   * and enters LOCALIZED state directly.
+   * 
+   * If there are any invalid resources specified, enters LOCALIZATION_FAILED
+   * directly.
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class RequestResourcesTransition implements
       MultipleArcTransition<ContainerImpl,ContainerEvent,ContainerState> {
@@ -513,6 +527,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition when one of the requested resources for this container
+   * has been successfully localized.
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class LocalizedTransition implements
       MultipleArcTransition<ContainerImpl,ContainerEvent,ContainerState> {
@@ -540,6 +558,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from LOCALIZED state to RUNNING state upon receiving
+   * a CONTAINER_LAUNCHED event
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class LaunchTransition extends ContainerTransition {
     @Override
@@ -556,6 +578,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from RUNNING or KILLING state to EXITED_WITH_SUCCESS state
+   * upon EXITED_WITH_SUCCESS message.
+   */
   @SuppressWarnings("unchecked")  // dispatcher not typed
   static class ExitedWithSuccessTransition extends ContainerTransition {
 
@@ -582,6 +608,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition to EXITED_WITH_FAILURE state upon
+   * CONTAINER_EXITED_WITH_FAILURE state.
+   **/
   @SuppressWarnings("unchecked")  // dispatcher not typed
   static class ExitedWithFailureTransition extends ContainerTransition {
 
@@ -609,6 +639,9 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition to EXITED_WITH_FAILURE upon receiving KILLED_ON_REQUEST
+   */
   static class KilledExternallyTransition extends ExitedWithFailureTransition {
     KilledExternallyTransition() {
       super(true);
@@ -621,6 +654,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from LOCALIZING to LOCALIZATION_FAILED upon receiving
+   * RESOURCE_FAILED event.
+   */
   static class ResourceFailedTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -638,7 +675,11 @@ public class ContainerImpl implements Container {
       container.metrics.endInitingContainer();
     }
   }
-  
+
+  /**
+   * Transition from LOCALIZING to KILLING upon receiving
+   * KILL_CONTAINER event.
+   */
   static class KillDuringLocalizationTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -652,6 +693,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Remain in KILLING state when receiving a RESOURCE_LOCALIZED request
+   * while in the process of killing.
+   */
   static class LocalizedResourceDuringKillTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -669,6 +714,11 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transitions upon receiving KILL_CONTAINER:
+   * - LOCALIZED -> KILLING
+   * - RUNNING -> KILLING
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class KillTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
@@ -683,6 +733,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from KILLING to CONTAINER_CLEANEDUP_AFTER_KILL
+   * upon receiving CONTAINER_KILLED_ON_REQUEST.
+   */
   static class ContainerKilledTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -696,6 +750,13 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Handle the following transitions:
+   * - NEW -> DONE upon KILL_CONTAINER
+   * - {LOCALIZATION_FAILED, EXITED_WITH_SUCCESS, EXITED_WITH_FAILURE,
+   *    KILLING, CONTAINER_CLEANEDUP_AFTER_KILL}
+   *   -> DONE upon CONTAINER_RESOURCES_CLEANEDUP
+   */
   static class ContainerDoneTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -703,7 +764,10 @@ public class ContainerImpl implements Container {
       container.finished();
     }
   }
-  
+
+  /**
+   * Update diagnostics, staying in the same state.
+   */
   static class ContainerDiagnosticsUpdateTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override

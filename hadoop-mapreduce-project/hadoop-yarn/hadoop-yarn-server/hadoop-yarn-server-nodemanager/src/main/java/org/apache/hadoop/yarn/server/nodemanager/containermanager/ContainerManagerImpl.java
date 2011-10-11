@@ -104,7 +104,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private Server server;
   private final ResourceLocalizationService rsrcLocalizationSrvc;
   private final ContainersLauncher containersLauncher;
-  private final AuxServices auxiluaryServices;
+  private final AuxServices auxiliaryServices;
   private final NodeManagerMetrics metrics;
 
   private final NodeStatusUpdater nodeStatusUpdater;
@@ -137,9 +137,9 @@ public class ContainerManagerImpl extends CompositeService implements
     this.containerTokenSecretManager = containerTokenSecretManager;
 
     // Start configurable services
-    auxiluaryServices = new AuxServices();
-    auxiluaryServices.register(this);
-    addService(auxiluaryServices);
+    auxiliaryServices = new AuxServices();
+    auxiliaryServices.register(this);
+    addService(auxiliaryServices);
 
     this.containersMonitor =
         new ContainersMonitorImpl(exec, dispatcher, this.context);
@@ -154,7 +154,7 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.register(ApplicationEventType.class,
         new ApplicationEventDispatcher());
     dispatcher.register(LocalizationEventType.class, rsrcLocalizationSrvc);
-    dispatcher.register(AuxServicesEventType.class, auxiluaryServices);
+    dispatcher.register(AuxServicesEventType.class, auxiliaryServices);
     dispatcher.register(ContainersMonitorEventType.class, containersMonitor);
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
     dispatcher.register(LogAggregatorEventType.class, logAggregationService);
@@ -213,8 +213,8 @@ public class ContainerManagerImpl extends CompositeService implements
 
   @Override
   public void stop() {
-    if (auxiluaryServices.getServiceState() == STARTED) {
-      auxiluaryServices.unregister(this);
+    if (auxiliaryServices.getServiceState() == STARTED) {
+      auxiliaryServices.unregister(this);
     }
     if (server != null) {
       server.close();
@@ -285,7 +285,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
     StartContainerResponse response =
         recordFactory.newRecordInstance(StartContainerResponse.class);
-    response.addAllServiceResponse(auxiluaryServices.getMeta());
+    response.addAllServiceResponse(auxiliaryServices.getMeta());
     // TODO launchedContainer misplaced -> doesn't necessarily mean a container
     // launch. A finished Application will not launch containers.
     metrics.launchedContainer();

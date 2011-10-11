@@ -135,9 +135,9 @@ public class ExponentiallySmoothedTaskRuntimeEstimator extends StartEndTimesBase
 
     lambda
         = conf.getLong(MRJobConfig.MR_AM_TASK_ESTIMATOR_SMOOTH_LAMBDA_MS,
-            MRJobConfig.DEFAULT_MR_AM_TASK_ESTIMATOR_SMNOOTH_LAMBDA_MS);
+            MRJobConfig.DEFAULT_MR_AM_TASK_ESTIMATOR_SMOOTH_LAMBDA_MS);
     smoothedValue
-        = conf.getBoolean(MRJobConfig.MR_AM_TASK_EXTIMATOR_EXPONENTIAL_RATE_ENABLE, true)
+        = conf.getBoolean(MRJobConfig.MR_AM_TASK_ESTIMATOR_EXPONENTIAL_RATE_ENABLE, true)
             ? SmoothedValue.RATE : SmoothedValue.TIME_PER_UNIT_PROGRESS;
   }
 
