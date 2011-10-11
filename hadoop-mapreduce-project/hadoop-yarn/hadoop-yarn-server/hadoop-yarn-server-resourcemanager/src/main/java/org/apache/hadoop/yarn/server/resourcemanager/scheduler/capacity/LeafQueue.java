@@ -698,9 +698,7 @@ public class LeafQueue implements CSQueue {
       application.showRequests();
 
       synchronized (application) {
-        Resource userLimit = 
-          computeUserLimit(application, clusterResource, Resources.none());
-        setUserResourceLimit(application, userLimit);
+        computeAndSetUserResourceLimit(application, clusterResource);
         
         for (Priority priority : application.getPriorities()) {
           // Required resource
@@ -719,7 +717,7 @@ public class LeafQueue implements CSQueue {
           }
 
           // User limits
-          userLimit = 
+          Resource userLimit = 
             computeUserLimit(application, clusterResource, required); 
           if (!assignToUser(application.getUser(), userLimit)) {
             break; 
@@ -807,10 +805,13 @@ public class LeafQueue implements CSQueue {
     return true;
   }
 
-  private void setUserResourceLimit(SchedulerApp application, 
-      Resource resourceLimit) {
-    application.setAvailableResourceLimit(resourceLimit);
-    metrics.setAvailableResourcesToUser(application.getUser(), application.getHeadroom());
+  private void computeAndSetUserResourceLimit(SchedulerApp application, 
+      Resource clusterResource) {
+    Resource userLimit = 
+        computeUserLimit(application, clusterResource, Resources.none());
+    application.setAvailableResourceLimit(userLimit);
+    metrics.setAvailableResourcesToUser(application.getUser(), 
+        application.getHeadroom());
   }
   
   private int roundUp(int memory) {
@@ -1270,12 +1271,18 @@ public class LeafQueue implements CSQueue {
 
   @Override
   public synchronized void updateClusterResource(Resource clusterResource) {
+    // Update queue properties
     maxActiveApplications = 
         computeMaxActiveApplications(clusterResource, maxAMResourcePercent, 
             absoluteCapacity);
     maxActiveApplicationsPerUser = 
         computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
             userLimitFactor);
+    
+    // Update application properties
+    for (SchedulerApp application : activeApplications) {
+      computeAndSetUserResourceLimit(application, clusterResource);
+    }
   }
   
   private synchronized void updateResource(Resource clusterResource) {

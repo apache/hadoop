@@ -117,7 +117,7 @@ public class TestLeafQueue {
     LOG.info("Setup top-level queues a and b");
   }
 
-  private LeafQueue stubLeafQueue(LeafQueue queue) {
+  static LeafQueue stubLeafQueue(LeafQueue queue) {
     
     // Mock some methods for ease in these unit tests
     

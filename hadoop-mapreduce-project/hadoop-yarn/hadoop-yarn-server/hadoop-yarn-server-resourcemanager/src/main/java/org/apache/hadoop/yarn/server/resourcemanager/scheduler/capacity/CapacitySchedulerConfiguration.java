@@ -165,6 +165,12 @@ public class CapacitySchedulerConfiguration extends Configuration {
       getInt(getQueuePrefix(queue) + USER_LIMIT, DEFAULT_USER_LIMIT);
     return userLimit;
   }
+
+  public void setUserLimit(String queue, int userLimit) {
+    setInt(getQueuePrefix(queue) + USER_LIMIT, userLimit);
+    LOG.info("here setUserLimit: queuePrefix=" + getQueuePrefix(queue) + 
+        ", userLimit=" + getUserLimit(queue));
+  }
   
   public float getUserLimitFactor(String queue) {
     float userLimitFactor = 
