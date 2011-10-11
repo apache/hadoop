@@ -81,13 +81,13 @@ public class BackupNode extends NameNode {
   // Common NameNode methods implementation for backup node.
   /////////////////////////////////////////////////////
   @Override // NameNode
-  protected InetSocketAddress getRpcServerAddress(Configuration conf) throws IOException {
+  protected InetSocketAddress getRpcServerAddress(Configuration conf) {
     String addr = conf.get(BN_ADDRESS_NAME_KEY, BN_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
   
   @Override
-  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) throws IOException {
+  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) {
     String addr = conf.get(BN_SERVICE_RPC_ADDRESS_KEY);
     if (addr == null || addr.isEmpty()) {
       return null;
@@ -135,11 +135,6 @@ public class BackupNode extends NameNode {
                  CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
     NamespaceInfo nsInfo = handshake(conf);
     super.initialize(conf);
-    // Backup node should never do lease recovery,
-    // therefore lease hard limit should never expire.
-    namesystem.leaseManager.setLeasePeriod(
-        HdfsConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
-    
     clusterId = nsInfo.getClusterID();
     blockPoolId = nsInfo.getBlockPoolID();
 

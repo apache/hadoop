@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.ServiceFailedException;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 
@@ -44,38 +43,38 @@ abstract public class HAState {
    * @param s new state
    * @throws ServiceFailedException on failure to transition to new state.
    */
-  protected final void setStateInternal(final NameNode nn, final HAState s)
+  protected final void setStateInternal(final HAContext context, final HAState s)
       throws ServiceFailedException {
-    exitState(nn);
-    nn.setState(s);
-    s.enterState(nn);
+    exitState(context);
+    context.setState(s);
+    s.enterState(context);
   }
 
   /**
    * Method to be overridden by subclasses to perform steps necessary for
    * entering a state.
-   * @param nn Namenode
+   * @param context HA context
    * @throws ServiceFailedException on failure to enter the state.
    */
-  protected abstract void enterState(final NameNode nn)
+  public abstract void enterState(final HAContext context)
       throws ServiceFailedException;
 
   /**
    * Method to be overridden by subclasses to perform steps necessary for
    * exiting a state.
-   * @param nn Namenode
+   * @param context HA context
    * @throws ServiceFailedException on failure to enter the state.
    */
-  protected abstract void exitState(final NameNode nn)
+  public abstract void exitState(final HAContext context)
       throws ServiceFailedException;
 
   /**
    * Move from the existing state to a new state
-   * @param nn Namenode
+   * @param context HA context
    * @param s new state
    * @throws ServiceFailedException on failure to transition to new state.
    */
-  public void setState(NameNode nn, HAState s) throws ServiceFailedException {
+  public void setState(HAContext context, HAState s) throws ServiceFailedException {
     if (this == s) { // Aleady in the new state
       return;
     }
@@ -85,15 +84,15 @@ abstract public class HAState {
   
   /**
    * Check if an operation is supported in a given state.
-   * @param nn Namenode
+   * @param context HA context
    * @param op Type of the operation.
    * @throws UnsupportedActionException if a given type of operation is not
    *           supported in this state.
    */
-  public void checkOperation(final NameNode nn, final OperationCategory op)
+  public void checkOperation(final HAContext context, final OperationCategory op)
       throws UnsupportedActionException {
     String msg = "Operation category " + op + " is not supported in state "
-        + nn.getState();
+        + context.getState();
     throw new UnsupportedActionException(msg);
   }
   

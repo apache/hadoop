@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
@@ -31,28 +34,37 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
  * 
  * It does not handle read/write/checkpoint operations.
  */
+@InterfaceAudience.Private
 public class StandbyState extends HAState {
   public StandbyState() {
     super("standby");
   }
 
   @Override
-  public void setState(NameNode nn, HAState s) throws ServiceFailedException {
+  public void setState(HAContext context, HAState s) throws ServiceFailedException {
     if (s == NameNode.ACTIVE_STATE) {
-      setStateInternal(nn, s);
+      setStateInternal(context, s);
       return;
     }
-    super.setState(nn, s);
+    super.setState(context, s);
   }
 
   @Override
-  protected void enterState(NameNode nn) throws ServiceFailedException {
-    // TODO:HA
+  public void enterState(HAContext context) throws ServiceFailedException {
+    try {
+      context.startStandbyServices();
+    } catch (IOException e) {
+      throw new ServiceFailedException("Failed to start standby services", e);
+    }
   }
 
   @Override
-  protected void exitState(NameNode nn) throws ServiceFailedException {
-    // TODO:HA
+  public void exitState(HAContext context) throws ServiceFailedException {
+    try {
+      context.stopStandbyServices();
+    } catch (IOException e) {
+      throw new ServiceFailedException("Failed to stop standby services", e);
+    }
   }
 }
 

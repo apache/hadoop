@@ -130,7 +130,6 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
@@ -347,28 +346,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dir.imageLoadComplete();
   }
 
-  void activateSecretManager() throws IOException {
+  void startSecretManager() throws IOException {
     if (dtSecretManager != null) {
       dtSecretManager.startThreads();
     }
   }
   
-  /**
-   * Activate FSNamesystem daemons.
+  void stopSecretManager() {
+    if (dtSecretManager != null) {
+      dtSecretManager.stopThreads();
+    }
+  }
+  
+  /** 
+   * Start services common to both active and standby states
+   * @throws IOException
    */
-  void activate(Configuration conf) throws IOException {
+  void startCommonServices(Configuration conf) throws IOException {
     this.registerMBean(); // register the MBean for the FSNamesystemState
-
     writeLock();
     try {
       nnResourceChecker = new NameNodeResourceChecker(conf);
       checkAvailableResources();
-
       setBlockTotal();
       blockManager.activate(conf);
-
-      this.lmthread = new Daemon(leaseManager.new Monitor());
-      lmthread.start();
       this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
       nnrmthread.start();
     } finally {
@@ -378,7 +379,70 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     registerMXBean();
     DefaultMetricsSystem.instance().register(this);
   }
+  
+  /** 
+   * Stop services common to both active and standby states
+   * @throws IOException
+   */
+  void stopCommonServices() {
+    writeLock();
+    try {
+      if (blockManager != null) blockManager.close();
+      if (nnrmthread != null) nnrmthread.interrupt();
+    } finally {
+      writeUnlock();
+    }
+  }
+  
+  /**
+   * Start services required in active state
+   * @throws IOException
+   */
+  void startActiveServices() throws IOException {
+    LOG.info("Starting services required for active state");
+    writeLock();
+    try {
+      startSecretManager();
+      lmthread = new Daemon(leaseManager.new Monitor());
+      lmthread.start();
+    } finally {
+      writeUnlock();
+    }
+  }
+  
+  /** 
+   * Start services required in active state 
+   * @throws InterruptedException
+   */
+  void stopActiveServices() {
+    LOG.info("Stopping services started for active state");
+    writeLock();
+    try {
+      stopSecretManager();
+      if (lmthread != null) {
+        try {
+          lmthread.interrupt();
+          lmthread.join(3000);
+        } catch (InterruptedException ie) {
+          LOG.warn("Encountered exception ", ie);
+        }
+        lmthread = null;
+      }
+    } finally {
+      writeUnlock();
+    }
+  }
+  
+  /** Start services required in standby state */
+  void startStandbyServices() {
+    LOG.info("Starting services required for standby state");
+  }
 
+  /** Stop services required in standby state */
+  void stopStandbyServices() {
+    LOG.info("Stopping services started for standby state");
+  }
+  
   public static Collection<URI> getNamespaceDirs(Configuration conf) {
     return getStorageDirs(conf, DFS_NAMENODE_NAME_DIR_KEY);
   }
@@ -502,7 +566,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Version of {@see #getNamespaceInfo()} that is not protected by a lock.
+   * Version of @see #getNamespaceInfo() that is not protected by a lock.
    */
   NamespaceInfo unprotectedGetNamespaceInfo() {
     return new NamespaceInfo(dir.fsImage.getStorage().getNamespaceID(),
@@ -519,23 +583,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void close() {
     fsRunning = false;
     try {
-      if (blockManager != null) blockManager.close();
+      stopCommonServices();
       if (smmthread != null) smmthread.interrupt();
-      if (dtSecretManager != null) dtSecretManager.stopThreads();
-      if (nnrmthread != null) nnrmthread.interrupt();
-    } catch (Exception e) {
-      LOG.warn("Exception shutting down FSNamesystem", e);
     } finally {
       // using finally to ensure we also wait for lease daemon
       try {
-        if (lmthread != null) {
-          lmthread.interrupt();
-          lmthread.join(3000);
-        }
+        stopActiveServices();
+        stopStandbyServices();
         if (dir != null) {
           dir.close();
         }
-      } catch (InterruptedException ie) {
       } catch (IOException ie) {
         LOG.error("Error closing FSDirectory", ie);
         IOUtils.cleanup(LOG, dir);
@@ -1386,7 +1443,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       lb = startFileInternal(src, null, holder, clientMachine, 
                         EnumSet.of(CreateFlag.APPEND), 
-                        false, blockManager.maxReplication, (long)0);
+                        false, blockManager.maxReplication, 0);
     } finally {
       writeUnlock();
     }
@@ -1469,7 +1526,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
-      replication = (int)pendingFile.getReplication();
+      replication = pendingFile.getReplication();
     } finally {
       writeUnlock();
     }
@@ -2264,7 +2321,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
-      INodeFileUnderConstruction pendingFile) throws IOException {
+      INodeFileUnderConstruction pendingFile) {
     assert hasWriteLock();
     pendingFile.setClientName(newHolder);
     return leaseManager.reassignLease(lease, src, newHolder);
@@ -2869,13 +2926,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @return true if in safe mode
      */
     private synchronized boolean isOn() {
-      try {
-        assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
-          + "Total num of blocks, active blocks, or "
-          + "total safe blocks don't match.";
-      } catch(IOException e) {
-        System.err.print(StringUtils.stringifyException(e));
-      }
+      assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
+        + "Total num of blocks, active blocks, or "
+        + "total safe blocks don't match.";
       return this.reached >= 0;
     }
       
@@ -3029,7 +3082,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.blockTotal = total;
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
-        (int) (((double) blockTotal) * replQueueThreshold);
+        (int) (blockTotal * replQueueThreshold);
       checkMode();
     }
       
@@ -3039,7 +3092,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      */
     private synchronized void incrementSafeBlockCount(short replication) {
-      if ((int)replication == safeReplication)
+      if (replication == safeReplication)
         this.blockSafe++;
       checkMode();
     }
@@ -3172,7 +3225,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Checks consistency of the class state.
      * This is costly and currently called only in assert.
      */
-    private boolean isConsistent() throws IOException {
+    private boolean isConsistent() {
       if (blockTotal == -1 && blockSafe == -1) {
         return true; // manual safe mode
       }
