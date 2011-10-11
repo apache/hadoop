@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.lib.*;
+import org.apache.hadoop.mapreduce.MRConfig;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
@@ -90,6 +91,8 @@ public class TestMapOutputType extends TestCase
     conf.setOutputKeyClass(Text.class);
     conf.setOutputValueClass(Text.class); 
     
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);   
+ 
     conf.setOutputFormat(SequenceFileOutputFormat.class);
     if (!fs.mkdirs(testdir)) {
       throw new IOException("Mkdirs failed to create " + testdir.toString());

@@ -67,6 +67,7 @@ public interface MRConfig {
   public static final String FRAMEWORK_NAME  = "mapreduce.framework.name";
   public static final String CLASSIC_FRAMEWORK_NAME  = "classic";
   public static final String YARN_FRAMEWORK_NAME  = "yarn";
+  public static final String LOCAL_FRAMEWORK_NAME = "local";
 
   public static final String TASK_LOCAL_OUTPUT_CLASS =
   "mapreduce.task.local.output.class";

@@ -43,6 +43,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
@@ -351,6 +352,7 @@ public class TestMapRed extends Configured implements Tool {
     conf.setInputFormat(SequenceFileInputFormat.class);
     conf.setOutputFormat(SequenceFileOutputFormat.class);
     conf.setNumReduceTasks(1);
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME); 
 
     JobClient.runJob(conf);
 
@@ -382,6 +384,7 @@ public class TestMapRed extends Configured implements Tool {
     conf.setOutputKeyClass(Text.class);
     conf.setOutputValueClass(Text.class);
     conf.setOutputFormat(SequenceFileOutputFormat.class);
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
     if (includeCombine) {
       conf.setCombinerClass(IdentityReducer.class);
     }
@@ -445,6 +448,7 @@ public class TestMapRed extends Configured implements Tool {
     } else {
       conf = new JobConf(getConf());
     }
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
     conf.setJarByClass(TestMapRed.class);
     int countsToGo = counts;
     int dist[] = new int[range];
@@ -737,6 +741,7 @@ public class TestMapRed extends Configured implements Tool {
       conf.setOutputKeyClass(Text.class);
       conf.setOutputValueClass(Text.class);
       conf.setOutputFormat(SequenceFileOutputFormat.class);
+      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
       if (!fs.mkdirs(testdir)) {
         throw new IOException("Mkdirs failed to create " + testdir.toString());
       }

@@ -342,11 +342,9 @@ public class ReduceTask extends Task {
     RawKeyValueIterator rIter = null;
     
     boolean isLocal = false; 
-    // local iff framework == classic && master address == local
+    // local iff framework == local
     String framework = job.get(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {
-    	isLocal = "local".equals(job.get(MRConfig.MASTER_ADDRESS, "local"));        	
-    }
+    isLocal = framework.equals(MRConfig.LOCAL_FRAMEWORK_NAME);
     
     if (!isLocal) {
       Class combinerClass = conf.getCombinerClass();

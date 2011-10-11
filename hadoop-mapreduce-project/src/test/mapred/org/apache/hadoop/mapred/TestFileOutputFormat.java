@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.MRConfig;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -76,6 +77,8 @@ public class TestFileOutputFormat extends HadoopTestCase {
 
     conf.setMapperClass(TestMap.class);
     conf.setReducerClass(TestReduce.class);
+
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
 
     FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);

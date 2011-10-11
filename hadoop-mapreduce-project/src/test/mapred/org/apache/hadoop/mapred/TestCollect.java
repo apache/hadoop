@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.UtilsForTests.RandomInputFormat;
+import org.apache.hadoop.mapreduce.MRConfig;
 
 import junit.framework.TestCase;
 import java.io.*;
@@ -120,6 +121,7 @@ public class TestCollect extends TestCase
     conf.setOutputValueClass(IntWritable.class);
     FileOutputFormat.setOutputPath(conf, OUTPUT_DIR);
     
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
     conf.setMapperClass(Map.class);
     conf.setReducerClass(Reduce.class);
     conf.setNumMapTasks(1);
