@@ -110,6 +110,9 @@ Trunk (unreleased changes)
 
     HDFS-2404. webhdfs liststatus json response is not correct. (suresh)
 
+    HDFS-2422. The NN should tolerate the same number of low-resource volumes
+               as failed volumes (atm)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
