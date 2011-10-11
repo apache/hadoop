@@ -328,6 +328,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3161. Improved some javadocs and fixed some typos in
     YARN. (Todd Lipcon via vinodkv)
 
+    MAPREDUCE-3148. Ported MAPREDUCE-2702 to old mapred api for aiding task
+    recovery. (acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

@@ -60,4 +60,9 @@ public interface MRConstants {
   
   /** Used in MRv1, mostly in TaskTracker code **/
   public static final String WORKDIR = "work";
+
+  /** Used on by MRv2 */
+  public static final String APPLICATION_ATTEMPT_ID =
+      "mapreduce.job.application.attempt.id";
+
 }

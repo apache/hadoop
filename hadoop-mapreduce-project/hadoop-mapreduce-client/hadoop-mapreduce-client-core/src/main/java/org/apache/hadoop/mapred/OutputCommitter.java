@@ -152,6 +152,33 @@ public abstract class OutputCommitter
    * is a bridge between the two.
    */
   @Override
+  public boolean isRecoverySupported() {
+    return false;
+  }
+
+  /**
+   * Recover the task output. 
+   * 
+   * The retry-count for the job will be passed via the 
+   * {@link MRConstants#APPLICATION_ATTEMPT_ID} key in  
+   * {@link TaskAttemptContext#getConfiguration()} for the 
+   * <code>OutputCommitter</code>.
+   * 
+   * If an exception is thrown the task will be attempted again. 
+   * 
+   * @param taskContext Context of the task whose output is being recovered
+   * @throws IOException
+   */
+  public void recoverTask(TaskAttemptContext taskContext) 
+  throws IOException {
+  }
+  
+  /**
+   * This method implements the new interface by calling the old method. Note
+   * that the input types are different between the new and old apis and this
+   * is a bridge between the two.
+   */
+  @Override
   public final void setupJob(org.apache.hadoop.mapreduce.JobContext jobContext
                              ) throws IOException {
     setupJob((JobContext) jobContext);
@@ -246,4 +273,17 @@ public abstract class OutputCommitter
                  ) throws IOException {
     abortTask((TaskAttemptContext) taskContext);
   }
+  
+  /**
+   * This method implements the new interface by calling the old method. Note
+   * that the input types are different between the new and old apis and this
+   * is a bridge between the two.
+   */
+  @Override
+  public final 
+  void recoverTask(org.apache.hadoop.mapreduce.TaskAttemptContext taskContext
+      ) throws IOException {
+    recoverTask((TaskAttemptContext) taskContext);
+  }
+
 }
