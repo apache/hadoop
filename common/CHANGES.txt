@@ -549,6 +549,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7697. Remove ivy dependency on different version of slf4j in avro.
     (shv)
 
+    HADOOP-7730. Allow TestCLI to be run against a cluster (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

@@ -59,7 +59,9 @@ public class CLITestHelper {
   public static final String TESTMODE_NOCOMPARE = "nocompare";
   public static final String TEST_CACHE_DATA_DIR =
     System.getProperty("test.cache.data", "build/test/cache");
-  
+  public static final String TEST_DIR_ABSOLUTE = "/tmp/testcli";
+  protected static String testDirAbsolute = TEST_DIR_ABSOLUTE;
+
   //By default, run the tests. The other mode is to run the commands and not
   // compare the output
   protected String testMode = TESTMODE_TEST;
@@ -72,7 +74,7 @@ public class CLITestHelper {
   protected Configuration conf = null;
   protected String clitestDataDir = null;
   protected String username = null;
-  
+
   /**
    * Read the test config file - testConfig.xml
    */
@@ -80,10 +82,16 @@ public class CLITestHelper {
     String testConfigFile = getTestFile();
     if (testsFromConfigFile == null) {
       boolean success = false;
-      testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
+      String configFile = System.getProperty("test.cli.config");
+      if (configFile == null) {
+        testConfigFile = TEST_CACHE_DATA_DIR + File.separator + testConfigFile;
+      } else {
+        testConfigFile = configFile;
+      }
       try {
         SAXParser p = (SAXParserFactory.newInstance()).newSAXParser();
         p.parse(testConfigFile, new TestConfigFileParser());
+        LOG.info("Using test config file " + testConfigFile);
         success = true;
       } catch (Exception e) {
         LOG.info("File: " + testConfigFile + " not found");
@@ -110,6 +118,8 @@ public class CLITestHelper {
 
     clitestDataDir = new File(TEST_CACHE_DATA_DIR).
     toURI().toString().replace(' ', '+');
+    // Many of the tests expect a replication value of 1 in the output
+    conf.setInt("dfs.replication", 1);
   }
   
   /**
@@ -128,7 +138,8 @@ public class CLITestHelper {
     String expCmd = cmd;
     expCmd = expCmd.replaceAll("CLITEST_DATA", clitestDataDir);
     expCmd = expCmd.replaceAll("USERNAME", username);
-    
+    expCmd = expCmd.replaceAll("TEST_DIR_ABSOLUTE", testDirAbsolute);
+
     return expCmd;
   }
   

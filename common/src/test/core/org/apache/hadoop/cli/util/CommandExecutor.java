@@ -43,6 +43,8 @@ public abstract class CommandExecutor {
       args[i] = args[i].replaceAll("CLITEST_DATA", 
         new File(CLITestHelper.TEST_CACHE_DATA_DIR).
         toURI().toString().replace(' ', '+'));
+      args[i] = args[i].replaceAll("TEST_DIR_ABSOLUTE",
+        CLITestHelper.TEST_DIR_ABSOLUTE);
       args[i] = args[i].replaceAll("USERNAME", System.getProperty("user.name"));
 
       i++;
