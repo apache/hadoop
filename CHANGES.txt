@@ -328,6 +328,7 @@ Release 0.92.0 - Unreleased
    HBASE-4482  Race Condition Concerning Eviction in SlabCache (Li Pi)
    HBASE-4547  TestAdmin failing in 0.92 because .tableinfo not found
    HBASE-4540  OpenedRegionHandler is not enforcing atomicity of the operation it is performing (Ram)
+   HBASE-4335  Splits can create temporary holes in .META. that confuse clients and regionservers (Lars H)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
