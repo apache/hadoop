@@ -166,6 +166,10 @@ public class TestApplication {
           refEq(new ApplicationLocalizationEvent(
               LocalizationEventType.DESTROY_APPLICATION_RESOURCES, wa.app)));
 
+      verify(wa.auxBus).handle(
+          refEq(new AuxServicesEvent(
+              AuxServicesEventType.APPLICATION_STOP, wa.appId)));
+
       wa.appResourcesCleanedup();
       assertEquals(ApplicationState.FINISHED, wa.app.getApplicationState());
 

@@ -28,6 +28,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
@@ -246,6 +248,10 @@ public class ApplicationImpl implements Application {
     this.dispatcher.getEventHandler().handle(
         new ApplicationLocalizationEvent(
             LocalizationEventType.DESTROY_APPLICATION_RESOURCES, this));
+
+    // tell any auxiliary services that the app is done 
+    this.dispatcher.getEventHandler().handle(
+        new AuxServicesEvent(AuxServicesEventType.APPLICATION_STOP, appId));
 
     // TODO: Trigger the LogsManager
   }

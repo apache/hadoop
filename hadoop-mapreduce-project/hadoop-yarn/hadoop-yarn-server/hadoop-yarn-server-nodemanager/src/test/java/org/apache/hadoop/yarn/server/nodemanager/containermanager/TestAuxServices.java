@@ -22,8 +22,12 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -39,6 +43,7 @@ import org.apache.hadoop.yarn.service.Service;
 import static org.apache.hadoop.yarn.service.Service.STATE.*;
 
 public class TestAuxServices {
+  private static final Log LOG = LogFactory.getLog(TestAuxServices.class);
 
   static class LightService extends AbstractService
       implements AuxServices.AuxiliaryService {
@@ -47,6 +52,7 @@ public class TestAuxServices {
     private int remaining_init;
     private int remaining_stop;
     private ByteBuffer meta = null;
+    private ArrayList<Integer> stoppedApps;
 
     LightService(String name, char idef, int expected_appId) {
       this(name, idef, expected_appId, null);
@@ -56,7 +62,13 @@ public class TestAuxServices {
       this.idef = idef;
       this.expected_appId = expected_appId;
       this.meta = meta;
+      this.stoppedApps = new ArrayList<Integer>();
     }
+
+    public ArrayList<Integer> getAppIdsStopped() {
+      return (ArrayList)this.stoppedApps.clone();
+    }
+
     @Override
     public void init(Configuration conf) {
       remaining_init = conf.getInt(idef + ".expected.init", 0);
@@ -77,7 +89,7 @@ public class TestAuxServices {
     }
     @Override
     public void stopApp(ApplicationId appId) {
-      assertEquals(expected_appId, appId.getId());
+      stoppedApps.add(appId.getId());
     }
     @Override
     public ByteBuffer getMeta() {
@@ -86,11 +98,15 @@ public class TestAuxServices {
   }
 
   static class ServiceA extends LightService {
-    public ServiceA() { super("A", 'A', 65, ByteBuffer.wrap("A".getBytes())); }
+    public ServiceA() { 
+      super("A", 'A', 65, ByteBuffer.wrap("A".getBytes()));
+    }
   }
 
   static class ServiceB extends LightService {
-    public ServiceB() { super("B", 'B', 66, ByteBuffer.wrap("B".getBytes())); }
+    public ServiceB() { 
+      super("B", 'B', 66, ByteBuffer.wrap("B".getBytes()));
+    }
   }
 
   @Test
@@ -119,6 +135,14 @@ public class TestAuxServices {
     appId.setId(66);
     event = new AuxServicesEvent(
         AuxServicesEventType.APPLICATION_STOP, "user0", appId, "Bsrv", null);
+    // verify all services got the stop event 
+    aux.handle(event);
+    Collection<AuxServices.AuxiliaryService> servs = aux.getServices();
+    for (AuxServices.AuxiliaryService serv: servs) {
+      ArrayList<Integer> appIds = ((LightService)serv).getAppIdsStopped();
+      assertEquals("app not properly stopped", 1, appIds.size());
+      assertTrue("wrong app stopped", appIds.contains((Integer)66));
+    }
   }
 
   @Test
