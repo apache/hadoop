@@ -314,6 +314,8 @@ public class LocalContainerLauncher extends AbstractService implements
           ReduceTask reduce = (ReduceTask)task;
 
           // a.k.a. "mapreduce.jobtracker.address" in LocalJobRunner:
+          // set framework name to local to make task local
+          conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
           conf.set(MRConfig.MASTER_ADDRESS, "local");  // bypass shuffle
 
           reduce.run(conf, umbilical);

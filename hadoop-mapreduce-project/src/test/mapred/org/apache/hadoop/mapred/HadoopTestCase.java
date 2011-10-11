@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRConfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -200,7 +201,14 @@ public abstract class HadoopTestCase extends TestCase {
    * @return configuration that works on the testcase Hadoop instance
    */
   protected JobConf createJobConf() {
-    return (localMR) ? new JobConf() : mrCluster.createJobConf();
+    if (localMR) {
+      JobConf conf = new JobConf();
+      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
+      return conf;
+    } 
+    else {
+      return mrCluster.createJobConf();
+    }
   }
 
 }

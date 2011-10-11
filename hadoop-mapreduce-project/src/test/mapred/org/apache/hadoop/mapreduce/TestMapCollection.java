@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestMapCollection {
@@ -311,6 +312,7 @@ public class TestMapCollection {
 
   private static void runTest(String name, Job job) throws Exception {
     job.setNumReduceTasks(1);
+    job.getConfiguration().set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
     job.getConfiguration().setInt(MRJobConfig.IO_SORT_FACTOR, 1000);
     job.getConfiguration().set("fs.default.name", "file:///");
     job.getConfiguration().setInt("test.mapcollection.num.maps", 1);

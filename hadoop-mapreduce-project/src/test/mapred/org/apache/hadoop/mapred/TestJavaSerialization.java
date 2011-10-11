@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.JavaSerializationComparator;
+import org.apache.hadoop.mapreduce.MRConfig;
 
 public class TestJavaSerialization extends TestCase {
 
@@ -109,6 +110,8 @@ public class TestJavaSerialization extends TestCase {
     conf.setMapperClass(WordCountMapper.class);
     conf.setReducerClass(SumReducer.class);
 
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
+
     FileInputFormat.setInputPaths(conf, INPUT_DIR);
 
     FileOutputFormat.setOutputPath(conf, OUTPUT_DIR);
@@ -154,6 +157,8 @@ public class TestJavaSerialization extends TestCase {
 
     conf.setMapperClass(WordCountMapper.class);
     conf.setReducerClass(SumReducer.class);
+
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
 
     FileInputFormat.setInputPaths(conf, INPUT_DIR);
 

@@ -135,7 +135,7 @@ public class TestMRJobs {
     }
 
     Configuration sleepConf = new Configuration(mrCluster.getConfig());
-    // set master address to local to test that local mode applied iff framework == classic and master_address == local
+    // set master address to local to test that local mode applied iff framework == local
     sleepConf.set(MRConfig.MASTER_ADDRESS, "local");	
     
     SleepJob sleepJob = new SleepJob();

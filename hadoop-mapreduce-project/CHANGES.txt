@@ -1527,6 +1527,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3154. Fix JobSubmitter to check for output specs before copying
     job submission files to fail fast. (Abhijit Suresh Shingate via acmurthy) 
 
+    MAPREDUCE-3158. Fix test failures in MRv1 due to default framework being
+    set to yarn. (Hitesh Shah) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

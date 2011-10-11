@@ -43,7 +43,7 @@ public class TestClientProtocolProviderImpls extends TestCase {
     }
 
     try {
-      conf.set(MRConfig.FRAMEWORK_NAME, "local");
+      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
       conf.set(JTConfig.JT_IPC_ADDRESS, "127.0.0.1:0");
 
       new Cluster(conf);
