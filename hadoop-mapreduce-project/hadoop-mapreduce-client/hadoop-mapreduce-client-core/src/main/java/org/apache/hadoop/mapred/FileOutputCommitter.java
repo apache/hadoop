@@ -38,7 +38,8 @@ public class FileOutputCommitter extends OutputCommitter {
 
   public static final Log LOG = LogFactory.getLog(
       "org.apache.hadoop.mapred.FileOutputCommitter");
-/**
+  
+  /**
    * Temporary directory name 
    */
   public static final String TEMP_DIR_NAME = "_temporary";
@@ -50,7 +51,9 @@ public class FileOutputCommitter extends OutputCommitter {
     JobConf conf = context.getJobConf();
     Path outputPath = FileOutputFormat.getOutputPath(conf);
     if (outputPath != null) {
-      Path tmpDir = new Path(outputPath, FileOutputCommitter.TEMP_DIR_NAME);
+      Path tmpDir = 
+          new Path(outputPath, getJobAttemptBaseDirName(context) + 
+              Path.SEPARATOR + FileOutputCommitter.TEMP_DIR_NAME);
       FileSystem fileSys = tmpDir.getFileSystem(conf);
       if (!fileSys.mkdirs(tmpDir)) {
         LOG.error("Mkdirs failed to create " + tmpDir.toString());
@@ -65,6 +68,24 @@ public class FileOutputCommitter extends OutputCommitter {
   }
   
   public void commitJob(JobContext context) throws IOException {
+    //delete the task temp directory from the current jobtempdir
+    JobConf conf = context.getJobConf();
+    Path outputPath = FileOutputFormat.getOutputPath(conf);
+    FileSystem outputFileSystem = outputPath.getFileSystem(conf);
+    Path tmpDir = new Path(outputPath, getJobAttemptBaseDirName(context) +
+        Path.SEPARATOR + FileOutputCommitter.TEMP_DIR_NAME);
+    FileSystem fileSys = tmpDir.getFileSystem(context.getConfiguration());
+    if (fileSys.exists(tmpDir)) {
+      fileSys.delete(tmpDir, true);
+    } else {
+      LOG.warn("Task temp dir could not be deleted " + tmpDir);
+    }
+    
+    //move the job output to final place
+    Path jobOutputPath = 
+        new Path(outputPath, getJobAttemptBaseDirName(context));
+    moveJobOutputs(outputFileSystem, outputPath, jobOutputPath);
+    
     // delete the _temporary folder in the output folder
     cleanupJob(context);
     // check if the output-dir marking is required
@@ -88,6 +109,30 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  private void moveJobOutputs(FileSystem fs,
+      Path finalOutputDir, Path jobOutput) throws IOException {
+    if (fs.isFile(jobOutput)) {
+      Path finalOutputPath = getFinalPath(finalOutputDir, jobOutput, jobOutput);
+      if (!fs.rename(jobOutput, finalOutputPath)) {
+        if (!fs.delete(finalOutputPath, true)) {
+          throw new IOException("Failed to delete earlier output of job");
+        }
+        if (!fs.rename(jobOutput, finalOutputPath)) {
+          throw new IOException("Failed to save output of job");
+        }
+      }
+      LOG.debug("Moved " + jobOutput + " to " + finalOutputPath);
+    } else if (fs.getFileStatus(jobOutput).isDirectory()) {
+      FileStatus[] paths = fs.listStatus(jobOutput);
+      Path finalOutputPath = getFinalPath(finalOutputDir, jobOutput, jobOutput);
+      fs.mkdirs(finalOutputPath);
+      if (paths != null) {
+        for (FileStatus path : paths) {
+          moveJobOutputs(fs, finalOutputDir, path.getPath());
+        }
+      }
+    }
+  }
   @Override
   @Deprecated
   public void cleanupJob(JobContext context) throws IOException {
@@ -128,9 +173,14 @@ public class FileOutputCommitter extends OutputCommitter {
       FileSystem fs = taskOutputPath.getFileSystem(job);
       context.getProgressible().progress();
       if (fs.exists(taskOutputPath)) {
-        Path jobOutputPath = taskOutputPath.getParent().getParent();
-        // Move the task outputs to their final place
-        moveTaskOutputs(context, fs, jobOutputPath, taskOutputPath);
+        // Move the task outputs to the current job attempt output dir
+        JobConf conf = context.getJobConf();
+        Path outputPath = FileOutputFormat.getOutputPath(conf);
+        FileSystem outputFileSystem = outputPath.getFileSystem(conf);
+        Path jobOutputPath = new Path(outputPath, getJobTempDirName(context));
+        moveTaskOutputs(context, outputFileSystem, jobOutputPath, 
+            taskOutputPath);
+
         // Delete the temporary task-specific output directory
         if (!fs.delete(taskOutputPath, true)) {
           LOG.info("Failed to delete the temporary output" + 
@@ -189,7 +239,8 @@ public class FileOutputCommitter extends OutputCommitter {
                             Path taskOutputPath) throws IOException {
     URI taskOutputUri = taskOutput.toUri();
     URI relativePath = taskOutputPath.toUri().relativize(taskOutputUri);
-    if (taskOutputUri == relativePath) {//taskOutputPath is not a parent of taskOutput
+    if (taskOutputUri == relativePath) { 
+      //taskOutputPath is not a parent of taskOutput
       throw new IOException("Can not get the relative path: base = " + 
           taskOutputPath + " child = " + taskOutput);
     }
@@ -216,7 +267,8 @@ public class FileOutputCommitter extends OutputCommitter {
     return false;
   }
 
-  Path getTempTaskOutputPath(TaskAttemptContext taskContext) throws IOException {
+  Path getTempTaskOutputPath(TaskAttemptContext taskContext) 
+      throws IOException {
     JobConf conf = taskContext.getJobConf();
     Path outputPath = FileOutputFormat.getOutputPath(conf);
     if (outputPath != null) {
@@ -246,5 +298,61 @@ public class FileOutputCommitter extends OutputCommitter {
           + taskTmpDir.toString());
     }
     return taskTmpDir;
+  }
+  
+  @Override
+  public boolean isRecoverySupported() {
+    return true;
+  }
+  
+  @Override
+  public void recoverTask(TaskAttemptContext context)
+      throws IOException {
+    Path outputPath = FileOutputFormat.getOutputPath(context.getJobConf());
+    context.progress();
+    Path jobOutputPath = new Path(outputPath, getJobTempDirName(context));
+    int previousAttempt =         
+        context.getConfiguration().getInt(
+            MRConstants.APPLICATION_ATTEMPT_ID, 0) - 1;
+    if (previousAttempt < 0) {
+      LOG.warn("Cannot recover task output for first attempt...");
+      return;
+    }
+
+    FileSystem outputFileSystem = 
+        outputPath.getFileSystem(context.getJobConf());
+    Path pathToRecover = 
+        new Path(outputPath, getJobAttemptBaseDirName(previousAttempt));
+    if (outputFileSystem.exists(pathToRecover)) {
+      // Move the task outputs to their final place
+      moveJobOutputs(outputFileSystem, jobOutputPath, pathToRecover);
+      LOG.info("Saved output of job to " + jobOutputPath);
+    }
+  }
+
+  protected static String getJobAttemptBaseDirName(JobContext context) {
+    int appAttemptId = 
+        context.getJobConf().getInt(
+            MRConstants.APPLICATION_ATTEMPT_ID, 0);
+    return getJobAttemptBaseDirName(appAttemptId);
+  }
+
+  protected static String getJobTempDirName(TaskAttemptContext context) {
+    int appAttemptId = 
+        context.getJobConf().getInt(
+            MRConstants.APPLICATION_ATTEMPT_ID, 0);
+    return getJobAttemptBaseDirName(appAttemptId);
+  }
+
+  protected static String getJobAttemptBaseDirName(int appAttemptId) {
+    return FileOutputCommitter.TEMP_DIR_NAME + Path.SEPARATOR + 
+      + appAttemptId;
+  }
+
+  protected static String getTaskAttemptBaseDirName(
+      TaskAttemptContext context) {
+    return getJobTempDirName(context) + Path.SEPARATOR + 
+      FileOutputCommitter.TEMP_DIR_NAME + Path.SEPARATOR +
+      "_" + context.getTaskAttemptID().toString();
   }
 }
