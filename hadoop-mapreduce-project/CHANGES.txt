@@ -1565,7 +1565,7 @@ Release 0.23.0 - Unreleased
     job submission files to fail fast. (Abhijit Suresh Shingate via acmurthy) 
 
     MAPREDUCE-3158. Fix test failures in MRv1 due to default framework being
-    set to yarn. (Hitesh Shah via acmurhty)
+    set to yarn. (Hitesh Shah via acmurthy)
 
     MAPREDUCE-3167. container-executor is not being packaged with the assembly
     target. (mahadev)
@@ -1575,6 +1575,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2668. Fixed AuxServices to send a signal on application-finish
     to all the services. (Thomas Graves via vinodkv)
+
+    MAPREDUCE-3126. Fixed a corner case in CapacityScheduler where headroom
+    wasn't updated on changes to cluster size. (acmurthy) 
 
 Release 0.22.0 - Unreleased
 
