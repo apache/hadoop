@@ -1533,6 +1533,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3158. Fix test failures in MRv1 due to default framework being
     set to yarn. (Hitesh Shah) 
 
+    MAPREDUCE-3167. container-executor is not being packaged with the assembly
+    target. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
