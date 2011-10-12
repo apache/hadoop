@@ -624,6 +624,8 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-3151. Contrib tests failing (Joep Rottinghuis via cos)
 
+    MAPREDUCE-3156. Allow TestMRCLI to be run against a cluster (cos)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

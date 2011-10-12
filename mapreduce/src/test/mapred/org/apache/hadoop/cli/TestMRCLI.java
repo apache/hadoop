@@ -30,6 +30,8 @@ import org.apache.hadoop.security.authorize.HadoopPolicyProvider;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.ToolRunner;
 
+import static org.junit.Assert.assertTrue;
+
 public class TestMRCLI extends TestHDFSCLI{
 
   protected MiniMRCluster mrCluster = null;
@@ -41,17 +43,28 @@ public class TestMRCLI extends TestHDFSCLI{
     super.setUp();
     conf.setClass(PolicyProvider.POLICY_PROVIDER_CONFIG,
         HadoopPolicyProvider.class, PolicyProvider.class);
+    jobtracker = System.getProperty("test.cli.mapred.job.tracker");
     JobConf mrConf = new JobConf(conf);
-    mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1, 
-                           null, null, mrConf);
-    jobtracker = mrCluster.createJobConf().get(JTConfig.JT_IPC_ADDRESS, "local");
+    if (jobtracker == null) {
+      // Start up mini mr cluster
+      mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1,
+                            null, null, mrConf);
+      jobtracker = mrCluster.createJobConf().get(JTConfig.JT_IPC_ADDRESS, "local");
+    } else {
+      conf.set(JTConfig.JT_IPC_ADDRESS, jobtracker);
+    }
     cmdExecutor = new MRCmdExecutor(jobtracker);
     archiveCmdExecutor = new ArchiveCmdExecutor(namenode, mrConf);
   }
 
   
   public void tearDown() throws Exception {
-    mrCluster.shutdown();
+    boolean success = false;
+    if (mrCluster != null) {
+      mrCluster.shutdown();
+      success = true;
+    }
+    assertTrue("Error tearing down Mini MR cluster", success);
     super.tearDown();
   }
   
