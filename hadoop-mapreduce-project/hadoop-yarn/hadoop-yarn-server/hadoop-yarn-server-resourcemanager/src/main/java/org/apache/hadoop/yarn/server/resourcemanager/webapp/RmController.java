@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.Apps;
@@ -73,8 +72,9 @@ public class RmController extends Controller {
     }
     setTitle(join("Application ", aid));
     String trackingUrl = app.getTrackingUrl();
-    String ui = trackingUrl == null ? "UNASSIGNED" :
-        (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
+    boolean trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
+	String ui = trackingUrlIsNotReady ? "UNASSIGNED" :
+        (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
 
     ResponseInfo info = info("Application Overview").
       _("User:", app.getUser()).
@@ -84,8 +84,8 @@ public class RmController extends Controller {
       _("Started:", Times.format(app.getStartTime())).
       _("Elapsed:", StringUtils.formatTime(
         Times.elapsed(app.getStartTime(), app.getFinishTime()))).
-      _("Tracking URL:", trackingUrl == null ? "#" :
-        join("http://", trackingUrl), ui).
+      _("Tracking URL:", trackingUrlIsNotReady ?
+        "#" : join("http://", trackingUrl), ui).
       _("Diagnostics:", app.getDiagnostics());
     Container masterContainer = app.getCurrentAppAttempt()
         .getMasterContainer();
