@@ -59,6 +59,9 @@ Trunk (unreleased changes)
 
     HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
 
+    HADOOP-6490. Use StringUtils over String#replace in Path#normalizePath.
+    (Uma Maheswara Rao G via harsh)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

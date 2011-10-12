@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.fs;
 
-import java.net.*;
-import java.io.*;
-import org.apache.avro.reflect.Stringable;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
+import org.apache.avro.reflect.Stringable;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -157,8 +159,8 @@ public class Path implements Comparable {
 
   private String normalizePath(String path) {
     // remove double slashes & backslashes
-    path = path.replace("//", "/");
-    path = path.replace("\\", "/");
+    path = StringUtils.replace(path, "//", "/");
+    path = StringUtils.replace(path, "\\", "/");
     
     // trim trailing slash from non-root path (ignoring windows drive)
     int minLength = hasWindowsDrive(path, true) ? 4 : 1;
