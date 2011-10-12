@@ -20,21 +20,22 @@
 
 package org.apache.hadoop.hbase.io;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 
 
 public class TestHalfStoreFileReader {
@@ -63,8 +64,10 @@ public class TestHalfStoreFileReader {
 
     Configuration conf = test_util.getConfiguration();
     FileSystem fs = FileSystem.get(conf);
+    CacheConfig cacheConf = new CacheConfig(conf);
 
-    HFile.Writer w = HFile.getWriterFactory(conf).createWriter(fs, p, 1024,
+    HFile.Writer w =
+      HFile.getWriterFactory(conf, cacheConf).createWriter(fs, p, 1024,
         "none", KeyValue.KEY_COMPARATOR);
 
     // write some things.
@@ -74,7 +77,7 @@ public class TestHalfStoreFileReader {
     }
     w.close();
 
-    HFile.Reader r = HFile.createReader(fs, p, null, false, false);
+    HFile.Reader r = HFile.createReader(fs, p, cacheConf);
     r.loadFileInfo();
     byte [] midkey = r.midkey();
     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
@@ -83,16 +86,17 @@ public class TestHalfStoreFileReader {
     //System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
 
     Reference bottom = new Reference(midkey, Reference.Range.bottom);
-    doTestOfScanAndReseek(p, fs, bottom);
+    doTestOfScanAndReseek(p, fs, bottom, cacheConf);
 
     Reference top = new Reference(midkey, Reference.Range.top);
-    doTestOfScanAndReseek(p, fs, top);
+    doTestOfScanAndReseek(p, fs, top, cacheConf);
   }
 
-  private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom)
+  private void doTestOfScanAndReseek(Path p, FileSystem fs, Reference bottom,
+      CacheConfig cacheConf)
       throws IOException {
     final HalfStoreFileReader halfreader =
-        new HalfStoreFileReader(fs, p, null, bottom);
+        new HalfStoreFileReader(fs, p, cacheConf, bottom);
     halfreader.loadFileInfo();
     final HFileScanner scanner = halfreader.getScanner(false, false);
 

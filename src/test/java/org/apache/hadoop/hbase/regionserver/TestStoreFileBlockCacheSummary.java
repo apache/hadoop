@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -100,7 +101,8 @@ public class TestStoreFileBlockCacheSummary {
    scan(ht, FAMILY);
    scan(ht2, FAMILY);
       
-   BlockCache bc = StoreFile.getBlockCache(TEST_UTIL.getConfiguration());
+   BlockCache bc =
+     new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache();
    List<BlockCacheColumnFamilySummary> bcs = 
      bc.getBlockCacheColumnFamilySummaries(TEST_UTIL.getConfiguration());
    LOG.info("blockCacheSummary: " + bcs);

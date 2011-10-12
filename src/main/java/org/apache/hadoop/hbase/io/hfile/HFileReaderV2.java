@@ -65,20 +65,20 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * Opens a HFile. You must load the index before you can use it by calling
    * {@link #loadFileInfo()}.
    *
+   * @param path Path to HFile.
+   * @param trailer File trailer.
    * @param fsdis input stream. Caller is responsible for closing the passed
    *          stream.
    * @param size Length of the stream.
-   * @param blockCache block cache. Pass null if none.
-   * @param inMemory whether blocks should be marked as in-memory in cache
-   * @param evictOnClose whether blocks in cache should be evicted on close
+   * @param closeIStream Whether to close the stream.
+   * @param cacheConf Cache configuration.
    * @throws IOException
    */
   public HFileReaderV2(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
-      final boolean closeIStream, final BlockCache blockCache,
-      final boolean inMemory, final boolean evictOnClose) throws IOException {
-    super(path, trailer, fsdis, size, closeIStream, blockCache, inMemory,
-        evictOnClose);
+      final boolean closeIStream, final CacheConfig cacheConf)
+  throws IOException {
+    super(path, trailer, fsdis, size, closeIStream, cacheConf);
 
     trailer.expectVersion(2);
     fsBlockReader = new HFileBlock.FSReaderV2(fsdis, compressAlgo,
@@ -174,9 +174,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       String cacheKey = HFile.getBlockCacheKey(name, metaBlockOffset);
 
-      if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
-            true);
+      cacheBlock &= cacheConf.shouldCacheDataOnRead();
+      if (cacheConf.isBlockCacheEnabled()) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
         if (cachedBlock != null) {
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
@@ -193,8 +194,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheBlock && blockCache != null) {
-        blockCache.cacheBlock(cacheKey, metaBlock, inMemory);
+      if (cacheBlock) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock,
+            cacheConf.isInMemory());
       }
 
       return metaBlock.getBufferWithoutHeader();
@@ -237,9 +239,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
       blockLoads.incrementAndGet();
 
       // Check cache for block. If found return.
-      if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
-            true);
+      cacheBlock &= cacheConf.shouldCacheDataOnRead();
+      if (cacheConf.isBlockCacheEnabled()) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock);
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
 
@@ -257,8 +260,9 @@ public class HFileReaderV2 extends AbstractHFileReader {
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheBlock && blockCache != null) {
-        blockCache.cacheBlock(cacheKey, dataBlock, inMemory);
+      if (cacheBlock) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, dataBlock,
+            cacheConf.isInMemory());
       }
 
       return dataBlock;
@@ -289,8 +293,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   @Override
   public void close() throws IOException {
-    if (evictOnClose && blockCache != null) {
-      int numEvicted = blockCache.evictBlocksByPrefix(name
+    if (cacheConf.shouldEvictOnClose()) {
+      int numEvicted = cacheConf.getBlockCache().evictBlocksByPrefix(name
           + HFile.CACHE_KEY_SEPARATOR);
       LOG.debug("On close of file " + name + " evicted " + numEvicted
           + " block(s)");

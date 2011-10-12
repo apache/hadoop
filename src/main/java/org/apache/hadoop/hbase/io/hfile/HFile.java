@@ -198,8 +198,12 @@ public class HFile {
    */
   public static abstract class WriterFactory {
     protected Configuration conf;
+    protected CacheConfig cacheConf;
 
-    WriterFactory(Configuration conf) { this.conf = conf; }
+    WriterFactory(Configuration conf, CacheConfig cacheConf) {
+      this.conf = conf;
+      this.cacheConf = cacheConf;
+    }
 
     public abstract Writer createWriter(FileSystem fs, Path path)
         throws IOException;
@@ -236,32 +240,28 @@ public class HFile {
    * can also be {@link HFileWriterV1#WRITER_FACTORY_V1} in testing.
    */
   public static final WriterFactory getWriterFactory(Configuration conf) {
+    return HFile.getWriterFactory(conf, new CacheConfig(conf));
+  }
+
+  /**
+   * Returns the factory to be used to create {@link HFile} writers. Should
+   * always be {@link HFileWriterV2#WRITER_FACTORY_V2} in production, but
+   * can also be {@link HFileWriterV1#WRITER_FACTORY_V1} in testing.
+   */
+  public static final WriterFactory getWriterFactory(Configuration conf,
+      CacheConfig cacheConf) {
     int version = getFormatVersion(conf);
     LOG.debug("Using HFile format version " + version);
     switch (version) {
     case 1:
-      return new HFileWriterV1.WriterFactoryV1(conf);
+      return new HFileWriterV1.WriterFactoryV1(conf, cacheConf);
     case 2:
-      return new HFileWriterV2.WriterFactoryV2(conf);
+      return new HFileWriterV2.WriterFactoryV2(conf, cacheConf);
     default:
       throw new IllegalArgumentException("Cannot create writer for HFile " +
           "format version " + version);
     }
   }
-
-  /**
-   * Configuration key to evict all blocks of a given file from the block cache
-   * when the file is closed.
-   */
-  public static final String EVICT_BLOCKS_ON_CLOSE_KEY =
-      "hbase.rs.evictblocksonclose";
-
-  /**
-   * Configuration key to cache data blocks on write. There are separate
-   * switches for Bloom blocks and non-root index blocks.
-   */
-  public static final String CACHE_BLOCKS_ON_WRITE_KEY =
-      "hbase.rs.cacheblocksonwrite";
 
   /** An abstraction used by the block index */
   public interface CachingBlockReader {
@@ -325,35 +325,32 @@ public class HFile {
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,
-      long size, boolean closeIStream, BlockCache blockCache,
-      boolean inMemory, boolean evictOnClose) throws IOException {
+      long size, boolean closeIStream, CacheConfig cacheConf)
+  throws IOException {
     FixedFileTrailer trailer = FixedFileTrailer.readFromStream(fsdis, size);
     switch (trailer.getVersion()) {
     case 1:
       return new HFileReaderV1(path, trailer, fsdis, size, closeIStream,
-          blockCache, inMemory, evictOnClose);
+          cacheConf);
     case 2:
       return new HFileReaderV2(path, trailer, fsdis, size, closeIStream,
-          blockCache, inMemory, evictOnClose);
+          cacheConf);
     default:
       throw new IOException("Cannot instantiate reader for HFile version " +
           trailer.getVersion());
     }
   }
 
-  public static Reader createReader(
-      FileSystem fs, Path path, BlockCache blockCache, boolean inMemory,
-      boolean evictOnClose) throws IOException {
+  public static Reader createReader(FileSystem fs, Path path,
+      CacheConfig cacheConf) throws IOException {
     return pickReaderVersion(path, fs.open(path),
-        fs.getFileStatus(path).getLen(), true, blockCache, inMemory,
-        evictOnClose);
+        fs.getFileStatus(path).getLen(), true, cacheConf);
   }
 
   public static Reader createReader(Path path, FSDataInputStream fsdis,
-      long size, BlockCache blockache, boolean inMemory, boolean evictOnClose)
+      long size, CacheConfig cacheConf)
       throws IOException {
-    return pickReaderVersion(path, fsdis, size, false, blockache, inMemory,
-        evictOnClose);
+    return pickReaderVersion(path, fsdis, size, false, cacheConf);
   }
 
   /*

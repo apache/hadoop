@@ -460,7 +460,8 @@ public class TestHFileBlockIndex {
   public void testHFileWriterAndReader() throws IOException {
     Path hfilePath = new Path(HBaseTestingUtility.getTestDir(),
         "hfile_for_block_index");
-    BlockCache blockCache = StoreFile.getBlockCache(conf);
+    CacheConfig cacheConf = new CacheConfig(conf);
+    BlockCache blockCache = cacheConf.getBlockCache();
 
     for (int testI = 0; testI < INDEX_CHUNK_SIZES.length; ++testI) {
       int indexBlockSize = INDEX_CHUNK_SIZES[testI];
@@ -478,7 +479,8 @@ public class TestHFileBlockIndex {
 
       // Write the HFile
       {
-        HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(fs,
+        HFile.Writer writer =
+          HFile.getWriterFactory(conf, cacheConf).createWriter(fs,
             hfilePath, SMALL_BLOCK_SIZE, compr, KeyValue.KEY_COMPARATOR);
         Random rand = new Random(19231737);
 
@@ -505,8 +507,7 @@ public class TestHFileBlockIndex {
       }
 
       // Read the HFile
-      HFile.Reader reader = HFile.createReader(fs, hfilePath, blockCache,
-          false, true);
+      HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConf);
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 

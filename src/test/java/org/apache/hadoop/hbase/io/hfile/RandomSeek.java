@@ -67,7 +67,10 @@ public class RandomSeek {
     Path path = new Path("/Users/ryan/rfile.big.txt");
     long start = System.currentTimeMillis();
     SimpleBlockCache cache = new SimpleBlockCache();
-    Reader reader = HFile.createReader(lfs, path, cache, false, false);
+    CacheConfig cacheConf = new CacheConfig(cache, true, false, false, false,
+        false, false, false);
+
+    Reader reader = HFile.createReader(lfs, path, cacheConf);
     reader.loadFileInfo();
     System.out.println(reader.getTrailer());
     long end = System.currentTimeMillis();

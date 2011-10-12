@@ -19,19 +19,18 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.compress.Compressor;
-
-import java.io.IOException;
-import java.net.URI;
 
 /**
  * Compression validation test.  Checks compression is working.  Be sure to run
@@ -106,13 +105,14 @@ public class CompressionTest {
   public static void doSmokeTest(FileSystem fs, Path path, String codec)
   throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(
+    HFile.Writer writer =
+      HFile.getWriterFactory(conf).createWriter(
       fs, path, HFile.DEFAULT_BLOCKSIZE, codec, null);
     writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
     writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
     writer.close();
 
-    HFile.Reader reader = HFile.createReader(fs, path, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf));
     reader.loadFileInfo();
     byte[] key = reader.getFirstKey();
     boolean rc = Bytes.toString(key).equals("testkey");

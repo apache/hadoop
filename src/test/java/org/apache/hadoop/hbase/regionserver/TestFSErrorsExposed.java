@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -70,13 +71,14 @@ public class TestFSErrorsExposed {
         HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
+    CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2*1024,
-        util.getConfiguration());
+        util.getConfiguration(), cacheConf);
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(), false,
-        util.getConfiguration(), StoreFile.BloomType.NONE, false);
+    StoreFile sf = new StoreFile(fs, writer.getPath(),
+        util.getConfiguration(), cacheConf, StoreFile.BloomType.NONE);
     StoreFile.Reader reader = sf.createReader();
     HFileScanner scanner = reader.getScanner(false, true);
 
@@ -112,13 +114,14 @@ public class TestFSErrorsExposed {
         HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
+    CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
     StoreFile.Writer writer = StoreFile.createWriter(fs, hfilePath, 2 * 1024,
-        util.getConfiguration());
+        util.getConfiguration(), cacheConf);
     TestStoreFile.writeStoreFile(
         writer, Bytes.toBytes("cf"), Bytes.toBytes("qual"));
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(), false,
-        util.getConfiguration(), BloomType.NONE, false);
+    StoreFile sf = new StoreFile(fs, writer.getPath(), util.getConfiguration(),
+        cacheConf, BloomType.NONE);
     List<StoreFileScanner> scanners = StoreFileScanner.getScannersForStoreFiles(
         Collections.singletonList(sf), false, true);
     KeyValueScanner scanner = scanners.get(0);

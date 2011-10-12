@@ -64,6 +64,7 @@ public class TestCacheOnWrite {
   private static final HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
   private Configuration conf;
+  private CacheConfig cacheConf;
   private FileSystem fs;
   private Random rand = new Random(12983177L);
   private Path storeFilePath;
@@ -82,11 +83,11 @@ public class TestCacheOnWrite {
       KeyValue.Type.values().length - 2;
 
   private static enum CacheOnWriteType {
-    DATA_BLOCKS(BlockType.DATA, HFile.CACHE_BLOCKS_ON_WRITE_KEY),
+    DATA_BLOCKS(BlockType.DATA, CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY),
     BLOOM_BLOCKS(BlockType.BLOOM_CHUNK,
-        BloomFilterFactory.IO_STOREFILE_BLOOM_CACHE_ON_WRITE),
+        CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY),
     INDEX_BLOCKS(BlockType.LEAF_INDEX,
-        HFileBlockIndex.CACHE_INDEX_BLOCKS_ON_WRITE_KEY);
+        CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY);
 
     private final String confKey;
     private final BlockType inlineBlockType;
@@ -114,6 +115,7 @@ public class TestCacheOnWrite {
     this.cowType = cowType;
     this.compress = compress;
     testName = "[cacheOnWrite=" + cowType + ", compress=" + compress + "]";
+    System.out.println(testName);
   }
 
   @Parameters
@@ -134,9 +136,17 @@ public class TestCacheOnWrite {
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, INDEX_BLOCK_SIZE);
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZE);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.DATA));
+    conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.LEAF_INDEX));
+    conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
+        cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
     cowType.modifyConf(conf);
     fs = FileSystem.get(conf);
-    blockCache = StoreFile.getBlockCache(conf);
+    cacheConf = new CacheConfig(conf);
+    blockCache = cacheConf.getBlockCache();
+    System.out.println("setUp()");
   }
 
   @After
@@ -152,7 +162,7 @@ public class TestCacheOnWrite {
 
   private void readStoreFile() throws IOException {
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs,
-        storeFilePath, null, false, false);
+        storeFilePath, cacheConf);
     LOG.info("HFile information: " + reader);
     HFileScanner scanner = reader.getScanner(false, false);
     assertTrue(testName, scanner.seekTo());
@@ -167,8 +177,8 @@ public class TestCacheOnWrite {
       if (prevBlock != null) {
          onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
       }
-      // Flags: cache the block, use pread, this is not a compaction.
-      HFileBlock block = reader.readBlock(offset, onDiskSize, true, true,
+      // Flags: don't cache the block, use pread, this is not a compaction.
+      HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
           false);
       String blockCacheKey = HFile.getBlockCacheKey(reader.getName(), offset);
       boolean isCached = blockCache.getBlock(blockCacheKey, true) != null;
@@ -210,7 +220,7 @@ public class TestCacheOnWrite {
         "test_cache_on_write");
     StoreFile.Writer sfw = StoreFile.createWriter(fs, storeFileParentDir,
         DATA_BLOCK_SIZE, compress, KeyValue.COMPARATOR, conf,
-        StoreFile.BloomType.ROWCOL, NUM_KV);
+        cacheConf, StoreFile.BloomType.ROWCOL, NUM_KV);
 
     final int rowLen = 32;
     for (int i = 0; i < NUM_KV; ++i) {

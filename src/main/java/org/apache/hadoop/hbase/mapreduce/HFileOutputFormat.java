@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -169,7 +170,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
         Path familydir = new Path(outputdir, Bytes.toString(family));
         String compression = compressionMap.get(family);
         compression = compression == null ? defaultCompression : compression;
-        wl.writer = HFile.getWriterFactory(conf).createWriter(fs,
+        wl.writer =
+          HFile.getWriterFactory(conf).createWriter(fs,
           StoreFile.getUniqueFile(fs, familydir), blocksize,
           compression, KeyValue.KEY_COMPARATOR);
         this.writers.put(family, wl);

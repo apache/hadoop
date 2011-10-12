@@ -128,5 +128,11 @@ public class SimpleBlockCache implements BlockCache {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public long getBlockCount() {
+    // TODO: implement this if we ever actually use this block cache
+    return 0;
+  }
+
 }
 

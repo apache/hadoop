@@ -269,6 +269,11 @@ public class SingleSizeCache implements BlockCache, HeapSize {
     return this.stats;
   }
 
+  @Override
+  public long getBlockCount() {
+    return numBlocks - backingStore.getBlocksRemaining();
+  }
+
   /* Since its offheap, it doesn't matter if its in memory or not */
   @Override
   public void cacheBlock(String blockName, Cacheable buf, boolean inMemory) {

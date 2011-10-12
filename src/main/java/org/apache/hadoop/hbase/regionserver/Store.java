@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -52,8 +53,8 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -93,6 +94,7 @@ public class Store implements HeapSize {
   private final HColumnDescriptor family;
   final FileSystem fs;
   final Configuration conf;
+  final CacheConfig cacheConf;
   // ttl in milliseconds.
   protected long ttl;
   protected int minVersions;
@@ -115,7 +117,6 @@ public class Store implements HeapSize {
   private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final String storeNameStr;
-  private final boolean inMemory;
   private CompactionProgress progress;
   private final int compactionKVMax;
 
@@ -195,8 +196,8 @@ public class Store implements HeapSize {
       conf.getInt("hbase.hstore.compaction.min",
         /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
 
-    // Check if this is in-memory store
-    this.inMemory = family.isInMemory();
+    // Setting up cache configuration for this family
+    this.cacheConf = new CacheConfig(conf, family);
     this.blockingStoreFileCount =
       conf.getInt("hbase.hstore.blockingStoreFiles", 7);
 
@@ -270,8 +271,8 @@ public class Store implements HeapSize {
       }
       StoreFile curfile = null;
       try {
-        curfile = new StoreFile(fs, p, blockcache, this.conf,
-            this.family.getBloomFilterType(), this.inMemory);
+        curfile = new StoreFile(fs, p, this.conf, this.cacheConf,
+            this.family.getBloomFilterType());
         curfile.createReader();
       } catch (IOException ioe) {
         LOG.warn("Failed open of " + p + "; presumption is that file was " +
@@ -335,7 +336,7 @@ public class Store implements HeapSize {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.region);
       reader = HFile.createReader(srcPath.getFileSystem(conf),
-          srcPath, null, false, false);
+          srcPath, cacheConf);
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
@@ -375,8 +376,8 @@ public class Store implements HeapSize {
     LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
     StoreFile.rename(fs, srcPath, dstPath);
 
-    StoreFile sf = new StoreFile(fs, dstPath, blockcache,
-        this.conf, this.family.getBloomFilterType(), this.inMemory);
+    StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
+        this.family.getBloomFilterType());
     sf.createReader();
 
     LOG.info("Moved hfile " + srcPath + " into store directory " +
@@ -530,8 +531,8 @@ public class Store implements HeapSize {
     }
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
-    StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
-      this.conf, this.family.getBloomFilterType(), this.inMemory);
+    StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
+        this.family.getBloomFilterType());
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
@@ -562,7 +563,7 @@ public class Store implements HeapSize {
     Compression.Algorithm compression)
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
-        compression, this.comparator, this.conf,
+        compression, this.comparator, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), maxKeyCount);
   }
 
@@ -1227,8 +1228,8 @@ public class Store implements HeapSize {
         LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
         return null;
       }
-      result = new StoreFile(this.fs, p, blockcache, this.conf,
-          this.family.getBloomFilterType(), this.inMemory);
+      result = new StoreFile(this.fs, p, this.conf, this.cacheConf,
+          this.family.getBloomFilterType());
       result.createReader();
     }
     this.lock.writeLock().lock();
@@ -1790,9 +1791,9 @@ public class Store implements HeapSize {
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (16 * ClassSize.REFERENCE) +
+      ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
       (7 * Bytes.SIZEOF_LONG) + (1 * Bytes.SIZEOF_DOUBLE) +
-      (6 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
+      (6 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +

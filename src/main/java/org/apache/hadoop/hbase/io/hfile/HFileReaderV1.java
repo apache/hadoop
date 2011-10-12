@@ -54,18 +54,14 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * @param fsdis input stream.  Caller is responsible for closing the passed
    * stream.
    * @param size Length of the stream.
-   * @param blockCache block cache. Pass null if none.
-   * @param inMemory whether blocks should be marked as in-memory in cache
-   * @param evictOnClose whether blocks in cache should be evicted on close
+   * @param cacheConf cache references and configuration
    * @throws IOException
    */
   public HFileReaderV1(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
       final boolean closeIStream,
-      final BlockCache blockCache, final boolean inMemory,
-      final boolean evictOnClose) {
-    super(path, trailer, fsdis, size, closeIStream, blockCache, inMemory,
-        evictOnClose);
+      final CacheConfig cacheConf) {
+    super(path, trailer, fsdis, size, closeIStream, cacheConf);
 
     trailer.expectVersion(1);
     fsBlockReader = new HFileBlock.FSReaderV1(fsdis, compressAlgo, fileSize);
@@ -221,9 +217,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       metaLoads.incrementAndGet();
       // Check cache for block.  If found return.
-      if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
-            true);
+      if (cacheConf.isBlockCacheEnabled()) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
+              cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
           return cachedBlock.getBufferWithoutHeader();
@@ -240,8 +237,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheBlock && blockCache != null) {
-        blockCache.cacheBlock(cacheKey, hfileBlock, inMemory);
+      if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
+            cacheConf.isInMemory());
       }
 
       return hfileBlock.getBufferWithoutHeader();
@@ -279,9 +277,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
       blockLoads.incrementAndGet();
 
       // Check cache for block.  If found return.
-      if (blockCache != null) {
-        HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(cacheKey,
-            true);
+      if (cacheConf.isBlockCacheEnabled()) {
+        HFileBlock cachedBlock =
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
+              cacheConf.shouldCacheDataOnRead());
         if (cachedBlock != null) {
           cacheHits.incrementAndGet();
           return cachedBlock.getBufferWithoutHeader();
@@ -312,8 +311,9 @@ public class HFileReaderV1 extends AbstractHFileReader {
       HFile.readOps.incrementAndGet();
 
       // Cache the block
-      if (cacheBlock && blockCache != null) {
-        blockCache.cacheBlock(cacheKey, hfileBlock, inMemory);
+      if (cacheConf.shouldCacheDataOnRead() && cacheBlock) {
+        cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock,
+            cacheConf.isInMemory());
       }
 
       return buf;
@@ -348,10 +348,10 @@ public class HFileReaderV1 extends AbstractHFileReader {
 
   @Override
   public void close() throws IOException {
-    if (evictOnClose && this.blockCache != null) {
+    if (cacheConf.shouldEvictOnClose()) {
       int numEvicted = 0;
       for (int i = 0; i < dataBlockIndexReader.getRootBlockCount(); i++) {
-        if (blockCache.evictBlock(HFile.getBlockCacheKey(name,
+        if (cacheConf.getBlockCache().evictBlock(HFile.getBlockCacheKey(name,
             dataBlockIndexReader.getRootBlockOffset(i))))
           numEvicted++;
       }

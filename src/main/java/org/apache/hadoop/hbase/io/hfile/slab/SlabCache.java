@@ -375,6 +375,15 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
     return 0; // this cache, by default, allocates all its space.
   }
 
+  @Override
+  public long getBlockCount() {
+    long count = 0;
+    for (SingleSizeCache cache : backingStore.values()) {
+      count += cache.getBlockCount();
+    }
+    return count;
+  }
+
   public long getCurrentSize() {
     return size;
   }

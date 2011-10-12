@@ -19,10 +19,11 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,14 +35,13 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
 
 /**
  * Test cases for the "load" half of the HFileOutputFormat bulk load
@@ -179,7 +179,7 @@ public class TestLoadIncrementalHFiles {
   private int verifyHFile(Path p) throws IOException {
     Configuration conf = util.getConfiguration();
     HFile.Reader reader = HFile.createReader(
-        p.getFileSystem(conf), p, null, false, false);
+        p.getFileSystem(conf), p, new CacheConfig(conf));
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, false);
     scanner.seekTo();
@@ -203,7 +203,8 @@ public class TestLoadIncrementalHFiles {
       byte[] family, byte[] qualifier,
       byte[] startKey, byte[] endKey, int numRows) throws IOException
   {
-    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(fs, path,
+    HFile.Writer writer =
+      HFile.getWriterFactory(conf, new CacheConfig(conf)).createWriter(fs, path,
         BLOCKSIZE, COMPRESSION,
         KeyValue.KEY_COMPARATOR);
     long now = System.currentTimeMillis();

@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -75,6 +74,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
@@ -96,10 +96,11 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -289,6 +290,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   private final RegionServerAccounting regionServerAccounting;
 
+  // Cache configuration and block cache reference
+  private final CacheConfig cacheConfig;
+
   /**
    * The server name the Master sees us as.  Its made from the hostname the
    * master passes us, port, and server startcode. Gets set after registration
@@ -384,6 +388,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     User.login(this.conf, "hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", this.isa.getHostName());
     regionServerAccounting = new RegionServerAccounting();
+    cacheConfig = new CacheConfig(conf);
   }
 
   /**
@@ -685,9 +690,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     // Send cache a shutdown.
-    BlockCache c = StoreFile.getBlockCache(this.conf);
-    if (c != null) {
-      c.shutdown();
+    if (cacheConfig.isBlockCacheEnabled()) {
+      cacheConfig.getBlockCache().shutdown();
     }
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
@@ -1279,7 +1283,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.metrics.readRequestsCount.set(readRequestsCount);
     this.metrics.writeRequestsCount.set(writeRequestsCount);
 
-    BlockCache blockCache = StoreFile.getBlockCache(conf);
+    BlockCache blockCache = cacheConfig.getBlockCache();
     if (blockCache != null) {
       this.metrics.blockCacheCount.set(blockCache.size());
       this.metrics.blockCacheFree.set(blockCache.getFreeSize());
@@ -3149,7 +3153,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries() throws IOException {
-    BlockCache c = StoreFile.getBlockCache(this.conf);
+    BlockCache c = new CacheConfig(this.conf).getBlockCache();
     return c.getBlockCacheColumnFamilySummaries(this.conf);
   }
 

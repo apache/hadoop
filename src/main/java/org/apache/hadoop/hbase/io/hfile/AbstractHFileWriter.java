@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.KeyValue.KeyComparator;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
@@ -91,17 +90,8 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   /** May be null if we were passed a stream. */
   protected final Path path;
 
-  /** Whether to cache key/value data blocks on write */
-  protected final boolean cacheDataBlocksOnWrite;
-
-  /** Whether to cache non-root index blocks on write */
-  protected final boolean cacheIndexBlocksOnWrite;
-
-  /** Block cache to optionally fill on write. */
-  protected BlockCache blockCache;
-
-  /** Configuration used for block cache initialization */
-  private Configuration conf;
+  /** Cache configuration for caching data on write. */
+  protected final CacheConfig cacheConf;
 
   /**
    * Name for this object used when logging or in toString. Is either
@@ -109,7 +99,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    */
   protected final String name;
 
-  public AbstractHFileWriter(Configuration conf,
+  public AbstractHFileWriter(CacheConfig cacheConf,
       FSDataOutputStream outputStream, Path path, int blockSize,
       Compression.Algorithm compressAlgo, KeyComparator comparator) {
     this.outputStream = outputStream;
@@ -122,15 +112,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
         : Bytes.BYTES_RAWCOMPARATOR;
 
     closeOutputStream = path != null;
-
-    cacheDataBlocksOnWrite = conf.getBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY,
-        false);
-    cacheIndexBlocksOnWrite = HFileBlockIndex.shouldCacheOnWrite(conf);
-
-    this.conf = conf;
-
-    if (cacheDataBlocksOnWrite || cacheIndexBlocksOnWrite)
-      initBlockCache();
+    this.cacheConf = cacheConf;
   }
 
   /**
@@ -275,13 +257,4 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
         fs.getDefaultReplication(), fs.getDefaultBlockSize(),
         null);
   }
-
-  /** Initializes the block cache to use for cache-on-write */
-  protected void initBlockCache() {
-    if (blockCache == null) {
-      blockCache = StoreFile.getBlockCache(conf);
-      conf = null;  // This is all we need configuration for.
-    }
-  }
-
 }

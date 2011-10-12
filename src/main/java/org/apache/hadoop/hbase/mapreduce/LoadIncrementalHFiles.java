@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.Reference.Range;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
@@ -288,7 +289,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   throws IOException {
     final Path hfilePath = item.hfilePath;
     final FileSystem fs = hfilePath.getFileSystem(getConf());
-    HFile.Reader hfr = HFile.createReader(fs, hfilePath, null, false, false);
+    HFile.Reader hfr = HFile.createReader(fs, hfilePath,
+        new CacheConfig(getConf()));
     final byte[] first, last;
     try {
       hfr.loadFileInfo();
@@ -378,10 +380,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       HColumnDescriptor familyDescriptor)
   throws IOException {
     FileSystem fs = inFile.getFileSystem(conf);
+    CacheConfig cacheConf = new CacheConfig(conf);
     HalfStoreFileReader halfReader = null;
     StoreFile.Writer halfWriter = null;
     try {
-      halfReader = new HalfStoreFileReader(fs, inFile, null, reference);
+      halfReader = new HalfStoreFileReader(fs, inFile, cacheConf,
+          reference);
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
@@ -389,8 +393,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
 
       halfWriter = new StoreFile.Writer(
-          fs, outFile, blocksize, compression, conf, KeyValue.COMPARATOR,
-          bloomFilterType, 0);
+          fs, outFile, blocksize, compression, conf, cacheConf,
+          KeyValue.COMPARATOR, bloomFilterType, 0);
       HFileScanner scanner = halfReader.getScanner(false, false);
       scanner.seekTo();
       do {
@@ -490,7 +494,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       for (Path hfile : hfiles) {
         if (hfile.getName().startsWith("_")) continue;
         
-        HFile.Reader reader = HFile.createReader(fs, hfile, null, false, false);
+        HFile.Reader reader = HFile.createReader(fs, hfile,
+            new CacheConfig(getConf()));
         final byte[] first, last;
         try {
           reader.loadFileInfo();

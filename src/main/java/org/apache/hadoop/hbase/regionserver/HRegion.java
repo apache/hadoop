@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -4090,7 +4091,8 @@ public class HRegion implements HeapSize { // , Writable{
       processTable(fs, tableDir, log, c, majorCompact);
      } finally {
        log.close();
-       BlockCache bc = StoreFile.getBlockCache(c);
+       // TODO: is this still right?
+       BlockCache bc = new CacheConfig(c).getBlockCache();
        if (bc != null) bc.shutdown();
      }
   }

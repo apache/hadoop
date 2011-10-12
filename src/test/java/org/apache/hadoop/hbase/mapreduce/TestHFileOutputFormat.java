@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -281,8 +282,8 @@ public class TestHFileOutputFormat  {
       FileStatus[] file = fs.listStatus(sub3[0].getPath());
 
       // open as HFile Reader and pull out TIMERANGE FileInfo.
-      HFile.Reader rd = HFile.createReader(fs, file[0].getPath(), null, true,
-          false);
+      HFile.Reader rd = HFile.createReader(fs, file[0].getPath(),
+          new CacheConfig(conf));
       Map<byte[],byte[]> finfo = rd.loadFileInfo();
       byte[] range = finfo.get("TIMERANGE".getBytes());
       assertNotNull(range);
@@ -608,8 +609,8 @@ public class TestHFileOutputFormat  {
             // verify that the compression on this file matches the configured
             // compression
             Path dataFilePath = fileSystem.listStatus(f.getPath())[0].getPath();
-            Reader reader = HFile.createReader(fileSystem, dataFilePath, null,
-                false, true);
+            Reader reader = HFile.createReader(fileSystem, dataFilePath,
+                new CacheConfig(conf));
             reader.loadFileInfo();
             assertEquals("Incorrect compression used for column family " + familyStr
                          + "(reader: " + reader + ")",

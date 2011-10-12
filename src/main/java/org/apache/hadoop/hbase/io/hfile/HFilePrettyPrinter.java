@@ -185,7 +185,7 @@ public class HFilePrettyPrinter {
       System.err.println("ERROR, file doesnt exist: " + file);
     }
 
-    HFile.Reader reader = HFile.createReader(fs, file, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(conf));
 
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 

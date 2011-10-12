@@ -118,7 +118,8 @@ public class TestHFileSeek extends TestCase {
     long totalBytes = 0;
     FSDataOutputStream fout = createFSOutput(path, fs);
     try {
-      Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+      Writer writer =
+        HFile.getWriterFactory(conf).createWriter(fout,
           options.minBlockSize, options.compress, null);
       try {
         BytesWritable key = new BytesWritable();
@@ -164,7 +165,7 @@ public class TestHFileSeek extends TestCase {
     long totalBytes = 0;
     FSDataInputStream fsdis = fs.open(path);
     Reader reader = HFile.createReader(path, fsdis,
-        fs.getFileStatus(path).getLen(), null, false, false);
+        fs.getFileStatus(path).getLen(), new CacheConfig(conf));
     reader.loadFileInfo();
     KeySampler kSampler =
         new KeySampler(rng, reader.getFirstKey(), reader.getLastKey(),

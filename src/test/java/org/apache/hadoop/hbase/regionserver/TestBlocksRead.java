@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,18 +32,18 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-
 import org.junit.Test;
 
 public class TestBlocksRead extends HBaseTestCase {
@@ -98,7 +99,7 @@ public class TestBlocksRead extends HBaseTestCase {
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     region = HRegion.createHRegion(info, path, conf, htd);
-    blockCache = StoreFile.getBlockCache(conf);
+    blockCache = new CacheConfig(conf).getBlockCache();
   }
 
   private void putData(byte[] cf, String row, String col, long version)
@@ -176,6 +177,10 @@ public class TestBlocksRead extends HBaseTestCase {
 
   private static long getBlkAccessCount(byte[] cf) {
       return blockCache.getStats().getRequestCount();
+  }
+
+  private static long getBlkCount() {
+    return blockCache.getBlockCount();
   }
 
   /**
@@ -315,5 +320,50 @@ public class TestBlocksRead extends HBaseTestCase {
     verifyData(kvs[0], "row", "col1", 11);
     verifyData(kvs[1], "row", "col2", 12);
     verifyData(kvs[2], "row", "col3", 13);
+  }
+
+  /**
+   * Test # of blocks read to ensure disabling cache-fill on Scan works.
+   * @throws Exception
+   */
+  @Test
+  public void testBlocksStoredWhenCachingDisabled() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
+    byte [] FAMILY = Bytes.toBytes("cf1");
+    byte [][] FAMILIES = new byte[][] { FAMILY };
+
+    HBaseConfiguration conf = getConf();
+    initHRegion(TABLE, getName(), conf, FAMILIES);
+
+    putData(FAMILY, "row", "col1", 1);
+    putData(FAMILY, "row", "col2", 2);
+    region.flushcache();
+
+    // Execute a scan with caching turned off
+    // Expected blocks stored: 0
+    long blocksStart = getBlkCount();
+    Scan scan = new Scan();
+    scan.setCacheBlocks(false);
+    RegionScanner rs = region.getScanner(scan);
+    List<KeyValue> result = new ArrayList<KeyValue>(2);
+    rs.next(result);
+    assertEquals(2, result.size());
+    rs.close();
+    long blocksEnd = getBlkCount();
+
+    assertEquals(blocksStart, blocksEnd);
+
+    // Execute with caching turned on
+    // Expected blocks stored: 2
+    blocksStart = blocksEnd;
+    scan.setCacheBlocks(true);
+    rs = region.getScanner(scan);
+    result = new ArrayList<KeyValue>(2);
+    rs.next(result);
+    assertEquals(2, result.size());
+    rs.close();
+    blocksEnd = getBlkCount();
+    
+    assertEquals(2, blocksEnd - blocksStart);
   }
 }

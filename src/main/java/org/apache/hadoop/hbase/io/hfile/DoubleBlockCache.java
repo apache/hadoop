@@ -166,4 +166,9 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
     return onHeapCache.getBlockCacheColumnFamilySummaries(conf);
   }
 
+  @Override
+  public long getBlockCount() {
+    return onHeapCache.getBlockCount() + offHeapCache.getBlockCount();
+  }
+
 }

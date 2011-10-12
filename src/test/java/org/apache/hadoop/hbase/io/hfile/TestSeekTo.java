@@ -45,7 +45,8 @@ public class TestSeekTo extends HBaseTestCase {
     Path ncTFile = new Path(this.testDir, "basic.hfile");
     FSDataOutputStream fout = this.fs.create(ncTFile);
     int blocksize = toKV("a").getLength() * 3;
-    HFile.Writer writer = HFile.getWriterFactory(conf).createWriter(fout,
+    HFile.Writer writer =
+      HFile.getWriterFactory(conf).createWriter(fout,
         blocksize, "none", null);
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
@@ -62,7 +63,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testSeekBefore() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = HFile.createReader(fs, p, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
@@ -95,7 +96,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testSeekTo() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = HFile.createReader(fs, p, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
     reader.loadFileInfo();
     assertEquals(2, reader.getDataBlockIndexReader().getRootBlockCount());
     HFileScanner scanner = reader.getScanner(false, true);
@@ -115,7 +116,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testBlockContainingKey() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = HFile.createReader(fs, p, null, false, false);
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf));
     reader.loadFileInfo();
     HFileBlockIndex.BlockIndexReader blockIndexReader = 
       reader.getDataBlockIndexReader();

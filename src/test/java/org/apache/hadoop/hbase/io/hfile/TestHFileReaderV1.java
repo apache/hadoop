@@ -56,7 +56,7 @@ public class TestHFileReaderV1 {
         "8e8ab58dcf39412da19833fcd8f687ac");
     Path existingHFilePath = new Path(url.getPath());
     HFile.Reader reader =
-      HFile.createReader(fs, existingHFilePath, null, false, false);
+      HFile.createReader(fs, existingHFilePath, new CacheConfig(conf));
     reader.loadFileInfo();
     FixedFileTrailer trailer = reader.getTrailer();
 

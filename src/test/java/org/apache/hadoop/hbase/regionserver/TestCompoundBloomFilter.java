@@ -20,7 +20,10 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
@@ -105,6 +109,7 @@ public class TestCompoundBloomFilter {
   }
 
   private static Configuration conf;
+  private static CacheConfig cacheConf;
   private FileSystem fs;
   private BlockCache blockCache;
 
@@ -123,7 +128,8 @@ public class TestCompoundBloomFilter {
 
     fs = FileSystem.get(conf);
 
-    blockCache = StoreFile.getBlockCache(conf);
+    cacheConf = new CacheConfig(conf);
+    blockCache = cacheConf.getBlockCache();
     assertNotNull(blockCache);
   }
 
@@ -187,7 +193,7 @@ public class TestCompoundBloomFilter {
 
   private void readStoreFile(int t, BloomType bt, List<KeyValue> kvs,
       Path sfPath) throws IOException {
-    StoreFile sf = new StoreFile(fs, sfPath, true, conf, bt, false);
+    StoreFile sf = new StoreFile(fs, sfPath, conf, cacheConf, bt);
     StoreFile.Reader r = sf.createReader();
     final boolean pread = true; // does not really matter
     StoreFileScanner scanner = r.getStoreFileScanner(true, pread);
@@ -283,11 +289,12 @@ public class TestCompoundBloomFilter {
       throws IOException {
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZES[t]);
-    conf.setBoolean(HFile.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY, true);
+    cacheConf = new CacheConfig(conf);
 
     StoreFile.Writer w = StoreFile.createWriter(fs,
         HBaseTestingUtility.getTestDir(), BLOCK_SIZES[t], null, null, conf,
-        bt, 0);
+        cacheConf, bt, 0);
 
     assertTrue(w.hasBloom());
     assertTrue(w.getBloomWriter() instanceof CompoundBloomFilterWriter);
