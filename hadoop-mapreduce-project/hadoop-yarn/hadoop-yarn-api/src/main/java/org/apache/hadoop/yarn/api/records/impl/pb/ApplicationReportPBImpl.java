@@ -23,10 +23,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -59,6 +61,24 @@ implements ApplicationReport {
     }
     this.applicationId = convertFromProtoFormat(p.getApplicationId());
     return this.applicationId;
+  }
+
+  public void setApplicationResourceUsageReport(ApplicationResourceUsageReport appInfo) {
+    maybeInitBuilder();
+    if (appInfo == null) {
+      builder.clearAppResourceUsage();
+      return;
+    }
+    builder.setAppResourceUsage(convertToProtoFormat(appInfo));
+  }
+
+  @Override
+  public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasAppResourceUsage()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getAppResourceUsage());
   }
 
   @Override
@@ -310,6 +330,14 @@ implements ApplicationReport {
 
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl) t).getProto();
+  }
+
+  private ApplicationResourceUsageReport convertFromProtoFormat(ApplicationResourceUsageReportProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
+  private ApplicationResourceUsageReportProto convertToProtoFormat(ApplicationResourceUsageReport s) {
+    return ProtoUtils.convertToProtoFormat(s);
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(

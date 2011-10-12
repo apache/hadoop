@@ -26,7 +26,10 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
@@ -60,6 +63,17 @@ public class ProtoUtils {
   }
   public static YarnApplicationState convertFromProtoFormat(YarnApplicationStateProto e) {
     return YarnApplicationState.valueOf(e.name());
+  }
+
+  /*
+   * ApplicationResourceUsageReport
+   */
+  public static ApplicationResourceUsageReportProto convertToProtoFormat(ApplicationResourceUsageReport e) {
+    return ((ApplicationResourceUsageReportPBImpl)e).getProto();
+  }
+
+  public static ApplicationResourceUsageReport convertFromProtoFormat(ApplicationResourceUsageReportProto e) {
+    return new ApplicationResourceUsageReportPBImpl(e);
   }
 
   /*

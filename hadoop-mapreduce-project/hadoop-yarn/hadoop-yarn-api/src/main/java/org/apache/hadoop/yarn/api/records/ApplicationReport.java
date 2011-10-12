@@ -211,4 +211,19 @@ public interface ApplicationReport {
   @Unstable
   void setFinalApplicationStatus(FinalApplicationStatus finishState);
 
+  /**
+   * Retrieve the structure containing the job resources for this application
+   * @return the job resources structure for this application
+   */
+  @Public
+  @Stable
+  ApplicationResourceUsageReport getApplicationResourceUsageReport();
+
+  /**
+   * Store the structure containing the job resources for this application
+   * @param appResources structure for this application
+   */
+  @Private
+  @Unstable
+  void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources);
 }

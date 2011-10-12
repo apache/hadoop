@@ -25,7 +25,9 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -42,6 +44,15 @@ public class TestTypeConverter {
     applicationReport.setYarnApplicationState(state);
     applicationReport.setStartTime(appStartTime);
     applicationReport.setUser("TestTypeConverter-user");
+    ApplicationResourceUsageReportPBImpl appUsageRpt = new ApplicationResourceUsageReportPBImpl();
+    ResourcePBImpl r = new ResourcePBImpl();
+    r.setMemory(2048);
+    appUsageRpt.setNeededResources(r);
+    appUsageRpt.setNumReservedContainers(1);
+    appUsageRpt.setNumUsedContainers(3);
+    appUsageRpt.setReservedResources(r);
+    appUsageRpt.setUsedResources(r);
+    applicationReport.setApplicationResourceUsageReport(appUsageRpt);
     JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
     Assert.assertEquals(appStartTime, jobStatus.getStartTime());
     Assert.assertEquals(state.toString(), jobStatus.getState().toString());
@@ -60,6 +71,15 @@ public class TestTypeConverter {
     when(mockReport.getUser()).thenReturn("dummy-user");
     when(mockReport.getQueue()).thenReturn("dummy-queue");
     String jobFile = "dummy-path/job.xml";
+    ApplicationResourceUsageReportPBImpl appUsageRpt = new ApplicationResourceUsageReportPBImpl();
+    ResourcePBImpl r = new ResourcePBImpl();
+    r.setMemory(2048);
+    appUsageRpt.setNeededResources(r);
+    appUsageRpt.setNumReservedContainers(1);
+    appUsageRpt.setNumUsedContainers(3);
+    appUsageRpt.setReservedResources(r);
+    appUsageRpt.setUsedResources(r);
+    when(mockReport.getApplicationResourceUsageReport()).thenReturn(appUsageRpt);
     JobStatus status = TypeConverter.fromYarn(mockReport, jobFile);
     Assert.assertNotNull("fromYarn returned null status", status);
     Assert.assertEquals("jobFile set incorrectly", "dummy-path/job.xml", status.getJobFile());
@@ -69,6 +89,11 @@ public class TestTypeConverter {
     Assert.assertEquals("schedulingInfo set incorrectly", "dummy-tracking-url", status.getSchedulingInfo());
     Assert.assertEquals("jobId set incorrectly", 6789, status.getJobID().getId());
     Assert.assertEquals("state set incorrectly", JobStatus.State.KILLED, status.getState());
+    Assert.assertEquals("needed mem info set incorrectly", 2048, status.getNeededMem());
+    Assert.assertEquals("num rsvd slots info set incorrectly", 1, status.getNumReservedSlots());
+    Assert.assertEquals("num used slots info set incorrectly", 3, status.getNumUsedSlots());
+    Assert.assertEquals("rsvd mem info set incorrectly", 2048, status.getReservedMem());
+    Assert.assertEquals("used mem info set incorrectly", 2048, status.getUsedMem());
   }
 
   @Test

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -31,6 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -47,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
@@ -58,7 +61,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
@@ -425,6 +430,52 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       }
     } finally {
       this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
+    this.readLock.lock();
+    
+    try {
+      int numUsedContainers = 0;
+      int numReservedContainers = 0;
+      int reservedResources = 0;
+      int currentConsumption = 0;
+      SchedulerAppReport schedApp = 
+          scheduler.getSchedulerAppInfo(this.getAppAttemptId());
+      Collection<RMContainer> liveContainers;
+      Collection<RMContainer> reservedContainers;
+      if (schedApp != null) {
+        liveContainers = schedApp.getLiveContainers();
+        reservedContainers = schedApp.getReservedContainers();
+        if (liveContainers != null) {
+          numUsedContainers = liveContainers.size();
+          for (RMContainer lc : liveContainers) {
+            currentConsumption += lc.getContainer().getResource().getMemory();
+          }
+        }
+        if (reservedContainers != null) {
+          numReservedContainers = reservedContainers.size();
+          for (RMContainer rc : reservedContainers) {
+            reservedResources += rc.getContainer().getResource().getMemory();
+          }
+        }
+      }
+      
+      ApplicationResourceUsageReport appResources = 
+          recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
+      appResources.setNumUsedContainers(numUsedContainers);
+      appResources.setNumReservedContainers(numReservedContainers);
+      appResources.setUsedResources(
+          Resources.createResource(currentConsumption));
+      appResources.setReservedResources(
+          Resources.createResource(reservedResources));
+      appResources.setNeededResources(
+          Resources.createResource(currentConsumption + reservedResources));
+      return appResources;
+    } finally {
+      this.readLock.unlock();
     }
   }
 

@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Iterators;
@@ -81,6 +82,7 @@ public class MockApps {
     final String queue = newQueue();
     final FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
     return new ApplicationReport() {
+      private ApplicationResourceUsageReport appUsageReport;
       @Override public ApplicationId getApplicationId() { return id; }
       @Override public String getUser() { return user; }
       @Override public String getName() { return name; }
@@ -88,6 +90,10 @@ public class MockApps {
       @Override public String getQueue() { return queue; }
       @Override public String getTrackingUrl() { return ""; }
       @Override public FinalApplicationStatus getFinalApplicationStatus() { return finishState; }
+      @Override
+      public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
+        return this.appUsageReport;
+      }
       public void setApplicationId(ApplicationId applicationId) {
         // TODO Auto-generated method stub
 
@@ -96,6 +102,10 @@ public class MockApps {
       public void setTrackingUrl(String url) {
         // TODO Auto-generated method stub
 
+      }
+      @Override
+      public void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources) {
+        this.appUsageReport = appResources;
       }
       @Override
       public void setName(String name) {

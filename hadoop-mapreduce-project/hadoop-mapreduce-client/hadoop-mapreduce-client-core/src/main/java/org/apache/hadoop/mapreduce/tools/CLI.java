@@ -53,6 +53,7 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceStability.Stable
 public class CLI extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CLI.class);
+  private Cluster cluster;
 
   public CLI() {
   }
@@ -210,7 +211,7 @@ public class CLI extends Configured implements Tool {
     }
 
     // initialize cluster
-    Cluster cluster = new Cluster(getConf());
+    cluster = new Cluster(getConf());
         
     // Submit the request
     try {
@@ -527,12 +528,26 @@ public class CLI extends Configured implements Tool {
       throws IOException, InterruptedException {
     System.out.println("Total jobs:" + jobs.length);
     System.out.println("JobId\tState\tStartTime\t" +
-        "UserName\tQueue\tPriority\tSchedulingInfo");
+        "UserName\tQueue\tPriority\tMaps\tReduces\tUsedContainers\t" +
+        "RsvdContainers\tUsedMem\tRsvdMem\tNeededMem\tAM info");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%s\t%d\t%s\t%s\t%s\t%s\n", job.getJobID().toString(),
-          job.getState(), job.getStartTime(),
+      TaskReport[] mapReports =
+                 cluster.getJob(job.getJobID()).getTaskReports(TaskType.MAP);
+      TaskReport[] reduceReports =
+                 cluster.getJob(job.getJobID()).getTaskReports(TaskType.REDUCE);
+
+      System.out.printf("%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%dM\t%dM\t%dM\t%s\n",
+          job.getJobID().toString(), job.getState(), job.getStartTime(),
           job.getUsername(), job.getQueue(), 
-          job.getPriority().name(), job.getSchedulingInfo());
+          job.getPriority().name(),
+          mapReports.length,
+          reduceReports.length,
+          job.getNumUsedSlots(),
+          job.getNumReservedSlots(),
+          job.getUsedMem(),
+          job.getReservedMem(),
+          job.getNeededMem(),
+          job.getSchedulingInfo());
     }
   }
   

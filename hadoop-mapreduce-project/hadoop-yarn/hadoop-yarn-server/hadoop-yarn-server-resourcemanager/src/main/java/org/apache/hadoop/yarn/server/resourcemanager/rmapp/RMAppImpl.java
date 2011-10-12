@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -325,18 +326,20 @@ public class RMAppImpl implements RMApp {
       String trackingUrl = "N/A";
       String host = "N/A";
       int rpcPort = -1;
+      ApplicationResourceUsageReport appUsageReport = null;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       if (this.currentAttempt != null) {
         trackingUrl = this.currentAttempt.getTrackingUrl();
         clientToken = this.currentAttempt.getClientToken();
         host = this.currentAttempt.getHost();
         rpcPort = this.currentAttempt.getRpcPort();
+        appUsageReport = currentAttempt.getApplicationResourceUsageReport();
       }
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
           this.diagnostics.toString(), trackingUrl,
-          this.startTime, this.finishTime, finishState);
+          this.startTime, this.finishTime, finishState, appUsageReport);
     } finally {
       this.readLock.unlock();
     }

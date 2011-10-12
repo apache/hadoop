@@ -92,6 +92,11 @@ public class JobStatus implements Writable, Cloneable {
   private boolean isRetired;
   private String historyFile = "";
   private String trackingUrl ="";
+  private int numUsedSlots;
+  private int numReservedSlots;
+  private int usedMem;
+  private int reservedMem;
+  private int neededMem;
 
     
   /**
@@ -487,6 +492,76 @@ public class JobStatus implements Writable, Cloneable {
     return historyFile;
   }
 
+  /**
+   * @return number of used mapred slots
+   */
+  public int getNumUsedSlots() {
+    return numUsedSlots;
+  }
+
+  /**
+   * @param n number of used mapred slots
+   */
+  public void setNumUsedSlots(int n) {
+    numUsedSlots = n;
+  }
+
+  /**
+   * @return the number of reserved slots
+   */
+  public int getNumReservedSlots() {
+    return numReservedSlots;
+  }
+
+  /**
+   * @param n the number of reserved slots
+   */
+  public void setNumReservedSlots(int n) {
+    this.numReservedSlots = n;
+  }
+
+  /**
+   * @return the used memory
+   */
+  public int getUsedMem() {
+    return usedMem;
+  }
+
+  /**
+   * @param m the used memory
+   */
+  public void setUsedMem(int m) {
+    this.usedMem = m;
+  }
+
+  /**
+   * @return the reserved memory
+   */
+  public int getReservedMem() {
+    return reservedMem;
+ }
+
+  /**
+   * @param r the reserved memory
+   */
+  public void setReservedMem(int r) {
+    this.reservedMem = r;
+  }
+
+  /**
+   * @return the needed memory
+   */
+  public int getNeededMem() {
+  return neededMem;
+ }
+
+  /**
+   * @param n the needed memory
+   */
+  public void setNeededMem(int n) {
+    this.neededMem = n;
+  }
+
   public String toString() {
     StringBuffer buffer = new StringBuffer();
     buffer.append("job-id : " + jobid);
@@ -499,6 +574,11 @@ public class JobStatus implements Writable, Cloneable {
     buffer.append("user-name : " + user);
     buffer.append("priority : " + priority);
     buffer.append("scheduling-info : " + schedulingInfo);
+    buffer.append("num-used-slots" + numUsedSlots);
+    buffer.append("num-reserved-slots" + numReservedSlots);
+    buffer.append("used-mem" + usedMem);
+    buffer.append("reserved-mem" + reservedMem);
+    buffer.append("needed-mem" + neededMem);
     return buffer.toString();
   }
 }
