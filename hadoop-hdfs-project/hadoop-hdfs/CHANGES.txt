@@ -110,9 +110,6 @@ Trunk (unreleased changes)
 
     HDFS-2404. webhdfs liststatus json response is not correct. (suresh)
 
-    HDFS-2422. The NN should tolerate the same number of low-resource volumes
-               as failed volumes (atm)
-
     HDFS-2349. Corruption detected during block transfers between DNs
                should log a WARN instead of INFO. (harsh)
 
@@ -1137,6 +1134,9 @@ Release 0.23.0 - Unreleased
                class (todd)
 
     HDFS-2414. Fix TestDFSRollback to avoid spurious failures. (todd)
+
+    HDFS-2422. The NN should tolerate the same number of low-resource volumes
+               as failed volumes (atm)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
