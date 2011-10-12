@@ -1037,6 +1037,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2414. Fix TestDFSRollback to avoid spurious failures. (todd)
 
+    HDFS-2422. The NN should tolerate the same number of low-resource volumes
+               as failed volumes (atm)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
