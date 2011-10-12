@@ -1884,7 +1884,7 @@ public class DataNode extends Configured
       nn.reportBadBlocks(new LocatedBlock[]{
           new LocatedBlock(block, new DatanodeInfo[] {
               new DatanodeInfo(bpReg)})});
-      LOG.info("Can't replicate block " + block
+      LOG.warn("Can't replicate block " + block
           + " because on-disk length " + onDiskLength 
           + " is shorter than NameNode recorded length " + block.getNumBytes());
       return;

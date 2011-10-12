@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-2422. The NN should tolerate the same number of low-resource volumes
                as failed volumes (atm)
 
+    HDFS-2349. Corruption detected during block transfers between DNs
+               should log a WARN instead of INFO. (harsh)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
