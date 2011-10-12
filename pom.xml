@@ -41,6 +41,7 @@
     <module>hadoop-hdfs-project</module>
     <module>hadoop-mapreduce-project</module>
     <module>hadoop-tools</module>
+    <module>hadoop-dist</module>
   </modules>
 
   <build>

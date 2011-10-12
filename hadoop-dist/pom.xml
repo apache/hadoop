@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>0.24.0-SNAPSHOT</version>
+    <relativePath>../hadoop-project</relativePath>
+  </parent>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>hadoop-dist</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
+  <description>Apache Hadoop Distribution</description>
+  <name>Apache Hadoop Distribution</name>
+  <packaging>jar</packaging>
+
+  <!-- Using dependencies to ensure this module is the last one -->
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-app</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>pom.xml</include>
+          </includes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>dist</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>dist</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target if="tar">
+                    <echo file="${project.build.directory}/dist-tar-stitching.sh">
+                      run() {
+                        echo "\$ ${@}"
+                        "${@}"
+                        if [ $? != 0 ]; then
+                          echo
+                          echo "Failed!"
+                          echo
+                          exit $?
+                        fi
+                      }
+
+                      ROOT=`cd ${basedir}/..;pwd`
+                      echo
+                      echo "Current directory `pwd`"
+                      echo
+                      run rm -rf hadoop-${project.version}
+                      run mkdir hadoop-${project.version}
+                      run cd hadoop-${project.version}
+                      run tar xzf $ROOT/hadoop-common-project/hadoop-common/target/hadoop-common-${project.version}.tar.gz --strip-components 1
+                      run tar xzf $ROOT/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${project.version}.tar.gz --strip-components 1
+                      run tar xzf $ROOT/hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}.tar.gz --strip-components 1
+                      COMMON_LIB=share/hadoop/common/lib
+                      MODULES=../../../../modules
+                      run ln -s $MODULES/hadoop-mapreduce-client-app-${project.version}.jar $COMMON_LIB
+                      run ln -s $MODULES/hadoop-yarn-api-${project.version}.jar $COMMON_LIB
+                      run ln -s $MODULES/hadoop-mapreduce-client-common-${project.version}.jar $COMMON_LIB
+                      run ln -s $MODULES/hadoop-yarn-common-${project.version}.jar $COMMON_LIB
+                      run ln -s $MODULES/hadoop-mapreduce-client-core-${project.version}.jar $COMMON_LIB
+                      run ln -s $MODULES/hadoop-yarn-server-common-${project.version}.jar $COMMON_LIB
+                      run ln -s $MODULES/hadoop-mapreduce-client-jobclient-${project.version}.jar $COMMON_LIB
+                      run cd -
+                      run tar czf hadoop-${project.version}.tar.gz hadoop-${project.version}
+                      echo
+                      echo "Hadoop dist tar available at: ${project.build.directory}/hadoop-${project.version}.tar.gz"
+                      echo
+                    </echo>
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./dist-tar-stitching.sh"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+</project>

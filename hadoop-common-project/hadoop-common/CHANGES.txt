@@ -445,6 +445,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7627. Improve MetricsAsserts to give more understandable output
     on failure. (todd)
 
+    HADOOP-7642. create hadoop-dist module where TAR stitching would happen.
+    (Thomas White via tucu)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
