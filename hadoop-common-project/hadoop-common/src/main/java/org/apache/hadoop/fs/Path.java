@@ -77,7 +77,7 @@ public class Path implements Comparable {
       }
     URI resolved = parentUri.resolve(child.uri);
     initialize(resolved.getScheme(), resolved.getAuthority(),
-               normalizePath(resolved.getPath()), resolved.getFragment());
+               resolved.getPath(), resolved.getFragment());
   }
 
   private void checkPathArg( String path ) {
