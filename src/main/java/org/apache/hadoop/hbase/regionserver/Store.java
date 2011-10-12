@@ -59,7 +59,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 /**
@@ -133,7 +132,6 @@ public class Store implements HeapSize {
     new CopyOnWriteArraySet<ChangedReadersObserver>();
 
   private final int blocksize;
-  private final boolean blockcache;
   /** Compression algorithm for flush files and minor compaction */
   private final Compression.Algorithm compression;
   /** Compression algorithm for major compaction */
@@ -166,7 +164,6 @@ public class Store implements HeapSize {
     this.region = region;
     this.family = family;
     this.conf = conf;
-    this.blockcache = family.isBlockCacheEnabled();
     this.blocksize = family.getBlocksize();
     this.compression = family.getCompression();
     // avoid overriding compression setting for major compactions if the user
@@ -1348,7 +1345,7 @@ public class Store implements HeapSize {
       this.memstore.getRowKeyAtOrBefore(state);
       // Check if match, if we got a candidate on the asked for 'kv' row.
       // Process each store file. Run through from newest to oldest.
-      for (StoreFile sf : Iterables.reverse(storefiles)) {
+      for (StoreFile sf : Lists.reverse(storefiles)) {
         // Update the candidate keys from the current map file
         rowAtOrBeforeFromStoreFile(sf, state);
       }
@@ -1387,7 +1384,7 @@ public class Store implements HeapSize {
       firstOnRow = new KeyValue(lastKV.getRow(), HConstants.LATEST_TIMESTAMP);
     }
     // Get a scanner that caches blocks and that uses pread.
-    HFileScanner scanner = r.getScanner(true, true);
+    HFileScanner scanner = r.getHFileReader().getScanner(true, true);
     // Seek scanner.  If can't seek it, return.
     if (!seekToScanner(scanner, firstOnRow, firstKV)) return;
     // If we found candidate on firstOnRow, just return. THIS WILL NEVER HAPPEN!
@@ -1473,7 +1470,7 @@ public class Store implements HeapSize {
           return false;
         }
       }
-      
+
       return true;
     } finally {
       this.lock.readLock().unlock();
@@ -1508,7 +1505,7 @@ public class Store implements HeapSize {
           LOG.warn("Storefile " + sf + " Reader is null");
           continue;
         }
-        
+
         long size = r.length();
         if (size > maxSize) {
           // This is the largest one so far
@@ -1793,7 +1790,7 @@ public class Store implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (17 * ClassSize.REFERENCE) +
       (7 * Bytes.SIZEOF_LONG) + (1 * Bytes.SIZEOF_DOUBLE) +
-      (6 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
+      (7 * Bytes.SIZEOF_INT) + (1 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +

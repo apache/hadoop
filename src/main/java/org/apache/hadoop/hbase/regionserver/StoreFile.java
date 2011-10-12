@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -121,9 +120,6 @@ public class StoreFile {
   // Need to make it 8k for testing.
   public static final int DEFAULT_BLOCKSIZE_SMALL = 8 * 1024;
 
-
-  private static BlockCache hfileBlockCache = null;
-
   private final FileSystem fs;
 
   // This file's path.
@@ -173,7 +169,6 @@ public class StoreFile {
 
   // Used making file ids.
   private final static Random rand = new Random();
-  private final Configuration conf;
 
   /**
    * Bloom filter type specified in column family configuration. Does not
@@ -206,7 +201,6 @@ public class StoreFile {
             final CacheConfig cacheConf,
             final BloomType cfBloomType)
       throws IOException {
-    this.conf = conf;
     this.fs = fs;
     this.path = p;
     this.cacheConf = cacheConf;

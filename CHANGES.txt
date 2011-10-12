@@ -333,6 +333,7 @@ Release 0.92.0 - Unreleased
                clients and regionservers (Lars H)
    HBASE-4555  TestShell seems passed, but actually errors seen in test
                output file (Mingjie Lai)
+   HBASE-4582  Store.java cleanup (failing TestHeapSize and has warnings)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
