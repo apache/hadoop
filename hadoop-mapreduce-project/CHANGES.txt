@@ -22,6 +22,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
     fair scheduler pools. (Ahmed Radwan via todd)
 
+    MAPREDUCE-3171. normalize nodemanager native code compilation with common/hdfs 
+    native. (tucu)
+
   BUG FIXES
 
     MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
