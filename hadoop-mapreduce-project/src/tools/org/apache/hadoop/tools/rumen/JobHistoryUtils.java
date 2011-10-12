@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,6 +58,30 @@ public class JobHistoryUtils {
   }
 
   /**
+   * Extracts job id from the current hadoop version's job history file name.
+   * @param fileName job history file name from which job id is to be extracted
+   * @return job id if the history file name format is same as that of the
+   * current hadoop version. Returns null otherwise.
+   */
+  private static String extractJobIDFromCurrentHistoryFile(String fileName) {
+    JobID id = null;
+    if (org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils
+            .isValidJobHistoryFileName(fileName)) {
+      try {
+        id = org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils
+                 .getJobIDFromHistoryFilePath(fileName);
+      } catch (IOException e) {
+        // Ignore this exception and go ahead with getting of jobID assuming
+        // older hadoop verison's history file
+      }
+    }
+    if (id != null) {
+      return id.toString();
+    }
+    return null;
+  }
+
+  /**
    * Extracts jobID string from the given job history file name.
    * @param fileName name of the job history file
    * @return JobID if the given <code>fileName</code> is a valid job history
@@ -67,16 +92,22 @@ public class JobHistoryUtils {
     // (1) old pre21 job history file name format
     // (2) new pre21 job history file name format
     // (3) current job history file name format i.e. 0.22
+
+    // Try to get the jobID assuming that the history file is from the current
+    // hadoop version
+    String jobID = extractJobIDFromCurrentHistoryFile(fileName);
+    if (jobID != null) {
+      return jobID;//history file is of current hadoop version
+    }
+
+    // History file could be of older hadoop versions
     String pre21JobID = applyParser(fileName,
         Pre21JobHistoryConstants.JOBHISTORY_FILENAME_REGEX_V1);
     if (pre21JobID == null) {
       pre21JobID = applyParser(fileName,
           Pre21JobHistoryConstants.JOBHISTORY_FILENAME_REGEX_V2);
     }
-    if (pre21JobID != null) {
-      return pre21JobID;
-    }
-    return applyParser(fileName, JobHistory.JOBHISTORY_FILENAME_REGEX);
+    return pre21JobID;
   }
 
   /**

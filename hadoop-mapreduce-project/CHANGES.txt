@@ -24,6 +24,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
+    on current history file name format. (Ravi Gummadi)
+
     MAPREDUCE-3157. [Rumen] Fix TraceBuilder to handle 0.20 history file
     names also. (Ravi Gummadi)
 
