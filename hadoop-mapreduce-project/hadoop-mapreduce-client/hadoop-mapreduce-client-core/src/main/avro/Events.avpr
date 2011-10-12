@@ -173,7 +173,8 @@
           {"name": "attemptId", "type": "string"},
           {"name": "startTime", "type": "long"},
           {"name": "trackerName", "type": "string"},
-          {"name": "httpPort", "type": "int"}
+          {"name": "httpPort", "type": "int"},
+          {"name": "shufflePort", "type": "int"}
       ]
      },
 

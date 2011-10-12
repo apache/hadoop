@@ -2676,7 +2676,7 @@ public class JobInProgress {
 
     TaskAttemptStartedEvent tse = new TaskAttemptStartedEvent(
         status.getTaskID(), taskType, status.getStartTime(), 
-        status.getTaskTracker(),  ttStatus.getHttpPort());
+        status.getTaskTracker(),  ttStatus.getHttpPort(), -1);
     
     jobHistory.logEvent(tse, status.getTaskID().getJobID());
     TaskAttemptID statusAttemptID = status.getTaskID();
@@ -3197,7 +3197,7 @@ public class JobInProgress {
       StringUtils.arrayToString(taskDiagnosticInfo.toArray(new String[0]));
     TaskType taskType = getTaskType(tip);
     TaskAttemptStartedEvent tse = new TaskAttemptStartedEvent(
-        taskid, taskType, startTime, taskTrackerName, taskTrackerPort);
+        taskid, taskType, startTime, taskTrackerName, taskTrackerPort, -1);
     
     jobHistory.logEvent(tse, taskid.getJobID());
 

@@ -79,7 +79,7 @@ public abstract class TaskAttempt20LineEventEmitter extends HistoryEventEmitter 
                 .parseInt(httpPort);
 
         return new TaskAttemptStartedEvent(taskAttemptID,
-            that.originalTaskType, that.originalStartTime, trackerName, port);
+            that.originalTaskType, that.originalStartTime, trackerName, port, -1);
       }
 
       return null;
