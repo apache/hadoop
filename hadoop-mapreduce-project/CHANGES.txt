@@ -1557,6 +1557,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2666. Retrieve shuffle port number from JobHistory on MR AM
     restart. (Jonathan Eagles via acmurthy) 
 
+    MAPREDUCE-2789. Complete schedulingInfo on CLI. (Eric Payne via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

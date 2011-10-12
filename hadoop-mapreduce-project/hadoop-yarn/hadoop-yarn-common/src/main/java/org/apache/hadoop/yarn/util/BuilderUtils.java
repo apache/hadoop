@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -245,7 +246,7 @@ public class BuilderUtils {
       ApplicationId applicationId, String user, String queue, String name,
       String host, int rpcPort, String clientToken, YarnApplicationState state,
       String diagnostics, String url, long startTime, long finishTime,
-      FinalApplicationStatus finalStatus) {
+      FinalApplicationStatus finalStatus, ApplicationResourceUsageReport appResources) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -261,6 +262,7 @@ public class BuilderUtils {
     report.setStartTime(startTime);
     report.setFinishTime(finishTime);
     report.setFinalApplicationStatus(finalStatus);
+    report.setApplicationResourceUsageReport(appResources);
     return report;
   }
 

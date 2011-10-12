@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -127,4 +128,10 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return the application submission context for this Application.
    */
   ApplicationSubmissionContext getSubmissionContext();
+
+  /*
+   * Get application container and resource usage information.
+   * @return an ApplicationResourceUsageReport object.
+   */
+  ApplicationResourceUsageReport getApplicationResourceUsageReport();
 }
