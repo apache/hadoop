@@ -1554,6 +1554,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3125. Modified TaskImpl to consider only non-failed, non-killed
     task-attempts for obtaining task's progress. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-2666. Retrieve shuffle port number from JobHistory on MR AM
+    restart. (Jonathan Eagles via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

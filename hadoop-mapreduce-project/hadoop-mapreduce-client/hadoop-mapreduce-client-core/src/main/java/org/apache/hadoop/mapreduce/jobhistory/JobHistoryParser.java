@@ -240,6 +240,7 @@ public class JobHistoryParser {
     attemptInfo.httpPort = event.getHttpPort();
     attemptInfo.trackerName = event.getTrackerName();
     attemptInfo.taskType = event.getTaskType();
+    attemptInfo.shufflePort = event.getShufflePort();
     
     taskInfo.attemptsMap.put(attemptId, attemptInfo);
   }
@@ -506,6 +507,7 @@ public class JobHistoryParser {
     String trackerName;
     Counters counters;
     int httpPort;
+    int shufflePort;
     String hostname;
 
     /** Create a Task Attempt Info which will store attempt level information
@@ -516,6 +518,7 @@ public class JobHistoryParser {
         mapFinishTime = -1;
       error =  state =  trackerName = hostname = "";
       httpPort = -1;
+      shufflePort = -1;
     }
     /**
      * Print all the information about this attempt.
@@ -530,6 +533,7 @@ public class JobHistoryParser {
       System.out.println("TASK_TYPE:" + taskType);
       System.out.println("TRACKER_NAME:" + trackerName);
       System.out.println("HTTP_PORT:" + httpPort);
+      System.out.println("SHUFFLE_PORT:" + shufflePort);
       if (counters != null) {
         System.out.println("COUNTERS:" + counters.toString());
       }
@@ -563,5 +567,7 @@ public class JobHistoryParser {
     public Counters getCounters() { return counters; }
     /** @return the HTTP port for the tracker */
     public int getHttpPort() { return httpPort; }
+    /** @return the Shuffle port for the tracker */
+    public int getShufflePort() { return shufflePort; }
   }
 }

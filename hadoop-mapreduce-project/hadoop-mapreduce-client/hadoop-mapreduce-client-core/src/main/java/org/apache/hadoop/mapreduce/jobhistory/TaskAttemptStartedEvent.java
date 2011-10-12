@@ -44,16 +44,18 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
    * @param startTime Start time of the attempt
    * @param trackerName Name of the Task Tracker where attempt is running
    * @param httpPort The port number of the tracker
+   * @param shufflePort The shuffle port number of the container
    */
   public TaskAttemptStartedEvent( TaskAttemptID attemptId,  
       TaskType taskType, long startTime, String trackerName,
-      int httpPort) {
+      int httpPort, int shufflePort) {
     datum.attemptId = new Utf8(attemptId.toString());
     datum.taskid = new Utf8(attemptId.getTaskID().toString());
     datum.startTime = startTime;
     datum.taskType = new Utf8(taskType.name());
     datum.trackerName = new Utf8(trackerName);
     datum.httpPort = httpPort;
+    datum.shufflePort = shufflePort;
   }
 
   TaskAttemptStartedEvent() {}
@@ -75,6 +77,8 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
   }
   /** Get the HTTP port */
   public int getHttpPort() { return datum.httpPort; }
+  /** Get the shuffle port */
+  public int getShufflePort() { return datum.shufflePort; }
   /** Get the attempt id */
   public TaskAttemptID getTaskAttemptId() {
     return TaskAttemptID.forName(datum.attemptId.toString());

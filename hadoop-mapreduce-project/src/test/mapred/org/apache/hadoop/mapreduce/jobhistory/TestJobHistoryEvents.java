@@ -48,7 +48,7 @@ public class TestJobHistoryEvents extends TestCase {
                                                       TaskType[] types) {
     for (TaskType t : types) {
       TaskAttemptStartedEvent tase = 
-        new TaskAttemptStartedEvent(id, t, 0L, "", 0);
+        new TaskAttemptStartedEvent(id, t, 0L, "", 0, -1);
       assertEquals(expected, tase.getEventType());
     }
   }

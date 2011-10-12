@@ -35,10 +35,13 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
@@ -101,12 +104,27 @@ public class TestJobHistoryParsing {
     Assert.assertEquals("total number of tasks is incorrect  ", 3, totalTasks);
 
     //Assert at taskAttempt level
-    for (TaskInfo taskInfo :  jobInfo.getAllTasks().values()) {
+    for (TaskInfo taskInfo : jobInfo.getAllTasks().values()) {
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
-      Assert.assertEquals("total number of task attempts ", 
+      Assert.assertEquals("total number of task attempts ",
           1, taskAttemptCount);
     }
-    
+
+    // Deep compare Job and JobInfo
+    for (Task task : job.getTasks().values()) {
+      TaskInfo taskInfo = jobInfo.getAllTasks().get(
+          TypeConverter.fromYarn(task.getID()));
+      Assert.assertNotNull("TaskInfo not found", taskInfo);
+      for (TaskAttempt taskAttempt : task.getAttempts().values()) {
+        TaskAttemptInfo taskAttemptInfo =
+          taskInfo.getAllTaskAttempts().get(
+              TypeConverter.fromYarn((taskAttempt.getID())));
+        Assert.assertNotNull("TaskAttemptInfo not found", taskAttemptInfo);
+        Assert.assertEquals("Incorrect shuffle port for task attempt",
+            taskAttempt.getShufflePort(), taskAttemptInfo.getShufflePort());
+      }
+    }
+
     String summaryFileName = JobHistoryUtils
         .getIntermediateSummaryFileName(jobId);
     Path summaryFile = new Path(jobhistoryDir, summaryFileName);
