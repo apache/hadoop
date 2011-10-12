@@ -1582,6 +1582,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3126. Fixed a corner case in CapacityScheduler where headroom
     wasn't updated on changes to cluster size. (acmurthy) 
 
+    MAPREDUCE-3140. Fixed the invalid JobHistory URL for failed
+    applications. (Subroto Sanyal via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
