@@ -1585,6 +1585,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3140. Fixed the invalid JobHistory URL for failed
     applications. (Subroto Sanyal via vinodkv)
 
+    MAPREDUCE-3125. Modified TaskImpl to consider only non-failed, non-killed
+    task-attempts for obtaining task's progress. (Hitesh Shah via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
