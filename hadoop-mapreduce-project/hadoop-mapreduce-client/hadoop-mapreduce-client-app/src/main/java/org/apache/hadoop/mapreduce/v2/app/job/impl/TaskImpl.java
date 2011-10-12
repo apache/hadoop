@@ -441,10 +441,20 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     float progress = 0f;
     TaskAttempt result = null;
     for (TaskAttempt at : attempts.values()) {
+      switch (at.getState()) {
+      
+      // ignore all failed task attempts
+      case FAIL_CONTAINER_CLEANUP: 
+      case FAIL_TASK_CLEANUP: 
+      case FAILED: 
+      case KILL_CONTAINER_CLEANUP: 
+      case KILL_TASK_CLEANUP: 
+      case KILLED:
+        continue;      
+      }      
       if (result == null) {
         result = at; //The first time around
       }
-      //TODO: consider the nextAttemptNumber only if it is not failed/killed ?
       // calculate the best progress
       if (at.getProgress() > progress) {
         result = at;
@@ -496,7 +506,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         break;
         
       case 1:
-        Map newAttempts
+        Map<TaskAttemptId, TaskAttempt> newAttempts
             = new LinkedHashMap<TaskAttemptId, TaskAttempt>(maxAttempts);
         newAttempts.putAll(attempts);
         attempts = newAttempts;
