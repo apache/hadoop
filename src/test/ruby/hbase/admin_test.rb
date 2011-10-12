@@ -96,7 +96,7 @@ module Hbase
     #-------------------------------------------------------------------------------
 
     define_test "split should work" do
-      admin.split('.META.')
+      admin.split('.META.', nil)
     end
 
     #-------------------------------------------------------------------------------
@@ -217,66 +217,57 @@ module Hbase
 
     define_test "alter should fail with non-string table names" do
       assert_raise(ArgumentError) do
-        admin.alter(123, METHOD => 'delete', NAME => 'y')
+        admin.alter(123, true, METHOD => 'delete', NAME => 'y')
       end
     end
 
     define_test "alter should fail with non-existing tables" do
       assert_raise(ArgumentError) do
-        admin.alter('.NOT.EXISTS.', METHOD => 'delete', NAME => 'y')
+        admin.alter('.NOT.EXISTS.', true, METHOD => 'delete', NAME => 'y')
       end
     end
 
-    define_test "alter should fail with enabled tables" do
-      assert_raise(ArgumentError) do
-        admin.alter(@test_name, METHOD => 'delete', NAME => 'y')
-      end
+    define_test "alter should not fail with enabled tables" do
+      admin.enable(@test_name)
+      admin.alter(@test_name, true, METHOD => 'delete', NAME => 'y')
     end
 
     define_test "alter should be able to delete column families" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.disable(@test_name)
-      admin.alter(@test_name, METHOD => 'delete', NAME => 'y')
+      admin.alter(@test_name, true, METHOD => 'delete', NAME => 'y')
       admin.enable(@test_name)
       assert_equal(['x:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should be able to add column families" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.disable(@test_name)
-      admin.alter(@test_name, NAME => 'z')
+      admin.alter(@test_name, true, NAME => 'z')
       admin.enable(@test_name)
       assert_equal(['x:', 'y:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should be able to add column families (name-only alter spec)" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.disable(@test_name)
-      admin.alter(@test_name, 'z')
+      admin.alter(@test_name, true, 'z')
       admin.enable(@test_name)
       assert_equal(['x:', 'y:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should support more than one alteration in one call" do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.disable(@test_name)
-      admin.alter(@test_name, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' })
+      admin.alter(@test_name, true, { NAME => 'z' }, { METHOD => 'delete', NAME => 'y' })
       admin.enable(@test_name)
       assert_equal(['x:', 'z:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test 'alter should support shortcut DELETE alter specs' do
       assert_equal(['x:', 'y:'], table(@test_name).get_all_columns.sort)
-      admin.disable(@test_name)
-      admin.alter(@test_name, 'delete' => 'y')
-      admin.disable(@test_name)
+      admin.alter(@test_name, true, 'delete' => 'y')
       assert_equal(['x:'], table(@test_name).get_all_columns.sort)
     end
 
     define_test "alter should be able to change table options" do
-      admin.disable(@test_name)
-      admin.alter(@test_name, METHOD => 'table_att', 'MAX_FILESIZE' => 12345678)
-      admin.disable(@test_name)
+      admin.alter(@test_name, true, METHOD => 'table_att', 'MAX_FILESIZE' => 12345678)
       assert_match(/12345678/, admin.describe(@test_name))
     end
   end

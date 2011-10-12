@@ -55,7 +55,9 @@ files.each do |file|
   end
 end
 
-Test::Unit::AutoRunner.run
+if !Test::Unit::AutoRunner.run
+  raise "Shell unit tests failed. Check output file for details."
+end
 
 puts "Done with tests! Shutting down the cluster..."
 if @own_cluster
