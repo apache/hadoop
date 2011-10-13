@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.handler;
+package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -39,7 +39,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Basic mock region server services.
  */
-class MockRegionServerServices implements RegionServerServices {
+public class MockRegionServerServices implements RegionServerServices {
   private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
   private boolean stopping = false;
   private final ConcurrentSkipListMap<byte[], Boolean> rit = 

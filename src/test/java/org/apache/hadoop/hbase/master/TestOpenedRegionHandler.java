@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -29,14 +32,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -44,6 +53,7 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestOpenedRegionHandler {
 
@@ -59,16 +69,10 @@ public class TestOpenedRegionHandler {
 
   @Before
   public void setUp() throws Exception {
-    // Start the cluster
-    log("Starting cluster");
     conf = HBaseConfiguration.create();
-    resetConf = conf;
-    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
-    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 5000);
     TEST_UTIL = new HBaseTestingUtility(conf);
-    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
   }
-
+  
   @After
   public void tearDown() throws Exception {
     // Stop the cluster
@@ -78,6 +82,14 @@ public class TestOpenedRegionHandler {
 
   @Test
   public void testOpenedRegionHandlerOnMasterRestart() throws Exception {
+    // Start the cluster
+    log("Starting cluster");
+    conf = HBaseConfiguration.create();
+    resetConf = conf;
+    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
+    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 5000);
+    TEST_UTIL = new HBaseTestingUtility(conf);
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     String tableName = "testOpenedRegionHandlerOnMasterRestart";
     MiniHBaseCluster cluster = createRegions(tableName);
     abortMaster(cluster);
@@ -88,7 +100,7 @@ public class TestOpenedRegionHandler {
     // forcefully move a region to OPENED state in zk
     // Create a ZKW to use in the test
     zkw = HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
-        region, regionServer);
+        region, regionServer.getServerName());
 
     // Start up a new master
     log("Starting up a new master");
@@ -104,42 +116,56 @@ public class TestOpenedRegionHandler {
   @Test
   public void testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches()
       throws Exception {
-    String tableName = "testIfVersionMismatches";
-    MiniHBaseCluster cluster = createRegions(tableName);
-    AssignmentManager am = cluster.getMaster().assignmentManager;
-    abortMaster(cluster);
+    try {
+      int testIndex = 0;
+      TEST_UTIL.startMiniZKCluster();
+      final Server server = new MockServer(TEST_UTIL);
+      HTableDescriptor htd = new HTableDescriptor(
+          "testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches");
+      HRegionInfo hri = new HRegionInfo(htd.getName(),
+          Bytes.toBytes(testIndex), Bytes.toBytes(testIndex + 1));
+      HRegion region = HRegion.createHRegion(hri, HBaseTestingUtility
+          .getTestDir(), TEST_UTIL.getConfiguration(), htd);
+      assertNotNull(region);
+      AssignmentManager am = Mockito.mock(AssignmentManager.class);
+      when(am.isRegionInTransition(hri)).thenReturn(
+          new RegionState(region.getRegionInfo(), RegionState.State.OPEN,
+              System.currentTimeMillis(), server.getServerName()));
+      // create a node with OPENED state
+      zkw = HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
+          region, server.getServerName());
+      when(am.getZKTable()).thenReturn(new ZKTable(zkw));
+      Stat stat = new Stat();
+      String nodeName = ZKAssign.getNodeName(zkw, region.getRegionInfo()
+          .getEncodedName());
+      ZKUtil.getDataAndWatch(zkw, nodeName, stat);
 
-    HRegionServer regionServer = cluster.getRegionServer(0);
-    HRegion region = getRegionBeingServed(cluster, regionServer);
+      // use the version for the OpenedRegionHandler
+      OpenedRegionHandler handler = new OpenedRegionHandler(server, am, region
+          .getRegionInfo(), server.getServerName(), stat.getVersion());
+      // Once again overwrite the same znode so that the version changes.
+      ZKAssign.transitionNode(zkw, region.getRegionInfo(), server
+          .getServerName(), EventType.RS_ZK_REGION_OPENED,
+          EventType.RS_ZK_REGION_OPENED, stat.getVersion());
 
-    cluster.stopRegionServer(0);
-    //create a node with OPENED state
-    zkw = HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
-        region, regionServer);
-    Stat stat = new Stat();
-    String nodeName = ZKAssign.getNodeName(zkw, region
-        .getRegionNameAsString());
-    ZKUtil.getDataAndWatch(zkw, nodeName, stat);
-    // use the version for the OpenedRegionHandler
-    OpenedRegionHandler handler = new OpenedRegionHandler(regionServer, am,
-        region.getRegionInfo(), regionServer
-        .getServerName(), stat.getVersion());
-    am.regionsInTransition.put(region
-        .getRegionInfo().getEncodedName(), new RegionState(
-            region.getRegionInfo(), RegionState.State.OPEN,
-            System.currentTimeMillis(), regionServer.getServerName()));
-
-    //Once again overwrite the same znode so that the version changes.
-    ZKAssign.transitionNodeOpened(zkw, region.getRegionInfo(), regionServer
-      .getServerName(), stat.getVersion()+1);
-
-    // try processing the opened region.
-    handler.process();
-    List<String> znodes = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
-        zkw.assignmentZNode);
-    String regionName = znodes.get(0);
-    assertEquals("The region should not be opened successfully.", regionName,
-        region.getRegionInfo().getEncodedName());
+      // Should not invoke assignmentmanager.regionOnline. If it is 
+      // invoked as per current mocking it will throw null pointer exception.
+      boolean expectedException = false;
+      try {
+        handler.process();
+      } catch (Exception e) {
+        expectedException = true;
+      }
+      assertFalse("The process method should not throw any exception.",
+          expectedException);
+      List<String> znodes = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
+          zkw.assignmentZNode);
+      String regionName = znodes.get(0);
+      assertEquals("The region should not be opened successfully.", regionName,
+          region.getRegionInfo().getEncodedName());
+    } finally {
+      TEST_UTIL.shutdownMiniZKCluster();
+    }
   }
   private MiniHBaseCluster createRegions(String tableName)
       throws InterruptedException, ZooKeeperConnectionException, IOException,

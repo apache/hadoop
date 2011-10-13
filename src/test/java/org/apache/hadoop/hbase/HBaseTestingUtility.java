@@ -1582,7 +1582,7 @@ public class HBaseTestingUtility {
    */
   public static ZooKeeperWatcher createAndForceNodeToOpenedState(
       HBaseTestingUtility TEST_UTIL, HRegion region,
-      HRegionServer regionServer) throws ZooKeeperConnectionException,
+      ServerName serverName) throws ZooKeeperConnectionException,
       IOException, KeeperException, NodeExistsException {
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "unittest", new Abortable() {
@@ -1598,12 +1598,11 @@ public class HBaseTestingUtility {
           }
         });
 
-    ZKAssign.createNodeOffline(zkw, region.getRegionInfo(), regionServer
-        .getServerName());
+    ZKAssign.createNodeOffline(zkw, region.getRegionInfo(), serverName);
     int version = ZKAssign.transitionNodeOpening(zkw, region
-        .getRegionInfo(), regionServer.getServerName());
-    ZKAssign.transitionNodeOpened(zkw, region.getRegionInfo(), regionServer
-        .getServerName(), version);
+        .getRegionInfo(), serverName);
+    ZKAssign.transitionNodeOpened(zkw, region.getRegionInfo(), serverName,
+        version);
     return zkw;
   }
   

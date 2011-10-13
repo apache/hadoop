@@ -579,6 +579,7 @@ Release 0.92.0 - Unreleased
                and CF config (Mikhail Bautin)
    HBASE-4422  Move block cache parameters and references into single
                CacheConf class (jgray)
+   HBASE-4558  Refactor TestOpenedRegionHandler and TestOpenRegionHandler. (Ram)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

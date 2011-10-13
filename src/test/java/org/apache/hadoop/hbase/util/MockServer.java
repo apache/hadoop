@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.handler;
+package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
 
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 /**
  * Basic mock Server for handler tests.
  */
-class MockServer implements Server {
+public class MockServer implements Server {
   static final Log LOG = LogFactory.getLog(MockServer.class);
   final static ServerName NAME = new ServerName("MockServer", 123, -1);
   
@@ -42,12 +42,12 @@ class MockServer implements Server {
   final HBaseTestingUtility htu;
 
   @SuppressWarnings("unused")
-  private MockServer() throws ZooKeeperConnectionException, IOException {
+  public MockServer() throws ZooKeeperConnectionException, IOException {
     // Shutdown default constructor by making it private.
     this(null);
   }
 
-  MockServer(final HBaseTestingUtility htu)
+  public MockServer(final HBaseTestingUtility htu)
   throws ZooKeeperConnectionException, IOException {
     this(htu, true);
   }
@@ -58,7 +58,7 @@ class MockServer implements Server {
    * @throws ZooKeeperConnectionException
    * @throws IOException
    */
-  MockServer(final HBaseTestingUtility htu, final boolean zkw)
+  public MockServer(final HBaseTestingUtility htu, final boolean zkw)
   throws ZooKeeperConnectionException, IOException {
     this.htu = htu;
     this.zk = zkw?
