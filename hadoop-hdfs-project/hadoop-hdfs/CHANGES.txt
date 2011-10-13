@@ -806,6 +806,9 @@ Release 0.23.0 - Unreleased
     HDFS-2205. Log message for failed connection to datanode is not
     followed by a success message. (Ravi Prakash via stevel)
 
+    HDFS-2401. Running a set of methods in a Single Test Class.
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
