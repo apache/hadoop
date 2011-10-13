@@ -259,6 +259,7 @@
             <configuration>
               <target>
                 <delete dir="${test.build.data}"/>
+                <mkdir dir="${test.build.data}"/>
                 <mkdir dir="${hadoop.log.dir}"/>
 
                 <copy todir="${project.build.directory}/test-classes/webapps">
