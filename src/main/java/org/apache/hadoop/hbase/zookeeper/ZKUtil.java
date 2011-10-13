@@ -23,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,7 @@ public class ZKUtil {
 
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
   private static final char ZNODE_PATH_SEPARATOR = '/';
+  private static int zkDumpConnectionTimeOut;
 
   /**
    * Creates a new connection to ZooKeeper, pulling settings and ensemble config
@@ -93,9 +95,11 @@ public class ZKUtil {
     LOG.debug(descriptor + " opening connection to ZooKeeper with ensemble (" +
         ensemble + ")");
     int retry = conf.getInt("zookeeper.recovery.retry", 3);
-    int retryIntervalMillis = 
+    int retryIntervalMillis =
       conf.getInt("zookeeper.recovery.retry.intervalmill", 1000);
-    return new RecoverableZooKeeper(ensemble, timeout, watcher, 
+    zkDumpConnectionTimeOut = conf.getInt("zookeeper.dump.connection.timeout",
+        1000);
+    return new RecoverableZooKeeper(ensemble, timeout, watcher,
         retry, retryIntervalMillis);
   }
 
@@ -223,7 +227,7 @@ public class ZKUtil {
       if (exists) {
         LOG.debug(zkw.prefix("Set watcher on existing znode " + znode));
       } else {
-        LOG.debug(zkw.prefix(znode+" does not exist. Watcher is set."));        
+        LOG.debug(zkw.prefix(znode+" does not exist. Watcher is set."));
       }
       return exists;
     } catch (KeeperException e) {
@@ -949,11 +953,11 @@ public class ZKUtil {
     try {
       sb.append("HBase is rooted at ").append(zkw.baseZNode);
       sb.append("\nMaster address: ").append(
-        Bytes.toStringBinary(getData(zkw, zkw.masterAddressZNode)));
+          Bytes.toStringBinary(getData(zkw, zkw.masterAddressZNode)));
       sb.append("\nRegion server holding ROOT: ").append(
-        Bytes.toStringBinary(getData(zkw, zkw.rootServerZNode)));
+          Bytes.toStringBinary(getData(zkw, zkw.rootServerZNode)));
       sb.append("\nRegion servers:");
-      for (String child: listChildrenNoWatch(zkw, zkw.rsZNode)) {
+      for (String child : listChildrenNoWatch(zkw, zkw.rsZNode)) {
         sb.append("\n ").append(child);
       }
       sb.append("\nQuorum Server Statistics:");
@@ -961,7 +965,13 @@ public class ZKUtil {
       for (String server : servers) {
         sb.append("\n ").append(server);
         try {
-          String[] stat = getServerStats(server);
+          String[] stat = getServerStats(server, ZKUtil.zkDumpConnectionTimeOut);
+
+          if (stat == null) {
+            sb.append("[Error] invalid quorum server: " + server);
+            break;
+          }
+
           for (String s : stat) {
             sb.append("\n  ").append(s);
           }
@@ -969,23 +979,11 @@ public class ZKUtil {
           sb.append("\n  ERROR: ").append(e.getMessage());
         }
       }
-    } catch(KeeperException ke) {
+    } catch (KeeperException ke) {
       sb.append("\nFATAL ZooKeeper Exception!\n");
       sb.append("\n" + ke.getMessage());
     }
     return sb.toString();
-  }
-
-  /**
-   * Gets the statistics from the given server. Uses a 1 minute timeout.
-   *
-   * @param server  The server to get the statistics from.
-   * @return The array of response strings.
-   * @throws IOException When the socket communication fails.
-   */
-  public static String[] getServerStats(String server)
-  throws IOException {
-    return getServerStats(server, 60 * 1000);
   }
 
   /**
@@ -999,8 +997,18 @@ public class ZKUtil {
   public static String[] getServerStats(String server, int timeout)
   throws IOException {
     String[] sp = server.split(":");
-    Socket socket = new Socket(sp[0],
-      sp.length > 1 ? Integer.parseInt(sp[1]) : 2181);
+    if (sp == null || sp.length == 0) {
+      return null;
+    }
+
+    String host = sp[0];
+    int port = sp.length > 1 ? Integer.parseInt(sp[1])
+        : HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
+
+    Socket socket = new Socket();
+    InetSocketAddress sockAddr = new InetSocketAddress(host, port);
+    socket.connect(sockAddr, timeout);
+
     socket.setSoTimeout(timeout);
     PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
     BufferedReader in = new BufferedReader(new InputStreamReader(

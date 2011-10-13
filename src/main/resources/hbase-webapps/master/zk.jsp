@@ -8,18 +8,15 @@
   import="org.apache.hadoop.hbase.zookeeper.ZKUtil"
   import="org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.master.HMaster" 
+  import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  Configuration conf = master.getConfiguration();
-  HBaseAdmin hbadmin = new HBaseAdmin(conf);
-  HConnection connection = hbadmin.getConnection();
-  ZooKeeperWatcher watcher = connection.getZooKeeperWatcher();
+  ZooKeeperWatcher watcher = master.getZooKeeperWatcher();
 %>
 
 <?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <title>ZooKeeper Dump</title>
@@ -32,7 +29,6 @@
 <hr id="head_rule" />
 <pre>
 <%= ZKUtil.dump(watcher) %>
-<% HConnectionManager.deleteConnection(hbadmin.getConfiguration(), false); %>
 </pre>
 
 </body>

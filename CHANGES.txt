@@ -589,6 +589,7 @@ Release 0.92.0 - Unreleased
                CacheConf class (jgray)
    HBASE-4558  Refactor TestOpenedRegionHandler and TestOpenRegionHandler. (Ram)
    HBASE-4558  Addendum for TestMasterFailOver (Ram) - Breaks the build
+   HBASE-4568  Make zk dump jsp response faster
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

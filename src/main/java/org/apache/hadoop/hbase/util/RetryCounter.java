@@ -21,7 +21,11 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 public class RetryCounter {
+  private static final Log LOG = LogFactory.getLog(RetryCounter.class);
   private final int maxRetries;
   private int retriesRemaining;
   private final int retryIntervalMillis;
@@ -39,8 +43,16 @@ public class RetryCounter {
     return maxRetries;
   }
 
+  /**
+   * Sleep for a exponentially back off time
+   * @throws InterruptedException
+   */
   public void sleepUntilNextRetry() throws InterruptedException {
-    timeUnit.sleep(retryIntervalMillis);
+    int attempts = getAttemptTimes();
+    long sleepTime = (long) (retryIntervalMillis * Math.pow(2, attempts));
+    LOG.info("The " + attempts + " times to retry  after sleeping " + sleepTime
+        + " ms");
+    timeUnit.sleep(sleepTime);
   }
 
   public boolean shouldRetry() {

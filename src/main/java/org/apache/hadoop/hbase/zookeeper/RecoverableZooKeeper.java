@@ -132,8 +132,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
       isRetry = true;
@@ -170,8 +168,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -207,8 +203,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -244,8 +238,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -281,8 +273,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -319,9 +309,7 @@ public class RecoverableZooKeeper {
           default:
             throw e;
         }
-      } 
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
+      }
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -359,8 +347,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -419,8 +405,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
@@ -509,8 +493,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
       isRetry = true;
@@ -550,8 +532,6 @@ public class RecoverableZooKeeper {
             throw e;
         }
       }
-      LOG.info("The "+retryCounter.getAttemptTimes()+" times to retry " +
-          "ZooKeeper after sleeping "+retryIntervalMillis+" ms");
       retryCounter.sleepUntilNextRetry();
       retryCounter.useRetry();
     }
