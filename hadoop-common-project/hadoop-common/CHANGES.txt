@@ -35,23 +35,27 @@ Trunk (unreleased changes)
 
     HADOOP-7736. Remove duplicate Path#normalizePath call. (harsh)
 
+    HADOOP-7509. Improve exception message thrown when Authentication is 
+    required. (Ravi Prakash via suresh)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
-                 by Jersey (Alejandro Abdelnur via atm)
+    by Jersey (Alejandro Abdelnur via atm)
 
     HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
 
-    HADOOP-7641. Add Apache License to template config files (Eric Yang via atm)
+    HADOOP-7641. Add Apache License to template config files.
+    (Eric Yang via atm)
 
     HADOOP-7621. alfredo config should be in a file not readable by users
-                 (Alejandro Abdelnur via atm)
+    (Alejandro Abdelnur via atm)
     
     HADOOP-7669  Fix newly introduced release audit warning. 
-                 (Uma Maheswara Rao G via stevel)
+    (Uma Maheswara Rao G via stevel)
     
-    HADOOP-6220. HttpServer wraps InterruptedExceptions by IOExceptions if interrupted 
-                 in startup (stevel)
+    HADOOP-6220. HttpServer wraps InterruptedExceptions by IOExceptions 
+    if interrupted in startup (stevel)
 
     HADOOP-7703. Improved exception handling of shutting down web server.
     (Devaraj K via Eric Yang)
@@ -60,9 +64,10 @@ Trunk (unreleased changes)
     (Devaraj K via Eric Yang)
 
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
-                 error (atm)
+    error (atm)
 
-    HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
+    HADOOP-7721. Add log before login in KerberosAuthenticationHandler. 
+    (jitendra)
 
 Release 0.23.0 - Unreleased
 
