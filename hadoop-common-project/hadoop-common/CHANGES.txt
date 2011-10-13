@@ -42,6 +42,9 @@ Trunk (unreleased changes)
     if the override value is same as the final parameter value.
     (Ravi Prakash via suresh)
 
+    HADOOP-7737. normalize hadoop-mapreduce & hadoop-dist dist/tar build with 
+    common/hdfs. (tucu)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required

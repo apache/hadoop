@@ -85,13 +85,13 @@
             <executions>
               <execution>
                 <id>dist</id>
-                <phase>package</phase>
+                <phase>prepare-package</phase>
                 <goals>
                   <goal>run</goal>
                 </goals>
                 <configuration>
-                  <target if="tar">
-                    <echo file="${project.build.directory}/dist-tar-stitching.sh">
+                  <target>
+                    <echo file="${project.build.directory}/dist-layout-stitching.sh">
                       run() {
                         echo "\$ ${@}"
                         "${@}"
@@ -110,9 +110,9 @@
                       run rm -rf hadoop-${project.version}
                       run mkdir hadoop-${project.version}
                       run cd hadoop-${project.version}
-                      run tar xzf $ROOT/hadoop-common-project/hadoop-common/target/hadoop-common-${project.version}.tar.gz --strip-components 1
-                      run tar xzf $ROOT/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${project.version}.tar.gz --strip-components 1
-                      run tar xzf $ROOT/hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}.tar.gz --strip-components 1
+                      run cp -r $ROOT/hadoop-common-project/hadoop-common/target/hadoop-common-${project.version}/* .
+                      run cp -r $ROOT/hadoop-hdfs-project/hadoop-hdfs/target/hadoop-hdfs-${project.version}/* .
+                      run cp -r $ROOT/hadoop-mapreduce-project/target/hadoop-mapreduce-${project.version}/* .
                       COMMON_LIB=share/hadoop/common/lib
                       MODULES=../../../../modules
                       run ln -s $MODULES/hadoop-mapreduce-client-app-${project.version}.jar $COMMON_LIB
@@ -122,7 +122,36 @@
                       run ln -s $MODULES/hadoop-mapreduce-client-core-${project.version}.jar $COMMON_LIB
                       run ln -s $MODULES/hadoop-yarn-server-common-${project.version}.jar $COMMON_LIB
                       run ln -s $MODULES/hadoop-mapreduce-client-jobclient-${project.version}.jar $COMMON_LIB
-                      run cd -
+                      echo
+                      echo "Hadoop dist layout available at: ${project.build.directory}/hadoop-${project.version}"
+                      echo
+                    </echo>
+                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                      <arg line="./dist-layout-stitching.sh"/>
+                    </exec>
+                  </target>
+                </configuration>
+              </execution>
+              <execution>
+                <id>tar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target if="tar">
+                    <echo file="${project.build.directory}/dist-tar-stitching.sh">
+                      run() {
+                        echo "\$ ${@}"
+                        "${@}"
+                        if [ $? != 0 ]; then
+                          echo
+                          echo "Failed!"
+                          echo
+                          exit $?
+                        fi
+                      }
+
                       run tar czf hadoop-${project.version}.tar.gz hadoop-${project.version}
                       echo
                       echo "Hadoop dist tar available at: ${project.build.directory}/hadoop-${project.version}.tar.gz"

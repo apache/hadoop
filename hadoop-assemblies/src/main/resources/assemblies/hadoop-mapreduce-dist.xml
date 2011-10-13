@@ -3,9 +3,9 @@
   xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
   <id>hadoop-mapreduce-dist</id>
   <formats>
-    <format>tar.gz</format>
+    <format>dir</format>
   </formats>
-  <includeBaseDirectory>true</includeBaseDirectory>
+  <includeBaseDirectory>false</includeBaseDirectory>
   <!-- TODO: this layout is wrong. We need module specific bin files in module specific dirs -->
   <fileSets>
     <fileSet>
