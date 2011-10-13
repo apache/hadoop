@@ -45,6 +45,9 @@ Trunk (unreleased changes)
     HADOOP-7737. normalize hadoop-mapreduce & hadoop-dist dist/tar build with 
     common/hdfs. (tucu)
 
+    HADOOP-7545. Fix wrong variable name in exception message introduced
+    in HADOOP-7509. (Ravi Prakash via suresh)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
