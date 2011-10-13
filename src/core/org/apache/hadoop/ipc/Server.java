@@ -1125,9 +1125,9 @@ public abstract class Server {
           }
           if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
             AccessControlException ae = new AccessControlException("Authorization ("
-              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
-              + ") is enabled but authentication ("
               + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
+              + ") is enabled but authentication ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
               + ") is configured as simple. Please configure another method "
               + "like kerberos or digest.");
             setupResponse(authFailedResponse, authFailedCall, Status.FATAL,

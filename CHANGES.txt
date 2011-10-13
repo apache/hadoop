@@ -38,6 +38,9 @@ Release 0.20.206.0 - unreleased
     HADOOP-7509. Improve exception message thrown when Authentication is 
     required. (Ravi Prakash via suresh)
 
+    HADOOP-7509. Fix wrong variable name in exception message introduced
+    in HADOOP-7509. (Ravi Prakash via suresh)
+
 Release 0.20.205.1 - unreleased
 
   BUG FIXES
