@@ -462,6 +462,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7642. create hadoop-dist module where TAR stitching would happen.
     (Thomas White via tucu)
 
+    HADOOP-7709. Running a set of methods in a Single Test Class. 
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

@@ -338,6 +338,7 @@
                 TODO: from a previous run is present
                 -->
                 <delete dir="${test.build.data}"/>
+                <mkdir dir="${test.build.data}"/>
                 <mkdir dir="${hadoop.log.dir}"/>
 
                 <copy toDir="${project.build.directory}/test-classes">
