@@ -45,6 +45,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
 
+    MAPREDUCE-3183. hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml 
+    missing license header. (Hitesh Shah via tucu).
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
