@@ -62,6 +62,7 @@ import javax.security.sasl.SaslServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
@@ -1123,8 +1124,12 @@ public abstract class Server {
             throw new IOException("Unable to read authentication method");
           }
           if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-            AccessControlException ae = new AccessControlException(
-                "Authentication is required");
+            AccessControlException ae = new AccessControlException("Authorization ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
+              + ") is enabled but authentication ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
+              + ") is configured as simple. Please configure another method "
+              + "like kerberos or digest.");
             setupResponse(authFailedResponse, authFailedCall, Status.FATAL,
                 null, ae.getClass().getName(), ae.getMessage());
             responder.doRespond(authFailedCall);
