@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -526,7 +527,7 @@ public class NameNode {
       throws IOException { 
     this.conf = conf;
     this.role = role;
-    this.haEnabled = DFSUtil.isHAEnabled(conf);
+    this.haEnabled = HAUtil.isHAEnabled(conf);
     this.haContext = new NameNodeHAContext();
     try {
       initializeGenericKeys(conf, getNameServiceId(conf));
@@ -841,15 +842,18 @@ public class NameNode {
    *          Configuration object to lookup specific key and to set the value
    *          to the key passed. Note the conf object is modified
    * @param nameserviceId name service Id
-   * @see DFSUtil#setGenericConf(Configuration, String, String...)
+   * @see DFSUtil#setGenericConf(Configuration, String, String, String...)
    */
   public static void initializeGenericKeys(Configuration conf, String
       nameserviceId) {
-    if ((nameserviceId == null) || nameserviceId.isEmpty()) {
+    String namenodeId = HAUtil.getNameNodeId(conf);
+    if ((nameserviceId == null || nameserviceId.isEmpty()) && 
+        (namenodeId == null || namenodeId.isEmpty())) {
       return;
     }
     
-    DFSUtil.setGenericConf(conf, nameserviceId, NAMESERVICE_SPECIFIC_KEYS);
+    DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
+        NAMESERVICE_SPECIFIC_KEYS);
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));

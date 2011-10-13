@@ -245,10 +245,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY = "dfs.corruptfilesreturned.max";
   public static final int     DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
 
-  // HA related configuration
-  public static final String DFS_HA_NAMENODE_IDS_KEY = "dfs.ha.namenode.ids";
-  public static final String DFS_HA_NAMENODE_IDS_DEFAULT = "";
-
   // property for fsimage compression
   public static final String DFS_IMAGE_COMPRESS_KEY = "dfs.image.compress";
   public static final boolean DFS_IMAGE_COMPRESS_DEFAULT = false;
@@ -279,11 +275,15 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY = "dfs.namenode.name.cache.threshold";
   public static final int     DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT = 10;
   
-  public static final String DFS_FEDERATION_NAMESERVICES = "dfs.federation.nameservices";
-  public static final String DFS_FEDERATION_NAMESERVICE_ID = "dfs.federation.nameservice.id";
+  public static final String  DFS_FEDERATION_NAMESERVICES = "dfs.federation.nameservices";
+  public static final String  DFS_FEDERATION_NAMESERVICE_ID = "dfs.federation.nameservice.id";
   public static final String  DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY = "dfs.namenode.resource.check.interval";
   public static final int     DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT = 5000;
   public static final String  DFS_NAMENODE_DU_RESERVED_KEY = "dfs.namenode.resource.du.reserved";
   public static final long    DFS_NAMENODE_DU_RESERVED_DEFAULT = 1024 * 1024 * 100; // 100 MB
   public static final String  DFS_NAMENODE_CHECKED_VOLUMES_KEY = "dfs.namenode.resource.checked.volumes";
+  
+  // HA related configuration
+  public static final String DFS_HA_NAMENODES_KEY = "dfs.ha.namenodes";
+  public static final String DFS_HA_NAMENODE_ID_KEY = "dfs.ha.namenode.id";
 }

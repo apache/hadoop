@@ -86,7 +86,7 @@ public class TestDFSUtil {
   private Configuration setupAddress(String key) {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFS_FEDERATION_NAMESERVICES, "nn1");
-    conf.set(DFSUtil.getNameServiceIdKey(key, "nn1"), "localhost:9000");
+    conf.set(DFSUtil.addKeySuffixes(key, "nn1"), "localhost:9000");
     return conf;
   }
 
@@ -102,7 +102,7 @@ public class TestDFSUtil {
   }
   
   /**
-   * Test {@link DFSUtil#getNameNodeNameServiceId(Configuration)} to ensure
+   * Test {@link DFSUtil#getNamenodeNameServiceId(Configuration)} to ensure
    * nameserviceId for namenode is determined based on matching the address with
    * local node's address
    */
@@ -135,7 +135,7 @@ public class TestDFSUtil {
   }
 
   /**
-   * Test {@link DFSUtil#getNameServiceId(Configuration, String))} to ensure
+   * Test {@link DFSUtil#getNamenodeNameServiceId(Configuration)} to ensure
    * exception is thrown when multiple rpc addresses match the local node's
    * address
    */
@@ -143,9 +143,9 @@ public class TestDFSUtil {
   public void testGetNameServiceIdException() {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFS_FEDERATION_NAMESERVICES, "nn1,nn2");
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
         "localhost:9000");
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
         "localhost:9001");
     DFSUtil.getNamenodeNameServiceId(conf);
     fail("Expected exception is not thrown");
@@ -178,9 +178,9 @@ public class TestDFSUtil {
     final String NN1_ADDRESS = "localhost:9000";
     final String NN2_ADDRESS = "localhost:9001";
     final String NN3_ADDRESS = "localhost:9002";
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn1"),
         NN1_ADDRESS);
-    conf.set(DFSUtil.getNameServiceIdKey(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
         NN2_ADDRESS);
 
     Collection<InetSocketAddress> nnAddresses = DFSUtil
@@ -247,7 +247,7 @@ public class TestDFSUtil {
    * copied to generic keys when the namenode starts.
    */
   @Test
-  public void testConfModification() throws IOException {
+  public void testConfModification() {
     final HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(DFS_FEDERATION_NAMESERVICES, "nn1");
     conf.set(DFS_FEDERATION_NAMESERVICE_ID, "nn1");
@@ -256,7 +256,7 @@ public class TestDFSUtil {
     // Set the nameservice specific keys with nameserviceId in the config key
     for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
       // Note: value is same as the key
-      conf.set(DFSUtil.getNameServiceIdKey(key, nameserviceId), key);
+      conf.set(DFSUtil.addKeySuffixes(key, nameserviceId), key);
     }
 
     // Initialize generic keys from specific keys
@@ -282,18 +282,21 @@ public class TestDFSUtil {
       DFSUtil.getNNServiceRpcAddresses(conf);
       fail("Expected IOException is not thrown");
     } catch (IOException expected) {
+      /** Expected */
     }
 
     try {
       DFSUtil.getBackupNodeAddresses(conf);
       fail("Expected IOException is not thrown");
     } catch (IOException expected) {
+      /** Expected */
     }
 
     try {
       DFSUtil.getSecondaryNameNodeAddresses(conf);
       fail("Expected IOException is not thrown");
     } catch (IOException expected) {
+      /** Expected */
     }
   }
 

@@ -72,7 +72,7 @@ public class TestGetConf {
     String[] values = new String[nameServiceIdCount];
     for (int i = 0; i < nameServiceIdCount; i++, portOffset++) {
       String nsID = getNameServiceId(i);
-      String specificKey = DFSUtil.getNameServiceIdKey(key, nsID);
+      String specificKey = DFSUtil.addKeySuffixes(key, nsID);
       values[i] = "nn" + i + ":" + portOffset;
       conf.set(specificKey, values[i]);
     }

@@ -1088,9 +1088,9 @@ public class TestCheckpoint extends TestCase {
     snConf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "");
 
     // Set the nameserviceIds
-    snConf1.set(DFSUtil.getNameServiceIdKey(
+    snConf1.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId1), nn1);
-    snConf2.set(DFSUtil.getNameServiceIdKey(
+    snConf2.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId2), nn2);
 
     SecondaryNameNode secondary1 = startSecondaryNameNode(snConf1);

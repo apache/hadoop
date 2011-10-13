@@ -587,11 +587,11 @@ public class MiniDFSCluster {
   private static void initFederatedNamenodeAddress(Configuration conf,
       String nameserviceId, int nnPort) {
     // Set nameserviceId specific key
-    String key = DFSUtil.getNameServiceIdKey(
+    String key = DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
     conf.set(key, "127.0.0.1:0");
 
-    key = DFSUtil.getNameServiceIdKey(
+    key = DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId);
     conf.set(key, "127.0.0.1:" + nnPort);
   }
@@ -644,10 +644,10 @@ public class MiniDFSCluster {
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
     NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs,
         format, operation, clusterId);
-    conf.set(DFSUtil.getNameServiceIdKey(
+    conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getNameNodeAddress()));
-    conf.set(DFSUtil.getNameServiceIdKey(
+    conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, 
