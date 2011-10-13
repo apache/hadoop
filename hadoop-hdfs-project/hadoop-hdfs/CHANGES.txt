@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-2349. Corruption detected during block transfers between DNs
                should log a WARN instead of INFO. (harsh)
 
+    HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in
+    webhdfs responses.  (szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
