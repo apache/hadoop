@@ -374,6 +374,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3148. Ported MAPREDUCE-2702 to old mapred api for aiding task
     recovery. (acmurthy) 
 
+    MAPREDUCE-3133. Running a set of methods in a Single Test Class.
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
