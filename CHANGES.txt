@@ -336,6 +336,8 @@ Release 0.92.0 - Unreleased
    HBASE-4582  Store.java cleanup (failing TestHeapSize and has warnings)
    HBASE-4556  Fix all incorrect uses of InternalScanner.next(...) (Lars H)
    HBASE-4078  Validate store files after flush/compaction
+   HBASE-3417  CacheOnWrite is using the temporary output path for block names,
+               need to use a more consistent block naming scheme (jgray)               
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

@@ -28,8 +28,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
-import java.util.Random;
 import java.util.SortedSet;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -162,13 +162,10 @@ public class StoreFile {
    * this files id.  Group 2 the referenced region name, etc.
    */
   private static final Pattern REF_NAME_PARSER =
-    Pattern.compile("^(\\d+)(?:\\.(.+))?$");
+    Pattern.compile("^([0-9a-f]+)(?:\\.(.+))?$");
 
   // StoreFile.Reader
   private volatile Reader reader;
-
-  // Used making file ids.
-  private final static Random rand = new Random();
 
   /**
    * Bloom filter type specified in column family configuration. Does not
@@ -662,7 +659,7 @@ public class StoreFile {
       throw new IOException("Expecting " + dir.toString() +
         " to be a directory");
     }
-    return fs.getFileStatus(dir).isDir()? getRandomFilename(fs, dir): dir;
+    return getRandomFilename(fs, dir);
   }
 
   /**
@@ -689,14 +686,8 @@ public class StoreFile {
                                 final Path dir,
                                 final String suffix)
       throws IOException {
-    long id = -1;
-    Path p = null;
-    do {
-      id = Math.abs(rand.nextLong());
-      p = new Path(dir, Long.toString(id) +
-        ((suffix == null || suffix.length() <= 0)? "": suffix));
-    } while(fs.exists(p));
-    return p;
+    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", "")
+        + (suffix == null ? "" : suffix));
   }
 
   /**
@@ -773,7 +764,7 @@ public class StoreFile {
         CacheConfig cacheConf,
         final KVComparator comparator, BloomType bloomType, long maxKeys)
         throws IOException {
-      writer = HFile.getWriterFactory(conf).createWriter(
+      writer = HFile.getWriterFactory(conf, cacheConf).createWriter(
           fs, path, blocksize,
           compress, comparator.getRawComparator());
 

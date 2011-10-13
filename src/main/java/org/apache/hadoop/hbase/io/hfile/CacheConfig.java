@@ -97,7 +97,7 @@ public class CacheConfig {
   private final boolean inMemory;
 
   /** Whether data blocks should be cached when new files are written */
-  private final boolean cacheDataOnWrite;
+  private boolean cacheDataOnWrite;
 
   /** Whether index blocks should be cached when new files are written */
   private final boolean cacheIndexesOnWrite;
@@ -106,7 +106,7 @@ public class CacheConfig {
   private final boolean cacheBloomsOnWrite;
 
   /** Whether blocks of a file should be evicted when the file is closed */
-  private final boolean evictOnClose;
+  private boolean evictOnClose;
 
   /** Whether data blocks should be stored in compressed form in the cache */
   private final boolean cacheCompressed;
@@ -228,6 +228,15 @@ public class CacheConfig {
   }
 
   /**
+   * Only used for testing.
+   * @param cacheDataOnWrite whether data blocks should be written to the cache
+   *                         when an HFile is written
+   */
+  public void forTestsOnly_setCacheDataOnWrite(boolean cacheDataOnWrite) {
+    this.cacheDataOnWrite = cacheDataOnWrite;
+  }
+
+  /**
    * @return true if index blocks should be written to the cache when an HFile
    *         is written, false if not
    */
@@ -249,6 +258,15 @@ public class CacheConfig {
    */
   public boolean shouldEvictOnClose() {
     return isBlockCacheEnabled() && this.evictOnClose;
+  }
+
+  /**
+   * Only used for testing.
+   * @param evictOnClose whether blocks should be evicted from the cache when an
+   *                     HFile reader is closed
+   */
+  public void forTestsOnly_setEvictOnClose(boolean evictOnClose) {
+    this.evictOnClose = evictOnClose;
   }
 
   /**

@@ -95,7 +95,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
 
   /**
    * Name for this object used when logging or in toString. Is either
-   * the result of a toString on stream or else toString of passed file Path.
+   * the result of a toString on stream or else name of passed file Path.
    */
   protected final String name;
 

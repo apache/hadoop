@@ -469,7 +469,8 @@ public class Store implements HeapSize {
       TimeRangeTracker snapshotTimeRangeTracker,
       MonitoredTask status)
       throws IOException {
-    StoreFile.Writer writer = null;
+    StoreFile.Writer writer;
+    String fileName;
     long flushed = 0;
     // Don't flush if there are no entries.
     if (set.size() == 0) {
@@ -492,6 +493,7 @@ public class Store implements HeapSize {
         // A. Write the map out to the disk
         writer = createWriterInTmp(set.size());
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
+        fileName = writer.getPath().getName();
         try {
           List<KeyValue> kvs = new ArrayList<KeyValue>();
           boolean hasMore;
@@ -519,7 +521,7 @@ public class Store implements HeapSize {
     }
 
     // Write-out finished successfully, move into the right spot
-    Path dstPath = StoreFile.getUniqueFile(fs, homedir);
+    Path dstPath = new Path(homedir, fileName);
     validateStoreFile(writer.getPath());
     String msg = "Renaming flushed file at " + writer.getPath() + " to " + dstPath;
     LOG.info(msg);
@@ -1245,15 +1247,17 @@ public class Store implements HeapSize {
     StoreFile result = null;
     if (compactedFile != null) {
       validateStoreFile(compactedFile.getPath());
-      Path p = null;
-      try {
-        p = StoreFile.rename(this.fs, compactedFile.getPath(),
-          StoreFile.getRandomFilename(fs, this.homedir));
-      } catch (IOException e) {
-        LOG.error("Failed move of compacted file " + compactedFile.getPath(), e);
-        return null;
+      // Move the file into the right spot
+      Path origPath = compactedFile.getPath();
+      Path destPath = new Path(homedir, origPath.getName());
+      LOG.info("Renaming compacted file at " + origPath + " to " + destPath);
+      if (!fs.rename(origPath, destPath)) {
+        LOG.error("Failed move of compacted file " + origPath + " to " +
+            destPath);
+        throw new IOException("Failed move of compacted file " + origPath +
+            " to " + destPath);
       }
-      result = new StoreFile(this.fs, p, this.conf, this.cacheConf,
+      result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
           this.family.getBloomFilterType());
       result.createReader();
     }
@@ -1587,7 +1591,7 @@ public class Store implements HeapSize {
     return storeSize;
   }
 
-  void triggerMajorCompaction() {
+  public void triggerMajorCompaction() {
     this.forceMajor = true;
   }
 
@@ -1813,6 +1817,13 @@ public class Store implements HeapSize {
    */
   public boolean needsCompaction() {
     return (storefiles.size() - filesCompacting.size()) > minFilesToCompact;
+  }
+
+  /**
+   * Used for tests. Get the cache configuration for this Store.
+   */
+  public CacheConfig getCacheConfig() {
+    return this.cacheConf;
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
