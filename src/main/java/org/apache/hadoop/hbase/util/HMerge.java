@@ -19,6 +19,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,12 +49,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
 
 /**
  * A non-instantiable class that has a static method capable of compacting
@@ -370,14 +370,16 @@ class HMerge {
 
       try {
         List<KeyValue> results = new ArrayList<KeyValue>();
-        while(rootScanner.next(results)) {
+        boolean hasMore;
+        do {
+          hasMore = rootScanner.next(results);
           for(KeyValue kv: results) {
             HRegionInfo info = Writables.getHRegionInfoOrNull(kv.getValue());
             if (info != null) {
               metaRegions.add(info);
             }
           }
-        }
+        } while (hasMore);
       } finally {
         rootScanner.close();
         try {

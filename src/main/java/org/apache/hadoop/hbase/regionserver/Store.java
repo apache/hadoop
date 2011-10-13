@@ -1146,7 +1146,9 @@ public class Store implements HeapSize {
         // we have to use a do/while loop.
         ArrayList<KeyValue> kvs = new ArrayList<KeyValue>();
         // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
-        while (scanner.next(kvs,this.compactionKVMax)) {
+        boolean hasMore;
+        do {
+          hasMore = scanner.next(kvs, this.compactionKVMax);
           if (writer == null && !kvs.isEmpty()) {
             writer = createWriterInTmp(maxKeyCount,
               this.compactionCompression);
@@ -1176,7 +1178,7 @@ public class Store implements HeapSize {
             }
           }
           kvs.clear();
-        }
+        } while (hasMore);
       } finally {
         if (scanner != null) {
           scanner.close();
