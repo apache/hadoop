@@ -520,6 +520,7 @@ public class Store implements HeapSize {
 
     // Write-out finished successfully, move into the right spot
     Path dstPath = StoreFile.getUniqueFile(fs, homedir);
+    validateStoreFile(writer.getPath());
     String msg = "Renaming flushed file at " + writer.getPath() + " to " + dstPath;
     LOG.info(msg);
     status.setStatus("Flushing " + this + ": " + msg);
@@ -1091,7 +1092,7 @@ public class Store implements HeapSize {
    * nothing made it through the compaction.
    * @throws IOException
    */
-  private StoreFile.Writer compactStore(final Collection<StoreFile> filesToCompact,
+  StoreFile.Writer compactStore(final Collection<StoreFile> filesToCompact,
                                final boolean majorCompaction, final long maxId)
       throws IOException {
     // calculate maximum key count after compaction (for blooms)
@@ -1193,6 +1194,30 @@ public class Store implements HeapSize {
     return writer;
   }
 
+  /**
+   * Validates a store file by opening and closing it. In HFileV2 this should
+   * not be an expensive operation.
+   *
+   * @param path the path to the store file
+   */
+  private void validateStoreFile(Path path)
+      throws IOException {
+    StoreFile storeFile = null;
+    try {
+      storeFile = new StoreFile(this.fs, path, this.conf,
+          this.cacheConf, this.family.getBloomFilterType());
+      storeFile.createReader();
+    } catch (IOException e) {
+      LOG.error("Failed to open store file : " + path
+          + ", keeping it in tmp location", e);
+      throw e;
+    } finally {
+      if (storeFile != null) {
+        storeFile.closeReader();
+      }
+    }
+  }
+
   /*
    * <p>It works by processing a compaction that's been written to disk.
    *
@@ -1212,13 +1237,14 @@ public class Store implements HeapSize {
    * @return StoreFile created. May be null.
    * @throws IOException
    */
-  private StoreFile completeCompaction(final Collection<StoreFile> compactedFiles,
+  StoreFile completeCompaction(final Collection<StoreFile> compactedFiles,
                                        final StoreFile.Writer compactedFile)
       throws IOException {
     // 1. Moving the new files into place -- if there is a new file (may not
     // be if all cells were expired or deleted).
     StoreFile result = null;
     if (compactedFile != null) {
+      validateStoreFile(compactedFile.getPath());
       Path p = null;
       try {
         p = StoreFile.rename(this.fs, compactedFile.getPath(),

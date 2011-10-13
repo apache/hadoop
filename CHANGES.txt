@@ -335,6 +335,7 @@ Release 0.92.0 - Unreleased
                output file (Mingjie Lai)
    HBASE-4582  Store.java cleanup (failing TestHeapSize and has warnings)
    HBASE-4556  Fix all incorrect uses of InternalScanner.next(...) (Lars H)
+   HBASE-4078  Validate store files after flush/compaction
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

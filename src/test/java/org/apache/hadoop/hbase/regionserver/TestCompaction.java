@@ -24,14 +24,19 @@ import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.Assert.fail;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,6 +49,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -477,5 +483,42 @@ public class TestCompaction extends HBaseTestCase {
     addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
     		"bbb").getBytes(), null);
     loader.flushcache();
+  }
+
+  public void testCompactionWithCorruptResult() throws Exception {
+    int nfiles = 10;
+    for (int i = 0; i < nfiles; i++) {
+      createStoreFile(r);
+    }
+    Store store = r.getStore(COLUMN_FAMILY);
+
+    List<StoreFile> storeFiles = store.getStorefiles();
+    long maxId = StoreFile.getMaxSequenceIdInList(storeFiles);
+
+    StoreFile.Writer compactedFile = store.compactStore(storeFiles, false, maxId);
+
+    // Now lets corrupt the compacted file.
+    FileSystem fs = cluster.getFileSystem();
+    Path origPath = compactedFile.getPath();
+    Path homedir = store.getHomedir();
+    Path dstPath = new Path(homedir, origPath.getName());
+    FSDataOutputStream stream = fs.create(origPath, null, true, 512, (short) 3,
+        (long) 1024,
+        null);
+    stream.writeChars("CORRUPT FILE!!!!");
+    stream.close();
+
+    try {
+      store.completeCompaction(storeFiles, compactedFile);
+    } catch (Exception e) {
+      // The complete compaction should fail and the corrupt file should remain
+      // in the 'tmp' directory;
+      assert (fs.exists(origPath));
+      assert (!fs.exists(dstPath));
+      System.out.println("testCompactionWithCorruptResult Passed");
+      return;
+    }
+    fail("testCompactionWithCorruptResult failed since no exception was" +
+        "thrown while completing a corrupt file");
   }
 }
