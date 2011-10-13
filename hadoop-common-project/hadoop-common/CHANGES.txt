@@ -38,6 +38,10 @@ Trunk (unreleased changes)
     HADOOP-7509. Improve exception message thrown when Authentication is 
     required. (Ravi Prakash via suresh)
 
+    HADOOP-7664. Remove warmings when overriding final parameter configuration
+    if the override value is same as the final parameter value.
+    (Ravi Prakash via suresh)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
