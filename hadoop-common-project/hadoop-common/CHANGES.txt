@@ -48,6 +48,8 @@ Trunk (unreleased changes)
     HADOOP-7545. Fix wrong variable name in exception message introduced
     in HADOOP-7509. (Ravi Prakash via suresh)
 
+    HADOOP-7743. Add Maven profile to create a full source tarball. (tucu)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required

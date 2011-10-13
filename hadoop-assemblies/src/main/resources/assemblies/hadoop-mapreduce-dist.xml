@@ -36,40 +36,6 @@
         <include>**/*</include>
       </includes>
     </fileSet>
-    <fileSet>
-      <outputDirectory>sources</outputDirectory>
-      <excludes>
-        <exclude>**/*.jar</exclude>
-        <exclude>**/target/**</exclude>
-        <!-- scripts to include later for setting fileMode -->
-        <exclude>**/bin/*</exclude>
-        <exclude>**/scripts/*</exclude>
-        <!-- images that we don't need (and cause problems for our tools) -->
-        <exclude>**/dt-*/images/**</exclude>
-        <!-- until the code that does this is fixed -->
-        <exclude>**/file:/**</exclude>
-        <exclude>**/SecurityAuth.audit*</exclude>
-      </excludes>
-      <includes>
-        <include>pom.xml</include>
-        <include>build*.xml</include>
-        <include>ivy.xml</include>
-        <include>ivy/**</include>
-        <include>INSTALL</include>
-        <include>LICENSE.txt</include>
-        <include>mr-client/**</include>
-        <include>hadoop-yarn/**</include>
-        <include>src/**</include>
-      </includes>
-    </fileSet>
-    <fileSet>
-      <outputDirectory>sources</outputDirectory>
-      <includes>
-        <include>**/bin/*</include>
-        <include>**/scripts/*</include>
-      </includes>
-      <fileMode>0755</fileMode>
-    </fileSet>
   </fileSets>
   <moduleSets>
     <moduleSet>

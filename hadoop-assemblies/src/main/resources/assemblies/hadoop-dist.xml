@@ -107,10 +107,6 @@
       <directory>${project.build.directory}/site</directory>
       <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
     </fileSet>
-    <fileSet>
-      <directory>${project.build.directory}/src</directory>
-      <outputDirectory>/share/hadoop/${hadoop.component}/src</outputDirectory>
-    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
