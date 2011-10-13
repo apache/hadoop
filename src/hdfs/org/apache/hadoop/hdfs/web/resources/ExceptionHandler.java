@@ -29,17 +29,28 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 
+import com.sun.jersey.api.ParamException;
+
 /** Handle exceptions. */
 @Provider
 public class ExceptionHandler implements ExceptionMapper<Exception> {
   public static final Log LOG = LogFactory.getLog(ExceptionHandler.class);
 
   @Override
-  public Response toResponse(final Exception e) {
+  public Response toResponse(Exception e) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GOT EXCEPITION", e);
     }
 
+    //Convert exception
+    if (e instanceof ParamException) {
+      final ParamException paramexception = (ParamException)e;
+      e = new IllegalArgumentException("Invalid value for webhdfs parameter \""
+          + paramexception.getParameterName() + "\": "
+          + e.getCause().getMessage(), e);
+    } 
+
+    //Map response status
     final Response.Status s;
     if (e instanceof SecurityException) {
       s = Response.Status.UNAUTHORIZED;
@@ -49,7 +60,10 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.FORBIDDEN;
     } else if (e instanceof UnsupportedOperationException) {
       s = Response.Status.BAD_REQUEST;
+    } else if (e instanceof IllegalArgumentException) {
+      s = Response.Status.BAD_REQUEST;
     } else {
+      LOG.warn("INTERNAL_SERVER_ERROR", e);
       s = Response.Status.INTERNAL_SERVER_ERROR;
     }
  

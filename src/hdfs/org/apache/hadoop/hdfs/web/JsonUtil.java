@@ -98,17 +98,18 @@ public class JsonUtil {
   /** Convert an exception object to a Json string. */
   public static String toJsonString(final Exception e) {
     final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("className", e.getClass().getName());
+    m.put("exception", e.getClass().getSimpleName());
     m.put("message", e.getMessage());
+    m.put("javaClassName", e.getClass().getName());
     return toJsonString(RemoteException.class, m);
   }
 
   /** Convert a Json map to a RemoteException. */
   public static RemoteException toRemoteException(final Map<?, ?> json) {
     final Map<?, ?> m = (Map<?, ?>)json.get(RemoteException.class.getSimpleName());
-    final String className = (String)m.get("className");
     final String message = (String)m.get("message");
-    return new RemoteException(className, message);
+    final String javaClassName = (String)m.get("javaClassName");
+    return new RemoteException(javaClassName, message);
   }
 
   private static String toJsonString(final Class<?> clazz, final Object value) {
