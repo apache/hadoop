@@ -196,7 +196,7 @@ public class TestMasterFailover {
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw = 
       HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL, 
-          metaRegion, regionServer);
+          metaRegion, regionServer.getServerName());
 
     TEST_UTIL.startMiniHBaseCluster(1, 1);
 

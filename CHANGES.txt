@@ -580,6 +580,7 @@ Release 0.92.0 - Unreleased
    HBASE-4422  Move block cache parameters and references into single
                CacheConf class (jgray)
    HBASE-4558  Refactor TestOpenedRegionHandler and TestOpenRegionHandler. (Ram)
+   HBASE-4558  Addendum for TestMasterFailOver (Ram) - Breaks the build
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
