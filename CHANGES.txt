@@ -286,6 +286,9 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2411. With webhdfs enabled in secure mode the auth to local mappings 
     are not being respected. (jitendra)
 
+    HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in
+    webhdfs responses.  (szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)

@@ -27,6 +27,7 @@ import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -102,6 +103,7 @@ public class NamenodeWebHdfsMethods {
 
   private @Context ServletContext context;
   private @Context HttpServletRequest request;
+  private @Context HttpServletResponse response;
 
   private static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset
@@ -215,6 +217,9 @@ public class NamenodeWebHdfsMethods {
               modificationTime, accessTime));
     }
 
+    //clear content type
+    response.setContentType(null);
+
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
@@ -312,6 +317,9 @@ public class NamenodeWebHdfsMethods {
           + Param.toSortedString(", ", bufferSize));
     }
 
+    //clear content type
+    response.setContentType(null);
+
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
@@ -389,6 +397,8 @@ public class NamenodeWebHdfsMethods {
           + Param.toSortedString(", ", offset, length, renewer, bufferSize));
     }
 
+    //clear content type
+    response.setContentType(null);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -515,6 +525,9 @@ public class NamenodeWebHdfsMethods {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
           + Param.toSortedString(", ", recursive));
     }
+
+    //clear content type
+    response.setContentType(null);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override

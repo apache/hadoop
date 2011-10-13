@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -76,6 +77,7 @@ public class DatanodeWebHdfsMethods {
   public static final Log LOG = LogFactory.getLog(DatanodeWebHdfsMethods.class);
 
   private @Context ServletContext context;
+  private @Context HttpServletResponse response;
 
   /** Handle HTTP PUT request. */
   @PUT
@@ -105,6 +107,9 @@ public class DatanodeWebHdfsMethods {
           + Param.toSortedString(", ", permission, overwrite, bufferSize,
               replication, blockSize));
     }
+
+    //clear content type
+    response.setContentType(null);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
@@ -158,6 +163,9 @@ public class DatanodeWebHdfsMethods {
           + Param.toSortedString(", ", bufferSize));
     }
 
+    //clear content type
+    response.setContentType(null);
+
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException {
@@ -207,6 +215,9 @@ public class DatanodeWebHdfsMethods {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
           + Param.toSortedString(", ", offset, length, bufferSize));
     }
+
+    //clear content type
+    response.setContentType(null);
 
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
