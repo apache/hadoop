@@ -100,7 +100,6 @@ public class TestWALObserver {
     conf.setInt("dfs.client.block.recovery.retries", 2);
 
     TEST_UTIL.startMiniCluster(1);
-    TEST_UTIL.setNameNodeNameSystemLeasePeriod(100, 10000);
     Path hbaseRootDir =
       TEST_UTIL.getDFSCluster().getFileSystem().makeQualified(new Path("/hbase"));
     LOG.info("hbase.rootdir=" + hbaseRootDir);

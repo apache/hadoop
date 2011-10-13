@@ -338,6 +338,8 @@ Release 0.92.0 - Unreleased
    HBASE-4078  Validate store files after flush/compaction
    HBASE-3417  CacheOnWrite is using the temporary output path for block names,
                need to use a more consistent block naming scheme (jgray)               
+   HBASE-4551  Fix pom and some test cases to compile and run against
+               Hadoop 0.23 (todd)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

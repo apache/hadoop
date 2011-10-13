@@ -1434,35 +1434,6 @@ public class HBaseTestingUtility {
   }
 
   /**
-   * Set soft and hard limits in namenode.
-   * You'll get a NPE if you call before you've started a minidfscluster.
-   * @param soft Soft limit
-   * @param hard Hard limit
-   * @throws NoSuchFieldException
-   * @throws SecurityException
-   * @throws IllegalAccessException
-   * @throws IllegalArgumentException
-   */
-  public void setNameNodeNameSystemLeasePeriod(final int soft, final int hard)
-  throws SecurityException, NoSuchFieldException, IllegalArgumentException, IllegalAccessException {
-    // TODO: If 0.20 hadoop do one thing, if 0.21 hadoop do another.
-    // Not available in 0.20 hdfs.  Use reflection to make it happen.
-
-    // private NameNode nameNode;
-    Field field = this.dfsCluster.getClass().getDeclaredField("nameNode");
-    field.setAccessible(true);
-    NameNode nn = (NameNode)field.get(this.dfsCluster);
-    field = nn.getClass().getDeclaredField("namesystem");
-    field.setAccessible(true);
-    FSNamesystem namesystem = (FSNamesystem)field.get(nn);
-
-    field = namesystem.getClass().getDeclaredField("leaseManager");
-    field.setAccessible(true);
-    LeaseManager lm = (LeaseManager)field.get(namesystem);
-    lm.setLeasePeriod(100, 50000);
-  }
-
-  /**
    * Set maxRecoveryErrorCount in DFSClient.  In 0.20 pre-append its hard-coded to 5 and
    * makes tests linger.  Here is the exception you'll see:
    * <pre>

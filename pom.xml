@@ -1509,14 +1509,16 @@
         <!-- test deps for hadoop-0.23 profile -->
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common-test</artifactId>
+          <artifactId>hadoop-common</artifactId>
           <version>${hadoop.version}</version>
+          <type>test-jar</type>
           <scope>test</scope>
         </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-hdfs-test</artifactId>
+          <artifactId>hadoop-hdfs</artifactId>
           <version>${hadoop.version}</version>
+          <type>test-jar</type>
           <scope>test</scope>
         </dependency>
         <dependency>

@@ -46,8 +46,9 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
@@ -358,7 +359,8 @@ public class TestHLog  {
 
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
-      cluster.getNameNode().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+      dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_ENTER);
       cluster.shutdown();
       try {
         // wal.writer.close() will throw an exception,

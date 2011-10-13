@@ -140,8 +140,6 @@ public class TestHLogSplit {
     regions = new ArrayList<String>();
     Collections.addAll(regions, "bbb", "ccc");
     InstrumentedSequenceFileLogWriter.activateFailure = false;
-    // Set the soft lease for hdfs to be down from default of 5 minutes or so.
-    TEST_UTIL.setNameNodeNameSystemLeasePeriod(100, 50000);
   }
 
   @After
