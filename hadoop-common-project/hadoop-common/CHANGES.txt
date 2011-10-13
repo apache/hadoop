@@ -392,6 +392,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7627. Improve MetricsAsserts to give more understandable output
     on failure. (todd)
 
+    HADOOP-7709. Running a set of methods in a Single Test Class. 
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
