@@ -3060,9 +3060,9 @@ public class HRegion implements HeapSize { // , Writable{
           EnvironmentEdgeManager.currentTimeMillis(),
           Writables.getBytes(r.getRegionInfo())));
       edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-          HConstants.META_MIGRATION_QUALIFIER,
+          org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD.META_MIGRATION_QUALIFIER,
           EnvironmentEdgeManager.currentTimeMillis(),
-          Bytes.toBytes("true")));
+          Bytes.toBytes(true)));
 
       meta.put(HConstants.CATALOG_FAMILY, edits);
     } finally {

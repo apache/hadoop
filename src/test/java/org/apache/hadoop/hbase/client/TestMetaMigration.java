@@ -28,7 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -77,7 +77,8 @@ public class TestMetaMigration {
   @Test
   public void testMetaUpdatedFlagInROOT() throws Exception {
     LOG.info("Starting testMetaUpdatedFlagInROOT");
-    boolean metaUpdated = miniHBaseCluster.getMaster().isMetaHRIUpdated();
+    boolean metaUpdated =
+      MetaMigrationRemovingHTD.isMetaHRIUpdated(miniHBaseCluster.getMaster());
     assertEquals(true, metaUpdated);
     LOG.info("END testMetaUpdatedFlagInROOT");
   }
@@ -97,16 +98,17 @@ public class TestMetaMigration {
             Bytes.toBytes("region_b")});
     CatalogTracker ct = miniHBaseCluster.getMaster().getCatalogTracker();
     // just for this test set it to false.
-    MetaEditor.updateRootWithMetaMigrationStatus(ct, false);
+    MetaMigrationRemovingHTD.updateRootWithMetaMigrationStatus(ct, false);
     MetaReader.fullScanMetaAndPrint(ct);
-    LOG.info("MEta Print completed.testUpdatesOnMetaWithLegacyHRI");
+    LOG.info("Meta Print completed.testUpdatesOnMetaWithLegacyHRI");
 
-    List<HTableDescriptor> htds = MetaEditor.updateMetaWithNewRegionInfo(
+    List<HTableDescriptor> htds = MetaMigrationRemovingHTD.updateMetaWithNewRegionInfo(
           TEST_UTIL.getHBaseCluster().getMaster());
     MetaReader.fullScanMetaAndPrint(ct);
     assertEquals(3, htds.size());
     // Assert that the flag in ROOT is updated to reflect the correct status
-    boolean metaUpdated = miniHBaseCluster.getMaster().isMetaHRIUpdated();
+    boolean metaUpdated =
+      MetaMigrationRemovingHTD.isMetaHRIUpdated(miniHBaseCluster.getMaster());
     assertEquals(true, metaUpdated);
     LOG.info("END testMetaWithLegacyHRI");
 
@@ -138,15 +140,16 @@ public class TestMetaMigration {
     TEST_UTIL.createMultiRegionsWithLegacyHRI(conf, htd, FAMILY, 10);
     CatalogTracker ct = miniHBaseCluster.getMaster().getCatalogTracker();
     // just for this test set it to false.
-    MetaEditor.updateRootWithMetaMigrationStatus(ct, false);
+    MetaMigrationRemovingHTD.updateRootWithMetaMigrationStatus(ct, false);
     //MetaReader.fullScanMetaAndPrint(ct);
     LOG.info("MEta Print completed.testUpdatesOnMetaWithLegacyHRI");
 
-    List<HTableDescriptor> htds = MetaEditor.updateMetaWithNewRegionInfo(
+    List<HTableDescriptor> htds = MetaMigrationRemovingHTD.updateMetaWithNewRegionInfo(
           TEST_UTIL.getHBaseCluster().getMaster());
     assertEquals(10, htds.size());
     // Assert that the flag in ROOT is updated to reflect the correct status
-    boolean metaUpdated = miniHBaseCluster.getMaster().isMetaHRIUpdated();
+    boolean metaUpdated =
+      MetaMigrationRemovingHTD.isMetaHRIUpdated(miniHBaseCluster.getMaster());
     assertEquals(true, metaUpdated);
     LOG.info("END testMetaWithLegacyHRI");
 

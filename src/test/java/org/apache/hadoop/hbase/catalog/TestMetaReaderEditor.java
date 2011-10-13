@@ -19,7 +19,10 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,8 +37,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -70,11 +71,15 @@ public class TestMetaReaderEditor {
   };
 
   @BeforeClass public static void beforeClass() throws Exception {
-    UTIL.startMiniCluster();
+    UTIL.startMiniCluster(3);
   }
 
   @Before public void setup() throws IOException, InterruptedException {
     Configuration c = new Configuration(UTIL.getConfiguration());
+    // Tests to 4 retries every 5 seconds. Make it try every 1 second so more
+    // responsive.  1 second is default as is ten retries.
+    c.setLong("hbase.client.pause", 1000);
+    c.setInt("hbase.client.retries.number", 10);
     zkw = new ZooKeeperWatcher(c, "TestMetaReaderEditor", ABORTABLE);
     ct = new CatalogTracker(zkw, c, ABORTABLE);
     ct.start();
@@ -82,6 +87,111 @@ public class TestMetaReaderEditor {
 
   @AfterClass public static void afterClass() throws IOException {
     UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * Does {@link MetaReader#getRegion(CatalogTracker, byte[])} and a write
+   * against .META. while its hosted server is restarted to prove our retrying
+   * works.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test (timeout = 180000) public void testRetrying()
+  throws IOException, InterruptedException {
+    final String name = "testRetrying";
+    LOG.info("Started " + name);
+    final byte [] nameBytes = Bytes.toBytes(name);
+    HTable t = UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
+    int regionCount = UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
+    // Test it works getting a region from just made user table.
+    final List<HRegionInfo> regions =
+      testGettingTableRegions(this.ct, nameBytes, regionCount);
+    MetaTask reader = new MetaTask(this.ct, "reader") {
+      @Override
+      void metaTask() throws Throwable {
+        testGetRegion(this.ct, regions.get(0));
+        LOG.info("Read " + regions.get(0).getEncodedName());
+      }
+    };
+    MetaTask writer = new MetaTask(this.ct, "writer") {
+      @Override
+      void metaTask() throws Throwable {
+        MetaEditor.addRegionToMeta(this.ct, regions.get(0));
+        LOG.info("Wrote " + regions.get(0).getEncodedName());
+      }
+    };
+    reader.start();
+    writer.start();
+    // Make sure reader and writer are working.
+    assertTrue(reader.isProgressing());
+    assertTrue(writer.isProgressing());
+    // Kill server hosting meta -- twice  . See if our reader/writer ride over the
+    // meta moves.  They'll need to retry.
+    for (int i = 0; i < 2; i++) {
+      LOG.info("Restart=" + i);
+      UTIL.ensureSomeRegionServersAvailable(2);
+      int index = -1;
+      do {
+        index = UTIL.getMiniHBaseCluster().getServerWithMeta();
+      } while (index == -1);
+      UTIL.getMiniHBaseCluster().abortRegionServer(index);
+      UTIL.getMiniHBaseCluster().waitOnRegionServer(index);
+    }
+    assertTrue(reader.toString(), reader.isProgressing());
+    assertTrue(writer.toString(), writer.isProgressing());
+    reader.stop = true;
+    writer.stop = true;
+    reader.join();
+    writer.join();
+  }
+
+  /**
+   * Thread that runs a MetaReader/MetaEditor task until asked stop.
+   */
+  abstract static class MetaTask extends Thread {
+    boolean stop = false;
+    int count = 0;
+    Throwable t = null;
+    final CatalogTracker ct;
+
+    MetaTask(final CatalogTracker ct, final String name) {
+      super(name);
+      this.ct = ct;
+    }
+
+    @Override
+    public void run() {
+      try {
+        while(!this.stop) {
+          LOG.info("Before " + this.getName()+ ", count=" + this.count);
+          metaTask();
+          this.count += 1;
+          LOG.info("After " + this.getName() + ", count=" + this.count);
+          Thread.sleep(100);
+        }
+      } catch (Throwable t) {
+        LOG.info(this.getName() + " failed", t);
+        this.t = t;
+      }
+    }
+
+    boolean isProgressing() throws InterruptedException {
+      int currentCount = this.count;
+      while(currentCount == this.count) {
+        if (!isAlive()) return false;
+        if (this.t != null) return false;
+        Thread.sleep(10);
+      }
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return "count=" + this.count + ", t=" +
+        (this.t == null? "null": this.t.toString());
+    }
+
+    abstract void metaTask() throws Throwable;
   }
 
   @Test public void testGetRegionsCatalogTables()
@@ -114,19 +224,9 @@ public class TestMetaReaderEditor {
   @Test public void testGetRegion() throws IOException, InterruptedException {
     final String name = "testGetRegion";
     LOG.info("Started " + name);
-    final byte [] nameBytes = Bytes.toBytes(name);
-    HTable t = UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
-    int regionCount = UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
-
-    // Test it works getting a region from user table.
-    List<HRegionInfo> regions = MetaReader.getTableRegions(ct, nameBytes);
-    assertEquals(regionCount, regions.size());
-    Pair<HRegionInfo, ServerName> pair =
-      MetaReader.getRegion(ct, regions.get(0).getRegionName());
-    assertEquals(regions.get(0).getEncodedName(),
-      pair.getFirst().getEncodedName());
     // Test get on non-existent region.
-    pair = MetaReader.getRegion(ct, Bytes.toBytes("nonexistent-region"));
+    Pair<HRegionInfo, ServerName> pair =
+      MetaReader.getRegion(ct, Bytes.toBytes("nonexistent-region"));
     assertNull(pair);
     // Test it works getting a region from meta/root.
     pair =
@@ -137,7 +237,8 @@ public class TestMetaReaderEditor {
   }
 
   // Test for the optimization made in HBASE-3650
-  @Test public void testScanMetaForTable() throws IOException {
+  @Test public void testScanMetaForTable()
+  throws IOException, InterruptedException {
     final String name = "testScanMetaForTable";
     LOG.info("Started " + name);
 
@@ -164,5 +265,26 @@ public class TestMetaReaderEditor {
       assertEquals(1, MetaReader.getTableRegions(ct, Bytes.toBytes(name+i)).size());
     }
     assertEquals(1, MetaReader.getTableRegions(ct, greaterName).size());
+  }
+
+  private static List<HRegionInfo> testGettingTableRegions(final CatalogTracker ct,
+      final byte [] nameBytes, final int regionCount)
+  throws IOException, InterruptedException {
+    List<HRegionInfo> regions = MetaReader.getTableRegions(ct, nameBytes);
+    assertEquals(regionCount, regions.size());
+    Pair<HRegionInfo, ServerName> pair =
+      MetaReader.getRegion(ct, regions.get(0).getRegionName());
+    assertEquals(regions.get(0).getEncodedName(),
+      pair.getFirst().getEncodedName());
+    return regions;
+  }
+
+  private static void testGetRegion(final CatalogTracker ct,
+      final HRegionInfo region)
+  throws IOException, InterruptedException {
+    Pair<HRegionInfo, ServerName> pair =
+      MetaReader.getRegion(ct, region.getRegionName());
+    assertEquals(region.getEncodedName(),
+      pair.getFirst().getEncodedName());
   }
 }

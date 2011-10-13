@@ -25,7 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,21 +40,18 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
@@ -64,7 +60,7 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
@@ -72,18 +68,14 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
-import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -205,7 +197,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = conf;
-
+    // Set how many times to retry talking to another server over HConnection.
+    HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     // Server to handle client requests.
     String hostname = DNS.getDefaultHost(
       conf.get("hbase.master.dns.interface", "default"),
@@ -470,7 +463,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Update meta with new HRI if required. i.e migrate all HRI with HTD to
     // HRI with out HTD in meta and update the status in ROOT. This must happen
     // before we assign all user regions or else the assignment will fail.
-    updateMetaWithNewHRI();
+    // TODO: Remove this when we do 0.94.
+    org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD.
+      updateMetaWithNewHRI(this);
 
     // Fixup assignment manager status
     status.setStatus("Starting assignment manager");
@@ -498,45 +493,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         LOG.error("Coprocessor postStartMaster() hook failed", ioe);
       }
     }
-  }
-
-  public boolean isMetaHRIUpdated()
-      throws IOException {
-    boolean metaUpdated = false;
-    Get get = new Get(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
-    get.addColumn(HConstants.CATALOG_FAMILY,
-        HConstants.META_MIGRATION_QUALIFIER);
-    Result r =
-        catalogTracker.waitForRootServerConnectionDefault().get(
-        HRegionInfo.ROOT_REGIONINFO.getRegionName(), get);
-    if (r != null && r.getBytes() != null)
-    {
-      byte[] metaMigrated = r.getValue(HConstants.CATALOG_FAMILY,
-          HConstants.META_MIGRATION_QUALIFIER);
-      String migrated = Bytes.toString(metaMigrated);
-      metaUpdated = new Boolean(migrated).booleanValue();
-    } else {
-      LOG.info("metaUpdated = NULL.");
-    }
-    LOG.info("Meta updated status = " + metaUpdated);
-    return metaUpdated;
-  }
-
-
-  boolean updateMetaWithNewHRI() throws IOException {
-    if (!isMetaHRIUpdated()) {
-      LOG.info("Meta has HRI with HTDs. Updating meta now.");
-      try {
-        MetaEditor.migrateRootAndMeta(this);
-        LOG.info("ROOT and Meta updated with new HRI.");
-        return true;
-      } catch (IOException e) {
-        throw new RuntimeException("Update ROOT/Meta with new HRI failed." +
-            "Master startup aborted.");
-      }
-    }
-    LOG.info("ROOT/Meta already up-to date with new HRI.");
-    return true;
   }
 
   /**
@@ -993,6 +949,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
            Bytes.equals(tableName, HConstants.META_TABLE_NAME);
   }
 
+  @Override
   public void deleteTable(final byte [] tableName) throws IOException {
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
@@ -1004,16 +961,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
-  /**
-   * Get the number of regions of the table that have been updated by the alter.
-   *
-   * @return Pair indicating the number of regions updated Pair.getFirst is the
-   *         regions that are yet to be updated Pair.getSecond is the total number
-   *         of regions of the table
-   */
   public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
   throws IOException {
-    return this.assignmentManager.getReopenStatus(tableName);
+    try {
+      return this.assignmentManager.getReopenStatus(tableName);
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted", e);
+    }
   }
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)
@@ -1098,7 +1052,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           if (data == null || data.size() <= 0) {
             return true;
           }
-          Pair<HRegionInfo, ServerName> pair = MetaReader.metaRowToRegionPair(data);
+          Pair<HRegionInfo, ServerName> pair = MetaReader.parseCatalogResult(data);
           if (pair == null) {
             return false;
           }

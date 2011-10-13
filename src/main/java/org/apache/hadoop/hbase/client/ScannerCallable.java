@@ -59,9 +59,9 @@ public class ScannerCallable extends ServerCallable<Result[]> {
    * @throws IOException
    */
   @Override
-  public void instantiateServer(boolean reload) throws IOException {
+  public void connect(boolean reload) throws IOException {
     if (!instantiated || reload) {
-      super.instantiateServer(reload);
+      super.connect(reload);
       instantiated = true;
     }
   }

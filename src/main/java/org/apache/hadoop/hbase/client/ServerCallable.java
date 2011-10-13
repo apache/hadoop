@@ -31,7 +31,14 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * Abstract class that implements Callable, used by retryable actions.
+ * Abstract class that implements {@link Callable}.  Implementation stipulates
+ * return type and method we actually invoke on remote Server.  Usually
+ * used inside a try/catch that fields usual connection failures all wrapped
+ * up in a retry loop.
+ * <p>Call {@link #connect(boolean)} to connect to server hosting region
+ * that contains the passed row in the passed table before invoking
+ * {@link #call()}.
+ * @see HConnection#getRegionServerWithoutRetries(ServerCallable)
  * @param <T> the class that the ServerCallable handles
  */
 public abstract class ServerCallable<T> implements Callable<T> {
@@ -44,9 +51,9 @@ public abstract class ServerCallable<T> implements Callable<T> {
   protected long startTime, endTime;
 
   /**
-   * @param connection connection callable is on
-   * @param tableName table name callable is on
-   * @param row row we are querying
+   * @param connection Connection to use.
+   * @param tableName Table name to which <code>row</code> belongs.
+   * @param row The row we want in <code>tableName</code>.
    */
   public ServerCallable(HConnection connection, byte [] tableName, byte [] row) {
     this(connection, tableName, row, HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
@@ -58,34 +65,37 @@ public abstract class ServerCallable<T> implements Callable<T> {
     this.row = row;
     this.callTimeout = callTimeout;
   }
+
   /**
-   *
-   * @param reload set this to true if connection should re-find the region
+   * Connect to the server hosting region with row from tablename.
+   * @param reload Set this to true if connection should re-find the region
    * @throws IOException e
    */
-  public void instantiateServer(boolean reload) throws IOException {
+  public void connect(final boolean reload) throws IOException {
     this.location = connection.getRegionLocation(tableName, row, reload);
     this.server = connection.getHRegionConnection(location.getHostname(),
       location.getPort());
   }
 
-  /** @return the server name */
+  /** @return the server name
+   * @deprecated Just use {@link #toString()} instead.
+   */
   public String getServerName() {
-    if (location == null) {
-      return null;
-    }
+    if (location == null) return null;
     return location.getHostnamePort();
   }
 
-  /** @return the region name */
+  /** @return the region name
+   * @deprecated Just use {@link #toString()} instead.
+   */
   public byte[] getRegionName() {
-    if (location == null) {
-      return null;
-    }
+    if (location == null) return null;
     return location.getRegionInfo().getRegionName();
   }
 
-  /** @return the row */
+  /** @return the row
+   * @deprecated Just use {@link #toString()} instead.
+   */
   public byte [] getRow() {
     return row;
   }

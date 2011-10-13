@@ -340,6 +340,8 @@ Release 0.92.0 - Unreleased
                need to use a more consistent block naming scheme (jgray)               
    HBASE-4551  Fix pom and some test cases to compile and run against
                Hadoop 0.23 (todd)
+   HBASE-3446  ProcessServerShutdown fails if META moves, orphaning lots of
+               regions
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

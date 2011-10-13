@@ -19,52 +19,29 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 
 /**
  * Tracks the unassigned zookeeper node used by the META table.
- *
- * A callback is made into the passed {@link CatalogTracker} when
- * <code>.META.</code> completes a new assignment.
  * <p>
  * If META is already assigned when instantiating this class, you will not
  * receive any notification for that assignment.  You will receive a
  * notification after META has been successfully assigned to a new location.
  */
 public class MetaNodeTracker extends ZooKeeperNodeTracker {
-  private static final Log LOG = LogFactory.getLog(MetaNodeTracker.class);
-
-  /** Catalog tracker to notify when META has a new assignment completed. */
-  private final CatalogTracker catalogTracker;
-
   /**
    * Creates a meta node tracker.
    * @param watcher
    * @param abortable
    */
-  public MetaNodeTracker(final ZooKeeperWatcher watcher,
-      final CatalogTracker catalogTracker, final Abortable abortable) {
+  public MetaNodeTracker(final ZooKeeperWatcher watcher, final Abortable abortable) {
     super(watcher, ZKUtil.joinZNode(watcher.assignmentZNode,
         HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()), abortable);
-    this.catalogTracker = catalogTracker;
   }
 
   @Override
   public void nodeDeleted(String path) {
     super.nodeDeleted(path);
-    if (!path.equals(node)) return;
-    LOG.info("Detected completed assignment of META, notifying catalog tracker");
-    try {
-      this.catalogTracker.waitForMetaServerConnectionDefault();
-    } catch (IOException e) {
-      LOG.warn("Tried to reset META server location after seeing the " +
-        "completion of a new META assignment but got an IOE", e);
-    }
   }
 }

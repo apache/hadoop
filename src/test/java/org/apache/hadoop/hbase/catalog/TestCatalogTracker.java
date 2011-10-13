@@ -35,16 +35,20 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Progressable;
@@ -160,27 +164,44 @@ public class TestCatalogTracker {
     t.join();
   }
 
-  @Test public void testGetMetaServerConnectionFails()
+  @Test
+  public void testGetMetaServerConnectionFails()
   throws IOException, InterruptedException, KeeperException {
-    HConnection connection = Mockito.mock(HConnection.class);
-    ConnectException connectException =
-      new ConnectException("Connection refused");
-    final HRegionInterface implementation =
-      Mockito.mock(HRegionInterface.class);
-    Mockito.when(implementation.get((byte [])Mockito.any(), (Get)Mockito.any())).
-      thenThrow(connectException);
-    Mockito.when(connection.getHRegionConnection((HServerAddress)Matchers.anyObject(), Matchers.anyBoolean())).
-      thenReturn(implementation);
-    Assert.assertNotNull(connection.getHRegionConnection(new HServerAddress(), false));
-    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    HConnection connection =
+      HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
     try {
-      RootLocationEditor.setRootLocation(this.watcher,
-        new ServerName("example.com", 1234, System.currentTimeMillis()));
-      Assert.assertFalse(ct.verifyMetaRegionLocation(100));
+      // Mock an HRegionInterface.
+      final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
+      // If a 'get' is called on mocked interface, throw connection refused.
+      Mockito.when(implementation.get((byte[]) Mockito.any(), (Get) Mockito.any())).
+        thenThrow(new ConnectException("Connection refused"));
+      // Make it so our implementation is returned when we do a connection.
+      // Need to fake out the location lookup stuff first.
+      ServerName sn = new ServerName("example.com", 1234, System.currentTimeMillis());
+      final HRegionLocation anyLocation =
+        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn.getHostname(),
+          sn.getPort());
+      Mockito.when(connection.getRegionLocation((byte[]) Mockito.any(),
+            (byte[]) Mockito.any(), Mockito.anyBoolean())).
+        thenReturn(anyLocation);
+      Mockito.when(connection.getHRegionConnection(Mockito.anyString(),
+          Mockito.anyInt(), Matchers.anyBoolean())).
+        thenReturn(implementation);
+      // Now start up the catalogtracker with our doctored Connection.
+      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+      try {
+        RootLocationEditor.setRootLocation(this.watcher, sn);
+        long timeout = UTIL.getConfiguration().
+          getLong("hbase.catalog.verification.timeout", 1000);
+        Assert.assertFalse(ct.verifyMetaRegionLocation(timeout));
+      } finally {
+        // Clean out root location or later tests will be confused... they
+        // presume start fresh in zk.
+        RootLocationEditor.deleteRootLocation(this.watcher);
+      }
     } finally {
-      // Clean out root location or later tests will be confused... they presume
-      // start fresh in zk.
-      RootLocationEditor.deleteRootLocation(this.watcher);
+      // Clear out our doctored connection or could mess up subsequent tests.
+      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
     }
   }
 
@@ -200,9 +221,9 @@ public class TestCatalogTracker {
       Mockito.mock(HRegionInterface.class);
     Mockito.when(implementation.getRegionInfo((byte [])Mockito.any())).
       thenThrow(connectException);
-    Mockito.when(connection.getHRegionConnection((HServerAddress)Matchers.anyObject(), Matchers.anyBoolean())).
+    Mockito.when(connection.getHRegionConnection(Mockito.anyString(),
+      Mockito.anyInt(), Mockito.anyBoolean())).
       thenReturn(implementation);
-    Assert.assertNotNull(connection.getHRegionConnection(new HServerAddress(), false));
     final CatalogTracker ct = constructAndStartCatalogTracker(connection);
     try {
       RootLocationEditor.setRootLocation(this.watcher,
@@ -225,8 +246,14 @@ public class TestCatalogTracker {
   @Test (expected = NotAllMetaRegionsOnlineException.class)
   public void testTimeoutWaitForMeta()
   throws IOException, InterruptedException {
-    final CatalogTracker ct = constructAndStartCatalogTracker();
-    ct.waitForMeta(100);
+    HConnection connection =
+      HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
+    try {
+      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+      ct.waitForMeta(100);
+    } finally {
+      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+    }
   }
 
   /**
@@ -259,62 +286,84 @@ public class TestCatalogTracker {
 
   /**
    * Test waiting on meta w/ no timeout specified.
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws KeeperException
+   * @throws Exception 
    */
   @Test public void testNoTimeoutWaitForMeta()
-  throws IOException, InterruptedException, KeeperException {
+  throws Exception {
     // Mock an HConnection and a HRegionInterface implementation.  Have the
     // HConnection return the HRI.  Have the HRI return a few mocked up responses
     // to make our test work.
-    HConnection connection = Mockito.mock(HConnection.class);
-    HRegionInterface  mockHRI = Mockito.mock(HRegionInterface.class);
-    // Make the HRI return an answer no matter how Get is called.  Same for
-    // getHRegionInfo.  Thats enough for this test.
-    Mockito.when(connection.getHRegionConnection((String)Mockito.any(),
-      Matchers.anyInt())).thenReturn(mockHRI);
+    HConnection connection =
+      HConnectionTestingUtility.getMockedConnection(UTIL.getConfiguration());
+    try {
+      // Mock an HRegionInterface.
+      
+      final HRegionInterface implementation = Mockito.mock(HRegionInterface.class);
+      // Make it so our implementation is returned when we do a connection.
+      // Need to fake out the location lookup stuff first.
+      ServerName sn = new ServerName("example.com", 1234, System.currentTimeMillis());
+      final HRegionLocation anyLocation =
+        new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn.getHostname(),
+          sn.getPort());
+      Mockito.when(connection.getRegionLocation((byte[]) Mockito.any(),
+            (byte[]) Mockito.any(), Mockito.anyBoolean())).
+        thenReturn(anyLocation);
+      // Have implementation returned which ever way getHRegionConnection is called.
+      Mockito.when(connection.getHRegionConnection(Mockito.anyString(),
+          Mockito.anyInt(), Matchers.anyBoolean())).
+        thenReturn(implementation);
+      Mockito.when(connection.getHRegionConnection(Mockito.anyString(),
+          Mockito.anyInt())).
+        thenReturn(implementation);
 
-    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
-    ServerName hsa = ct.getMetaLocation();
-    Assert.assertNull(hsa);
+      final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+      ServerName hsa = ct.getMetaLocation();
+      Assert.assertNull(hsa);
 
-    // Now test waiting on meta location getting set.
-    Thread t = new WaitOnMetaThread(ct) {
-      @Override
-      void doWaiting() throws InterruptedException {
-        this.ct.waitForMeta();
-      }
-    };
-    startWaitAliveThenWaitItLives(t, 1000);
+      // Now test waiting on meta location getting set.
+      Thread t = new WaitOnMetaThread(ct) {
+        @Override
+        void doWaiting() throws InterruptedException {
+          this.ct.waitForMeta();
+        }
+      };
+      startWaitAliveThenWaitItLives(t, 1000);
 
-    // Now the ct is up... set into the mocks some answers that make it look
-    // like things have been getting assigned.  Make it so we'll return a
-    // location (no matter what the Get is).  Same for getHRegionInfo -- always
-    // just return the meta region.
-    List<KeyValue> kvs = new ArrayList<KeyValue>();
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-      Bytes.toBytes(SN.getHostAndPort())));
-    kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
-      HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-      Bytes.toBytes(SN.getStartcode())));
-    final Result result = new Result(kvs);
-    Mockito.when(mockHRI.get((byte [])Mockito.any(), (Get)Mockito.any())).
-      thenReturn(result);
-    Mockito.when(mockHRI.getRegionInfo((byte [])Mockito.any())).
-      thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
-    // This should trigger wake up of meta wait (Its the removal of the meta
-    // region unassigned node that triggers catalogtrackers that a meta has
-    // been assigned.
-    String node = ct.getMetaNodeTracker().getNode();
-    ZKUtil.createAndFailSilent(this.watcher, node);
-    MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
-    ZKUtil.deleteNode(this.watcher, node);
-    // Join the thread... should exit shortly.
-    t.join();
-    // Now meta is available.
-    Assert.assertTrue(ct.getMetaLocation().equals(SN));
+      // Now the ct is up... set into the mocks some answers that make it look
+      // like things have been getting assigned. Make it so we'll return a
+      // location (no matter what the Get is). Same for getHRegionInfo -- always
+      // just return the meta region.
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
+        HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(HRegionInfo.FIRST_META_REGIONINFO)));
+      kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
+        HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        Bytes.toBytes(SN.getHostAndPort())));
+      kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY,
+        HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+        Bytes.toBytes(SN.getStartcode())));
+      final Result result = new Result(kvs);
+      Mockito.when(connection.getRegionServerWithRetries((ServerCallable<Result>)Mockito.any())).
+        thenReturn(result);
+      Mockito.when(implementation.getRegionInfo((byte[]) Mockito.any())).
+        thenReturn(HRegionInfo.FIRST_META_REGIONINFO);
+      // This should trigger wake up of meta wait (Its the removal of the meta
+      // region unassigned node that triggers catalogtrackers that a meta has
+      // been assigned).
+      String node = ct.getMetaNodeTracker().getNode();
+      ZKUtil.createAndFailSilent(this.watcher, node);
+      MetaEditor.updateMetaLocation(ct, HRegionInfo.FIRST_META_REGIONINFO, SN);
+      ZKUtil.deleteNode(this.watcher, node);
+      // Go get the new meta location. waitForMeta gets and verifies meta.
+      Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
+      // Join the thread... should exit shortly.
+      t.join();
+      // Now meta is available.
+      Assert.assertTrue(ct.waitForMeta(10000).equals(SN));
+    } finally {
+      HConnectionManager.deleteConnection(UTIL.getConfiguration(), true);
+    }
   }
 
   private void startWaitAliveThenWaitItLives(final Thread t, final int ms) {

@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -265,14 +264,16 @@ public class ServerShutdownHandler extends EventHandler {
           LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
           " from list of regions to assign because in RIT" + " region state: "
           + rit.getState());
-          hris.remove(rit.getRegion());
+          if (hris != null) hris.remove(rit.getRegion());
         }
       }
 
-      LOG.info("Reassigning " + (hris == null? 0: hris.size()) +
-          " region(s) that " + serverName +
-          " was carrying (skipping " + regionsInTransition.size() +
-      " regions(s) that are already in transition)");
+      assert regionsInTransition != null;
+      LOG.info("Reassigning " + ((hris == null)? 0: hris.size()) +
+        " region(s) that " + (serverName == null? "null": serverName)  +
+        " was carrying (skipping " +
+        regionsInTransition.size() +
+        " regions(s) that are already in transition)");
 
       // Iterate regions that were on this server and assign them
       if (hris != null) {
@@ -342,7 +343,8 @@ public class ServerShutdownHandler extends EventHandler {
       final AssignmentManager assignmentManager,
       final CatalogTracker catalogTracker)
   throws IOException {
-    HRegionInfo daughter = getHRegionInfo(result, qualifier);
+    HRegionInfo daughter =
+      MetaReader.parseHRegionInfoFromCatalogResult(result, qualifier);
     if (daughter == null) return;
     if (isDaughterMissing(catalogTracker, daughter)) {
       LOG.info("Fixup; missing daughter " + daughter.getRegionNameAsString());
@@ -357,21 +359,6 @@ public class ServerShutdownHandler extends EventHandler {
     } else {
       LOG.debug("Daughter " + daughter.getRegionNameAsString() + " present");
     }
-  }
-
-  /**
-   * Interpret the content of the cell at {@link HConstants#CATALOG_FAMILY} and
-   * <code>qualifier</code> as an HRegionInfo and return it, or null.
-   * @param r Result instance to pull from.
-   * @param qualifier Column family qualifier
-   * @return An HRegionInfo instance or null.
-   * @throws IOException
-   */
-  private static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier)
-  throws IOException {
-    byte [] bytes = r.getValue(HConstants.CATALOG_FAMILY, qualifier);
-    if (bytes == null || bytes.length <= 0) return null;
-    return Writables.getHRegionInfoOrNull(bytes);
   }
 
   /**
@@ -416,7 +403,8 @@ public class ServerShutdownHandler extends EventHandler {
 
     @Override
     public boolean visit(Result r) throws IOException {
-      HRegionInfo hri = getHRegionInfo(r, HConstants.REGIONINFO_QUALIFIER);
+      HRegionInfo hri =
+        MetaReader.parseHRegionInfoFromCatalogResult(r, HConstants.REGIONINFO_QUALIFIER);
       if (hri == null) {
         LOG.warn("No serialized HRegionInfo in " + r);
         return true;

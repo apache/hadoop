@@ -86,21 +86,20 @@ public class TestMaster {
         tableRegions.get(0).getFirst().getEndKey());
 
     // Now trigger a split and stop when the split is in progress
-
-    CountDownLatch aboutToOpen = new CountDownLatch(1);
+    CountDownLatch split = new CountDownLatch(1);
     CountDownLatch proceed = new CountDownLatch(1);
-    RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
+    RegionSplitListener list = new RegionSplitListener(split, proceed);
     cluster.getMaster().executorService.
-      registerListener(EventType.RS_ZK_REGION_OPENED, list);
+      registerListener(EventType.RS_ZK_REGION_SPLIT, list);
 
     LOG.info("Splitting table");
     admin.split(TABLENAME);
     LOG.info("Waiting for split result to be about to open");
-    aboutToOpen.await(60, TimeUnit.SECONDS);
+    split.await(60, TimeUnit.SECONDS);
     try {
       LOG.info("Making sure we can call getTableRegions while opening");
-      tableRegions = MetaReader.getTableRegionsAndLocations(
-          m.getCatalogTracker(), Bytes.toString(TABLENAME));
+      tableRegions = MetaReader.getTableRegionsAndLocations(m.getCatalogTracker(),
+        TABLENAME, false);
 
       LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
       // We have three regions because one is split-in-progress
@@ -118,22 +117,21 @@ public class TestMaster {
     }
   }
 
-  static class RegionOpenListener implements EventHandlerListener {
-    CountDownLatch aboutToOpen, proceed;
+  static class RegionSplitListener implements EventHandlerListener {
+    CountDownLatch split, proceed;
 
-    public RegionOpenListener(CountDownLatch aboutToOpen, CountDownLatch proceed)
-    {
-      this.aboutToOpen = aboutToOpen;
+    public RegionSplitListener(CountDownLatch split, CountDownLatch proceed) {
+      this.split = split;
       this.proceed = proceed;
     }
 
     @Override
     public void afterProcess(EventHandler event) {
-      if (event.getEventType() != EventType.RS_ZK_REGION_OPENED) {
+      if (event.getEventType() != EventType.RS_ZK_REGION_SPLIT) {
         return;
       }
       try {
-        aboutToOpen.countDown();
+        split.countDown();
         proceed.await(60, TimeUnit.SECONDS);
       } catch (InterruptedException ie) {
         throw new RuntimeException(ie);

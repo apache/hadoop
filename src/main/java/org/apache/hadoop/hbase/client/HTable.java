@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -192,7 +191,8 @@ public class HTable implements HTableInterface, Closeable {
     }
     this.connection = HConnectionManager.getConnection(conf);
     this.scannerTimeout =
-      (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+      (int) conf.getLong(HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
+        HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
     this.operationTimeout = HTableDescriptor.isMetaTable(tableName) ? HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT
         : conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
             HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
@@ -416,8 +416,9 @@ public class HTable implements HTableInterface, Closeable {
       }
     };
     MetaScanner.metaScan(configuration, visitor, this.tableName);
-    return new Pair(startKeyList.toArray(new byte[startKeyList.size()][]),
-                endKeyList.toArray(new byte[endKeyList.size()][]));
+    return new Pair<byte [][], byte [][]>(
+      startKeyList.toArray(new byte[startKeyList.size()][]),
+      endKeyList.toArray(new byte[endKeyList.size()][]));
   }
 
   /**
@@ -851,7 +852,7 @@ public class HTable implements HTableInterface, Closeable {
   @Override
   public void flushCommits() throws IOException {
     try {
-      connection.processBatchOfPuts(writeBuffer, tableName, pool);
+      this.connection.processBatchOfPuts(writeBuffer, tableName, pool);
     } finally {
       if (clearBufferOnFail) {
         writeBuffer.clear();

@@ -47,6 +47,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
@@ -61,20 +64,27 @@ import org.mockito.Mockito;
 public class TestCatalogJanitor {
   /**
    * Pseudo server for below tests.
+   * Be sure to call stop on the way out else could leave some mess around.
    */
   class MockServer implements Server {
+    private final HConnection connection;
     private final Configuration c;
     private final CatalogTracker ct;
 
     MockServer(final HBaseTestingUtility htu)
-    throws NotAllMetaRegionsOnlineException, IOException {
+    throws NotAllMetaRegionsOnlineException, IOException, InterruptedException {
       this.c = htu.getConfiguration();
+      // Mock an HConnection and a HRegionInterface implementation.  Have the
+      // HConnection return the HRI.  Have the HRI return a few mocked up responses
+      // to make our test work.
+      this.connection = HConnectionTestingUtility.getMockedConnection(this.c);
       // Set hbase.rootdir into test dir.
       FileSystem fs = FileSystem.get(this.c);
       Path rootdir = fs.makeQualified(new Path(this.c.get(HConstants.HBASE_DIR)));
       this.c.set(HConstants.HBASE_DIR, rootdir.toString());
       this.ct = Mockito.mock(CatalogTracker.class);
       HRegionInterface hri = Mockito.mock(HRegionInterface.class);
+      Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
       Mockito.when(ct.waitForMetaServerConnectionDefault()).thenReturn(hri);
     }
 
@@ -115,9 +125,13 @@ public class TestCatalogJanitor {
 
     @Override
     public void stop(String why) {
-      //no-op
+      if (this.ct != null) {
+        this.ct.stop();
+      }
+      if (this.connection != null) {
+        HConnectionManager.deleteConnection(this.connection.getConfiguration(), true);
+      }
     }
-    
   }
 
   /**
@@ -267,42 +281,53 @@ public class TestCatalogJanitor {
   }
 
   @Test
-  public void testCleanParent() throws IOException {
+  public void testCleanParent() throws IOException, InterruptedException {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     setRootDirAndCleanIt(htu, "testCleanParent");
     Server server = new MockServer(htu);
-    MasterServices services = new MockMasterServices(server);
-    CatalogJanitor janitor = new CatalogJanitor(server, services);
-    // Create regions.
-    HTableDescriptor htd = createHTableDescriptor();
-    HRegionInfo parent =
-      new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
-          Bytes.toBytes("eee"));
-    HRegionInfo splita =
-      new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
-          Bytes.toBytes("ccc"));
-    HRegionInfo splitb =
-      new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
-          Bytes.toBytes("eee"));
-    // Test that when both daughter regions are in place, that we do not
-    // remove the parent.
-    Result r = createResult(parent, splita, splitb);
-    // Add a reference under splitA directory so we don't clear out the parent.
-    Path rootdir = services.getMasterFileSystem().getRootDir();
-    Path tabledir =
-      HTableDescriptor.getTableDir(rootdir, htd.getName());
-    Path storedir = Store.getStoreHomedir(tabledir, splita.getEncodedName(),
-      htd.getColumnFamilies()[0].getName());
-    Reference ref = new Reference(Bytes.toBytes("ccc"), Reference.Range.top);
-    long now = System.currentTimeMillis();
-    // Reference name has this format: StoreFile#REF_NAME_PARSER
-    Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
-    FileSystem fs = services.getMasterFileSystem().getFileSystem();
-    ref.write(fs, p);
-    assertFalse(janitor.cleanParent(parent, r));
-    // Remove the reference file and try again.
-    assertTrue(fs.delete(p, true));
-    assertTrue(janitor.cleanParent(parent, r));
+    try {
+      MasterServices services = new MockMasterServices(server);
+      CatalogJanitor janitor = new CatalogJanitor(server, services);
+      // Create regions.
+      HTableDescriptor htd = new HTableDescriptor("table");
+      htd.addFamily(new HColumnDescriptor("f"));
+      HRegionInfo parent =
+        new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+            Bytes.toBytes("eee"));
+      HRegionInfo splita =
+        new HRegionInfo(htd.getName(), Bytes.toBytes("aaa"),
+            Bytes.toBytes("ccc"));
+      HRegionInfo splitb =
+        new HRegionInfo(htd.getName(), Bytes.toBytes("ccc"),
+            Bytes.toBytes("eee"));
+      // Test that when both daughter regions are in place, that we do not
+      // remove the parent.
+      List<KeyValue> kvs = new ArrayList<KeyValue>();
+      kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
+          HConstants.SPLITA_QUALIFIER, Writables.getBytes(splita)));
+      kvs.add(new KeyValue(parent.getRegionName(), HConstants.CATALOG_FAMILY,
+          HConstants.SPLITB_QUALIFIER, Writables.getBytes(splitb)));
+      Result r = new Result(kvs);
+      // Add a reference under splitA directory so we don't clear out the parent.
+      Path rootdir = services.getMasterFileSystem().getRootDir();
+      Path tabledir =
+        HTableDescriptor.getTableDir(rootdir, htd.getName());
+      Path storedir = Store.getStoreHomedir(tabledir, splita.getEncodedName(),
+          htd.getColumnFamilies()[0].getName());
+      Reference ref = new Reference(Bytes.toBytes("ccc"), Reference.Range.top);
+      long now = System.currentTimeMillis();
+      // Reference name has this format: StoreFile#REF_NAME_PARSER
+      Path p = new Path(storedir, Long.toString(now) + "." + parent.getEncodedName());
+      FileSystem fs = services.getMasterFileSystem().getFileSystem();
+      Path path = ref.write(fs, p);
+      assertTrue(fs.exists(path));
+      assertFalse(janitor.cleanParent(parent, r));
+      // Remove the reference file and try again.
+      assertTrue(fs.delete(p, true));
+      assertTrue(janitor.cleanParent(parent, r));
+    } finally {
+      server.stop("shutdown");
+    }
   }
 
   /**

@@ -967,6 +967,7 @@ public class KeyValue implements Writable, HeapSize {
    * @return True if this KV is a {@link KeyValue.Type#Delete} type.
    */
   public boolean isDeleteType() {
+    // TODO: Fix this method name vis-a-vis isDelete!
     return getType() == Type.Delete.getCode();
   }
 

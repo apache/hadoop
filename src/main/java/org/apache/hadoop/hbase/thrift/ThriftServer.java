@@ -272,17 +272,19 @@ public class ThriftServer {
     public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
       try{
-        List<HRegionInfo> HRegions = this.admin.getTableRegions(tableName.array());
+        List<HRegionInfo> hris = this.admin.getTableRegions(tableName.array());
         List<TRegionInfo> regions = new ArrayList<TRegionInfo>();
 
-        for (HRegionInfo regionInfo : HRegions){
-          TRegionInfo region = new TRegionInfo();
-          region.startKey = ByteBuffer.wrap(regionInfo.getStartKey());
-          region.endKey = ByteBuffer.wrap(regionInfo.getEndKey());
-          region.id = regionInfo.getRegionId();
-          region.name = ByteBuffer.wrap(regionInfo.getRegionName());
-          region.version = regionInfo.getVersion();
-          regions.add(region);
+        if (hris != null) {
+          for (HRegionInfo regionInfo : hris){
+            TRegionInfo region = new TRegionInfo();
+            region.startKey = ByteBuffer.wrap(regionInfo.getStartKey());
+            region.endKey = ByteBuffer.wrap(regionInfo.getEndKey());
+            region.id = regionInfo.getRegionId();
+            region.name = ByteBuffer.wrap(regionInfo.getRegionName());
+            region.version = regionInfo.getVersion();
+            regions.add(region);
+          }
         }
         return regions;
       } catch (IOException e){

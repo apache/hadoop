@@ -152,7 +152,7 @@ module Hbase
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
      end
 
-    define_test "create hould work with hash column args" do
+    define_test "create should work with hash column args" do
       drop_test_table(@create_test_name)
       admin.create(@create_test_name, { NAME => 'a'}, { NAME => 'b'})
       assert_equal(['a:', 'b:'], table(@create_test_name).get_all_columns.sort)
@@ -160,14 +160,14 @@ module Hbase
 
     #-------------------------------------------------------------------------------
 
-#    define_test "close should work without region server name" do
-#      if admin.exists?(@create_test_name)
-#        admin.disable(@create_test_name)
-#        admin.drop(@create_test_name)
-#      end
-#      admin.create(@create_test_name, 'foo')
-#      admin.close_region(@create_test_name + ',,0')
-#    end
+    define_test "close should work without region server name" do
+      if admin.exists?(@create_test_name)
+        admin.disable(@create_test_name)
+        admin.drop(@create_test_name)
+      end
+      admin.create(@create_test_name, 'foo')
+      admin.close_region(@create_test_name + ',,0', nil)
+    end
 
     #-------------------------------------------------------------------------------
 
@@ -187,13 +187,14 @@ module Hbase
       table(@test_name).put(1, "x:a", 1)
       table(@test_name).put(2, "x:a", 2)
       assert_equal(2, table(@test_name).count)
-      admin.truncate(@test_name)
+      # This is hacky.  Need to get the configuration into admin instance
+      admin.truncate(@test_name, $TEST_CLUSTER.getConfiguration)
       assert_equal(0, table(@test_name).count)
     end
 
     define_test "truncate should yield log records" do
       logs = []
-      admin.truncate(@test_name) do |log|
+      admin.truncate(@test_name, $TEST_CLUSTER.getConfiguration) do |log|
         assert_kind_of(String, log)
         logs << log
       end

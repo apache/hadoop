@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
@@ -332,6 +333,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   throws IOException, InterruptedException {
     this.fsOk = true;
     this.conf = conf;
+    // Set how many times to retry talking to another server over HConnection.
+    HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     this.isOnline = false;
     checkCodecs(this.conf);
 

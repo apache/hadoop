@@ -111,8 +111,8 @@ public class EnableTableHandler extends EventHandler {
     boolean done = false;
     // Get the regions of this table. We're done when all listed
     // tables are onlined.
-    List<HRegionInfo> regionsInMeta =
-      MetaReader.getTableRegions(this.ct, tableName, true);
+    List<HRegionInfo> regionsInMeta;
+    regionsInMeta = MetaReader.getTableRegions(this.ct, tableName, true);
     int countOfRegionsInTable = regionsInMeta.size();
     List<HRegionInfo> regions = regionsToAssign(regionsInMeta);
     int regionsCount = regions.size();

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -98,6 +99,9 @@ public class TestDistributedLogSplitting {
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
     master = cluster.getMaster();
+    while (cluster.getLiveRegionServerThreads().size() < num_rs) {
+      Threads.sleep(1);
+    }
   }
 
   @After
@@ -111,7 +115,7 @@ public class TestDistributedLogSplitting {
     final int NUM_REGIONS_TO_CREATE = 40;
     final int NUM_ROWS_PER_REGION = 100;
 
-    startCluster(NUM_RS);
+    startCluster(NUM_RS); // NUM_RS=6.
 
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
         "distributed log splitting test", null);

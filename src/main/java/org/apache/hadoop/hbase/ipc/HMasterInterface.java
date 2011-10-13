@@ -87,7 +87,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * @throws IOException
    */
   public Pair<Integer, Integer> getAlterStatus(byte[] tableName)
-      throws IOException;
+  throws IOException;
 
   /**
    * Adds a column to the specified table
