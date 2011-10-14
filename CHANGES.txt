@@ -52,6 +52,9 @@ Release 0.20.205.1 - unreleased
     to IllegalArgumentException and response it as http BAD_REQUEST in webhdfs.
     (szetszwo)
 
+    HDFS-2424. Added a root element "HdfsFileStatuses" for the response
+    of webhdfs listStatus.  (szetszwo)
+
 Release 0.20.205.0 - unreleased
 
   NEW FEATURES
