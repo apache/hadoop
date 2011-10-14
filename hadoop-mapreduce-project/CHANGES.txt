@@ -1572,6 +1572,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3124. Fixed location of native libs i.e. libhadoop.so for
     containers. (John George via acmurthy) 
 
+    MAPREDUCE-3057. Job History Server goes of OutOfMemory with 1200 Jobs 
+    and Heap Size set to 10 GB. (Eric Payne via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
