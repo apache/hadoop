@@ -475,6 +475,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7709. Running a set of methods in a Single Test Class. 
     (Jonathan Eagles via mahadev)
 
+    HADOOP-7705. Add a log4j back end that can push out JSON data,
+    one per line. (stevel)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
