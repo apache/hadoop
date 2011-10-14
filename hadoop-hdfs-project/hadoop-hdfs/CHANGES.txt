@@ -125,6 +125,10 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
 
+    HDFS-2439. Fix NullPointerException in webhdfs when opening a non-existing
+    file or creating a file without specifying the replication parameter.
+    (szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

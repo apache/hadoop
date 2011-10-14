@@ -131,7 +131,7 @@ public class DatanodeWebHdfsMethods {
           fullpath, permission.getFsPermission(), 
           overwrite.getValue() ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
               : EnumSet.of(CreateFlag.CREATE),
-          replication.getValue(), blockSize.getValue(conf), null, b), null);
+          replication.getValue(conf), blockSize.getValue(conf), null, b), null);
       try {
         IOUtils.copyBytes(in, out, b);
       } finally {
