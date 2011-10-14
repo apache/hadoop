@@ -1261,12 +1261,12 @@ public class Balancer {
     return datanode.utilization > (policy.getAvgUtilization()+threshold);
   }
   
-  /* Return true if the given datanode is above average utilized
+  /* Return true if the given datanode is above or equal to average utilized
    * but not overUtilized */
   private boolean isAboveAvgUtilized(BalancerDatanode datanode) {
     final double avg = policy.getAvgUtilization();
     return (datanode.utilization <= (avg+threshold))
-        && (datanode.utilization > avg);
+        && (datanode.utilization >= avg);
   }
   
   /* Return true if the given datanode is underUtilized */
