@@ -117,8 +117,11 @@ Trunk (unreleased changes)
     webhdfs responses.  (szetszwo)
 
     HDFS-2428. Convert com.sun.jersey.api.ParamException$QueryParamException
-    to IllegalArgumentException and response it http BAD_REQUEST in webhdfs.
+    to IllegalArgumentException and response it as http BAD_REQUEST in webhdfs.
     (szetszwo)
+
+    HDFS-2424. Added a root element "HdfsFileStatuses" for the response
+    of webhdfs listStatus.  (szetszwo)
 
 Release 0.23.0 - Unreleased
 
