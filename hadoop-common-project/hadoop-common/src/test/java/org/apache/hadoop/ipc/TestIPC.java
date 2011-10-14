@@ -583,6 +583,12 @@ public class TestIPC {
         NetworkTraces.RESPONSE_TO_HADOOP_0_21_0_RPC);
   }
   
+  @Test
+  public void testHttpGetResponse() throws Exception {
+    doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
+        Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
+  }
+  
   private void doIpcVersionTest(
       byte[] requestData,
       byte[] expectedResponse) throws Exception {

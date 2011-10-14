@@ -102,6 +102,23 @@ public abstract class Server {
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
   
+  /**
+   * If the user accidentally sends an HTTP GET to an IPC port, we detect this
+   * and send back a nicer response.
+   */
+  private static final ByteBuffer HTTP_GET_BYTES = ByteBuffer.wrap(
+      "GET ".getBytes());
+  
+  /**
+   * An HTTP response to send back if we detect an HTTP request to our IPC
+   * port.
+   */
+  static final String RECEIVED_HTTP_REQ_RESPONSE =
+    "HTTP/1.1 404 Not Found\r\n" +
+    "Content-type: text/plain\r\n\r\n" +
+    "It looks like you are making an HTTP request to a Hadoop IPC port. " +
+    "This is not the correct port for the web interface on this daemon.\r\n";
+  
   // 1 : Introduce ping and server does not throw away RPCs
   // 3 : Introduce the protocol into the RPC connection header
   // 4 : Introduced SASL security layer
@@ -910,6 +927,7 @@ public abstract class Server {
     private ByteArrayOutputStream authFailedResponse = new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
     private static final int SASL_CALLID = -33;
+    
     private final Call saslCall = new Call(SASL_CALLID, null, this);
     private final ByteArrayOutputStream saslResponse = new ByteArrayOutputStream();
     
@@ -1142,7 +1160,7 @@ public abstract class Server {
           if (count < 0 || dataLengthBuffer.remaining() > 0) 
             return count;
         }
-      
+        
         if (!rpcHeaderRead) {
           //Every connection is expected to send the header.
           if (rpcHeaderBuffer == null) {
@@ -1156,7 +1174,16 @@ public abstract class Server {
           byte[] method = new byte[] {rpcHeaderBuffer.get(1)};
           authMethod = AuthMethod.read(new DataInputStream(
               new ByteArrayInputStream(method)));
-          dataLengthBuffer.flip();          
+          dataLengthBuffer.flip();
+          
+          // Check if it looks like the user is hitting an IPC port
+          // with an HTTP GET - this is a common error, so we can
+          // send back a simple string indicating as much.
+          if (HTTP_GET_BYTES.equals(dataLengthBuffer)) {
+            setupHttpRequestOnIpcPortResponse();
+            return -1;
+          }
+        
           if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Incorrect header or version mismatch from " + 
@@ -1274,6 +1301,13 @@ public abstract class Server {
         
         responder.doRespond(fakeCall);
       }
+    }
+    
+    private void setupHttpRequestOnIpcPortResponse() throws IOException {
+      Call fakeCall =  new Call(0, null, this);
+      fakeCall.setResponse(ByteBuffer.wrap(
+          RECEIVED_HTTP_REQ_RESPONSE.getBytes()));
+      responder.doRespond(fakeCall);
     }
 
     /// Reads the connection header following version
