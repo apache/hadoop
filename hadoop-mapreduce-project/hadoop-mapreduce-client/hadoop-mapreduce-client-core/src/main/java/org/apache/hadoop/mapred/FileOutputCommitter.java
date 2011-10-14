@@ -71,27 +71,30 @@ public class FileOutputCommitter extends OutputCommitter {
     //delete the task temp directory from the current jobtempdir
     JobConf conf = context.getJobConf();
     Path outputPath = FileOutputFormat.getOutputPath(conf);
-    FileSystem outputFileSystem = outputPath.getFileSystem(conf);
-    Path tmpDir = new Path(outputPath, getJobAttemptBaseDirName(context) +
-        Path.SEPARATOR + FileOutputCommitter.TEMP_DIR_NAME);
-    FileSystem fileSys = tmpDir.getFileSystem(context.getConfiguration());
-    if (fileSys.exists(tmpDir)) {
-      fileSys.delete(tmpDir, true);
-    } else {
-      LOG.warn("Task temp dir could not be deleted " + tmpDir);
-    }
-    
-    //move the job output to final place
-    Path jobOutputPath = 
-        new Path(outputPath, getJobAttemptBaseDirName(context));
-    moveJobOutputs(outputFileSystem, outputPath, jobOutputPath);
-    
-    // delete the _temporary folder in the output folder
-    cleanupJob(context);
-    // check if the output-dir marking is required
-    if (shouldMarkOutputDir(context.getJobConf())) {
-      // create a _success file in the output folder
-      markOutputDirSuccessful(context);
+    if (outputPath != null) {
+      FileSystem outputFileSystem = outputPath.getFileSystem(conf);
+      Path tmpDir = new Path(outputPath, getJobAttemptBaseDirName(context) +
+          Path.SEPARATOR + FileOutputCommitter.TEMP_DIR_NAME);
+      FileSystem fileSys = tmpDir.getFileSystem(context.getConfiguration());
+      if (fileSys.exists(tmpDir)) {
+        fileSys.delete(tmpDir, true);
+      } else {
+        LOG.warn("Task temp dir could not be deleted " + tmpDir);
+      }
+
+      //move the job output to final place
+      Path jobOutputPath = 
+          new Path(outputPath, getJobAttemptBaseDirName(context));
+      moveJobOutputs(outputFileSystem, 
+          jobOutputPath, outputPath, jobOutputPath);
+
+      // delete the _temporary folder in the output folder
+      cleanupJob(context);
+      // check if the output-dir marking is required
+      if (shouldMarkOutputDir(context.getJobConf())) {
+        // create a _success file in the output folder
+        markOutputDirSuccessful(context);
+      }
     }
   }
   
@@ -109,10 +112,14 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
-  private void moveJobOutputs(FileSystem fs,
+  private void moveJobOutputs(FileSystem fs, final Path origJobOutputPath,
       Path finalOutputDir, Path jobOutput) throws IOException {
+    LOG.debug("Told to move job output from " + jobOutput
+        + " to " + finalOutputDir + 
+        " and orig job output path is " + origJobOutputPath);  
     if (fs.isFile(jobOutput)) {
-      Path finalOutputPath = getFinalPath(finalOutputDir, jobOutput, jobOutput);
+      Path finalOutputPath = 
+          getFinalPath(fs, finalOutputDir, jobOutput, origJobOutputPath);
       if (!fs.rename(jobOutput, finalOutputPath)) {
         if (!fs.delete(finalOutputPath, true)) {
           throw new IOException("Failed to delete earlier output of job");
@@ -121,18 +128,23 @@ public class FileOutputCommitter extends OutputCommitter {
           throw new IOException("Failed to save output of job");
         }
       }
-      LOG.debug("Moved " + jobOutput + " to " + finalOutputPath);
+      LOG.debug("Moved job output file from " + jobOutput + " to " + 
+          finalOutputPath);
     } else if (fs.getFileStatus(jobOutput).isDirectory()) {
+      LOG.debug("Job output file " + jobOutput + " is a dir");      
       FileStatus[] paths = fs.listStatus(jobOutput);
-      Path finalOutputPath = getFinalPath(finalOutputDir, jobOutput, jobOutput);
+      Path finalOutputPath = 
+          getFinalPath(fs, finalOutputDir, jobOutput, origJobOutputPath);
       fs.mkdirs(finalOutputPath);
+      LOG.debug("Creating dirs along job output path " + finalOutputPath);
       if (paths != null) {
         for (FileStatus path : paths) {
-          moveJobOutputs(fs, finalOutputDir, path.getPath());
+          moveJobOutputs(fs, origJobOutputPath, finalOutputDir, path.getPath());
         }
       }
     }
   }
+  
   @Override
   @Deprecated
   public void cleanupJob(JobContext context) throws IOException {
@@ -199,8 +211,10 @@ public class FileOutputCommitter extends OutputCommitter {
   throws IOException {
     TaskAttemptID attemptId = context.getTaskAttemptID();
     context.getProgressible().progress();
+    LOG.debug("Told to move taskoutput from " + taskOutput
+        + " to " + jobOutputDir);    
     if (fs.isFile(taskOutput)) {
-      Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput, 
+      Path finalOutputPath = getFinalPath(fs, jobOutputDir, taskOutput, 
                                           getTempTaskOutputPath(context));
       if (!fs.rename(taskOutput, finalOutputPath)) {
         if (!fs.delete(finalOutputPath, true)) {
@@ -214,10 +228,12 @@ public class FileOutputCommitter extends OutputCommitter {
       }
       LOG.debug("Moved " + taskOutput + " to " + finalOutputPath);
     } else if(fs.getFileStatus(taskOutput).isDirectory()) {
+      LOG.debug("Taskoutput " + taskOutput + " is a dir");
       FileStatus[] paths = fs.listStatus(taskOutput);
-      Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput, 
+      Path finalOutputPath = getFinalPath(fs, jobOutputDir, taskOutput, 
 	          getTempTaskOutputPath(context));
       fs.mkdirs(finalOutputPath);
+      LOG.debug("Creating dirs along path " + finalOutputPath);
       if (paths != null) {
         for (FileStatus path : paths) {
           moveTaskOutputs(context, fs, jobOutputDir, path.getPath());
@@ -235,14 +251,16 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
-  private Path getFinalPath(Path jobOutputDir, Path taskOutput, 
+  @SuppressWarnings("deprecation")
+  private Path getFinalPath(FileSystem fs, Path jobOutputDir, Path taskOutput, 
                             Path taskOutputPath) throws IOException {
-    URI taskOutputUri = taskOutput.toUri();
-    URI relativePath = taskOutputPath.toUri().relativize(taskOutputUri);
+    URI taskOutputUri = taskOutput.makeQualified(fs).toUri();
+    URI taskOutputPathUri = taskOutputPath.makeQualified(fs).toUri();
+    URI relativePath = taskOutputPathUri.relativize(taskOutputUri);
     if (taskOutputUri == relativePath) { 
       //taskOutputPath is not a parent of taskOutput
       throw new IOException("Can not get the relative path: base = " + 
-          taskOutputPath + " child = " + taskOutput);
+          taskOutputPathUri + " child = " + taskOutputUri);
     }
     if (relativePath.getPath().length() > 0) {
       return new Path(jobOutputDir, relativePath.getPath());
@@ -325,7 +343,10 @@ public class FileOutputCommitter extends OutputCommitter {
         new Path(outputPath, getJobAttemptBaseDirName(previousAttempt));
     if (outputFileSystem.exists(pathToRecover)) {
       // Move the task outputs to their final place
-      moveJobOutputs(outputFileSystem, jobOutputPath, pathToRecover);
+      LOG.debug("Trying to recover task from " + pathToRecover
+          + " into " + jobOutputPath);
+      moveJobOutputs(outputFileSystem, 
+          pathToRecover, jobOutputPath, pathToRecover);
       LOG.info("Saved output of job to " + jobOutputPath);
     }
   }
