@@ -60,6 +60,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ServletUtil;
 import org.xml.sax.Attributes;
@@ -83,14 +84,18 @@ public class HftpFileSystem extends FileSystem {
     HttpURLConnection.setFollowRedirects(true);
   }
 
+  public static final Text TOKEN_KIND = new Text("HFTP delegation");
+
   private String nnHttpUrl;
-  private URI hdfsURI;
+  private Text hdfsServiceName;
+  private URI hftpURI;
   protected InetSocketAddress nnAddr;
   protected UserGroupInformation ugi; 
 
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
-  private Token<DelegationTokenIdentifier> delegationToken;
+  private Token<?> delegationToken;
+  private Token<?> renewToken;
   public static final String HFTP_SERVICE_NAME_KEY = "hdfs.service.host_";
   
   public static final SimpleDateFormat getDateFormat() {
@@ -118,7 +123,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public String getCanonicalServiceName() {
-    return SecurityUtil.buildDTServiceName(hdfsURI, getDefaultPort());
+    return SecurityUtil.buildDTServiceName(hftpURI, getDefaultPort());
   }
   
   private String buildUri(String schema, String host, int port) {
@@ -144,17 +149,21 @@ public class HftpFileSystem extends FileSystem {
       urlPort = conf.getInt(DFSConfigKeys.DFS_HTTPS_PORT_KEY, 
           DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
 
-    nnHttpUrl = 
-      buildUri("https://", NetUtils.normalizeHostName(name.getHost()), urlPort);
+    String normalizedNN = NetUtils.normalizeHostName(name.getHost());
+    nnHttpUrl = buildUri("https://", normalizedNN ,urlPort);
     LOG.debug("using url to get DT:" + nnHttpUrl);
+    try {
+      hftpURI = new URI(buildUri("hftp://", normalizedNN, urlPort));
+    } catch (URISyntaxException ue) {
+      throw new IOException("bad uri for hdfs", ue);
+    }
 
-    
-    
     // if one uses RPC port different from the Default one,  
     // one should specify what is the setvice name for this delegation token
     // otherwise it is hostname:RPC_PORT
-    String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
-    SecurityUtil.buildDTServiceName(name, DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
+    String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY
+        + SecurityUtil.buildDTServiceName(name,
+            DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
     if(LOG.isDebugEnabled()) {
       LOG.debug("Trying to find DT for " + name + " using key=" + key + 
           "; conf=" + conf.get(key, ""));
@@ -165,9 +174,10 @@ public class HftpFileSystem extends FileSystem {
       nnPort = NetUtils.createSocketAddr(nnServiceName, 
           NameNode.DEFAULT_PORT).getPort();
     }
-
     try {
-      hdfsURI = new URI(buildUri("hdfs://", nnAddr.getHostName(), nnPort));
+      URI hdfsURI = new URI("hdfs://" + normalizedNN + ":" + nnPort);
+      hdfsServiceName = new Text(SecurityUtil.buildDTServiceName(hdfsURI, 
+                                                                 nnPort));
     } catch (URISyntaxException ue) {
       throw new IOException("bad uri for hdfs", ue);
     }
@@ -175,30 +185,55 @@ public class HftpFileSystem extends FileSystem {
     if (UserGroupInformation.isSecurityEnabled()) {
       //try finding a token for this namenode (esp applicable for tasks
       //using hftp). If there exists one, just set the delegationField
-      String canonicalName = getCanonicalServiceName();
+      String hftpServiceName = getCanonicalServiceName();
       for (Token<? extends TokenIdentifier> t : ugi.getTokens()) {
-        if (DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(t.getKind()) &&
-            t.getService().toString().equals(canonicalName)) {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("Found existing DT for " + name);
+        Text kind = t.getKind();
+        if (DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind)) {
+          if (t.getService().toString().equals(hdfsServiceName)) {
+            setDelegationToken(t);
+            break;
           }
-          delegationToken = (Token<DelegationTokenIdentifier>) t;
-          break;
+        } else if (TOKEN_KIND.equals(kind)) {
+          if (hftpServiceName
+              .equals(normalizeService(t.getService().toString()))) {
+            setDelegationToken(t);
+            break;
+          }
         }
       }
       
       //since we don't already have a token, go get one over https
       if (delegationToken == null) {
-        delegationToken = 
-          (Token<DelegationTokenIdentifier>) getDelegationToken(null);
+        setDelegationToken(getDelegationToken(null));
         renewer.addTokenToRenew(this);
       }
     }
   }
-  
+
+  private String normalizeService(String service) {
+    int colonIndex = service.indexOf(':');
+    if (colonIndex == -1) {
+      throw new IllegalArgumentException("Invalid service for hftp token: " + 
+                                         service);
+    }
+    String hostname = 
+        NetUtils.normalizeHostName(service.substring(0, colonIndex));
+    String port = service.substring(colonIndex + 1);
+    return hostname + ":" + port;
+  }
+
+  private <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+    renewToken = token;
+    // emulate the 203 usage of the tokens
+    // by setting the kind and service as if they were hdfs tokens
+    delegationToken = new Token<T>(token);
+    delegationToken.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
+    delegationToken.setService(hdfsServiceName);
+  }
 
   @Override
-  public synchronized Token<?> getDelegationToken(final String renewer) throws IOException {
+  public synchronized Token<?> getDelegationToken(final String renewer
+                                                  ) throws IOException {
     try {
       //Renew TGT if needed
       ugi.reloginFromKeytab();
@@ -221,7 +256,6 @@ public class HftpFileSystem extends FileSystem {
               LOG.debug("Got dt for " + getUri() + ";t.service="
                   +t.getService());
             }
-            t.setService(new Text(getCanonicalServiceName()));
             return t;
           }
           return null;
@@ -625,7 +659,8 @@ public class HftpFileSystem extends FileSystem {
     @Override
     public int compareTo(Delayed o) {
       if (o.getClass() != RenewAction.class) {
-        throw new IllegalArgumentException("Illegal comparision to non-RenewAction");
+        throw new IllegalArgumentException
+                  ("Illegal comparision to non-RenewAction");
       }
       RenewAction other = (RenewAction) o;
       return timestamp < other.timestamp ? -1 :
@@ -662,31 +697,20 @@ public class HftpFileSystem extends FileSystem {
      * @return
      * @throws IOException
      */
-    @SuppressWarnings("unchecked")
     public boolean renew() throws IOException, InterruptedException {
       final HftpFileSystem fs = weakFs.get();
       if (fs != null) {
         synchronized (fs) {
-          fs.ugi.reloginFromKeytab();
-          fs.ugi.doAs(new PrivilegedExceptionAction<Void>() {
-
-            @Override
-            public Void run() throws Exception {
-              try {
-                DelegationTokenFetcher.renewDelegationToken(fs.nnHttpUrl, 
-                    fs.delegationToken);
-              } catch (IOException ie) {
-                try {
-                  fs.delegationToken = 
-                    (Token<DelegationTokenIdentifier>) fs.getDelegationToken(null);
-                } catch (IOException ie2) {
-                  throw new IOException("Can't renew or get new delegation token ", 
-                      ie);
-                }
-              }
-              return null;
-            } 
-          });
+          try {
+            fs.renewToken.renew(fs.getConf());
+          } catch (IOException ie) {
+            try {
+              fs.setDelegationToken(fs.getDelegationToken(null));
+            } catch (IOException ie2) {
+              throw new IOException("Can't renew or get new delegation "
+                  + "token ", ie);
+            }
+          }
         }
       }
       return fs != null;
@@ -722,7 +746,7 @@ public class HftpFileSystem extends FileSystem {
     }
 
     public void addTokenToRenew(HftpFileSystem fs) {
-      queue.add(new RenewAction(RENEW_CYCLE + System.currentTimeMillis(),fs));
+      queue.add(new RenewAction(RENEW_CYCLE + System.currentTimeMillis(), fs));
     }
 
     public void run() {
@@ -746,5 +770,45 @@ public class HftpFileSystem extends FileSystem {
         }
       }
     }
+  }
+  
+  @InterfaceAudience.Private
+  public static class TokenManager extends TokenRenewer {
+
+    @Override
+    public boolean handleKind(Text kind) {
+      return kind.equals(TOKEN_KIND);
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, 
+                      Configuration conf) throws IOException {
+      // update the kerberos credentials, if they are coming from a keytab
+      UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+      // use https to renew the token
+      return 
+        DelegationTokenFetcher.renewDelegationToken
+        ("https://" + token.getService().toString(), 
+         (Token<DelegationTokenIdentifier>) token);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, 
+                       Configuration conf) throws IOException {
+      // update the kerberos credentials, if they are coming from a keytab
+      UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+      // use https to cancel the token
+      DelegationTokenFetcher.cancelDelegationToken
+        ("https://" + token.getService().toString(), 
+         (Token<DelegationTokenIdentifier>) token);
+    }
+    
   }
 }

@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -35,7 +36,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Unstable
 public class JobTokenIdentifier extends TokenIdentifier {
   private Text jobid;
-  final static Text KIND_NAME = new Text("mapreduce.job");
+  public final static Text KIND_NAME = new Text("mapreduce.job");
   
   /**
    * Default constructor
@@ -85,5 +86,13 @@ public class JobTokenIdentifier extends TokenIdentifier {
   @Override
   public void write(DataOutput out) throws IOException {
     jobid.write(out);
+  }
+
+  @InterfaceAudience.Private
+  public static class Renewer extends Token.TrivialRenewer {
+    @Override
+    protected Text getKind() {
+      return KIND_NAME;
+    }
   }
 }

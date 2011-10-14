@@ -93,9 +93,11 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.Progressable;
 
 /********************************************************
@@ -115,6 +117,7 @@ public class DFSClient implements java.io.Closeable {
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
+  private final InetSocketAddress nnAddress;
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
@@ -241,6 +244,7 @@ public class DFSClient implements java.io.Closeable {
     this.dfsClientConf = new Conf(conf);
     this.conf = conf;
     this.stats = stats;
+    this.nnAddress = nameNodeAddr;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
 
@@ -442,18 +446,26 @@ public class DFSClient implements java.io.Closeable {
       throws IOException {
     Token<DelegationTokenIdentifier> result =
       namenode.getDelegationToken(renewer);
+    SecurityUtil.setTokenService(result, nnAddress);
     LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(result));
     return result;
   }
 
   /**
-   * @see ClientProtocol#renewDelegationToken(Token)
+   * Renew a delegation token
+   * @param token the token to renew
+   * @return the new expiration time
+   * @throws InvalidToken
+   * @throws IOException
+   * @deprecated Use Token.renew instead.
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     LOG.info("Renewing " + DelegationTokenIdentifier.stringifyToken(token));
     try {
-      return namenode.renewDelegationToken(token);
+      return token.renew(conf);
+    } catch (InterruptedException ie) {                                       
+      throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
                                      AccessControlException.class);
@@ -461,19 +473,77 @@ public class DFSClient implements java.io.Closeable {
   }
 
   /**
-   * @see ClientProtocol#cancelDelegationToken(Token)
+   * Cancel a delegation token
+   * @param token the token to cancel
+   * @throws InvalidToken
+   * @throws IOException
+   * @deprecated Use Token.cancel instead.
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     LOG.info("Cancelling " + DelegationTokenIdentifier.stringifyToken(token));
     try {
-      namenode.cancelDelegationToken(token);
+      token.cancel(conf);
+     } catch (InterruptedException ie) {                                       
+      throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
                                      AccessControlException.class);
     }
   }
   
+  @InterfaceAudience.Private
+  public static class Renewer extends TokenRenewer {
+    
+    @Override
+    public boolean handleKind(Text kind) {
+      return DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf) throws IOException {
+      Token<DelegationTokenIdentifier> delToken = 
+          (Token<DelegationTokenIdentifier>) token;
+      LOG.info("Renewing " + 
+               DelegationTokenIdentifier.stringifyToken(delToken));
+      ClientProtocol nn = 
+        DFSUtil.createNamenode
+           (NameNode.getAddress(token.getService().toString()),
+            conf, UserGroupInformation.getCurrentUser());
+      try {
+        return nn.renewDelegationToken(delToken);
+      } catch (RemoteException re) {
+        throw re.unwrapRemoteException(InvalidToken.class, 
+                                       AccessControlException.class);
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf) throws IOException {
+      Token<DelegationTokenIdentifier> delToken = 
+          (Token<DelegationTokenIdentifier>) token;
+      LOG.info("Cancelling " + 
+               DelegationTokenIdentifier.stringifyToken(delToken));
+      ClientProtocol nn = DFSUtil.createNamenode(
+          NameNode.getAddress(token.getService().toString()), conf,
+          UserGroupInformation.getCurrentUser());
+      try {
+        nn.cancelDelegationToken(delToken);
+      } catch (RemoteException re) {
+        throw re.unwrapRemoteException(InvalidToken.class,
+            AccessControlException.class);
+      }
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+    
+  }
+
   /**
    * Report corrupt blocks that were discovered by the client.
    * @see ClientProtocol#reportBadBlocks(LocatedBlock[])

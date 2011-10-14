@@ -183,6 +183,7 @@ public class TestDelegationToken {
     dtSecretManager.renewToken(token, "JobTracker");
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
     final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();

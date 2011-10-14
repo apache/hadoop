@@ -18,6 +18,7 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -34,7 +35,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
 import sun.security.jgss.krb5.Krb5Util;
@@ -352,4 +355,22 @@ public class SecurityUtil {
     return null;
   }
 
+  /**
+   * Set the given token's service to the format expected by the RPC client 
+   * @param token a delegation token
+   * @param addr the socket for the rpc connection
+   */
+  public static void setTokenService(Token<?> token, InetSocketAddress addr) {
+    token.setService(buildTokenService(addr));
+  }
+  
+  /**
+   * Construct the service key for a token
+   * @param addr InetSocketAddress of remote connection with a token
+   * @return "ip:port"
+   */
+  public static Text buildTokenService(InetSocketAddress addr) {
+    String host = addr.getAddress().getHostAddress();
+    return new Text(host + ":" + addr.getPort());
+  }
 }

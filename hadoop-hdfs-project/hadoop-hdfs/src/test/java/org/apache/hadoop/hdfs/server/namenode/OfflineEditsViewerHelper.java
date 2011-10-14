@@ -203,11 +203,9 @@ public class OfflineEditsViewerHelper {
       "JobTracker/foo.com@FOO.COM");
     try {
       longUgi.doAs(new PrivilegedExceptionAction<Object>() {
-        public Object run() throws IOException {
-          final DistributedFileSystem dfs =
-            (DistributedFileSystem) cluster.getFileSystem();
-          dfs.renewDelegationToken(token);
-          dfs.cancelDelegationToken(token);
+        public Object run() throws IOException, InterruptedException {
+          token.renew(config);
+          token.cancel(config);
           return null;
         }
       });

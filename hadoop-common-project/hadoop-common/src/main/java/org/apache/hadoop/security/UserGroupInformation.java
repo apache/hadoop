@@ -635,6 +635,23 @@ public class UserGroupInformation {
   }
   
   /**
+   * Re-login a user from keytab if TGT is expired or is close to expiry.
+   * 
+   * @throws IOException
+   */
+  public synchronized void checkTGTAndReloginFromKeytab() throws IOException {
+    if (!isSecurityEnabled()
+        || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
+        || !isKeytab)
+      return;
+    KerberosTicket tgt = getTGT();
+    if (tgt != null && System.currentTimeMillis() < getRefreshTime(tgt)) {
+      return;
+    }
+    reloginFromKeytab();
+  }
+
+  /**
    * Re-Login a user in from a keytab file. Loads a user identity from a keytab
    * file and logs them in. They become the currently logged-in user. This
    * method assumes that {@link #loginUserFromKeytab(String, String)} had 
