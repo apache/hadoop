@@ -371,7 +371,7 @@ public class Cluster {
    * @return the new expiration time
    * @throws InvalidToken
    * @throws IOException
-   * @deprecated Use {@link Token.renew} instead
+   * @deprecated Use {@link Token#renew} instead
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                    ) throws InvalidToken, IOException,
@@ -388,7 +388,7 @@ public class Cluster {
    * Cancel a delegation token from the JobTracker
    * @param token the token to cancel
    * @throws IOException
-   * @deprecated Use {@link Token.cancel} instead
+   * @deprecated Use {@link Token#cancel} instead
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
                                     ) throws IOException,
