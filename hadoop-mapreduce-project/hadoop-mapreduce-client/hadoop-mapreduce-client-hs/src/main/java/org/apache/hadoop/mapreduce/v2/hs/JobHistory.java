@@ -71,7 +71,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
 public class JobHistory extends AbstractService implements HistoryContext   {
 
   private static final int DEFAULT_JOBLIST_CACHE_SIZE = 20000;
-  private static final int DEFAULT_LOADEDJOB_CACHE_SIZE = 2000;
+  private static final int DEFAULT_LOADEDJOB_CACHE_SIZE = 5;
   private static final int DEFAULT_DATESTRING_CACHE_SIZE = 200000;
   private static final long DEFAULT_MOVE_THREAD_INTERVAL = 3 * 60 * 1000l; //3 minutes
   private static final int DEFAULT_MOVE_THREAD_COUNT = 3;
