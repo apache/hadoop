@@ -45,6 +45,7 @@ import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -112,6 +113,9 @@ public class NamenodeWebHdfsMethods {
         || op == GetOpParam.Op.GETFILECHECKSUM
         || op == PostOpParam.Op.APPEND) {
       final HdfsFileStatus status = namenode.getFileInfo(path);
+      if (status == null) {
+        throw new FileNotFoundException("File " + path + " not found.");
+      }
       final long len = status.getLen();
       if (op == GetOpParam.Op.OPEN && (openOffset < 0L || openOffset >= len)) {
         throw new IOException("Offset=" + openOffset + " out of the range [0, "
@@ -227,6 +231,7 @@ public class NamenodeWebHdfsMethods {
         try {
 
     final String fullpath = path.getAbsolutePath();
+    final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
 
     switch(op.getValue()) {
@@ -251,7 +256,7 @@ public class NamenodeWebHdfsMethods {
     }
     case SETREPLICATION:
     {
-      final boolean b = namenode.setReplication(fullpath, replication.getValue());
+      final boolean b = namenode.setReplication(fullpath, replication.getValue(conf));
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }

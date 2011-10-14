@@ -14,6 +14,10 @@ Release 0.20.205.1 - unreleased
     HDFS-2424. Added a root element "HdfsFileStatuses" for the response
     of webhdfs listStatus.  (szetszwo)
 
+    HDFS-2439. Fix NullPointerException in webhdfs when opening a non-existing
+    file or creating a file without specifying the replication parameter.
+    (szetszwo)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
