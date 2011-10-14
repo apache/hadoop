@@ -154,6 +154,9 @@ Release 0.23.0 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-7655. Provide a small validation script that smoke tests the installed
+    cluster. (Arpit Gupta via mattf)
+
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
     improve other messaging. (nigel)
 
