@@ -126,7 +126,7 @@ public class DatanodeWebHdfsMethods {
       final int b = bufferSize.getValue(conf);
       final FSDataOutputStream out = new FSDataOutputStream(dfsclient.create(
           fullpath, permission.getFsPermission(), overwrite.getValue(),
-          replication.getValue(), blockSize.getValue(conf), null, b), null);
+          replication.getValue(conf), blockSize.getValue(conf), null, b), null);
       try {
         IOUtils.copyBytes(in, out, b);
       } finally {

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -107,6 +108,8 @@ public class ByteRangeInputStream extends FSInputStream {
           HftpFileSystem.LOG.debug("filelength = " + filelength);
         }
         in = connection.getInputStream();
+      } catch (FileNotFoundException fnfe) {
+        throw fnfe;
       } catch (IOException ioe) {
         HftpFileSystem.throwIOExceptionFromConnection(connection, ioe);
       }
