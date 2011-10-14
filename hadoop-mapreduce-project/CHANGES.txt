@@ -334,6 +334,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3133. Running a set of methods in a Single Test Class.
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3059. QueueMetrics do not have metrics for aggregate 
+    containers-allocated and aggregate containers-released.
+    (Devaraj K via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
