@@ -997,7 +997,10 @@ public class Balancer implements Tool {
           this.aboveAvgUtilizedDatanodes.add((Source)datanodeS);
         } else {
           assert(isOverUtilized(datanodeS)) :
-            datanodeS.getName()+ "is not an overUtilized node";
+            datanodeS.getName()+ " is not an overUtilized node:" +
+            		" utilization=" + datanodeS.utilization +
+            		" avgUtilization=" + avgUtilization +
+            		" threshold=" + threshold;
           this.overUtilizedDatanodes.add((Source)datanodeS);
           overLoadedBytes += (long)((datanodeS.utilization-avgUtilization
               -threshold)*datanodeS.datanode.getCapacity()/100.0);
@@ -1008,7 +1011,10 @@ public class Balancer implements Tool {
           this.belowAvgUtilizedDatanodes.add(datanodeS);
         } else {
           assert (isUnderUtilized(datanodeS)) :
-            datanodeS.getName()+ "is not an underUtilized node"; 
+            datanodeS.getName()+ "is not an underUtilized node:" +
+            " utilization=" + datanodeS.utilization +
+            " avgUtilization=" + avgUtilization +
+            " threshold=" + threshold;
           this.underUtilizedDatanodes.add(datanodeS);
           underLoadedBytes += (long)((avgUtilization-threshold-
               datanodeS.utilization)*datanodeS.datanode.getCapacity()/100.0);
@@ -1440,11 +1446,11 @@ public class Balancer implements Tool {
     return datanode.utilization > (avgUtilization+threshold);
   }
   
-  /* Return true if the given datanode is above average utilized
+  /* Return true if the given datanode is above or equal to average utilized
    * but not overUtilized */
   private boolean isAboveAvgUtilized(BalancerDatanode datanode) {
     return (datanode.utilization <= (avgUtilization+threshold))
-        && (datanode.utilization > avgUtilization);
+        && (datanode.utilization >= avgUtilization);
   }
   
   /* Return true if the given datanode is underUtilized */

@@ -642,6 +642,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-1762. Allow TestHDFSCLI to be run against a cluster (cos)
 
+    HDFS-2012. Balancer incorrectly treats nodes whose utilization equals
+    avgUtilization. (Uma Maheswara Rao G via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
