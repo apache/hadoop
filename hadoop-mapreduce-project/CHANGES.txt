@@ -1608,6 +1608,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2789. Complete schedulingInfo on CLI. (Eric Payne via acmurthy) 
 
+    MAPREDUCE-3170. Fixed job output commit for deep hierarchies. (Hitesh Shah
+    via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
