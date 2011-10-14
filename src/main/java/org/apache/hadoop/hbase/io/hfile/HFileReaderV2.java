@@ -293,7 +293,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
   @Override
   public void close() throws IOException {
-    if (cacheConf.shouldEvictOnClose()) {
+    close(cacheConf.shouldEvictOnClose());
+  }
+
+  public void close(boolean evictOnClose) throws IOException {
+    if (evictOnClose) {
       int numEvicted = cacheConf.getBlockCache().evictBlocksByPrefix(name
           + HFile.CACHE_KEY_SEPARATOR);
       LOG.debug("On close of file " + name + " evicted " + numEvicted

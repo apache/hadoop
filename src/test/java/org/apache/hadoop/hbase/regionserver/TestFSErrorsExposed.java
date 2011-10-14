@@ -101,7 +101,7 @@ public class TestFSErrorsExposed {
       LOG.info("Got expected exception", ioe);
       assertTrue(ioe.getMessage().contains("Fault"));
     }
-    reader.close();
+    reader.close(true); // end of test so evictOnClose
   }
 
   /**

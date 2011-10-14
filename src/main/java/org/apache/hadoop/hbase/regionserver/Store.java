@@ -421,7 +421,7 @@ public class Store implements HeapSize {
       storefiles = ImmutableList.of();
 
       for (StoreFile f: result) {
-        f.closeReader();
+        f.closeReader(true);
       }
       LOG.debug("closed " + this.storeNameStr);
       return result;
@@ -1215,7 +1215,7 @@ public class Store implements HeapSize {
       throw e;
     } finally {
       if (storeFile != null) {
-        storeFile.closeReader();
+        storeFile.closeReader(false);
       }
     }
   }

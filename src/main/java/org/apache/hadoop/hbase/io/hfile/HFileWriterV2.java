@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,6 +44,7 @@ import org.apache.hadoop.io.Writable;
  * Writes HFile format version 2.
  */
 public class HFileWriterV2 extends AbstractHFileWriter {
+  static final Log LOG = LogFactory.getLog(HFileWriterV2.class);
 
   /** Inline block writers for multi-level block index and compound Blooms. */
   private List<InlineBlockWriter> inlineBlockWriters =
@@ -174,6 +177,8 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // Meta data block index writer
     metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
+
+    LOG.debug("HFileWriter initialized with " + cacheConf);
   }
 
   /**

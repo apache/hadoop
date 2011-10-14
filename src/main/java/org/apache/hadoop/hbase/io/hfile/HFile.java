@@ -322,6 +322,9 @@ public class HFile {
     DataInput getBloomFilterMetadata() throws IOException;
 
     Path getPath();
+
+    /** Close method with optional evictOnClose */
+    void close(boolean evictOnClose) throws IOException;
   }
 
   private static Reader pickReaderVersion(Path path, FSDataInputStream fsdis,

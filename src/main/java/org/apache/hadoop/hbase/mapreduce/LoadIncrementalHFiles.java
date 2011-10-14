@@ -409,7 +409,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
     } finally {
       if (halfWriter != null) halfWriter.close();
-      if (halfReader != null) halfReader.close();
+      if (halfReader != null) halfReader.close(cacheConf.shouldEvictOnClose());
     }
   }
 

@@ -347,6 +347,8 @@ Release 0.92.0 - Unreleased
    HBASE-4492  TestRollingRestart fails intermittently
    HBASE-4512  JVMClusterUtil throwing wrong exception when master thread cannot be created (Ram)
    HBASE-4479  TestMasterFailover failure in Hbase-0.92#17 (Ram)
+   HBASE-4589  CacheOnWrite broken in some cases because it can conflict
+               with evictOnClose (jgray)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

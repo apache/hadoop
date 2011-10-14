@@ -526,11 +526,13 @@ public class StoreFile {
   }
 
   /**
+   * @param b 
    * @throws IOException
    */
-  public synchronized void closeReader() throws IOException {
+  public synchronized void closeReader(boolean evictOnClose)
+  throws IOException {
     if (this.reader != null) {
-      this.reader.close();
+      this.reader.close(evictOnClose);
       this.reader = null;
     }
   }
@@ -540,7 +542,7 @@ public class StoreFile {
    * @throws IOException
    */
   public void deleteReader() throws IOException {
-    closeReader();
+    closeReader(true);
     this.fs.delete(getPath(), true);
   }
 
@@ -1011,8 +1013,8 @@ public class StoreFile {
       return reader.getScanner(cacheBlocks, pread);
     }
 
-    public void close() throws IOException {
-      reader.close();
+    public void close(boolean evictOnClose) throws IOException {
+      reader.close(evictOnClose);
     }
 
     public boolean shouldSeek(Scan scan, final SortedSet<byte[]> columns) {
