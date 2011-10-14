@@ -701,6 +701,8 @@ Release 0.90.5 - Unreleased
    HBASE-4537  TestUser imports breaking build against secure Hadoop
    HBASE-4501  [replication] Shutting down a stream leaves recovered
                sources running
+   HBASE-4282  Ensure RegionServer aborts when WAL close fails with
+               deferred flush edits
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
