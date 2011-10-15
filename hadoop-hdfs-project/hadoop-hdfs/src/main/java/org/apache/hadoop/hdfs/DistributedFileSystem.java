@@ -814,7 +814,6 @@ public class DistributedFileSystem extends FileSystem {
   ) throws IOException {
     Token<DelegationTokenIdentifier> result =
       dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
-    result.setService(new Text(getCanonicalServiceName()));
     return result;
   }
 
@@ -834,7 +833,7 @@ public class DistributedFileSystem extends FileSystem {
   @Deprecated
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    return dfs.getDelegationToken(renewer);
+    return getDelegationToken(renewer.toString());
   }
   
   @Override // FileSystem
@@ -851,10 +850,15 @@ public class DistributedFileSystem extends FileSystem {
    * @param token delegation token obtained earlier
    * @return the new expiration time
    * @throws IOException
+   * @deprecated Use Token.renew instead.
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
-    return dfs.renewDelegationToken(token);
+    try {
+      return token.renew(getConf());
+    } catch (InterruptedException ie) {
+      throw new RuntimeException("Caught interrupted", ie);
+    }
   }
 
   /**
@@ -862,10 +866,15 @@ public class DistributedFileSystem extends FileSystem {
    * 
    * @param token delegation token
    * @throws IOException
+   * @deprecated Use Token.cancel instead.
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    dfs.cancelDelegationToken(token);
+    try {
+      token.cancel(getConf());
+    } catch (InterruptedException ie) {
+      throw new RuntimeException("Caught interrupted", ie);
+    }
   }
 
   /**

@@ -2,6 +2,8 @@ Hadoop MapReduce Change Log
 
     MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
 
+    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

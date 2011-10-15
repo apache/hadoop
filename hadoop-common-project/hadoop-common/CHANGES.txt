@@ -1,5 +1,7 @@
 Hadoop Change Log
 
+    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

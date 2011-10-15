@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -457,6 +458,37 @@ public class JobClient extends CLI {
   public void init(JobConf conf) throws IOException {
     setConf(conf);
     cluster = new Cluster(conf);
+  }
+
+  @InterfaceAudience.Private
+  public static class Renewer extends TokenRenewer {
+
+    @Override
+    public boolean handleKind(Text kind) {
+      return DelegationTokenIdentifier.MAPREDUCE_DELEGATION_KIND.equals(kind);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf
+                      ) throws IOException, InterruptedException {
+      return new Cluster(conf).
+        renewDelegationToken((Token<DelegationTokenIdentifier>) token);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf
+                       ) throws IOException, InterruptedException {
+      new Cluster(conf).
+        cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+    
   }
 
   /**
@@ -1048,22 +1080,24 @@ public class JobClient extends CLI {
    * @return true if the renewal went well
    * @throws InvalidToken
    * @throws IOException
+   * @deprecated Use {@link Token.renew} instead
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                    ) throws InvalidToken, IOException, 
                                             InterruptedException {
-    return cluster.renewDelegationToken(token);
+    return token.renew(getConf());
   }
 
   /**
    * Cancel a delegation token from the JobTracker
    * @param token the token to cancel
    * @throws IOException
+   * @deprecated Use {@link Token.cancel} instead
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
                                     ) throws InvalidToken, IOException, 
                                              InterruptedException {
-    cluster.cancelDelegationToken(token);
+    token.cancel(getConf());
   }
 
   /**

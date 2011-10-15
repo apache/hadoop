@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.Acces
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 @InterfaceAudience.Private
@@ -170,5 +171,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     if(cache == null) cache = super.getBytes();
     
     return cache;
+  }
+  
+  @InterfaceAudience.Private
+  public static class Renewer extends Token.TrivialRenewer {
+    @Override
+    protected Text getKind() {
+      return KIND_NAME;
+    }
   }
 }

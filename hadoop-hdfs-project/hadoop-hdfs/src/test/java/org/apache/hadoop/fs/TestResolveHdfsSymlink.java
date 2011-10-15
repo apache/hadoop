@@ -105,7 +105,7 @@ public class TestResolveHdfsSymlink {
    * @throws IOException
    * @throws InterruptedException
    */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "deprecation" })
   @Test
   public void testFcDelegationToken() throws UnsupportedFileSystemException,
       IOException, InterruptedException {
