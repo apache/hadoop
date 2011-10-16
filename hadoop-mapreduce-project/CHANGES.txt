@@ -388,6 +388,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3059. QueueMetrics do not have metrics for aggregate 
     containers-allocated and aggregate containers-released.
     (Devaraj K via mahadev)
+   
+    MAPREDUCE-3187. Add names for various unnamed threads in MR2.
+    (Todd Lipcon and Siddharth Seth via mahadev)
 
   OPTIMIZATIONS
 

@@ -242,6 +242,7 @@ public abstract class RMCommunicator extends AbstractService  {
         }
       }
     });
+    allocatorThread.setName("RMCommunicator Allocator");
     allocatorThread.start();
   }
 

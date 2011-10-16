@@ -309,7 +309,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
   private class MonitoringThread extends Thread {
     public MonitoringThread() {
-
+      super("Container Monitor");
     }
 
     @Override

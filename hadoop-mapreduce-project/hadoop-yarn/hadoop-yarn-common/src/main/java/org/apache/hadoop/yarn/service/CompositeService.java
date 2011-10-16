@@ -108,6 +108,7 @@ public class CompositeService extends AbstractService {
     private CompositeService compositeService;
 
     public CompositeServiceShutdownHook(CompositeService compositeService) {
+      super("CompositeServiceShutdownHook for " + compositeService.getName());
       this.compositeService = compositeService;
     }
 

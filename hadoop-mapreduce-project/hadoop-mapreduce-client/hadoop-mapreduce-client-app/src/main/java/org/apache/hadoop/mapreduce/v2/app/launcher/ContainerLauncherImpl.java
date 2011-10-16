@@ -25,6 +25,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -63,6 +64,8 @@ import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * This class is responsible for launching of containers.
  */
@@ -100,9 +103,13 @@ public class ContainerLauncherImpl extends AbstractService implements
 
   public void start() {
     // Start with a default core-pool size of 10 and change it dynamically.
+    ThreadFactory tf = new ThreadFactoryBuilder()
+      .setNameFormat("ContainerLauncher #%d")
+      .build();
     launcherPool = new ThreadPoolExecutor(INITIAL_POOL_SIZE,
         Integer.MAX_VALUE, 1, TimeUnit.HOURS,
-        new LinkedBlockingQueue<Runnable>());
+        new LinkedBlockingQueue<Runnable>(),
+        tf);
     eventHandlingThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -143,6 +150,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         }
       }
     });
+    eventHandlingThread.setName("ContainerLauncher Event Handler");
     eventHandlingThread.start();
     super.start();
   }

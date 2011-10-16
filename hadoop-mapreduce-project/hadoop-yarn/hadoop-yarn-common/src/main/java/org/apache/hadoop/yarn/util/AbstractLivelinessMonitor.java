@@ -51,6 +51,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
   @Override
   public void start() {
     checkerThread = new Thread(new PingChecker());
+    checkerThread.setName("Ping Checker");
     checkerThread.start();
     super.start();
   }

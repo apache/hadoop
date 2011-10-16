@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.taskclean;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +31,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
 
@@ -47,8 +50,11 @@ public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
   }
 
   public void start() {
+    ThreadFactory tf = new ThreadFactoryBuilder()
+      .setNameFormat("TaskCleaner #%d")
+      .build();
     launcherPool = new ThreadPoolExecutor(1, 5, 1, 
-        TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
+        TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
     eventHandlingThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -65,6 +71,7 @@ public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
           launcherPool.execute(new EventProcessor(event));        }
       }
     });
+    eventHandlingThread.setName("TaskCleaner Event Handler");
     eventHandlingThread.start();
     super.start();
   }

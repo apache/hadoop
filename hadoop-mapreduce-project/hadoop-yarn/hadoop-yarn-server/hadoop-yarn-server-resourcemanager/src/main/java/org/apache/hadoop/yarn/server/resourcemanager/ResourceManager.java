@@ -250,6 +250,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       super(SchedulerEventDispatcher.class.getName());
       this.scheduler = scheduler;
       this.eventProcessor = new Thread(new EventProcessor());
+      this.eventProcessor.setName("ResourceManager Event Processor");
     }
 
     @Override

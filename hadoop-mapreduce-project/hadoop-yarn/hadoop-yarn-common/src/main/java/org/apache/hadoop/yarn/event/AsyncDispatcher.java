@@ -84,6 +84,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     //start all the components
     super.start();
     eventHandlingThread = new Thread(createThread());
+    eventHandlingThread.setName("AsyncDispatcher event handler");
     eventHandlingThread.start();
   }
 
