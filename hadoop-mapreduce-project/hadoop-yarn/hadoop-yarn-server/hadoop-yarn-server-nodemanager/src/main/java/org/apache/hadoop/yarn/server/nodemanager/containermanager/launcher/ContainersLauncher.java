@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * The launcher for the containers. This service should be started only after
  * the {@link ResourceLocalizationService} is started as it depends on creation
@@ -54,7 +56,10 @@ public class ContainersLauncher extends AbstractService
   private final ContainerExecutor exec;
   private final Dispatcher dispatcher;
   private final ExecutorService containerLauncher =
-    Executors.newCachedThreadPool();
+    Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+          .setNameFormat("ContainersLauncher #%d")
+          .build());
   private final Map<ContainerId,RunningContainer> running =
     Collections.synchronizedMap(new HashMap<ContainerId,RunningContainer>());
 

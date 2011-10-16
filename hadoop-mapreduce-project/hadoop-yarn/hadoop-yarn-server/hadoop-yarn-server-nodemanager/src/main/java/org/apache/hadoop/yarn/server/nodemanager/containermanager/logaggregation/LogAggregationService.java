@@ -46,6 +46,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 public class LogAggregationService extends AbstractService implements
     EventHandler<LogAggregatorEvent> {
 
@@ -70,7 +72,10 @@ public class LogAggregationService extends AbstractService implements
     this.deletionService = deletionService;
     this.appLogAggregators =
         new ConcurrentHashMap<ApplicationId, AppLogAggregator>();
-    this.threadPool = Executors.newCachedThreadPool();
+    this.threadPool = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder()
+          .setNameFormat("LogAggregationService #%d")
+          .build());
   }
 
   public synchronized void init(Configuration conf) {

@@ -71,6 +71,7 @@ public class TaskHeartbeatHandler extends AbstractService {
   @Override
   public void start() {
     lostTaskCheckerThread = new Thread(new PingChecker());
+    lostTaskCheckerThread.setName("TaskHeartbeatHandler PingChecker");
     lostTaskCheckerThread.start();
     super.start();
   }

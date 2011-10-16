@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import static java.util.concurrent.TimeUnit.*;
 
@@ -33,6 +34,8 @@ import org.apache.hadoop.yarn.service.AbstractService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class DeletionService extends AbstractService {
   static final Log LOG = LogFactory.getLog(DeletionService.class);
@@ -70,12 +73,17 @@ public class DeletionService extends AbstractService {
 
   @Override
   public void init(Configuration conf) {
+    ThreadFactory tf = new ThreadFactoryBuilder()
+      .setNameFormat("DeletionService #%d")
+      .build();
     if (conf != null) {
       sched = new ScheduledThreadPoolExecutor(
-          conf.getInt(YarnConfiguration.NM_DELETE_THREAD_COUNT, YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT));
+          conf.getInt(YarnConfiguration.NM_DELETE_THREAD_COUNT, YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT),
+          tf);
       debugDelay = conf.getInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 0);
     } else {
-      sched = new ScheduledThreadPoolExecutor(YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT);
+      sched = new ScheduledThreadPoolExecutor(YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT,
+          tf);
     }
     sched.setKeepAliveTime(60L, SECONDS);
     super.init(conf);

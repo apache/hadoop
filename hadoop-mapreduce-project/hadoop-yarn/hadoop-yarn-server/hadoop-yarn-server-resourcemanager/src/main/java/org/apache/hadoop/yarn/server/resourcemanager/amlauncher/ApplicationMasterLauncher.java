@@ -90,6 +90,11 @@ public class ApplicationMasterLauncher extends AbstractService implements
   }
 
   private class LauncherThread extends Thread {
+    
+    public LauncherThread() {
+      super("ApplicationMaster Launcher");
+    }
+
     @Override
     public void run() {
       while (!this.isInterrupted()) {

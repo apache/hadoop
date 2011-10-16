@@ -32,6 +32,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -63,6 +64,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 
 /*
@@ -256,7 +259,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     if (startCleanerService) {
       long maxAgeOfHistoryFiles = conf.getLong(
           JHAdminConfig.MR_HISTORY_MAX_AGE_MS, DEFAULT_HISTORY_MAX_AGE);
-    cleanerScheduledExecutor = new ScheduledThreadPoolExecutor(1);
+      cleanerScheduledExecutor = new ScheduledThreadPoolExecutor(1,
+          new ThreadFactoryBuilder().setNameFormat("LogCleaner").build()
+      );
       long runInterval = conf.getLong(
           JHAdminConfig.MR_HISTORY_CLEANER_INTERVAL_MS, DEFAULT_RUN_INTERVAL);
       cleanerScheduledExecutor
@@ -594,8 +599,11 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     
     MoveIntermediateToDoneRunnable(long sleepTime, int numMoveThreads) {
       this.sleepTime = sleepTime;
+      ThreadFactory tf = new ThreadFactoryBuilder()
+        .setNameFormat("MoveIntermediateToDone Thread #%d")
+        .build();
       moveToDoneExecutor = new ThreadPoolExecutor(1, numMoveThreads, 1, 
-          TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
+          TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
       running = true;
     }
   

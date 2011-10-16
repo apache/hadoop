@@ -231,7 +231,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   protected void startStatusUpdater() {
 
-    new Thread() {
+    new Thread("Node Status Updater") {
       @Override
       public void run() {
         int lastHeartBeatID = 0;
