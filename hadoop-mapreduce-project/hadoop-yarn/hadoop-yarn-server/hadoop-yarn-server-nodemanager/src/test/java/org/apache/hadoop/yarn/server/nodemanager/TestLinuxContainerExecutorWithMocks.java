@@ -106,14 +106,14 @@ public class TestLinuxContainerExecutorWithMocks {
     
     when(context.getEnvironment()).thenReturn(env);
     
-    Path scriptPath = new Path("file:///bin/true");
+    Path scriptPath = new Path("file:///bin/echo");
     Path tokensPath = new Path("file:///dev/null");
     Path workDir = new Path("/tmp");
     int ret = mockExec.launchContainer(container, scriptPath, tokensPath, 
         appSubmitter, appId, workDir);
     assertEquals(0, ret);
     assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId, 
-        workDir.toString(), "/bin/true", "/dev/null"),
+        workDir.toString(), "/bin/echo", "/dev/null"),
         readMockParams());
   }
 
