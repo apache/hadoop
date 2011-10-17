@@ -2,8 +2,6 @@
 * { margin: 0; border: 0 }
 html, body { height: 100% }
 body { padding: 0; font: 90% sans-serif }
-a { text-decoration: none }
-a:hover { text-decoration: underline }
 .content { padding-right: 1em }
 .content h1, .content h2, .content h3 { margin: 0 0 0.3em; font-weight: normal }
 table { border-collapse: collapse; border-spacing: 0; width: 100% }
