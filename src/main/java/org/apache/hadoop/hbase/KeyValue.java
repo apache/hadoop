@@ -205,7 +205,7 @@ public class KeyValue implements Writable, HeapSize {
   private int length = 0;
 
   // the row cached
-  private byte [] rowCache = null;
+  private volatile byte [] rowCache = null;
 
 
   /** Here be dragons **/
@@ -911,8 +911,11 @@ public class KeyValue implements Writable, HeapSize {
     if (rowCache == null) {
       int o = getRowOffset();
       short l = getRowLength();
-      rowCache = new byte[l];
-      System.arraycopy(getBuffer(), o, rowCache, 0, l);
+      // initialize and copy the data into a local variable
+      // in case multiple threads race here.
+      byte local[] = new byte[l];
+      System.arraycopy(getBuffer(), o, local, 0, l);
+      rowCache = local; // volatile assign
     }
     return rowCache;
   }
