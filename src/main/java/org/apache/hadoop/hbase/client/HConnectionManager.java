@@ -1400,11 +1400,8 @@ public class HConnectionManager {
         throw new IllegalArgumentException(
             "argument results must be the same size as argument list");
       }
-      if (list.size() == 0) {
+      if (list.isEmpty()) {
         return;
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("expecting "+results.length+" results");
       }
 
       // Keep track of the most recent servers for any given item for better

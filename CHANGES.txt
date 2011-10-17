@@ -594,6 +594,7 @@ Release 0.92.0 - Unreleased
    HBASE-4558  Refactor TestOpenedRegionHandler and TestOpenRegionHandler. (Ram)
    HBASE-4558  Addendum for TestMasterFailOver (Ram) - Breaks the build
    HBASE-4568  Make zk dump jsp response faster
+   HBASE-4606  Remove spam in HCM and fix a list.size == 0
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
