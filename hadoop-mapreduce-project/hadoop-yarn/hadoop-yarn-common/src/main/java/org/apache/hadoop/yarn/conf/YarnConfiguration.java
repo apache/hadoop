@@ -129,7 +129,7 @@ public class YarnConfiguration extends Configuration {
   /** Are RM acls enabled.*/
   public static final String RM_ACL_ENABLE = 
     RM_PREFIX + "acl.enable";
-  public static final boolean DEFAULT_RM_ACL_ENABLE = false;
+  public static final boolean DEFAULT_RM_ACL_ENABLE = true;
   
   /** ACL of who can be admin of RM.*/
   public static final String RM_ADMIN_ACL = 

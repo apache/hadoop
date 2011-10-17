@@ -194,17 +194,28 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | <<<ResourceManager>>> host:port for NodeManagers. | |
 | | | <host:port> |
 *-------------------------+-------------------------+------------------------+
+| <<<yarn.resourcemanager.admin.address>>> | | | 
+| | <<<ResourceManager>>> host:port for administrative commands. | |
+| | | <host:port> |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.resourcemanager.webapp.address>>> | | | 
+| | <<<ResourceManager>>> web-ui host:port. | |
+| | | <host:port> |
+*-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.scheduler.class>>> | | |
 | | <<<ResourceManager>>> Scheduler class. | |
 | | | <<<CapacityScheduler>>> (recommended) or <<<FifoScheduler>>> |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.acl.enable>>> | | |
 | | <<<true>>> / <<<false>>> | |
-| | | Enable ACLs? |
+| | | Enable ACLs? Defaults to <true>. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.admin.acl>>> | | |
 | | Admin ACL | |
 | | | ACL to set admins on the cluster. |
+| | | ACLs are of for <comma-separated-users><space><comma-separated-groups>. |
+| | | Defaults to special value of <<*>> which means <anyone>. |
+| | | Special value of just <space> means no one has access. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.remote-app-log-dir>>> | | |
 | | </logs> | |
