@@ -41,6 +41,8 @@ Hadoop MapReduce Next Generation
 
   * {{{./SingleCluster.html}Setting up a Single Node Cluster}}
 
+  * {{{./ClusterSetup.html}Setting up a full-fledged Hadoop Cluster}}
+  
   * {{{./apidocs/index.html}JavaDocs}}
 
   * {{{./WritingYarnApplications.html}Writing Yarn Applications}}
