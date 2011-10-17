@@ -355,10 +355,11 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           // Note: We don't impose blockingStoreFiles constraint on meta regions
           LOG.warn("Region " + region.getRegionNameAsString() + " has too many " +
             "store files; delaying flush up to " + this.blockingWaitTime + "ms");
+          if (!this.server.compactSplitThread.requestSplit(region)) {
+            this.server.compactSplitThread.requestCompaction(region, getName());
+          }
         }
-        if (!this.server.compactSplitThread.requestSplit(region)) {
-          this.server.compactSplitThread.requestCompaction(region, getName());
-        }
+
         // Put back on the queue.  Have it come back out of the queue
         // after a delay of this.blockingWaitTime / 100 ms.
         this.flushQueue.add(fqe.requeue(this.blockingWaitTime / 100));

@@ -342,6 +342,8 @@ Release 0.92.0 - Unreleased
                Hadoop 0.23 (todd)
    HBASE-3446  ProcessServerShutdown fails if META moves, orphaning lots of
                regions
+   HBASE-4579  CST.requestCompaction semantics changed, logs are now
+               spammed when too many store files
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

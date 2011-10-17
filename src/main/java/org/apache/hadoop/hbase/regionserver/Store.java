@@ -1003,7 +1003,8 @@ public class Store implements HeapSize {
     }
 
     if (filesToCompact.isEmpty()) {
-      LOG.debug(this.storeNameStr + ": no store files to compact");
+      LOG.debug(this.getHRegionInfo().getEncodedName() + " - " +
+        this.storeNameStr + ": no store files to compact");
       return filesToCompact;
     }
 
