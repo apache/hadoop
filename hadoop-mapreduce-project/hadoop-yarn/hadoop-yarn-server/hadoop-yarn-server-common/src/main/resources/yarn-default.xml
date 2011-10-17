@@ -85,7 +85,7 @@
   <property>
     <description>Are RM acls enabled.</description>
     <name>yarn.resourcemanager.acl.enable</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
