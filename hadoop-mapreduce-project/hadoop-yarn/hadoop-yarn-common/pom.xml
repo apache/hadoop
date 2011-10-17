@@ -16,15 +16,15 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${yarn.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-common</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-yarn-common</name>
 
   <properties>
-    <install.file>${project.artifact.file}</install.file>
     <yarn.basedir>${project.parent.basedir}</yarn.basedir>
   </properties>
 
@@ -109,7 +109,7 @@
             <configuration>
               <executable>scripts/saveVersion.sh</executable>
               <arguments>
-                <argument>${yarn.version}</argument>
+                <argument>${project.version}</argument>
                 <argument>${project.build.directory}</argument>
               </arguments>
             </configuration>

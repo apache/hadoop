@@ -53,6 +53,8 @@ Trunk (unreleased changes)
     MAPREDUCE-3192. Fix Javadoc warning in JobClient.java and Cluster.java.
     (jitendra)
 
+    MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

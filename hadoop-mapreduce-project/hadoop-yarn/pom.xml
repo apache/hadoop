@@ -14,9 +14,15 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>0.24.0-SNAPSHOT</version>
+    <relativePath>../../hadoop-project</relativePath>
+  </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn</artifactId>
-  <version>${yarn.version}</version>
+  <version>0.24.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>hadoop-yarn</name>
   <url>http://hadoop.apache.org/mapreduce</url>
@@ -25,14 +31,21 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
-    <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
-    <hadoop-common.version>0.24.0-SNAPSHOT</hadoop-common.version>
-    <hadoop-hdfs.version>0.24.0-SNAPSHOT</hadoop-hdfs.version>
-    <yarn.version>0.24.0-SNAPSHOT</yarn.version>
-    <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
-    <install.file>${install.pom}</install.file>
     <yarn.basedir>${basedir}</yarn.basedir>
   </properties>
+  
+  <distributionManagement>
+    <repository>
+      <id>apache.releases.https</id>
+      <name>Apache Release Distribution Repository</name>
+      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+    </repository>
+    <snapshotRepository>
+      <id>apache.snapshots.https</id>
+      <name>Apache Development Snapshot Repository</name>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <repositories>
     <repository>
@@ -54,6 +67,126 @@
   </repositories>
 
   <dependencies>
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>2.4.0a</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>1.5.3</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.ant</groupId>
+          <artifactId>ant</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jboss.netty</groupId>
+          <artifactId>netty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.velocity</groupId>
+          <artifactId>velocity</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>paranamer-ant</artifactId>
+          <groupId>com.thoughtworks.paranamer</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>commons-el</groupId>
+          <artifactId>commons-el</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>tomcat</groupId>
+          <artifactId>jasper-runtime</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>tomcat</groupId>
+          <artifactId>jasper-compiler</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jsp-2.1-jetty</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>hsqldb</groupId>
+          <artifactId>hsqldb</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+     <groupId>org.slf4j</groupId>
+       <artifactId>slf4j-api</artifactId>
+       <version>1.6.1</version>
+    </dependency>
+    <dependency>
+     <groupId>org.slf4j</groupId>
+       <artifactId>slf4j-log4j12</artifactId>
+       <version>1.6.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-annotations</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.8.5</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <!-- needed for security and runtime -->
+      <artifactId>hadoop-hdfs</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-servlet</artifactId>
+      <version>2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.8.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>3.2.3.Final</version>
+    </dependency>
+    <dependency>
+      <groupId>com.cenqua.clover</groupId>
+      <artifactId>clover</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
@@ -93,7 +226,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop-common.version}</version>
+      <version>${project.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.avro</groupId>
@@ -124,7 +257,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
-      <version>${hadoop-common.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -141,14 +274,14 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop-common.version}</version>
+      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hadoop-hdfs.version}</version>
+      <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -183,33 +316,33 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-api</artifactId>
-        <version>${yarn.version}</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-common</artifactId>
-        <version>${yarn.version}</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-common</artifactId>
-        <version>${yarn.version}</version>
+        <version>${project.version}</version>
         <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-common</artifactId>
-        <version>${yarn.version}</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-        <version>${yarn.version}</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-        <version>${yarn.version}</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -317,86 +450,6 @@
       </plugins>
     </pluginManagement>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-assemblies</artifactId>
-            <version>${hadoop.assemblies.version}</version>
-          </dependency>
-        </dependencies>
-        <configuration>
-          <tarLongFileMode>gnu</tarLongFileMode>
-          <appendAssemblyId>false</appendAssemblyId>
-          <attach>false</attach>
-          <finalName>${project.artifactId}-${project.version}</finalName>
-          <descriptorRefs>
-            <descriptorRef>hadoop-mapreduce-dist</descriptorRef>
-          </descriptorRefs>
-        </configuration>
-        <executions>
-          <execution>
-            <id>tar</id>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>santize-pom</id>
-            <phase>package</phase>
-            <configuration>
-              <target>
-                <echo message="project.build.directory: ${project.build.directory}"/>
-                <copy file="pom.xml" tofile="${install.pom}">
-                  <filterchain>
-                    <!-- we'll have to wait for ant 1.8.3 for the following
-                    <expandproperties>
-                      <propertyset regex=".*version$">
-                      </propertyset>
-                    </expandproperties>
-                    until then an even uglier workaround: -->
-                    <tokenfilter>
-                      <replaceregex pattern="\$\{hadoop-common.version}"
-                          replace="${hadoop-common.version}" flags="g"/>
-                      <replaceregex pattern="\$\{hadoop-hdfs.version}"
-                          replace="${hadoop-hdfs.version}" flags="g"/>
-                      <replaceregex pattern="\$\{yarn.version}"
-                          replace="${yarn.version}" flags="g"/>
-                    </tokenfilter>
-                  </filterchain>
-                </copy>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-install-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>install-sanitized-pom</id>
-            <configuration>
-              <file>${install.file}</file>
-              <pomFile>${install.pom}</pomFile>
-            </configuration>
-            <phase>install</phase>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
        <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>

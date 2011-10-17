@@ -16,15 +16,15 @@
   <parent>
     <artifactId>hadoop-yarn-applications</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${yarn.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-yarn-applications-distributedshell</name>
 
   <properties>
-    <install.file>${project.artifact.file}</install.file>
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
   </properties>
 
@@ -32,37 +32,37 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-api</artifactId>
-      <version>${yarn.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId>
-      <version>${yarn.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-nodemanager</artifactId>
       <scope>test</scope>
-      <version>${yarn.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
       <scope>test</scope>
-      <version>${yarn.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-common</artifactId>
       <scope>test</scope>
-      <version>${yarn.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-tests</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
-      <version>${yarn.version}</version>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

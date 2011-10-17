@@ -400,7 +400,7 @@
               <dependency>
                 <groupId>org.apache.hadoop</groupId>
                 <artifactId>hadoop-assemblies</artifactId>
-                <version>${hadoop.assemblies.version}</version>
+                <version>${project.version}</version>
               </dependency>
             </dependencies>
             <executions>
