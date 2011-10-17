@@ -1642,7 +1642,7 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3189. Add link decoration back to MR2's CSS. (Todd Lipcon via
     mahadev)
     
-    MAPREDUCE-3101. Changed default value of yarn.resourcemanager.acl.enable
+    MAPREDUCE-3127. Changed default value of yarn.resourcemanager.acl.enable
     to true and added some more documentation. (acmurthy) 
 
 Release 0.22.0 - Unreleased
