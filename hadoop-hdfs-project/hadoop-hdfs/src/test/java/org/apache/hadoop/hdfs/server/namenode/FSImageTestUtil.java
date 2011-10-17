@@ -42,10 +42,13 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFil
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.mockito.Mockito;
+import org.mockito.Matchers;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -106,7 +109,7 @@ public abstract class FSImageTestUtil {
     Mockito.doReturn(type)
       .when(sd).getStorageDirType();
     Mockito.doReturn(currentDir).when(sd).getCurrentDir();
-    
+    Mockito.doReturn(currentDir).when(sd).getRoot();
     Mockito.doReturn(mockFile(true)).when(sd).getVersionFile();
     Mockito.doReturn(mockFile(false)).when(sd).getPreviousDir();
     return sd;
@@ -128,7 +131,8 @@ public abstract class FSImageTestUtil {
   
     // Version file should always exist
     doReturn(mockFile(true)).when(sd).getVersionFile();
-    
+    doReturn(mockFile(true)).when(sd).getRoot();
+
     // Previous dir optionally exists
     doReturn(mockFile(previousExists))
       .when(sd).getPreviousDir();   
@@ -143,6 +147,7 @@ public abstract class FSImageTestUtil {
     doReturn(files).when(mockDir).listFiles();
     doReturn(mockDir).when(sd).getCurrentDir();
     
+
     return sd;
   }
   
@@ -170,11 +175,16 @@ public abstract class FSImageTestUtil {
     assertTrue(logDir.mkdirs() || logDir.exists());
     Files.deleteDirectoryContents(logDir);
     NNStorage storage = Mockito.mock(NNStorage.class);
-    List<StorageDirectory> sds = Lists.newArrayList(
-        FSImageTestUtil.mockStorageDirectory(logDir, NameNodeDirType.EDITS));
+    StorageDirectory sd 
+      = FSImageTestUtil.mockStorageDirectory(logDir, NameNodeDirType.EDITS);
+    List<StorageDirectory> sds = Lists.newArrayList(sd);
     Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
+    Mockito.doReturn(sd).when(storage)
+      .getStorageDirectory(Matchers.<URI>anyObject());
 
-    return new FSEditLog(storage);
+    return new FSEditLog(new Configuration(), 
+                         storage,
+                         ImmutableList.of(logDir.toURI()));
   }
   
   /**

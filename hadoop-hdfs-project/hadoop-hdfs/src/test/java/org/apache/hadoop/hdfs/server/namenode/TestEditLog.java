@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -861,8 +862,11 @@ public class TestEditLog extends TestCase {
    * The syntax <code>[1,]</code> specifies an in-progress log starting at
    * txid 1.
    */
-  private NNStorage mockStorageWithEdits(String... editsDirSpecs) {
+  private NNStorage mockStorageWithEdits(String... editsDirSpecs) throws IOException {
     List<StorageDirectory> sds = Lists.newArrayList();
+    List<URI> uris = Lists.newArrayList();
+
+    NNStorage storage = Mockito.mock(NNStorage.class);
     for (String dirSpec : editsDirSpecs) {
       List<String> files = Lists.newArrayList();
       String[] logSpecs = dirSpec.split("\\|");
@@ -878,13 +882,17 @@ public class TestEditLog extends TestCase {
               Long.valueOf(m.group(2))));
         }
       }
-      sds.add(FSImageTestUtil.mockStorageDirectory(
+      StorageDirectory sd = FSImageTestUtil.mockStorageDirectory(
           NameNodeDirType.EDITS, false,
-          files.toArray(new String[0])));
-    }
-    
-    NNStorage storage = Mockito.mock(NNStorage.class);
+          files.toArray(new String[0]));
+      sds.add(sd);
+      URI u = URI.create("file:///storage"+ Math.random());
+      Mockito.doReturn(sd).when(storage).getStorageDirectory(u);
+      uris.add(u);
+    }    
+
     Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
+    Mockito.doReturn(uris).when(storage).getEditsDirectories();
     return storage;
   }
 

@@ -120,7 +120,7 @@ public class FSImage implements Closeable {
       storage.setRestoreFailedStorage(true);
     }
 
-    this.editLog = new FSEditLog(storage);
+    this.editLog = new FSEditLog(conf, storage, editsDirs);
     
     archivalManager = new NNStorageRetentionManager(conf, storage, editLog);
   }
@@ -150,8 +150,7 @@ public class FSImage implements Closeable {
       "NameNode formatting should be performed before reading the image";
     
     Collection<URI> imageDirs = storage.getImageDirectories();
-    Collection<URI> editsDirs = storage.getEditsDirectories();
-
+    Collection<URI> editsDirs = editLog.getEditURIs();
 
     // none of the data dirs exist
     if((imageDirs.size() == 0 || editsDirs.size() == 0) 
