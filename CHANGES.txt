@@ -713,6 +713,8 @@ Release 0.90.5 - Unreleased
    HBASE-4570. Fix a race condition that could cause inconsistent results
                from scans during concurrent writes. (todd and Jonathan Jsieh
                via todd)
+   HBASE-4562  When split doing offlineParentInMeta encounters error, it'll
+               cause data loss (bluedavy via Lars H)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

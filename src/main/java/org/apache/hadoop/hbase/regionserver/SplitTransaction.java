@@ -287,13 +287,24 @@ public class SplitTransaction {
     this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
     HRegion b = createDaughterRegion(this.hri_b, this.parent.rsServices);
 
+    // This is the point of no return.  Adding subsequent edits to .META. as we
+    // do below when we do the daughter opens adding each to .META. can fail in
+    // various interesting ways the most interesting of which is a timeout
+    // BUT the edits all go through (See HBASE-3872).  IF we reach the PONR
+    // then subsequent failures need to crash out this regionserver; the
+    // server shutdown processing should be able to fix-up the incomplete split.
+    // The offlined parent will have the daughters as extra columns.  If
+    // we leave the daughter regions in place and do not remove them when we
+    // crash out, then they will have their references to the parent in place
+    // still and the server shutdown fixup of .META. will point to these
+    // regions.
+    // We should add PONR JournalEntry before offlineParentInMeta,so even if
+    // OfflineParentInMeta timeout,this will cause regionserver exit,and then
+    // master ServerShutdownHandler will fix daughter & avoid data loss. See (
+    // HBASE-4562).
+    this.journal.add(JournalEntry.PONR);
+
     // Edit parent in meta.  Offlines parent region and adds splita and splitb.
-    // TODO: This can 'fail' by timing out against .META. but the edits could
-    // be applied anyways over on the server.  There is no way to tell for sure.
-    // We could try and get the edits again subsequent to their application
-    // whether we fail or not but that could fail too.  We should probably move
-    // the PONR to here before the edits go in but could mean we'd abort the
-    // regionserver when we didn't need to; i.e. the edits did not make it in.
     if (!testing) {
       MetaEditor.offlineParentInMeta(server.getCatalogTracker(),
         this.parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo());
@@ -313,18 +324,6 @@ public class SplitTransaction {
   /* package */void openDaughters(final Server server,
       final RegionServerServices services, HRegion a, HRegion b)
       throws IOException {
-    // This is the point of no return.  Adding subsequent edits to .META. as we
-    // do below when we do the daughter opens adding each to .META. can fail in
-    // various interesting ways the most interesting of which is a timeout
-    // BUT the edits all go through (See HBASE-3872).  IF we reach the PONR
-    // then subsequent failures need to crash out this regionserver; the
-    // server shutdown processing should be able to fix-up the incomplete split.
-    // The offlined parent will have the daughters as extra columns.  If
-    // we leave the daughter regions in place and do not remove them when we
-    // crash out, then they will have their references to the parent in place
-    // still and the server shutdown fixup of .META. will point to these
-    // regions.
-    this.journal.add(JournalEntry.PONR);
     boolean stopped = server != null && server.isStopped();
     boolean stopping = services != null && services.isStopping();
     // TODO: Is this check needed here?
