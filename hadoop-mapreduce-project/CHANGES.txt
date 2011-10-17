@@ -1645,6 +1645,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3127. Changed default value of yarn.resourcemanager.acl.enable
     to true and added some more documentation. (acmurthy) 
 
+    MAPREDUCE-3032. Fixed TaskAttemptImpl so that JobHistory can have error
+    information about failed tasks. (Devaraj K via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

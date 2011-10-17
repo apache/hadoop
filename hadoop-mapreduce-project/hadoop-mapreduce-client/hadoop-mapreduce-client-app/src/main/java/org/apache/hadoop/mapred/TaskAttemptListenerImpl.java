@@ -302,8 +302,6 @@ public class TaskAttemptListenerImpl extends CompositeService
     taskAttemptStatus.progress = taskStatus.getProgress();
     LOG.info("Progress of TaskAttempt " + taskAttemptID + " is : "
         + taskStatus.getProgress());
-    // Task sends the diagnostic information to the TT
-    taskAttemptStatus.diagnosticInfo = taskStatus.getDiagnosticInfo();
     // Task sends the updated state-string to the TT.
     taskAttemptStatus.stateString = taskStatus.getStateString();
     // Set the output-size when map-task finishes. Set by the task itself.
