@@ -705,6 +705,8 @@ Release 0.90.5 - Unreleased
                sources running
    HBASE-4282  Ensure RegionServer aborts when WAL close fails with
                deferred flush edits
+   HBASE-4563  When error occurs in this.parent.close(false) of split,
+               the split region cannot write or read (bluedavy via Lars H)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
