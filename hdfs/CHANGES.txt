@@ -645,6 +645,9 @@ Release 0.22.0 - Unreleased
     HDFS-2012. Balancer incorrectly treats nodes whose utilization equals
     avgUtilization. (Uma Maheswara Rao G via shv)
 
+    HDFS-2286. DataXceiverServer logs AsynchronousCloseException at shutdown
+    (Todd Lipcon and Uma Maheswara Rao G via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
