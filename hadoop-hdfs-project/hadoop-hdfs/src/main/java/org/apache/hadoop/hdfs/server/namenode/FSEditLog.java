@@ -18,10 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
-
+import java.net.URI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -42,9 +43,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -122,23 +125,68 @@ public class FSEditLog  {
     }
   };
 
+  final private Collection<URI> editsDirs;
+
+  /**
+   * Construct FSEditLog with default configuration, taking editDirs from NNStorage
+   * @param storage Storage object used by namenode
+   */
+  @VisibleForTesting
   FSEditLog(NNStorage storage) {
+    this(new Configuration(), storage, Collections.<URI>emptyList());
+  }
+
+  /**
+   * Constructor for FSEditLog. Add underlying journals are constructed, but 
+   * no streams are opened until open() is called.
+   * 
+   * @param conf The namenode configuration
+   * @param storage Storage object used by namenode
+   * @param editsDirs List of journals to use
+   */
+  FSEditLog(Configuration conf, NNStorage storage, Collection<URI> editsDirs) {
     isSyncRunning = false;
     this.storage = storage;
     metrics = NameNode.getNameNodeMetrics();
     lastPrintTime = now();
+    
+    if (editsDirs.isEmpty()) { 
+      // if this is the case, no edit dirs have been explictly configured
+      // image dirs are to be used for edits too
+      try {
+        editsDirs = Lists.newArrayList(storage.getEditsDirectories());
+      } catch (IOException ioe) {
+        // cannot get list from storage, so the empty editsDirs 
+        // will be assigned. an error will be thrown on first use
+        // of the editlog, as no journals will exist
+      }
+      this.editsDirs = editsDirs;
+    } else {
+      this.editsDirs = Lists.newArrayList(editsDirs);
+    }
 
     this.journalSet = new JournalSet();
-    for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.EDITS)) {
-      journalSet.add(new FileJournalManager(sd));
+    for (URI u : this.editsDirs) {
+      StorageDirectory sd = storage.getStorageDirectory(u);
+      if (sd != null) {
+        journalSet.add(new FileJournalManager(sd));
+      }
     }
-    
+ 
     if (journalSet.isEmpty()) {
       LOG.error("No edits directories configured!");
     } 
     state = State.BETWEEN_LOG_SEGMENTS;
   }
-  
+
+  /**
+   * Get the list of URIs the editlog is using for storage
+   * @return collection of URIs in use by the edit log
+   */
+  Collection<URI> getEditURIs() {
+    return editsDirs;
+  }
+
   /**
    * Initialize the output stream for logging, opening the first
    * log segment.

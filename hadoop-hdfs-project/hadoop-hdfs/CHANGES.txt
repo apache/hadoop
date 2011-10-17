@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
     not include multiple methods of the same name. (cutting)
 
+    HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
+    than NNStorage. (Ivan Kelly via jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
