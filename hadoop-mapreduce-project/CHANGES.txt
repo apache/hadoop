@@ -1632,6 +1632,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2840. mr279 TestUberAM.testSleepJob test fails. (jonathan eagles
     via mahadev)
 
+    MAPREDUCE-3190. Ensure bin/yarn fails early with a clear error message
+    when HADOOP_COMMON_HOME or HADOOP_HDFS_HOME are not set. (todd & acmurthy 
+    via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
