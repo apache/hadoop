@@ -392,6 +392,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3187. Add names for various unnamed threads in MR2.
     (Todd Lipcon and Siddharth Seth via mahadev)
 
+    MAPREDUCE-3136. Added documentation for setting up Hadoop clusters in both
+    non-secure and secure mode for both HDFS & YARN. (acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
