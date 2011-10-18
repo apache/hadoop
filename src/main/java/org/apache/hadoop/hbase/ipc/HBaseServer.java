@@ -298,7 +298,8 @@ public abstract class HBaseServer implements RpcServer {
       if (result instanceof WritableWithSize) {
         // get the size hint.
         WritableWithSize ohint = (WritableWithSize) result;
-        long hint = ohint.getWritableSize() + Bytes.SIZEOF_BYTE + Bytes.SIZEOF_INT;
+        long hint = ohint.getWritableSize() + Bytes.SIZEOF_BYTE +
+          (2 * Bytes.SIZEOF_INT);
         if (hint > Integer.MAX_VALUE) {
           // oops, new problem.
           IOException ioe =
@@ -313,8 +314,15 @@ public abstract class HBaseServer implements RpcServer {
       ByteBufferOutputStream buf = new ByteBufferOutputStream(size);
       DataOutputStream out = new DataOutputStream(buf);
       try {
-        out.writeInt(this.id);                // write call id
-        out.writeBoolean(error != null);      // write error flag
+        // Call id.
+        out.writeInt(this.id);
+        // Write flag.
+        byte flag = (error != null)?
+          ResponseFlag.getErrorAndLengthSet(): ResponseFlag.getLengthSetOnly();
+        out.writeByte(flag);
+        // Place holder for length set later below after we
+        // fill the buffer with data.
+        out.writeInt(0xdeadbeef);
       } catch (IOException e) {
         errorClass = e.getClass().getName();
         error = StringUtils.stringifyException(e);
@@ -331,7 +339,16 @@ public abstract class HBaseServer implements RpcServer {
         LOG.warn("Error sending response to call: ", e);
       }
 
-      this.response = buf.getByteBuffer();
+      // Set the length into the ByteBuffer after call id and after
+      // byte flag.
+      ByteBuffer bb = buf.getByteBuffer();
+      int bufSiz = bb.remaining();
+      // Move to the size location in our ByteBuffer past call.id
+      // and past the byte flag.
+      bb.position(Bytes.SIZEOF_INT + Bytes.SIZEOF_BYTE); 
+      bb.putInt(bufSiz);
+      bb.position(0);
+      this.response = bb;
     }
 
     @Override

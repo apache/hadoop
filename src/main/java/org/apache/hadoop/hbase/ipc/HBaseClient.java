@@ -33,14 +33,10 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
@@ -280,7 +276,7 @@ public class HBaseClient {
        * otherwise, throw the timeout exception.
        */
       private void handleTimeout(SocketTimeoutException e) throws IOException {
-        if (shouldCloseConnection.get() || !running.get() || 
+        if (shouldCloseConnection.get() || !running.get() ||
             remoteId.rpcTimeout > 0) {
           throw e;
         }
@@ -552,14 +548,24 @@ public class HBaseClient {
       touch();
 
       try {
-        int id = in.readInt();                    // try to read an id
+        // See HBaseServer.Call.setResponse for where we write out the response.
+        // It writes the call.id (int), a flag byte, then optionally the length
+        // of the response (int) followed by data.
+
+        // Read the call id.
+        int id = in.readInt();
 
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
-
         Call call = calls.remove(id);
 
-        boolean isError = in.readBoolean();     // read if error
+        // Read the flag byte
+        byte flag = in.readByte();
+        boolean isError = ResponseFlag.isError(flag);
+        if (ResponseFlag.isLength(flag)) {
+          // Currently length if present is unused.
+          in.readInt();
+        }
         if (isError) {
           //noinspection ThrowableInstanceNeverThrown
           call.setException(new RemoteException( WritableUtils.readString(in),
