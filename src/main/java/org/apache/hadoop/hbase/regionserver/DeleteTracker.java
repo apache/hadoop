@@ -51,9 +51,9 @@ public interface DeleteTracker {
    * @param qualifierOffset column qualifier offset
    * @param qualifierLength column qualifier length
    * @param timestamp timestamp
-   * @return true is the specified KeyValue is deleted, false if not
+   * @return deleteResult The result tells whether the KeyValue is deleted and why
    */
-  public boolean isDeleted(byte [] buffer, int qualifierOffset,
+  public DeleteResult isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp);
 
   /**
@@ -92,6 +92,19 @@ public interface DeleteTracker {
     INCLUDE_NEW_NEXT_BOTH,
     NEXT_OLD,
     NEXT_NEW
+  }
+
+  /**
+   * Returns codes for delete result.
+   * The codes tell the ScanQueryMatcher whether the kv is deleted and why.
+   * Based on the delete result, the ScanQueryMatcher will decide the next
+   * operation
+   */
+  public static enum DeleteResult {
+    FAMILY_DELETED, // The KeyValue is deleted by a delete family.
+    COLUMN_DELETED, // The KeyValue is deleted by a delete column.
+    VERSION_DELETED, // The KeyValue is deleted by a version delete.
+    NOT_DELETED
   }
 
 }

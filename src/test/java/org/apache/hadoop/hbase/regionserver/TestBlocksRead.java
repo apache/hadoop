@@ -283,14 +283,14 @@ public class TestBlocksRead extends HBaseTestCase {
     deleteFamily(FAMILY, "row", 6);
     region.flushcache();
 
-    // Baseline expected blocks read: 6.
-    kvs = getData(FAMILY, "row", "col1", 6);
+    // Baseline expected blocks read: 4. [HBASE-4585]
+    kvs = getData(FAMILY, "row", "col1", 4);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col2", 6);
+    kvs = getData(FAMILY, "row", "col2", 5);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", "col3", 6);
+    kvs = getData(FAMILY, "row", "col3", 4);
     assertEquals(0, kvs.length);
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 6);
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 5);
     assertEquals(0, kvs.length);
 
     // File 5: Delete
@@ -304,8 +304,8 @@ public class TestBlocksRead extends HBaseTestCase {
     putData(FAMILY, "row", "col3", 9);
     region.flushcache();
 
-    // Baseline expected blocks read: 10
-    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 10);
+    // Baseline expected blocks read: 8. [HBASE-4585]
+    kvs = getData(FAMILY, "row", Arrays.asList("col1", "col2", "col3"), 8);
     assertEquals(0, kvs.length);
 
     // File 7: Put back new data
