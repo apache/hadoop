@@ -38,7 +38,6 @@ import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -110,6 +109,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
  * The information is shared across different components using AppContext.
  */
 
+@SuppressWarnings("deprecation")
 public class MRAppMaster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(MRAppMaster.class);
@@ -262,7 +262,7 @@ public class MRAppMaster extends CompositeService {
           return;
         }
         Path jobTempDirPath = new Path(jobTempDir);
-        LOG.info("Deleting staging directory " + fs.getDefaultUri(getConfig()) +
+        LOG.info("Deleting staging directory " + FileSystem.getDefaultUri(getConfig()) +
             " " + jobTempDir);
         fs.delete(jobTempDirPath, true);
       }
@@ -596,6 +596,7 @@ public class MRAppMaster extends CompositeService {
       return jobs;
     }
 
+    @SuppressWarnings("rawtypes")
     @Override
     public EventHandler getEventHandler() {
       return dispatcher.getEventHandler();
@@ -612,6 +613,7 @@ public class MRAppMaster extends CompositeService {
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void start() {
 
@@ -665,6 +667,7 @@ public class MRAppMaster extends CompositeService {
    * In a typical workflow, one presumably would want to uberize only a subset
    * of the jobs (the "small" ones), which is awkward with the current design.
    */
+  @SuppressWarnings("unchecked")
   protected void startJobs() {
     /** create a job-start event to get this ball rolling */
     JobEvent startJobEvent = new JobEvent(job.getID(), JobEventType.JOB_START);
@@ -673,6 +676,7 @@ public class MRAppMaster extends CompositeService {
   }
 
   private class JobEventDispatcher implements EventHandler<JobEvent> {
+    @SuppressWarnings("unchecked")
     @Override
     public void handle(JobEvent event) {
       ((EventHandler<JobEvent>)context.getJob(event.getJobId())).handle(event);
@@ -680,6 +684,7 @@ public class MRAppMaster extends CompositeService {
   }
 
   private class TaskEventDispatcher implements EventHandler<TaskEvent> {
+    @SuppressWarnings("unchecked")
     @Override
     public void handle(TaskEvent event) {
       Task task = context.getJob(event.getTaskID().getJobId()).getTask(
@@ -690,6 +695,7 @@ public class MRAppMaster extends CompositeService {
 
   private class TaskAttemptEventDispatcher 
           implements EventHandler<TaskAttemptEvent> {
+    @SuppressWarnings("unchecked")
     @Override
     public void handle(TaskAttemptEvent event) {
       Job job = context.getJob(event.getTaskAttemptID().getTaskId().getJobId());

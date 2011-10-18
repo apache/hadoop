@@ -1624,6 +1624,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3165. Ensure logging options are set correctly for MR AM and
     tasks. (todd via acmurthy) 
 
+    MAPREDUCE-3203. Fix some javac warnings in MRAppMaster. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
