@@ -93,6 +93,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -616,7 +617,7 @@ public abstract class TaskAttemptImpl implements
       serviceData.put(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
           ShuffleHandler.serializeServiceData(jobToken));
 
-      MRApps.addToEnvironment(
+      Apps.addToEnvironment(
           environment,  
           Environment.CLASSPATH.name(), 
           getInitialClasspath());

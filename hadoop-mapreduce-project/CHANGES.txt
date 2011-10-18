@@ -397,6 +397,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3136. Added documentation for setting up Hadoop clusters in both
     non-secure and secure mode for both HDFS & YARN. (acmurthy)
 
+    MAPREDUCE-3068. Added a whitelist of environment variables for containers
+    from the NodeManager and set MALLOC_ARENA_MAX for all daemons and
+    containers. (Chris Riccomini via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

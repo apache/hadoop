@@ -213,6 +213,14 @@ public class YarnConfiguration extends Configuration {
   
   /** Prefix for all node manager configs.*/
   public static final String NM_PREFIX = "yarn.nodemanager.";
+
+  /** Environment variables that will be sent to containers.*/
+  public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
+  public static final String DEFAULT_NM_ADMIN_USER_ENV = "MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX";
+
+  /** Environment variables that containers may override rather than use NodeManager's default.*/
+  public static final String NM_ENV_WHITELIST = NM_PREFIX + "env-whitelist";
+  public static final String DEFAULT_NM_ENV_WHITELIST = "JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,YARN_HOME";
   
   /** address of node manager IPC.*/
   public static final String NM_ADDRESS = NM_PREFIX + "address";

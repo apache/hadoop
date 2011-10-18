@@ -141,6 +141,11 @@ public interface ApplicationConstants {
     HADOOP_HDFS_HOME("HADOOP_HDFS_HOME"),
     
     /**
+     * $MALLOC_ARENA_MAX
+     */
+    MALLOC_ARENA_MAX("MALLOC_ARENA_MAX"),
+    
+    /**
      * $YARN_HOME
      */
     YARN_HOME("YARN_HOME");

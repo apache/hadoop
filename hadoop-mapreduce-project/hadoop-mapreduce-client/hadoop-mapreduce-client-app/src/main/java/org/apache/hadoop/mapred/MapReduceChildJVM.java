@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.ID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.util.StringUtils;
@@ -78,15 +78,15 @@ public class MapReduceChildJVM {
             );
     
     // Add pwd to LD_LIBRARY_PATH, add this before adding anything else
-    MRApps.addToEnvironment(
+    Apps.addToEnvironment(
         environment, 
         Environment.LD_LIBRARY_PATH.name(), 
         Environment.PWD.$());
 
     // Add the env variables passed by the user & admin
     String mapredChildEnv = getChildEnv(conf, task.isMapTask());
-    MRApps.setEnvFromInputString(environment, mapredChildEnv);
-    MRApps.setEnvFromInputString(
+    Apps.setEnvFromInputString(environment, mapredChildEnv);
+    Apps.setEnvFromInputString(
         environment, 
         conf.get(
             MRJobConfig.MAPRED_ADMIN_USER_ENV, 
