@@ -733,6 +733,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7724. Fixed hadoop-setup-conf.sh to put proxy user in
     core-site.xml.  (Arpit Gupta via Eric Yang)
 
+    HADOOP-7755. Detect MapReduce PreCommit Trunk builds silently failing
+    when running test-patch.sh. (Jonathan Eagles via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
