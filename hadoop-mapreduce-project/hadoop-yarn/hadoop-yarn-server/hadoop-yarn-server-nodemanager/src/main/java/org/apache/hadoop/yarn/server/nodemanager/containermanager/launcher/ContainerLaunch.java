@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
+import org.apache.hadoop.yarn.util.Apps;
 public class ContainerLaunch implements Callable<Integer> {
 
   private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
@@ -309,7 +309,7 @@ public class ContainerLaunch implements Callable<Integer> {
     /**
      * Non-modifiable environment variables
      */
-    
+
     putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
     
     putEnvIfNotNull(environment, 
@@ -343,11 +343,20 @@ public class ContainerLaunch implements Callable<Integer> {
      * Modifiable environment variables
      */
     
-    putEnvIfAbsent(environment, Environment.JAVA_HOME.name());
-    putEnvIfAbsent(environment, Environment.HADOOP_COMMON_HOME.name());
-    putEnvIfAbsent(environment, Environment.HADOOP_HDFS_HOME.name());
-    putEnvIfAbsent(environment, Environment.YARN_HOME.name());
+    // allow containers to override these variables
+    String[] whitelist = conf.get(YarnConfiguration.NM_ENV_WHITELIST, YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+    
+    for(String whitelistEnvVariable : whitelist) {
+      putEnvIfAbsent(environment, whitelistEnvVariable.trim());
+    }
 
+    // variables here will be forced in, even if the container has specified them.
+    Apps.setEnvFromInputString(
+      environment,
+      conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV)
+    );
   }
     
   static void writeLaunchEnv(OutputStream out,
