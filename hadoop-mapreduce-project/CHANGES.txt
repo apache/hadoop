@@ -1609,6 +1609,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3196. TestLinuxContainerExecutorWithMocks fails on Mac OSX.
     (Arun Murthy via mahadev)
 
+    MAPREDUCE-3197. TestMRClientService failing on building clean checkout of 
+    branch 0.23 (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
