@@ -20,7 +20,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
@@ -320,14 +322,14 @@ public class YARNRunner implements ClientProtocol {
     }
 
     // Setup the command to run the AM
-    Vector<CharSequence> vargs = new Vector<CharSequence>(8);
+    List<String> vargs = new ArrayList<String>(8);
     vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 
+    // TODO: why do we use 'conf' some places and 'jobConf' others?
     long logSize = TaskLog.getTaskLogLength(new JobConf(conf));
-    vargs.add("-Dlog4j.configuration=container-log4j.properties");
-    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "="
-        + ApplicationConstants.LOG_DIR_EXPANSION_VAR);
-    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
+    String logLevel = jobConf.get(
+        MRJobConfig.MR_AM_LOG_LEVEL, MRJobConfig.DEFAULT_MR_AM_LOG_LEVEL);
+    MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
 
     vargs.add(conf.get(MRJobConfig.MR_AM_COMMAND_OPTS,
         MRJobConfig.DEFAULT_MR_AM_COMMAND_OPTS));

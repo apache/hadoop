@@ -1621,6 +1621,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2762. Cleanup MR staging directory on completion. (mahadev via
     acmurthy) 
 
+    MAPREDUCE-3165. Ensure logging options are set correctly for MR AM and
+    tasks. (todd via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
