@@ -189,7 +189,7 @@ public class HftpFileSystem extends FileSystem {
       for (Token<? extends TokenIdentifier> t : ugi.getTokens()) {
         Text kind = t.getKind();
         if (DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind)) {
-          if (t.getService().toString().equals(hdfsServiceName)) {
+          if (t.getService().equals(hdfsServiceName)) {
             setDelegationToken(t);
             break;
           }
