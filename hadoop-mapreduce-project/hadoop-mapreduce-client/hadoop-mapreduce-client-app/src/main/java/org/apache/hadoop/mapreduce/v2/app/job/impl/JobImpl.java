@@ -339,7 +339,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_DIAGNOSTIC_UPDATE,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
                   JobEventType.INTERNAL_ERROR))
-
           // create the topology tables
           .installTopology();
  
@@ -724,6 +723,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.getEventHandler().handle(new JobHistoryEvent(this.jobId, jfe));    
   }
   
+  /**
+   * Create the default file System for this job.
+   * @param conf the conf object
+   * @return the default filesystem for this job
+   * @throws IOException
+   */
+  protected FileSystem getFileSystem(Configuration conf) throws IOException {
+    return FileSystem.get(conf);
+  }
+  
   static JobState checkJobCompleteSuccess(JobImpl job) {
     // check for Job success
     if (job.completedTaskCount == job.getTasks().size()) {
@@ -733,7 +742,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       } catch (IOException e) {
         LOG.warn("Could not do commit for Job", e);
       }
-      
       job.logJobHistoryFinishedEvent();
       return job.finished(JobState.SUCCEEDED);
     }
@@ -816,7 +824,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.metrics.preparingJob(job);
       try {
         setup(job);
-        job.fs = FileSystem.get(job.conf);
+        job.fs = job.getFileSystem(job.conf);
 
         //log to job history
         JobSubmittedEvent jse = new JobSubmittedEvent(job.oldJobId,
@@ -848,13 +856,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           LOG.info("Using mapred newApiCommitter.");
         }
         
-        LOG.info("OutputCommitter set in config " + job.conf.get("mapred.output.committer.class"));
+        LOG.info("OutputCommitter set in config " + job.conf.get(
+            "mapred.output.committer.class"));
         
         if (newApiCommitter) {
           job.jobContext = new JobContextImpl(job.conf,
               job.oldJobId);
-          org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID = RecordFactoryProvider
-              .getRecordFactory(null)
+          org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID
+          = RecordFactoryProvider.getRecordFactory(null)
               .newRecordInstance(
                   org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId.class);
           attemptID.setTaskId(RecordFactoryProvider.getRecordFactory(null)
@@ -884,14 +893,17 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           inputLength += taskSplitMetaInfo[i].getInputDataLength();
         }
 
-//FIXME:  need new memory criterion for uber-decision (oops, too late here; until AM-resizing supported, must depend on job client to pass fat-slot needs)
+        //FIXME:  need new memory criterion for uber-decision (oops, too late here; 
+        // until AM-resizing supported, must depend on job client to pass fat-slot needs)
         // these are no longer "system" settings, necessarily; user may override
         int sysMaxMaps = job.conf.getInt(MRJobConfig.JOB_UBERTASK_MAXMAPS, 9);
         int sysMaxReduces =
             job.conf.getInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 1);
         long sysMaxBytes = job.conf.getLong(MRJobConfig.JOB_UBERTASK_MAXBYTES,
-            job.conf.getLong("dfs.block.size", 64*1024*1024));  //FIXME: this is wrong; get FS from [File?]InputFormat and default block size from that
-        //long sysMemSizeForUberSlot = JobTracker.getMemSizeForReduceSlot(); // FIXME [could use default AM-container memory size...]
+            job.conf.getLong("dfs.block.size", 64*1024*1024));  //FIXME: this is 
+        // wrong; get FS from [File?]InputFormat and default block size from that
+        //long sysMemSizeForUberSlot = JobTracker.getMemSizeForReduceSlot(); 
+        // FIXME [could use default AM-container memory size...]
 
         boolean uberEnabled =
             job.conf.getBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
@@ -900,8 +912,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         boolean smallInput = (inputLength <= sysMaxBytes);
         boolean smallMemory = true;  //FIXME (see above)
             // ignoring overhead due to UberTask and statics as negligible here:
-//  FIXME   && (Math.max(memoryPerMap, memoryPerReduce) <= sysMemSizeForUberSlot
-//              || sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT)
+        //  FIXME   && (Math.max(memoryPerMap, memoryPerReduce) <= sysMemSizeForUberSlot
+        //              || sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT)
         boolean notChainJob = !isChainJob(job.conf);
 
         // User has overall veto power over uberization, or user can modify
@@ -935,7 +947,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           job.conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 1);
 
           // disable speculation:  makes no sense to speculate an entire job
-//        canSpeculateMaps = canSpeculateReduces = false; // [TODO: in old version, ultimately was from conf.getMapSpeculativeExecution(), conf.getReduceSpeculativeExecution()]
+          //canSpeculateMaps = canSpeculateReduces = false; // [TODO: in old 
+          //version, ultimately was from conf.getMapSpeculativeExecution(), 
+          //conf.getReduceSpeculativeExecution()]
         } else {
           StringBuilder msg = new StringBuilder();
           msg.append("Not uberizing ").append(job.jobId).append(" because:");
