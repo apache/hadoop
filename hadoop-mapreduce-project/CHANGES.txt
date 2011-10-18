@@ -1666,6 +1666,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3197. TestMRClientService failing on building clean checkout of 
     branch 0.23 (mahadev)
 
+    MAPREDUCE-2762. Cleanup MR staging directory on completion. (mahadev via
+    acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

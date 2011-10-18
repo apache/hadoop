@@ -238,6 +238,8 @@ public interface MRJobConfig {
   public static final String REDUCE_JAVA_OPTS = "mapreduce.reduce.java.opts";
 
   public static final String REDUCE_ULIMIT = "mapreduce.reduce.ulimit";
+  
+  public static final String MAPREDUCE_JOB_DIR = "mapreduce.job.dir";
 
   public static final String REDUCE_MAX_ATTEMPTS = "mapreduce.reduce.maxattempts";
 
