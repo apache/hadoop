@@ -54,13 +54,13 @@ public interface ClusterStory {
   /**
    * Get {@link MachineNode} by its host name.
    * 
-   * @return The {@line MachineNode} with the same name. Or null if not found.
+   * @return The {@link MachineNode} with the same name. Or null if not found.
    */
   public MachineNode getMachineByName(String name);
   
   /**
    * Get {@link RackNode} by its name.
-   * @return The {@line RackNode} with the same name. Or null if not found.
+   * @return The {@link RackNode} with the same name. Or null if not found.
    */
   public RackNode getRackByName(String name);
 

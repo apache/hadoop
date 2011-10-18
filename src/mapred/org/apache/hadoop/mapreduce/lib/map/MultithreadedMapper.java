@@ -235,6 +235,10 @@ public class MultithreadedMapper<K1, V1, K2, V2>
       outer.setStatus(status);
     }
     
+    @Override
+    public float getProgress() {
+      return outer.getProgress();
+    }
   }
 
   private class MapRunner extends Thread {

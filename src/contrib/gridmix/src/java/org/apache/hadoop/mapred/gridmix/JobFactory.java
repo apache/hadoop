@@ -63,6 +63,7 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
   protected final JobStoryProducer jobProducer;
   protected final ReentrantLock lock = new ReentrantLock(true);
   protected final JobCreator jobCreator;
+  protected int numJobsInTrace = 0;
 
   /**
    * Creating a new instance does not start the thread.
@@ -112,7 +113,7 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
     public MinTaskInfo(TaskInfo info) {
       super(info.getInputBytes(), info.getInputRecords(),
             info.getOutputBytes(), info.getOutputRecords(),
-            info.getTaskMemory());
+            info.getTaskMemory(), info.getResourceUsageMetrics());
     }
     public long getInputBytes() {
       return Math.max(0, super.getInputBytes());
@@ -168,13 +169,33 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
 
   protected abstract Thread createReaderThread() ;
 
+  //gets the next job from the trace and does some bookkeeping for the same
+  private JobStory getNextJobFromTrace() throws IOException {
+    JobStory story = jobProducer.getNextJob();
+    if (story != null) {
+      ++numJobsInTrace;
+    }
+    return story;
+  }
+
   protected JobStory getNextJobFiltered() throws IOException {
-    JobStory job;
-    do {
-      job = jobProducer.getNextJob();
-    } while (job != null
-        && (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS ||
-            job.getSubmissionTime() < 0));
+    JobStory job = getNextJobFromTrace();
+    while (job != null &&
+           (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS ||
+            job.getSubmissionTime() < 0)) {
+      if (LOG.isDebugEnabled()) {
+        String reason = null;
+        if (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS) {
+          reason = "STATE (" + job.getOutcome().name() + ") ";
+        }
+        if (job.getSubmissionTime() < 0) {
+          reason += "SUBMISSION-TIME (" + job.getSubmissionTime() + ")";
+        }
+        LOG.debug("Ignoring job " + job.getJobID() + " from the input trace."
+                  + " Reason: " + reason == null ? "N/A" : reason);
+      }
+      job = getNextJobFromTrace();
+    }
     return null == job ? null : new FilterJobStory(job) {
         @Override
         public TaskInfo getTaskInfo(TaskType taskType, int taskNumber) {

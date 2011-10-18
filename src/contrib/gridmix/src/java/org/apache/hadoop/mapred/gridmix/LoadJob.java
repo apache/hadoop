@@ -22,6 +22,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskTracker;
+import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.ResourceUsageMatcher;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -30,10 +33,13 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
+import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 
 import java.io.IOException;
@@ -83,6 +89,106 @@ class LoadJob extends GridmixJob {
     return job;
   }
 
+  @Override
+  protected boolean canEmulateCompression() {
+    return true;
+  }
+  
+  /**
+   * This is a progress based resource usage matcher.
+   */
+  @SuppressWarnings("unchecked")
+  static class ResourceUsageMatcherRunner extends Thread {
+    private final ResourceUsageMatcher matcher;
+    private final Progressive progress;
+    private final long sleepTime;
+    private static final String SLEEP_CONFIG = 
+      "gridmix.emulators.resource-usage.sleep-duration";
+    private static final long DEFAULT_SLEEP_TIME = 100; // 100ms
+    
+    ResourceUsageMatcherRunner(final TaskInputOutputContext context, 
+                               ResourceUsageMetrics metrics) {
+      Configuration conf = context.getConfiguration();
+      
+      // set the resource calculator plugin
+      Class<? extends ResourceCalculatorPlugin> clazz =
+        conf.getClass(TaskTracker.TT_RESOURCE_CALCULATOR_PLUGIN,
+                      null, ResourceCalculatorPlugin.class);
+      ResourceCalculatorPlugin plugin = 
+        ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
+      
+      // set the other parameters
+      this.sleepTime = conf.getLong(SLEEP_CONFIG, DEFAULT_SLEEP_TIME);
+      progress = new Progressive() {
+        @Override
+        public float getProgress() {
+          return context.getProgress();
+        }
+      };
+      
+      // instantiate a resource-usage-matcher
+      matcher = new ResourceUsageMatcher();
+      matcher.configure(conf, plugin, metrics, progress);
+    }
+    
+    protected void match() throws Exception {
+      // match the resource usage
+      matcher.matchResourceUsage();
+    }
+    
+    @Override
+    public void run() {
+      LOG.info("Resource usage matcher thread started.");
+      try {
+        while (progress.getProgress() < 1) {
+          // match
+          match();
+          
+          // sleep for some time
+          try {
+            Thread.sleep(sleepTime);
+          } catch (Exception e) {}
+        }
+        
+        // match for progress = 1
+        match();
+        LOG.info("Resource usage emulation complete! Matcher exiting");
+      } catch (Exception e) {
+        LOG.info("Exception while running the resource-usage-emulation matcher"
+                 + " thread! Exiting.", e);
+      }
+    }
+  }
+  
+  // Makes sure that the TaskTracker doesn't kill the map/reduce tasks while
+  // they are emulating
+  private static class StatusReporter extends Thread {
+    private TaskInputOutputContext context;
+    StatusReporter(TaskInputOutputContext context) {
+      this.context = context;
+    }
+
+    @Override
+    public void run() {
+      LOG.info("Status reporter thread started.");
+      try {
+        while (context.getProgress() < 1) {
+          // report progress
+          context.progress();
+
+          // sleep for some time
+          try {
+            Thread.sleep(100); // sleep for 100ms
+          } catch (Exception e) {}
+        }
+        
+        LOG.info("Status reporter thread exiting");
+      } catch (Exception e) {
+        LOG.info("Exception while running the status reporter thread!", e);
+      }
+    }
+  }
+  
   public static class LoadMapper
       extends Mapper<NullWritable,GridmixRecord,GridmixKey,GridmixRecord> {
 
@@ -95,6 +201,9 @@ class LoadJob extends GridmixJob {
     private final GridmixKey key = new GridmixKey();
     private final GridmixRecord val = new GridmixRecord();
 
+    private ResourceUsageMatcherRunner matcher = null;
+    private StatusReporter reporter = null;
+    
     @Override
     protected void setup(Context ctxt)
         throws IOException, InterruptedException {
@@ -104,6 +213,20 @@ class LoadJob extends GridmixJob {
       final long[] reduceBytes = split.getOutputBytes();
       final long[] reduceRecords = split.getOutputRecords();
 
+      // enable gridmix map output record for compression
+      final boolean emulateMapOutputCompression = 
+        CompressionEmulationUtil.isCompressionEmulationEnabled(conf)
+        && conf.getBoolean("mapred.compress.map.output", false);
+      float compressionRatio = 1.0f;
+      if (emulateMapOutputCompression) {
+        compressionRatio = 
+          CompressionEmulationUtil.getMapOutputCompressionEmulationRatio(conf);
+        LOG.info("GridMix is configured to use a compression ratio of " 
+                 + compressionRatio + " for the map output data.");
+        key.setCompressibility(true, compressionRatio);
+        val.setCompressibility(true, compressionRatio);
+      }
+      
       long totalRecords = 0L;
       final int nReduces = ctxt.getNumReduceTasks();
       if (nReduces > 0) {
@@ -114,17 +237,30 @@ class LoadJob extends GridmixJob {
           if (i == id) {
             spec.bytes_out = split.getReduceBytes(idx);
             spec.rec_out = split.getReduceRecords(idx);
+            spec.setResourceUsageSpecification(
+                   split.getReduceResourceUsageMetrics(idx));
             ++idx;
             id += maps;
           }
+          // set the map output bytes such that the final reduce input bytes 
+          // match the expected value obtained from the original job
+          long mapOutputBytes = reduceBytes[i];
+          if (emulateMapOutputCompression) {
+            mapOutputBytes /= compressionRatio;
+          }
           reduces.add(new IntermediateRecordFactory(
-              new AvgRecordFactory(reduceBytes[i], reduceRecords[i], conf),
+              new AvgRecordFactory(mapOutputBytes, reduceRecords[i], conf, 
+                                   5*1024),
               i, reduceRecords[i], spec, conf));
           totalRecords += reduceRecords[i];
         }
       } else {
-        reduces.add(new AvgRecordFactory(reduceBytes[0], reduceRecords[0],
-              conf));
+        long mapOutputBytes = reduceBytes[0];
+        if (emulateMapOutputCompression) {
+          mapOutputBytes /= compressionRatio;
+        }
+        reduces.add(new AvgRecordFactory(mapOutputBytes, reduceRecords[0],
+                    conf, 5*1024));
         totalRecords = reduceRecords[0];
       }
       final long splitRecords = split.getInputRecords();
@@ -134,6 +270,13 @@ class LoadJob extends GridmixJob {
         : splitRecords;
       ratio = totalRecords / (1.0 * inputRecords);
       acc = 0.0;
+      
+      matcher = new ResourceUsageMatcherRunner(ctxt, 
+                      split.getMapResourceUsageMetrics());
+      
+      // start the status reporter thread
+      reporter = new StatusReporter(ctxt);
+      reporter.start();
     }
 
     @Override
@@ -151,6 +294,13 @@ class LoadJob extends GridmixJob {
         }
         context.write(key, val);
         acc -= 1.0;
+        
+        // match inline
+        try {
+          matcher.match();
+        } catch (Exception e) {
+          LOG.debug("Error in resource usage emulation! Message: ", e);
+        }
       }
     }
 
@@ -162,8 +312,18 @@ class LoadJob extends GridmixJob {
         while (factory.next(key, val)) {
           context.write(key, val);
           key.setSeed(r.nextLong());
+          
+          // match inline
+          try {
+            matcher.match();
+          } catch (Exception e) {
+            LOG.debug("Error in resource usage emulation! Message: ", e);
+          }
         }
       }
+      
+      // start the matcher thread since the map phase ends here
+      matcher.start();
     }
   }
 
@@ -177,6 +337,9 @@ class LoadJob extends GridmixJob {
     private double ratio;
     private RecordFactory factory;
 
+    private ResourceUsageMatcherRunner matcher = null;
+    private StatusReporter reporter = null;
+    
     @Override
     protected void setup(Context context)
         throws IOException, InterruptedException {
@@ -187,20 +350,48 @@ class LoadJob extends GridmixJob {
       long outBytes = 0L;
       long outRecords = 0L;
       long inRecords = 0L;
+      ResourceUsageMetrics metrics = new ResourceUsageMetrics();
       for (GridmixRecord ignored : context.getValues()) {
         final GridmixKey spec = context.getCurrentKey();
         inRecords += spec.getReduceInputRecords();
         outBytes += spec.getReduceOutputBytes();
         outRecords += spec.getReduceOutputRecords();
+        if (spec.getReduceResourceUsageMetrics() != null) {
+          metrics = spec.getReduceResourceUsageMetrics();
+        }
       }
       if (0 == outRecords && inRecords > 0) {
         LOG.info("Spec output bytes w/o records. Using input record count");
         outRecords = inRecords;
       }
+      
+      // enable gridmix reduce output record for compression
+      Configuration conf = context.getConfiguration();
+      if (CompressionEmulationUtil.isCompressionEmulationEnabled(conf)
+          && FileOutputFormat.getCompressOutput(context)) {
+        float compressionRatio = 
+          CompressionEmulationUtil
+            .getReduceOutputCompressionEmulationRatio(conf);
+        LOG.info("GridMix is configured to use a compression ratio of " 
+                 + compressionRatio + " for the reduce output data.");
+        val.setCompressibility(true, compressionRatio);
+        
+        // Set the actual output data size to make sure that the actual output 
+        // data size is same after compression
+        outBytes /= compressionRatio;
+      }
+      
       factory =
-        new AvgRecordFactory(outBytes, outRecords, context.getConfiguration());
+        new AvgRecordFactory(outBytes, outRecords, 
+                             context.getConfiguration(), 5*1024);
       ratio = outRecords / (1.0 * inRecords);
       acc = 0.0;
+      
+      matcher = new ResourceUsageMatcherRunner(context, metrics);
+      
+      // start the status reporter thread
+      reporter = new StatusReporter(context);
+      reporter.start();
     }
     @Override
     protected void reduce(GridmixKey key, Iterable<GridmixRecord> values,
@@ -210,6 +401,13 @@ class LoadJob extends GridmixJob {
         while (acc >= 1.0 && factory.next(null, val)) {
           context.write(NullWritable.get(), val);
           acc -= 1.0;
+          
+          // match inline
+          try {
+            matcher.match();
+          } catch (Exception e) {
+            LOG.debug("Error in resource usage emulation! Message: ", e);
+          }
         }
       }
     }
@@ -220,6 +418,13 @@ class LoadJob extends GridmixJob {
       while (factory.next(null, val)) {
         context.write(NullWritable.get(), val);
         val.setSeed(r.nextLong());
+        
+        // match inline
+        try {
+          matcher.match();
+        } catch (Exception e) {
+          LOG.debug("Error in resource usage emulation! Message: ", e);
+        }
       }
     }
   }
@@ -311,11 +516,13 @@ class LoadJob extends GridmixJob {
       final int nSpec = reds / maps + ((reds % maps) > i ? 1 : 0);
       final long[] specBytes = new long[nSpec];
       final long[] specRecords = new long[nSpec];
+      final ResourceUsageMetrics[] metrics = new ResourceUsageMetrics[nSpec];
       for (int j = 0; j < nSpec; ++j) {
         final TaskInfo info =
           jobdesc.getTaskInfo(TaskType.REDUCE, i + j * maps);
         specBytes[j] = info.getOutputBytes();
         specRecords[j] = info.getOutputRecords();
+        metrics[j] = info.getResourceUsageMetrics();
         if (LOG.isDebugEnabled()) {
           LOG.debug(String.format("SPEC(%d) %d -> %d %d %d", id(), i,
               i + j * maps, info.getOutputRecords(), info.getOutputBytes()));
@@ -326,7 +533,8 @@ class LoadJob extends GridmixJob {
               info.getInputBytes(), 3), maps, i,
             info.getInputBytes(), info.getInputRecords(),
             info.getOutputBytes(), info.getOutputRecords(),
-            reduceByteRatio, reduceRecordRatio, specBytes, specRecords));
+            reduceByteRatio, reduceRecordRatio, specBytes, specRecords,
+            info.getResourceUsageMetrics(), metrics));
     }
     pushDescription(id(), splits);
   }

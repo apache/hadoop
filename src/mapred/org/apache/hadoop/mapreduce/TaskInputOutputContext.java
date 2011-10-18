@@ -93,6 +93,10 @@ public abstract class TaskInputOutputContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     reporter.progress();
   }
 
+  public float getProgress() {
+    return reporter.getProgress();
+  }
+
   @Override
   public void setStatus(String status) {
     reporter.setStatus(status);

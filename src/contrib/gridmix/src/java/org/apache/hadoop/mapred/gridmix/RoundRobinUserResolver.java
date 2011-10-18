@@ -38,12 +38,18 @@ public class RoundRobinUserResolver implements UserResolver {
 
   private int uidx = 0;
   private List<UserGroupInformation> users = Collections.emptyList();
-  private final HashMap<UserGroupInformation,UserGroupInformation> usercache =
-    new HashMap<UserGroupInformation,UserGroupInformation>();
+
+  /**
+   *  Mapping between user names of original cluster and UGIs of proxy users of
+   *  simulated cluster
+   */
+  private final HashMap<String,UserGroupInformation> usercache =
+      new HashMap<String,UserGroupInformation>();
   
   /**
-   * Userlist assumes one UGI per line, each UGI matching
-   * &lt;username&gt;,&lt;group&gt;[,group]*
+   * Userlist assumes one user per line.
+   * Each line in users-list-file is of the form &lt;username&gt;[,group]* 
+   * <br> Group names are ignored(they are not parsed at all).
    */
   private List<UserGroupInformation> parseUserList(
       URI userUri, Configuration conf) throws IOException {
@@ -54,64 +60,78 @@ public class RoundRobinUserResolver implements UserResolver {
     final Path userloc = new Path(userUri.toString());
     final Text rawUgi = new Text();
     final FileSystem fs = userloc.getFileSystem(conf);
-    final ArrayList<UserGroupInformation> ret = new ArrayList();
+    final ArrayList<UserGroupInformation> ugiList =
+        new ArrayList<UserGroupInformation>();
 
     LineReader in = null;
     try {
-      final ArrayList<String> groups = new ArrayList();
       in = new LineReader(fs.open(userloc));
-      while (in.readLine(rawUgi) > 0) {
+      while (in.readLine(rawUgi) > 0) {//line is of the form username[,group]*
+        // e is end position of user name in this line
         int e = rawUgi.find(",");
-        if (e <= 0) {
+        if (rawUgi.getLength() == 0 || e == 0) {
           throw new IOException("Missing username: " + rawUgi);
         }
+        if (e == -1) {
+          e = rawUgi.getLength();
+        }
         final String username = Text.decode(rawUgi.getBytes(), 0, e);
-        int s = e;
-        while ((e = rawUgi.find(",", ++s)) != -1) {
-          groups.add(Text.decode(rawUgi.getBytes(), s, e - s));
-          s = e;
+        UserGroupInformation ugi = null;
+        try {
+          ugi = UserGroupInformation.createProxyUser(username,
+                    UserGroupInformation.getLoginUser());
+        } catch (IOException ioe) {
+          LOG.error("Error while creating a proxy user " ,ioe);
         }
-        groups.add(Text.decode(rawUgi.getBytes(), s, rawUgi.getLength() - s));
-        if (groups.size() == 0) {
-          throw new IOException("Missing groups: " + rawUgi);
+        if (ugi != null) {
+          ugiList.add(ugi);
         }
-        ret.add(UserGroupInformation.createRemoteUser(username));
+        // No need to parse groups, even if they exist. Go to next line
       }
     } finally {
       if (in != null) {
         in.close();
       }
     }
-    return ret;
+    return ugiList;
   }
 
   @Override
   public synchronized boolean setTargetUsers(URI userloc, Configuration conf)
       throws IOException {
+    uidx = 0;
     users = parseUserList(userloc, conf);
     if (users.size() == 0) {
-      throw new IOException("Empty user list");
+      throw new IOException(buildEmptyUsersErrorMsg(userloc));
     }
-    usercache.keySet().retainAll(users);
+    usercache.clear();
     return true;
+  }
+
+  static String buildEmptyUsersErrorMsg(URI userloc) {
+    return "Empty user list is not allowed for RoundRobinUserResolver. Provided"
+    + " user resource URI '" + userloc + "' resulted in an empty user list.";
   }
 
   @Override
   public synchronized UserGroupInformation getTargetUgi(
       UserGroupInformation ugi) {
-    UserGroupInformation ret = usercache.get(ugi);
-    if (null == ret) {
-      ret = users.get(uidx++ % users.size());
-      usercache.put(ugi, ret);
+    // UGI of proxy user
+    UserGroupInformation targetUGI = usercache.get(ugi.getUserName());
+    if (targetUGI == null) {
+      targetUGI = users.get(uidx++ % users.size());
+      usercache.put(ugi.getUserName(), targetUGI);
     }
-    UserGroupInformation val = null;
-    try {
-      val = UserGroupInformation.createProxyUser(
-        ret.getUserName(), UserGroupInformation.getLoginUser());
-    } catch (IOException e) {
-      LOG.error("Error while creating the proxy user " ,e);
-    }
-    return val;
+    return targetUGI;
   }
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * {@link RoundRobinUserResolver} needs to map the users in the
+   * trace to the provided list of target users. So user list is needed.
+   */
+  public boolean needsTargetUsersList() {
+    return true;
+  }
 }

@@ -189,9 +189,10 @@ public class Statistics implements Component<Job> {
         try {
           jobCompleted.await(jtPollingInterval, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ie) {
-          LOG.error(
-            "Statistics interrupt while waiting for polling " + ie.getCause(),
-            ie);
+          if (!shutdown) {
+            LOG.error("Statistics interrupt while waiting for completion of "
+                + "a job.", ie);
+          }
           return;
         } finally {
           lock.unlock();

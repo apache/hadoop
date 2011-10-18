@@ -4,6 +4,8 @@ Release 0.20.206.0 - unreleased
 
   NEW FEATURES
 
+    MAPREDUCE-3118. Backport Gridmix and Rumen features to 
+                    branch-0.20-security (Ravi Gummadi via amarrk)
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)

@@ -24,7 +24,7 @@ import java.util.TreeSet;
 
 /**
  * {@link Node} represents a node in the cluster topology. A node can be a
- * {@MachineNode}, or a {@link RackNode}, etc.
+ * {@link MachineNode}, or a {@link RackNode}, etc.
  */
 public class Node implements Comparable<Node> {
   private static final SortedSet<Node> EMPTY_SET = 

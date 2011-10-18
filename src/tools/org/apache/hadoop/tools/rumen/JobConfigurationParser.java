@@ -17,13 +17,9 @@
  */
 package org.apache.hadoop.tools.rumen;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -38,22 +34,11 @@ import org.xml.sax.SAXException;
 
 /**
  * {@link JobConfigurationParser} parses the job configuration xml file, and
- * extracts various framework specific properties. It parses the file using a
+ * extracts configuration properties. It parses the file using a
  * stream-parser and thus is more memory efficient. [This optimization may be
  * postponed for a future release]
  */
 public class JobConfigurationParser {
-  final private Set<String> interested;
-
-  /**
-   * Constructor
-   * 
-   * @param interested
-   *          properties we should extract from the job configuration xml.
-   */
-  public JobConfigurationParser(List<String> interested) {
-    this.interested = new HashSet<String>(interested);
-  }
 
   /**
    * Parse the job configuration file (as an input stream) and return a
@@ -66,7 +51,7 @@ public class JobConfigurationParser {
    *         configuration xml.
    * @throws IOException
    */
-  Properties parse(InputStream input) throws IOException {
+  static Properties parse(InputStream input) throws IOException {
     Properties result = new Properties();
 
     try {
@@ -117,7 +102,7 @@ public class JobConfigurationParser {
           }
         }
 
-        if (interested.contains(attr) && value != null) {
+        if (attr != null && value != null) {
           result.put(attr, value);
         }
       }

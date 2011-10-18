@@ -78,13 +78,13 @@ class JobMonitor implements Gridmix.Component<Job> {
   }
 
   /**
-   * Add a submission failed job , such tht it can be communicated
+   * Add a submission failed job , such that it can be communicated
    * back to serial.
    * TODO: Cleaner solution for this problem
    * @param job
    */
   public void submissionFailed(Job job) {
-    LOG.info(" Job submission failed notify if anyone is waiting " + job);
+    LOG.info("Job submission failed notification for job " + job.getJobID());
     this.statistics.add(job);
   }
 

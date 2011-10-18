@@ -32,13 +32,13 @@ public class SubmitterUserResolver implements UserResolver {
   
   private UserGroupInformation ugi = null;
 
-  public SubmitterUserResolver() {
+  public SubmitterUserResolver() throws IOException {
     LOG.info(" Current user resolver is SubmitterUserResolver ");
+    ugi = UserGroupInformation.getLoginUser();
   }
 
   public synchronized boolean setTargetUsers(URI userdesc, Configuration conf)
       throws IOException {
-    ugi = UserGroupInformation.getLoginUser();
     return false;
   }
 
@@ -47,4 +47,13 @@ public class SubmitterUserResolver implements UserResolver {
     return this.ugi;
   }
 
+  /**
+   * {@inheritDoc}
+   * <p>
+   * Since {@link SubmitterUserResolver} returns the user name who is running
+   * gridmix, it doesn't need a target list of users.
+   */
+  public boolean needsTargetUsersList() {
+    return false;
+  }
 }

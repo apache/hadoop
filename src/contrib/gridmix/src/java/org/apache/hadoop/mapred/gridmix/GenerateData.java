@@ -30,8 +30,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -41,6 +43,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Utils;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -52,6 +55,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 
 // TODO can replace with form of GridmixJob
 class GenerateData extends GridmixJob {
@@ -86,14 +90,103 @@ class GenerateData extends GridmixJob {
    * Replication of generated data.
    */
   public static final String GRIDMIX_GEN_REPLICATION = "gridmix.gen.replicas";
+  static final String JOB_NAME = "GRIDMIX_GENERATE_INPUT_DATA";
 
   public GenerateData(Configuration conf, Path outdir, long genbytes)
       throws IOException {
-    super(conf, 0L, "GRIDMIX_GENDATA");
+    super(conf, 0L, JOB_NAME);
     job.getConfiguration().setLong(GRIDMIX_GEN_BYTES, genbytes);
     FileOutputFormat.setOutputPath(job, outdir);
   }
 
+  /**
+   * Represents the input data characteristics.
+   */
+  static class DataStatistics {
+    private long dataSize;
+    private long numFiles;
+    private boolean isDataCompressed;
+    
+    DataStatistics(long dataSize, long numFiles, boolean isCompressed) {
+      this.dataSize = dataSize;
+      this.numFiles = numFiles;
+      this.isDataCompressed = isCompressed;
+    }
+    
+    long getDataSize() {
+      return dataSize;
+    }
+    
+    long getNumFiles() {
+      return numFiles;
+    }
+    
+    boolean isDataCompressed() {
+      return isDataCompressed;
+    }
+  }
+  
+  /**
+   * Publish the data statistics.
+   */
+  static DataStatistics publishDataStatistics(Path inputDir, long genBytes, 
+                                              Configuration conf) 
+  throws IOException {
+    if (CompressionEmulationUtil.isCompressionEmulationEnabled(conf)) {
+      return CompressionEmulationUtil.publishCompressedDataStatistics(inputDir, 
+                                        conf, genBytes);
+    } else {
+      return publishPlainDataStatistics(conf, inputDir);
+    }
+  }
+
+  /**
+   * List files recursively and get their statuses.
+   * @param path The path of the file/dir for which ls is to be done recursively
+   * @param fs FileSystem of the path
+   * @param filter the user-supplied path filter
+   * @return
+   */
+  private static List<FileStatus> listFiles(Path path, FileSystem fs,
+      PathFilter filter) throws IOException {
+    List<FileStatus> list = new ArrayList<FileStatus>();
+    FileStatus[] statuses = fs.listStatus(path, filter);
+    if (statuses != null) {
+      for (FileStatus status : statuses) {
+        if (status.isDir()) {
+          list.addAll(listFiles(status.getPath(), fs, filter));
+        } else {
+          list.add(status);
+        }
+      }
+    }
+    return list;
+  }
+
+  static DataStatistics publishPlainDataStatistics(Configuration conf, 
+                                                   Path inputDir) 
+  throws IOException {
+    FileSystem fs = inputDir.getFileSystem(conf);
+
+    // obtain input data file statuses
+    long dataSize = 0;
+    long fileCount = 0;
+    PathFilter filter = new Utils.OutputFileUtils.OutputFilesFilter();
+    List<FileStatus> statuses = listFiles(inputDir, fs, filter);
+
+    for (FileStatus fStat : statuses) {
+      dataSize += fStat.getLen();
+    }
+    fileCount = statuses.size();
+
+    // publish the plain data statistics
+    LOG.info("Total size of input data : " 
+             + StringUtils.humanReadableInt(dataSize));
+    LOG.info("Total number of input data files : " + fileCount);
+    
+    return new DataStatistics(dataSize, fileCount, false);
+  }
+  
   @Override
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
@@ -101,6 +194,18 @@ class GenerateData extends GridmixJob {
     ugi.doAs( new PrivilegedExceptionAction <Job>() {
        public Job run() throws IOException, ClassNotFoundException,
                                InterruptedException {
+         // check if compression emulation is enabled
+         if (CompressionEmulationUtil
+             .isCompressionEmulationEnabled(job.getConfiguration())) {
+           CompressionEmulationUtil.configure(job);
+         } else {
+           configureRandomBytesDataGenerator();
+         }
+         job.submit();
+         return job;
+       }
+       
+       private void configureRandomBytesDataGenerator() {
         job.setMapperClass(GenDataMapper.class);
         job.setNumReduceTasks(0);
         job.setMapOutputKeyClass(NullWritable.class);
@@ -113,11 +218,14 @@ class GenerateData extends GridmixJob {
         } catch (IOException e) {
           LOG.error("Error  while adding input path ", e);
         }
-        job.submit();
-        return job;
       }
     });
     return job;
+  }
+  
+  @Override
+  protected boolean canEmulateCompression() {
+    return false;
   }
 
   public static class GenDataMapper

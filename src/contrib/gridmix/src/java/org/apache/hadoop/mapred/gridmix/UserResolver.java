@@ -19,29 +19,27 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.LineReader;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Maps users in the trace to a set of valid target users on the test cluster.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public interface UserResolver {
 
   /**
    * Configure the user map given the URI and configuration. The resolver's
    * contract will define how the resource will be interpreted, but the default
    * will typically interpret the URI as a {@link org.apache.hadoop.fs.Path}
-   * listing target users. 
-   * @param userdesc URI (possibly null) from which user information may be
-   * loaded per the subclass contract.
+   * listing target users.
+   * This method should be called only if {@link #needsTargetUsersList()}
+   * returns true.
+   * @param userdesc URI from which user information may be loaded per the
+   * subclass contract.
    * @param conf The tool configuration.
    * @return true if the resource provided was used in building the list of
    * target users
@@ -54,5 +52,14 @@ public interface UserResolver {
    * @param ugi User information from the trace.
    */
   public UserGroupInformation getTargetUgi(UserGroupInformation ugi);
+
+  /**
+   * Indicates whether this user resolver needs a list of target users to be
+   * provided.
+   *
+   * @return true if a list of target users is to be provided for this
+   * user resolver
+   */
+  public boolean needsTargetUsersList();
 
 }

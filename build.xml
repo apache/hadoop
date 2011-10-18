@@ -1291,6 +1291,7 @@
         <packageset dir="${mapred.src.dir}"/>
         <packageset dir="${hdfs.src.dir}"/>        	
     	<packageset dir="${examples.dir}"/>
+    	<packageset dir="${tools.src}"/>
 
     	<packageset dir="src/contrib/streaming/src/java"/>
     	<packageset dir="src/contrib/data_join/src/java"/>
@@ -1371,6 +1372,8 @@
        <packageset dir="src/core"/>
        <packageset dir="src/mapred"/>
        <packageset dir="src/tools"/>
+       <packageset dir="${tools.src}"/>
+       <packageset dir="${tools.src}"/>
        <classpath >
          <path refid="classpath" />
          <path refid="jdiff-classpath" />

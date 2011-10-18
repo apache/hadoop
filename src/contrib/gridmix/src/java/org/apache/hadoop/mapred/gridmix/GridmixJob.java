@@ -17,24 +17,27 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -53,16 +56,17 @@ import org.apache.commons.logging.LogFactory;
  */
 abstract class GridmixJob implements Callable<Job>, Delayed {
 
-  public static final String JOBNAME = "GRIDMIX";
-  public static final String ORIGNAME = "gridmix.job.name.original";
+  // Gridmix job name format is GRIDMIX<6 digit sequence number>
+  public static final String JOB_NAME_PREFIX = "GRIDMIX";
   public static final Log LOG = LogFactory.getLog(GridmixJob.class);
 
   private static final ThreadLocal<Formatter> nameFormat =
     new ThreadLocal<Formatter>() {
       @Override
       protected Formatter initialValue() {
-        final StringBuilder sb = new StringBuilder(JOBNAME.length() + 5);
-        sb.append(JOBNAME);
+        final StringBuilder sb =
+            new StringBuilder(JOB_NAME_PREFIX.length() + 6);
+        sb.append(JOB_NAME_PREFIX);
         return new Formatter(sb);
       }
     };
@@ -80,6 +84,14 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
       "gridmix.job-submission.use-queue-in-trace";
   protected static final String GRIDMIX_DEFAULT_QUEUE = 
       "gridmix.job-submission.default-queue";
+  // configuration key to enable/disable High-Ram feature emulation
+  static final String GRIDMIX_HIGHRAM_EMULATION_ENABLE = 
+    "gridmix.highram-emulation.enable";
+  // configuration key to enable/disable task jvm options
+  static final String GRIDMIX_TASK_JVM_OPTIONS_ENABLE = 
+    "gridmix.task.jvm-options.enable";
+  private static final Pattern maxHeapPattern = 
+    Pattern.compile("-Xmx[0-9]+[kKmMgGtT]?+");
 
   private static void setJobQueue(Job job, String queue) {
     if (queue != null)
@@ -93,22 +105,56 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
     this.jobdesc = jobdesc;
     this.seq = seq;
 
-    ((StringBuilder)nameFormat.get().out()).setLength(JOBNAME.length());
+    ((StringBuilder)nameFormat.get().out()).setLength(JOB_NAME_PREFIX.length());
     try {
       job = this.ugi.doAs(new PrivilegedExceptionAction<Job>() {
         public Job run() throws IOException {
-          Job ret = new Job(conf, nameFormat.get().format("%05d", seq)
-              .toString());
+
+          String jobId = null == jobdesc.getJobID()
+                         ? "<unknown>"
+                         : jobdesc.getJobID().toString();
+          Job ret = new Job(conf,
+                            nameFormat.get().format("%06d", seq).toString());
           ret.getConfiguration().setInt(GRIDMIX_JOB_SEQ, seq);
-          ret.getConfiguration().set(ORIGNAME,
-              null == jobdesc.getJobID() ? "<unknown>" : jobdesc.getJobID()
-                  .toString());
+
+          ret.getConfiguration().set(Gridmix.ORIGINAL_JOB_ID, jobId);
+          ret.getConfiguration().set(Gridmix.ORIGINAL_JOB_NAME,
+                                     jobdesc.getName());
           if (conf.getBoolean(GRIDMIX_USE_QUEUE_IN_TRACE, false)) {
             setJobQueue(ret, jobdesc.getQueueName());
           } else {
             setJobQueue(ret, conf.get(GRIDMIX_DEFAULT_QUEUE));
           }
 
+          // check if the job can emulate compression
+          if (canEmulateCompression()) {
+            // set the compression related configs if compression emulation is
+            // enabled
+            if (CompressionEmulationUtil.isCompressionEmulationEnabled(conf)) {
+              CompressionEmulationUtil.configureCompressionEmulation(
+                  jobdesc.getJobConf(), ret.getConfiguration());
+            }
+          }
+          
+          // configure high ram properties if enabled
+          if (conf.getBoolean(GRIDMIX_HIGHRAM_EMULATION_ENABLE, true)) {
+            configureHighRamProperties(jobdesc.getJobConf(), 
+                                       ret.getConfiguration());
+          }
+          
+          // configure task jvm options if enabled
+          // this knob can be turned off if there is a mismatch between the
+          // target (simulation) cluster and the original cluster. Such a 
+          // mismatch can result in job failures (due to memory issues) on the 
+          // target (simulated) cluster.
+          //
+          // TODO If configured, scale the original task's JVM (heap related)
+          //      options to suit the target (simulation) cluster
+          if (conf.getBoolean(GRIDMIX_TASK_JVM_OPTIONS_ENABLE, true)) {
+            configureTaskJVMOptions(jobdesc.getJobConf(), 
+                                    ret.getConfiguration());
+          }
+          
           return ret;
         }
       });
@@ -120,6 +166,185 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
         submissionMillis, TimeUnit.MILLISECONDS);
     outdir = new Path(outRoot, "" + seq);
   }
+  
+  @SuppressWarnings("deprecation")
+  protected static void configureTaskJVMOptions(Configuration originalJobConf,
+                                                Configuration simulatedJobConf){
+    // Get the heap related java opts used for the original job and set the 
+    // same for the simulated job.
+    //    set task task heap options
+    configureTaskJVMMaxHeapOptions(originalJobConf, simulatedJobConf, 
+                                   JobConf.MAPRED_TASK_JAVA_OPTS);
+    //  set map task heap options
+    configureTaskJVMMaxHeapOptions(originalJobConf, simulatedJobConf, 
+                                   JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
+
+    //  set reduce task heap options
+    configureTaskJVMMaxHeapOptions(originalJobConf, simulatedJobConf, 
+                                   JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS);
+  }
+  
+  // Configures the task's max heap options using the specified key
+  private static void configureTaskJVMMaxHeapOptions(Configuration srcConf, 
+                                                     Configuration destConf,
+                                                     String key) {
+    String srcHeapOpts = srcConf.get(key);
+    if (srcHeapOpts != null) {
+      List<String> srcMaxOptsList = new ArrayList<String>();
+      // extract the max heap options and ignore the rest
+      extractMaxHeapOpts(srcHeapOpts, srcMaxOptsList, 
+                         new ArrayList<String>());
+      if (srcMaxOptsList.size() > 0) {
+        List<String> destOtherOptsList = new ArrayList<String>();
+        // extract the other heap options and ignore the max options in the 
+        // destination configuration
+        String destHeapOpts = destConf.get(key);
+        if (destHeapOpts != null) {
+          extractMaxHeapOpts(destHeapOpts, new ArrayList<String>(), 
+                             destOtherOptsList);
+        }
+        
+        // the source configuration might have some task level max heap opts set
+        // remove these opts from the destination configuration and replace
+        // with the options set in the original configuration
+        StringBuilder newHeapOpts = new StringBuilder();
+        
+        for (String otherOpt : destOtherOptsList) {
+          newHeapOpts.append(otherOpt).append(" ");
+        }
+        
+        for (String opts : srcMaxOptsList) {
+          newHeapOpts.append(opts).append(" ");
+        }
+        
+        // set the final heap opts 
+        destConf.set(key, newHeapOpts.toString().trim());
+      }
+    }
+  }
+  
+  private static void extractMaxHeapOpts(String javaOptions,  
+      List<String> maxOpts,  List<String> others) {
+    for (String opt : javaOptions.split(" ")) {
+      Matcher matcher = maxHeapPattern.matcher(opt);
+      if (matcher.find()) {
+        maxOpts.add(opt);
+      } else {
+        others.add(opt);
+      }
+    }
+  }
+
+  // Scales the desired job-level configuration parameter. This API makes sure 
+  // that the ratio of the job level configuration parameter to the cluster 
+  // level configuration parameter is maintained in the simulated run. Hence 
+  // the values are scaled from the original cluster's configuration to the 
+  // simulated cluster's configuration for higher emulation accuracy.
+  // This kind of scaling is useful for memory parameters.
+  private static void scaleConfigParameter(Configuration sourceConf, 
+                        Configuration destConf, String clusterValueKey, 
+                        String jobValueKey, long defaultValue) {
+    long simulatedClusterDefaultValue = 
+           destConf.getLong(clusterValueKey, defaultValue);
+    
+    long originalClusterDefaultValue = 
+           sourceConf.getLong(clusterValueKey, defaultValue);
+    
+    long originalJobValue = 
+           sourceConf.getLong(jobValueKey, defaultValue);
+    
+    double scaleFactor = (double)originalJobValue/originalClusterDefaultValue;
+    
+    long simulatedJobValue = (long)(scaleFactor * simulatedClusterDefaultValue);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("For the job configuration parameter '" + jobValueKey 
+                + "' and the cluster configuration parameter '" 
+                + clusterValueKey + "', the original job's configuration value"
+                + " is scaled from '" + originalJobValue + "' to '" 
+                + simulatedJobValue + "' using the default (unit) value of "
+                + "'" + originalClusterDefaultValue + "' for the original "
+                + " cluster and '" + simulatedClusterDefaultValue + "' for the"
+                + " simulated cluster.");
+    }
+    
+    destConf.setLong(jobValueKey, simulatedJobValue);
+  }
+  
+  // Checks if the scaling of original job's memory parameter value is 
+  // valid
+  @SuppressWarnings("deprecation")
+  private static boolean checkMemoryUpperLimits(String jobKey, String limitKey,  
+                                                Configuration conf, 
+                                                boolean convertLimitToMB) {
+    if (conf.get(limitKey) != null) {
+      long limit = conf.getLong(limitKey, JobConf.DISABLED_MEMORY_LIMIT);
+      // scale only if the max memory limit is set.
+      if (limit >= 0) {
+        if (convertLimitToMB) {
+          limit /= (1024 * 1024); //Converting to MB
+        }
+        
+        long scaledConfigValue = 
+               conf.getLong(jobKey, JobConf.DISABLED_MEMORY_LIMIT);
+        
+        // check now
+        if (scaledConfigValue > limit) {
+          throw new RuntimeException("Simulated job's configuration" 
+              + " parameter '" + jobKey + "' got scaled to a value '" 
+              + scaledConfigValue + "' which exceeds the upper limit of '" 
+              + limit + "' defined for the simulated cluster by the key '" 
+              + limitKey + "'. To disable High-Ram feature emulation, set '" 
+              + GRIDMIX_HIGHRAM_EMULATION_ENABLE + "' to 'false'.");
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Check if the parameter scaling does not exceed the cluster limits.
+  @SuppressWarnings("deprecation")
+  private static void validateTaskMemoryLimits(Configuration conf, 
+                        String jobKey, String clusterMaxKey) {
+    if (!checkMemoryUpperLimits(jobKey, 
+        JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, conf, true)) {
+      checkMemoryUpperLimits(jobKey, clusterMaxKey, conf, false);
+    }
+  }
+
+  /**
+   * Sets the high ram job properties in the simulated job's configuration.
+   */
+  @SuppressWarnings("deprecation")
+  static void configureHighRamProperties(Configuration sourceConf, 
+                                         Configuration destConf) {
+    // set the memory per map task
+    scaleConfigParameter(sourceConf, destConf, 
+                         JobTracker.MAPRED_CLUSTER_MAP_MEMORY_MB_PROPERTY,
+                         JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, 
+                         JobConf.DISABLED_MEMORY_LIMIT);
+    
+    // validate and fail early
+    validateTaskMemoryLimits(destConf,
+        JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY, 
+        JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY);
+    
+    // set the memory per reduce task
+    scaleConfigParameter(sourceConf, destConf, 
+                         JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
+                         JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
+                         JobConf.DISABLED_MEMORY_LIMIT);
+    // validate and fail early
+    validateTaskMemoryLimits(destConf,
+        JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY, 
+        JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY);
+  }
+
+  /**
+   * Indicates whether this {@link GridmixJob} supports compression emulation.
+   */
+  protected abstract boolean canEmulateCompression();
 
   protected GridmixJob(
     final Configuration conf, long submissionMillis, final String name)
@@ -289,13 +514,18 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
         TaskAttemptContext job) throws IOException {
 
       Path file = getDefaultWorkFile(job, "");
-      FileSystem fs = file.getFileSystem(job.getConfiguration());
-      final FSDataOutputStream fileOut = fs.create(file, false);
+      final DataOutputStream fileOut;
+
+      fileOut = 
+        new DataOutputStream(CompressionEmulationUtil
+            .getPossiblyCompressedOutputStream(file, job.getConfiguration()));
+
       return new RecordWriter<K,GridmixRecord>() {
         @Override
         public void write(K ignored, GridmixRecord value)
             throws IOException {
-          value.writeRandom(fileOut, value.getSize());
+          // Let the Gridmix record fill itself.
+          value.write(fileOut);
         }
         @Override
         public void close(TaskAttemptContext ctxt) throws IOException {

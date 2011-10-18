@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.rumen;
 
 import java.io.BufferedInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,6 +47,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.tools.rumen.TraceBuilder.MyOptions;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -363,6 +365,160 @@ public class TestRumenJobTraces {
   }
 
   /**
+   * Check if processing of input arguments is as expected by passing globbed
+   * input path
+   * <li> without -recursive option and
+   * <li> with -recursive option.
+   */
+  @Test
+  public void testProcessInputArgument() throws Exception {
+    final Configuration conf = new Configuration();
+    final FileSystem lfs = FileSystem.getLocal(conf);
+
+    // define the test's root temporary directory
+    final Path rootTempDir =
+      new Path(System.getProperty("test.build.data", "/tmp"))
+          .makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
+    // define the test's root input directory
+    Path testRootInputDir = new Path(rootTempDir, "TestProcessInputArgument");
+    // define the nested input directory
+    Path nestedInputDir = new Path(testRootInputDir, "1/2/3/4");
+    // define the globbed version of the nested input directory
+    Path globbedInputNestedDir =
+      lfs.makeQualified(new Path(testRootInputDir, "*/*/*/*/*"));
+    try {
+      lfs.delete(nestedInputDir, true);
+
+      List<String> recursiveInputPaths = new ArrayList<String>();
+      List<String> nonRecursiveInputPaths = new ArrayList<String>();
+      // Create input files under the given path with multiple levels of
+      // sub directories
+      createHistoryLogsHierarchy(nestedInputDir, lfs, recursiveInputPaths,
+          nonRecursiveInputPaths);
+
+      // Check the case of globbed input path and without -recursive option
+      List<Path> inputs = MyOptions.processInputArgument(
+                              globbedInputNestedDir.toString(), conf, false);
+      validateHistoryLogPaths(inputs, nonRecursiveInputPaths);
+   // Check the case of globbed input path and with -recursive option
+      inputs = MyOptions.processInputArgument(
+                   globbedInputNestedDir.toString(), conf, true);
+      validateHistoryLogPaths(inputs, recursiveInputPaths);
+
+    } finally {
+      lfs.delete(testRootInputDir, true);
+    }
+  }
+
+  /**
+   * Validate if the input history log paths are as expected.
+   * @param inputs  the resultant input paths to be validated
+   * @param expectedHistoryFileNames  the expected input history logs
+   * @throws IOException
+   */
+  private void validateHistoryLogPaths(List<Path> inputs,
+      List<String> expectedHistoryFileNames) throws IOException {
+
+    System.out.println("\nExpected history files are:");
+    for (String historyFile : expectedHistoryFileNames) {
+      System.out.println(historyFile);
+    }
+    System.out.println("\nResultant history files are:");
+    List<String> historyLogs = new ArrayList<String>();
+    for (Path p : inputs) {
+      historyLogs.add(p.toUri().getPath());
+      System.out.println(p.toUri().getPath());
+    }
+
+    assertEquals("Number of history logs found is different from the expected.",
+        expectedHistoryFileNames.size(), inputs.size());
+
+    // Verify if all the history logs are expected ones and they are in the
+    // expected order
+    assertTrue("Some of the history log files do not match the expected.",
+        historyLogs.equals(expectedHistoryFileNames));
+  }
+
+  /**
+   * Create history logs under the given path with multiple levels of
+   * sub directories as shown below.
+   * <br>
+   * Create a file, an empty subdirectory and a nonempty subdirectory
+   * &lt;historyDir&gt; under the given input path.
+   * <br>
+   * The subdirectory &lt;historyDir&gt; contains the following dir structure:
+   * <br>
+   * <br>&lt;historyDir&gt;/historyFile1.txt
+   * <br>&lt;historyDir&gt;/historyFile1.gz
+   * <br>&lt;historyDir&gt;/subDir1/historyFile2.txt
+   * <br>&lt;historyDir&gt;/subDir1/historyFile2.gz
+   * <br>&lt;historyDir&gt;/subDir2/historyFile3.txt
+   * <br>&lt;historyDir&gt;/subDir2/historyFile3.gz
+   * <br>&lt;historyDir&gt;/subDir1/subDir11/historyFile4.txt
+   * <br>&lt;historyDir&gt;/subDir1/subDir11/historyFile4.gz
+   * <br>&lt;historyDir&gt;/subDir2/subDir21/
+   * <br>
+   * Create the lists of input paths that should be processed by TraceBuilder
+   * for recursive case and non-recursive case.
+   * @param nestedInputDir the input history logs directory where history files
+   *                       with nested subdirectories are created
+   * @param fs         FileSystem of the input paths
+   * @param recursiveInputPaths input paths for recursive case
+   * @param nonRecursiveInputPaths input paths for non-recursive case
+   * @throws IOException
+   */
+  private void createHistoryLogsHierarchy(Path nestedInputDir, FileSystem fs,
+      List<String> recursiveInputPaths, List<String> nonRecursiveInputPaths)
+  throws IOException {
+    List<Path> dirs = new ArrayList<Path>();
+    // define a file in the nested test input directory
+    Path inputPath1 = new Path(nestedInputDir, "historyFile.txt");
+    // define an empty sub-folder in the nested test input directory
+    Path emptyDir = new Path(nestedInputDir, "emptyDir");
+    // define a nonempty sub-folder in the nested test input directory
+    Path historyDir = new Path(nestedInputDir, "historyDir");
+
+    fs.mkdirs(nestedInputDir);
+    // Create an empty input file
+    fs.createNewFile(inputPath1);
+    // Create empty subdir
+    fs.mkdirs(emptyDir);// let us not create any files under this dir
+
+    fs.mkdirs(historyDir);
+    dirs.add(historyDir);
+
+    Path subDir1 = new Path(historyDir, "subDir1");
+    fs.mkdirs(subDir1);
+    dirs.add(subDir1);
+    Path subDir2 = new Path(historyDir, "subDir2");
+    fs.mkdirs(subDir2);
+    dirs.add(subDir2);
+
+    Path subDir11 = new Path(subDir1, "subDir11");
+    fs.mkdirs(subDir11);
+    dirs.add(subDir11);
+    Path subDir21 = new Path(subDir2, "subDir21");
+    fs.mkdirs(subDir21);// let us not create any files under this dir
+
+    int i = 0;
+    for (Path dir : dirs) {
+      i++;
+      Path gzPath = new Path(dir, "historyFile" + i + ".gz");
+      Path txtPath = new Path(dir, "historyFile" + i + ".txt");
+      fs.createNewFile(txtPath);
+      fs.createNewFile(gzPath);
+      recursiveInputPaths.add(gzPath.toUri().getPath());
+      recursiveInputPaths.add(txtPath.toUri().getPath());
+      if (i == 1) {
+        nonRecursiveInputPaths.add(gzPath.toUri().getPath());
+        nonRecursiveInputPaths.add(txtPath.toUri().getPath());
+      }
+    }
+    recursiveInputPaths.add(inputPath1.toUri().getPath());
+    nonRecursiveInputPaths.add(inputPath1.toUri().getPath());
+  }
+
+    /**
    * Test if {@link CurrentJHParser} can read events from current JH files.
    */
   @Test
@@ -426,7 +582,7 @@ public class TestRumenJobTraces {
 
       // Test if the JobHistoryParserFactory can detect the parser correctly
       parser = JobHistoryParserFactory.getParser(ris);
-        
+
       HistoryEvent e;
       while ((e = parser.nextEvent()) != null) {
         String eventString = e.getEventType().toString();
@@ -470,71 +626,267 @@ public class TestRumenJobTraces {
     }
   }
   
+    /**
+     * Test if the {@link JobConfigurationParser} can correctly extract out 
+     * key-value pairs from the job configuration.
+     */
+    @Test
+    public void testJobConfigurationParsing() throws Exception {
+      final FileSystem lfs = FileSystem.getLocal(new Configuration());
+  
+      final Path rootTempDir =
+          new Path(System.getProperty("test.build.data", "/tmp")).makeQualified(
+              lfs.getUri(), lfs.getWorkingDirectory());
+  
+      final Path tempDir = new Path(rootTempDir, "TestJobConfigurationParser");
+      lfs.delete(tempDir, true);
+  
+      // Add some configuration parameters to the conf
+      JobConf jConf = new JobConf(false);
+      String key = "test.data";
+      String value = "hello world";
+      jConf.set(key, value);
+      
+      // create the job conf file
+      Path jobConfPath = new Path(tempDir.toString(), "job.xml");
+      lfs.delete(jobConfPath, false);
+      DataOutputStream jobConfStream = lfs.create(jobConfPath);
+      jConf.writeXml(jobConfStream);
+      jobConfStream.close();
+      
+      // now read the job conf file using the job configuration parser
+      Properties properties = 
+        JobConfigurationParser.parse(lfs.open(jobConfPath));
+      
+      // check if the required parameter is loaded
+      assertEquals("Total number of extracted properties (" + properties.size() 
+                   + ") doesn't match the expected size of 1 ["
+                   + "JobConfigurationParser]",
+                   1, properties.size());
+      // check if the key is present in the extracted configuration
+      assertTrue("Key " + key + " is missing in the configuration extracted "
+                 + "[JobConfigurationParser]",
+                 properties.keySet().contains(key));
+      // check if the desired property has the correct value
+      assertEquals("JobConfigurationParser couldn't recover the parameters"
+                   + " correctly",
+                  value, properties.get(key));
+      
+      // Test ZombieJob
+      LoggedJob job = new LoggedJob();
+      job.setJobProperties(properties);
+      
+      ZombieJob zjob = new ZombieJob(job, null);
+      Configuration zconf = zjob.getJobConf();
+      // check if the required parameter is loaded
+      assertEquals("ZombieJob couldn't recover the parameters correctly", 
+                   value, zconf.get(key));
+    }
+
+    @Test
+    public void testJobConfigurationParser() throws Exception {
+
+      // Validate parser with old mapred config properties from
+      // sample-conf-file.xml
+      validateJobConfParser("sample-conf.file.xml");
+    }
+
+    private void validateJobConfParser(String confFile) throws Exception {
+
+      final Configuration conf = new Configuration();
+      final FileSystem lfs = FileSystem.getLocal(conf);
+
+      @SuppressWarnings("deprecation")
+      final Path rootInputDir =
+          new Path(System.getProperty("test.tools.input.dir", ""))
+              .makeQualified(lfs);
+
+      final Path rootInputPath = new Path(rootInputDir, "rumen/small-trace-test");
+
+      final Path inputPath = new Path(rootInputPath, confFile);
+
+      InputStream inputConfStream =
+          new PossiblyDecompressedInputStream(inputPath, conf);
+
+      try {
+        Properties props = JobConfigurationParser.parse(inputConfStream);
+        inputConfStream.close();
+
+        // Make sure that parser puts the interested properties into props1 and
+        // props2 as defined by list1 and list2.
+        assertEquals("Config property for job queue name is not "
+            + " extracted properly.", "TheQueue",
+            JobBuilder.extract(props, JobConfPropertyNames.QUEUE_NAMES
+            .getCandidates(), null));
+        assertEquals("Config property for job name is not "
+            + " extracted properly.", "MyMRJob",
+            JobBuilder.extract(props, JobConfPropertyNames.JOB_NAMES
+            .getCandidates(), null));
+
+        validateChildJavaOpts(props);
+
+      } finally {
+        inputConfStream.close();
+      }
+    }
+    
+    // Validate child java opts in properties.
+    private void validateChildJavaOpts(Properties props) {
+      // if old property mapred.child.java.opts is set, then extraction of all
+      // the following 3 properties should give that value.
+      assertEquals("mapred.child.java.opts is not extracted properly.",
+          "-server -Xmx640m -Djava.net.preferIPv4Stack=true",
+          JobBuilder.extract(props, JobConfPropertyNames.TASK_JAVA_OPTS_S
+          .getCandidates(), null));
+      assertEquals("New config property " + JobConf.MAPRED_MAP_TASK_JAVA_OPTS
+          + " is not extracted properly when the old config property "
+          + "mapred.child.java.opts is set.",
+          "-server -Xmx640m -Djava.net.preferIPv4Stack=true",
+          JobBuilder.extract(props, JobConfPropertyNames.MAP_JAVA_OPTS_S
+          .getCandidates(), null));
+      assertEquals("New config property " + JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS
+          + " is not extracted properly when the old config property "
+          + "mapred.child.java.opts is set.",
+          "-server -Xmx640m -Djava.net.preferIPv4Stack=true",
+          JobBuilder.extract(props, JobConfPropertyNames.REDUCE_JAVA_OPTS_S
+          .getCandidates(), null));
+    }
+
+  /**
+   * Test {@link ResourceUsageMetrics}.
+   */
   @Test
-  public void testJobConfigurationParser() throws Exception {
-    String[] list1 =
-        { "mapred.job.queue.name", "mapreduce.job.name",
-            "mapred.child.java.opts" };
-
-    String[] list2 = { "mapred.job.queue.name", "mapred.child.java.opts" };
-
-    List<String> interested1 = new ArrayList<String>();
-    for (String interested : list1) {
-      interested1.add(interested);
-    }
-
-    List<String> interested2 = new ArrayList<String>();
-    for (String interested : list2) {
-      interested2.add(interested);
-    }
-
-    JobConfigurationParser jcp1 = new JobConfigurationParser(interested1);
-    JobConfigurationParser jcp2 = new JobConfigurationParser(interested2);
-
-    final Configuration conf = new Configuration();
-    final FileSystem lfs = FileSystem.getLocal(conf);
-
-    @SuppressWarnings("deprecation")
-    final Path rootInputDir =
-        new Path(System.getProperty("test.tools.input.dir", ""))
-            .makeQualified(lfs);
-
-    final Path rootInputPath = new Path(rootInputDir, "rumen/small-trace-test");
-
-    final Path inputPath = new Path(rootInputPath, "sample-conf.file.xml");
-
-    InputStream inputConfStream =
-        new PossiblyDecompressedInputStream(inputPath, conf);
-
-    try {
-      Properties props1 = jcp1.parse(inputConfStream);
-      inputConfStream.close();
-
-      inputConfStream = new PossiblyDecompressedInputStream(inputPath, conf);
-      Properties props2 = jcp2.parse(inputConfStream);
-
-      assertEquals("testJobConfigurationParser: wrong number of properties", 3,
-          props1.size());
-      assertEquals("testJobConfigurationParser: wrong number of properties", 2,
-          props2.size());
-
-      assertEquals("prop test 1", "TheQueue", props1
-          .get("mapred.job.queue.name"));
-      assertEquals("prop test 2", "job_0001", props1.get("mapreduce.job.name"));
-      assertEquals("prop test 3",
-          "-server -Xmx640m -Djava.net.preferIPv4Stack=true", props1
-              .get("mapred.child.java.opts"));
-      assertEquals("prop test 4", "TheQueue", props2
-          .get("mapred.job.queue.name"));
-      assertEquals("prop test 5",
-          "-server -Xmx640m -Djava.net.preferIPv4Stack=true", props2
-              .get("mapred.child.java.opts"));
-
-    } finally {
-      inputConfStream.close();
-    }
+  public void testResourceUsageMetrics() throws Exception {
+    final long cpuUsage = 100;
+    final long pMemUsage = 200;
+    final long vMemUsage = 300;
+    final long heapUsage = 400;
+    
+    // test ResourceUsageMetrics's setters
+    ResourceUsageMetrics metrics = new ResourceUsageMetrics();
+    metrics.setCumulativeCpuUsage(cpuUsage);
+    metrics.setPhysicalMemoryUsage(pMemUsage);
+    metrics.setVirtualMemoryUsage(vMemUsage);
+    metrics.setHeapUsage(heapUsage);
+    // test cpu usage value
+    assertEquals("Cpu usage values mismatch via set", cpuUsage, 
+                 metrics.getCumulativeCpuUsage());
+    // test pMem usage value
+    assertEquals("Physical memory usage values mismatch via set", pMemUsage, 
+                 metrics.getPhysicalMemoryUsage());
+    // test vMem usage value
+    assertEquals("Virtual memory usage values mismatch via set", vMemUsage, 
+                 metrics.getVirtualMemoryUsage());
+    // test heap usage value
+    assertEquals("Heap usage values mismatch via set", heapUsage, 
+                 metrics.getHeapUsage());
+    
+    // test deepCompare() (pass case)
+    testResourceUsageMetricViaDeepCompare(metrics, cpuUsage, vMemUsage, 
+                                          pMemUsage, heapUsage, true);
+    
+    // test deepCompare (fail case)
+    // test cpu usage mismatch
+    testResourceUsageMetricViaDeepCompare(metrics, 0, vMemUsage, pMemUsage, 
+                                          heapUsage, false);
+    // test pMem usage mismatch
+    testResourceUsageMetricViaDeepCompare(metrics, cpuUsage, vMemUsage, 0, 
+                                          heapUsage, false);
+    // test vMem usage mismatch
+    testResourceUsageMetricViaDeepCompare(metrics, cpuUsage, 0, pMemUsage, 
+                                          heapUsage, false);
+    // test heap usage mismatch
+    testResourceUsageMetricViaDeepCompare(metrics, cpuUsage, vMemUsage, 
+                                          pMemUsage, 0, false);
+    
+    // define a metric with a fixed value of size()
+    ResourceUsageMetrics metrics2 = new ResourceUsageMetrics() {
+      @Override
+      public int size() {
+        return -1;
+      }
+    };
+    metrics2.setCumulativeCpuUsage(cpuUsage);
+    metrics2.setPhysicalMemoryUsage(pMemUsage);
+    metrics2.setVirtualMemoryUsage(vMemUsage);
+    metrics2.setHeapUsage(heapUsage);
+    
+    // test with size mismatch
+    testResourceUsageMetricViaDeepCompare(metrics2, cpuUsage, vMemUsage, 
+                                          pMemUsage, heapUsage, false);
   }
+  
+  // test ResourceUsageMetric's deepCompare() method
+  private static void testResourceUsageMetricViaDeepCompare(
+                        ResourceUsageMetrics metrics, long cpuUsage, 
+                        long vMemUsage, long pMemUsage, long heapUsage,
+                        boolean shouldPass) {
+    ResourceUsageMetrics testMetrics = new ResourceUsageMetrics();
+    testMetrics.setCumulativeCpuUsage(cpuUsage);
+    testMetrics.setPhysicalMemoryUsage(pMemUsage);
+    testMetrics.setVirtualMemoryUsage(vMemUsage);
+    testMetrics.setHeapUsage(heapUsage);
+    
+    Boolean passed = null;
+    try {
+      metrics.deepCompare(testMetrics, new TreePath(null, "<root>"));
+      passed = true;
+    } catch (DeepInequalityException die) {
+      passed = false;
+    }
+    
+    assertEquals("ResourceUsageMetrics deepCompare() failed!", 
+                 shouldPass, passed);
+  }
+  
+  /**
+   * Testing {@link ResourceUsageMetrics} using {@link HadoopLogsAnalyzer}.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testResourceUsageMetricsWithHadoopLogsAnalyzer() 
+  throws IOException {
+    Configuration conf = new Configuration();
+    // get the input trace file
+    Path rootInputDir =
+      new Path(System.getProperty("test.tools.input.dir", ""));
+    Path rootInputSubFolder = new Path(rootInputDir, "rumen/small-trace-test");
+    Path traceFile = new Path(rootInputSubFolder, "v20-resource-usage-log.gz");
+    
+    FileSystem lfs = FileSystem.getLocal(conf);
+    
+    // define the root test directory
+    Path rootTempDir =
+        new Path(System.getProperty("test.build.data", "/tmp"));
 
+    // define output directory
+    Path outputDir = 
+      new Path(rootTempDir, "testResourceUsageMetricsWithHadoopLogsAnalyzer");
+    lfs.delete(outputDir, true);
+    lfs.deleteOnExit(outputDir);
+    
+    // run HadoopLogsAnalyzer
+    HadoopLogsAnalyzer analyzer = new HadoopLogsAnalyzer();
+    analyzer.setConf(conf);
+    Path traceOutput = new Path(outputDir, "trace.json");
+    analyzer.run(new String[] {"-write-job-trace", traceOutput.toString(), 
+                               "-v1", traceFile.toString()});
+    
+    // test HadoopLogsAnalyzer's output w.r.t ResourceUsageMetrics
+    //  get the logged job
+    JsonObjectMapperParser<LoggedJob> traceParser =
+      new JsonObjectMapperParser<LoggedJob>(traceOutput, LoggedJob.class, 
+                                            conf);
+    
+    //  get the logged job from the output trace file
+    LoggedJob job = traceParser.getNext();
+    LoggedTaskAttempt attempt = job.getMapTasks().get(0).getAttempts().get(0);
+    ResourceUsageMetrics metrics = attempt.getResourceUsageMetrics();
+    
+    //  test via deepCompare()
+    testResourceUsageMetricViaDeepCompare(metrics, 200, 100, 75, 50, true);
+  }
+  
   @Test
   public void testTopologyBuilder() throws Exception {
     final TopologyBuilder subject = new TopologyBuilder();

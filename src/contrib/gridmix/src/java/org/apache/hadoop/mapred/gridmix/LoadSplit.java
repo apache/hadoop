@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 
 class LoadSplit extends CombineFileSplit {
   private int id;
@@ -39,6 +40,9 @@ class LoadSplit extends CombineFileSplit {
   private long[] reduceOutputBytes = new long[0];
   private long[] reduceOutputRecords = new long[0];
 
+  private ResourceUsageMetrics mapMetrics;
+  private ResourceUsageMetrics[] reduceMetrics;
+
   LoadSplit() {
     super();
   }
@@ -46,7 +50,9 @@ class LoadSplit extends CombineFileSplit {
   public LoadSplit(CombineFileSplit cfsplit, int maps, int id,
       long inputBytes, long inputRecords, long outputBytes,
       long outputRecords, double[] reduceBytes, double[] reduceRecords,
-      long[] reduceOutputBytes, long[] reduceOutputRecords)
+      long[] reduceOutputBytes, long[] reduceOutputRecords,
+      ResourceUsageMetrics metrics,
+      ResourceUsageMetrics[] rMetrics)
       throws IOException {
     super(cfsplit);
     this.id = id;
@@ -60,6 +66,8 @@ class LoadSplit extends CombineFileSplit {
     nSpec = reduceOutputBytes.length;
     this.reduceOutputBytes = reduceOutputBytes;
     this.reduceOutputRecords = reduceOutputRecords;
+    this.mapMetrics = metrics;
+    this.reduceMetrics = rMetrics;
   }
 
   public int getId() {
@@ -97,6 +105,15 @@ class LoadSplit extends CombineFileSplit {
   public long getReduceRecords(int i) {
     return reduceOutputRecords[i];
   }
+  
+  public ResourceUsageMetrics getMapResourceUsageMetrics() {
+    return mapMetrics;
+  }
+  
+  public ResourceUsageMetrics getReduceResourceUsageMetrics(int i) {
+    return reduceMetrics[i];
+  }
+  
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
@@ -115,6 +132,12 @@ class LoadSplit extends CombineFileSplit {
     for (int i = 0; i < nSpec; ++i) {
       WritableUtils.writeVLong(out, reduceOutputBytes[i]);
       WritableUtils.writeVLong(out, reduceOutputRecords[i]);
+    }
+    mapMetrics.write(out);
+    int numReduceMetrics = (reduceMetrics == null) ? 0 : reduceMetrics.length;
+    WritableUtils.writeVInt(out, numReduceMetrics);
+    for (int i = 0; i < numReduceMetrics; ++i) {
+      reduceMetrics[i].write(out);
     }
   }
   @Override
@@ -143,6 +166,14 @@ class LoadSplit extends CombineFileSplit {
     for (int i = 0; i < nSpec; ++i) {
       reduceOutputBytes[i] = WritableUtils.readVLong(in);
       reduceOutputRecords[i] = WritableUtils.readVLong(in);
+    }
+    mapMetrics = new ResourceUsageMetrics();
+    mapMetrics.readFields(in);
+    int numReduceMetrics = WritableUtils.readVInt(in);
+    reduceMetrics = new ResourceUsageMetrics[numReduceMetrics];
+    for (int i = 0; i < numReduceMetrics; ++i) {
+      reduceMetrics[i] = new ResourceUsageMetrics();
+      reduceMetrics[i].readFields(in);
     }
   }
 }

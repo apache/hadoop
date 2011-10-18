@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -35,6 +36,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.JobHistory;
 import org.apache.hadoop.util.Tool;
@@ -49,7 +51,6 @@ public class TraceBuilder extends Configured implements Tool {
   static final int RUN_METHOD_FAILED_EXIT_CODE = 3;
 
   TopologyBuilder topologyBuilder = new TopologyBuilder();
-  JobConfigurationParser jobConfParser;
   Outputter<LoggedJob> traceWriter;
   Outputter<LoggedNetworkTopology> topologyWriter;
 
@@ -67,48 +68,136 @@ public class TraceBuilder extends Configured implements Tool {
         IOException, ClassNotFoundException {
       int switchTop = 0;
 
+      // to determine if the input paths should be recursively scanned or not
+      boolean doRecursiveTraversal = false;
+
       while (args[switchTop].startsWith("-")) {
         if (args[switchTop].equalsIgnoreCase("-demuxer")) {
           inputDemuxerClass =
-              Class.forName(args[++switchTop]).asSubclass(InputDemuxer.class);
-
-          ++switchTop;
+            Class.forName(args[++switchTop]).asSubclass(InputDemuxer.class);
+        } else if (args[switchTop].equalsIgnoreCase("-recursive")) {
+          doRecursiveTraversal = true;
         }
+        ++switchTop;
       }
 
       traceOutput = new Path(args[0 + switchTop]);
       topologyOutput = new Path(args[1 + switchTop]);
 
       for (int i = 2 + switchTop; i < args.length; ++i) {
+        inputs.addAll(processInputArgument(
+            args[i], conf, doRecursiveTraversal));
+      }
+    }
 
-        Path thisPath = new Path(args[i]);
+    /**
+     * Compare the history file names, not the full paths.
+     * Job history file name format is such that doing lexicographic sort on the
+     * history file names should result in the order of jobs' submission times.
+     */
+    private static class HistoryLogsComparator
+    implements Comparator<FileStatus> {
+      @Override
+      public int compare(FileStatus file1, FileStatus file2) {
+        return file1.getPath().getName().compareTo(
+            file2.getPath().getName());
+      }
+    }
 
-        FileSystem fs = thisPath.getFileSystem(conf);
-        if (fs.getFileStatus(thisPath).isDir()) {
-          FileStatus[] statuses = fs.listStatus(thisPath);
+    private static class InputFilter implements PathFilter {
+      public boolean accept(Path path) {
+        return !(path.getName().endsWith(".crc")
+                 || path.getName().startsWith("."));
+      }
+    }
 
-          List<String> dirNames = new ArrayList<String>();
-
-          for (FileStatus s : statuses) {
-            if (s.isDir()) continue;
-            String name = s.getPath().getName();
-
-            if (!(name.endsWith(".crc") || name.startsWith("."))) {
-              dirNames.add(name);
+    /**
+     * List files (possibly recursively) and get their statuses.
+     * @param path The path of the file/dir for which ls is to be done
+     * @param fs FileSystem of the path
+     * @param filter the user-supplied path filter
+     * @return the list of file statuses under the given path
+     */
+    static List<FileStatus> listFiles(Path path, FileSystem fs,
+        PathFilter filter, boolean isRecursive) throws IOException {
+      List<FileStatus> list = new ArrayList<FileStatus>();
+      FileStatus[] statuses = fs.listStatus(path, filter);
+      if (statuses != null) {
+        for (FileStatus status : statuses) {
+          if (status.isDir()) {
+            if (isRecursive) {
+              list.addAll(listFiles(status.getPath(), fs, filter, isRecursive));
             }
+          } else {
+            list.add(status);
           }
-
-          String[] sortableNames = dirNames.toArray(new String[1]);
-
-          Arrays.sort(sortableNames);
-
-          for (String dirName : sortableNames) {
-            inputs.add(new Path(thisPath, dirName));
-          }
-        } else {
-          inputs.add(thisPath);
         }
       }
+      return list;
+    }
+
+    /**
+     * Processes the input file/folder argument. If the input is a file,
+     * then it is directly considered for further processing by TraceBuilder.
+     * If the input is a folder, then all the history logs in the
+     * input folder are considered for further processing.
+     *
+     * If isRecursive is true, then the input path is recursively scanned
+     * for job history logs for further processing by TraceBuilder.
+     *
+     * NOTE: If the input represents a globbed path, then it is first flattened
+     *       and then the individual paths represented by the globbed input
+     *       path are considered for further processing.
+     *
+     * @param input        input path, possibly globbed
+     * @param conf         configuration
+     * @param isRecursive  whether to recursively traverse the input paths to
+     *                     find history logs
+     * @return the input history log files' paths
+     * @throws FileNotFoundException
+     * @throws IOException
+     */
+    static List<Path> processInputArgument(String input, Configuration conf,
+        boolean isRecursive) throws FileNotFoundException, IOException {
+      Path inPath = new Path(input);
+      FileSystem fs = inPath.getFileSystem(conf);
+      FileStatus[] inStatuses = fs.globStatus(inPath);
+
+      List<Path> inputPaths = new LinkedList<Path>();
+      if (inStatuses == null || inStatuses.length == 0) {
+        return inputPaths;
+      }
+
+      for (FileStatus inStatus : inStatuses) {
+        Path thisPath = inStatus.getPath();
+        if (inStatus.isDir()) {
+
+          // Find list of files in this path(recursively if -recursive option
+              // is specified).
+          List<FileStatus> historyLogs = new ArrayList<FileStatus>();
+
+          List<FileStatus> statuses = listFiles(thisPath, fs, new InputFilter(),
+              isRecursive);
+          for (FileStatus child : statuses) {
+            historyLogs.add(child);
+          }
+          if (historyLogs.size() > 0) {
+            // Add the sorted history log file names in this path to the
+            // inputPaths list
+            FileStatus[] sortableNames =
+              historyLogs.toArray(new FileStatus[historyLogs.size()]);
+            Arrays.sort(sortableNames, new HistoryLogsComparator());
+
+            for (FileStatus historyLog : sortableNames) {
+              inputPaths.add(historyLog.getPath());
+            }
+          }
+        } else {
+          inputPaths.add(thisPath);
+        }
+      }
+
+      return inputPaths;
     }
   }
 
@@ -169,25 +258,11 @@ public class TraceBuilder extends Configured implements Tool {
     return jobId != null;
   }
 
-  private void addInterestedProperties(List<String> interestedProperties,
-      String[] names) {
-    for (String name : names) {
-      interestedProperties.add(name);
-    }
-  }
 
   @SuppressWarnings("unchecked")
   @Override
   public int run(String[] args) throws Exception {
     MyOptions options = new MyOptions(args, getConf());
-    List<String> interestedProperties = new ArrayList<String>();
-    {
-      for (JobConfPropertyNames candidateSet : JobConfPropertyNames.values()) {
-        addInterestedProperties(interestedProperties, candidateSet
-            .getCandidates());
-      }
-    }
-    jobConfParser = new JobConfigurationParser(interestedProperties);
     traceWriter = options.clazzTraceOutputter.newInstance();
     traceWriter.init(options.traceOutput, getConf());
     topologyWriter = new DefaultOutputter<LoggedNetworkTopology>();
@@ -232,7 +307,7 @@ public class TraceBuilder extends Configured implements Tool {
               }
 
               if (isJobConfXml(filePair.first(), ris)) {
-                processJobConf(jobConfParser.parse(ris.rewind()), jobBuilder);
+            	processJobConf(JobConfigurationParser.parse(ris.rewind()), jobBuilder);
               } else {
                 parser = JobHistoryParserFactory.getParser(ris);
                 if (parser == null) {

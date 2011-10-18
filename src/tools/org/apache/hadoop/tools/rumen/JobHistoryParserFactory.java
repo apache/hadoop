@@ -38,7 +38,7 @@ public class JobHistoryParserFactory {
     throw new IOException("No suitable parser.");
   }
 
-  enum VersionDetector {
+  public enum VersionDetector {
     Hadoop20() {
 
       @Override

@@ -96,6 +96,7 @@ public class Progress {
     return node.getInternal();
   }
 
+  
   /** Computes progress in this node. */
   private synchronized float getInternal() {
     int phaseCount = phases.size();
@@ -106,6 +107,14 @@ public class Progress {
     } else {
       return progress;
     }
+  }
+
+  /**
+   * Returns progress in this node. get() would give overall progress of the
+   * root node(not just given current node).
+   */
+  public synchronized float getProgress() {
+    return getInternal();
   }
 
   public synchronized void setStatus(String status) {

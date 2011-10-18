@@ -94,6 +94,11 @@ public class SleepJob extends GridmixJob {
   }
 
   @Override
+  protected boolean canEmulateCompression() {
+    return false;
+  }
+  
+  @Override
   public Job call()
     throws IOException, InterruptedException, ClassNotFoundException {
     ugi.doAs(

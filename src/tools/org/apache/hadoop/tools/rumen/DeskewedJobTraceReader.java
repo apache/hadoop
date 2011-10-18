@@ -72,7 +72,7 @@ public class DeskewedJobTraceReader implements Closeable {
    * 
    * @param reader
    *          the {@link JobTraceReader} that's being protected
-   * @param skewBufferSize
+   * @param skewBufferLength
    *          [the number of late jobs that can preced a later out-of-order
    *          earlier job
    * @throws IOException

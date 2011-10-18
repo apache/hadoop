@@ -3,6 +3,9 @@
   "user" : "hadoopqa",
   "jobName" : null,
   "jobID" : "job_200904211745_0002",
+   "jobProperties" : {
+    "mapred.child.java.opts" : "-server -Xmx640m -Djava.net.preferIPv4Stack=true"
+  },
   "mapTasks" : [ {
     "startTime" : 1240336753705,
     "attempts" : [ {

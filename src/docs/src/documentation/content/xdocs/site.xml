@@ -49,6 +49,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <vaidya         label="Vaidya"  href="vaidya.html"/>
     <archives     label="Hadoop Archives" href="hadoop_archives.html"/>
     <gridmix       label="Gridmix"  href="gridmix.html"/>
+    <Rumen          label="Rumen"     href="rumen.html"/>
     <cap_scheduler  label="Capacity Scheduler" href="capacity_scheduler.html"/>
     <fair_scheduler    label="Fair Scheduler"  href="fair_scheduler.html"/>
     <cap_scheduler  label="Hod Scheduler"  href="hod_scheduler.html"/>

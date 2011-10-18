@@ -64,6 +64,9 @@ public class LoggedTaskAttempt implements DeepCompare {
 
   LoggedLocation location;
 
+  // Initialize to default object for backward compatibility
+  ResourceUsageMetrics metrics = new ResourceUsageMetrics();
+  
   LoggedTaskAttempt() {
     super();
   }
@@ -349,8 +352,50 @@ public class LoggedTaskAttempt implements DeepCompare {
         attempt.spilledRecords = val;
       }
     }, counters, "SPILLED_RECORDS");
+    
+    // incorporate CPU usage
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        metrics.setCumulativeCpuUsage(val);
+      }
+    }, counters, "CPU_MILLISECONDS");
+    
+    // incorporate virtual memory usage
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        metrics.setVirtualMemoryUsage(val);
+      }
+    }, counters, "VIRTUAL_MEMORY_BYTES");
+    
+    // incorporate physical memory usage
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        metrics.setPhysicalMemoryUsage(val);
+      }
+    }, counters, "PHYSICAL_MEMORY_BYTES");
+    
+    // incorporate heap usage
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        metrics.setHeapUsage(val);
+      }
+    }, counters, "COMMITTED_HEAP_BYTES");
   }
 
+  // Get the resource usage metrics
+  public ResourceUsageMetrics getResourceUsageMetrics() {
+    return metrics;
+  }
+  
+  // Set the resource usage metrics
+  void setResourceUsageMetrics(ResourceUsageMetrics metrics) {
+    this.metrics = metrics;
+  }
+  
   private static String canonicalizeCounterName(String nonCanonicalName) {
     String result = nonCanonicalName.toLowerCase();
 

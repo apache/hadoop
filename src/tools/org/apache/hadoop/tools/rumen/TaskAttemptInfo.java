@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.tools.rumen;
 
-import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapred.TaskStatus.State;
 
 /**
@@ -38,7 +37,7 @@ public abstract class TaskAttemptInfo {
   }
 
   /**
-   * Get the final {@link TaskStatus.State} of the task-attempt.
+   * Get the final {@link State} of the task-attempt.
    * 
    * @return the final <code>State</code> of the task-attempt
    */

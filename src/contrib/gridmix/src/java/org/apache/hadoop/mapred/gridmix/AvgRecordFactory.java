@@ -40,6 +40,8 @@ class AvgRecordFactory extends RecordFactory {
   private final int keyLen;
   private long accBytes = 0L;
   private long accRecords = 0L;
+  private int unspilledBytes = 0;
+  private int minSpilledBytes = 0;
 
   /**
    * @param targetBytes Expected byte count.
@@ -48,6 +50,14 @@ class AvgRecordFactory extends RecordFactory {
    */
   public AvgRecordFactory(long targetBytes, long targetRecords,
       Configuration conf) {
+    this(targetBytes, targetRecords, conf, 0);
+  }
+  
+  /**
+   * @param minSpilledBytes Minimum amount of data expected per record
+   */
+  public AvgRecordFactory(long targetBytes, long targetRecords,
+      Configuration conf, int minSpilledBytes) {
     this.targetBytes = targetBytes;
     this.targetRecords = targetRecords <= 0 && this.targetBytes >= 0
       ? Math.max(1,
@@ -58,6 +68,7 @@ class AvgRecordFactory extends RecordFactory {
     avgrec = (int) Math.min(Integer.MAX_VALUE, tmp + 1);
     keyLen = Math.max(1,
         (int)(tmp * Math.min(1.0f, conf.getFloat(GRIDMIX_KEY_FRC, 0.1f))));
+    this.minSpilledBytes = minSpilledBytes;
   }
 
   @Override
@@ -67,14 +78,33 @@ class AvgRecordFactory extends RecordFactory {
     }
     final int reclen = accRecords++ >= step ? avgrec - 1 : avgrec;
     final int len = (int) Math.min(targetBytes - accBytes, reclen);
+    
+    unspilledBytes += len;
+    
     // len != reclen?
     if (key != null) {
-      key.setSize(keyLen);
-      val.setSize(len - key.getSize());
+      if (unspilledBytes < minSpilledBytes && accRecords < targetRecords) {
+        key.setSize(1);
+        val.setSize(1);
+        accBytes += key.getSize() + val.getSize();
+        unspilledBytes -= (key.getSize() + val.getSize());
+      } else {
+        key.setSize(keyLen);
+        val.setSize(unspilledBytes - key.getSize());
+        accBytes += unspilledBytes;
+        unspilledBytes = 0;
+      }
     } else {
-      val.setSize(len);
+      if (unspilledBytes < minSpilledBytes && accRecords < targetRecords) {
+        val.setSize(1);
+        accBytes += val.getSize();
+        unspilledBytes -= val.getSize();
+      } else {
+        val.setSize(unspilledBytes);
+        accBytes += unspilledBytes;
+        unspilledBytes = 0;
+      }
     }
-    accBytes += len;
     return true;
   }
 

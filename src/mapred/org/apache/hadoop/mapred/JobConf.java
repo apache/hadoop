@@ -156,10 +156,10 @@ public class JobConf extends Configuration {
    */
   public static final String DEFAULT_QUEUE_NAME = "default";
   
-  static final String MAPRED_JOB_MAP_MEMORY_MB_PROPERTY =
+  public static final String MAPRED_JOB_MAP_MEMORY_MB_PROPERTY =
       "mapred.job.map.memory.mb";
 
-  static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
+  public static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
       "mapred.job.reduce.memory.mb";
 
   static final String MR_ACLS_ENABLED = "mapred.acls.enabled";

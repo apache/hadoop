@@ -19,11 +19,14 @@
  */
 -->
 <configuration>
+<!--
+Old mapred config properties
+-->
    <property>
       <name>mapred.job.queue.name</name><value>TheQueue</value>
    </property>
    <property>
-      <name>mapreduce.job.name</name><value>job_0001</value>
+      <name>mapred.job.name</name><value>MyMRJob</value>
    </property>
    <property>
       <name>maproduce.uninteresting.property</name><value>abcdef</value>

@@ -28,6 +28,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 class GridmixRecord implements WritableComparable<GridmixRecord> {
 
@@ -39,6 +40,10 @@ class GridmixRecord implements WritableComparable<GridmixRecord> {
   private final DataOutputBuffer dob =
     new DataOutputBuffer(Long.SIZE / Byte.SIZE);
   private byte[] literal = dob.getData();
+  private boolean compressible = false;
+  private float compressionRatio = 
+    CompressionEmulationUtil.DEFAULT_COMPRESSION_RATIO;
+  private RandomTextDataGenerator rtg = null;
 
   GridmixRecord() {
     this(1, 0L);
@@ -57,6 +62,19 @@ class GridmixRecord implements WritableComparable<GridmixRecord> {
     setSizeInternal(size);
   }
 
+  void setCompressibility(boolean compressible, float ratio) {
+    this.compressible = compressible;
+    this.compressionRatio = ratio;
+    // Initialize the RandomTextDataGenerator once for every GridMix record
+    // Note that RandomTextDataGenerator is needed only when the GridMix record
+    // is configured to generate compressible text data.
+    if (compressible) {
+      rtg = 
+        CompressionEmulationUtil.getRandomTextDataGenerator(ratio, 
+                                   RandomTextDataGenerator.DEFAULT_SEED);
+    }
+  }
+  
   private void setSizeInternal(int size) {
     this.size = Math.max(1, size);
     try {
@@ -79,6 +97,39 @@ class GridmixRecord implements WritableComparable<GridmixRecord> {
     return (x ^= (x << 17));
   }
 
+  /**
+   * Generate random text data that can be compressed. If the record is marked
+   * compressible (via {@link FileOutputFormat#COMPRESS}), only then the 
+   * random data will be text data else 
+   * {@link GridmixRecord#writeRandom(DataOutput, int)} will be invoked.
+   */
+  private void writeRandomText(DataOutput out, final int size) 
+  throws IOException {
+    long tmp = seed;
+    out.writeLong(tmp);
+    int i = size - (Long.SIZE / Byte.SIZE);
+    //TODO Should we use long for size. What if the data is more than 4G?
+    
+    String randomWord = rtg.getRandomWord();
+    byte[] bytes = randomWord.getBytes("UTF-8");
+    long randomWordSize = bytes.length;
+    while (i >= randomWordSize) {
+      out.write(bytes);
+      i -= randomWordSize;
+      
+      // get the next random word
+      randomWord = rtg.getRandomWord();
+      bytes = randomWord.getBytes("UTF-8");
+      // determine the random word size
+      randomWordSize = bytes.length;
+    }
+    
+    // pad the remaining bytes
+    if (i > 0) {
+      out.write(bytes, 0, i);
+    }
+  }
+  
   public void writeRandom(DataOutput out, final int size) throws IOException {
     long tmp = seed;
     out.writeLong(tmp);
@@ -120,8 +171,13 @@ class GridmixRecord implements WritableComparable<GridmixRecord> {
     WritableUtils.writeVInt(out, size);
     final int payload = size - WritableUtils.getVIntSize(size);
     if (payload > Long.SIZE / Byte.SIZE) {
-      writeRandom(out, payload);
+      if (compressible) {
+        writeRandomText(out, payload);
+      } else {
+        writeRandom(out, payload);
+      }
     } else if (payload > 0) {
+      //TODO What is compressible is turned on? LOG is a bad idea!
       out.write(literal, 0, payload);
     }
   }

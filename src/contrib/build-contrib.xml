@@ -33,6 +33,7 @@
 
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
+  <property name="src.test.data" location="${root}/src/test/data"/>
   <!-- Property added for contrib system tests -->
   <property name="src.test.system" location="${root}/src/test/system"/>
 
@@ -289,6 +290,7 @@
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
+      <sysproperty key="src.test.data" value="${src.test.data}"/>
       <sysproperty key="contrib.name" value="${name}"/>
       
       <!-- requires fork=yes for: 

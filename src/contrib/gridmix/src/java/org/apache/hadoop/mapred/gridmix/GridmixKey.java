@@ -25,6 +25,7 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 
 class GridmixKey extends GridmixRecord {
   static final byte REDUCE_SPEC = 0;
@@ -115,6 +116,22 @@ class GridmixKey extends GridmixRecord {
     setSize(origSize);
   }
 
+  /**
+   * Get the {@link ResourceUsageMetrics} stored in the key.
+   */
+  public ResourceUsageMetrics getReduceResourceUsageMetrics() {
+    assert REDUCE_SPEC == getType();
+    return spec.metrics;
+  }
+  
+  /**
+   * Store the {@link ResourceUsageMetrics} in the key.
+   */
+  public void setReduceResourceUsageMetrics(ResourceUsageMetrics metrics) {
+    assert REDUCE_SPEC == getType();
+    spec.setResourceUsageSpecification(metrics);
+  }
+  
   public byte getType() {
     return type;
   }
@@ -195,18 +212,35 @@ class GridmixKey extends GridmixRecord {
     long rec_in;
     long rec_out;
     long bytes_out;
+    private ResourceUsageMetrics metrics = null;
+    private int sizeOfResourceUsageMetrics = 0;
     public Spec() { }
 
     public void set(Spec other) {
       rec_in = other.rec_in;
       bytes_out = other.bytes_out;
       rec_out = other.rec_out;
+      setResourceUsageSpecification(other.metrics);
     }
 
+    /**
+     * Sets the {@link ResourceUsageMetrics} for this {@link Spec}.
+     */
+    public void setResourceUsageSpecification(ResourceUsageMetrics metrics) {
+      this.metrics = metrics;
+      if (metrics != null) {
+        this.sizeOfResourceUsageMetrics = metrics.size();
+      } else {
+        this.sizeOfResourceUsageMetrics = 0;
+      }
+    }
+    
     public int getSize() {
       return WritableUtils.getVIntSize(rec_in) +
              WritableUtils.getVIntSize(rec_out) +
-             WritableUtils.getVIntSize(bytes_out);
+             WritableUtils.getVIntSize(bytes_out) +
+             WritableUtils.getVIntSize(sizeOfResourceUsageMetrics) +
+             sizeOfResourceUsageMetrics;
     }
 
     @Override
@@ -214,6 +248,11 @@ class GridmixKey extends GridmixRecord {
       rec_in = WritableUtils.readVLong(in);
       rec_out = WritableUtils.readVLong(in);
       bytes_out = WritableUtils.readVLong(in);
+      sizeOfResourceUsageMetrics =  WritableUtils.readVInt(in);
+      if (sizeOfResourceUsageMetrics > 0) {
+        metrics = new ResourceUsageMetrics();
+        metrics.readFields(in);
+      }
     }
 
     @Override
@@ -221,6 +260,10 @@ class GridmixKey extends GridmixRecord {
       WritableUtils.writeVLong(out, rec_in);
       WritableUtils.writeVLong(out, rec_out);
       WritableUtils.writeVLong(out, bytes_out);
+      WritableUtils.writeVInt(out, sizeOfResourceUsageMetrics);
+      if (sizeOfResourceUsageMetrics > 0) {
+        metrics.write(out);
+      }
     }
   }
 
