@@ -596,7 +596,6 @@ Release 0.92.0 - Unreleased
    HBASE-4568  Make zk dump jsp response faster
    HBASE-4606  Remove spam in HCM and fix a list.size == 0
    HBASE-3581  hbase rpc should send size of response
-   HBASE-4585  Avoid seek operation when current kv is deleted(Liyin Tang)
 
 
   TASKS

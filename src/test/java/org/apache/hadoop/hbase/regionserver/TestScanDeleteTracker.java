@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 
@@ -43,8 +42,8 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     deleteType = KeyValue.Type.Delete.getCode();
 
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
-    DeleteResult ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
-    assertEquals(DeleteResult.VERSION_DELETED, ret);
+    boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
+    assertEquals(true, ret);
   }
 
   public void testDeletedBy_DeleteColumn() {
@@ -53,8 +52,8 @@ public class TestScanDeleteTracker extends HBaseTestCase {
 
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
     timestamp -= 5;
-    DeleteResult ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
-    assertEquals(DeleteResult.COLUMN_DELETED, ret);
+    boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
+    assertEquals(true, ret);
   }
 
   public void testDeletedBy_DeleteFamily() {
@@ -64,8 +63,8 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
 
     timestamp -= 5;
-    DeleteResult ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
-    assertEquals(DeleteResult.FAMILY_DELETED, ret);
+    boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
+    assertEquals(true, ret);
   }
 
   public void testDelete_DeleteColumn() {
@@ -79,8 +78,8 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
 
     timestamp -= 5;
-    DeleteResult ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
-    assertEquals(DeleteResult.COLUMN_DELETED, ret);
+    boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
+    assertEquals(true, ret);
   }
 
 
@@ -94,8 +93,8 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     deleteType = KeyValue.Type.Delete.getCode();
     sdt.add(qualifier, 0, qualifier.length, timestamp, deleteType);
 
-    DeleteResult ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
-    assertEquals( DeleteResult.VERSION_DELETED, ret);
+    boolean ret = sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
+    assertEquals(true, ret);
   }
 
   //Testing new way where we save the Delete in case of a Delete for specific
@@ -109,5 +108,6 @@ public class TestScanDeleteTracker extends HBaseTestCase {
     sdt.isDeleted(qualifier, 0, qualifier.length, timestamp);
     assertEquals(false ,sdt.isEmpty());
   }
+
 
 }

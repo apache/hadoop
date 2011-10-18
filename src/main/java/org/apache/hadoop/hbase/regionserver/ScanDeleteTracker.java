@@ -21,7 +21,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -100,13 +99,13 @@ public class ScanDeleteTracker implements DeleteTracker {
    * @param qualifierOffset column qualifier offset
    * @param qualifierLength column qualifier length
    * @param timestamp timestamp
-   * @return deleteResult
+   * @return true is the specified KeyValue is deleted, false if not
    */
   @Override
-  public DeleteResult isDeleted(byte [] buffer, int qualifierOffset,
+  public boolean isDeleted(byte [] buffer, int qualifierOffset,
       int qualifierLength, long timestamp) {
     if (timestamp <= familyStamp) {
-      return DeleteResult.FAMILY_DELETED;
+      return true;
     }
 
     if (deleteBuffer != null) {
@@ -115,12 +114,12 @@ public class ScanDeleteTracker implements DeleteTracker {
 
       if (ret == 0) {
         if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
-          return DeleteResult.COLUMN_DELETED;
+          return true;
         }
         // Delete (aka DeleteVersion)
         // If the timestamp is the same, keep this one
         if (timestamp == deleteTimestamp) {
-          return DeleteResult.VERSION_DELETED;
+          return true;
         }
         // use assert or not?
         assert timestamp < deleteTimestamp;
@@ -139,7 +138,7 @@ public class ScanDeleteTracker implements DeleteTracker {
       }
     }
 
-    return DeleteResult.NOT_DELETED;
+    return false;
   }
 
   @Override
