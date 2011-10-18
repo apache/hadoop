@@ -396,8 +396,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                     DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
                     httpKeytab);
               }
-              params.put("kerberos.name.rules",
-                  conf.get("hadoop.security.auth_to_local", "DEFAULT"));
               return params;
             }
           };

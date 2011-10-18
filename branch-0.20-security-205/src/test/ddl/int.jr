@@ -1,6 +1,0 @@
-module org.apache.hadoop.record {
-    class RecInt {
-        int data;
-    }
-}
-
