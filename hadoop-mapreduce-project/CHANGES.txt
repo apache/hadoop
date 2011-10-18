@@ -96,6 +96,12 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2037. Capture intermediate progress, CPU and memory usage for
     tasks. (Dick King via acmurthy) 
 
+    MAPREDUCE-279. MapReduce 2.0. Merging MR-279 branch into trunk. Contributed by
+    Arun C Murthy, Christopher Douglas, Devaraj Das, Greg Roelofs, Jeffrey
+    Naisbitt, Josh Wills, Jonathan Eagles, Krishna Ramachandran, Luke Lu, Mahadev
+    Konar, Robert Evans, Sharad Agarwal, Siddharth Seth, Thomas Graves, and Vinod
+    Kumar Vavilapalli.
+
     MAPREDUCE-2930. Added the ability to be able to generate graphs from the
     state-machine definitions. (Binglin Chang via vinodkv)
 
