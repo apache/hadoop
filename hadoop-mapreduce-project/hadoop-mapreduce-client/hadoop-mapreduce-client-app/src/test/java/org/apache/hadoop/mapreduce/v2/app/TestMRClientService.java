@@ -38,7 +38,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.client.MRClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -49,10 +48,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.junit.Test;
 
@@ -150,14 +147,12 @@ public class TestMRClientService {
         proxy.getTaskReports(gtreportsRequest).getTaskReportList());
 
     List<String> diag = proxy.getDiagnostics(gdRequest).getDiagnosticsList();
-    Assert.assertEquals("Num diagnostics not correct", 2 , diag.size());
+    Assert.assertEquals("Num diagnostics not correct", 1 , diag.size());
     Assert.assertEquals("Diag 1 not correct",
         diagnostic1, diag.get(0).toString());
-    Assert.assertEquals("Diag 2 not correct",
-        diagnostic2, diag.get(1).toString());
 
     TaskReport taskReport = proxy.getTaskReport(gtrRequest).getTaskReport();
-    Assert.assertEquals("Num diagnostics not correct", 2,
+    Assert.assertEquals("Num diagnostics not correct", 1,
         taskReport.getDiagnosticsCount());
 
     //send the done signal to the task
