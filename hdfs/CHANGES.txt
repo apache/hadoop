@@ -648,6 +648,8 @@ Release 0.22.0 - Unreleased
     HDFS-2286. DataXceiverServer logs AsynchronousCloseException at shutdown
     (Todd Lipcon and Uma Maheswara Rao G via shv)
 
+    HDFS-2451. TestNodeCount.testNodeCount failes with NPE (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

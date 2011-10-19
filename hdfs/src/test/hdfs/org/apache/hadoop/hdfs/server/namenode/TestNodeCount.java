@@ -107,7 +107,9 @@ public class TestNodeCount extends TestCase {
       
       // The block should be replicated
       do {
+        namesystem.writeLock();
         num = namesystem.blockManager.countNodes(block);
+        namesystem.writeUnlock();
       } while (num.liveReplicas() != REPLICATION_FACTOR);
       
       // restart the first datanode
@@ -116,7 +118,9 @@ public class TestNodeCount extends TestCase {
       
       // check if excessive replica is detected
       do {
-       num = namesystem.blockManager.countNodes(block);
+        namesystem.writeLock();
+        num = namesystem.blockManager.countNodes(block);
+        namesystem.writeUnlock();
       } while (num.excessReplicas() != 2);
     } finally {
       cluster.shutdown();
