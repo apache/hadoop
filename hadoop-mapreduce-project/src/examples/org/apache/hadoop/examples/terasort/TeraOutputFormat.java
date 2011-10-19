@@ -29,7 +29,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
@@ -100,28 +99,9 @@ public class TeraOutputFormat extends FileOutputFormat<Text,Text> {
       throws IOException {
     if (committer == null) {
       Path output = getOutputPath(context);
-      committer = new TeraOutputCommitter(output, context);
+      committer = new FileOutputCommitter(output, context);
     }
     return committer;
   }
 
-  public static class TeraOutputCommitter extends FileOutputCommitter {
-
-    public TeraOutputCommitter(Path outputPath, TaskAttemptContext context)
-        throws IOException {
-      super(outputPath, context);
-    }
-
-    @Override
-    public void commitJob(JobContext jobContext) {
-    }
-
-    @Override
-    public void setupJob(JobContext jobContext) {
-    }
-
-    @Override
-    public void setupTask(TaskAttemptContext taskContext) {
-    }
-  }
 }
