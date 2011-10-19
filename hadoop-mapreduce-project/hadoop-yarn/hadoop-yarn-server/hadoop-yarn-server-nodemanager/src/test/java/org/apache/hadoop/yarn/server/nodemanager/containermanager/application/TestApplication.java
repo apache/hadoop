@@ -41,11 +41,12 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(1, 314159265358979L, "yak", 3);
-      wa.initApplication(1);
+      wa.initApplication();
+      wa.initContainer(1);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       assertEquals(1, wa.app.getContainers().size());
-      wa.initApplication(0);
-      wa.initApplication(2);
+      wa.initContainer(0);
+      wa.initContainer(2);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       assertEquals(3, wa.app.getContainers().size());
       wa.applicationInited();
@@ -70,7 +71,8 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(2, 314159265358979L, "yak", 3);
-      wa.initApplication(0);
+      wa.initApplication();
+      wa.initContainer(0);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       assertEquals(1, wa.app.getContainers().size());
 
@@ -80,8 +82,8 @@ public class TestApplication {
           argThat(new ContainerInitMatcher(wa.containers.get(0)
               .getContainerID())));
 
-      wa.initApplication(1);
-      wa.initApplication(2);
+      wa.initContainer(1);
+      wa.initContainer(2);
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
       assertEquals(3, wa.app.getContainers().size());
 
@@ -105,7 +107,8 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(3, 314159265358979L, "yak", 3);
-      wa.initApplication(-1);
+      wa.initApplication();
+      wa.initContainer(-1);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       wa.applicationInited();
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
@@ -130,7 +133,8 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(4, 314159265358979L, "yak", 3);
-      wa.initApplication(-1);
+      wa.initApplication();
+      wa.initContainer(-1);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       wa.applicationInited();
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
@@ -185,7 +189,8 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(5, 314159265358979L, "yak", 3);
-      wa.initApplication(-1);
+      wa.initApplication();
+      wa.initContainer(-1);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       wa.applicationInited();
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
@@ -220,7 +225,8 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(5, 314159265358979L, "yak", 3);
-      wa.initApplication(-1);
+      wa.initApplication();
+      wa.initContainer(-1);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       wa.applicationInited();
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
@@ -256,7 +262,8 @@ public class TestApplication {
     WrappedApplication wa = null;
     try {
       wa = new WrappedApplication(1, 314159265358979L, "yak", 3);
-      wa.initApplication(0);
+      wa.initApplication();
+      wa.initContainer(0);
       assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
       assertEquals(1, wa.app.getContainers().size());
 
@@ -276,7 +283,7 @@ public class TestApplication {
           refEq(new ApplicationLocalizationEvent(
               LocalizationEventType.DESTROY_APPLICATION_RESOURCES, wa.app)));
 
-      wa.initApplication(1);
+      wa.initContainer(1);
       assertEquals(ApplicationState.APPLICATION_RESOURCES_CLEANINGUP,
           wa.app.getApplicationState());
       assertEquals(0, wa.app.getContainers().size());
@@ -376,13 +383,18 @@ public class TestApplication {
       dispatcher.stop();
     }
 
-    public void initApplication(int containerNum) {
+    public void initApplication() {
+      app.handle(new ApplicationInitEvent(appId));
+    }
+
+
+    public void initContainer(int containerNum) {
       if (containerNum == -1) {
         for (int i = 0; i < containers.size(); i++) {
-          app.handle(new ApplicationInitEvent(containers.get(i)));
+          app.handle(new ApplicationContainerInitEvent(containers.get(i)));
         }
       } else {
-        app.handle(new ApplicationInitEvent(containers.get(containerNum)));
+        app.handle(new ApplicationContainerInitEvent(containers.get(containerNum)));
       }
       drainDispatcherEvents();
     }

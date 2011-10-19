@@ -22,6 +22,7 @@ public enum ApplicationEventType {
 
   // Source: ContainerManager
   INIT_APPLICATION,
+  INIT_CONTAINER,
   FINISH_APPLICATION,
 
   // Source: ResourceLocalizationService

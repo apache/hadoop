@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
@@ -225,6 +226,7 @@ public class ContainerManagerImpl extends CompositeService implements
   /**
    * Start a container on this NodeManager.
    */
+  @SuppressWarnings("unchecked")
   @Override
   public StartContainerResponse startContainer(StartContainerRequest request)
       throws YarnRemoteException {
@@ -274,10 +276,13 @@ public class ContainerManagerImpl extends CompositeService implements
         context.getApplications().putIfAbsent(applicationID, application)) {
       LOG.info("Creating a new application reference for app "
           + applicationID);
+      dispatcher.getEventHandler().handle(
+          new ApplicationInitEvent(applicationID));
     }
 
     // TODO: Validate the request
-    dispatcher.getEventHandler().handle(new ApplicationInitEvent(container));
+    dispatcher.getEventHandler().handle(
+        new ApplicationContainerInitEvent(container));
 
     NMAuditLogger.logSuccess(launchContext.getUser(), 
         AuditConstants.START_CONTAINER, "ContainerManageImpl", 
