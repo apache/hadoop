@@ -42,6 +42,6 @@ class ResponseFlag {
   }
 
   static byte getErrorAndLengthSet() {
-    return LENGTH_BIT & ERROR_BIT;
+    return LENGTH_BIT | ERROR_BIT;
   }
 }

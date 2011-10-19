@@ -344,6 +344,8 @@ Release 0.92.0 - Unreleased
                regions
    HBASE-4579  CST.requestCompaction semantics changed, logs are now
                spammed when too many store files
+   HBASE-4620  I broke the build when I submitted HBASE-3581 (Send
+               length of the rpc response)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
