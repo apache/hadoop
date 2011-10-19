@@ -61,6 +61,10 @@ Release 0.20.205.1 - unreleased
     file or creating a file without specifying the replication parameter.
     (szetszwo)
 
+    HDFS-2453. Fix http response code for partial content in webhdfs, added
+    getDefaultBlockSize() and getDefaultReplication() in WebHdfsFileSystem
+    and cleared content type in ExceptionHandler. (szetszwo)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES

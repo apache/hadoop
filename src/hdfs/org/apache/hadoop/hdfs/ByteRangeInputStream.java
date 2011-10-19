@@ -22,10 +22,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.StringTokenizer;
 
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
+import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 
 /**
  * To support HTTP byte streams, a new connection to an HTTP server needs to be
@@ -42,6 +45,8 @@ public class ByteRangeInputStream extends FSInputStream {
    */
   static class URLOpener {
     protected URL url;
+    /** The url with offset parameter */
+    private URL offsetUrl;
   
     public URLOpener(URL u) {
       url = u;
@@ -54,12 +59,55 @@ public class ByteRangeInputStream extends FSInputStream {
     public URL getURL() {
       return url;
     }
-  
-    public HttpURLConnection openConnection() throws IOException {
-      return (HttpURLConnection)url.openConnection();
+
+    HttpURLConnection openConnection() throws IOException {
+      return (HttpURLConnection)offsetUrl.openConnection();
+    }
+
+    private HttpURLConnection openConnection(final long offset) throws IOException {
+      offsetUrl = offset == 0L? url: new URL(url + "&" + new OffsetParam(offset));
+      final HttpURLConnection conn = openConnection();
+      conn.setRequestMethod("GET");
+      if (offset != 0L) {
+        conn.setRequestProperty("Range", "bytes=" + offset + "-");
+      }
+      return conn;
     }  
   }
   
+  static private final String OFFSET_PARAM_PREFIX = OffsetParam.NAME + "=";
+
+  /** Remove offset parameter, if there is any, from the url */
+  static URL removeOffsetParam(final URL url) throws MalformedURLException {
+    String query = url.getQuery();
+    if (query == null) {
+      return url;
+    }
+    final String lower = query.toLowerCase();
+    if (!lower.startsWith(OFFSET_PARAM_PREFIX)
+        && !lower.contains("&" + OFFSET_PARAM_PREFIX)) {
+      return url;
+    }
+
+    //rebuild query
+    StringBuilder b = null;
+    for(final StringTokenizer st = new StringTokenizer(query, "&");
+        st.hasMoreTokens();) {
+      final String token = st.nextToken();
+      if (!token.toLowerCase().startsWith(OFFSET_PARAM_PREFIX)) {
+        if (b == null) {
+          b = new StringBuilder("?").append(token);
+        } else {
+          b.append('&').append(token);
+        }
+      }
+    }
+    query = b == null? "": b.toString();
+
+    final String urlStr = url.toString();
+    return new URL(urlStr.substring(0, urlStr.indexOf('?')) + query);
+  }
+
   enum StreamStatus {
     NORMAL, SEEK
   }
@@ -95,12 +143,8 @@ public class ByteRangeInputStream extends FSInputStream {
       final URLOpener opener =
         (resolvedURL.getURL() == null) ? originalURL : resolvedURL;
 
-      final HttpURLConnection connection = opener.openConnection();
+      final HttpURLConnection connection = opener.openConnection(startPos);
       try {
-        connection.setRequestMethod("GET");
-        if (startPos != 0) {
-          connection.setRequestProperty("Range", "bytes="+startPos+"-");
-        }
         connection.connect();
         final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
         filelength = (cl == null) ? -1 : Long.parseLong(cl);
@@ -125,7 +169,7 @@ public class ByteRangeInputStream extends FSInputStream {
         throw new IOException("HTTP_OK expected, received " + respCode);
       }
 
-      resolvedURL.setURL(connection.getURL());
+      resolvedURL.setURL(removeOffsetParam(connection.getURL()));
       status = StreamStatus.NORMAL;
     }
     
