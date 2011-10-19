@@ -1643,6 +1643,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2693. Fix NPE in job-blacklisting. (Hitesh Shah via acmurthy) 
 
+    MAPREDUCE-3208. Fix NPE task/container log appenders. (liangzhwa via
+    acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
