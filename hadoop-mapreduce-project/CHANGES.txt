@@ -1683,6 +1683,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3162. Separated application-init and container-init event types
     in NodeManager's Application state machine. (Todd Lipcon via vinodkv)
 
+    MAPREDUCE-3176. Fixed ant mapreduce tests that are timing out because
+    of wrong framework name. (Hitesh Shah via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
