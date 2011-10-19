@@ -40,6 +40,8 @@ public class ConfigUtil {
     addDeprecatedKeys();
     Configuration.addDefaultResource("mapred-default.xml");
     Configuration.addDefaultResource("mapred-site.xml");
+    Configuration.addDefaultResource("yarn-default.xml");
+    Configuration.addDefaultResource("yarn-site.xml");
   }
   
   /**

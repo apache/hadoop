@@ -1635,6 +1635,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3176. Fixed ant mapreduce tests that are timing out because
     of wrong framework name. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3181. Fixed MapReduce runtime to load yarn-default.xml and
+    yarn-site.xml. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
