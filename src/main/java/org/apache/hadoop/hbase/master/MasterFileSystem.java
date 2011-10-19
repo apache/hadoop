@@ -372,7 +372,7 @@ public class MasterFileSystem {
 
   private static void setInfoFamilyCachingForRoot(final boolean b) {
     for (HColumnDescriptor hcd:
-        HTableDescriptor.ROOT_TABLEDESC.families.values()) {
+        HTableDescriptor.ROOT_TABLEDESC.getColumnFamilies()) {
        if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
          hcd.setBlockCacheEnabled(b);
          hcd.setInMemory(b);
@@ -382,7 +382,7 @@ public class MasterFileSystem {
 
   private static void setInfoFamilyCachingForMeta(final boolean b) {
     for (HColumnDescriptor hcd:
-        HTableDescriptor.META_TABLEDESC.families.values()) {
+        HTableDescriptor.META_TABLEDESC.getColumnFamilies()) {
       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
         hcd.setBlockCacheEnabled(b);
         hcd.setInMemory(b);
