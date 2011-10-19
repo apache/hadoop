@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.net.StandardSocketFactory;
 
 /**
@@ -92,6 +93,7 @@ public class TestSocketFactory extends TestCase {
       JobConf jconf = new JobConf(cconf);
       jconf.set("mapred.job.tracker", String.format("localhost:%d",
           jobTrackerPort + 10));
+      jconf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
       client = new JobClient(jconf);
 
       JobStatus[] jobs = client.jobsToComplete();
