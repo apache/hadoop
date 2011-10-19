@@ -67,8 +67,6 @@ Trunk (unreleased changes)
 
     HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be fetched. (tucu)
 
-    HDFS-2474. Make GlobFilter class public. (tucu)
-
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

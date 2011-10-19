@@ -21,13 +21,8 @@ package org.apache.hadoop.fs;
 import java.util.regex.PatternSyntaxException;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
  // A class that could decide if a string matches the glob or not
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class GlobFilter implements PathFilter {
+class GlobFilter implements PathFilter {
   private final static PathFilter DEFAULT_FILTER = new PathFilter() {
       public boolean accept(Path file) {
         return true;
