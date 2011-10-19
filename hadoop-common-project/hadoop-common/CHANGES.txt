@@ -659,6 +659,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7755. Detect MapReduce PreCommit Trunk builds silently failing
     when running test-patch.sh. (Jonathan Eagles via tomwhite)
 
+    HADOOP-7744. Ensure failed tests exit with proper error code. (Jonathan
+    Eagles via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
