@@ -1680,6 +1680,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3199. Fixed pom files to include correct log4j configuration for
     tests. (vinodkv)
 
+    MAPREDUCE-3162. Separated application-init and container-init event types
+    in NodeManager's Application state machine. (Todd Lipcon via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

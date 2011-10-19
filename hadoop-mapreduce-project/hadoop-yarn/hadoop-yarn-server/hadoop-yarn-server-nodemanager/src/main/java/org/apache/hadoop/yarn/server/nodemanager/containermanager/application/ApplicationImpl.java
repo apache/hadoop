@@ -104,11 +104,14 @@ public class ApplicationImpl implements Application {
            // Transitions from NEW state
            .addTransition(ApplicationState.NEW, ApplicationState.INITING,
                ApplicationEventType.INIT_APPLICATION, new AppInitTransition())
+           .addTransition(ApplicationState.NEW, ApplicationState.NEW,
+               ApplicationEventType.INIT_CONTAINER,
+               new InitContainerTransition())
 
            // Transitions from INITING state
            .addTransition(ApplicationState.INITING, ApplicationState.INITING,
-               ApplicationEventType.INIT_APPLICATION,
-               new AppIsInitingTransition())
+               ApplicationEventType.INIT_CONTAINER,
+               new InitContainerTransition())
            .addTransition(ApplicationState.INITING,
                EnumSet.of(ApplicationState.FINISHING_CONTAINERS_WAIT,
                    ApplicationState.APPLICATION_RESOURCES_CLEANINGUP),
@@ -121,8 +124,8 @@ public class ApplicationImpl implements Application {
            // Transitions from RUNNING state
            .addTransition(ApplicationState.RUNNING,
                ApplicationState.RUNNING,
-               ApplicationEventType.INIT_APPLICATION,
-               new DuplicateAppInitTransition())
+               ApplicationEventType.INIT_CONTAINER,
+               new InitContainerTransition())
            .addTransition(ApplicationState.RUNNING,
                ApplicationState.RUNNING,
                ApplicationEventType.APPLICATION_CONTAINER_FINISHED,
@@ -167,9 +170,6 @@ public class ApplicationImpl implements Application {
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
-      ApplicationInitEvent initEvent = (ApplicationInitEvent) event;
-      Container container = initEvent.getContainer();
-      app.containers.put(container.getContainerID(), container);
       app.dispatcher.getEventHandler().handle(
           new ApplicationLocalizationEvent(
               LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
@@ -177,17 +177,36 @@ public class ApplicationImpl implements Application {
   }
 
   /**
-   * Absorb initialization events while the application initializes.
+   * Handles INIT_CONTAINER events which request that we launch a new
+   * container. When we're still in the INITTING state, we simply
+   * queue these up. When we're in the RUNNING state, we pass along
+   * an ContainerInitEvent to the appropriate ContainerImpl.
    */
-  static class AppIsInitingTransition implements
+  @SuppressWarnings("unchecked")
+  static class InitContainerTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
-      ApplicationInitEvent initEvent = (ApplicationInitEvent) event;
+      ApplicationContainerInitEvent initEvent =
+        (ApplicationContainerInitEvent) event;
       Container container = initEvent.getContainer();
       app.containers.put(container.getContainerID(), container);
       LOG.info("Adding " + container.getContainerID()
           + " to application " + app.toString());
+      
+      switch (app.getApplicationState()) {
+      case RUNNING:
+        app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
+            container.getContainerID()));
+        break;
+      case INITING:
+      case NEW:
+        // these get queued up and sent out in AppInitDoneTransition
+        break;
+      default:
+        assert false : "Invalid state for InitContainerTransition: " +
+            app.getApplicationState();
+      }
     }
   }
 
@@ -211,20 +230,6 @@ public class ApplicationImpl implements Application {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  static class DuplicateAppInitTransition implements
-      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
-    @Override
-    public void transition(ApplicationImpl app, ApplicationEvent event) {
-      ApplicationInitEvent initEvent = (ApplicationInitEvent) event;
-      Container container = initEvent.getContainer();
-      app.containers.put(container.getContainerID(), container);
-      LOG.info("Adding " + container.getContainerID()
-          + " to application " + app.toString());
-      app.dispatcher.getEventHandler().handle(new ContainerInitEvent(
-            container.getContainerID()));
-    }
-  }
   
   static final class ContainerDoneTransition implements
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {

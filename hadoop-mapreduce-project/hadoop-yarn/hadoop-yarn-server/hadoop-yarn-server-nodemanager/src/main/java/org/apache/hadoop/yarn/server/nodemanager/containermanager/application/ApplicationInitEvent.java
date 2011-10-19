@@ -18,20 +18,11 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 public class ApplicationInitEvent extends ApplicationEvent {
 
-  private final Container container;
-
-  public ApplicationInitEvent(Container container) {
-    super(container.getContainerID().getApplicationAttemptId().getApplicationId(),
-        ApplicationEventType.INIT_APPLICATION);
-    this.container = container;
+  public ApplicationInitEvent(ApplicationId appId) {
+    super(appId, ApplicationEventType.INIT_APPLICATION);
   }
-
-  public Container getContainer() {
-    return this.container;
-  }
-
 }
