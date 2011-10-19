@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.web.resources;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -36,11 +38,16 @@ import com.sun.jersey.api.ParamException;
 public class ExceptionHandler implements ExceptionMapper<Exception> {
   public static final Log LOG = LogFactory.getLog(ExceptionHandler.class);
 
+  private @Context HttpServletResponse response;
+
   @Override
   public Response toResponse(Exception e) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GOT EXCEPITION", e);
     }
+
+    //clear content type
+    response.setContentType(null);
 
     //Convert exception
     if (e instanceof ParamException) {

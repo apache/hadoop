@@ -31,6 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
@@ -44,6 +46,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.ByteRangeInputStream;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -86,6 +89,7 @@ import org.mortbay.util.ajax.JSON;
 
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends HftpFileSystem {
+  public static final Log LOG = LogFactory.getLog(WebHdfsFileSystem.class);
   /** File System URI: {SCHEME}://namenode:port/path/to/file */
   public static final String SCHEME = "webhdfs";
   /** Http URI: http://namenode:port/{PATH_PREFIX}/path/to/file */
@@ -338,6 +342,18 @@ public class WebHdfsFileSystem extends HftpFileSystem {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETTIMES;
     run(op, p, new ModificationTimeParam(mtime), new AccessTimeParam(atime));
+  }
+
+  @Override
+  public long getDefaultBlockSize() {
+    return getConf().getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
+  }
+
+  @Override
+  public short getDefaultReplication() {
+    return (short)getConf().getInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+        DFSConfigKeys.DFS_REPLICATION_DEFAULT);
   }
 
   private FSDataOutputStream write(final HttpOpParam.Op op,

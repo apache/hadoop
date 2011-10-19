@@ -132,6 +132,10 @@ Trunk (unreleased changes)
     HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
     than NNStorage. (Ivan Kelly via jitendra)
 
+    HDFS-2453. Fix http response code for partial content in webhdfs, added
+    getDefaultBlockSize() and getDefaultReplication() in WebHdfsFileSystem
+    and cleared content type in ExceptionHandler.  (szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
