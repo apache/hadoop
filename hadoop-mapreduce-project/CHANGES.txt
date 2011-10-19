@@ -1652,6 +1652,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3179. Ensure failed tests exit with right error code. (Jonathan
     Eagles via acmurthy)
 
+    MAPREDUCE-3188. Ensure correct shutdown in services. (todd via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
