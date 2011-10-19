@@ -25,6 +25,7 @@
   <name>hadoop-mapreduce-client-hs</name>
 
   <properties>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
     <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
   </properties>
 
@@ -50,15 +51,4 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <excludes>
-          </excludes>
-        </configuration>
-      </plugin>
-    </plugins>
-   </build>
 </project>

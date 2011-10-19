@@ -27,7 +27,8 @@
   <packaging>pom</packaging>
 
   <properties>
-    <mr.basedir>${project.parent.basedir}</mr.basedir>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <mr.basedir>../</mr.basedir>
   </properties>
 
 

@@ -390,26 +390,6 @@
           <version>2.4.1</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <!-- requires 2.5+ to make system properties work -->
-          <!-- requires 2.7+ to avoid SUREFIRE-640 -->
-          <version>2.9</version>
-          <configuration>
-            <failIfNoTests>false</failIfNoTests>
-            <redirectTestOutputToFile>${test.logs}</redirectTestOutputToFile>
-            <forkedProcessTimeoutInSeconds>${test.timeout}</forkedProcessTimeoutInSeconds>
-            <environmentVariables>
-              <JAVA_HOME>${java.home}</JAVA_HOME>
-            </environmentVariables>
-            <systemPropertyVariables>
-              <build.dir>${project.build.directory}</build.dir>
-              <build.output.dir>${project.build.outputDirectory}</build.output.dir>
-              <log4j.configuration>file:///${yarn.basedir}/../src/test/log4j.properties</log4j.configuration>
-            </systemPropertyVariables>
-          </configuration>
-        </plugin>
-        <plugin>
           <groupId>com.atlassian.maven.plugins</groupId>
           <artifactId>maven-clover2-plugin</artifactId>
           <version>3.0.2</version>

@@ -196,27 +196,6 @@
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <!-- requires 2.5+ to make system properties work -->
-          <!-- requires 2.7+ to avoid SUREFIRE-640 -->
-          <version>2.9</version>
-          <configuration>
-            <failIfNoTests>false</failIfNoTests>
-            <redirectTestOutputToFile>${test.logs}</redirectTestOutputToFile>
-            <forkedProcessTimeoutInSeconds>${test.timeout}</forkedProcessTimeoutInSeconds>
-            <forkMode>${fork.mode}</forkMode>
-            <environmentVariables>
-              <JAVA_HOME>${java.home}</JAVA_HOME>
-            </environmentVariables>
-            <systemPropertyVariables>
-              <build.dir>${project.build.directory}</build.dir>
-              <build.output.dir>${project.build.outputDirectory}</build.output.dir>
-              <log4j.configuration>file:///${mr.basedir}/src/test/log4j.properties</log4j.configuration>  
-            </systemPropertyVariables>
-          </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.2.1</version>
         </plugin>

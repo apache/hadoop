@@ -25,6 +25,7 @@
   <name>hadoop-yarn-site</name>
 
   <properties>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
   </properties>
 

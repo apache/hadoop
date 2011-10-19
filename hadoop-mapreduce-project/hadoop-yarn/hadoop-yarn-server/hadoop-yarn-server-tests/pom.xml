@@ -24,6 +24,7 @@
   <name>hadoop-yarn-server-tests</name>
 
   <properties>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
   </properties>
 

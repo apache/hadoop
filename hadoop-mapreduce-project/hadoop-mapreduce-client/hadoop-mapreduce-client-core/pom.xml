@@ -25,9 +25,10 @@
   <name>hadoop-mapreduce-client-core</name>
 
   <properties>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
     <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
   </properties>
-  
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -41,6 +42,15 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+	<configuration>
+          <systemPropertyVariables>
+            <log4j.configuration>file:///${project.parent.basedir}/../src/test/log4j.properties</log4j.configuration>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
       <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>

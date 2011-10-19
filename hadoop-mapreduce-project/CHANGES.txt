@@ -1674,6 +1674,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3203. Fix some javac warnings in MRAppMaster. (mahadev)
 
+    MAPREDUCE-3199. Fixed pom files to include correct log4j configuration for
+    tests. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

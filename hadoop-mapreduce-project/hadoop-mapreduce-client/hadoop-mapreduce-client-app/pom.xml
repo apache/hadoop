@@ -26,7 +26,8 @@
 
   <properties>
     <applink.base>${project.build.directory}/${project.name}</applink.base>
-    <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <mr.basedir>${project.parent.basedir}/../</mr.basedir>
   </properties>
 
   <dependencies>
