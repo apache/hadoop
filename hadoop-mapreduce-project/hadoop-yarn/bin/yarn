@@ -53,7 +53,7 @@ esac
 
 # if no args specified, show usage
 if [ $# = 0 ]; then
-  echo "Usage: hadoop [--config confdir] COMMAND"
+  echo "Usage: yarn [--config confdir] COMMAND"
   echo "where COMMAND is one of:"
   echo "  resourcemanager      run the ResourceManager" 
   echo "  nodemanager          run a nodemanager on each slave" 
