@@ -1689,6 +1689,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3181. Fixed MapReduce runtime to load yarn-default.xml and
     yarn-site.xml. (acmurthy) 
 
+    MAPREDUCE-2788. Normalize resource requests in FifoScheduler
+    appropriately. (Ahmed Radwan via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

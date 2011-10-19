@@ -441,7 +441,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
     
     // Sanity check
-    normalizeRequests(ask);
+    SchedulerUtils.normalizeRequests(ask, minimumAllocation.getMemory());
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -519,21 +519,6 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
 
     return root.getQueueUserAclInfo(user);
-  }
-
-  @Lock(Lock.NoLock.class)
-  private void normalizeRequests(List<ResourceRequest> asks) {
-    for (ResourceRequest ask : asks) {
-      normalizeRequest(ask);
-    }
-  }
-
-  @Lock(Lock.NoLock.class)
-  private void normalizeRequest(ResourceRequest ask) {
-    int minMemory = minimumAllocation.getMemory();
-    int memory = Math.max(ask.getCapability().getMemory(), minMemory);
-    ask.getCapability().setMemory (
-        minMemory * ((memory/minMemory) + (memory%minMemory > 0 ? 1 : 0)));
   }
 
   private synchronized void nodeUpdate(RMNode nm, 
