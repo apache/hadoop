@@ -1641,6 +1641,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2788. Normalize resource requests in FifoScheduler
     appropriately. (Ahmed Radwan via acmurthy) 
 
+    MAPREDUCE-2693. Fix NPE in job-blacklisting. (Hitesh Shah via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
