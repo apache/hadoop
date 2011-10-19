@@ -346,6 +346,7 @@ Release 0.92.0 - Unreleased
                spammed when too many store files
    HBASE-4620  I broke the build when I submitted HBASE-3581 (Send
                length of the rpc response)
+   HBASE-4621  TestAvroServer fails quite often intermittently (Akash Ashok)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

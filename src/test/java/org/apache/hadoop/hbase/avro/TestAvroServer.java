@@ -122,10 +122,12 @@ public class TestAvroServer {
     impl.disableTable(tableAname);
     assertFalse(impl.isTableEnabled(tableAname));
 
+    long oldMaxFileSize = impl.describeTable(tableAname).maxFileSize;
     tableA.maxFileSize = 123456L;
     impl.modifyTable(tableAname, tableA);
+  
     // It can take a while for the change to take effect.  Wait here a while.
-    while(impl.describeTable(tableAname) == null) {
+    while(impl.describeTable(tableAname).maxFileSize == oldMaxFileSize) {
       Threads.sleep(100);
     }
 
