@@ -1646,6 +1646,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3208. Fix NPE task/container log appenders. (liangzhwa via
     acmurthy) 
 
+    MAPREDUCE-3212. Fix usage/help message for bin/yarn. (Bhallamudi Venkata 
+    Siva Kamesh via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
