@@ -50,11 +50,14 @@ public class CoreTestDriver {
   }
 
   public void run(String argv[]) {
+    int exitCode = -1;
     try {
-      pgd.driver(argv);
+      exitCode = pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();
     }
+
+    System.exit(exitCode);
   }
 
   public static void main(String argv[]){
