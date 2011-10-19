@@ -686,7 +686,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override
   public Block[] getBlocksBeingWrittenReport() {
-    return null;
+    return new Block[0];
   }
 
   @Override

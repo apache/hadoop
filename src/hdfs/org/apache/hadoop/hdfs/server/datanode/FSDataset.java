@@ -563,9 +563,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     /**
      * Recover blocks that were being written when the datanode
      * was earlier shut down. These blocks get re-inserted into
-     * ongoingCreates. Also, send a blockreceived message to the NN
-     * for each of these blocks because these are not part of a 
-     * block report.
+     * ongoingCreates.
      */
     private void recoverBlocksBeingWritten(File bbw) throws IOException {
       FSDir fsd = new FSDir(bbw);
