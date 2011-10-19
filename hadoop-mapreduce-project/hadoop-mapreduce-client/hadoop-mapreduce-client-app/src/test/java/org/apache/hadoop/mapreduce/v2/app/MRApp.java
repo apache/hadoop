@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -118,10 +119,20 @@ public class MRApp extends MRAppMaster {
     applicationAttemptId.setAttemptId(startCount);
     return applicationAttemptId;
   }
+  
+  private static ContainerId getContainerId(ApplicationId applicationId,
+      int startCount) {
+    ApplicationAttemptId appAttemptId =
+        getApplicationAttemptId(applicationId, startCount);
+    ContainerId containerId =
+        BuilderUtils.newContainerId(appAttemptId, startCount);
+    return containerId;
+  }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName, 
       boolean cleanOnStart, int startCount) {
-    super(getApplicationAttemptId(applicationId, startCount));
+    super(getApplicationAttemptId(applicationId, startCount), getContainerId(
+        applicationId, startCount), "testhost", 3333, System.currentTimeMillis());
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("PathUsed: " + testAbsPath);
@@ -405,10 +416,10 @@ public class MRApp extends MRAppMaster {
     public TestJob(Configuration conf, ApplicationId applicationId,
         EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
         Clock clock, String user) {
-      super(getApplicationAttemptId(applicationId, getStartCount()), 
-          conf, eventHandler, taskAttemptListener,
-          new JobTokenSecretManager(), new Credentials(), clock, 
-          getCompletedTaskFromPreviousRun(), metrics, user);
+      super(getApplicationAttemptId(applicationId, getStartCount()), conf,
+          eventHandler, taskAttemptListener, new JobTokenSecretManager(),
+          new Credentials(), clock, getCompletedTaskFromPreviousRun(), metrics,
+          user, System.currentTimeMillis(), getAllAMInfos());
 
       // This "this leak" is okay because the retained pointer is in an
       //  instance variable.

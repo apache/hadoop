@@ -36,12 +36,24 @@ public interface ApplicationConstants {
   // TODO: They say tokens via env isn't good.
   public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
     "AppClientTokenEnv";
-
+  
   /**
-   * The environmental variable for APPLICATION_ATTEMPT_ID. Set in
-   * ApplicationMaster's environment only.
+   * The environment variable for CONTAINER_ID. Set in AppMaster environment
+   * only
    */
-  public static final String APPLICATION_ATTEMPT_ID_ENV = "APPLICATION_ATTEMPT_ID";
+  public static final String AM_CONTAINER_ID_ENV = "AM_CONTAINER_ID";
+  
+  /**
+   * The environment variable for NM_HTTP_ADDRESS. Set in AppMaster environment
+   * only
+   */
+  public static final String NM_HTTP_ADDRESS_ENV = "NM_HTTP_ADDRESS";
+  
+  /**
+   * The environment variable for APP_SUBMIT_TIME. Set in AppMaster environment
+   * only
+   */
+  public static final String APP_SUBMIT_TIME_ENV = "APP_SUBMIT_TIME_ENV";
 
   public static final String CONTAINER_TOKEN_FILE_ENV_NAME =
       UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION;

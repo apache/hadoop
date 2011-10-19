@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.recover;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
@@ -147,6 +149,14 @@ public class RecoveryService extends CompositeService implements Recovery {
   @Override
   public Set<TaskId> getCompletedTasks() {
     return completedTasks.keySet();
+  }
+  
+  @Override
+  public List<AMInfo> getAMInfos() {
+    if (jobInfo == null || jobInfo.getAMInfos() == null) {
+      return new LinkedList<AMInfo>();
+    }
+    return new LinkedList<AMInfo>(jobInfo.getAMInfos());
   }
 
   private void parse() throws IOException {
@@ -351,15 +361,16 @@ public class RecoveryService extends CompositeService implements Recovery {
     private void sendAssignedEvent(TaskAttemptId yarnAttemptID,
         TaskAttemptInfo attemptInfo) {
       LOG.info("Sending assigned event to " + yarnAttemptID);
-      ContainerId cId = recordFactory
-          .newRecordInstance(ContainerId.class);
+      ContainerId cId = attemptInfo.getContainerId();
       Container container = recordFactory
           .newRecordInstance(Container.class);
       container.setId(cId);
       container.setNodeId(recordFactory
           .newRecordInstance(NodeId.class));
+      // NodeId can be obtained from TaskAttemptInfo.hostname - but this will
+      // eventually contain rack info.
       container.setContainerToken(null);
-      container.setNodeHttpAddress(attemptInfo.getHostname() + ":" + 
+      container.setNodeHttpAddress(attemptInfo.getTrackerName() + ":" + 
           attemptInfo.getHttpPort());
       actualHandler.handle(new TaskAttemptContainerAssignedEvent(yarnAttemptID,
           container));

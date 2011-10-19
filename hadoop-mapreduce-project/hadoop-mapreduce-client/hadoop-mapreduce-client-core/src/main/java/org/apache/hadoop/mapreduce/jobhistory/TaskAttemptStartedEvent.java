@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import org.apache.avro.util.Utf8;
 
@@ -45,10 +45,11 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
    * @param trackerName Name of the Task Tracker where attempt is running
    * @param httpPort The port number of the tracker
    * @param shufflePort The shuffle port number of the container
+   * @param containerId The containerId for the task attempt.
    */
   public TaskAttemptStartedEvent( TaskAttemptID attemptId,  
       TaskType taskType, long startTime, String trackerName,
-      int httpPort, int shufflePort) {
+      int httpPort, int shufflePort, ContainerId containerId) {
     datum.attemptId = new Utf8(attemptId.toString());
     datum.taskid = new Utf8(attemptId.getTaskID().toString());
     datum.startTime = startTime;
@@ -56,6 +57,15 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
     datum.trackerName = new Utf8(trackerName);
     datum.httpPort = httpPort;
     datum.shufflePort = shufflePort;
+    datum.containerId = new Utf8(containerId.toString());
+  }
+
+  // TODO Remove after MrV1 is removed.
+  // Using a dummy containerId to prevent jobHistory parse failures.
+  public TaskAttemptStartedEvent(TaskAttemptID attemptId, TaskType taskType,
+      long startTime, String trackerName, int httpPort, int shufflePort) {
+    this(attemptId, taskType, startTime, trackerName, httpPort, shufflePort,
+        ConverterUtils.toContainerId("container_-1_-1_-1_-1"));
   }
 
   TaskAttemptStartedEvent() {}
@@ -91,5 +101,8 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
            ? EventType.MAP_ATTEMPT_STARTED 
            : EventType.REDUCE_ATTEMPT_STARTED;
   }
-
+  /** Get the ContainerId */
+  public ContainerId getContainerId() {
+    return ConverterUtils.toContainerId(datum.containerId.toString());
+  }
 }

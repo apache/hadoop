@@ -323,25 +323,29 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     multi-tenancy nature, amongst other issues, it cannot make any assumptions 
     of things like pre-configured ports that it can listen on. 
   
+  * When the ApplicationMaster starts up, several parameters are made available
+    to it via the environment. These include the ContainerId for the
+    ApplicationMaster container, the application submission time and the HTTP
+    address of the NodeManager running the container. Ref ApplicationConstants
+    for parameter names.
+
   * All interactions with the ResourceManager require an ApplicationAttemptId 
-    (there can be multiple attempts per application in case of failures). When 
-    the ApplicationMaster starts up, the ApplicationAttemptId associated with 
-    this particular instance will be set in the environment. There are helper 
-    apis to convert the value obtained from the environment into an 
-    ApplicationAttemptId object.
+    (there can be multiple attempts per application in case of failures). The 
+    ApplicationAttemptId can be obtained from the ApplicationMaster
+    containerId. There are helper apis to convert the value obtained from the
+    environment into objects.
     
 +---+
     Map<String, String> envs = System.getenv();
-    ApplicationAttemptId appAttemptID = 
-        Records.newRecord(ApplicationAttemptId.class);
-    if (!envs.containsKey(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV)) {
-      // app attempt id should always be set in the env by the framework 
+    String containerIdString = 
+        envs.get(ApplicationConstants.AM_CONTAINER_ID_ENV);
+    if (containerIdString == null) {
+      // container id should always be set in the env by the framework 
       throw new IllegalArgumentException(
-          "ApplicationAttemptId not set in the environment");				
-    } 
-    appAttemptID = 
-        ConverterUtils.toApplicationAttemptId(
-            envs.get(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV));
+          "ContainerId not set in the environment");
+    }
+    ContainerId containerId = ConverterUtils.toContainerId(containerIdString);
+    ApplicationAttemptId appAttemptID = containerId.getApplicationAttemptId();
 +---+     
   
   * After an ApplicationMaster has initialized itself completely, it needs to 

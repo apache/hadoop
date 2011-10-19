@@ -206,11 +206,12 @@ public class ClientRMService extends AbstractService implements
       
       // Safety 
       submissionContext.setUser(user);
-      
+
       // This needs to be synchronous as the client can query 
       // immediately following the submission to get the application status.
       // So call handle directly and do not send an event.
-      rmAppManager.handle(new RMAppManagerSubmitEvent(submissionContext));
+      rmAppManager.handle(new RMAppManagerSubmitEvent(submissionContext, System
+          .currentTimeMillis()));
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user + " with " + submissionContext);

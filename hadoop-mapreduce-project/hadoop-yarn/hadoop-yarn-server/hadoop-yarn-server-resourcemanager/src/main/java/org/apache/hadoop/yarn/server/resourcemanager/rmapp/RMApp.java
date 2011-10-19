@@ -116,6 +116,12 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   long getStartTime();
 
   /**
+   * the submit time of the application.
+   * @return the submit time of the application.
+   */
+  long getSubmitTime();
+  
+  /**
    * The tracking url for the application master.
    * @return the tracking url for the application master.
    */

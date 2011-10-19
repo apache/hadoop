@@ -22,8 +22,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
-import java.io.IOException;
-
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -66,7 +64,7 @@ public class ContainerPage extends NMView implements NMWebParams {
       ContainerId containerID;
       try {
         containerID = ConverterUtils.toContainerId($(CONTAINER_ID));
-      } catch (IOException e) {
+      } catch (IllegalArgumentException e) {
         html.p()._("Invalid containerId " + $(CONTAINER_ID))._();
         return;
       }

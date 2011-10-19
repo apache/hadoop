@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
@@ -36,11 +37,15 @@ public class TestMRAppMaster {
   public void testMRAppMasterForDifferentUser() throws IOException,
       InterruptedException {
     String applicationAttemptIdStr = "appattempt_1317529182569_0004_000001";
+    String containerIdStr = "container_1317529182569_0004_000001_1";
     String stagingDir = "/tmp/staging";
     String userName = "TestAppMasterUser";
     ApplicationAttemptId applicationAttemptId = ConverterUtils
         .toApplicationAttemptId(applicationAttemptIdStr);
-    MRAppMasterTest appMaster = new MRAppMasterTest(applicationAttemptId);
+    ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
+    MRAppMasterTest appMaster =
+        new MRAppMasterTest(applicationAttemptId, containerId, "host", -1,
+            System.currentTimeMillis());
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
     MRAppMaster.initAndStartAppMaster(appMaster, conf, userName);
@@ -54,8 +59,9 @@ class MRAppMasterTest extends MRAppMaster {
   Path stagingDirPath;
   private Configuration conf;
 
-  public MRAppMasterTest(ApplicationAttemptId applicationAttemptId) {
-    super(applicationAttemptId);
+  public MRAppMasterTest(ApplicationAttemptId applicationAttemptId,
+      ContainerId containerId, String host, int port, long submitTime) {
+    super(applicationAttemptId, containerId, host, port, submitTime);
   }
 
   @Override

@@ -340,8 +340,8 @@ public class TestRMContainerAllocator {
 
     public FakeJob(ApplicationAttemptId appAttemptID, Configuration conf,
         int numMaps, int numReduces) {
-      super(appAttemptID, conf, null, null, null, null, null, null, null,
-          null);
+      super(appAttemptID, conf, null, null, null, null, null, null, null, null,
+          System.currentTimeMillis(), null);
       this.jobId = MRBuilderUtils
           .newJobId(appAttemptID.getApplicationId(), 0);
       this.numMaps = numMaps;

@@ -894,15 +894,20 @@ public abstract class TaskAttemptImpl implements
     return jce;
   }
 
-  private static TaskAttemptUnsuccessfulCompletionEvent createTaskAttemptUnsuccessfulCompletionEvent(
-      TaskAttemptImpl taskAttempt, TaskAttemptState attemptState) {
-    TaskAttemptUnsuccessfulCompletionEvent tauce = new TaskAttemptUnsuccessfulCompletionEvent(
-        TypeConverter.fromYarn(taskAttempt.attemptId),
-        TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
-        attemptState.toString(), taskAttempt.finishTime,
-        taskAttempt.nodeHostName == null ? "UNKNOWN" : taskAttempt.nodeHostName,
-        StringUtils.join(LINE_SEPARATOR, taskAttempt.getDiagnostics()),
-        taskAttempt.getProgressSplitBlock().burst());
+  private static
+      TaskAttemptUnsuccessfulCompletionEvent
+      createTaskAttemptUnsuccessfulCompletionEvent(TaskAttemptImpl taskAttempt,
+          TaskAttemptState attemptState) {
+    TaskAttemptUnsuccessfulCompletionEvent tauce =
+        new TaskAttemptUnsuccessfulCompletionEvent(
+            TypeConverter.fromYarn(taskAttempt.attemptId),
+            TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId()
+                .getTaskType()), attemptState.toString(),
+            taskAttempt.finishTime,
+            taskAttempt.containerMgrAddress == null ? "UNKNOWN"
+                : taskAttempt.containerMgrAddress, StringUtils.join(
+                LINE_SEPARATOR, taskAttempt.getDiagnostics()), taskAttempt
+                .getProgressSplitBlock().burst());
     return tauce;
   }
 
@@ -1120,11 +1125,15 @@ public abstract class TaskAttemptImpl implements
               , 1);
       taskAttempt.eventHandler.handle(jce);
       
+      LOG.info("TaskAttempt: [" + taskAttempt.attemptId
+          + "] using containerId: [" + taskAttempt.containerID + " on NM: ["
+          + taskAttempt.containerMgrAddress + "]");
       TaskAttemptStartedEvent tase =
         new TaskAttemptStartedEvent(TypeConverter.fromYarn(taskAttempt.attemptId),
             TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()),
             taskAttempt.launchTime,
-            nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(), taskAttempt.shufflePort);
+            nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(),
+            taskAttempt.shufflePort, taskAttempt.containerID);
       taskAttempt.eventHandler.handle
           (new JobHistoryEvent(taskAttempt.attemptId.getTaskId().getJobId(), tase));
       taskAttempt.eventHandler.handle
@@ -1236,7 +1245,8 @@ public abstract class TaskAttemptImpl implements
          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
          state.toString(),
          this.reportedStatus.mapFinishTime,
-         finishTime, this.nodeHostName == null ? "UNKNOWN" : this.nodeHostName,
+         finishTime, this.containerMgrAddress == null ? "UNKNOWN" 
+             : this.containerMgrAddress,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),
          getProgressSplitBlock().burst());
@@ -1249,7 +1259,8 @@ public abstract class TaskAttemptImpl implements
          state.toString(),
          this.reportedStatus.shuffleFinishTime,
          this.reportedStatus.sortFinishTime,
-         finishTime, this.nodeHostName == null ? "UNKNOWN" : this.nodeHostName,
+         finishTime, this.containerMgrAddress == null ? "UNKNOWN" 
+             : this.containerMgrAddress,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),
          getProgressSplitBlock().burst());

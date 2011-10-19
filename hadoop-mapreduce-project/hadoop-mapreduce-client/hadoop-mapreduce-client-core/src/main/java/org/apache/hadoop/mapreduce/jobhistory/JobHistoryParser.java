@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.jobhistory;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -37,6 +39,8 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 /**
  * Default Parser for the JobHistory files. Typical usage is
@@ -174,6 +178,9 @@ public class JobHistoryParser {
     case CLEANUP_ATTEMPT_FINISHED:
       handleTaskAttemptFinishedEvent((TaskAttemptFinishedEvent) event);
       break;
+    case AM_STARTED:
+      handleAMStartedEvent((AMStartedEvent) event);
+      break;
     default:
       break;
     }
@@ -241,6 +248,7 @@ public class JobHistoryParser {
     attemptInfo.trackerName = event.getTrackerName();
     attemptInfo.taskType = event.getTaskType();
     attemptInfo.shufflePort = event.getShufflePort();
+    attemptInfo.containerId = event.getContainerId();
     
     taskInfo.attemptsMap.put(attemptId, attemptInfo);
   }
@@ -305,6 +313,20 @@ public class JobHistoryParser {
     info.totalReduces = event.getTotalReduces();
     info.uberized = event.getUberized();
   }
+  
+  private void handleAMStartedEvent(AMStartedEvent event) {
+    AMInfo amInfo = new AMInfo();
+    amInfo.appAttemptId = event.getAppAttemptId();
+    amInfo.startTime = event.getStartTime();
+    amInfo.containerId = event.getContainerId();
+    amInfo.nodeManagerHost = event.getNodeManagerHost();
+    amInfo.nodeManagerHttpPort = event.getNodeManagerHttpPort();
+    if (info.amInfos == null) {
+      info.amInfos = new LinkedList<AMInfo>();
+    }
+    info.amInfos.add(amInfo);
+    info.latestAmInfo = amInfo;
+  }
 
   private void handleJobInfoChangeEvent(JobInfoChangeEvent event) {
     info.submitTime = event.getSubmitTime();
@@ -348,6 +370,8 @@ public class JobHistoryParser {
     Map<JobACL, AccessControlList> jobACLs;
     
     Map<TaskID, TaskInfo> tasksMap;
+    List<AMInfo> amInfos;
+    AMInfo latestAmInfo;
     boolean uberized;
     
     /** Create a job info object where job information will be stored
@@ -377,7 +401,9 @@ public class JobHistoryParser {
       System.out.println("REDUCE_COUNTERS:" + reduceCounters.toString());
       System.out.println("TOTAL_COUNTERS: " + totalCounters.toString());
       System.out.println("UBERIZED: " + uberized);
-
+      for (AMInfo amInfo : amInfos) {
+        amInfo.printAll();
+      }
       for (TaskInfo ti: tasksMap.values()) {
         ti.printAll();
       }
@@ -427,6 +453,10 @@ public class JobHistoryParser {
     public Map<JobACL, AccessControlList> getJobACLs() { return jobACLs; }
     /** @return the uberized status of this job */
     public boolean getUberized() { return uberized; }
+    /** @return the AMInfo for the job's AppMaster */
+    public List<AMInfo> getAMInfos() { return amInfos; }
+    /** @return the AMInfo for the newest AppMaster */
+    public AMInfo getLatestAMInfo() { return latestAmInfo; };
   }
   
   /**
@@ -509,6 +539,7 @@ public class JobHistoryParser {
     int httpPort;
     int shufflePort;
     String hostname;
+    ContainerId containerId;
 
     /** Create a Task Attempt Info which will store attempt level information
      * on a history parse.
@@ -534,6 +565,7 @@ public class JobHistoryParser {
       System.out.println("TRACKER_NAME:" + trackerName);
       System.out.println("HTTP_PORT:" + httpPort);
       System.out.println("SHUFFLE_PORT:" + shufflePort);
+      System.out.println("CONTIANER_ID:" + containerId);
       if (counters != null) {
         System.out.println("COUNTERS:" + counters.toString());
       }
@@ -569,5 +601,74 @@ public class JobHistoryParser {
     public int getHttpPort() { return httpPort; }
     /** @return the Shuffle port for the tracker */
     public int getShufflePort() { return shufflePort; }
+    /** @return the ContainerId for the tracker */
+    public ContainerId getContainerId() { return containerId; }
   }
+
+  /**
+   * Stores AM information
+   */
+  public static class AMInfo {
+    ApplicationAttemptId appAttemptId;
+    long startTime;
+    ContainerId containerId;
+    String nodeManagerHost;
+    int nodeManagerHttpPort;
+
+    /**
+     * Create a AM Info which will store AM level information on a history
+     * parse.
+     */
+    public AMInfo() {
+      startTime = -1;
+      nodeManagerHost = "";
+      nodeManagerHttpPort = -1;
+    }
+
+    public AMInfo(ApplicationAttemptId appAttemptId, long startTime,
+        ContainerId containerId, String nodeManagerHost, int nodeManagerHttpPort) {
+      this.appAttemptId = appAttemptId;
+      this.startTime = startTime;
+      this.containerId = containerId;
+      this.nodeManagerHost = nodeManagerHost;
+      this.nodeManagerHttpPort = nodeManagerHttpPort;
+    }
+
+    /**
+     * Print all the information about this AM.
+     */
+    public void printAll() {
+      System.out.println("APPLICATION_ATTEMPT_ID:" + appAttemptId.toString());
+      System.out.println("START_TIME: " + startTime);
+      System.out.println("CONTAINER_ID: " + containerId.toString());
+      System.out.println("NODE_MANAGER_HOST: " + nodeManagerHost);
+      System.out.println("NODE_MANAGER_HTTP_PORT: " + nodeManagerHttpPort);
+    }
+
+    /** @return the ApplicationAttemptId */
+    public ApplicationAttemptId getAppAttemptId() {
+      return appAttemptId;
+    }
+
+    /** @return the start time of the AM */
+    public long getStartTime() {
+      return startTime;
+    }
+
+    /** @return the container id for the AM */
+    public ContainerId getContainerId() {
+      return containerId;
+    }
+
+    /** @return the host name for the node manager on which the AM is running */
+    public String getNodeManagerHost() {
+      return nodeManagerHost;
+    }
+
+    /** @return the http port for the node manager running the AM */
+    public int getNodeManagerHttpPort() {
+      return nodeManagerHttpPort;
+    }
+  }
+
 }

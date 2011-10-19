@@ -213,7 +213,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
 
   @SuppressWarnings("unchecked")
   protected synchronized void submitApplication(
-      ApplicationSubmissionContext submissionContext) {
+      ApplicationSubmissionContext submissionContext, long submitTime) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
@@ -241,13 +241,13 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       ApplicationStore appStore = rmContext.getApplicationsStore()
           .createApplicationStore(submissionContext.getApplicationId(),
           submissionContext);
-      
+
       // Create RMApp
       application = new RMAppImpl(applicationId, rmContext,
           this.conf, submissionContext.getApplicationName(), user,
           submissionContext.getQueue(), submissionContext, clientTokenStr,
           appStore, this.scheduler,
-          this.masterService);
+          this.masterService, submitTime);
 
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 
           null) {
@@ -284,8 +284,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       case APP_SUBMIT:
       {
         ApplicationSubmissionContext submissionContext = 
-            ((RMAppManagerSubmitEvent)event).getSubmissionContext();        
-        submitApplication(submissionContext);
+            ((RMAppManagerSubmitEvent)event).getSubmissionContext();
+        long submitTime = ((RMAppManagerSubmitEvent)event).getSubmitTime();
+        submitApplication(submissionContext, submitTime);
       }
       break;
       default:

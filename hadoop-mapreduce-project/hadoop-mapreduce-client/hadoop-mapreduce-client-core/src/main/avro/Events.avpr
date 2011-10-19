@@ -69,6 +69,16 @@
       ]
      },
 
+     {"type": "record", "name": "AMStarted",
+      "fields": [
+          {"name": "applicationAttemptId", "type": "string"},
+          {"name": "startTime", "type": "long"},
+          {"name": "containerId", "type": "string"},
+          {"name": "nodeManagerHost", "type": "string"},
+          {"name": "nodeManagerHttpPort", "type": "int"}
+      ]
+     },
+
      {"type": "record", "name": "JobSubmitted",
       "fields": [
           {"name": "jobid", "type": "string"},
@@ -174,7 +184,8 @@
           {"name": "startTime", "type": "long"},
           {"name": "trackerName", "type": "string"},
           {"name": "httpPort", "type": "int"},
-          {"name": "shufflePort", "type": "int"}
+          {"name": "shufflePort", "type": "int"},
+          {"name": "containerId", "type": "string"}
       ]
      },
 
@@ -260,7 +271,8 @@
           "CLEANUP_ATTEMPT_STARTED",
           "CLEANUP_ATTEMPT_FINISHED",
           "CLEANUP_ATTEMPT_FAILED",
-          "CLEANUP_ATTEMPT_KILLED"
+          "CLEANUP_ATTEMPT_KILLED",
+          "AM_STARTED"
           ]
      },
 
@@ -272,6 +284,7 @@
                "JobFinished",
                "JobInfoChange",
                "JobInited",
+               "AMStarted",
                "JobPriorityChange",
                "JobStatusChanged",
                "JobSubmitted",

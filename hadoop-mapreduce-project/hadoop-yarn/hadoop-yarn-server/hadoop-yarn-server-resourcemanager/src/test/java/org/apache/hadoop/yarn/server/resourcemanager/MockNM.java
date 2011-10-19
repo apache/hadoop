@@ -42,6 +42,7 @@ public class MockNM {
   private final String nodeIdStr;
   private final int memory;
   private final ResourceTrackerService resourceTracker;
+  private final int httpPort = 2;
 
   MockNM(String nodeIdStr, int memory, ResourceTrackerService resourceTracker) {
     this.nodeIdStr = nodeIdStr;
@@ -51,6 +52,10 @@ public class MockNM {
 
   public NodeId getNodeId() {
     return nodeId;
+  }
+
+  public String getHttpAddress() {
+    return nodeId.getHost() + ":" + String.valueOf(httpPort);
   }
 
   public void containerStatus(Container container) throws Exception {
@@ -69,7 +74,7 @@ public class MockNM {
     RegisterNodeManagerRequest req = Records.newRecord(
         RegisterNodeManagerRequest.class);
     req.setNodeId(nodeId);
-    req.setHttpPort(2);
+    req.setHttpPort(httpPort);
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
     req.setResource(resource);
