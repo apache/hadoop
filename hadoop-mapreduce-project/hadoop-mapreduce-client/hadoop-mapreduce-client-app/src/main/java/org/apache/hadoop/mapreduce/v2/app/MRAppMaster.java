@@ -22,7 +22,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,6 +43,8 @@ import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
+import org.apache.hadoop.mapreduce.jobhistory.AMStartedEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -72,6 +77,7 @@ import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanerImpl;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -82,6 +88,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -115,14 +122,20 @@ public class MRAppMaster extends CompositeService {
   private static final Log LOG = LogFactory.getLog(MRAppMaster.class);
 
   private Clock clock;
-  private final long startTime = System.currentTimeMillis();
+  private final long startTime;
+  private final long appSubmitTime;
   private String appName;
   private final ApplicationAttemptId appAttemptID;
+  private final ContainerId containerID;
+  private final String nmHost;
+  private final int nmHttpPort;
   protected final MRAppMetrics metrics;
   private Set<TaskId> completedTasksFromPreviousRun;
+  private List<AMInfo> amInfos;
   private AppContext context;
   private Dispatcher dispatcher;
   private ClientService clientService;
+  private Recovery recoveryServ;
   private ContainerAllocator containerAllocator;
   private ContainerLauncher containerLauncher;
   private TaskCleaner taskCleaner;
@@ -131,19 +144,29 @@ public class MRAppMaster extends CompositeService {
   private JobTokenSecretManager jobTokenSecretManager =
       new JobTokenSecretManager();
   private JobEventDispatcher jobEventDispatcher;
+  private boolean inRecovery = false;
 
   private Job job;
   private Credentials fsTokens = new Credentials(); // Filled during init
   private UserGroupInformation currentUser; // Will be setup during init
 
-  public MRAppMaster(ApplicationAttemptId applicationAttemptId) {
-    this(applicationAttemptId, new SystemClock());
+  public MRAppMaster(ApplicationAttemptId applicationAttemptId,
+      ContainerId containerId, String nmHost, int nmHttpPort, long appSubmitTime) {
+    this(applicationAttemptId, containerId, nmHost, nmHttpPort,
+        new SystemClock(), appSubmitTime);
   }
 
-  public MRAppMaster(ApplicationAttemptId applicationAttemptId, Clock clock) {
+  public MRAppMaster(ApplicationAttemptId applicationAttemptId,
+      ContainerId containerId, String nmHost, int nmHttpPort, Clock clock,
+      long appSubmitTime) {
     super(MRAppMaster.class.getName());
     this.clock = clock;
+    this.startTime = clock.getTime();
+    this.appSubmitTime = appSubmitTime;
     this.appAttemptID = applicationAttemptId;
+    this.containerID = containerId;
+    this.nmHost = nmHost;
+    this.nmHttpPort = nmHttpPort;
     this.metrics = MRAppMetrics.create();
     LOG.info("Created MRAppMaster for application " + applicationAttemptId);
   }
@@ -162,11 +185,11 @@ public class MRAppMaster extends CompositeService {
     if (conf.getBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, false)
          && appAttemptID.getAttemptId() > 1) {
       LOG.info("Recovery is enabled. Will try to recover from previous life.");
-      Recovery recoveryServ = new RecoveryService(appAttemptID, clock);
+      recoveryServ = new RecoveryService(appAttemptID, clock);
       addIfService(recoveryServ);
       dispatcher = recoveryServ.getDispatcher();
       clock = recoveryServ.getClock();
-      completedTasksFromPreviousRun = recoveryServ.getCompletedTasks();
+      inRecovery = true;
     } else {
       dispatcher = new AsyncDispatcher();
       addIfService(dispatcher);
@@ -327,7 +350,8 @@ public class MRAppMaster extends CompositeService {
     // create single job
     Job newJob = new JobImpl(appAttemptID, conf, dispatcher.getEventHandler(),
         taskAttemptListener, jobTokenSecretManager, fsTokens, clock,
-        completedTasksFromPreviousRun, metrics, currentUser.getUserName());
+        completedTasksFromPreviousRun, metrics, currentUser.getUserName(),
+        appSubmitTime, amInfos);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,
@@ -463,6 +487,10 @@ public class MRAppMaster extends CompositeService {
     return completedTasksFromPreviousRun;
   }
 
+  public List<AMInfo> getAllAMInfos() {
+    return amInfos;
+  }
+  
   public ContainerAllocator getContainerAllocator() {
     return containerAllocator;
   }
@@ -617,10 +645,32 @@ public class MRAppMaster extends CompositeService {
   @Override
   public void start() {
 
-    ///////////////////// Create the job itself.
+    // Pull completedTasks etc from recovery
+    if (inRecovery) {
+      completedTasksFromPreviousRun = recoveryServ.getCompletedTasks();
+      amInfos = recoveryServ.getAMInfos();
+    }
+
+    // / Create the AMInfo for the current AppMaster
+    if (amInfos == null) {
+      amInfos = new LinkedList<AMInfo>();
+    }
+    AMInfo amInfo =
+        new AMInfo(appAttemptID, startTime, containerID, nmHost, nmHttpPort);
+    amInfos.add(amInfo);
+
+    // /////////////////// Create the job itself.
     job = createJob(getConfig());
-    
+
     // End of creating the job.
+
+    // Send out an MR AM inited event for this AM and all previous AMs.
+    for (AMInfo info : amInfos) {
+      dispatcher.getEventHandler().handle(
+          new JobHistoryEvent(job.getID(), new AMStartedEvent(info
+              .getAppAttemptId(), info.getStartTime(), info.getContainerId(),
+              info.getNodeManagerHost(), info.getNodeManagerHttpPort())));
+    }
 
     // metrics system init is really init & start.
     // It's more test friendly to put it here.
@@ -723,17 +773,39 @@ public class MRAppMaster extends CompositeService {
 
   public static void main(String[] args) {
     try {
-      String applicationAttemptIdStr = System
-          .getenv(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV);
-      if (applicationAttemptIdStr == null) {
-        String msg = ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV
-            + " is null";
+      String containerIdStr =
+          System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
+      String nodeHttpAddressStr =
+          System.getenv(ApplicationConstants.NM_HTTP_ADDRESS_ENV);
+      String appSubmitTimeStr =
+          System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
+      if (containerIdStr == null) {
+        String msg = ApplicationConstants.AM_CONTAINER_ID_ENV + " is null";
         LOG.error(msg);
         throw new IOException(msg);
       }
-      ApplicationAttemptId applicationAttemptId = ConverterUtils
-          .toApplicationAttemptId(applicationAttemptIdStr);
-      MRAppMaster appMaster = new MRAppMaster(applicationAttemptId);
+      if (nodeHttpAddressStr == null) {
+        String msg = ApplicationConstants.NM_HTTP_ADDRESS_ENV + " is null";
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+      if (appSubmitTimeStr == null) {
+        String msg = ApplicationConstants.APP_SUBMIT_TIME_ENV + " is null";
+        LOG.error(msg);
+        throw new IOException(msg);
+      }
+
+      ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
+      ApplicationAttemptId applicationAttemptId =
+          containerId.getApplicationAttemptId();
+      InetSocketAddress nodeHttpInetAddr =
+        NetUtils.createSocketAddr(nodeHttpAddressStr);
+      long appSubmitTime = Long.parseLong(appSubmitTimeStr);
+      
+      MRAppMaster appMaster =
+          new MRAppMaster(applicationAttemptId, containerId,
+              nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(),
+              appSubmitTime);
       Runtime.getRuntime().addShutdownHook(
           new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());

@@ -359,6 +359,9 @@ Release 0.23.0 - Unreleased
     from the NodeManager and set MALLOC_ARENA_MAX for all daemons and
     containers. (Chris Riccomini via acmurthy)
 
+    MAPREDUCE-3144. Augmented JobHistory with the information needed for
+    serving aggregated logs. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

@@ -34,8 +34,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
@@ -46,7 +47,9 @@ import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestJobHistoryParsing {
@@ -54,6 +57,7 @@ public class TestJobHistoryParsing {
   @Test
   public void testHistoryParsing() throws Exception {
     Configuration conf = new Configuration();
+    long amStartTimeEst = System.currentTimeMillis();
     MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(), true);
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
@@ -102,12 +106,30 @@ public class TestJobHistoryParsing {
         job.isUber(), jobInfo.getUberized());
     int totalTasks = jobInfo.getAllTasks().size();
     Assert.assertEquals("total number of tasks is incorrect  ", 3, totalTasks);
+    
+    // Verify aminfo
+    Assert.assertEquals(1, jobInfo.getAMInfos().size());
+    Assert.assertEquals("testhost", jobInfo.getAMInfos().get(0)
+        .getNodeManagerHost());
+    AMInfo amInfo = jobInfo.getAMInfos().get(0);
+    Assert.assertEquals(3333, amInfo.getNodeManagerHttpPort());
+    Assert.assertEquals(1, amInfo.getAppAttemptId().getAttemptId());
+    Assert.assertEquals(amInfo.getAppAttemptId(), amInfo.getContainerId()
+        .getApplicationAttemptId());
+    Assert.assertTrue(amInfo.getStartTime() <= System.currentTimeMillis()
+        && amInfo.getStartTime() >= amStartTimeEst);
 
+    ContainerId fakeCid = BuilderUtils.newContainerId(-1, -1, -1, -1);
     //Assert at taskAttempt level
     for (TaskInfo taskInfo : jobInfo.getAllTasks().values()) {
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
       Assert.assertEquals("total number of task attempts ",
           1, taskAttemptCount);
+      TaskAttemptInfo taInfo =
+          taskInfo.getAllTaskAttempts().values().iterator().next();
+      Assert.assertNotNull(taInfo.getContainerId());
+      //Verify the wrong ctor is not being used. Remove after mrv1 is removed.
+      Assert.assertFalse(taInfo.getContainerId().equals(fakeCid));
     }
 
     // Deep compare Job and JobInfo

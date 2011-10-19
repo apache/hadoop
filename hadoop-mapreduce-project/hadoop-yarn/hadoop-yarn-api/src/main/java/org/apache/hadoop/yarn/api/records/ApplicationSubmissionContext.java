@@ -126,7 +126,7 @@ public interface ApplicationSubmissionContext {
   @Public
   @Stable
   public void setUser(String user);
-  
+
   /**
    * Get the <code>ContainerLaunchContext</code> to describe the 
    * <code>Container</code> with which the <code>ApplicationMaster</code> is

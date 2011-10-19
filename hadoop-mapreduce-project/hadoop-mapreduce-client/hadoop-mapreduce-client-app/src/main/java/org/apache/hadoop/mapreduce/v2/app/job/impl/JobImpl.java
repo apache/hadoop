@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobInfoChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobInitedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
@@ -136,6 +137,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final String username;
   private final Map<JobACL, AccessControlList> jobACLs;
   private final Set<TaskId> completedTasksFromPreviousRun;
+  private final List<AMInfo> amInfos;
   private final Lock readLock;
   private final Lock writeLock;
   private final JobId jobId;
@@ -148,6 +150,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
   private final String userName;
+  private final long appSubmitTime;
 
   private boolean lazyTasksCopyNeeded = false;
   private volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
@@ -354,7 +357,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private int failedReduceTaskCount = 0;
   private int killedMapTaskCount = 0;
   private int killedReduceTaskCount = 0;
-  private long submitTime;
   private long startTime;
   private long finishTime;
   private float setupProgress;
@@ -370,7 +372,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       JobTokenSecretManager jobTokenSecretManager,
       Credentials fsTokenCredentials, Clock clock, 
       Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
-      String userName) {
+      String userName, long appSubmitTime, List<AMInfo> amInfos) {
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = recordFactory.newRecordInstance(JobId.class);
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
@@ -378,7 +380,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.metrics = metrics;
     this.clock = clock;
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
+    this.amInfos = amInfos;
     this.userName = userName;
+    this.appSubmitTime = appSubmitTime;
     ApplicationId applicationId = applicationAttemptId.getApplicationId();
     jobId.setAppId(applicationId);
     jobId.setId(applicationId.getId());
@@ -806,6 +810,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public Map<JobACL, AccessControlList> getJobACLs() {
     return Collections.unmodifiableMap(jobACLs);
   }
+  
+  @Override
+  public List<AMInfo> getAMInfos() {
+    return amInfos;
+  }
 
   public static class InitTransition 
       implements MultipleArcTransition<JobImpl, JobEvent, JobState> {
@@ -819,7 +828,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
      */
     @Override
     public JobState transition(JobImpl job, JobEvent event) {
-      job.submitTime = job.clock.getTime();
       job.metrics.submittedJob(job);
       job.metrics.preparingJob(job);
       try {
@@ -830,7 +838,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         JobSubmittedEvent jse = new JobSubmittedEvent(job.oldJobId,
               job.conf.get(MRJobConfig.JOB_NAME, "test"), 
             job.conf.get(MRJobConfig.USER_NAME, "mapred"),
-            job.submitTime,
+            job.appSubmitTime,
             job.remoteJobConfFile.toString(),
             job.jobACLs, job.conf.get(MRJobConfig.QUEUE_NAME, "default"));
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
@@ -1152,7 +1160,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
              job.isUber()); //Will transition to state running. Currently in INITED
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jie));
       JobInfoChangeEvent jice = new JobInfoChangeEvent(job.oldJobId,
-          job.submitTime, job.startTime);
+          job.appSubmitTime, job.startTime);
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jice));
       job.metrics.runningJob(job);
 

@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn.util;
 
 import static org.apache.hadoop.yarn.util.StringHelper._split;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.NumberFormat;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -33,9 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -97,27 +93,8 @@ public class ConverterUtils {
     return url;
   }
 
-  // TODO: Why thread local?
-  // ^ NumberFormat instances are not threadsafe
-  private static final ThreadLocal<NumberFormat> appIdFormat =
-    new ThreadLocal<NumberFormat>() {
-      @Override
-      public NumberFormat initialValue() {
-        NumberFormat fmt = NumberFormat.getInstance();
-        fmt.setGroupingUsed(false);
-        fmt.setMinimumIntegerDigits(4);
-        return fmt;
-      }
-    };
-
-  
-
   public static String toString(ApplicationId appId) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(APPLICATION_PREFIX + "_").append(appId.getClusterTimestamp())
-        .append("_");
-    sb.append(appIdFormat.get().format(appId.getId()));
-    return sb.toString();
+    return appId.toString();
   }
 
   public static ApplicationId toApplicationId(RecordFactory recordFactory,
@@ -152,11 +129,11 @@ public class ConverterUtils {
     return cId.toString();
   }
 
-  public static ContainerId toContainerId(String containerIdStr)
-      throws IOException {
+  public static ContainerId toContainerId(String containerIdStr) {
     Iterator<String> it = _split(containerIdStr).iterator();
     if (!it.next().equals(CONTAINER_PREFIX)) {
-      throw new IOException("Invalid ContainerId prefix: " + containerIdStr);
+      throw new IllegalArgumentException("Invalid ContainerId prefix: "
+          + containerIdStr);
     }
     try {
       ApplicationAttemptId appAttemptID = toApplicationAttemptId(it);
@@ -165,21 +142,22 @@ public class ConverterUtils {
       containerId.setId(Integer.parseInt(it.next()));
       return containerId;
     } catch (NumberFormatException n) {
-      throw new IOException("Invalid ContainerId: " + containerIdStr, n);
+      throw new IllegalArgumentException("Invalid ContainerId: "
+          + containerIdStr, n);
     }
   }
 
   public static ApplicationAttemptId toApplicationAttemptId(
-      String applicationAttmeptIdStr) throws IOException {
+      String applicationAttmeptIdStr) {
     Iterator<String> it = _split(applicationAttmeptIdStr).iterator();
     if (!it.next().equals(APPLICATION_ATTEMPT_PREFIX)) {
-      throw new IOException("Invalid AppAttemptId prefix: "
+      throw new IllegalArgumentException("Invalid AppAttemptId prefix: "
           + applicationAttmeptIdStr);
     }
     try {
       return toApplicationAttemptId(it);
     } catch (NumberFormatException n) {
-      throw new IOException("Invalid AppAttemptId: "
+      throw new IllegalArgumentException("Invalid AppAttemptId: "
           + applicationAttmeptIdStr, n);
     }
   }

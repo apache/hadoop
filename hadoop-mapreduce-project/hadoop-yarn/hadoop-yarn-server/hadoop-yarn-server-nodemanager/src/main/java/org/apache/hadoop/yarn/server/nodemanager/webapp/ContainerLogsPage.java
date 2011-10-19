@@ -69,7 +69,7 @@ public class ContainerLogsPage extends NMView {
       ContainerId containerId;
       try {
         containerId = ConverterUtils.toContainerId($(CONTAINER_ID));
-      } catch (IOException e) {
+      } catch (IllegalArgumentException e) {
         div.h1("Invalid containerId " + $(CONTAINER_ID))._();
         return;
       }

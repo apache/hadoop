@@ -163,7 +163,7 @@ public class TestAppManager{
     }
     public void submitApplication(
         ApplicationSubmissionContext submissionContext) {
-      super.submitApplication(submissionContext);
+      super.submitApplication(submissionContext, System.currentTimeMillis());
     }
   }
 

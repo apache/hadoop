@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import javax.crypto.SecretKey;
@@ -37,7 +35,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -58,7 +55,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
-import org.apache.hadoop.yarn.security.ContainerManagerSecurityInfo;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -83,6 +79,7 @@ public class AMLauncher implements Runnable {
   private final ApplicationTokenSecretManager applicationTokenSecretManager;
   private final ClientToAMSecretManager clientToAMSecretManager;
   private final AMLauncherEventType eventType;
+  private final RMContext rmContext;
   
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
@@ -96,6 +93,7 @@ public class AMLauncher implements Runnable {
     this.applicationTokenSecretManager = applicationTokenSecretManager;
     this.clientToAMSecretManager = clientToAMSecretManager;
     this.eventType = eventType;
+    this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
   }
   
@@ -189,9 +187,18 @@ public class AMLauncher implements Runnable {
       throws IOException {
     Map<String, String> environment = container.getEnvironment();
 
-    // Set the AppAttemptId to be consumable by the AM.
-    environment.put(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV,
-        application.getAppAttemptId().toString());
+    // Set the AppAttemptId, containerId, NMHTTPAdress, AppSubmitTime to be
+    // consumable by the AM.
+    environment.put(ApplicationConstants.AM_CONTAINER_ID_ENV, container
+        .getContainerId().toString());
+    environment.put(ApplicationConstants.NM_HTTP_ADDRESS_ENV, application
+        .getMasterContainer().getNodeHttpAddress());
+    environment.put(
+        ApplicationConstants.APP_SUBMIT_TIME_ENV,
+        String.valueOf(rmContext.getRMApps()
+            .get(application.getAppAttemptId().getApplicationId())
+            .getSubmitTime()));
+    
 
     if (UserGroupInformation.isSecurityEnabled()) {
       // TODO: Security enabled/disabled info should come from RM.

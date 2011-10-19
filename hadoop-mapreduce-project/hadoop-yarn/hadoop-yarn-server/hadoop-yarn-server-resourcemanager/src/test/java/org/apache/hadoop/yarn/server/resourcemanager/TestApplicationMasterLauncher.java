@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
@@ -39,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMaste
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -56,6 +58,9 @@ public class TestApplicationMasterLauncher {
     boolean launched = false;
     boolean cleanedup = false;
     String attemptIdAtContainerManager = null;
+    String containerIdAtContainerManager = null;
+    String nmAddressAtContainerManager = null;
+    long submitTimeAtContainerManager;
 
     @Override
     public StartContainerResponse
@@ -63,9 +68,20 @@ public class TestApplicationMasterLauncher {
             throws YarnRemoteException {
       LOG.info("Container started by MyContainerManager: " + request);
       launched = true;
-      attemptIdAtContainerManager = request.getContainerLaunchContext()
-          .getEnvironment().get(
-              ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV);
+      containerIdAtContainerManager =
+          request.getContainerLaunchContext().getEnvironment()
+              .get(ApplicationConstants.AM_CONTAINER_ID_ENV);
+      ContainerId containerId =
+          ConverterUtils.toContainerId(containerIdAtContainerManager);
+      attemptIdAtContainerManager =
+          containerId.getApplicationAttemptId().toString();
+      nmAddressAtContainerManager =
+          request.getContainerLaunchContext().getEnvironment()
+              .get(ApplicationConstants.NM_HTTP_ADDRESS_ENV);
+      submitTimeAtContainerManager =
+          Long.parseLong(request.getContainerLaunchContext().getEnvironment()
+              .get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
+      
       return null;
     }
 
@@ -140,6 +156,13 @@ public class TestApplicationMasterLauncher {
     ApplicationAttemptId appAttemptId = attempt.getAppAttemptId();
     Assert.assertEquals(appAttemptId.toString(),
         containerManager.attemptIdAtContainerManager);
+    Assert.assertEquals(app.getSubmitTime(),
+        containerManager.submitTimeAtContainerManager);
+    Assert.assertEquals(app.getRMAppAttempt(appAttemptId)
+        .getSubmissionContext().getAMContainerSpec().getContainerId()
+        .toString(), containerManager.containerIdAtContainerManager);
+    Assert.assertEquals(nm1.getHttpAddress(),
+        containerManager.nmAddressAtContainerManager);
 
     MockAM am = new MockAM(rm.getRMContext(), rm
         .getApplicationMasterService(), appAttemptId);

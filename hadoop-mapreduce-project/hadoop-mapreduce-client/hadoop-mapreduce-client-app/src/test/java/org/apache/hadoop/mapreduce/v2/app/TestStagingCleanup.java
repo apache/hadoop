@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 
@@ -81,7 +82,9 @@ import org.junit.Test;
    private class TestMRApp extends MRAppMaster {
 
     public TestMRApp(ApplicationAttemptId applicationAttemptId) {
-      super(applicationAttemptId);
+      super(applicationAttemptId, BuilderUtils.newContainerId(
+          applicationAttemptId, 1), "testhost", 3333, System
+          .currentTimeMillis());
     }
      
     @Override

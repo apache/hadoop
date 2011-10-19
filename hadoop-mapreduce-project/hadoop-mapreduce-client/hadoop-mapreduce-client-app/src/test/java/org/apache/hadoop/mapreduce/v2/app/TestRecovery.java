@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
@@ -46,6 +47,7 @@ public class TestRecovery {
   @Test
   public void testCrashed() throws Exception {
     int runCount = 0;
+    long am1StartTimeEst = System.currentTimeMillis();
     MRApp app = new MRAppWithHistory(2, 1, false, this.getClass().getName(), true, ++runCount);
     Configuration conf = new Configuration();
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
@@ -126,9 +128,10 @@ public class TestRecovery {
     
     //stop the app
     app.stop();
-    
+
     //rerun
     //in rerun the 1st map will be recovered from previous run
+    long am2StartTimeEst = System.currentTimeMillis();
     app = new MRAppWithHistory(2, 1, false, this.getClass().getName(), false, ++runCount);
     conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
@@ -178,8 +181,27 @@ public class TestRecovery {
         task1StartTime, mapTask1.getReport().getStartTime());
     Assert.assertEquals("Task Finish time not correct",
         task1FinishTime, mapTask1.getReport().getFinishTime());
+    Assert.assertEquals(2, job.getAMInfos().size());
+    int attemptNum = 1;
+    // Verify AMInfo
+    for (AMInfo amInfo : job.getAMInfos()) {
+      Assert.assertEquals(attemptNum++, amInfo.getAppAttemptId()
+          .getAttemptId());
+      Assert.assertEquals(amInfo.getAppAttemptId(), amInfo.getContainerId()
+          .getApplicationAttemptId());
+      Assert.assertEquals("testhost", amInfo.getNodeManagerHost());
+      Assert.assertEquals(3333, amInfo.getNodeManagerHttpPort());
+    }
+    long am1StartTimeReal = job.getAMInfos().get(0).getStartTime();
+    long am2StartTimeReal = job.getAMInfos().get(1).getStartTime();
+    Assert.assertTrue(am1StartTimeReal >= am1StartTimeEst
+        && am1StartTimeReal <= am2StartTimeEst);
+    Assert.assertTrue(am2StartTimeReal >= am2StartTimeEst
+        && am2StartTimeReal <= System.currentTimeMillis());
+    // TODO Add verification of additional data from jobHistory - whatever was
+    // available in the failed attempt should be available here
   }
-
+  
   class MRAppWithHistory extends MRApp {
     public MRAppWithHistory(int maps, int reduces, boolean autoComplete,
         String testName, boolean cleanOnStart, int startCount) {

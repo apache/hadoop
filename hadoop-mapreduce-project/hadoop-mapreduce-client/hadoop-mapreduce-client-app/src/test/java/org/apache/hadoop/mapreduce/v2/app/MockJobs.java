@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -487,6 +488,11 @@ public class MockJobs extends MockApps {
       @Override
       public Map<JobACL, AccessControlList> getJobACLs() {
         return Collections.<JobACL, AccessControlList>emptyMap();
+      }
+
+      @Override
+      public List<AMInfo> getAMInfos() {
+        throw new UnsupportedOperationException("Not supported yet.");
       }
     };
   }

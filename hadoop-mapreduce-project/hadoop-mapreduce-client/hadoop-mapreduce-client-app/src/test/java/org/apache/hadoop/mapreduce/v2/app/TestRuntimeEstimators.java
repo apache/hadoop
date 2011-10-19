@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -471,6 +472,11 @@ public class TestRuntimeEstimators {
 
     @Override
     public Map<JobACL, AccessControlList> getJobACLs() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public List<AMInfo> getAMInfos() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }

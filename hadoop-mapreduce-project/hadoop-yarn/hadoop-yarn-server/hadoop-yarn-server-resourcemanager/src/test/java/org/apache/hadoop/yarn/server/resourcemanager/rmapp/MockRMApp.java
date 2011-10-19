@@ -33,6 +33,7 @@ public class MockRMApp implements RMApp {
   String name = MockApps.newAppName();
   String queue = MockApps.newQueue();
   long start = System.currentTimeMillis() - (int) (Math.random() * DT);
+  long submit = start - (int) (Math.random() * DT);
   long finish = 0;
   RMAppState state = RMAppState.NEW;
   int failCount = 0;
@@ -139,6 +140,11 @@ public class MockRMApp implements RMApp {
   @Override
   public long getStartTime() {
     return start;
+  }
+
+  @Override
+  public long getSubmitTime() {
+    return submit;
   }
 
   public void setStartTime(long time) {
