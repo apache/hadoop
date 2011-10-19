@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -72,5 +75,35 @@ public class SchedulerUtils {
     return containerStatus;
   }
 
+  /**
+   * Utility method to normalize a list of resource requests, by insuring that
+   * the memory for each request is a multiple of minMemory and is not zero.
+   *
+   * @param asks
+   *          a list of resource requests.
+   * @param minMemory
+   *          the configured minimum memory allocation.
+   */
+  public static void normalizeRequests(List<ResourceRequest> asks,
+      int minMemory) {
+    for (ResourceRequest ask : asks) {
+      normalizeRequest(ask, minMemory);
+    }
+  }
+
+  /**
+   * Utility method to normalize a resource request, by insuring that the
+   * requested memory is a multiple of minMemory and is not zero.
+   *
+   * @param ask
+   *          the resource request.
+   * @param minMemory
+   *          the configured minimum memory allocation.
+   */
+  public static void normalizeRequest(ResourceRequest ask, int minMemory) {
+    int memory = Math.max(ask.getCapability().getMemory(), minMemory);
+    ask.getCapability().setMemory(
+        minMemory * ((memory / minMemory) + (memory % minMemory > 0 ? 1 : 0)));
+  }
 
 }

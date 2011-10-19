@@ -217,7 +217,7 @@ public class FifoScheduler implements ResourceScheduler {
     }
 
     // Sanity check
-    normalizeRequests(ask);
+    SchedulerUtils.normalizeRequests(ask, MINIMUM_MEMORY);
 
     // Release containers
     for (ContainerId releasedContainer : release) {
@@ -258,21 +258,6 @@ public class FifoScheduler implements ResourceScheduler {
     return new Allocation(
         application.pullNewlyAllocatedContainers(), 
         application.getHeadroom());
-  }
-
-  private void normalizeRequests(List<ResourceRequest> asks) {
-    for (ResourceRequest ask : asks) {
-      normalizeRequest(ask);
-    }
-  }
-
-  private void normalizeRequest(ResourceRequest ask) {
-    int memory = ask.getCapability().getMemory();
-    // FIXME: TestApplicationCleanup is relying on unnormalized behavior.
-    memory = 
-        MINIMUM_MEMORY * 
-        ((memory/MINIMUM_MEMORY) + (memory%MINIMUM_MEMORY > 0 ? 1 : 0));
-    ask.setCapability(Resources.createResource(memory));
   }
 
   private SchedulerApp getApplication(
