@@ -1703,6 +1703,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3212. Fix usage/help message for bin/yarn. (Bhallamudi Venkata 
     Siva Kamesh via acmurthy) 
 
+    MAPREDUCE-3179. Ensure failed tests exit with right error code. (Jonathan
+    Eagles via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
