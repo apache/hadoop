@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3171. normalize nodemanager native code compilation with common/hdfs 
     native. (tucu)
 
+    MAPREDUCE-3149. Add a test to verify that TokenCache handles file system 
+    uri with no authority. (John George via jitendra)
+
   BUG FIXES
 
     MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
