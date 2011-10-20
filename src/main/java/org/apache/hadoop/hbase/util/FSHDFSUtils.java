@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 
 
@@ -41,6 +40,16 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
  */
 public class FSHDFSUtils extends FSUtils{
   private static final Log LOG = LogFactory.getLog(FSHDFSUtils.class);
+
+  /**
+   * Lease timeout constant, sourced from HDFS upstream.
+   * The upstream constant is defined in a private interface, so we
+   * can't reuse for compatibility reasons.
+   * NOTE: On versions earlier than Hadoop 0.23, the constant is in
+   * o.a.h.hdfs.protocol.FSConstants, while for 0.23 and above it is
+   * in o.a.h.hdfs.protocol.HdfsConstants cause of HDFS-1620.
+   */
+  public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
 
   public void recoverFileLease(final FileSystem fs, final Path p, Configuration conf)
   throws IOException{
@@ -86,7 +95,7 @@ public class FSHDFSUtils extends FSUtils{
           // that the RS is holding onto the file even though it lost its
           // znode. We could potentially abort after some time here.
           long waitedFor = System.currentTimeMillis() - startWaiting;
-          if (waitedFor > FSConstants.LEASE_SOFTLIMIT_PERIOD) {
+          if (waitedFor > LEASE_SOFTLIMIT_PERIOD) {
             LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
               ":" + e.getMessage());
           }

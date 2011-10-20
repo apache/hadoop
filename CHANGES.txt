@@ -353,6 +353,8 @@ Release 0.92.0 - Unreleased
    HBASE-4430  Disable TestSlabCache and TestSingleSizedCache temporarily to
                see if these are cause of build box failure though all tests pass
                (Li Pi)
+   HBASE-4510  Check and workaround usage of internal HDFS APIs in HBase
+               (Harsh)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
