@@ -21,19 +21,23 @@
 package org.apache.hadoop.hbase.io.hfile.slab;
 
 /**
- * Interface for objects that want to know when an eviction occurs.
+ * Interface for objects that want to know when actions occur in a SingleSizeCache.
  * */
-interface SlabItemEvictionWatcher {
+interface SlabItemActionWatcher {
 
   /**
-   * This is called as a callback by the EvictionListener in each of the
-   * SingleSizeSlabCaches.
+   * This is called as a callback when an item is removed from a SingleSizeCache.
    *
    * @param key the key of the item being evicted
    * @param notifier the object notifying the SlabCache of the eviction.
-   * @param boolean callAssignedCache whether we should call the cache which the
-   *        key was originally assigned to.
    */
-  void onEviction(String key, Object notifier);
-
+  void onEviction(String key, SingleSizeCache notifier);
+  
+  /**
+   * This is called as a callback when an item is inserted into a SingleSizeCache.
+   *
+   * @param key the key of the item being added
+   * @param notifier the object notifying the SlabCache of the insertion..
+   */
+  void onInsertion(String key, SingleSizeCache notifier);
 }
