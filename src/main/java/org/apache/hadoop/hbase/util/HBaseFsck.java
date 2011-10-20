@@ -653,6 +653,17 @@ public class HBaseFsck {
           }
         }
 
+        // check for degenerate ranges
+        for (HbckInfo rng : ranges) {
+          // special endkey case converts '' to null
+          byte[] endKey = rng.getEndKey();
+          endKey = (endKey.length == 0) ? null : endKey;
+          if (Bytes.equals(rng.getStartKey(),endKey)) {
+            errors.reportError(ERROR_CODE.DEGENERATE_REGION,
+              "Region has the same start and end key.", this, rng);
+          }
+        }
+
         if (ranges.size() == 1) {
           // this split key is ok -- no overlap, not a hole.
           if (problemKey != null) {
@@ -676,12 +687,12 @@ public class HBaseFsck {
             subRange.remove(r1);
             for (HbckInfo r2 : subRange) {
               if (Bytes.compareTo(r1.getStartKey(), r2.getStartKey())==0) {
-            // dup start key
-            errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
-              "Multiple regions have the same startkey: "
-                  + Bytes.toStringBinary(key), this, r1);
-            errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
-                "Multiple regions have the same startkey: "
+                // dup start key
+                errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
+                    "Multiple regions have the same startkey: "
+                    + Bytes.toStringBinary(key), this, r1);
+                errors.reportError(ERROR_CODE.DUPE_STARTKEYS,
+                    "Multiple regions have the same startkey: "
                     + Bytes.toStringBinary(key), this, r2);
               } else {
                 // overlap
@@ -1047,7 +1058,7 @@ public class HBaseFsck {
       NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
       MULTI_DEPLOYED, SHOULD_NOT_BE_DEPLOYED, MULTI_META_REGION, RS_CONNECT_FAILURE,
       FIRST_REGION_STARTKEY_NOT_EMPTY, DUPE_STARTKEYS,
-      HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE
+      HOLE_IN_REGION_CHAIN, OVERLAP_IN_REGION_CHAIN, REGION_CYCLE, DEGENERATE_REGION
     }
     public void clear();
     public void report(String message);

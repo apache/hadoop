@@ -278,6 +278,32 @@ public class TestHBaseFsck {
       deleteTable(table);
     }
   }
+  
+  /**
+   * This creates a bad table with regions that has startkey == endkey
+   */
+  @Test
+  public void testDegenerateRegions() throws Exception {
+    String table = "tableDegenerateRegions";
+    try {
+      setupTable(table);
+      assertNoErrors(doFsck(false));
+
+      // Now let's mess it up, by adding a region with a duplicate startkey
+      HRegionInfo hriDupe = createRegion(conf, tbl.getTableDescriptor(),
+          Bytes.toBytes("B"), Bytes.toBytes("B"));
+      TEST_UTIL.getHBaseCluster().getMaster().assignRegion(hriDupe);
+      TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+          .waitForAssignment(hriDupe);
+
+      HBaseFsck hbck = doFsck(false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.DEGENERATE_REGION,
+          ERROR_CODE.DUPE_STARTKEYS, ERROR_CODE.DUPE_STARTKEYS});
+      assertEquals(2, hbck.getOverlapGroups(table).size());
+    } finally {
+      deleteTable(table);
+    }
+  }
 
   /**
    * This creates a bad table where a start key contained in another region.

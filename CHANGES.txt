@@ -347,6 +347,8 @@ Release 0.92.0 - Unreleased
    HBASE-4620  I broke the build when I submitted HBASE-3581 (Send
                length of the rpc response)
    HBASE-4621  TestAvroServer fails quite often intermittently (Akash Ashok)
+   HBASE-4378  [hbck] Does not complain about regions with startkey==endkey.
+               (Jonathan Hsieh)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
