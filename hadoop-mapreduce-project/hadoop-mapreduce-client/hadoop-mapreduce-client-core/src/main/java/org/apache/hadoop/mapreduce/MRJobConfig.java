@@ -275,7 +275,12 @@ public interface MRJobConfig {
 
   public static final String JOB_ACL_VIEW_JOB = "mapreduce.job.acl-view-job";
 
+  public static final String DEFAULT_JOB_ACL_VIEW_JOB = " ";
+
   public static final String JOB_ACL_MODIFY_JOB = "mapreduce.job.acl-modify-job";
+
+  public static final String DEFAULT_JOB_ACL_MODIFY_JOB = " ";
+
   public static final String JOB_SUBMITHOST =
     "mapreduce.job.submithostname";
   public static final String JOB_SUBMITHOSTADDR =

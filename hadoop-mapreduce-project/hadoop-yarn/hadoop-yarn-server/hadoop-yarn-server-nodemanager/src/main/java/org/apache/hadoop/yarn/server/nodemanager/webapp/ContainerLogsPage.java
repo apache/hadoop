@@ -28,12 +28,17 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -54,12 +59,15 @@ public class ContainerLogsPage extends NMView {
     private final Configuration conf;
     private final LocalDirAllocator logsSelector;
     private final Context nmContext;
+    private final ApplicationACLsManager aclsManager;
 
     @Inject
-    public ContainersLogsBlock(Configuration conf, Context context) {
+    public ContainersLogsBlock(Configuration conf, Context context,
+        ApplicationACLsManager aclsManager) {
       this.conf = conf;
       this.logsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
       this.nmContext = context;
+      this.aclsManager = aclsManager;
     }
 
     @Override
@@ -74,22 +82,48 @@ public class ContainerLogsPage extends NMView {
         return;
       }
 
+      ApplicationId applicationId = containerId.getApplicationAttemptId()
+          .getApplicationId();
+      Application application = this.nmContext.getApplications().get(
+          applicationId);
       Container container = this.nmContext.getContainers().get(containerId);
 
-      if (container == null) {
+      if (application == null || container == null) {
         div.h1(
             "Unknown container. Container is either not yet running or "
                 + "has already completed or "
                 + "doesn't belong to this node at all.")._();
-      } else if (EnumSet.of(ContainerState.NEW, ContainerState.LOCALIZING,
+        return;
+      }
+
+      if (EnumSet.of(ContainerState.NEW, ContainerState.LOCALIZING,
           ContainerState.LOCALIZING).contains(container.getContainerState())) {
         div.h1("Container is not yet running. Current state is "
                 + container.getContainerState())
               ._();
-      } else if (EnumSet.of(ContainerState.RUNNING,
+        return;
+      }
+
+      if (EnumSet.of(ContainerState.RUNNING,
           ContainerState.EXITED_WITH_FAILURE,
           ContainerState.EXITED_WITH_SUCCESS).contains(
           container.getContainerState())) {
+
+        // Check for the authorization.
+        String remoteUser = request().getRemoteUser();
+        UserGroupInformation callerUGI = null;
+        if (remoteUser != null) {
+          callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+        }
+        if (callerUGI != null && !this.aclsManager.checkAccess(callerUGI,
+            ApplicationAccessType.VIEW_APP, application.getUser(),
+                applicationId)) {
+          div.h1(
+              "You (User " + remoteUser
+                  + ") are not authorized to view the logs for application "
+                  + applicationId)._();
+          return;
+        }
 
         if (!$(CONTAINER_LOG_TYPE).isEmpty()) {
           File logFile = null;
@@ -98,7 +132,7 @@ public class ContainerLogsPage extends NMView {
                 new File(this.logsSelector
                     .getLocalPathToRead(
                         ConverterUtils.toString(
-                            containerId.getApplicationAttemptId().getApplicationId())
+                            applicationId)
                             + Path.SEPARATOR + $(CONTAINER_ID)
                             + Path.SEPARATOR
                             + $(CONTAINER_LOG_TYPE), this.conf).toUri()
@@ -175,8 +209,8 @@ public class ContainerLogsPage extends NMView {
 
     static List<File>
         getContainerLogDirs(Configuration conf, ContainerId containerId) {
-      String[] logDirs =
-          conf.getStrings(YarnConfiguration.NM_LOG_DIRS, YarnConfiguration.DEFAULT_NM_LOG_DIRS);
+      String[] logDirs = conf.getStrings(YarnConfiguration.NM_LOG_DIRS,
+          YarnConfiguration.DEFAULT_NM_LOG_DIRS);
       List<File> containerLogDirs = new ArrayList<File>(logDirs.length);
       for (String logDir : logDirs) {
         String appIdStr = 

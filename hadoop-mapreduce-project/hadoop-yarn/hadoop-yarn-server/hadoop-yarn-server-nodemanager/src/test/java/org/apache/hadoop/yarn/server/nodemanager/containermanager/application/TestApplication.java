@@ -1,14 +1,23 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
-import static org.mockito.Mockito.*;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.refEq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -27,6 +36,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -366,7 +376,8 @@ public class TestApplication {
       this.user = user;
       this.appId = BuilderUtils.newApplicationId(timestamp, id);
 
-      app = new ApplicationImpl(dispatcher, this.user, appId, null);
+      app = new ApplicationImpl(dispatcher, new ApplicationACLsManager(
+          new Configuration()), this.user, appId, null);
       containers = new ArrayList<Container>();
       for (int i = 0; i < numContainers; i++) {
         containers.add(createMockedContainer(this.appId, i));
@@ -384,9 +395,9 @@ public class TestApplication {
     }
 
     public void initApplication() {
-      app.handle(new ApplicationInitEvent(appId));
+      app.handle(new ApplicationInitEvent(appId,
+          new HashMap<ApplicationAccessType, String>()));
     }
-
 
     public void initContainer(int containerNum) {
       if (containerNum == -1) {
@@ -429,6 +440,10 @@ public class TestApplication {
     ContainerId cId = BuilderUtils.newContainerId(appAttemptId, containerId);
     Container c = mock(Container.class);
     when(c.getContainerID()).thenReturn(cId);
+    ContainerLaunchContext launchContext = mock(ContainerLaunchContext.class);
+    when(c.getLaunchContext()).thenReturn(launchContext);
+    when(launchContext.getApplicationACLs()).thenReturn(
+        new HashMap<ApplicationAccessType, String>());
     return c;
   }
 }

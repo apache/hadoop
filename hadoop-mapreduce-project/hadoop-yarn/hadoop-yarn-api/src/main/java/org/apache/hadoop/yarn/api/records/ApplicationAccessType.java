@@ -15,40 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ClientRMProtocol;
 
 /**
- * <p>
- * <code>QueueACL</code> enumerates the various ACLs for queues.
- * </p>
- * 
- * <p>
- * The ACLs are one of:
- * <ul>
- * <li>{@link #SUBMIT_APPLICATIONS} - ACL to submit applications to the
- * queue.</li>
- * <li>{@link #ADMINISTER_QUEUE} - ACL to administer the queue.</li>
- * </ul>
- * </p>
- * 
- * @see QueueInfo
- * @see ClientRMProtocol#getQueueUserAcls(org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest)
+ * Application access types.
  */
 @Public
 @Stable
-public enum QueueACL {
+public enum ApplicationAccessType {
+
   /**
-   * ACL to submit applications to the queue.
+   * Access-type representing 'viewing' application. ACLs against this type
+   * dictate who can 'view' some or all of the application related details.
    */
-  SUBMIT_APPLICATIONS,
-  
+  VIEW_APP,
+
   /**
-   * ACL to administer the queue.
+   * Access-type representing 'modifying' application. ACLs against this type
+   * dictate who can 'modify' the application for e.g., by killing the
+   * application
    */
-  ADMINISTER_QUEUE,
+  MODIFY_APP;
 }

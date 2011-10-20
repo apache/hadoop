@@ -232,7 +232,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       .addTransition(
           RMAppAttemptState.KILLED,
           RMAppAttemptState.KILLED,
-          EnumSet.of(RMAppAttemptEventType.EXPIRE,
+          EnumSet.of(RMAppAttemptEventType.APP_ACCEPTED,
+              RMAppAttemptEventType.APP_REJECTED,
+              RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.LAUNCH_FAILED,
               RMAppAttemptEventType.EXPIRE,

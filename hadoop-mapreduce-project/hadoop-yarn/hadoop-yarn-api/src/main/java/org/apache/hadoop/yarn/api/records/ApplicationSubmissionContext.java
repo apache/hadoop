@@ -148,5 +148,4 @@ public interface ApplicationSubmissionContext {
   @Public
   @Stable
   public void setAMContainerSpec(ContainerLaunchContext amContainer);
-
 }

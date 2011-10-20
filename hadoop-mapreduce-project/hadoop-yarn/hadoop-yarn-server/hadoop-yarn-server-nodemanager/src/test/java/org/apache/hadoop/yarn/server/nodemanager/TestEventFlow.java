@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
@@ -97,9 +98,9 @@ public class TestEventFlow {
       }
     };
 
-    DummyContainerManager containerManager =
-        new DummyContainerManager(context, exec, del, nodeStatusUpdater, 
-            metrics, containerTokenSecretManager);
+    DummyContainerManager containerManager = new DummyContainerManager(
+        context, exec, del, nodeStatusUpdater, metrics,
+        containerTokenSecretManager, new ApplicationACLsManager(conf));
     containerManager.init(conf);
     containerManager.start();
 

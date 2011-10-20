@@ -373,7 +373,7 @@ public class RecoveryService extends CompositeService implements Recovery {
       container.setNodeHttpAddress(attemptInfo.getTrackerName() + ":" + 
           attemptInfo.getHttpPort());
       actualHandler.handle(new TaskAttemptContainerAssignedEvent(yarnAttemptID,
-          container));
+          container, null));
     }
   }
 

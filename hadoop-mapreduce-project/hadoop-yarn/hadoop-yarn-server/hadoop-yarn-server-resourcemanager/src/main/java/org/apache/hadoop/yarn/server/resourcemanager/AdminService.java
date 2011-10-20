@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -38,7 +37,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsResponse;
@@ -51,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.Refresh
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 public class AdminService extends AbstractService implements RMAdminProtocol {
@@ -86,9 +84,9 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
       conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS);
     masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
-    adminAcl = 
-      new AccessControlList(
-          conf.get(YarnConfiguration.RM_ADMIN_ACL, YarnConfiguration.DEFAULT_RM_ADMIN_ACL));
+    adminAcl = new AccessControlList(conf.get(
+        YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
   }
 
   public void start() {
@@ -214,9 +212,9 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     UserGroupInformation user = checkAcls("refreshAdminAcls");
     
     Configuration conf = new Configuration();
-    adminAcl = 
-      new AccessControlList(
-          conf.get(YarnConfiguration.RM_ADMIN_ACL, YarnConfiguration.DEFAULT_RM_ADMIN_ACL));
+    adminAcl = new AccessControlList(conf.get(
+        YarnConfiguration.YARN_ADMIN_ACL,
+        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
     RMAuditLogger.logSuccess(user.getShortUserName(), "refreshAdminAcls", 
         "AdminService");
 

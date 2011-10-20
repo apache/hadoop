@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,6 +28,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -42,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -57,15 +60,18 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
   private final ClientToAMSecretManager clientToAMSecretManager;
   private final ApplicationMasterService masterService;
   private final YarnScheduler scheduler;
+  private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
 
-  public RMAppManager(RMContext context, ClientToAMSecretManager 
-      clientToAMSecretManager, YarnScheduler scheduler, 
-      ApplicationMasterService masterService, Configuration conf) {
+  public RMAppManager(RMContext context,
+      ClientToAMSecretManager clientToAMSecretManager,
+      YarnScheduler scheduler, ApplicationMasterService masterService,
+      ApplicationACLsManager applicationACLsManager, Configuration conf) {
     this.rmContext = context;
     this.scheduler = scheduler;
     this.clientToAMSecretManager = clientToAMSecretManager;
     this.masterService = masterService;
+    this.applicationACLsManager = applicationACLsManager;
     this.conf = conf;
     setCompletedAppsMax(conf.getInt(
         YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
@@ -208,6 +214,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       LOG.info("Application should be expired, max # apps"
           + " met. Removing app: " + removeId); 
       rmContext.getRMApps().remove(removeId);
+      this.applicationACLsManager.removeApplication(removeId);
     }
   }
 
@@ -256,12 +263,17 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
         LOG.info(message);
         throw RPCUtil.getRemoteException(message);
       } else {
+
+        this.applicationACLsManager.addApplication(applicationId,
+            submissionContext.getAMContainerSpec().getApplicationACLs());
+
         this.rmContext.getDispatcher().getEventHandler().handle(
             new RMAppEvent(applicationId, RMAppEventType.START));
       }
     } catch (IOException ie) {
         LOG.info("RMAppManager submit application exception", ie);
         if (application != null) {
+          // TODO: Weird setup.
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppRejectedEvent(applicationId, ie.getMessage()));
         }

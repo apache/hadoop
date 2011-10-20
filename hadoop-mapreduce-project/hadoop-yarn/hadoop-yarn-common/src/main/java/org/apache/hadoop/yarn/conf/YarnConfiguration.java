@@ -36,14 +36,8 @@ public class YarnConfiguration extends Configuration {
   }
 
   //Configurations
-  
-  /** ACL of who can view this application.*/
-  public static final String APPLICATION_ACL_VIEW_APP =
-    "yarn.app.acl.view-job";
-  
-  /** ACL of who can modify this application.*/
-  public static final String APPLICATION_ACL_MODIFY_APP =
-    "yarn.app.acl.modify-job";
+
+  public static final String YARN_PREFIX = "yarn.";
 
   /** Delay before deleting resource to ease debugging of NM issues */
   public static final String DEBUG_NM_DELETE_DELAY_SEC =
@@ -52,7 +46,7 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
   // IPC Configs
   ////////////////////////////////
-  public static final String IPC_PREFIX = "yarn.ipc.";
+  public static final String IPC_PREFIX = YARN_PREFIX + "ipc.";
 
   /** Factory to create client IPC classes.*/
   public static final String IPC_CLIENT_FACTORY = 
@@ -126,15 +120,15 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_RESOURCE_TRACKER_ADDRESS =
     "0.0.0.0:8025";
   
-  /** Are RM acls enabled.*/
-  public static final String RM_ACL_ENABLE = 
-    RM_PREFIX + "acl.enable";
-  public static final boolean DEFAULT_RM_ACL_ENABLE = true;
+  /** Are acls enabled.*/
+  public static final String YARN_ACL_ENABLE = 
+    YARN_PREFIX + "acl.enable";
+  public static final boolean DEFAULT_YARN_ACL_ENABLE = true;
   
-  /** ACL of who can be admin of RM.*/
-  public static final String RM_ADMIN_ACL = 
-    RM_PREFIX + "admin.acl";
-  public static final String DEFAULT_RM_ADMIN_ACL = "*";
+  /** ACL of who can be admin of YARN cluster.*/
+  public static final String YARN_ADMIN_ACL = 
+    YARN_PREFIX + "admin.acl";
+  public static final String DEFAULT_YARN_ADMIN_ACL = "*";
   
   /** The address of the RM admin interface.*/
   public static final String RM_ADMIN_ADDRESS = 

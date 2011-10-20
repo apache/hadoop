@@ -112,7 +112,7 @@ public class LocalContainerAllocator extends RMCommunicator
         eventHandler.handle(jce);
       }
       eventHandler.handle(new TaskAttemptContainerAssignedEvent(
-          event.getAttemptID(), container));
+          event.getAttemptID(), container, applicationACLs));
     }
   }
 

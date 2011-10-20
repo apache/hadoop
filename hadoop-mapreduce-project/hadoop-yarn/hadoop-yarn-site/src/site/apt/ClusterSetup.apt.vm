@@ -176,6 +176,24 @@ Hadoop MapReduce Next Generation - Cluster Setup
       
       * <<<conf/yarn-site.xml>>>
 
+        * Configurations for ResourceManager and NodeManager:
+
+*-------------------------+-------------------------+------------------------+
+|| Parameter              || Value                  || Notes                 |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.acl.enable>>> | | |
+| | <<<true>>> / <<<false>>> | |
+| | | Enable ACLs? Defaults to <true>. |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.admin.acl>>> | | |
+| | Admin ACL | |
+| | | ACL to set admins on the cluster. |
+| | | ACLs are of for <comma-separated-users><space><comma-separated-groups>. |
+| | | Defaults to special value of <<*>> which means <anyone>. |
+| | | Special value of just <space> means no one has access. |
+*-------------------------+-------------------------+------------------------+
+
+
         * Configurations for ResourceManager:
 
 *-------------------------+-------------------------+------------------------+
@@ -205,17 +223,6 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | <<<yarn.resourcemanager.scheduler.class>>> | | |
 | | <<<ResourceManager>>> Scheduler class. | |
 | | | <<<CapacityScheduler>>> (recommended) or <<<FifoScheduler>>> |
-*-------------------------+-------------------------+------------------------+
-| <<<yarn.resourcemanager.acl.enable>>> | | |
-| | <<<true>>> / <<<false>>> | |
-| | | Enable ACLs? Defaults to <true>. |
-*-------------------------+-------------------------+------------------------+
-| <<<yarn.resourcemanager.admin.acl>>> | | |
-| | Admin ACL | |
-| | | ACL to set admins on the cluster. |
-| | | ACLs are of for <comma-separated-users><space><comma-separated-groups>. |
-| | | Defaults to special value of <<*>> which means <anyone>. |
-| | | Special value of just <space> means no one has access. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.remote-app-log-dir>>> | | |
 | | </logs> | |

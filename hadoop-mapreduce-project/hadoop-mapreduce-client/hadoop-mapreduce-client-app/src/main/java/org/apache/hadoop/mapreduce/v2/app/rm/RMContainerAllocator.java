@@ -620,7 +620,7 @@ public class RMContainerAllocator extends RMContainerRequestor
 
               // send the container-assigned event to task attempt
               eventHandler.handle(new TaskAttemptContainerAssignedEvent(
-                  assigned.attemptID, allocated));
+                  assigned.attemptID, allocated, applicationACLs));
 
               assignedRequests.add(allocated.getId(), assigned.attemptID);
 

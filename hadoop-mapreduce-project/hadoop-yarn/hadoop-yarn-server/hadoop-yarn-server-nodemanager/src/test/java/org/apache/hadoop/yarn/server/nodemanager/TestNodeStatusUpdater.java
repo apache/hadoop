@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.Service.STATE;
@@ -324,9 +325,11 @@ public class TestNodeStatusUpdater {
       protected ContainerManagerImpl createContainerManager(Context context,
           ContainerExecutor exec, DeletionService del,
           NodeStatusUpdater nodeStatusUpdater,
-          ContainerTokenSecretManager containerTokenSecretManager) {
-        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
-            metrics, containerTokenSecretManager) {
+          ContainerTokenSecretManager containerTokenSecretManager,
+          ApplicationACLsManager aclsManager) {
+        return new ContainerManagerImpl(context, exec, del,
+            nodeStatusUpdater, metrics, containerTokenSecretManager,
+            aclsManager) {
           @Override
           public void start() {
             // Simulating failure of starting RPC server

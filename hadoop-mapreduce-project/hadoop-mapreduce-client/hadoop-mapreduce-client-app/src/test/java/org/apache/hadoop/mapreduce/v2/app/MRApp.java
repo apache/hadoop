@@ -361,7 +361,7 @@ public class MRApp extends MRAppMaster {
         container.setNodeHttpAddress("localhost:9999");
         getContext().getEventHandler().handle(
             new TaskAttemptContainerAssignedEvent(event.getAttemptID(),
-                container));
+                container, null));
       }
     };
   }
