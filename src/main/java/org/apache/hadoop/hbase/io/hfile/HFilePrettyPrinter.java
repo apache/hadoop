@@ -194,7 +194,7 @@ public class HFilePrettyPrinter {
       // scan over file and read key/value's and check if requested
       HFileScanner scanner = reader.getScanner(false, false, false);
       scanner.seekTo();
-      scanKeysValues(file, count, scanner);
+      scanKeysValues(file, scanner);
     }
 
     // print meta data
@@ -210,7 +210,7 @@ public class HFilePrettyPrinter {
     reader.close();
   }
 
-  private void scanKeysValues(Path file, int count, HFileScanner scanner)
+  private void scanKeysValues(Path file, HFileScanner scanner)
       throws IOException {
     KeyValue pkv = null;
     do {

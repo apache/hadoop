@@ -355,6 +355,7 @@ Release 0.92.0 - Unreleased
                (Li Pi)
    HBASE-4510  Check and workaround usage of internal HDFS APIs in HBase
                (Harsh)
+   HBASE-4595  HFilePrettyPrinter Scanned kv count always 0 (Matteo Bertozzi)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
