@@ -1176,7 +1176,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // process RIT if any
       // TODO: Why does this not call AssignmentManager.joinCluster?  Otherwise
       // we are not processing dead servers if any.
-      this.assignmentManager.processRegionsInTransition();
+      this.assignmentManager.processDeadServersAndRegionsInTransition();
       return true;
     } finally {
       status.cleanup();

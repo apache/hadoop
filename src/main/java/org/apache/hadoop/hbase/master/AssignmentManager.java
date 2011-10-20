@@ -314,11 +314,8 @@ public class AssignmentManager extends ZooKeeperListener {
     // Returns servers who have not checked in (assumed dead) and their regions
     Map<ServerName,List<Pair<HRegionInfo,Result>>> deadServers =
       rebuildUserRegions();
-    // Process list of dead servers; note this will add regions to the RIT.
-    // processRegionsInTransition will read them and assign them out.
-    processDeadServers(deadServers);
-    // Check existing regions in transition
-    processRegionsInTransition(deadServers);
+
+    processDeadServersAndRegionsInTransition(deadServers);
 
     // Recover the tables that were not fully moved to DISABLED state.
     // These tables are in DISABLING state when the master restarted/switched.
@@ -333,21 +330,23 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws IOException
    * @throws InterruptedException
    */
-  void processRegionsInTransition()
+  void processDeadServersAndRegionsInTransition()
   throws KeeperException, IOException, InterruptedException {
     // Pass null to signify no dead servers in this context.
-    processRegionsInTransition(null);
+    processDeadServersAndRegionsInTransition(null);
   }
 
   /**
-   * Process all regions that are in transition up in zookeeper.  Used by
-   * master joining an already running cluster.
-   * @param deadServers Map of dead servers and their regions.  Can be null.
+   * Process all regions that are in transition in zookeeper and also
+   * processes the list of dead servers by scanning the META. 
+   * Used by master joining an cluster.
+   * @param deadServers
+   *          Map of dead servers and their regions. Can be null.
    * @throws KeeperException
    * @throws IOException
    * @throws InterruptedException
    */
-  void processRegionsInTransition(
+  void processDeadServersAndRegionsInTransition(
       final Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers)
   throws KeeperException, IOException, InterruptedException {
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
@@ -374,11 +373,10 @@ public class AssignmentManager extends ZooKeeperListener {
     // If we found user regions out on cluster, its a failover.
     if (regionsToProcess) {
       LOG.info("Found regions out on cluster or in RIT; failover");
-      if (!nodes.isEmpty()) {
-        for (String encodedRegionName: nodes) {
-          processRegionInTransition(encodedRegionName, null, deadServers);
-        }
-      }
+      // Process list of dead servers and regions in RIT.
+      // See HBASE-4580 for more information.
+      processDeadServersAndRecoverLostRegions(deadServers, nodes);
+
     } else {
       // Fresh cluster startup.
       LOG.info("Clean cluster startup. Assigning userregions");
@@ -2222,52 +2220,67 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Processes list of dead servers from result of META scan.
+   * Processes list of dead servers from result of META scan and regions in RIT
    * <p>
-   * This is used as part of failover to handle RegionServers which failed
-   * while there was no active master.
+   * This is used for failover to recover the lost regions that belonged to
+   * RegionServers which failed while there was no active master or regions 
+   * that were in RIT.
    * <p>
-   * Method stubs in-memory data to be as expected by the normal server shutdown
-   * handler.
-   *
+   * 
    * @param deadServers
+   *          The list of dead servers which failed while there was no active
+   *          master. Can be null.
+   * @param nodes
+   *          The regions in RIT
    * @throws IOException
    * @throws KeeperException
    */
-  private void processDeadServers(
-      Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers)
-  throws IOException, KeeperException {
-    for (Map.Entry<ServerName, List<Pair<HRegionInfo,Result>>> deadServer:
+  private void processDeadServersAndRecoverLostRegions(
+      Map<ServerName, List<Pair<HRegionInfo, Result>>> deadServers,
+      List<String> nodes) throws IOException, KeeperException {
+    if (null != deadServers) {
+      for (Map.Entry<ServerName, List<Pair<HRegionInfo, Result>>> deadServer : 
         deadServers.entrySet()) {
-      List<Pair<HRegionInfo,Result>> regions = deadServer.getValue();
-      for (Pair<HRegionInfo,Result> region : regions) {
-        HRegionInfo regionInfo = region.getFirst();
-        Result result = region.getSecond();
-        // If region was in transition (was in zk) force it offline for reassign
-        try {
-          RegionTransitionData data = ZKAssign.getData(watcher,
-              regionInfo.getEncodedName());
+        List<Pair<HRegionInfo, Result>> regions = deadServer.getValue();
+        for (Pair<HRegionInfo, Result> region : regions) {
+          HRegionInfo regionInfo = region.getFirst();
+          Result result = region.getSecond();
+          // If region was in transition (was in zk) force it offline for
+          // reassign
+          try {
+            RegionTransitionData data = ZKAssign.getData(watcher,
+                regionInfo.getEncodedName());
 
-          // If zk node of this region has been updated by a live server,
-          // we consider that this region is being handled.
-          // So we should skip it and process it in processRegionsInTransition.
-          if (data != null && data.getOrigin() != null &&
-	      serverManager.isServerOnline(data.getOrigin())) {
-            LOG.info("The region " + regionInfo.getEncodedName()
-                + "is being handled on " + data.getOrigin());
-            continue;
+            // If zk node of this region has been updated by a live server,
+            // we consider that this region is being handled.
+            // So we should skip it and process it in
+            // processRegionsInTransition.
+            if (data != null && data.getOrigin() != null && 
+                serverManager.isServerOnline(data.getOrigin())) {
+              LOG.info("The region " + regionInfo.getEncodedName()
+                  + "is being handled on " + data.getOrigin());
+              continue;
+            }
+            // Process with existing RS shutdown code
+            boolean assign = ServerShutdownHandler.processDeadRegion(
+                regionInfo, result, this, this.catalogTracker);
+            if (assign) {
+              ZKAssign.createOrForceNodeOffline(watcher, regionInfo,
+                  master.getServerName());
+              if (!nodes.contains(regionInfo.getEncodedName())) {
+                nodes.add(regionInfo.getEncodedName());
+              }
+            }
+          } catch (KeeperException.NoNodeException nne) {
+            // This is fine
           }
-          // Process with existing RS shutdown code
-          boolean assign =
-            ServerShutdownHandler.processDeadRegion(regionInfo, result, this,
-            this.catalogTracker);
-          if (assign) {
-            ZKAssign.createOrForceNodeOffline(watcher, regionInfo,
-              master.getServerName());
-          }
-        } catch (KeeperException.NoNodeException nne) {
-          // This is fine
         }
+      }
+    }
+
+    if (!nodes.isEmpty()) {
+      for (String encodedRegionName : nodes) {
+        processRegionInTransition(encodedRegionName, null, deadServers);
       }
     }
   }

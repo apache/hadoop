@@ -356,6 +356,8 @@ Release 0.92.0 - Unreleased
    HBASE-4510  Check and workaround usage of internal HDFS APIs in HBase
                (Harsh)
    HBASE-4595  HFilePrettyPrinter Scanned kv count always 0 (Matteo Bertozzi)
+   HBASE-4580  Some invalid zk nodes were created when a clean cluster restarts
+               (Gaojinchao)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
