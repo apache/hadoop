@@ -31,25 +31,31 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
-import org.junit.Test;
+import org.junit.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
  * Tests HTablePool.
  */
+@RunWith(Suite.class)
+@Suite.SuiteClasses({TestHTablePool.TestHTableReusablePool.class, TestHTablePool.TestHTableThreadLocalPool.class})
 public class TestHTablePool {
 	private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 	private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
 
-	public abstract static class TestHTablePoolType extends TestCase {
-		protected void setUp() throws Exception {
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
 			TEST_UTIL.startMiniCluster(1);
 			TEST_UTIL.createTable(TABLENAME, HConstants.CATALOG_FAMILY);
 		}
 
-		protected void tearDown() throws IOException {
+    @AfterClass
+		public static void tearDownAfterClass() throws IOException {
 			TEST_UTIL.shutdownMiniCluster();
 		}
 
+	public abstract static class TestHTablePoolType extends TestCase {
 		protected abstract PoolType getPoolType();
 
 		@Test
@@ -95,7 +101,11 @@ public class TestHTablePool {
 		public void testTablesWithDifferentNames() throws IOException {
 			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
 					Integer.MAX_VALUE, getPoolType());
-			byte[] otherTable = Bytes.toBytes("OtherTable");
+      // We add the class to the table name as the HBase cluster is reused
+      //  during the tests: this gives naming unicity.
+			byte[] otherTable = Bytes.toBytes(
+        "OtherTable_" + getClass().getSimpleName()
+      );
 			TEST_UTIL.createTable(otherTable, HConstants.CATALOG_FAMILY);
 
 			// Request a table from an empty pool
@@ -341,12 +351,4 @@ public class TestHTablePool {
 					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
 		}
 	}
-
-	public static junit.framework.Test suite() {
-		TestSuite suite = new TestSuite();
-		suite.addTestSuite(TestHTableReusablePool.class);
-		suite.addTestSuite(TestHTableThreadLocalPool.class);
-		return suite;
-	}
-
 }
