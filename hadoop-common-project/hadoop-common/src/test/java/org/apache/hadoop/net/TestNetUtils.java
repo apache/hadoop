@@ -131,6 +131,27 @@ public class TestNetUtils {
     assertRemoteDetailsIncluded(wrapped);
     assertInException(wrapped, "/UnknownHost");
   }
+  
+  @Test
+  public void testCreateSocketAddress() throws Throwable {
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+        "127.0.0.1:12345", 1000, "myconfig");
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(12345, addr.getPort());
+    
+    addr = NetUtils.createSocketAddr(
+        "127.0.0.1", 1000, "myconfig");
+    assertEquals("127.0.0.1", addr.getAddress().getHostAddress());
+    assertEquals(1000, addr.getPort());
+
+    try {
+      addr = NetUtils.createSocketAddr(
+          "127.0.0.1:blahblah", 1000, "myconfig");
+      fail("Should have failed to parse bad port");
+    } catch (IllegalArgumentException iae) {
+      assertInException(iae, "myconfig");
+    }
+  }
 
   private void assertRemoteDetailsIncluded(IOException wrapped)
       throws Throwable {
