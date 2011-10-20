@@ -150,12 +150,38 @@ public class NetUtils {
    */
   public static InetSocketAddress createSocketAddr(String target,
                                                    int defaultPort) {
+    return createSocketAddr(target, defaultPort, null);
+  }
+
+  /**
+   * Create an InetSocketAddress from the given target string and
+   * default port. If the string cannot be parsed correctly, the
+   * <code>configName</code> parameter is used as part of the
+   * exception message, allowing the user to better diagnose
+   * the misconfiguration.
+   *
+   * @param target a string of either "host" or "host:port"
+   * @param defaultPort the default port if <code>target</code> does not
+   *                    include a port number
+   * @param configName the name of the configuration from which
+   *                   <code>target</code> was loaded. This is used in the
+   *                   exception message in the case that parsing fails. 
+   */
+  public static InetSocketAddress createSocketAddr(String target,
+                                                   int defaultPort,
+                                                   String configName) {
+    String helpText = "";
+    if (configName != null) {
+      helpText = " (configuration property '" + configName + "')";
+    }
     if (target == null) {
-      throw new IllegalArgumentException("Target address cannot be null.");
+      throw new IllegalArgumentException("Target address cannot be null." +
+          helpText);
     }
     int colonIndex = target.indexOf(':');
     if (colonIndex < 0 && defaultPort == -1) {
-      throw new RuntimeException("Not a host:port pair: " + target);
+      throw new RuntimeException("Not a host:port pair: " + target +
+          helpText);
     }
     String hostname;
     int port = -1;
@@ -165,7 +191,14 @@ public class NetUtils {
       } else {
         // must be the old style <host>:<port>
         hostname = target.substring(0, colonIndex);
-        port = Integer.parseInt(target.substring(colonIndex + 1));
+        String portStr = target.substring(colonIndex + 1);
+        try {
+          port = Integer.parseInt(portStr);
+        } catch (NumberFormatException nfe) {
+          throw new IllegalArgumentException(
+              "Can't parse port '" + portStr + "'"
+              + helpText);
+        }
       }
     } else {
       // a new uri

@@ -486,6 +486,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7705. Add a log4j back end that can push out JSON data,
     one per line. (stevel)
 
+    HADOOP-7749. Add a NetUtils createSocketAddr call which provides more
+    help in exception messages. (todd)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
