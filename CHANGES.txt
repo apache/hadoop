@@ -350,6 +350,9 @@ Release 0.92.0 - Unreleased
    HBASE-4378  [hbck] Does not complain about regions with startkey==endkey.
                (Jonathan Hsieh)
    HBASE-4459  HbaseObjectWritable code is a byte, we will eventually run out of codes
+   HBASE-4430  Disable TestSlabCache and TestSingleSizedCache temporarily to
+               see if these are cause of build box failure though all tests pass
+               (Li Pi)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

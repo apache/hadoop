@@ -50,7 +50,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * correct SingleSizeCache.
  *
  **/
-public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize {
+public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   private final ConcurrentHashMap<String, SingleSizeCache> backingStore;
   private final TreeMap<Integer, SingleSizeCache> sizer;
@@ -212,34 +212,7 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
      * twice
      */
     scache.cacheBlock(blockName, cachedItem);
-
-    /*
-     * If an eviction for this value hasn't taken place yet, we want to wait for
-     * it to take place. See HBase-4330.
-     */
-    SingleSizeCache replace;
-    while ((replace = backingStore.putIfAbsent(blockName, scache)) != null) {
-      synchronized (replace) {
-        /*
-         * With the exception of unit tests, this should happen extremely
-         * rarely.
-         */
-        try {
-          replace.wait();
-        } catch (InterruptedException e) {
-          LOG.warn("InterruptedException on the caching thread: " + e);
-        }
-      }
-    }
-
-    /*
-     * Let the eviction threads know that something has been cached, and let
-     * them try their hand at eviction
-     */
-    synchronized (scache) {
-      scache.notifyAll();
-    }
-  }
+  } 
 
   /**
    * We don't care about whether its in memory or not, so we just pass the call
@@ -291,60 +264,14 @@ public class SlabCache implements SlabItemEvictionWatcher, BlockCache, HeapSize 
   }
 
   @Override
-  public void onEviction(String key, Object notifier) {
-    /*
-     * Without the while loop below, the following can occur:
-     *
-     * Invariant: Anything in SingleSizeCache will have a representation in
-     * SlabCache, and vice-versa.
-     *
-     * Start: Key A is in both SingleSizeCache and SlabCache. Invariant is
-     * satisfied
-     *
-     * Thread A: Caches something, starting eviction of Key A in SingleSizeCache
-     *
-     * Thread B: Checks for Key A -> Returns Gets Null, as eviction has begun
-     *
-     * Thread B: Recaches Key A, gets to SingleSizeCache, does not get the
-     * PutIfAbsentLoop yet...
-     *
-     * Thread C: Caches another key, starting the second eviction of Key A.
-     *
-     * Thread A: does its onEviction, removing the entry of Key A from
-     * SlabCache.
-     *
-     * Thread C: does its onEviction, removing the (blank) entry of Key A from
-     * SlabCache:
-     *
-     * Thread B: goes to putifabsent, and puts its entry into SlabCache.
-     *
-     * Result: SlabCache has an entry for A, while SingleSizeCache has no
-     * entries for A. Invariant is violated.
-     *
-     * What the while loop does, is that, at the end, it GUARANTEES that an
-     * onEviction will remove an entry. See HBase-4482.
-     */
-
-    stats.evict();
-    while ((backingStore.remove(key)) == null) {
-      /* With the exception of unit tests, this should happen extremely rarely. */
-      synchronized (notifier) {
-        try {
-          notifier.wait();
-        } catch (InterruptedException e) {
-          LOG.warn("InterruptedException on the evicting thread: " + e);
-        }
-      }
-    }
+  public void onEviction(String key, SingleSizeCache notifier) {
     stats.evicted();
-
-    /*
-     * Now we've evicted something, lets tell the caching threads to try to
-     * cache something.
-     */
-    synchronized (notifier) {
-      notifier.notifyAll();
-    }
+    backingStore.remove(key);
+  }
+  
+  @Override
+  public void onInsertion(String key, SingleSizeCache notifier) {
+    backingStore.put(key, notifier);
   }
 
   /**

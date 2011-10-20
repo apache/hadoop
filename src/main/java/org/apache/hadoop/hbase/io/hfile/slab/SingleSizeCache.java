@@ -57,7 +57,7 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   private final int numBlocks;
   private final int blockSize;
   private final CacheStats stats;
-  private final SlabItemEvictionWatcher evictionWatcher;
+  private final SlabItemActionWatcher actionWatcher;
   private final AtomicLong size;
   private final AtomicLong timeSinceLastAccess;
   public final static long CACHE_FIXED_OVERHEAD = ClassSize
@@ -78,12 +78,12 @@ public class SingleSizeCache implements BlockCache, HeapSize {
    * @param master the SlabCache this SingleSlabCache is assigned to.
    */
   public SingleSizeCache(int blockSize, int numBlocks,
-      SlabItemEvictionWatcher master) {
+      SlabItemActionWatcher master) {
     this.blockSize = blockSize;
     this.numBlocks = numBlocks;
     backingStore = new Slab(blockSize, numBlocks);
     this.stats = new CacheStats();
-    this.evictionWatcher = master;
+    this.actionWatcher = master;
     this.size = new AtomicLong(CACHE_FIXED_OVERHEAD + backingStore.heapSize());
     this.timeSinceLastAccess = new AtomicLong();
 
@@ -121,11 +121,17 @@ public class SingleSizeCache implements BlockCache, HeapSize {
         storedBlock);
     toBeCached.serialize(storedBlock);
 
-    CacheablePair alreadyCached = backingMap.putIfAbsent(blockName, newEntry);
+    synchronized (this) {
+      CacheablePair alreadyCached = backingMap.putIfAbsent(blockName, newEntry);
+    
 
-    if (alreadyCached != null) {
-      backingStore.free(storedBlock);
-      throw new RuntimeException("already cached " + blockName);
+      if (alreadyCached != null) {
+        backingStore.free(storedBlock);
+        throw new RuntimeException("already cached " + blockName);
+      }
+      if (actionWatcher != null) {
+        actionWatcher.onInsertion(blockName, this);
+      }
     }
     newEntry.recentlyAccessed.set(System.nanoTime());
     this.size.addAndGet(newEntry.heapSize());
@@ -198,8 +204,8 @@ public class SingleSizeCache implements BlockCache, HeapSize {
       // Thread A calls cacheBlock on the same block, and gets
       // "already cached" since the block is still in backingStore
 
-      if (evictionWatcher != null) {
-        evictionWatcher.onEviction(key, this);
+      if (actionWatcher != null) {
+        actionWatcher.onEviction(key, this);
       }
     }
     stats.evicted();
