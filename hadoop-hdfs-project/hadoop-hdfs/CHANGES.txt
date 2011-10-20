@@ -702,6 +702,8 @@ Release 0.23.0 - Unreleased
     HDFS-2401. Running a set of methods in a Single Test Class.
     (Jonathan Eagles via mahadev)
 
+    HDFS-2471. Add federation documentation. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

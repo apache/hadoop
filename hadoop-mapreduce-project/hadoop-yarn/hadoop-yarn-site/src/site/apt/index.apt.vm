@@ -49,3 +49,5 @@ Hadoop MapReduce Next Generation
 
   * {{{./CapacityScheduler.html}Capacity Scheduler}}
 
+  * {{{./Federation.html}HDFS Federation feature description, configuration and management}}
+
