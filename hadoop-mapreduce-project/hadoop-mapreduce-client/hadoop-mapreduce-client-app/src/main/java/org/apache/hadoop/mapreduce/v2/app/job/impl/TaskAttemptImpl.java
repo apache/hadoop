@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -53,7 +52,6 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.ReduceAttemptFinishedEvent;
@@ -101,8 +99,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
@@ -117,6 +115,7 @@ import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.util.StringUtils;
@@ -532,8 +531,10 @@ public abstract class TaskAttemptImpl implements
 
   /**
    * Create the {@link ContainerLaunchContext} for this attempt.
+   * @param applicationACLs 
    */
-  private ContainerLaunchContext createContainerLaunchContext() {
+  private ContainerLaunchContext createContainerLaunchContext(
+      Map<ApplicationAccessType, String> applicationACLs) {
 
     // Application resources
     Map<String, LocalResource> localResources = 
@@ -634,17 +635,11 @@ public abstract class TaskAttemptImpl implements
         jvmID);
     
     // Construct the actual Container
-    ContainerLaunchContext container =
-        recordFactory.newRecordInstance(ContainerLaunchContext.class);
-    container.setContainerId(containerID);
-    container.setUser(conf.get(MRJobConfig.USER_NAME));
-    container.setResource(assignedCapability);
-    container.setLocalResources(localResources);
-    container.setEnvironment(environment);
-    container.setCommands(commands);
-    container.setServiceData(serviceData);
-    container.setContainerTokens(tokens);
-    
+    ContainerLaunchContext container = BuilderUtils
+        .newContainerLaunchContext(containerID, conf
+            .get(MRJobConfig.USER_NAME), assignedCapability, localResources,
+            environment, commands, serviceData, tokens, applicationACLs);
+
     return container;
   }
 
@@ -1003,7 +998,7 @@ public abstract class TaskAttemptImpl implements
     @Override
     public void transition(final TaskAttemptImpl taskAttempt, 
         TaskAttemptEvent event) {
-      TaskAttemptContainerAssignedEvent cEvent = 
+      final TaskAttemptContainerAssignedEvent cEvent = 
         (TaskAttemptContainerAssignedEvent) event;
       taskAttempt.containerID = cEvent.getContainer().getId();
       taskAttempt.nodeHostName = cEvent.getContainer().getNodeId().getHost();
@@ -1026,7 +1021,8 @@ public abstract class TaskAttemptImpl implements
               taskAttempt.containerMgrAddress, taskAttempt.containerToken) {
         @Override
         public ContainerLaunchContext getContainer() {
-          return taskAttempt.createContainerLaunchContext();
+          return taskAttempt.createContainerLaunchContext(cEvent
+              .getApplicationACLs());
         }
         @Override
         public Task getRemoteTask() {  // classic mapred Task, not YARN version

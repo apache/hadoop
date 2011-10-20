@@ -181,5 +181,20 @@ public interface ContainerLaunchContext {
   @Public
   @Stable
   void setCommands(List<String> commands);
-  
+
+  /**
+   * Get the <code>ApplicationACL</code>s for the application. 
+   * @return all the <code>ApplicationACL</code>s
+   */
+  @Public
+  @Stable
+  public Map<ApplicationAccessType, String> getApplicationACLs();
+
+  /**
+   * Set the <code>ApplicationACL</code>s for the application. 
+   * @param acls
+   */
+  @Public
+  @Stable
+  public void setApplicationACLs(Map<ApplicationAccessType, String> acls);
 }

@@ -19,29 +19,27 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
-import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.RMAppManager;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -49,15 +47,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service;
-
 import org.junit.Test;
-import com.google.common.collect.Maps;
+
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * Testing applications being retired from RM.
@@ -135,14 +133,16 @@ public class TestAppManager{
   public class TestRMAppManager extends RMAppManager {
 
     public TestRMAppManager(RMContext context, Configuration conf) {
-      super(context, null, null, null, conf);
+      super(context, null, null, null, new ApplicationACLsManager(conf), conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
-    public TestRMAppManager(RMContext context, ClientToAMSecretManager
-        clientToAMSecretManager, YarnScheduler scheduler,
-        ApplicationMasterService masterService, Configuration conf) {
-      super(context, clientToAMSecretManager, scheduler, masterService, conf);
+    public TestRMAppManager(RMContext context,
+        ClientToAMSecretManager clientToAMSecretManager,
+        YarnScheduler scheduler, ApplicationMasterService masterService,
+        ApplicationACLsManager applicationACLsManager, Configuration conf) {
+      super(context, clientToAMSecretManager, scheduler, masterService,
+          applicationACLsManager, conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
@@ -339,14 +339,19 @@ public class TestAppManager{
     ApplicationMasterService masterService =  new ApplicationMasterService(rmContext,
         new ApplicationTokenSecretManager(), scheduler);
     Configuration conf = new Configuration();
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, 
-        new ClientToAMSecretManager(), scheduler, masterService, conf);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
+        new ClientToAMSecretManager(), scheduler, masterService,
+        new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(1);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     ApplicationSubmissionContext context = 
         recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
     context.setApplicationId(appID);
+    ContainerLaunchContext amContainer = recordFactory
+        .newRecordInstance(ContainerLaunchContext.class);
+    amContainer.setApplicationACLs(new HashMap<ApplicationAccessType, String>());
+    context.setAMContainerSpec(amContainer);
     setupDispatcher(rmContext, conf);
 
     appMonitor.submitApplication(context);
@@ -382,8 +387,9 @@ public class TestAppManager{
     ApplicationMasterService masterService =  new ApplicationMasterService(rmContext,
         new ApplicationTokenSecretManager(), scheduler);
     Configuration conf = new Configuration();
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, 
-        new ClientToAMSecretManager(), scheduler, masterService, conf);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
+        new ClientToAMSecretManager(), scheduler, masterService,
+        new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(10);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -391,6 +397,11 @@ public class TestAppManager{
     context.setApplicationId(appID);
     context.setApplicationName("testApp1");
     context.setQueue("testQueue");
+    ContainerLaunchContext amContainer = recordFactory
+        .newRecordInstance(ContainerLaunchContext.class);
+    amContainer
+        .setApplicationACLs(new HashMap<ApplicationAccessType, String>());
+    context.setAMContainerSpec(amContainer);
 
     setupDispatcher(rmContext, conf);
 
@@ -424,8 +435,9 @@ public class TestAppManager{
     ApplicationMasterService masterService =  new ApplicationMasterService(rmContext,
         new ApplicationTokenSecretManager(), scheduler);
     Configuration conf = new Configuration();
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, 
-        new ClientToAMSecretManager(), scheduler, masterService, conf);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
+        new ClientToAMSecretManager(), scheduler, masterService,
+        new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(0);
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);

@@ -41,6 +41,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -533,9 +534,9 @@ public class LeafQueue implements CSQueue {
     } catch (IOException ioe) {
       throw new AccessControlException(ioe);
     }
-    if (!hasAccess(QueueACL.SUBMIT_JOB, userUgi)) {
+    if (!hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)) {
       throw new AccessControlException("User " + userName + " cannot submit" +
-          " jobs to queue " + getQueuePath());
+          " applications to queue " + getQueuePath());
     }
 
     User user = null;
@@ -1065,34 +1066,25 @@ public class LeafQueue implements CSQueue {
 
   public Container createContainer(SchedulerApp application, SchedulerNode node, 
       Resource capability, Priority priority) {
-    Container container = 
-          BuilderUtils.newContainer(this.recordFactory,
-              application.getApplicationAttemptId(),
-              application.getNewContainerId(),
-              node.getNodeID(), node.getHttpAddress(), 
-              capability, priority);
+
+    NodeId nodeId = node.getRMNode().getNodeID();
+    ContainerId containerId = BuilderUtils.newContainerId(application
+        .getApplicationAttemptId(), application.getNewContainerId());
+    ContainerToken containerToken = null;
 
     // If security is enabled, send the container-tokens too.
     if (UserGroupInformation.isSecurityEnabled()) {
-      ContainerToken containerToken = 
-          this.recordFactory.newRecordInstance(ContainerToken.class);
-      NodeId nodeId = container.getNodeId();
-      ContainerTokenIdentifier tokenidentifier = new ContainerTokenIdentifier(
-          container.getId(), nodeId.toString(), container.getResource());
-      containerToken.setIdentifier(
-          ByteBuffer.wrap(tokenidentifier.getBytes()));
-      containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
-      containerToken.setPassword(
-          ByteBuffer.wrap(
-              containerTokenSecretManager.createPassword(tokenidentifier))
-          );
-      // RPC layer client expects ip:port as service for tokens
-      InetSocketAddress addr = NetUtils.createSocketAddr(nodeId.getHost(),
-          nodeId.getPort());
-      containerToken.setService(addr.getAddress().getHostAddress() + ":"
-          + addr.getPort());
-      container.setContainerToken(containerToken);
+      ContainerTokenIdentifier tokenIdentifier = new ContainerTokenIdentifier(
+          containerId, nodeId.toString(), capability);
+      containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
+          .wrap(containerTokenSecretManager
+              .createPassword(tokenIdentifier)), tokenIdentifier);
     }
+
+    // Create the container
+    Container container = BuilderUtils.newContainer(containerId, nodeId,
+        node.getRMNode().getHttpAddress(), capability, priority,
+        containerToken);
 
     return container;
   }

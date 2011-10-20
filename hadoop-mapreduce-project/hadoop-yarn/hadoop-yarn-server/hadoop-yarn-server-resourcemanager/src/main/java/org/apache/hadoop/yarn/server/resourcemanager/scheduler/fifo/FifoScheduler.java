@@ -509,36 +509,25 @@ public class FifoScheduler implements ResourceScheduler {
 
     if (assignedContainers > 0) {
       for (int i=0; i < assignedContainers; ++i) {
-        // Create the container
-        Container container =
-            BuilderUtils.newContainer(recordFactory,
-                application.getApplicationAttemptId(),
-                application.getNewContainerId(),
-                node.getRMNode().getNodeID(),
-                node.getRMNode().getHttpAddress(), 
-                capability, priority);
-        
+
+        NodeId nodeId = node.getRMNode().getNodeID();
+        ContainerId containerId = BuilderUtils.newContainerId(application
+            .getApplicationAttemptId(), application.getNewContainerId());
+        ContainerToken containerToken = null;
+
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
-          ContainerToken containerToken =
-              recordFactory.newRecordInstance(ContainerToken.class);
-          NodeId nodeId = container.getNodeId();
-          ContainerTokenIdentifier tokenidentifier =
-            new ContainerTokenIdentifier(container.getId(),
-                nodeId.toString(), container.getResource());
-          containerToken.setIdentifier(
-              ByteBuffer.wrap(tokenidentifier.getBytes()));
-          containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
-          containerToken.setPassword(
-              ByteBuffer.wrap(containerTokenSecretManager
-                  .createPassword(tokenidentifier)));
-          // RPC layer client expects ip:port as service for tokens
-          InetSocketAddress addr = NetUtils.createSocketAddr(
-              nodeId.getHost(), nodeId.getPort());
-          containerToken.setService(addr.getAddress().getHostAddress() + ":"
-              + addr.getPort());
-          container.setContainerToken(containerToken);
+          ContainerTokenIdentifier tokenIdentifier = new ContainerTokenIdentifier(
+              containerId, nodeId.toString(), capability);
+          containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
+              .wrap(containerTokenSecretManager
+                  .createPassword(tokenIdentifier)), tokenIdentifier);
         }
+
+        // Create the container
+        Container container = BuilderUtils.newContainer(containerId, nodeId,
+            node.getRMNode().getHttpAddress(), capability, priority,
+            containerToken);
         
         // Allocate!
         

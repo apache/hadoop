@@ -18,11 +18,22 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
 
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 
 public class ApplicationInitEvent extends ApplicationEvent {
 
-  public ApplicationInitEvent(ApplicationId appId) {
+  private final Map<ApplicationAccessType, String> applicationACLs;
+
+  public ApplicationInitEvent(ApplicationId appId,
+      Map<ApplicationAccessType, String> acls) {
     super(appId, ApplicationEventType.INIT_APPLICATION);
+    this.applicationACLs = acls;
+  }
+
+  public Map<ApplicationAccessType, String> getApplicationACLs() {
+    return this.applicationACLs;
   }
 }

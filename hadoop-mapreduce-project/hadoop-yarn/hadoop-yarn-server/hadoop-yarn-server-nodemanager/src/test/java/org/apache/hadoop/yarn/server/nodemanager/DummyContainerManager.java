@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -60,8 +61,11 @@ public class DummyContainerManager extends ContainerManagerImpl {
   
   public DummyContainerManager(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
-      NodeManagerMetrics metrics, ContainerTokenSecretManager containerTokenSecretManager) {
-    super(context, exec, deletionContext, nodeStatusUpdater, metrics, containerTokenSecretManager);
+      NodeManagerMetrics metrics,
+      ContainerTokenSecretManager containerTokenSecretManager,
+      ApplicationACLsManager applicationACLsManager) {
+    super(context, exec, deletionContext, nodeStatusUpdater, metrics,
+        containerTokenSecretManager, applicationACLsManager);
   }
 
   @Override

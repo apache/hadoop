@@ -20,15 +20,17 @@ package org.apache.hadoop.yarn.util;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
@@ -140,7 +142,7 @@ public class ProtoUtils {
   /*
    * QueueACL
    */
-  private static String QUEUE_ACL_PREFIX = "Q_";
+  private static String QUEUE_ACL_PREFIX = "QACL_";
   public static QueueACLProto convertToProtoFormat(QueueACL e) {
     return QueueACLProto.valueOf(QUEUE_ACL_PREFIX + e.name());
   }
@@ -148,4 +150,21 @@ public class ProtoUtils {
     return QueueACL.valueOf(e.name().replace(QUEUE_ACL_PREFIX, ""));
   }
 
+
+  /*
+   * ApplicationAccessType
+   */
+  private static String APP_ACCESS_TYPE_PREFIX = "APPACCESS_";
+
+  public static ApplicationAccessTypeProto convertToProtoFormat(
+      ApplicationAccessType e) {
+    return ApplicationAccessTypeProto.valueOf(APP_ACCESS_TYPE_PREFIX
+        + e.name());
+  }
+
+  public static ApplicationAccessType convertFromProtoFormat(
+      ApplicationAccessTypeProto e) {
+    return ApplicationAccessType.valueOf(e.name().replace(
+        APP_ACCESS_TYPE_PREFIX, ""));
+  }
 }

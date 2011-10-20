@@ -18,20 +18,26 @@
 
 package org.apache.hadoop.yarn.util;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -41,8 +47,10 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 
 /**
  * Builder utilities to construct various objects.
@@ -195,18 +203,9 @@ public class BuilderUtils {
     return nodeId;
   }
 
-  public static Container newContainer(RecordFactory recordFactory,
-      ApplicationAttemptId appAttemptId, int containerId, NodeId nodeId,
-      String nodeHttpAddress, Resource resource, Priority priority) {
-    ContainerId containerID =
-        newContainerId(recordFactory, appAttemptId, containerId);
-    return newContainer(containerID, nodeId, nodeHttpAddress,
-        resource, priority);
-  }
-
   public static Container newContainer(ContainerId containerId,
       NodeId nodeId, String nodeHttpAddress,
-      Resource resource, Priority priority) {
+      Resource resource, Priority priority, ContainerToken containerToken) {
     Container container = recordFactory.newRecordInstance(Container.class);
     container.setId(containerId);
     container.setNodeId(nodeId);
@@ -218,6 +217,42 @@ public class BuilderUtils {
     containerStatus.setContainerId(containerId);
     containerStatus.setState(ContainerState.NEW);
     container.setContainerStatus(containerStatus);
+    container.setContainerToken(containerToken);
+    return container;
+  }
+
+  public static ContainerToken newContainerToken(NodeId nodeId,
+      ByteBuffer password, ContainerTokenIdentifier tokenIdentifier) {
+    ContainerToken containerToken = recordFactory
+        .newRecordInstance(ContainerToken.class);
+    containerToken.setIdentifier(ByteBuffer.wrap(tokenIdentifier.getBytes()));
+    containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
+    containerToken.setPassword(password);
+    // RPC layer client expects ip:port as service for tokens
+    InetSocketAddress addr = NetUtils.createSocketAddr(nodeId.getHost(),
+        nodeId.getPort());
+    containerToken.setService(addr.getAddress().getHostAddress() + ":"
+        + addr.getPort());
+    return containerToken;
+  }
+
+  public static ContainerLaunchContext newContainerLaunchContext(
+      ContainerId containerID, String user, Resource assignedCapability,
+      Map<String, LocalResource> localResources,
+      Map<String, String> environment, List<String> commands,
+      Map<String, ByteBuffer> serviceData, ByteBuffer containerTokens,
+      Map<ApplicationAccessType, String> acls) {
+    ContainerLaunchContext container = recordFactory
+        .newRecordInstance(ContainerLaunchContext.class);
+    container.setContainerId(containerID);
+    container.setUser(user);
+    container.setResource(assignedCapability);
+    container.setLocalResources(localResources);
+    container.setEnvironment(environment);
+    container.setCommands(commands);
+    container.setServiceData(serviceData);
+    container.setContainerTokens(containerTokens);
+    container.setApplicationACLs(acls);
     return container;
   }
 

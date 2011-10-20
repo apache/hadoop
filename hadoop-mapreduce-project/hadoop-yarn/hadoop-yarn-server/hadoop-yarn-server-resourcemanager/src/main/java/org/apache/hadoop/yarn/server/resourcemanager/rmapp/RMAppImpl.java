@@ -152,8 +152,10 @@ public class RMAppImpl implements RMApp {
     .addTransition(
         RMAppState.KILLED,
         RMAppState.KILLED,
-        EnumSet.of(RMAppEventType.KILL, RMAppEventType.ATTEMPT_FINISHED,
-            RMAppEventType.ATTEMPT_FAILED, RMAppEventType.ATTEMPT_KILLED))
+        EnumSet.of(RMAppEventType.APP_ACCEPTED,
+            RMAppEventType.APP_REJECTED, RMAppEventType.KILL,
+            RMAppEventType.ATTEMPT_FINISHED, RMAppEventType.ATTEMPT_FAILED,
+            RMAppEventType.ATTEMPT_KILLED))
 
      .installTopology();
 

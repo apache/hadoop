@@ -83,14 +83,14 @@
   </property>
 
   <property>
-    <description>Are RM acls enabled.</description>
-    <name>yarn.resourcemanager.acl.enable</name>
+    <description>Are acls enabled.</description>
+    <name>yarn.acl.enable</name>
     <value>true</value>
   </property>
 
   <property>
-    <description>ACL of who can be admin of RM.</description>
-    <name>yarn.resourcemanager.admin.acl</name>
+    <description>ACL of who can be admin of the YARN cluster.</description>
+    <name>yarn.admin.acl</name>
     <value>*</value>
   </property>
 

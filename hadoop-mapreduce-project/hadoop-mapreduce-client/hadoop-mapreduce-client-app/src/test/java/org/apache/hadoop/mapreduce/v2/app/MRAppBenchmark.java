@@ -144,7 +144,7 @@ public class MRAppBenchmark {
                   getContext().getEventHandler()
                       .handle(
                       new TaskAttemptContainerAssignedEvent(event
-                          .getAttemptID(), container));
+                          .getAttemptID(), container, null));
                   concurrentRunningTasks++;
                 } else {
                   Thread.sleep(1000);

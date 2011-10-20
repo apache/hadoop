@@ -186,7 +186,7 @@ public class NodeManager implements ContainerManager {
         BuilderUtils.newContainer(containerLaunchContext.getContainerId(),
             this.nodeId, nodeHttpAddress,
             containerLaunchContext.getResource(), 
-            null                                        // DKDC - Doesn't matter
+            null, null                                 // DKDC - Doesn't matter
             );
 
     applicationContainers.add(container);

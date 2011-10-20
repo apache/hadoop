@@ -61,9 +61,10 @@ class AppsList implements ToJSON {
       }
       String appID = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
-      boolean trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
-	  String ui = trackingUrlIsNotReady ?
-    	  "UNASSIGNED" : (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
+      boolean trackingUrlIsNotReady = trackingUrl == null
+          || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
+      String ui = trackingUrlIsNotReady ? "UNASSIGNED"
+          : (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
       out.append("[\"");
       appendSortable(out, app.getApplicationId().getId());
       appendLink(out, appID, rc.prefix(), "app", appID).append(_SEP).

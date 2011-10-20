@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
@@ -42,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
@@ -54,8 +56,17 @@ import com.google.inject.Module;
 public class TestRMWebApp {
   static final int GiB = 1024; // MiB
 
-  @Test public void testControllerIndex() {
-    Injector injector = WebAppTests.createMockInjector(this);
+  @Test
+  public void testControllerIndex() {
+    Injector injector = WebAppTests.createMockInjector(TestRMWebApp.class,
+        this, new Module() {
+
+          @Override
+          public void configure(Binder binder) {
+            binder.bind(ApplicationACLsManager.class).toInstance(
+                new ApplicationACLsManager(new Configuration()));
+          }
+        });
     RmController c = injector.getInstance(RmController.class);
     c.index();
     assertEquals("Applications", c.get(TITLE, "unknown"));

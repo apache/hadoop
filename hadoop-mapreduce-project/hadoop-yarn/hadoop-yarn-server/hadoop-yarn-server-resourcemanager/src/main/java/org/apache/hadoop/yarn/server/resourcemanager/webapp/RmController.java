@@ -24,14 +24,17 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -43,7 +46,14 @@ import com.google.inject.Inject;
 // Do NOT rename/refactor this to RMView as it will wreak havoc
 // on Mac OS HFS as its case-insensitive!
 public class RmController extends Controller {
-  @Inject RmController(RequestContext ctx) { super(ctx); }
+
+  private ApplicationACLsManager aclsManager;
+
+  @Inject
+  RmController(RequestContext ctx, ApplicationACLsManager aclsManager) {
+    super(ctx);
+    this.aclsManager = aclsManager;
+  }
 
   @Override public void index() {
     setTitle("Applications");
@@ -70,10 +80,28 @@ public class RmController extends Controller {
       setTitle("Application not found: "+ aid);
       return;
     }
+
+    // Check for the authorization.
+    String remoteUser = request().getRemoteUser();
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+    if (callerUGI != null
+        && !this.aclsManager.checkAccess(callerUGI,
+            ApplicationAccessType.VIEW_APP, app.getUser(), appID)) {
+      setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      setTitle("Unauthorized request for viewing application " + appID);
+      renderText("You (User " + remoteUser
+          + ") are not authorized to view the logs for application " + appID);
+      return;
+    }
+
     setTitle(join("Application ", aid));
     String trackingUrl = app.getTrackingUrl();
-    boolean trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
-	String ui = trackingUrlIsNotReady ? "UNASSIGNED" :
+    boolean trackingUrlIsNotReady = trackingUrl == null
+        || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
+    String ui = trackingUrlIsNotReady ? "UNASSIGNED" :
         (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
 
     ResponseInfo info = info("Application Overview").
