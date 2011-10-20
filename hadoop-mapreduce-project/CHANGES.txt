@@ -58,6 +58,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
 
+    MAPREDUCE-3204. mvn site:site fails on MapReduce. (tucu)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
