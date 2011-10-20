@@ -61,6 +61,8 @@ Trunk (unreleased changes)
     HDFS-2395. Add a root element in the JSON responses of webhdfs.
     (szetszwo)
 
+    HDFS-2459. Separate datatypes for Journal Protocol. (suresh)
+
 	HDFS-2181 Separate HDFS Client wire protocol data types (sanjay)
 
     HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)

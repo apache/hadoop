@@ -15,36 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
-import org.apache.hadoop.hdfs.protocolR23Compatible.JournalWireProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**
- * Protocol used to journal edits to a remote node. Currently,
- * this is used to publish edits from the NameNode to a BackupNode.
+ * This class defines the actual protocol used to communicate with the
+ * NN via RPC using writable types.
+ * The parameters in the methods which are specified in the
+ * package are separate from those used internally in the NN and DFSClient
+ * and hence need to be converted using {@link JournalProtocolTranslatorR23}
+ * and {@link JournalProtocolServerSideTranslatorR23}.
+ *
  */
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface JournalProtocol extends VersionedProtocol {
+public interface JournalWireProtocol extends VersionedProtocol {
+  
   /**
-   * 
-   * This class is used by both the Namenode (client) and BackupNode (server) 
-   * to insulate from the protocol serialization.
-   * 
-   * If you are adding/changing DN's interface then you need to 
-   * change both this class and ALSO
-   * {@link JournalWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link ClientNamenodeWireProtocol}
+   * The  rules for changing this protocol are the same as that for
+   * {@link ClientNamenodeWireProtocol} - see that java file for details.
    */
   public static final long versionID = 1L;
 
@@ -59,7 +56,7 @@ public interface JournalProtocol extends VersionedProtocol {
    * @param numTxns number of transactions
    * @param records byte array containing serialized journal records
    */
-  public void journal(NamenodeRegistration registration,
+  public void journal(NamenodeRegistrationWritable registration,
                       long firstTxnId,
                       int numTxns,
                       byte[] records) throws IOException;
@@ -70,6 +67,15 @@ public interface JournalProtocol extends VersionedProtocol {
    * @param registration the registration of the active NameNode
    * @param txid the first txid in the new log
    */
-  public void startLogSegment(NamenodeRegistration registration,
+  public void startLogSegment(NamenodeRegistrationWritable registration,
       long txid) throws IOException;
+  
+  /**
+   * This method is defined to get the protocol signature using 
+   * the R23 protocol - hence we have added the suffix of 2 the method name
+   * to avoid conflict.
+   */
+  public org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable
+           getProtocolSignature2(String protocol, long clientVersion,
+      int clientMethodsHash) throws IOException;
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -28,9 +28,9 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 
 /**
  * Information sent by a subordinate name-node to the active name-node
@@ -38,62 +38,22 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class NamenodeRegistration extends StorageInfo
-implements NodeRegistration {
-  String rpcAddress;          // RPC address of the node
-  String httpAddress;         // HTTP address of the node
-  NamenodeRole role;          // node role
+public class NamenodeRegistrationWritable implements Writable {
+  private String rpcAddress;    // RPC address of the node
+  private String httpAddress;   // HTTP address of the node
+  private NamenodeRole role;    // node role
+  private StorageInfoWritable storageInfo;
 
-  public NamenodeRegistration() {
-    super();
-  }
+  public NamenodeRegistrationWritable() { }
 
-  public NamenodeRegistration(String address,
+  public NamenodeRegistrationWritable(String address,
                               String httpAddress,
-                              StorageInfo storageInfo,
-                              NamenodeRole role) {
-    super(storageInfo);
+                              NamenodeRole role,
+                              StorageInfo storageInfo) {
     this.rpcAddress = address;
     this.httpAddress = httpAddress;
     this.role = role;
-  }
-
-  @Override // NodeRegistration
-  public String getAddress() {
-    return rpcAddress;
-  }
-  
-  public String getHttpAddress() {
-    return httpAddress;
-  }
-  
-  @Override // NodeRegistration
-  public String getRegistrationID() {
-    return Storage.getRegistrationID(this);
-  }
-
-  @Override // NodeRegistration
-  public int getVersion() {
-    return super.getLayoutVersion();
-  }
-
-  @Override // NodeRegistration
-  public String toString() {
-    return getClass().getSimpleName()
-    + "(" + rpcAddress
-    + ", role=" + getRole()
-    + ")";
-  }
-
-  /**
-   * Get name-node role.
-   */
-  public NamenodeRole getRole() {
-    return role;
-  }
-
-  public boolean isRole(NamenodeRole that) {
-    return role.equals(that);
+    this.storageInfo = StorageInfoWritable.convert(storageInfo);
   }
 
   /////////////////////////////////////////////////
@@ -101,9 +61,11 @@ implements NodeRegistration {
   /////////////////////////////////////////////////
   static {
     WritableFactories.setFactory
-      (NamenodeRegistration.class,
+      (NamenodeRegistrationWritable.class,
        new WritableFactory() {
-         public Writable newInstance() { return new NamenodeRegistration(); }
+          public Writable newInstance() {
+            return new NamenodeRegistrationWritable();
+          }
        });
   }
 
@@ -112,7 +74,7 @@ implements NodeRegistration {
     Text.writeString(out, rpcAddress);
     Text.writeString(out, httpAddress);
     Text.writeString(out, role.name());
-    super.write(out);
+    storageInfo.write(out);
   }
 
   @Override // Writable
@@ -120,6 +82,17 @@ implements NodeRegistration {
     rpcAddress = Text.readString(in);
     httpAddress = Text.readString(in);
     role = NamenodeRole.valueOf(Text.readString(in));
-    super.readFields(in);
+    storageInfo.readFields(in);
+  }
+
+  public static NamenodeRegistrationWritable convert(NamenodeRegistration reg) {
+    return new NamenodeRegistrationWritable(reg.getAddress(),
+        reg.getHttpAddress(), reg.getRole(),
+        reg);
+  }
+
+  public NamenodeRegistration convert() {
+    return new NamenodeRegistration(rpcAddress, httpAddress,
+        storageInfo.convert(), role);
   }
 }
