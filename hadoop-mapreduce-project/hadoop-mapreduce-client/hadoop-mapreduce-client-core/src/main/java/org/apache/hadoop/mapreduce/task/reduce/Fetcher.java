@@ -135,7 +135,7 @@ class Fetcher<K,V> extends Thread {
   
   public void run() {
     try {
-      while (true) {
+      while (true && !Thread.currentThread().isInterrupted()) {
         MapHost host = null;
         try {
           // If merge is on, block
