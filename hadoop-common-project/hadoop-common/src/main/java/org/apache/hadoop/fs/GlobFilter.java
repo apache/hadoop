@@ -21,8 +21,15 @@ package org.apache.hadoop.fs;
 import java.util.regex.PatternSyntaxException;
 import java.io.IOException;
 
- // A class that could decide if a string matches the glob or not
-class GlobFilter implements PathFilter {
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+/**
+ * A filter for POSIX glob pattern with brace expansions.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class GlobFilter implements PathFilter {
   private final static PathFilter DEFAULT_FILTER = new PathFilter() {
       public boolean accept(Path file) {
         return true;
@@ -32,11 +39,24 @@ class GlobFilter implements PathFilter {
   private PathFilter userFilter = DEFAULT_FILTER;
   private GlobPattern pattern;
 
-  GlobFilter(String filePattern) throws IOException {
+  /**
+   * Creates a glob filter with the specified file pattern.
+   *
+   * @param filePattern the file pattern.
+   * @throws IOException thrown if the file pattern is incorrect.
+   */
+  public GlobFilter(String filePattern) throws IOException {
     init(filePattern, DEFAULT_FILTER);
   }
 
-  GlobFilter(String filePattern, PathFilter filter) throws IOException {
+  /**
+   * Creates a glob filter with the specified file pattern and an user filter.
+   *
+   * @param filePattern the file pattern.
+   * @param filter user filter in addition to the glob pattern.
+   * @throws IOException thrown if the file pattern is incorrect.
+   */
+  public GlobFilter(String filePattern, PathFilter filter) throws IOException {
     init(filePattern, filter);
   }
 

@@ -53,6 +53,8 @@ Trunk (unreleased changes)
     HADOOP-7729. Send back valid HTTP response if user hits IPC port with
     HTTP GET. (todd)
 
+    HADOOP-7758. Make GlobFilter class public. (tucu)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
