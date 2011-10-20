@@ -349,6 +349,7 @@ Release 0.92.0 - Unreleased
    HBASE-4621  TestAvroServer fails quite often intermittently (Akash Ashok)
    HBASE-4378  [hbck] Does not complain about regions with startkey==endkey.
                (Jonathan Hsieh)
+   HBASE-4459  HbaseObjectWritable code is a byte, we will eventually run out of codes
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
