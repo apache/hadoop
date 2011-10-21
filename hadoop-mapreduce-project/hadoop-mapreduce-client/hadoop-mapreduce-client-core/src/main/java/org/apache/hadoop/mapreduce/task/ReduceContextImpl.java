@@ -176,11 +176,15 @@ public class ReduceContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     return value;
   }
   
+  BackupStore<KEYIN,VALUEIN> getBackupStore() {
+    return backupStore;
+  }
+  
   protected class ValueIterator implements ReduceContext.ValueIterator<VALUEIN> {
 
     private boolean inReset = false;
     private boolean clearMarkFlag = false;
-    
+
     @Override
     public boolean hasNext() {
       try {
@@ -247,7 +251,7 @@ public class ReduceContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 
     @Override
     public void mark() throws IOException {
-      if (backupStore == null) {
+      if (getBackupStore() == null) {
         backupStore = new BackupStore<KEYIN,VALUEIN>(conf, taskid);
       }
       isMarked = true;
@@ -290,7 +294,7 @@ public class ReduceContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
 
     @Override
     public void clearMark() throws IOException {
-      if (backupStore == null) {
+      if (getBackupStore() == null) {
         return;
       }
       if (inReset) {
@@ -308,7 +312,7 @@ public class ReduceContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
      * @throws IOException
      */
     public void resetBackupStore() throws IOException {
-      if (backupStore == null) {
+      if (getBackupStore() == null) {
         return;
       }
       inReset = isMarked = false;
