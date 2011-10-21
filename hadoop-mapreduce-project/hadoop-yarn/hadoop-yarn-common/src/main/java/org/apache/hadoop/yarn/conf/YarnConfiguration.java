@@ -227,7 +227,9 @@ public class YarnConfiguration extends Configuration {
   
   /** address of node manager IPC.*/
   public static final String NM_ADDRESS = NM_PREFIX + "address";
-  public static final String DEFAULT_NM_ADDRESS = "0.0.0.0:0";
+  public static final int DEFAULT_NM_PORT = 0;
+  public static final String DEFAULT_NM_ADDRESS = "0.0.0.0:"
+      + DEFAULT_NM_PORT;
   
   /** who will execute(launch) the containers.*/
   public static final String NM_CONTAINER_EXECUTOR = 

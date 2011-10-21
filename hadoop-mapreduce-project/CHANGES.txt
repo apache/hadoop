@@ -1726,6 +1726,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3070. Fix NodeManager to use ephemeral ports by default.
     (Devaraj K via acmurthy) 
 
+    MAPREDUCE-3242. Trunk compilation broken with bad interaction from 
+    MAPREDUCE-3070 and MAPREDUCE-3239. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
