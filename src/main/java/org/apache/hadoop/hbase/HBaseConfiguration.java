@@ -33,6 +33,9 @@ public class HBaseConfiguration extends Configuration {
 
   private static final Log LOG = LogFactory.getLog(HBaseConfiguration.class);
 
+  // a constant to convert a fraction to a percentage
+  private static final int CONVERT_TO_PERCENTAGE = 100;
+
   /**
    * Instantinating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create() to construct a plain Configuration
@@ -70,14 +73,21 @@ public class HBaseConfiguration extends Configuration {
 
   private static void checkForClusterFreeMemoryLimit(Configuration conf) {
       float globalMemstoreLimit = conf.getFloat("hbase.regionserver.global.memstore.upperLimit", 0.4f);
+      int gml = (int)(globalMemstoreLimit * CONVERT_TO_PERCENTAGE);
       float blockCacheUpperLimit = conf.getFloat("hfile.block.cache.size", 0.2f);
-      if (1.0f - (globalMemstoreLimit + blockCacheUpperLimit)
-              < HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
+      int bcul = (int)(blockCacheUpperLimit * CONVERT_TO_PERCENTAGE);
+      if (CONVERT_TO_PERCENTAGE - (gml + bcul)
+              < (int)(CONVERT_TO_PERCENTAGE * 
+                      HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD)) {
           throw new RuntimeException(
-        "Current heap configuration for MemStore and BlockCache exceeds the threshold required for " +
-                "successful cluster operation. The combined value cannot exceed 0.8. Please check " +
-                "the settings for hbase.regionserver.global.memstore.upperLimit and" +
-                " hfile.block.cache.size in your configuration.");
+            "Current heap configuration for MemStore and BlockCache exceeds " +
+            "the threshold required for successful cluster operation. " +
+            "The combined value cannot exceed 0.8. Please check " +
+            "the settings for hbase.regionserver.global.memstore.upperLimit and " +
+            "hfile.block.cache.size in your configuration. " +
+            "hbase.regionserver.global.memstore.upperLimit is " + 
+            globalMemstoreLimit +
+            " hfile.block.cache.size is " + blockCacheUpperLimit);
       }
   }
 
