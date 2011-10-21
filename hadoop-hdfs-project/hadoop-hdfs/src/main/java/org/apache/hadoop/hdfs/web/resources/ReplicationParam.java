@@ -36,7 +36,7 @@ public class ReplicationParam extends ShortParam {
    * @param value the parameter value.
    */
   public ReplicationParam(final Short value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, (short)1, null);
   }
 
   /**

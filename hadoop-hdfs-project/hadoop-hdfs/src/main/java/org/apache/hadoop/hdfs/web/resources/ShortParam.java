@@ -19,8 +19,24 @@ package org.apache.hadoop.hdfs.web.resources;
 
 /** Short parameter. */
 abstract class ShortParam extends Param<Short, ShortParam.Domain> {
-  ShortParam(final Domain domain, final Short value) {
+  ShortParam(final Domain domain, final Short value,
+      final Short min, final Short max) {
     super(domain, value);
+    checkRange(min, max);
+  }
+
+  private void checkRange(final Short min, final Short max) {
+    if (value == null) {
+      return;
+    }
+    if (min != null && value < min) {
+      throw new IllegalArgumentException("Invalid parameter range: " + getName()
+          + " = " + domain.toString(value) + " < " + domain.toString(min));
+    }
+    if (max != null && value > max) {
+      throw new IllegalArgumentException("Invalid parameter range: " + getName()
+          + " = " + domain.toString(value) + " > " + domain.toString(max));
+    }
   }
   
   @Override
@@ -49,7 +65,12 @@ abstract class ShortParam extends Param<Short, ShortParam.Domain> {
 
     @Override
     Short parse(final String str) {
-      return NULL.equals(str)? null: Short.parseShort(str, radix);
+      try {
+        return NULL.equals(str)? null: Short.parseShort(str, radix);
+      } catch(NumberFormatException e) {
+        throw new IllegalArgumentException("Failed to parse \"" + str
+            + "\" as a radix-" + radix + " short integer.", e);
+      }
     }
 
     /** Convert a Short to a String. */ 
