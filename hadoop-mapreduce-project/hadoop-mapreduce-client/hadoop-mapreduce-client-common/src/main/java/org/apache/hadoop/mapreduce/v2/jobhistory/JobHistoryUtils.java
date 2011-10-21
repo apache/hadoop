@@ -480,7 +480,9 @@ public class JobHistoryUtils {
   //construct the history url for job
     String hsAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-    InetSocketAddress address = NetUtils.createSocketAddr(hsAddress);
+    InetSocketAddress address = NetUtils.createSocketAddr(
+      hsAddress, JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT,
+      JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
     StringBuffer sb = new StringBuffer();
     if (address.getAddress().isAnyLocalAddress() || 
         address.getAddress().isLoopbackAddress()) {

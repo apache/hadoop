@@ -42,7 +42,7 @@ public class TestMaster {
     
     // Trying invalid master address for classic 
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
-    conf.set(MRConfig.MASTER_ADDRESS, "local");
+    conf.set(MRConfig.MASTER_ADDRESS, "local:invalid");
 
     // should throw an exception for invalid value
     try {

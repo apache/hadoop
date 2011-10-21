@@ -106,7 +106,9 @@ public class HistoryClientService extends AbstractService {
     initializeWebApp(conf);
     String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
-    InetSocketAddress address = NetUtils.createSocketAddr(serviceAddr);
+    InetSocketAddress address = NetUtils.createSocketAddr(serviceAddr,
+      JHAdminConfig.DEFAULT_MR_HISTORY_PORT,
+      JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
     InetAddress hostNameResolved = null;
     try {
       hostNameResolved = InetAddress.getLocalHost(); //address.getAddress().getLocalHost();
