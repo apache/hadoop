@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 
 /** Block size parameter. */
 public class BlockSizeParam extends LongParam {
@@ -34,7 +36,7 @@ public class BlockSizeParam extends LongParam {
    * @param value the parameter value.
    */
   public BlockSizeParam(final Long value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, 1L, null);
   }
 
   /**
@@ -53,6 +55,6 @@ public class BlockSizeParam extends LongParam {
   /** @return the value or, if it is null, return the default from conf. */
   public long getValue(final Configuration conf) {
     return getValue() != null? getValue()
-        : conf.getLong("dfs.block.size", FSConstants.DEFAULT_BLOCK_SIZE);
+        : conf.getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
   }
 }

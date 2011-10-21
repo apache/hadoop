@@ -59,7 +59,7 @@ import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.DstPathParam;
+import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.GroupParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
@@ -375,7 +375,7 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
     final Map<String, Object> json = run(op, src,
-        new DstPathParam(makeQualified(dst).toUri().getPath()));
+        new DestinationParam(makeQualified(dst).toUri().getPath()));
     return (Boolean)json.get("boolean");
   }
 

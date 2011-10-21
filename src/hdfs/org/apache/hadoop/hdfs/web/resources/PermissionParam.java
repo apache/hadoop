@@ -27,13 +27,15 @@ public class PermissionParam extends ShortParam {
   public static final String DEFAULT = NULL;
 
   private static final Domain DOMAIN = new Domain(NAME, 8);
+
+  private static final short DEFAULT_PERMISSION = 0755;
   
   /**
    * Constructor.
    * @param value the parameter value.
    */
   public PermissionParam(final FsPermission value) {
-    super(DOMAIN, value == null? null: value.toShort());
+    super(DOMAIN, value == null? null: value.toShort(), null, null);
   }
 
   /**
@@ -41,7 +43,7 @@ public class PermissionParam extends ShortParam {
    * @param str a string representation of the parameter value.
    */
   public PermissionParam(final String str) {
-    super(DOMAIN, DOMAIN.parse(str));
+    super(DOMAIN, DOMAIN.parse(str), (short)0, (short)0777);
   }
 
   @Override
@@ -51,7 +53,7 @@ public class PermissionParam extends ShortParam {
 
   /** @return the represented FsPermission. */
   public FsPermission getFsPermission() {
-    final Short mode = getValue();
-    return mode == null? FsPermission.getDefault(): new FsPermission(mode);
+    final Short v = getValue();
+    return new FsPermission(v != null? v: DEFAULT_PERMISSION);
   }
 }

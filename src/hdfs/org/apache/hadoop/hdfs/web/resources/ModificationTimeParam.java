@@ -31,7 +31,7 @@ public class ModificationTimeParam extends LongParam {
    * @param value the parameter value.
    */
   public ModificationTimeParam(final Long value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, -1L, null);
   }
 
   /**
