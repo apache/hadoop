@@ -375,6 +375,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-901. Efficient framework counters. (llu via acmurthy)
 
+    MAPREDUCE-2629. Workaround a JVM class loading quirk which prevents
+    JIT compilation of inner classes methods in ReduceContextImpl.
+
   BUG FIXES
 
     MAPREDUCE-2603. Disable High-Ram emulation in system tests. 
