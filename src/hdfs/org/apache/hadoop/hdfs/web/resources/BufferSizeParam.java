@@ -33,7 +33,7 @@ public class BufferSizeParam extends IntegerParam {
    * @param value the parameter value.
    */
   public BufferSizeParam(final Integer value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, 1, null);
   }
 
   /**

@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Release 0.20.205.1 - unreleased
 
+  IMPROVEMENTS
+
+    HDFS-2427. Change the default permission in webhdfs to 755 and add range
+    check/validation for all parameters.  (szetszwo)
+
   BUG FIXES
 
     HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in

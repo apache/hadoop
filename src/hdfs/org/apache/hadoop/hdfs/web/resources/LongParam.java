@@ -19,8 +19,23 @@ package org.apache.hadoop.hdfs.web.resources;
 
 /** Long parameter. */
 abstract class LongParam extends Param<Long, LongParam.Domain> {
-  LongParam(final Domain domain, final Long value) {
+  LongParam(final Domain domain, final Long value, final Long min, final Long max) {
     super(domain, value);
+    checkRange(min, max);
+  }
+
+  private void checkRange(final Long min, final Long max) {
+    if (value == null) {
+      return;
+    }
+    if (min != null && value < min) {
+      throw new IllegalArgumentException("Invalid parameter range: " + getName()
+          + " = " + domain.toString(value) + " < " + domain.toString(min));
+    }
+    if (max != null && value > max) {
+      throw new IllegalArgumentException("Invalid parameter range: " + getName()
+          + " = " + domain.toString(value) + " > " + domain.toString(max));
+    }
   }
   
   @Override
@@ -49,7 +64,12 @@ abstract class LongParam extends Param<Long, LongParam.Domain> {
 
     @Override
     Long parse(final String str) {
-      return NULL.equals(str)? null: Long.parseLong(str, radix);
+      try {
+        return NULL.equals(str)? null: Long.parseLong(str, radix);
+      } catch(NumberFormatException e) {
+        throw new IllegalArgumentException("Failed to parse \"" + str
+            + "\" as a radix-" + radix + " long integer.", e);
+      }
     }
 
     /** Convert a Short to a String. */ 
