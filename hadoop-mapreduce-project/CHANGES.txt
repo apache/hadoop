@@ -363,6 +363,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3144. Augmented JobHistory with the information needed for
     serving aggregated logs. (Siddharth Seth via vinodkv)
+  
+    MAPREDUCE-3163. JobClient spews errors when killing MR2 job.
+    (mahadev)
 
   OPTIMIZATIONS
 

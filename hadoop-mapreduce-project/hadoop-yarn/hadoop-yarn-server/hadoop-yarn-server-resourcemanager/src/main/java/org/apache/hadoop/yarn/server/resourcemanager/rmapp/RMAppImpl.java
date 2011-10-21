@@ -212,7 +212,8 @@ public class RMAppImpl implements RMApp {
           && currentAttempt.getFinalApplicationStatus() != null) {
         return currentAttempt.getFinalApplicationStatus();   
       }
-      return createFinalApplicationStatus(this.stateMachine.getCurrentState());
+      return 
+          createFinalApplicationStatus(this.stateMachine.getCurrentState());
     } finally {
       this.readLock.unlock();
     }
