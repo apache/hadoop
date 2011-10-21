@@ -83,7 +83,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
-    dataXceiverServer.childSockets.put(s, s);
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
 
@@ -118,6 +117,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read/write data from/to the DataXceiveServer.
    */
   public void run() {
+    dataXceiverServer.childSockets.put(s, s);
     updateCurrentThreadName("Waiting for operation");
 
     DataInputStream in=null; 

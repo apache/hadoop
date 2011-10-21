@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.io.IOUtils;
 
 
 /**
@@ -132,8 +133,9 @@ class DataXceiverServer implements Runnable, FSConstants {
    */
   public void run() {
     while (datanode.shouldRun) {
+      Socket s = null;
       try {
-        Socket s = ss.accept();
+        s = ss.accept();
         s.setTcpNoDelay(true);
         new Daemon(datanode.threadGroup, 
             new DataXceiver(s, datanode, this)).start();
@@ -147,8 +149,19 @@ class DataXceiverServer implements Runnable, FSConstants {
           LOG.warn(datanode.dnRegistration + ":DataXceiverServer: ", ace);
         }
       } catch (IOException ie) {
+        IOUtils.closeSocket(s);
         LOG.warn(datanode.dnRegistration + ":DataXceiveServer: " 
                                 + StringUtils.stringifyException(ie));
+      } catch (OutOfMemoryError ie) {
+        IOUtils.closeSocket(s);
+        // DataNode can run out of memory if there is too many transfers.
+        // Log the event, Sleep for 30 seconds, other transfers may complete by then.
+        LOG.warn("DataNode is out of memory. Will retry in 30 seconds.", ie);
+        try {
+          Thread.sleep(30 * 1000);
+        } catch (InterruptedException e) {
+          // ignore
+        }
       } catch (Throwable te) {
         LOG.error(datanode.dnRegistration + ":DataXceiveServer: Exiting due to:" 
                                  + StringUtils.stringifyException(te));

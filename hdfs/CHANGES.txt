@@ -650,6 +650,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-2451. TestNodeCount.testNodeCount failes with NPE (cos)
 
+    HDFS-2452. OutOfMemoryError in DataXceiverServer takes down the DataNode
+    (Uma Maheswara Rao via cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
