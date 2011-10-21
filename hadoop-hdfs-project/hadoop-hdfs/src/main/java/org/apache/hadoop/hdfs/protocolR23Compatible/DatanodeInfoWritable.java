@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -59,9 +60,9 @@ public class DatanodeInfoWritable extends DatanodeIDWritable  {
   
   // administrative states of a datanode
   public enum AdminStates {
-    NORMAL(org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.NORMAL.toString()), 
-    DECOMMISSION_INPROGRESS(org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.DECOMMISSION_INPROGRESS.toString()), 
-    DECOMMISSIONED(org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.DECOMMISSIONED.toString());
+    NORMAL(DatanodeInfo.AdminStates.NORMAL.toString()), 
+    DECOMMISSION_INPROGRESS(DatanodeInfo.AdminStates.DECOMMISSION_INPROGRESS.toString()), 
+    DECOMMISSIONED(DatanodeInfo.AdminStates.DECOMMISSIONED.toString());
 
     final String value;
 
@@ -84,27 +85,27 @@ public class DatanodeInfoWritable extends DatanodeIDWritable  {
   @Nullable
   protected AdminStates adminState;
   
-  static public org.apache.hadoop.hdfs.protocol.DatanodeInfo convertDatanodeInfo(DatanodeInfoWritable di) {
+  static public DatanodeInfo convertDatanodeInfo(DatanodeInfoWritable di) {
     if (di == null) return null;
-    return new org.apache.hadoop.hdfs.protocol.DatanodeInfo(
+    return new DatanodeInfo(
         new org.apache.hadoop.hdfs.protocol.DatanodeID(di.getName(), di.getStorageID(), di.getInfoPort(), di.getIpcPort()),
         di.getNetworkLocation(), di.getHostName(),
          di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
         di.getBlockPoolUsed()  ,  di.getLastUpdate() , di.getXceiverCount() ,
-        org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.fromValue(di.getAdminState().value)); 
+        DatanodeInfo.AdminStates.fromValue(di.getAdminState().value)); 
   }
   
   
-  static public org.apache.hadoop.hdfs.protocol.DatanodeInfo[] convertDatanodeInfo(DatanodeInfoWritable di[]) {
+  static public DatanodeInfo[] convertDatanodeInfo(DatanodeInfoWritable di[]) {
     if (di == null) return null;
-    org.apache.hadoop.hdfs.protocol.DatanodeInfo[] result = new org.apache.hadoop.hdfs.protocol.DatanodeInfo[di.length];
+    DatanodeInfo[] result = new DatanodeInfo[di.length];
     for (int i = 0; i < di.length; i++) {
       result[i] = convertDatanodeInfo(di[i]);
     }    
     return result;
   }
   
-  static public DatanodeInfoWritable[] convertDatanodeInfo(org.apache.hadoop.hdfs.protocol.DatanodeInfo[] di) {
+  static public DatanodeInfoWritable[] convertDatanodeInfo(DatanodeInfo[] di) {
     if (di == null) return null;
     DatanodeInfoWritable[] result = new DatanodeInfoWritable[di.length];
     for (int i = 0; i < di.length; i++) {
@@ -115,7 +116,16 @@ public class DatanodeInfoWritable extends DatanodeIDWritable  {
           AdminStates.fromValue(di[i].getAdminState().toString()));
     }    
     return result;
-    
+  }
+  
+  static public DatanodeInfoWritable convertDatanodeInfo(DatanodeInfo di) {
+    if (di == null) return null;
+    return new DatanodeInfoWritable(new DatanodeIDWritable(di.getName(),
+        di.getStorageID(), di.getInfoPort(), di.getIpcPort()),
+        di.getNetworkLocation(), di.getHostName(), di.getCapacity(),
+        di.getDfsUsed(), di.getRemaining(), di.getBlockPoolUsed(),
+        di.getLastUpdate(), di.getXceiverCount(), 
+        AdminStates.fromValue(di.getAdminState().toString()));
   }
 
   public DatanodeInfoWritable() {

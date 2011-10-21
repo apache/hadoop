@@ -61,7 +61,9 @@ Trunk (unreleased changes)
     HDFS-2395. Add a root element in the JSON responses of webhdfs.
     (szetszwo)
 
-    HDFS-2459. Separate datatypes for Journal Protocol. (suresh)
+    HDFS-2459. Separate datatypes for JournalProtocol. (suresh)
+
+    HDFS-2480. Separate datatypes for NamenodeProtocol. (suresh)
 
 	HDFS-2181 Separate HDFS Client wire protocol data types (sanjay)
 

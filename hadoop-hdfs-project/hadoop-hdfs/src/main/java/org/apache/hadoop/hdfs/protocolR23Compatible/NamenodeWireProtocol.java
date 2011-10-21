@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -32,39 +32,23 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
  * It's used to get part of the name node state
  *****************************************************************************/
+/** 
+ * This class defines the actual protocol used to communicate between namenodes.
+ * The parameters in the methods which are specified in the
+ * package are separate from those used internally in the DN and DFSClient
+ * and hence need to be converted using {@link NamenodeProtocolTranslatorR23}
+ * and {@link NamenodeProtocolServerSideTranslatorR23}.
+ */
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface NamenodeProtocol extends VersionedProtocol {
+public interface NamenodeWireProtocol extends VersionedProtocol {
   /**
-   * Until version 6L, this class served as both
-   * the client interface to the NN AND the RPC protocol used to 
-   * communicate with the NN.
-   * 
-   * Post version 70 (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/ClientNamenodeWireProtocol}
-   * 
-   * This class is used by both the DFSClient and the 
-   * NN server side to insulate from the protocol serialization.
-   * 
-   * If you are adding/changing NN's interface then you need to 
-   * change both this class and ALSO
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.NamenodeWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}
-   * 
-   * 6: Switch to txid-based file naming for image and edits
+   * The  rules for changing this protocol are the same as that for
+   * {@link ClientNamenodeWireProtocol} - see that java file for details.
    */
   public static final long versionID = 6L;
-
-  // Error codes passed by errorReport().
-  final static int NOTIFY = 0;
-  final static int FATAL = 1;
-
-  public final static int ACT_UNKNOWN = 0;    // unknown action   
-  public final static int ACT_SHUTDOWN = 50;   // shutdown node
-  public final static int ACT_CHECKPOINT = 51;   // do checkpoint
 
   /**
    * Get a list of blocks belonging to <code>datanode</code>
@@ -74,11 +58,11 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * @param datanode  a data node
    * @param size      requested size
    * @return          a list of blocks & their locations
-   * @throws IOException if size is less than or equal to 0 or
-                                   datanode does not exist
+   * @throws RemoteException if size is less than or equal to 0 or
+   *                               datanode does not exist
    */
-  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
-  throws IOException;
+  public BlocksWithLocationsWritable getBlocks(DatanodeInfoWritable datanode,
+      long size) throws IOException;
 
   /**
    * Get the current block keys
@@ -86,7 +70,7 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * @return ExportedBlockKeys containing current block keys
    * @throws IOException 
    */
-  public ExportedBlockKeys getBlockKeys() throws IOException;
+  public ExportedBlockKeysWritable getBlockKeys() throws IOException;
 
   /**
    * @return The most recent transaction ID that has been synced to
@@ -104,16 +88,13 @@ public interface NamenodeProtocol extends VersionedProtocol {
    *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
    */
   @Deprecated
-  public CheckpointSignature rollEditLog() throws IOException;
+  public CheckpointSignatureWritable rollEditLog() throws IOException;
 
   /**
    * Request name-node version and storage information.
-   * 
-   * @return {@link NamespaceInfo} identifying versions and storage information 
-   *          of the name-node
    * @throws IOException
    */
-  public NamespaceInfo versionRequest() throws IOException;
+  public NamespaceInfoWritable versionRequest() throws IOException;
 
   /**
    * Report to the active name-node an error occurred on a subordinate node.
@@ -125,7 +106,7 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * @param msg free text description of the error
    * @throws IOException
    */
-  public void errorReport(NamenodeRegistration registration,
+  public void errorReport(NamenodeRegistrationWritable registration,
                           int errorCode, 
                           String msg) throws IOException;
 
@@ -135,8 +116,8 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * @return  {@link NamenodeRegistration} of the node,
    *          which this node has just registered with.
    */
-  public NamenodeRegistration register(NamenodeRegistration registration)
-  throws IOException;
+  public NamenodeRegistrationWritable register(
+      NamenodeRegistrationWritable registration) throws IOException;
 
   /**
    * A request to the active name-node to start a checkpoint.
@@ -145,15 +126,15 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * image before and after the checkpoint.
    * 
    * @see CheckpointCommand
-   * @see NamenodeCommand
+   * @see NamenodeCommandWritable
    * @see #ACT_SHUTDOWN
    * 
    * @param registration the requesting node
    * @return {@link CheckpointCommand} if checkpoint is allowed.
    * @throws IOException
    */
-  public NamenodeCommand startCheckpoint(NamenodeRegistration registration)
-  throws IOException;
+  public NamenodeCommandWritable startCheckpoint(
+      NamenodeRegistrationWritable registration) throws IOException;
 
   /**
    * A request to the active name-node to finalize
@@ -163,8 +144,8 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * @param sig {@code CheckpointSignature} which identifies the checkpoint.
    * @throws IOException
    */
-  public void endCheckpoint(NamenodeRegistration registration,
-                            CheckpointSignature sig) throws IOException;
+  public void endCheckpoint(NamenodeRegistrationWritable registration,
+                            CheckpointSignatureWritable sig) throws IOException;
   
   
   /**
@@ -172,7 +153,17 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * available to be fetched from the NameNode.
    * @param sinceTxId return only logs that contain transactions >= sinceTxId
    */
-  public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
+  public RemoteEditLogManifestWritable getEditLogManifest(long sinceTxId)
     throws IOException;
+  
+  /**
+   * This method is defined to get the protocol signature using 
+   * the R23 protocol - hence we have added the suffix of 2 the method name
+   * to avoid conflict.
+   */
+  public org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable
+           getProtocolSignature2(String protocol, 
+      long clientVersion,
+      int clientMethodsHash) throws IOException;
 }
 
