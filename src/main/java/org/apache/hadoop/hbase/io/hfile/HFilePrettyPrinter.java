@@ -64,6 +64,7 @@ public class HFilePrettyPrinter {
   private boolean printKey;
   private boolean shouldPrintMeta;
   private boolean printBlocks;
+  private boolean printStats;
   private boolean checkRow;
   private boolean checkFamily;
 
@@ -88,6 +89,7 @@ public class HFilePrettyPrinter {
         "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/.META./12/34");
     options.addOption("r", "region", true,
         "Region to scan. Pass region name; e.g. '.META.,,1'");
+    options.addOption("s", "stats", false, "Print statistics");
   }
 
   public boolean parseOptions(String args[]) throws ParseException,
@@ -105,6 +107,7 @@ public class HFilePrettyPrinter {
     printKey = cmd.hasOption("e") || printValue;
     shouldPrintMeta = cmd.hasOption("m");
     printBlocks = cmd.hasOption("b");
+    printStats = cmd.hasOption("s");
     checkRow = cmd.hasOption("k");
     checkFamily = cmd.hasOption("a");
 
@@ -189,12 +192,14 @@ public class HFilePrettyPrinter {
 
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
-    if (verbose || printKey || checkRow || checkFamily) {
+    KeyValueStatsCollector fileStats = null;
 
+    if (verbose || printKey || checkRow || checkFamily || printStats) {
       // scan over file and read key/value's and check if requested
       HFileScanner scanner = reader.getScanner(false, false, false);
-      scanner.seekTo();
-      scanKeysValues(file, scanner);
+      fileStats = new KeyValueStatsCollector();
+      if (scanner.seekTo())
+        scanKeysValues(file, fileStats, scanner);
     }
 
     // print meta data
@@ -207,14 +212,23 @@ public class HFilePrettyPrinter {
       System.out.println(reader.getDataBlockIndexReader());
     }
 
+    if (printStats) {
+      fileStats.finish();
+      System.out.println("Stats:\n" + fileStats);
+    }
+
     reader.close();
   }
 
-  private void scanKeysValues(Path file, HFileScanner scanner)
+  private void scanKeysValues(Path file, KeyValueStatsCollector fileStats, HFileScanner scanner)
       throws IOException {
     KeyValue pkv = null;
     do {
       KeyValue kv = scanner.getKeyValue();
+      // collect stats
+      if (printStats) {
+        fileStats.collect(kv);
+      }
       // dump key value
       if (printKey) {
         System.out.print("K: " + kv);
@@ -305,4 +319,83 @@ public class HFilePrettyPrinter {
     }
   }
 
+  private static class LongStats {
+    private long min = Long.MAX_VALUE;
+    private long max = Long.MIN_VALUE;
+    private long sum = 0;
+    private long count = 0;
+
+    void collect(long d) {
+      if (d < min) min = d;
+      if (d > max) max = d;
+      sum += d;
+      count++;
+    }
+
+    public String toString() {
+      return "count: " + count +
+        "\tmin: " + min +
+        "\tmax: " + max +
+        "\tmean: " + ((double)sum/count);
+    }
+  }
+
+  private static class KeyValueStatsCollector {
+    LongStats keyLen = new LongStats();
+    LongStats valLen = new LongStats();
+    LongStats rowSizeBytes = new LongStats();
+    LongStats rowSizeCols = new LongStats();
+
+    long curRowBytes = 0;
+    long curRowCols = 0;
+
+    byte[] biggestRow = null;
+
+    private KeyValue prevKV = null;
+    private long maxRowBytes = 0;
+
+    public void collect(KeyValue kv) {
+      keyLen.collect(kv.getKeyLength());
+      valLen.collect(kv.getValueLength());
+      if (prevKV != null &&
+          KeyValue.COMPARATOR.compareRows(prevKV, kv) != 0) {
+        // new row
+        collectRow();
+      }
+      curRowBytes += kv.getLength();
+      curRowCols++;
+      prevKV = kv;
+    }
+
+    private void collectRow() {
+      rowSizeBytes.collect(curRowBytes);
+      rowSizeCols.collect(curRowCols);
+
+      if (curRowBytes > maxRowBytes && prevKV != null) {
+        biggestRow = prevKV.getRow();
+      }
+
+      curRowBytes = 0;
+      curRowCols = 0;
+    }
+
+    public void finish() {
+      if (curRowCols > 0) {
+        collectRow();
+      }
+    }
+
+    @Override
+    public String toString() {
+      if (prevKV == null)
+        return "no data available for statistics";
+
+      return
+        "Key length: " + keyLen + "\n" +
+        "Val length: " + valLen + "\n" +
+        "Row size (bytes): " + rowSizeBytes + "\n" +
+        "Row size (columns): " + rowSizeCols + "\n" +
+        "Key of biggest row: " + Bytes.toStringBinary(biggestRow);
+    }
+  }
 }

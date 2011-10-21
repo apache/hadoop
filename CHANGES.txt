@@ -613,6 +613,8 @@ Release 0.92.0 - Unreleased
    HBASE-4486  Improve Javadoc for HTableDescriptor (Akash Ashok)
    HBASE-4604  hbase.client.TestHTablePool could start a single cluster
                instead of one per method (nkeywal)
+   HBASE-3929  Add option to HFile tool to produce basic stats (Matteo
+               Bertozzi and todd via todd)
 
 
   TASKS
