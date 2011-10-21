@@ -56,21 +56,18 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 
 public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
@@ -128,7 +125,7 @@ public class ClientServiceDelegate {
     if (!forceRefresh && realProxy != null) {
       return realProxy;
     }
-      //TODO RM NPEs for unknown jobs. History may still be aware.
+    
     // Possibly allow nulls through the PB tunnel, otherwise deal with an exception
     // and redirect to the history server.
     ApplicationReport application = rm.getApplicationReport(appId);
@@ -136,7 +133,7 @@ public class ClientServiceDelegate {
       trackingUrl = application.getTrackingUrl();
     }
     String serviceAddr = null;
-    while (application == null || YarnApplicationState.RUNNING.equals(application.getYarnApplicationState())) {
+    while (application == null || YarnApplicationState.RUNNING == application.getYarnApplicationState()) {
       if (application == null) {
         LOG.info("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
@@ -196,7 +193,6 @@ public class ClientServiceDelegate {
      * block on it. This is to be able to return job status
      * on an allocating Application.
      */
-
     String user = application.getUser();
     if (user == null) {
       throw RPCUtil.getRemoteException("User is not set in the application report");
@@ -269,16 +265,19 @@ public class ClientServiceDelegate {
         throw yre;
       } catch (InvocationTargetException e) {
         if (e.getTargetException() instanceof YarnRemoteException) {
-          LOG.warn("Exception thrown by remote end.", e
-              .getTargetException());
+          LOG.warn("Error from remote end: " + e
+              .getTargetException().getLocalizedMessage());
+          LOG.debug("Tracing remote error ", e.getTargetException());
           throw (YarnRemoteException) e.getTargetException();
         }
-        LOG.info("Failed to contact AM/History for job " + jobId
-            + "  Will retry..", e.getTargetException());
+        LOG.info("Failed to contact AM/History for job " + jobId + 
+            " retrying..");
+        LOG.debug("Failed exception on AM/History contact", 
+            e.getTargetException());
         forceRefresh = true;
       } catch (Exception e) {
         LOG.info("Failed to contact AM/History for job " + jobId
-            + "  Will retry..", e);
+            + "  Will retry..");
         LOG.debug("Failing to contact application master", e);
         forceRefresh = true;
       }
