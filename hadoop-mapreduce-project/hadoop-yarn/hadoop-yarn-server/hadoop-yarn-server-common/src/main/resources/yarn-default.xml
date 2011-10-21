@@ -191,7 +191,7 @@
   <property>
     <description>address of node manager IPC.</description>
     <name>yarn.nodemanager.address</name>
-    <value>0.0.0.0:45454</value>
+    <value>0.0.0.0:0</value>
   </property>
 
   <property>
