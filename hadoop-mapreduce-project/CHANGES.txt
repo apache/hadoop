@@ -1720,6 +1720,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3226. Fix shutdown of fetcher threads. (vinodkv via acmurthy) 
 
+    MAPREDUCE-3070. Fix NodeManager to use ephemeral ports by default.
+    (Devaraj K via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
