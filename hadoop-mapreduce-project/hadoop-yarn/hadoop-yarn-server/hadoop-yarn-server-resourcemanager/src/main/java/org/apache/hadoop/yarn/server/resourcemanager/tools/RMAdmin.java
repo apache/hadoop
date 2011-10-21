@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.tools;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -145,7 +146,11 @@ public class RMAdmin extends Configured implements Tool {
     // Create the client
     final String adminAddress =
       conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
-          YarnConfiguration.RM_ADMIN_ADDRESS);
+          YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS);
+    final InetSocketAddress addr =
+      NetUtils.createSocketAddr(adminAddress,
+        YarnConfiguration.DEFAULT_RM_ADMIN_PORT,
+        YarnConfiguration.RM_ADMIN_ADDRESS);
     final YarnRPC rpc = YarnRPC.create(conf);
     
     RMAdminProtocol adminProtocol =
@@ -153,7 +158,7 @@ public class RMAdmin extends Configured implements Tool {
         @Override
         public RMAdminProtocol run() {
           return (RMAdminProtocol) rpc.getProxy(RMAdminProtocol.class,
-              NetUtils.createSocketAddr(adminAddress), conf);
+              addr, conf);
         }
       });
 

@@ -92,7 +92,9 @@ public class ApplicationMasterService extends AbstractService implements
     String bindAddress =
       conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
-    masterServiceAddress =  NetUtils.createSocketAddr(bindAddress);
+    masterServiceAddress =  NetUtils.createSocketAddr(bindAddress,
+      YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT,
+      YarnConfiguration.RM_SCHEDULER_ADDRESS);
     super.init(conf);
   }
 

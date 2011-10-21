@@ -192,7 +192,9 @@ public class ContainerManagerImpl extends CompositeService implements
     YarnRPC rpc = YarnRPC.create(conf);
 
     InetSocketAddress initialAddress = NetUtils.createSocketAddr(conf.get(
-        YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS));
+        YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS),
+        YarnConfiguration.DEFAULT_NM_PORT,
+        YarnConfiguration.NM_ADDRESS);
 
     server =
         rpc.getServer(ContainerManager.class, this, initialAddress, conf,

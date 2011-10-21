@@ -33,7 +33,9 @@ public class JHAdminConfig {
   
   /** host:port address for History Server API.*/
   public static final String MR_HISTORY_ADDRESS = MR_HISTORY_PREFIX + "address";
-  public static final String DEFAULT_MR_HISTORY_ADDRESS = "0.0.0.0:10020";
+  public static final int DEFAULT_MR_HISTORY_PORT = 10020;
+  public static final String DEFAULT_MR_HISTORY_ADDRESS = "0.0.0.0:" +
+      DEFAULT_MR_HISTORY_PORT;
   
   /** If history cleaning should be enabled or not.*/
   public static final String MR_HISTORY_CLEANER_ENABLE = 
@@ -106,6 +108,7 @@ public class JHAdminConfig {
   /**The address the history server webapp is on.*/
   public static final String MR_HISTORY_WEBAPP_ADDRESS =
     MR_HISTORY_PREFIX + "webapp.address";
+  public static final int DEFAULT_MR_HISTORY_WEBAPP_PORT = 19888;
   public static final String DEFAULT_MR_HISTORY_WEBAPP_ADDRESS =
-    "0.0.0.0:19888";
+    "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_PORT;
 }

@@ -48,12 +48,14 @@ public class Master {
     String framework = conf.get(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     if (framework.equals(MRConfig.CLASSIC_FRAMEWORK_NAME)) {
       masterAddress = conf.get(MRConfig.MASTER_ADDRESS, "localhost:8012");
+      return NetUtils.createSocketAddr(masterAddress, 8012, MRConfig.MASTER_ADDRESS);
     } 
     else {
       masterAddress = conf.get(YarnConfiguration.RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADDRESS);
+      return NetUtils.createSocketAddr(masterAddress, YarnConfiguration.DEFAULT_RM_PORT,
+        YarnConfiguration.RM_ADDRESS);
     }
-    return NetUtils.createSocketAddr(masterAddress);
   }
 
   public static String getMasterPrincipal(Configuration conf) 

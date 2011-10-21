@@ -111,7 +111,9 @@ public class ClientRMService extends AbstractService implements
       conf.get(YarnConfiguration.RM_ADDRESS,
           YarnConfiguration.DEFAULT_RM_ADDRESS);
     clientBindAddress =
-      NetUtils.createSocketAddr(clientServiceBindAddress);
+      NetUtils.createSocketAddr(clientServiceBindAddress,
+        YarnConfiguration.DEFAULT_RM_PORT,
+        YarnConfiguration.RM_ADDRESS);
     super.init(conf);
   }
   

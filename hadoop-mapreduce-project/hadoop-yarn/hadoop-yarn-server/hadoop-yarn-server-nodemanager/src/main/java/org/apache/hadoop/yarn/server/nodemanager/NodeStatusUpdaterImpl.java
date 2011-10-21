@@ -117,7 +117,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       getConfig().get(YarnConfiguration.NM_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     InetSocketAddress httpBindAddress =
-      NetUtils.createSocketAddr(httpBindAddressStr);
+      NetUtils.createSocketAddr(httpBindAddressStr,
+        YarnConfiguration.DEFAULT_NM_WEBAPP_PORT,
+        YarnConfiguration.NM_WEBAPP_ADDRESS);
     try {
       //      this.hostName = InetAddress.getLocalHost().getCanonicalHostName();
       this.httpPort = httpBindAddress.getPort();
@@ -141,7 +143,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   protected ResourceTracker getRMClient() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress rmAddress = NetUtils.createSocketAddr(this.rmAddress);
+    InetSocketAddress rmAddress = NetUtils.createSocketAddr(this.rmAddress,
+      YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT,
+      YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
     return (ResourceTracker) rpc.getProxy(ResourceTracker.class, rmAddress,
         conf);
   }
