@@ -1044,13 +1044,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (UserGroupInformation.isSecurityEnabled()) {
         tokenStorage.addAll(job.fsTokens);
       }
-
-      Path remoteJobTokenFile =
-          new Path(job.remoteJobSubmitDir,
-              MRJobConfig.APPLICATION_TOKENS_FILE);
-      tokenStorage.writeTokenStorageFile(remoteJobTokenFile, job.conf);
-      LOG.info("Writing back the job-token file on the remote file system:"
-          + remoteJobTokenFile.toString());
     }
 
     /**
