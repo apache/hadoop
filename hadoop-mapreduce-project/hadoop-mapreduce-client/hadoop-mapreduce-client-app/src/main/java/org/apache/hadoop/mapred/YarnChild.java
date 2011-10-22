@@ -177,7 +177,7 @@ class YarnChild {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       exception.printStackTrace(new PrintStream(baos));
       if (taskid != null) {
-        umbilical.reportDiagnosticInfo(taskid, baos.toString());
+        umbilical.fatalError(taskid, baos.toString());
       }
     } catch (Throwable throwable) {
       LOG.fatal("Error running child : "
