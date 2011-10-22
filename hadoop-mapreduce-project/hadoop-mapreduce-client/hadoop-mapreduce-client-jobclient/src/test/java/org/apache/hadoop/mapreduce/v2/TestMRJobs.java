@@ -299,7 +299,6 @@ public class TestMRJobs {
   throws IOException, InterruptedException, ClassNotFoundException {
     Configuration myConf = new Configuration(mrCluster.getConfig());
     myConf.setInt(MRJobConfig.NUM_MAPS, 1);
-    myConf.setInt("mapreduce.task.timeout", 10*1000);//reduce the timeout
     myConf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2); //reduce the number of attempts
 
     Job job = new Job(myConf);

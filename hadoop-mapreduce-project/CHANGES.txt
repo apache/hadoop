@@ -1729,6 +1729,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3242. Trunk compilation broken with bad interaction from 
     MAPREDUCE-3070 and MAPREDUCE-3239. (mahadev)
 
+    MAPREDUCE-3058. Fixed MR YarnChild to report failure when task throws an
+    error and thus prevent a hanging task and job. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

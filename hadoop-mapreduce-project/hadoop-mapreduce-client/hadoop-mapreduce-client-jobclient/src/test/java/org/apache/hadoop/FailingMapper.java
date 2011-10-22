@@ -30,6 +30,22 @@ import org.apache.hadoop.mapreduce.Mapper;
 public class FailingMapper extends Mapper<Text, Text, Text, Text> {
   public void map(Text key, Text value,
       Context context) throws IOException,InterruptedException {
+
+    // Just create a non-daemon thread which hangs forever. MR AM should not be
+    // hung by this.
+    new Thread() {
+      @Override
+      public void run() {
+        synchronized (this) {
+          try {
+            wait();
+          } catch (InterruptedException e) {
+            //
+          }
+        }
+      }
+    }.start();
+
     if (context.getTaskAttemptID().getId() == 0) {
       System.out.println("Attempt:" + context.getTaskAttemptID() + 
         " Failing mapper throwing exception");

@@ -351,9 +351,11 @@ class LoadJob extends GridmixJob {
       
       matcher = new ResourceUsageMatcherRunner(ctxt, 
                       split.getMapResourceUsageMetrics());
+      matcher.setDaemon(true);
       
       // start the status reporter thread
       reporter = new StatusReporter(ctxt, matcher);
+      reporter.setDaemon(true);
       reporter.start();
     }
 
