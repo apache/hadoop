@@ -1679,6 +1679,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3087. Fixed the mapreduce classpath to correctly include the
     generated-classpath file needed for tests. (Ravi Prakash via vinodkv)
 
+    MAPREDUCE-3233. Fixed a bug in MR Job so as to be able to restart the
+    application on AM crash. (Mahadev Konar via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
