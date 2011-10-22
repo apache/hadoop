@@ -189,7 +189,8 @@ public class MRApps extends Apps {
       Apps.addToEnvironment(
           environment,
           Environment.CLASSPATH.name(),
-          thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile());
+          thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile()
+            .split("!")[0]);
 
       // Add standard Hadoop classes
       for (String c : ApplicationConstants.APPLICATION_CLASSPATH) {

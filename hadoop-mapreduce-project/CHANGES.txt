@@ -1732,6 +1732,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3058. Fixed MR YarnChild to report failure when task throws an
     error and thus prevent a hanging task and job. (vinodkv)
 
+    MAPREDUCE-3087. Fixed the mapreduce classpath to correctly include the
+    generated-classpath file needed for tests. (Ravi Prakash via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
