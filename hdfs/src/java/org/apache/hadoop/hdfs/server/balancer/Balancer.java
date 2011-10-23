@@ -991,7 +991,7 @@ public class Balancer implements Tool {
       }
       cluster.add(datanode);
       BalancerDatanode datanodeS;
-      if (getUtilization(datanode) > avgUtilization) {
+      if (getUtilization(datanode) >= avgUtilization) {
         datanodeS = new Source(datanode, avgUtilization, threshold);
         if (isAboveAvgUtilized(datanodeS)) {
           this.aboveAvgUtilizedDatanodes.add((Source)datanodeS);
