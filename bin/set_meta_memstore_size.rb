@@ -1,6 +1,3 @@
-#
-# Copyright 2011 The Apache Software Foundation
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# 
+
 # This script must be used on a live cluster in order to fix .META.'s 
 # MEMSTORE_SIZE back to 64MB instead of the 16KB that was configured 
 # in 0.20 era. This is only required if .META. was created at that time.
