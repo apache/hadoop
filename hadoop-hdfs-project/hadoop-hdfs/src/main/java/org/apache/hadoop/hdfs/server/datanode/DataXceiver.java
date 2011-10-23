@@ -92,7 +92,6 @@ class DataXceiver extends Receiver implements Runnable {
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
-    dataXceiverServer.childSockets.put(s, s);
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
 
@@ -129,6 +128,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void run() {
     int opsProcessed = 0;
     Op op = null;
+    dataXceiverServer.childSockets.put(s, s);
     try {
       int stdTimeout = s.getSoTimeout();
 
