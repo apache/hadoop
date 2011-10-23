@@ -704,6 +704,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2471. Add federation documentation. (suresh)
 
+    HDFS-2485. Improve code layout and constants in UnderReplicatedBlocks
+    (stevel)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
