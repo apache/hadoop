@@ -302,7 +302,7 @@
         <plugin>
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.6</version>
+          <version>1.0-alpha-3</version>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-report-plugin</artifactId>

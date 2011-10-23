@@ -360,6 +360,7 @@ Release 0.92.0 - Unreleased
                (Gaojinchao)
    HBASE-4588  The floating point arithmetic to validate memory allocation
                configurations need to be done as integers (dhruba)
+   HBASE-4647  RAT finds about 40 files missing licenses
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
