@@ -823,7 +823,7 @@ public class Balancer {
       cluster.add(datanode);
       BalancerDatanode datanodeS;
       final double avg = policy.getAvgUtilization();
-      if (policy.getUtilization(datanode) > avg) {
+      if (policy.getUtilization(datanode) >= avg) {
         datanodeS = new Source(datanode, policy, threshold);
         if (isAboveAvgUtilized(datanodeS)) {
           this.aboveAvgUtilizedDatanodes.add((Source)datanodeS);
