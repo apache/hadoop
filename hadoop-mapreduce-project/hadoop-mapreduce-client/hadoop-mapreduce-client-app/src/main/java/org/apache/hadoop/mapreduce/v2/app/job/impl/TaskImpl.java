@@ -568,7 +568,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     //raise the completion event only if the container is assigned
     // to nextAttemptNumber
     if (attempt.getNodeHttpAddress() != null) {
-      TaskAttemptCompletionEvent tce = recordFactory.newRecordInstance(TaskAttemptCompletionEvent.class);
+      TaskAttemptCompletionEvent tce = recordFactory
+          .newRecordInstance(TaskAttemptCompletionEvent.class);
       tce.setEventId(-1);
       tce.setMapOutputServerAddress("http://"
           + attempt.getNodeHttpAddress().split(":")[0] + ":"

@@ -1747,6 +1747,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3028. Added job-end notification support. (Ravi Prakash via
     acmurthy) 
 
+    MAPREDUCE-3249. Ensure shuffle-port is correctly used duringMR AM recovery. 
+    (vinodkv via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

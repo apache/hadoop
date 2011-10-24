@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 /*
  * Recovers the completed tasks from the previous life of Application Master.
@@ -313,8 +314,8 @@ public class RecoveryService extends CompositeService implements Recovery {
         TaskAttemptId aId = ((ContainerRemoteLaunchEvent) event)
             .getTaskAttemptID();
         TaskAttemptInfo attInfo = getTaskAttemptInfo(aId);
-        //TODO need to get the real port number MAPREDUCE-2666
-        actualHandler.handle(new TaskAttemptContainerLaunchedEvent(aId, -1));
+        actualHandler.handle(new TaskAttemptContainerLaunchedEvent(aId,
+            attInfo.getShufflePort()));
         // send the status update event
         sendStatusUpdateEvent(aId, attInfo);
 
@@ -392,16 +393,15 @@ public class RecoveryService extends CompositeService implements Recovery {
         TaskAttemptInfo attemptInfo) {
       LOG.info("Sending assigned event to " + yarnAttemptID);
       ContainerId cId = attemptInfo.getContainerId();
-      Container container = recordFactory
-          .newRecordInstance(Container.class);
-      container.setId(cId);
-      container.setNodeId(recordFactory
-          .newRecordInstance(NodeId.class));
-      // NodeId can be obtained from TaskAttemptInfo.hostname - but this will
-      // eventually contain rack info.
-      container.setContainerToken(null);
-      container.setNodeHttpAddress(attemptInfo.getTrackerName() + ":" + 
-          attemptInfo.getHttpPort());
+      String[] splits = attemptInfo.getHostname().split(":");
+      NodeId nodeId = BuilderUtils.newNodeId(splits[0], Integer
+          .parseInt(splits[1]));
+      // Resource/Priority/ApplicationACLs are only needed while launching the
+      // container on an NM, these are already completed tasks, so setting them
+      // to null
+      Container container = BuilderUtils.newContainer(cId, nodeId,
+          attemptInfo.getTrackerName() + ":" + attemptInfo.getHttpPort(),
+          null, null, null);
       actualHandler.handle(new TaskAttemptContainerAssignedEvent(yarnAttemptID,
           container, null));
     }
