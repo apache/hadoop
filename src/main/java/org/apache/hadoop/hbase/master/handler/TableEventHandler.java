@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableMap;
@@ -86,7 +87,6 @@ public abstract class TableEventHandler extends EventHandler {
       if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
           getAssignmentManager().getZKTable().
           isEnabledTable(Bytes.toString(tableName))) {
-        this.masterServices.getAssignmentManager().setRegionsToReopen(hris);
         if (reOpenAllRegions(hris)) {
           LOG.info("Completed table operation " + eventType + " on table " +
               Bytes.toString(tableName));
@@ -108,17 +108,27 @@ public abstract class TableEventHandler extends EventHandler {
     TreeMap<ServerName, List<HRegionInfo>> serverToRegions = Maps
         .newTreeMap();
     NavigableMap<HRegionInfo, ServerName> hriHserverMapping = table.getRegionLocations();
-
+    List<HRegionInfo> reRegions = new ArrayList<HRegionInfo>();
     for (HRegionInfo hri : regions) {
       ServerName rsLocation = hriHserverMapping.get(hri);
+
+      // Skip the offlined split parent region
+      // See HBASE-4578 for more information.
+      if (null == rsLocation) {
+        LOG.info("Skip " + hri);
+        continue;
+      }
       if (!serverToRegions.containsKey(rsLocation)) {
         LinkedList<HRegionInfo> hriList = Lists.newLinkedList();
         serverToRegions.put(rsLocation, hriList);
       }
+      reRegions.add(hri);
       serverToRegions.get(rsLocation).add(hri);
     }
-    LOG.info("Reopening " + regions.size() + " regions on "
+    
+    LOG.info("Reopening " + reRegions.size() + " regions on "
         + serverToRegions.size() + " region servers.");
+    this.masterServices.getAssignmentManager().setRegionsToReopen(reRegions);
     BulkReOpen bulkReopen = new BulkReOpen(this.server, serverToRegions,
         this.masterServices.getAssignmentManager());
     while (true) {
