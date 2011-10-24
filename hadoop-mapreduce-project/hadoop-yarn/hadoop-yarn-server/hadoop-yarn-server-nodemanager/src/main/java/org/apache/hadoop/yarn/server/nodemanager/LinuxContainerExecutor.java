@@ -56,11 +56,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    * List of commands that the setuid script will execute.
    */
   enum Commands {
-    INITIALIZE_JOB(0),
+    INITIALIZE_CONTAINER(0),
     LAUNCH_CONTAINER(1),
     SIGNAL_CONTAINER(2),
-    DELETE_AS_USER(3),
-    DELETE_LOG_AS_USER(4);
+    DELETE_AS_USER(3);
 
     private int value;
     Commands(int value) {
@@ -78,8 +77,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   enum ResultCode {
     OK(0),
     INVALID_USER_NAME(2),
-    INVALID_TASK_PID(9),
-    INVALID_TASKCONTROLLER_PERMISSIONS(22),
+    UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
+    INVALID_CONTAINER_PID(9),
+    INVALID_CONTAINER_EXEC_PERMISSIONS(22),
     INVALID_CONFIG_FILE(24);
 
     private final int value;
@@ -107,7 +107,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     List<String> command = new ArrayList<String>(
       Arrays.asList(containerExecutorExe, 
                     user, 
-                    Integer.toString(Commands.INITIALIZE_JOB.getValue()),
+                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
                     appId,
                     nmPrivateContainerTokensPath.toUri().getPath().toString()));
     File jvm =                                  // use same jvm as parent
@@ -220,7 +220,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       shExec.execute();
     } catch (ExitCodeException e) {
       int ret_code = shExec.getExitCode();
-      if (ret_code == ResultCode.INVALID_TASK_PID.getValue()) {
+      if (ret_code == ResultCode.INVALID_CONTAINER_PID.getValue()) {
         return false;
       }
       logOutput(shExec.getOutput());
