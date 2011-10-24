@@ -734,4 +734,13 @@
       simplify coprocessor failure analysis.
       </description>
   </property>
+  <property>
+    <name>dfs.support.append</name>
+    <value>true</value>
+    <description>Does HDFS allow appends to files?
+    This is an hdfs config. set in here so the hdfs client will do append support.
+    You must ensure that this config. is true serverside too when running hbase
+    (You will have to restart your cluster after setting it).
+  </description>
+</property>
 </configuration>

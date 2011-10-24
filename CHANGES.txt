@@ -692,6 +692,8 @@ Release 0.92.0 - Unreleased
                (todd)
    HBASE-4057  Implement HBase version of "show processlist" (Riley Patterson)
    HBASE-4437  Update hadoop in 0.92 (0.20.205?)
+   HBASE-4656  Note how dfs.support.append has to be enabled in 0.20.205.0
+               clusters
 
 Release 0.90.5 - Unreleased
 
