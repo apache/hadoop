@@ -1179,4 +1179,49 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.end-notification.max.attempts</name>
+  <value>5</value>
+  <final>true</final>
+  <description>The maximum number of times a URL will be read for providing job
+    end notification. Cluster administrators can set this to limit how long
+    after end of a job, the Application Master waits before exiting. Must be
+    marked as final to prevent users from overriding this.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.end-notification.max.retry.interval</name>
+  <value>5</value>
+  <final>true</final>
+  <description>The maximum amount of time (in seconds) to wait before retrying
+    job end notification. Cluster administrators can set this to limit how long
+    the Application Master waits before exiting. Must be marked as final to
+    prevent users from overriding this.</description>
+</property>
+
+<property>
+  <name>mapreduce.job.end-notification.url</name>
+  <value></value>
+  <description>The URL to send job end notification. It may contain sentinels
+    $jobId and $jobStatus which will be replaced with jobId and jobStatus.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.end-notification.retry.attempts</name>
+  <value>5</value>
+  <description>The number of times the submitter of the job wants to retry job
+    end notification if it fails. This is capped by
+    mapreduce.job.end-notification.max.attempts</description>
+</property>
+
+<property>
+  <name>mapreduce.job.end-notification.retry.interval</name>
+  <value>1</value>
+  <description>The number of seconds the submitter of the job wants to wait
+    before job end notification is retried if it fails. This is capped by
+    mapreduce.job.end-notification.max.retry.interval</description>
+</property>
+
 </configuration>

@@ -1688,6 +1688,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3233. Fixed a bug in MR Job so as to be able to restart the
     application on AM crash. (Mahadev Konar via vinodkv)
 
+    MAPREDUCE-3028. Added job-end notification support. (Ravi Prakash via
+    acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
