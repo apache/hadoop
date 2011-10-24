@@ -386,19 +386,34 @@ public class MRAppMaster extends CompositeService {
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
-      LOG.info("Calling stop for all the services");
       try {
+        // Stop all services
+        // This will also send the final report to the ResourceManager
+        LOG.info("Calling stop for all the services");
         stop();
+        
+        // Send job-end notification
+        try {
+          LOG.info("Job end notification started for jobID : "
+            + job.getReport().getJobId());
+          JobEndNotifier notifier = new JobEndNotifier();
+          notifier.setConf(getConfig());
+          notifier.notify(job.getReport());
+        } catch (InterruptedException ie) {
+          LOG.warn("Job end notification interrupted for jobID : "
+            + job.getReport().getJobId(), ie );
+        }
       } catch (Throwable t) {
         LOG.warn("Graceful stop failed ", t);
       }
+      
+      // Cleanup staging directory
       try {
         cleanupStagingDir();
       } catch(IOException io) {
         LOG.warn("Failed to delete staging dir");
       }
-      //TODO: this is required because rpc server does not shut down
-      // in spite of calling server.stop().
+      
       //Bring the process down by force.
       //Not needed after HADOOP-7140
       LOG.info("Exiting MR AppMaster..GoodBye!");

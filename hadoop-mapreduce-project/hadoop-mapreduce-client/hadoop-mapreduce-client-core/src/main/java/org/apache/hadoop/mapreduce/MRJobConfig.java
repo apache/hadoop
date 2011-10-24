@@ -91,12 +91,6 @@ public interface MRJobConfig {
 
   public static final String WORKING_DIR = "mapreduce.job.working.dir";
 
-  public static final String END_NOTIFICATION_URL = "mapreduce.job.end-notification.url";
-
-  public static final String END_NOTIFICATION_RETRIES = "mapreduce.job.end-notification.retry.attempts";
-
-  public static final String END_NOTIFICATION_RETRIE_INTERVAL = "mapreduce.job.end-notification.retry.interval";
-
   public static final String CLASSPATH_ARCHIVES = "mapreduce.job.classpath.archives";
 
   public static final String CLASSPATH_FILES = "mapreduce.job.classpath.files";
@@ -486,4 +480,23 @@ public interface MRJobConfig {
 
   public static final String APPLICATION_ATTEMPT_ID =
       "mapreduce.job.application.attempt.id";
+
+  /**
+   * Job end notification.
+   */
+  public static final String MR_JOB_END_NOTIFICATION_URL =
+    "mapreduce.job.end-notification.url";
+
+  public static final String MR_JOB_END_RETRY_ATTEMPTS =
+    "mapreduce.job.end-notification.retry.attempts";
+
+  public static final String MR_JOB_END_RETRY_INTERVAL =
+    "mapreduce.job.end-notification.retry.interval";
+
+  public static final String MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS =
+    "mapreduce.job.end-notification.max.attempts";
+
+  public static final String MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL =
+    "mapreduce.job.end-notification.max.retry.interval";
+
 }
