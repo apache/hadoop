@@ -1691,6 +1691,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3028. Added job-end notification support. (Ravi Prakash via
     acmurthy) 
 
+    MAPREDUCE-3252. Fix map tasks to not rewrite data an extra time when
+    map output fits in spill buffer. (todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
