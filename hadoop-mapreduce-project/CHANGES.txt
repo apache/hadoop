@@ -115,6 +115,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3104. Implemented Application-acls. (vinodkv)
 
+    MAPREDUCE-2708. Designed and implemented MR Application Master recovery to
+    make MR AMs resume their progress after restart. (Sharad Agarwal via vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

@@ -239,6 +239,14 @@ class YarnChild {
       Token<JobTokenIdentifier> jt) throws IOException {
     final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
     job.setCredentials(credentials);
+    
+    String appAttemptIdEnv = System
+        .getenv(MRJobConfig.APPLICATION_ATTEMPT_ID_ENV);
+    LOG.debug("APPLICATION_ATTEMPT_ID: " + appAttemptIdEnv);
+    // Set it in conf, so as to be able to be used the the OutputCommitter.
+    job.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, Integer
+        .parseInt(appAttemptIdEnv));
+
     // set tcp nodelay
     job.setBoolean("ipc.client.tcpnodelay", true);
     job.setClass(MRConfig.TASK_LOCAL_OUTPUT_CLASS,

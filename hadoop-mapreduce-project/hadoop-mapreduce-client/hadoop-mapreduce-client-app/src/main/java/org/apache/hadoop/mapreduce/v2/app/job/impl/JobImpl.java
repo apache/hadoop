@@ -39,15 +39,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
-import org.apache.hadoop.mapreduce.OutputFormat;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -64,7 +61,6 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
-import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
@@ -98,14 +94,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -126,15 +119,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   // Maximum no. of fetch-failure notifications after which map task is failed
   private static final int MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
-
-  private final RecordFactory recordFactory =
-      RecordFactoryProvider.getRecordFactory(null);
   
   //final fields
   private final ApplicationAttemptId applicationAttemptId;
   private final Clock clock;
   private final JobACLsManager aclsManager;
   private final String username;
+  private final OutputCommitter committer;
   private final Map<JobACL, AccessControlList> jobACLs;
   private final Set<TaskId> completedTasksFromPreviousRun;
   private final List<AMInfo> amInfos;
@@ -142,6 +133,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final Lock writeLock;
   private final JobId jobId;
   private final String jobName;
+  private final boolean newApiCommitter;
   private final org.apache.hadoop.mapreduce.JobID oldJobId;
   private final TaskAttemptListener taskAttemptListener;
   private final Object tasksSyncHandle = new Object();
@@ -167,7 +159,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Path remoteJobSubmitDir;
   public Path remoteJobConfFile;
   private JobContext jobContext;
-  private OutputCommitter committer;
   private int allowedMapFailuresPercent = 0;
   private int allowedReduceFailuresPercent = 0;
   private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
@@ -367,14 +358,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
 
-  public JobImpl(ApplicationAttemptId applicationAttemptId, Configuration conf,
-      EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
+  public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
+      Configuration conf, EventHandler eventHandler,
+      TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
-      Credentials fsTokenCredentials, Clock clock, 
+      Credentials fsTokenCredentials, Clock clock,
       Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
-      String userName, long appSubmitTime, List<AMInfo> amInfos) {
+      OutputCommitter committer, boolean newApiCommitter, String userName,
+      long appSubmitTime, List<AMInfo> amInfos) {
     this.applicationAttemptId = applicationAttemptId;
-    this.jobId = recordFactory.newRecordInstance(JobId.class);
+    this.jobId = jobId;
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
     this.conf = conf;
     this.metrics = metrics;
@@ -383,15 +376,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.amInfos = amInfos;
     this.userName = userName;
     this.appSubmitTime = appSubmitTime;
-    ApplicationId applicationId = applicationAttemptId.getApplicationId();
-    jobId.setAppId(applicationId);
-    jobId.setId(applicationId.getId());
-    oldJobId = TypeConverter.fromYarn(jobId);
-    LOG.info("Job created" +
-    		" appId=" + applicationId + 
-    		" jobId=" + jobId + 
-    		" oldJobId=" + oldJobId);
-    
+    this.oldJobId = TypeConverter.fromYarn(jobId);
+    this.newApiCommitter = newApiCommitter;
+
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -400,6 +387,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
     this.fsTokens = fsTokenCredentials;
     this.jobTokenSecretManager = jobTokenSecretManager;
+    this.committer = committer;
 
     this.aclsManager = new JobACLsManager(conf);
     this.username = System.getProperty("user.name");
@@ -854,47 +842,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
         checkTaskLimits();
 
-        
-        boolean newApiCommitter = false;
-        if ((job.numReduceTasks > 0 && 
-            job.conf.getBoolean("mapred.reducer.new-api", false)) ||
-              (job.numReduceTasks == 0 && 
-               job.conf.getBoolean("mapred.mapper.new-api", false)))  {
-          newApiCommitter = true;
-          LOG.info("Using mapred newApiCommitter.");
-        }
-        
-        LOG.info("OutputCommitter set in config " + job.conf.get(
-            "mapred.output.committer.class"));
-        
-        if (newApiCommitter) {
+        if (job.newApiCommitter) {
           job.jobContext = new JobContextImpl(job.conf,
               job.oldJobId);
-          org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID
-          = RecordFactoryProvider.getRecordFactory(null)
-              .newRecordInstance(
-                  org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId.class);
-          attemptID.setTaskId(RecordFactoryProvider.getRecordFactory(null)
-              .newRecordInstance(TaskId.class));
-          attemptID.getTaskId().setJobId(job.jobId);
-          attemptID.getTaskId().setTaskType(TaskType.MAP);
-          TaskAttemptContext taskContext = new TaskAttemptContextImpl(job.conf,
-              TypeConverter.fromYarn(attemptID));
-          try {
-            OutputFormat outputFormat = ReflectionUtils.newInstance(
-                taskContext.getOutputFormatClass(), job.conf);
-            job.committer = outputFormat.getOutputCommitter(taskContext);
-          } catch(Exception e) {
-            throw new IOException("Failed to assign outputcommitter", e);
-          }
         } else {
           job.jobContext = new org.apache.hadoop.mapred.JobContextImpl(
               new JobConf(job.conf), job.oldJobId);
-          job.committer = ReflectionUtils.newInstance(
-              job.conf.getClass("mapred.output.committer.class", FileOutputCommitter.class,
-              org.apache.hadoop.mapred.OutputCommitter.class), job.conf);
         }
-        LOG.info("OutputCommitter is " + job.committer.getClass().getName());
         
         long inputLength = 0;
         for (int i = 0; i < job.numMapTasks; ++i) {
