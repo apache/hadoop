@@ -449,6 +449,8 @@ public interface MRJobConfig {
   public static final String STDOUT_LOGFILE_ENV = "STDOUT_LOGFILE_ENV";
   public static final String STDERR_LOGFILE_ENV = "STDERR_LOGFILE_ENV";
 
+  public static final String APPLICATION_ATTEMPT_ID_ENV = "APPLICATION_ATTEMPT_ID_ENV";
+
   // This should be the directory where splits file gets localized on the node
   // running ApplicationMaster.
   public static final String JOB_SUBMIT_DIR = "jobSubmitDir";

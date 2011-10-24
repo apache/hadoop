@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.lib.output;
 
+import java.io.IOException;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -56,6 +58,17 @@ public class NullOutputFormat<K, V> extends OutputFormat<K, V> {
       }
       public void setupJob(JobContext jobContext) { }
       public void setupTask(TaskAttemptContext taskContext) { }
+
+      @Override
+      public boolean isRecoverySupported() {
+        return true;
+      }
+
+      @Override
+      public void recoverTask(TaskAttemptContext taskContext)
+          throws IOException {
+        // Nothing to do for recovering the task.
+      }
     };
   }
 }

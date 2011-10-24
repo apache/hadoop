@@ -29,11 +29,9 @@ import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.ID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.Apps;
 
 public class MapReduceChildJVM {
 
@@ -131,6 +129,8 @@ public class MapReduceChildJVM {
         MRJobConfig.STDERR_LOGFILE_ENV,
         getTaskLogFile(TaskLog.LogName.STDERR)
         );
+    environment.put(MRJobConfig.APPLICATION_ATTEMPT_ID_ENV, 
+        	conf.get(MRJobConfig.APPLICATION_ATTEMPT_ID).toString());
   }
 
   private static String getChildJavaOpts(JobConf jobConf, boolean isMapTask) {

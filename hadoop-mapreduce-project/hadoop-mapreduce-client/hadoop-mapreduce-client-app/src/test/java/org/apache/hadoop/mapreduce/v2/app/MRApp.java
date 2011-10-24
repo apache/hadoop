@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
@@ -264,9 +265,11 @@ public class MRApp extends MRAppMaster {
     } catch (IOException e) {
       throw new YarnException(e);
     }
-    Job newJob = new TestJob(conf, getAppID(), getDispatcher().getEventHandler(),
-                             getTaskAttemptListener(), getContext().getClock(),
-                             currentUser.getUserName());
+    Job newJob = new TestJob(getJobId(), getAttemptID(), conf, 
+    		getDispatcher().getEventHandler(),
+            getTaskAttemptListener(), getContext().getClock(),
+            getCommitter(), isNewApiCommitter(),
+            currentUser.getUserName());
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
@@ -413,13 +416,15 @@ public class MRApp extends MRAppMaster {
       return localStateMachine;
     }
 
-    public TestJob(Configuration conf, ApplicationId applicationId,
-        EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
-        Clock clock, String user) {
-      super(getApplicationAttemptId(applicationId, getStartCount()), conf,
-          eventHandler, taskAttemptListener, new JobTokenSecretManager(),
-          new Credentials(), clock, getCompletedTaskFromPreviousRun(), metrics,
-          user, System.currentTimeMillis(), getAllAMInfos());
+    public TestJob(JobId jobId, ApplicationAttemptId applicationAttemptId,
+        Configuration conf, EventHandler eventHandler,
+        TaskAttemptListener taskAttemptListener, Clock clock,
+        OutputCommitter committer, boolean newApiCommitter, String user) {
+      super(jobId, getApplicationAttemptId(applicationId, getStartCount()),
+          conf, eventHandler, taskAttemptListener,
+          new JobTokenSecretManager(), new Credentials(), clock,
+          getCompletedTaskFromPreviousRun(), metrics, committer,
+          newApiCommitter, user, System.currentTimeMillis(), getAllAMInfos());
 
       // This "this leak" is okay because the retained pointer is in an
       //  instance variable.
