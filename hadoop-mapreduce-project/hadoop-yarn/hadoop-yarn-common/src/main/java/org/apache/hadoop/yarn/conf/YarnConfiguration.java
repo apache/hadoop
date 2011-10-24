@@ -341,6 +341,13 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
   
+  /** 
+   * The UNIX group that the linux-container-executor should run as.
+   * This is intended to be set as part of container-executor.cfg. 
+   */
+  public static final String NM_LINUX_CONTAINER_GROUP =
+    NM_PREFIX + "linux-container-executor.group";
+  
   /** T-file compression types used to compress aggregated logs.*/
   public static final String NM_LOG_AGG_COMPRESSION_TYPE = 
     NM_PREFIX + "log-aggregation.compression-type";

@@ -54,25 +54,26 @@ import org.junit.Test;
  * <li>Compile the code with container-executor.conf.dir set to the location you
  * want for testing.
  * <br><pre><code>
- * > mvn clean install -Dcontainer-executor.conf.dir=/etc/hadoop -DskipTests
+ * > mvn clean install -Pnative -Dcontainer-executor.conf.dir=/etc/hadoop
+ *                          -DskipTests
  * </code></pre>
  * 
- * <li>Set up <code>${container-executor.conf.dir}/taskcontroller.cfg</code>
- * taskcontroller.cfg needs to be owned by root and have in it the proper
+ * <li>Set up <code>${container-executor.conf.dir}/container-executor.cfg</code>
+ * container-executor.cfg needs to be owned by root and have in it the proper
  * config values.
  * <br><pre><code>
- * > cat /etc/hadoop/taskcontroller.cfg
- * mapreduce.cluster.local.dir=/tmp/hadoop/nm-local/
- * hadoop.log.dir=/tmp/hadoop/nm-log
- * mapreduce.tasktracker.group=mapred
+ * > cat /etc/hadoop/container-executor.cfg
+ * yarn.nodemanager.local-dirs=/tmp/hadoop/nm-local/
+ * yarn.nodemanager.log-dirs=/tmp/hadoop/nm-log
+ * yarn.nodemanager.linux-container-executor.group=mapred
  * #depending on the user id of the application.submitter option
  * min.user.id=1
- * > sudo chown root:root /etc/hadoop/taskcontroller.cfg
- * > sudo chmod 444 /etc/hadoop/taskcontroller.cfg
+ * > sudo chown root:root /etc/hadoop/container-executor.cfg
+ * > sudo chmod 444 /etc/hadoop/container-executor.cfg
  * </code></pre>
  * 
  * <li>iMove the binary and set proper permissions on it. It needs to be owned 
- * by root, the group needs to be the group configured in taskcontroller.cfg, 
+ * by root, the group needs to be the group configured in container-executor.cfg, 
  * and it needs the setuid bit set. (The build will also overwrite it so you
  * need to move it to a place that you can support it. 
  * <br><pre><code>

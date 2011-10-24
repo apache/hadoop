@@ -373,6 +373,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3239. Use new createSocketAddr API in MRv2 to give better 
     error messages on misconfig (Todd Lipcon via mahadev)
 
+    MAPREDUCE-2747. Cleaned up LinuxContainerExecutor binary sources and changed
+    the configuration to use yarn names. (Robert Joseph Evans via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
