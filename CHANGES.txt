@@ -366,6 +366,8 @@ Release 0.92.0 - Unreleased
    HBASE-4578  NPE when altering a table that has moving regions (gaojinchao)
    HBASE-4070  Improve region server metrics to report loaded coprocessors to
                master (Eugene Koontz via apurtell)
+   HBASE-3512  Shell support for listing currently loaded coprocessors (Eugene
+               Koontz via apurtell)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

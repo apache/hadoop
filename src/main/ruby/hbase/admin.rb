@@ -386,6 +386,10 @@ module Hbase
         for k, v in status.getRegionsInTransition()
           puts("    %s" % [v])
         end
+        master_coprocs = java.util.Arrays.toString(@admin.getMasterCoprocessors())
+        if master_coprocs != nil
+          puts("master coprocessors: %s" % master_coprocs)
+        end
         puts("%d live servers" % [ status.getServersSize() ])
         for server in status.getServers()
           puts("    %s:%d %d" % \
