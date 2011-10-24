@@ -1674,7 +1674,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           jobClient.reportTaskTrackerError(taskTrackerName, 
                                            "DiskErrorException", msg);
         }
-        return State.STALE;
+        // If we caught a DEE here we have no good dirs, therefore shutdown.
+        return State.DENIED;
       } catch (RemoteException re) {
         String reClass = re.getClassName();
         if (DisallowedTaskTrackerException.class.getName().equals(reClass)) {
@@ -2427,7 +2428,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       getUserLogManager().start();
       startCleanupThreads();
       boolean denied = false;
-      while (running && !shuttingDown && !denied) {
+      while (running && !shuttingDown) {
         boolean staleState = false;
         try {
           // This while-loop attempts reconnects if we get network errors
@@ -2451,9 +2452,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             }
           }
         } finally {
-          close();
+          // If denied we'll close via shutdown below. We should close
+          // here even if shuttingDown as shuttingDown can be set even
+          // if shutdown is not called.
+          if (!denied) {
+            close();
+          }
         }
         if (shuttingDown) { return; }
+        if (denied) { break; }
         LOG.warn("Reinitializing local state");
         initialize();
       }
@@ -2464,8 +2471,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       LOG.error("Got fatal exception while reinitializing TaskTracker: " +
                 StringUtils.stringifyException(iex));
       return;
-    }
-    catch (InterruptedException i) {
+    } catch (InterruptedException i) {
       LOG.error("Got interrupted while reinitializing TaskTracker: " +
           i.getMessage());
       return;

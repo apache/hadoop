@@ -43,6 +43,8 @@ Release 0.20.206.0 - unreleased
     HADOOP-7745. Fix wrong variable name in exception message introduced
     in HADOOP-7509. (Ravi Prakash via suresh)
 
+    MAPREDUCE-2957. The TT should not re-init if it has no good local dirs. (eli)
+
 Release 0.20.205.1 - unreleased
 
   IMPROVEMENTS
