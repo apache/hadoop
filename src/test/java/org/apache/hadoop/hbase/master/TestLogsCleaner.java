@@ -64,6 +64,9 @@ public class TestLogsCleaner {
   @Test
   public void testLogCleaning() throws Exception{
     Configuration conf = TEST_UTIL.getConfiguration();
+    // set TTL
+    long ttl = 2000;
+    conf.setLong("hbase.master.logcleaner.ttl", ttl);
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     Replication.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
@@ -87,30 +90,33 @@ public class TestLogsCleaner {
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + "a"));
     // Case 2: 1 "recent" file, not even deletable for the first log cleaner
     // (TimeToLiveLogCleaner), so we are not going down the chain
-    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
     System.out.println("Now is: " + now);
-    for (int i = 0; i < 30; i++) {
+    for (int i = 1; i < 31; i++) {
       // Case 3: old files which would be deletable for the first log cleaner
       // (TimeToLiveLogCleaner), and also for the second (ReplicationLogCleaner)
-      Path fileName = new Path(oldLogDir, fakeMachineName + "." +
-          (now - 6000000 - i) );
+      Path fileName = new Path(oldLogDir, fakeMachineName + "." + (now - i) );
       fs.createNewFile(fileName);
       // Case 4: put 3 old log files in ZK indicating that they are scheduled
       // for replication so these files would pass the first log cleaner
       // (TimeToLiveLogCleaner) but would be rejected by the second
       // (ReplicationLogCleaner)
-      if (i % (30/3) == 0) {
+      if (i % (30/3) == 1) {
         zkHelper.addLogToList(fileName.getName(), fakeMachineName);
         System.out.println("Replication log file: " + fileName);
       }
     }
-    for (FileStatus stat : fs.listStatus(oldLogDir)) {
-      System.out.println(stat.getPath().toString());
-    }
+
+    // sleep for sometime to get newer modifcation time 
+    Thread.sleep(ttl);
+    fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + now));
 
     // Case 2: 1 newer file, not even deletable for the first log cleaner
     // (TimeToLiveLogCleaner), so we are not going down the chain
     fs.createNewFile(new Path(oldLogDir, fakeMachineName + "." + (now + 10000) ));
+
+    for (FileStatus stat : fs.listStatus(oldLogDir)) {
+      System.out.println(stat.getPath().toString());
+    }
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
