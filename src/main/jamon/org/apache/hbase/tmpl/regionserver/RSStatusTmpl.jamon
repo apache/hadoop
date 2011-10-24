@@ -80,6 +80,13 @@ org.apache.hadoop.hbase.HRegionInfo;
 <tr><td>HBase Compiled</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
 <tr><td>Metrics</td><td><% metrics.toString() %></td><td>RegionServer Metrics; file and heap sizes are in megabytes</td></tr>
 <tr><td>Zookeeper Quorum</td><td><% regionServer.getZooKeeper().getQuorum() %></td><td>Addresses of all registered ZK servers</td></tr>
+<tr>
+  <td>Coprocessors</td>
+  <td>
+    <% java.util.Arrays.toString(regionServer.getCoprocessors()) %>
+  </td>
+  <td>Coprocessors currently loaded by this regionserver</td>
+</tr>
 </table>
 
 <& ../common/TaskMonitorTmpl; filter = filter &>

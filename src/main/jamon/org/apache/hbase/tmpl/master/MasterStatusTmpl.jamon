@@ -102,6 +102,12 @@ org.apache.hadoop.hbase.HTableDescriptor;
         <tr><td>Fragmentation</td><td><% frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
 </%if>
 <tr><td>Zookeeper Quorum</td><td><% master.getZooKeeperWatcher().getQuorum() %></td><td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td></tr>
+<tr>
+  <td>
+   Coprocessors</td><td><% java.util.Arrays.toString(master.getCoprocessors()) %>
+  </td>
+  <td>Coprocessors currently loaded loaded by the master</td>
+</tr>
 </table>
 
 <& ../common/TaskMonitorTmpl; filter = filter &>

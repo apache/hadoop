@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -345,7 +346,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   /**
-   * Initilize all ZK based system trackers.
+   * Initialize all ZK based system trackers.
    * @throws IOException
    * @throws InterruptedException
    */
@@ -1112,7 +1113,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.fileSystemManager.getClusterId(),
       this.serverManager.getOnlineServers(),
       this.serverManager.getDeadServers(),
-      this.assignmentManager.getRegionsInTransition());
+      this.assignmentManager.getRegionsInTransition(),
+      this.getCoprocessors());
   }
 
   public String getClusterId() {
@@ -1128,6 +1130,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    */
   public static String getLoadedCoprocessors() {
     return CoprocessorHost.getLoadedCoprocessors().toString();
+  }
+
+  /**
+   * @return array of coprocessor SimpleNames.
+   */
+  public String[] getCoprocessors() {
+    Set<String> masterCoprocessors =
+        getCoprocessorHost().getCoprocessors();
+    return masterCoprocessors.toArray(new String[0]);
   }
 
   @Override

@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,6 +67,7 @@ public class ClusterStatus extends VersionedWritable {
   private Collection<ServerName> deadServers;
   private Map<String, RegionState> intransition;
   private String clusterId;
+  private String[] masterCoprocessors;
 
   /**
    * Constructor, for Writable
@@ -76,12 +78,14 @@ public class ClusterStatus extends VersionedWritable {
 
   public ClusterStatus(final String hbaseVersion, final String clusterid,
       final Map<ServerName, HServerLoad> servers,
-      final Collection<ServerName> deadServers, final Map<String, RegionState> rit) {
+      final Collection<ServerName> deadServers, final Map<String, RegionState> rit,
+      final String[] masterCoprocessors) {
     this.hbaseVersion = hbaseVersion;
     this.liveServers = servers;
     this.deadServers = deadServers;
     this.intransition = rit;
     this.clusterId = clusterid;
+    this.masterCoprocessors = masterCoprocessors;
   }
 
   /**
@@ -155,7 +159,8 @@ public class ClusterStatus extends VersionedWritable {
     return (getVersion() == ((ClusterStatus)o).getVersion()) &&
       getHBaseVersion().equals(((ClusterStatus)o).getHBaseVersion()) &&
       this.liveServers.equals(((ClusterStatus)o).liveServers) &&
-      deadServers.equals(((ClusterStatus)o).deadServers);
+      deadServers.equals(((ClusterStatus)o).deadServers) &&
+      Arrays.equals(this.masterCoprocessors, ((ClusterStatus)o).masterCoprocessors);
   }
 
   /**
@@ -205,6 +210,10 @@ public class ClusterStatus extends VersionedWritable {
     return clusterId;
   }
 
+   public String[] getMasterCoprocessors() {
+     return masterCoprocessors;
+  }
+
   //
   // Writable
   //
@@ -227,6 +236,10 @@ public class ClusterStatus extends VersionedWritable {
       e.getValue().write(out);
     }
     out.writeUTF(clusterId);
+    out.writeInt(masterCoprocessors.length);
+    for(String masterCoprocessor: masterCoprocessors) {
+      out.writeUTF(masterCoprocessor);
+    }
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -254,5 +267,10 @@ public class ClusterStatus extends VersionedWritable {
       this.intransition.put(key, regionState);
     }
     this.clusterId = in.readUTF();
+    int masterCoprocessorsLength = in.readInt();
+    masterCoprocessors = new String[masterCoprocessorsLength];
+    for(int i = 0; i < masterCoprocessorsLength; i++) {
+      masterCoprocessors[i] = in.readUTF();
+    }
   }
 }
