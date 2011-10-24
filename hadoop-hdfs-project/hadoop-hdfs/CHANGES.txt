@@ -65,14 +65,18 @@ Trunk (unreleased changes)
 
     HDFS-2480. Separate datatypes for NamenodeProtocol. (suresh)
 
-	HDFS-2181 Separate HDFS Client wire protocol data types (sanjay)
+    HDFS-2181 Separate HDFS Client wire protocol data types (sanjay)
 
     HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)
 
-    HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be fetched. (tucu)
+    HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be 
+    fetched. (tucu)
 
     HDFS-2427. Change the default permission in webhdfs to 755 and add range
-    check/validation for all parameters.  (szetszwo)
+    check/validation for all parameters. (szetszwo)
+
+    HDFS-2489. Move Finalize and Register to separate file out of
+    DatanodeCommand.java. (suresh)
 
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)

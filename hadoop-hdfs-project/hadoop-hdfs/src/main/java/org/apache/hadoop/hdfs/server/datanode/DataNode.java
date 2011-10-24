@@ -151,6 +151,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -1418,7 +1419,7 @@ public class DataNode extends Configured
         }
         break;
       case DatanodeProtocol.DNA_FINALIZE:
-        storage.finalizeUpgrade(((DatanodeCommand.Finalize) cmd)
+        storage.finalizeUpgrade(((FinalizeCommand) cmd)
             .getBlockPoolId());
         break;
       case UpgradeCommand.UC_ACTION_START_UPGRADE:
