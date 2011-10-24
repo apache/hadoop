@@ -147,6 +147,8 @@ Trunk (unreleased changes)
     getDefaultBlockSize() and getDefaultReplication() in WebHdfsFileSystem
     and cleared content type in ExceptionHandler.  (szetszwo)
 
+	HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

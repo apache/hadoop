@@ -178,7 +178,9 @@ public class BackupNode extends NameNode {
       }
     }
     // Stop the RPC client
-    RPC.stopProxy(namenode);
+    if (namenode != null) {
+      RPC.stopProxy(namenode);
+    }
     namenode = null;
     // Stop the checkpoint manager
     if(checkpointManager != null) {
@@ -198,7 +200,7 @@ public class BackupNode extends NameNode {
       super(conf, nn);
       JournalProtocolServerSideTranslatorR23 journalProtocolTranslator = 
           new JournalProtocolServerSideTranslatorR23(this);
-      this.server.addProtocol(JournalWireProtocol.class,
+      this.clientRpcServer.addProtocol(JournalWireProtocol.class,
           journalProtocolTranslator);
       nnRpcAddress = nn.nnRpcAddress;
     }
@@ -251,7 +253,7 @@ public class BackupNode extends NameNode {
       verifyRequest(nnReg);
       if(!nnRpcAddress.equals(nnReg.getAddress()))
         throw new IOException("Journal request from unexpected name-node: "
-            + nnReg.getAddress() + " expecting " + rpcAddress);
+            + nnReg.getAddress() + " expecting " + clientRpcAddress);
       getBNImage().journal(firstTxId, numTxns, records);
     }
   
