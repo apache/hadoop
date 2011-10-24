@@ -362,6 +362,7 @@ Release 0.92.0 - Unreleased
                configurations need to be done as integers (dhruba)
    HBASE-4647  RAT finds about 40 files missing licenses
    HBASE-4642  Add Apache License Header
+   HBASE-4591  TTL for old HLogs should be calculated from last modification time
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.io.IOException;
+
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.logging.Log;
@@ -39,13 +42,13 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
   public boolean isLogDeletable(Path filePath) {
     long time = 0;
     long currentTime = System.currentTimeMillis();
-    String[] parts = filePath.getName().split("\\.");
     try {
-      time = Long.parseLong(parts[parts.length-1]);
-    } catch (NumberFormatException e) {
-      LOG.error("Unable to parse the timestamp in " + filePath.getName() +
-          ", deleting it since it's invalid and may not be a hlog", e);
-      return true;
+      FileStatus fStat = filePath.getFileSystem(conf).getFileStatus(filePath);
+      time = fStat.getModificationTime();
+    } catch (IOException e) {
+      LOG.error("Unable to get modification time of file " + filePath.getName() +
+      ", not deleting it.", e);
+      return false;
     }
     long life = currentTime - time;
     if (life < 0) {
