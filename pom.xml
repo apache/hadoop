@@ -1222,7 +1222,7 @@
         at revision 1034499 with this hdfs-895 patch:
         https://issues.apache.org/jira/secure/attachment/12459473/hdfs-895-branch-20-append.txt
         -->
-        <hadoop.version>0.20-append-r1057313</hadoop.version>
+        <hadoop.version>0.20.205.0</hadoop.version>
       </properties>
       <dependencies>
         <dependency>

@@ -28,8 +28,11 @@
   Configuration conf = master.getConfiguration();
 %>
 <?xml version="1.0" encoding="UTF-8" ?>
+<!-- Commenting out DOCTYPE so our blue outline shows on hadoop 0.20.205.0, etc.
+     See tail of HBASE-2110 for explaination.
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+-->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
 <title>HBase Master: <%= master.getServerName()%>%></title>
