@@ -1750,6 +1750,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3249. Ensure shuffle-port is correctly used duringMR AM recovery. 
     (vinodkv via acmurthy) 
 
+    MAPREDUCE-3252. Fix map tasks to not rewrite data an extra time when
+    map output fits in spill buffer. (todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
