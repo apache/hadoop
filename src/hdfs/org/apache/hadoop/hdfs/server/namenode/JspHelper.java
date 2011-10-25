@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.Random;
 import java.util.TreeSet;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
@@ -427,15 +428,30 @@ public class JspHelper {
     return UserGroupInformation.createRemoteUser(strings[0]);
   }
 
-  /** Same as getUGI(request, conf, KERBEROS_SSL, true). */
+  /** Same as getUGI(null, request, conf). */
   public static UserGroupInformation getUGI(final HttpServletRequest request,
       final Configuration conf) throws IOException {
-    return getUGI(request, conf, AuthenticationMethod.KERBEROS_SSL, true);
+    return getUGI(null, request, conf);
+  }
+  
+  /**
+   * Get {@link UserGroupInformation} and possibly the delegation token out of
+   * the request.
+   * @param context the Servlet context
+   * @param request the http request
+   * @param conf configuration
+   * @throws AccessControlException if the request has no token
+   */
+  public static UserGroupInformation getUGI(ServletContext context,
+      HttpServletRequest request, Configuration conf) throws IOException {
+    return getUGI(context, request, conf, AuthenticationMethod.KERBEROS_SSL,
+        true);
   }
 
   /**
    * Get {@link UserGroupInformation} and possibly the delegation token out of
    * the request.
+   * @param context the Servlet context
    * @param request the http request
    * @param conf configuration
    * @param secureAuthMethod the AuthenticationMethod used in secure mode.
@@ -443,8 +459,8 @@ public class JspHelper {
    * @return a new user from the request
    * @throws AccessControlException if the request has no token
    */
-  public static UserGroupInformation getUGI(HttpServletRequest request,
-      Configuration conf,
+  public static UserGroupInformation getUGI(ServletContext context,
+      HttpServletRequest request, Configuration conf,
       final AuthenticationMethod secureAuthMethod,
       final boolean tryUgiParameter) throws IOException {
     final UserGroupInformation ugi;
@@ -464,6 +480,14 @@ public class JspHelper {
         DataInputStream in = new DataInputStream(buf);
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
+        if (context != null) {
+          NameNode nn = (NameNode) context.getAttribute("name.node");
+          if (nn != null) {
+            //Verify the token.
+            nn.getNamesystem().getDelegationTokenSecretManager()
+                .verifyToken(id, token.getPassword());
+          }
+        }
         ugi = id.getUser();
         checkUsername(ugi.getShortUserName(), usernameFromQuery);
         checkUsername(ugi.getShortUserName(), user);

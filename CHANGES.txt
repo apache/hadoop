@@ -27,6 +27,8 @@ Release 0.20.205.1 - unreleased
     getDefaultBlockSize() and getDefaultReplication() in WebHdfsFileSystem
     and cleared content type in ExceptionHandler. (szetszwo)
 
+    HDFS-2416. Distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
