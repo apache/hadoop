@@ -104,8 +104,6 @@ implements WritableComparable<HServerInfo> {
 
   /**
    * @return ServerName and load concatenated.
-   * @see #getServerName()
-   * @see #getLoad()
    */
   @Override
   public synchronized String toString() {

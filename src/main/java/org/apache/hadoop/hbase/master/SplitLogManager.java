@@ -68,8 +68,8 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.*
  * znode is created under /hbase/splitlog. SplitLogWorkers race to grab a task.
  *
  * SplitLogManager monitors the task znodes that it creates using the
- * {@link #timeoutMonitor} thread. If a task's progress is slow then
- * {@link #resubmit(String, boolean)} will take away the task from the owner
+ * timeoutMonitor thread. If a task's progress is slow then
+ * resubmit(String, boolean) will take away the task from the owner
  * {@link SplitLogWorker} and the task will be
  * upforgrabs again. When the task is done then the task's znode is deleted by
  * SplitLogManager.
@@ -122,8 +122,6 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param conf
    * @param stopper
    * @param serverName
-   * @param services
-   * @param service
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
       Stoppable stopper, String serverName) {
@@ -205,7 +203,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * @throws IOException
    *             if there was an error while splitting any log file
    * @return cumulative size of the logfiles split
-   * @throws KeeperException 
+   * @throws IOException 
    */
   public long splitLogDistributed(final Path logDir) throws IOException {
     List<Path> logDirs = new ArrayList<Path>();
@@ -218,8 +216,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * available worker region server. This method must only be called after the
    * region servers have been brought online.
    *
-   * @param logDir
-   *          the log directory encoded with a region server name
+   * @param logDirs
    * @throws IOException
    *          if there was an error while splitting any log file
    * @return cumulative size of the logfiles split

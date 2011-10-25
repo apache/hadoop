@@ -76,11 +76,6 @@ extends RetriesExhaustedException {
     return actions.get(i);
   }
 
-  /**
-   * @param i
-   * @return
-   * @deprecated
-   */
   public HServerAddress getAddress(int i) {
     return new HServerAddress(Addressing.createInetSocketAddressFromHostAndPortStr(getHostnamePort(i)));
   }

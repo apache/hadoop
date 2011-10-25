@@ -134,9 +134,9 @@ public abstract class HBaseServer implements RpcServer {
   }
 
   /** Returns the server instance called under or null.  May be called under
-   * {@link #call(Class, Writable, long)} implementations, and under {@link Writable}
-   * methods of paramters and return values.  Permits applications to access
-   * the server context.
+   * {@link #call(Class, Writable, long, MonitoredRPCHandler)} implementations,
+   * and under {@link Writable} methods of paramters and return values.
+   * Permits applications to access the server context.
    * @return HBaseServer
    */
   public static RpcServer get() {
@@ -860,7 +860,6 @@ public abstract class HBaseServer implements RpcServer {
     // Processes one response. Returns true if there are no more pending
     // data for this channel.
     //
-    @SuppressWarnings({"ConstantConditions"})
     private boolean processResponse(final LinkedList<Call> responseQueue,
                                     boolean inHandler) throws IOException {
       boolean error = true;
@@ -1280,14 +1279,15 @@ public abstract class HBaseServer implements RpcServer {
 
   }
 
+
+  private Function<Writable,Integer> qosFunction = null;
+
   /**
    * Gets the QOS level for this call.  If it is higher than the highPriorityLevel and there
    * are priorityHandlers available it will be processed in it's own thread set.
    *
-   * @param param
-   * @return priority, higher is better
+   * @param newFunc
    */
-  private Function<Writable,Integer> qosFunction = null;
   @Override
   public void setQosFunction(Function<Writable, Integer> newFunc) {
     qosFunction = newFunc;

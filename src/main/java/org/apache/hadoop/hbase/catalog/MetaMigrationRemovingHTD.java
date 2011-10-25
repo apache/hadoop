@@ -50,7 +50,7 @@ public class MetaMigrationRemovingHTD {
   /**
    * Update legacy META rows, removing HTD from HRI.
    * @param masterServices
-   * @return
+   * @return List of table descriptors.
    * @throws IOException
    */
   public static List<HTableDescriptor> updateMetaWithNewRegionInfo(
@@ -78,7 +78,7 @@ public class MetaMigrationRemovingHTD {
   /**
    * Update the ROOT with new HRI. (HRI with no HTD)
    * @param masterServices
-   * @return
+   * @return List of table descriptors
    * @throws IOException
    */
   public static List<HTableDescriptor> updateRootWithNewRegionInfo(

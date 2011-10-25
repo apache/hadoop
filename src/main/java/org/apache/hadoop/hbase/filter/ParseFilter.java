@@ -19,26 +19,19 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
-import java.util.TreeSet;
 import java.util.ArrayList;
-import java.util.Stack;
+import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Stack;
 
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.filter.ParseConstants;
-
-import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
-import java.lang.ArrayIndexOutOfBoundsException;
-import java.lang.ClassCastException;
-import java.lang.reflect.*;
-import java.util.EmptyStackException;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class allows a user to specify a filter via a string
@@ -289,7 +282,7 @@ public class ParseFilter {
 /**
  * Returns the arguments of the filter from the filter string
  * <p>
- * @param filter_string filter string given by the user
+ * @param filterStringAsByteArray filter string given by the user
  * @return an ArrayList containing the arguments of the filter in the filter string
  */
   public static ArrayList<byte []> getFilterArguments (byte [] filterStringAsByteArray) {
@@ -361,7 +354,6 @@ public class ParseFilter {
  * @param operatorStack the stack containing the operators and parenthesis
  * @param filterStack the stack containing the filters
  * @param operator the operator found while parsing the filterString
- * @return returns the filterStack after evaluating the stack
  */
   public void reduce(Stack<ByteBuffer> operatorStack,
                      Stack<Filter> filterStack,
@@ -646,7 +638,7 @@ public class ParseFilter {
  * byte array representing abc
  * <p>
  * @param quotedByteArray the quoted byte array
- * @return
+ * @return Unquoted byte array
  */
   public static byte [] removeQuotesFromByteArray (byte [] quotedByteArray) {
     if (quotedByteArray == null ||
@@ -665,7 +657,7 @@ public class ParseFilter {
  * Converts an int expressed in a byte array to an actual int
  * <p>
  * This doesn't use Bytes.toInt because that assumes
- * that there will be {@link #SIZEOF_INT} bytes available.
+ * that there will be {@link Bytes#SIZEOF_INT} bytes available.
  * <p>
  * @param numberAsByteArray the int value expressed as a byte array
  * @return the int value
@@ -688,7 +680,7 @@ public class ParseFilter {
  * Converts a long expressed in a byte array to an actual long
  * <p>
  * This doesn't use Bytes.toLong because that assumes
- * that there will be {@link #SIZEOF_LONG} bytes available.
+ * that there will be {@link Bytes#SIZEOF_INT} bytes available.
  * <p>
  * @param numberAsByteArray the long value expressed as a byte array
  * @return the long value

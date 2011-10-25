@@ -47,7 +47,7 @@ public class BitComparator extends WritableByteArrayComparable {
   /**
    * Constructor
    * @param value value
-   * @param BitwiseOp bitOperator - the operator to use on the bit comparison
+   * @param bitOperator operator to use on the bit comparison
    */
   public BitComparator(byte[] value, BitwiseOp bitOperator) {
     super(value);

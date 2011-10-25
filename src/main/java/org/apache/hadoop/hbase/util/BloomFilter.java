@@ -37,8 +37,7 @@ import java.nio.ByteBuffer;
  * When creating the filter, the sender can choose its desired point in a
  * trade-off between the false positive rate and the size.
  *
- * @see {@link BloomFilterWriter} for the ability to add elements to a Bloom
- *      filter
+ * @see BloomFilterWriter for the ability to add elements to a Bloom filter
  */
 public interface BloomFilter extends BloomFilterBase {
 
@@ -59,5 +58,4 @@ public interface BloomFilter extends BloomFilterBase {
    *         and thus allows a null byte buffer to be passed to contains()
    */
   boolean supportsAutoLoading();
-
 }

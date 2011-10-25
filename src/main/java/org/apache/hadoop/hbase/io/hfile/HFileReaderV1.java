@@ -55,7 +55,6 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * stream.
    * @param size Length of the stream.
    * @param cacheConf cache references and configuration
-   * @throws IOException
    */
   public HFileReaderV1(Path path, FixedFileTrailer trailer,
       final FSDataInputStream fsdis, final long size,
@@ -80,7 +79,7 @@ public class HFileReaderV1 extends AbstractHFileReader {
    * Read in the index and file info.
    *
    * @return A map of fileinfo data.
-   * @see {@link Writer#appendFileInfo(byte[], byte[])}.
+   * @see Writer#appendFileInfo(byte[], byte[])
    * @throws IOException
    */
   @Override

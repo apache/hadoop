@@ -31,7 +31,7 @@ public class LoadBalancerFactory {
   /**
    * Create a loadblanacer from the given conf.
    * @param conf
-   * @return
+   * @return A {@link LoadBalancer}
    */
   public static LoadBalancer getLoadBalancer(Configuration conf) {
 

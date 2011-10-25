@@ -106,8 +106,6 @@ public class HTablePool implements Closeable {
    *          configuration
    * @param maxSize
    *          maximum number of references to keep for each table
-   * @param tableFactory
-   *          table factory
    * @param poolType
    *          pool type which is one of {@link PoolType#Reusable} or
    *          {@link PoolType#ThreadLocal}

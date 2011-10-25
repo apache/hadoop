@@ -20,10 +20,10 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.KeyValue;
-
-import java.util.List;
 import java.util.ArrayList;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Scan;
 
 /**
  * This filter is used to filter based on the key. It takes an operator

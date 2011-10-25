@@ -198,7 +198,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   /**
-   * TODO left from {@HFile} version 1: move this to StoreFile after Ryan's
+   * TODO left from {@link HFile} version 1: move this to StoreFile after Ryan's
    * patch goes in to eliminate {@link KeyValue} here.
    *
    * @return the first row key, or null if the file is empty.
@@ -212,7 +212,7 @@ public abstract class AbstractHFileReader implements HFile.Reader {
   }
 
   /**
-   * TODO left from {@HFile} version 1: move this to StoreFile after
+   * TODO left from {@link HFile} version 1: move this to StoreFile after
    * Ryan's patch goes in to eliminate {@link KeyValue} here.
    *
    * @return the last row key, or null if the file is empty.

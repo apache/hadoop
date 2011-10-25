@@ -42,14 +42,15 @@ import org.apache.hadoop.io.Writable;
  * <S>. There is a conversion method
  * {@link ColumnInterpreter#castToReturnType(Object)} which takes a <T> type and
  * returns a <S> type.
- * @param <T, S>: T - cell value data type, S - promoted data type
+ * @param <T> Cell value data type
+ * @param <S> Promoted data type
  */
 public interface ColumnInterpreter<T, S> extends Writable {
 
   /**
    * @param colFamily
    * @param colQualifier
-   * @param value
+   * @param kv
    * @return value of type T
    * @throws IOException
    */
@@ -57,44 +58,39 @@ public interface ColumnInterpreter<T, S> extends Writable {
       throws IOException;
 
   /**
-   * returns sum or non null value among (if either of them is null); otherwise
-   * returns a null.
    * @param l1
    * @param l2
-   * @return
+   * @return sum or non null value among (if either of them is null); otherwise
+   * returns a null.
    */
   public S add(S l1, S l2);
 
   /**
    * returns the maximum value for this type T
-   * @return
+   * @return max
    */
 
   T getMaxValue();
-
-  /**
-   * @return
-   */
 
   T getMinValue();
 
   /**
    * @param o1
    * @param o2
-   * @return
+   * @return multiplication
    */
   S multiply(S o1, S o2);
 
   /**
    * @param o
-   * @return
+   * @return increment
    */
   S increment(S o);
 
   /**
    * provides casting opportunity between the data types.
    * @param o
-   * @return
+   * @return cast
    */
   S castToReturnType(T o);
 
@@ -109,10 +105,10 @@ public interface ColumnInterpreter<T, S> extends Writable {
 
   /**
    * used for computing average of <S> data values. Not providing the divide
-   * method that takes two <S> values as it si not needed as of now.
+   * method that takes two <S> values as it is not needed as of now.
    * @param o
    * @param l
-   * @return
+   * @return Average
    */
   double divideForAvg(S o, Long l);
 }

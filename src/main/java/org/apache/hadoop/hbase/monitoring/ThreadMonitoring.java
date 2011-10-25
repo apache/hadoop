@@ -48,8 +48,9 @@ public abstract class ThreadMonitoring {
   /**
    * Print all of the thread's information and stack traces.
    * 
-   * @param stream the stream to
-   * 
+   * @param sb
+   * @param info
+   * @param indent
    */
   public static void appendThreadInfo(StringBuilder sb,
                                       ThreadInfo info,

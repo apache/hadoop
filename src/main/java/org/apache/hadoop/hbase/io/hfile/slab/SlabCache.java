@@ -103,7 +103,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    * The second list is blocksize of the slabs in bytes. (E.g. the slab holds
    * blocks of this size).
    *
-   * @param Configuration file.
+   * @param conf Configuration file.
    */
   public void addSlabByConf(Configuration conf) {
     // Proportions we allocate to each slab of the total size.
@@ -229,7 +229,8 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   /**
    * Get the buffer of the block with the specified name.
    *
-   * @param blockName block name
+   * @param key
+   * @param caching
    * @return buffer of specified block name, or null if not in cache
    */
   public Cacheable getBlock(String key, boolean caching) {

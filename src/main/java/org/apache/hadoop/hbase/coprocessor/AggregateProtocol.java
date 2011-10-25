@@ -80,11 +80,10 @@ public interface AggregateProtocol extends CoprocessorProtocol {
   <T, S> S getSum(ColumnInterpreter<T, S> ci, Scan scan) throws IOException;
 
   /**
-   * Gives the row count for the given column family and column qualifier, in
-   * the given row range as defined in the Scan object.
    * @param ci
    * @param scan
-   * @return
+   * @return Row count for the given column family and column qualifier, in
+   * the given row range as defined in the Scan object.
    * @throws IOException
    */
   <T, S> long getRowNum(ColumnInterpreter<T, S> ci, Scan scan)
@@ -104,7 +103,7 @@ public interface AggregateProtocol extends CoprocessorProtocol {
    * type.
    * @param ci
    * @param scan
-   * @return
+   * @return Average
    * @throws IOException
    */
   <T, S> Pair<S, Long> getAvg(ColumnInterpreter<T, S> ci, Scan scan)
@@ -120,7 +119,7 @@ public interface AggregateProtocol extends CoprocessorProtocol {
    * deviation is square root of variance.
    * @param ci
    * @param scan
-   * @return
+   * @return STD
    * @throws IOException
    */
   <T, S> Pair<List<S>, Long> getStd(ColumnInterpreter<T, S> ci, Scan scan)

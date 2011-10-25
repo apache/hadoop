@@ -108,7 +108,7 @@ public class RegionTransitionData implements Writable {
    *
    * @param eventType type of event
    * @param regionName name of region as per <code>HRegionInfo#getRegionName()</code>
-   * @param origin Originating {@link ServerName}
+   * @param serverName Originating {@link ServerName}
    * @param payload Payload examples include the daughters involved in a
    * {@link EventType#RS_ZK_REGION_SPLIT}. Can be null
    */

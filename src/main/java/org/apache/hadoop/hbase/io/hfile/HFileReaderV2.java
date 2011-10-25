@@ -207,7 +207,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * Read in a file block.
    *
    * @param dataBlockOffset offset to read.
-   * @param onDiskSize size of the block
+   * @param onDiskBlockSize size of the block
+   * @param cacheBlock
    * @param pread Use positional read instead of seek+read (positional is better
    *          doing random reads whereas seek+read is better scanning).
    * @param isCompaction is this block being read as part of a compaction

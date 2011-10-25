@@ -220,7 +220,7 @@ public interface MasterObserver extends Coprocessor {
   /**
    * Called prior to unassigning a given region.
    * @param ctx the environment to interact with the framework and master
-   * @param regionName the name of the region
+   * @param regionInfo
    * @param force whether to force unassignment or not
    */
   void preUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -229,7 +229,7 @@ public interface MasterObserver extends Coprocessor {
   /**
    * Called after the region unassignment has been requested.
    * @param ctx the environment to interact with the framework and master
-   * @param regionName the name of the region
+   * @param regionInfo
    * @param force whether to force unassignment or not
    */
   void postUnassign(final ObserverContext<MasterCoprocessorEnvironment> ctx,

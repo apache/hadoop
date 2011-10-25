@@ -145,7 +145,7 @@ public class CatalogTracker {
    * Does not timeout.
    * @param zk If zk is null, we'll create an instance (and shut it down
    * when {@link #stop()} is called) else we'll use what is passed.
-   * @param connection server connection
+   * @param conf
    * @param abortable If fatal exception we'll call abort on this.  May be null.
    * If it is we'll use the Connection associated with the passed
    * {@link Configuration} as our Abortable.

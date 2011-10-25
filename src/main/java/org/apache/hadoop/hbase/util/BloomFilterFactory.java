@@ -127,12 +127,11 @@ public final class BloomFilterFactory {
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile} writing.
    *
    * @param conf
+   * @param cacheConf
    * @param bloomType
    * @param maxKeys an estimate of the number of keys we expect to insert.
    *        Irrelevant if compound Bloom filters are enabled.
    * @param writer the HFile writer
-   * @param comparator the comparator to use for compound Bloom filters. This
-   *        has no effect if creating single-chunk version 1 Bloom filters.
    * @return the new Bloom filter, or null in case Bloom filters are disabled
    *         or when failed to create one.
    */

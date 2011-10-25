@@ -1284,7 +1284,7 @@ public class HLog implements Syncable {
    *
    * In this method, by removing the entry in lastSeqWritten for the region
    * being flushed we ensure that the next edit inserted in this region will be
-   * correctly recorded in {@link #append(HRegionInfo, HLogKey, WALEdit)}. The
+   * correctly recorded in {@link #append(HRegionInfo, byte[], WALEdit, long, HTableDescriptor)} The
    * lsn of the earliest in-memory lsn - which is now in the memstore snapshot -
    * is saved temporarily in the lastSeqWritten map while the flush is active.
    *
@@ -1292,7 +1292,7 @@ public class HLog implements Syncable {
    *         {@link #completeCacheFlush(byte[], byte[], long, boolean)} (byte[],
    *         byte[], long)}
    * @see #completeCacheFlush(byte[], byte[], long, boolean)
-   * @see #abortCacheFlush()
+   * @see #abortCacheFlush(byte[])
    */
   public long startCacheFlush(final byte[] encodedRegionName) {
     this.cacheFlushLock.lock();
@@ -1592,29 +1592,6 @@ public class HLog implements Syncable {
     System.err.println("         For example: HLog --dump hdfs://example.com:9000/hbase/.logs/MACHINE/LOGFILE");
     System.err.println(" --split Split the passed directory of WAL logs");
     System.err.println("         For example: HLog --split hdfs://example.com:9000/hbase/.logs/DIR");
-  }
-
-  private static void dump(final Configuration conf, final Path p)
-  throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    if (!fs.exists(p)) {
-      throw new FileNotFoundException(p.toString());
-    }
-    if (!fs.isFile(p)) {
-      throw new IOException(p + " is not a file");
-    }
-    Reader log = getReader(fs, p, conf);
-    try {
-      int count = 0;
-      HLog.Entry entry;
-      while ((entry = log.next()) != null) {
-        System.out.println("#" + count + ", pos=" + log.getPosition() + " " +
-          entry.toString());
-        count++;
-      }
-    } finally {
-      log.close();
-    }
   }
 
   private static void split(final Configuration conf, final Path p)

@@ -61,7 +61,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 /**
  * Executes region split as a "transaction".  Call {@link #prepare()} to setup
  * the transaction, {@link #execute(Server, RegionServerServices)} to run the
- * transaction and {@link #rollback(OnlineRegions)} to cleanup if execute fails.
+ * transaction and {@link #rollback(Server, RegionServerServices)} to cleanup if execute fails.
  *
  * <p>Here is an example of how you would use this class:
  * <pre>
@@ -145,9 +145,6 @@ public class SplitTransaction {
 
   /**
    * Constructor
-   * @param services So we can online new regions.  If null, we'll skip onlining
-   * (Useful testing).
-   * @param c Configuration to use running split
    * @param r Region to split
    * @param splitrow Row to split around
    */
@@ -430,8 +427,7 @@ public class SplitTransaction {
    * @param services Used to online/offline regions.
    * @throws IOException If thrown, transaction failed. Call {@link #rollback(Server, RegionServerServices)}
    * @return Regions created
-   * @throws KeeperException
-   * @throws NodeExistsException 
+   * @throws IOException
    * @see #rollback(Server, RegionServerServices)
    */
   public PairOfSameType<HRegion> execute(final Server server,

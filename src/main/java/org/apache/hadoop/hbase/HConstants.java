@@ -437,13 +437,13 @@ public final class HConstants {
   public static int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
 
   /**
-   * Parameter name for unique identifier for this {@link Configuration}
-   * instance. If there are two or more {@link Configuration} instances that,
+   * Parameter name for unique identifier for this {@link org.apache.hadoop.conf.Configuration}
+   * instance. If there are two or more {@link org.apache.hadoop.conf.Configuration} instances that,
    * for all intents and purposes, are the same except for their instance ids,
-   * then they will not be able to share the same {@link Connection} instance.
+   * then they will not be able to share the same {@link org.apache.hadoop.hbase.client.HConnection} instance.
    * On the other hand, even if the instance ids are the same, it could result
-   * in non-shared {@link Connection} instances if some of the other connection
-   * parameters differ.
+   * in non-shared {@link org.apache.hadoop.hbase.client.HConnection}
+   * instances if some of the other connection parameters differ.
    */
   public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 

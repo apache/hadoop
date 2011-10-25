@@ -210,8 +210,8 @@ public class RegionCoprocessorHost
    * {@link org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost#postOpen()} are such hooks.
    *
    * See also {@link org.apache.hadoop.hbase.master.MasterCoprocessorHost#handleCoprocessorThrowable()}
-   * @param env: The coprocessor that threw the exception.
-   * @param e: The exception that was thrown.
+   * @param env The coprocessor that threw the exception.
+   * @param e The exception that was thrown.
    */
   private void handleCoprocessorThrowableNoRethrow(
       final CoprocessorEnvironment env, final Throwable e) {
@@ -566,7 +566,6 @@ public class RegionCoprocessorHost
   /**
    * @param get the Get request
    * @param results the result set
-   * @return the possibly transformed result set to use
    * @exception IOException Exception
    */
   public void postGet(final Get get, final List<KeyValue> results)

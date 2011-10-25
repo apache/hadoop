@@ -55,7 +55,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   /**
    * @param fs
    * @param p
-   * @param c
+   * @param cacheConf
    * @param r
    * @throws IOException
    */

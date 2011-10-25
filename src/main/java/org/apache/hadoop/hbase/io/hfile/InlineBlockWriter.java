@@ -56,7 +56,6 @@ public interface InlineBlockWriter {
    * @param offset the offset of the block in the stream
    * @param onDiskSize the on-disk size of the block
    * @param uncompressedSize the uncompressed size of the block
-   * @param rawSize
    */
   void blockWritten(long offset, int onDiskSize, int uncompressedSize);
 
@@ -69,5 +68,4 @@ public interface InlineBlockWriter {
    * @return true if inline blocks produced by this writer should be cached
    */
   boolean cacheOnWrite();
-
 }

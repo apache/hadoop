@@ -90,7 +90,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    }
   
   /** @return Bind address -- the raw IP, the result of a call to
-   * {@link InetSocketAddress#getAddress()#getHostAddress()} --
+   * InetSocketAddress#getAddress()#getHostAddress() --
    * or null if cannot resolve */
   public String getBindAddress() {
     return getBindAddressInternal(address);

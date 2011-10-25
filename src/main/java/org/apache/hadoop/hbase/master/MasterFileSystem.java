@@ -164,15 +164,13 @@ public class MasterFileSystem {
 
   /**
    * @return HBase root dir.
-   * @throws IOException
    */
   public Path getRootDir() {
     return this.rootdir;
   }
 
   /**
-   * Returns the unique identifier generated for this cluster
-   * @return
+   * @return The unique identifier generated for this cluster
    */
   public String getClusterId() {
     return clusterId;

@@ -131,7 +131,6 @@ public abstract class Mutation extends OperationWithAttributes {
 
   /**
    * Method for setting the put's familyMap
-   * @return familyMap
    */
   public void setFamilyMap(Map<byte [], List<KeyValue>> map) {
     this.familyMap = map;

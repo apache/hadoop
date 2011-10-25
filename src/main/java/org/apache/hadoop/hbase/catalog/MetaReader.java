@@ -251,7 +251,7 @@ public class MetaReader {
    * @param metaServer connection to server hosting ROOT
    * @return location of META in ROOT where location, or null if not available
    * @throws IOException
-   * @deprecated Does not retry; use {@link #readRegionLocation(CatalogTracker, byte[])
+   * @deprecated Does not retry; use {@link #readRegionLocation(CatalogTracker, byte[])}
    */
   public static ServerName readMetaLocation(HRegionInterface metaServer)
   throws IOException {
@@ -589,7 +589,7 @@ public class MetaReader {
 
   /**
    * @param catalogTracker
-   * @param hsi Server specification
+   * @param serverName
    * @return List of user regions installed on this server (does not include
    * catalog regions).
    * @throws IOException

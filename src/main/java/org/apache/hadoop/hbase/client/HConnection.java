@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -192,7 +191,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param regionServer - the server to connect to
    * @return proxy for HRegionServer
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link #getHRegionConnection(InetSocketAddress)}
+   * @deprecated Use {@link #getHRegionConnection(String, int)}
    */
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
   throws IOException;

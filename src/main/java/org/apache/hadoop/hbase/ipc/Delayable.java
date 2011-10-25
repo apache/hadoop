@@ -48,7 +48,7 @@ public interface Delayable {
   /**
    * Signal that the  RPC server is now allowed to send the response.
    * @param result The value to return to the caller.  If the corresponding
-   * {@link #delayResponse(boolean)} specified that the return value should
+   * delay response specified that the return value should
    * not be delayed, this parameter must be null.
    * @throws IOException
    */

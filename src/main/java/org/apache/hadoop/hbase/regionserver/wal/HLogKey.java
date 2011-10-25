@@ -71,7 +71,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * @param tablename   - name of table
    * @param logSeqNum   - log sequence number
    * @param now Time at which this edit was written.
-   * @param UUID of the cluster (used in Replication)
+   * @param clusterId of the cluster (used in Replication)
    */
   public HLogKey(final byte [] encodedRegionName, final byte [] tablename,
       long logSeqNum, final long now, UUID clusterId) {

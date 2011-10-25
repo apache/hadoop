@@ -67,7 +67,7 @@ import com.google.common.collect.Ordering;
 /**
  * A Store data file.  Stores usually have one or more of these files.  They
  * are produced by flushing the memstore to disk.  To
- * create, call {@link #createWriter(FileSystem, Path, int, Configuration)}
+ * create, call {@link #createWriter(FileSystem, Path, int, Configuration, CacheConfig)}
  * and append data. Be sure to add any metadata before calling close on the
  * Writer (Use the appendMetadata convenience methods). On close, a StoreFile
  * is sitting in the Filesystem.  To refer to it, create a StoreFile instance
@@ -392,7 +392,7 @@ public class StoreFile {
    * helper function to compute HDFS blocks distribution of a given file.
    * For reference file, it is an estimate
    * @param fs  The FileSystem
-   * @param o  The path of the file
+   * @param p  The path of the file
    * @return HDFS blocks distribution
    */
   static public HDFSBlocksDistribution computeHDFSBlockDistribution(
@@ -518,7 +518,6 @@ public class StoreFile {
 
   /**
    * @return Current reader.  Must call createReader first else returns null.
-   * @throws IOException
    * @see #createReader()
    */
   public Reader getReader() {
@@ -526,7 +525,7 @@ public class StoreFile {
   }
 
   /**
-   * @param b 
+   * @param evictOnClose 
    * @throws IOException
    */
   public synchronized void closeReader(boolean evictOnClose)
@@ -819,7 +818,6 @@ public class StoreFile {
      * If the timeRangeTracker is not set,
      * update TimeRangeTracker to include the timestamp of this key
      * @param kv
-     * @throws IOException
      */
     public void includeInTimeRangeTracker(final KeyValue kv) {
       if (!isTimeRangeTrackerSet) {
@@ -1081,7 +1079,7 @@ public class StoreFile {
 
     /**
      * A method for checking Bloom filters. Called directly from
-     * {@link StoreFileScanner} in case of a multi-column query.
+     * StoreFileScanner in case of a multi-column query.
      *
      * @param row
      * @param rowOffset
@@ -1089,7 +1087,7 @@ public class StoreFile {
      * @param col
      * @param colOffset
      * @param colLen
-     * @return
+     * @return True if passes
      */
     public boolean passesBloomFilter(byte[] row, int rowOffset, int rowLen,
         byte[] col, int colOffset, int colLen) {

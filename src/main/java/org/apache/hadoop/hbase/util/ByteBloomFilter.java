@@ -164,8 +164,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    * @param bitSize
    * @param errorRate
    * @return maximum number of keys that can be inserted into the Bloom filter
-   * @see {@link #computeMaxKeys(long, double, int)} for a more precise
-   *      estimate
+   * @see #computeMaxKeys(long, double, int) for a more precise estimate
    */
   public static long idealMaxKeys(long bitSize, double errorRate) {
     // The reason we need to use floor here is that otherwise we might put
@@ -227,7 +226,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
    *
    * @param bitSize
    * @param foldFactor
-   * @return
+   * @return Foldable byte size
    */
   public static int computeFoldableByteSize(long bitSize, int foldFactor) {
     long byteSizeLong = (bitSize + 7) / 8;

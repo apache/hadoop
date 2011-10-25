@@ -243,7 +243,7 @@ public class ServerManager {
   }
 
   /**
-   * @param serverName
+   * @param address
    * @return HServerLoad if serverName is known else null
    * @deprecated Use {@link #getLoad(HServerAddress)}
    */

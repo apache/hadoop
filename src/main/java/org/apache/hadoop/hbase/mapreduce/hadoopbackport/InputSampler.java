@@ -159,7 +159,7 @@ public class InputSampler<K,V> extends Configured implements Tool  {
    * native Hadoop ones (We'll throw a ClassNotFoundException if end up in
    * here when we should be using native hadoop TotalOrderPartitioner).
    * @param job
-   * @return
+   * @return Context
    * @throws IOException 
    */
   public static TaskAttemptContext getTaskAttemptContext(final Job job)

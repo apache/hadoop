@@ -21,14 +21,10 @@ package org.apache.hadoop.hbase.util;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Action;
@@ -129,7 +125,7 @@ public class Objects {
    * Attempts to construct a text description of the given object, by
    * introspecting known classes and building a description of size.
    * @param obj
-   * @return
+   * @return Description
    */
   public static String describeQuantity(Object obj) {
     StringBuilder str = new StringBuilder();

@@ -74,7 +74,7 @@ public interface BlockCache {
 
   /**
    * Get the statistics for this block cache.
-   * @return
+   * @return Stats
    */
   public CacheStats getStats();
 

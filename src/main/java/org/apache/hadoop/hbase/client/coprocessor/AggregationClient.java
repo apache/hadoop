@@ -170,7 +170,7 @@ public class AggregationClient {
    * @param tableName
    * @param ci
    * @param scan
-   * @return
+   * @return <R, S>
    * @throws Throwable
    */
   public <R, S> long rowCount(final byte[] tableName,
@@ -282,7 +282,7 @@ public class AggregationClient {
    * @param tableName
    * @param ci
    * @param scan
-   * @return
+   * @return <R, S>
    * @throws Throwable
    */
   public <R, S> double avg(final byte[] tableName,
@@ -348,7 +348,7 @@ public class AggregationClient {
    * @param tableName
    * @param ci
    * @param scan
-   * @return
+   * @return <R, S>
    * @throws Throwable
    */
   public <R, S> double std(final byte[] tableName, ColumnInterpreter<R, S> ci,

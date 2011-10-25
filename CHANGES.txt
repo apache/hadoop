@@ -369,6 +369,7 @@ Release 0.92.0 - Unreleased
                master (Eugene Koontz via apurtell)
    HBASE-3512  Shell support for listing currently loaded coprocessors (Eugene
                Koontz via apurtell)
+   HBASE-4670  Fix javadoc warnings
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

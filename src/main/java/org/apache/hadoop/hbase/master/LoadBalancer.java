@@ -61,7 +61,7 @@ public interface LoadBalancer extends Configurable {
   /**
    * Perform the major balance operation
    * @param clusterState
-   * @return
+   * @return List of plans
    */
   public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState);
 
@@ -69,7 +69,7 @@ public interface LoadBalancer extends Configurable {
    * Perform a Round Robin assignment of regions.
    * @param regions
    * @param servers
-   * @return
+   * @return Map of servername to regioninfos
    */
   public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(List<HRegionInfo> regions, List<ServerName> servers);
 
@@ -77,7 +77,7 @@ public interface LoadBalancer extends Configurable {
    * Assign regions to the previously hosting region server
    * @param regions
    * @param servers
-   * @return
+   * @return List of plans
    */
   public Map<ServerName, List<HRegionInfo>> retainAssignment(Map<HRegionInfo, ServerName> regions, List<ServerName> servers);
 
@@ -85,14 +85,14 @@ public interface LoadBalancer extends Configurable {
    * Sync assign a region
    * @param regions
    * @param servers
-   * @return
+    * @return Map regioninfos to servernames
    */
   public Map<HRegionInfo, ServerName> immediateAssignment(List<HRegionInfo> regions, List<ServerName> servers);
 
   /**
    * Get a random region server from the list
    * @param servers
-   * @return
+   * @return Servername
    */
   public ServerName randomAssignment(List<ServerName> servers);
 }

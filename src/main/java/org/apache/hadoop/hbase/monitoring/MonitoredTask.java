@@ -56,7 +56,7 @@ public interface MonitoredTask extends Cloneable {
   /**
    * Public exposure of Object.clone() in order to allow clients to easily 
    * capture current state.
-   * @returns a copy of the object whose references will not change
+   * @return a copy of the object whose references will not change
    */
   public abstract MonitoredTask clone();
 

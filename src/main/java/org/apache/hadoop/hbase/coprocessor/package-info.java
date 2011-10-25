@@ -154,7 +154,7 @@ import org.apache.hadoop.hbase.client.Get;
 // and intercept preXXX() method to check user privilege for the given table
 // and column family.
 public class AccessControlCoprocessor extends BaseRegionObserverCoprocessor {
-  @Override
+  // @Override
   public Get preGet(CoprocessorEnvironment e, Get get)
       throws CoprocessorException {
 
@@ -208,9 +208,9 @@ extends CoprocessorProtocol {
 // Aggregation implementation at a region.
 public static class ColumnAggregationEndpoint extends BaseEndpointCoprocessor
 implements ColumnAggregationProtocol {
-  @Override
-   // Scan the region by the given family and qualifier. Return the aggregation
-   // result.
+  // @Override
+  // Scan the region by the given family and qualifier. Return the aggregation
+  // result.
   public int sum(byte[] family, byte[] qualifier)
   throws IOException {
     // aggregate at each region

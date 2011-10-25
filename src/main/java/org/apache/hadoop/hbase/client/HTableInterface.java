@@ -279,7 +279,7 @@ public interface HTableInterface {
   /**
    * Atomically increments a column value.
    * <p>
-   * Equivalent to {@code {@link #incrementColumnValue(byte[], byte[], byte[],
+   * Equivalent to {@link #incrementColumnValue(byte[], byte[], byte[],
    * long, boolean) incrementColumnValue}(row, family, qualifier, amount,
    * <b>true</b>)}
    * @param row The row that contains the cell to increment.
@@ -377,7 +377,7 @@ public interface HTableInterface {
    *
    * @param protocol The class or interface defining the remote protocol
    * @param row The row key used to identify the remote region location
-   * @return
+   * @return A CoprocessorProtocol instance
    */
   <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol, byte[] row);
 
@@ -402,7 +402,7 @@ public interface HTableInterface {
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
    * method
    * @return a <code>Map</code> of region names to
-   * {@link Batch.Call#call(Object)} return values
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)} return values
    */
   <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
       Class<T> protocol, byte[] startKey, byte[] endKey, Batch.Call<T,R> callable)
@@ -421,7 +421,7 @@ public interface HTableInterface {
    *
    * <p>
    * For each result, the given
-   * {@link Batch.Callback#update(byte[], byte[], Object)}
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
    * method will be called.
    *</p>
    *
@@ -432,7 +432,7 @@ public interface HTableInterface {
    * @param callable wraps the CoprocessorProtocol implementation method calls
    * made per-region
    * @param callback an instance upon which
-   * {@link Batch.Callback#update(byte[], byte[], Object)} with the
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)} with the
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
    * return value for each region
    * @param <T> CoprocessorProtocol subclass for the remote invocation

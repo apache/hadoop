@@ -52,7 +52,7 @@ import org.apache.hadoop.io.WritableUtils;
  * Examples of how to use the block index writer can be found in
  * {@link CompoundBloomFilterWriter} and {@link HFileWriterV2}. Examples of how
  * to use the reader can be found in {@link HFileReaderV2} and
- * {@link TestHFileBlockIndex}.
+ * TestHFileBlockIndex.
  */
 public class HFileBlockIndex {
 
@@ -62,7 +62,7 @@ public class HFileBlockIndex {
 
   /**
    * The maximum size guideline for index blocks (both leaf, intermediate, and
-   * root). If not specified, {@link #DEFAULT_MAX_CHUNK_SIZE} is used.
+   * root). If not specified, <code>DEFAULT_MAX_CHUNK_SIZE</code> is used.
    */
   public static final String MAX_CHUNK_SIZE_KEY = "hfile.index.block.max.size";
 
@@ -913,8 +913,6 @@ public class HFileBlockIndex {
      * blocks, so the non-root index format is used.
      *
      * @param out
-     * @param position The beginning offset of the inline block in the file not
-     *          include the header.
      */
     @Override
     public void writeInlineBlock(DataOutput out) throws IOException {

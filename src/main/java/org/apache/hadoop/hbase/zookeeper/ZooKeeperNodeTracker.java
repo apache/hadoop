@@ -68,7 +68,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * Starts the tracking of the node in ZooKeeper.
    *
    * <p>Use {@link #blockUntilAvailable()} to block until the node is available
-   * or {@link #getData()} to get the data of the node if it is available.
+   * or {@link #getData(boolean)} to get the data of the node if it is available.
    */
   public synchronized void start() {
     this.watcher.registerListener(this);
@@ -143,7 +143,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
    * <p>If the node is currently available, the most up-to-date known version of
    * the data is returned.  If the node is not currently available, null is
    * returned.
-   * @param whether to refresh the data by calling ZK directly.
+   * @param refresh whether to refresh the data by calling ZK directly.
    * @return data of the node, null if unavailable
    */
   public synchronized byte [] getData(boolean refresh) {

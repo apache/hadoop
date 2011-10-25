@@ -276,7 +276,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * Main processing loop for the HMaster.
    * <ol>
    * <li>Block until becoming active master
-   * <li>Finish initialization via {@link #finishInitialization()}
+   * <li>Finish initialization via finishInitialization(MonitoredTask)
    * <li>Enter loop until we are stopped
    * <li>Stop services and perform cleanup once stopped
    * </ol>
@@ -856,7 +856,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   /**
-   * Switch for the background {@link CatalogJanitor} thread.
+   * Switch for the background CatalogJanitor thread.
    * Used for testing.  The thread will continue to run.  It will just be a noop
    * if disabled.
    * @param b If false, the catalog janitor won't do anything.

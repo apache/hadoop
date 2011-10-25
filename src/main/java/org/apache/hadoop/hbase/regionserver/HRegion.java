@@ -295,7 +295,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * HRegion constructor.  his constructor should only be used for testing and
    * extensions.  Instances of HRegion should be instantiated with the
-   * {@link HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)} method.
+   * {@link HRegion#newHRegion(Path, HLog, FileSystem, Configuration, HRegionInfo, HTableDescriptor, RegionServerServices)} method.
    *
    *
    * @param tableDir qualified path of directory where region should be located,
@@ -313,7 +313,7 @@ public class HRegion implements HeapSize { // , Writable{
    * is new), then read them from the supplied path.
    * @param rsServices reference to {@link RegionServerServices} or null
    *
-   * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, org.apache.hadoop.hbase.HRegionInfo, FlushRequester)
+   * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, HRegionInfo, HTableDescriptor, RegionServerServices)
    */
   public HRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
       HRegionInfo regionInfo, final HTableDescriptor htd,
@@ -1110,7 +1110,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param status 
    * @return true if the region needs compacting
    * @throws IOException
-   * @see #internalFlushcache()
+   * @see #internalFlushcache(MonitoredTask)
    */
   protected boolean internalFlushcache(
       final HLog wal, final long myseqid, MonitoredTask status)
@@ -2534,7 +2534,7 @@ public class HRegion implements HeapSize { // , Writable{
   
   /**
    * Release the row lock!
-   * @param lockid  The lock ID to release.
+   * @param lockId  The lock ID to release.
    */
   public void releaseRowLock(final Integer lockId) {
     HashedBytes rowKey = lockIds.remove(lockId);
@@ -2944,13 +2944,14 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Open a Region.
-   * @param info Info for region to be opened.
+   * @param info Info for region to be opened
+   * @param htd
    * @param wal HLog for region to use. This method will call
    * HLog#setSequenceNumber(long) passing the result of the call to
    * HRegion#getMinSequenceId() to ensure the log id is properly kept
    * up.  HRegionStore does this every time it opens a new region.
    * @param conf
-   * @param flusher An interface we can request flushes against.
+   * @param rsServices An interface we can request flushes against.
    * @param reporter An interface we can report progress against.
    * @return new HRegion
    *

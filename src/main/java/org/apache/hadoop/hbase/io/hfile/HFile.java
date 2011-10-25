@@ -235,18 +235,14 @@ public class HFile {
   }
 
   /**
-   * Returns the factory to be used to create {@link HFile} writers. Should
-   * always be {@link HFileWriterV2#WRITER_FACTORY_V2} in production, but
-   * can also be {@link HFileWriterV1#WRITER_FACTORY_V1} in testing.
+   * Returns the factory to be used to create {@link HFile} writers.
    */
   public static final WriterFactory getWriterFactory(Configuration conf) {
     return HFile.getWriterFactory(conf, new CacheConfig(conf));
   }
 
   /**
-   * Returns the factory to be used to create {@link HFile} writers. Should
-   * always be {@link HFileWriterV2#WRITER_FACTORY_V2} in production, but
-   * can also be {@link HFileWriterV1#WRITER_FACTORY_V1} in testing.
+   * Returns the factory to be used to create {@link HFile} writers
    */
   public static final WriterFactory getWriterFactory(Configuration conf,
       CacheConfig cacheConf) {

@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -41,7 +40,7 @@ import org.apache.zookeeper.KeeperException;
  * listening for changes in the RS node list and watching each node.
  *
  * <p>If an RS node gets deleted, this automatically handles calling of
- * {@link ServerManager#expireServer(org.apache.hadoop.hbase.HServerInfo)}.
+ * {@link ServerManager#expireServer(ServerName)}
  */
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
@@ -121,7 +120,6 @@ public class RegionServerTracker extends ZooKeeperListener {
   /**
    * Gets the online servers.
    * @return list of online servers
-   * @throws KeeperException
    */
   public List<ServerName> getOnlineServers() {
     synchronized (this.regionServers) {

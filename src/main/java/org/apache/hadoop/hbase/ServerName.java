@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * usually timestamp of server startup). The {@link #toString()} format of
  * ServerName is safe to use in the  filesystem and as znode name up in
  * ZooKeeper.  Its format is:
- * <code>&lt;hostname> '{@link #SERVERNAME_SEPARATOR"}' &lt;port> '{@ink #SERVERNAME_SEPARATOR"}' &lt;startcode></code>.
+ * <code>&lt;hostname> '{@link #SERVERNAME_SEPARATOR}' &lt;port> '{@link #SERVERNAME_SEPARATOR}' &lt;startcode></code>.
  * For example, if hostname is <code>example.org</code>, port is <code>1234</code>,
  * and the startcode for the regionserver is <code>1212121212</code>, then
  * the {@link #toString()} would be <code>example.org,1234,1212121212</code>.
@@ -220,7 +220,7 @@ public class ServerName implements Comparable<ServerName> {
 
   /**
    * @param left
-   * @param rigth
+   * @param right
    * @return True if <code>other</code> has same hostname and port.
    */
   public static boolean isSameHostnameAndPort(final ServerName left,

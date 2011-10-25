@@ -71,7 +71,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
 
   /**
    * Prepare an ordered pair of row and qualifier to be compared using
-   * {@link KeyValue.KeyComparator}. This is only used for row-column Bloom
+   * KeyValue.KeyComparator. This is only used for row-column Bloom
    * filters.
    */
   @Override

@@ -19,6 +19,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,22 +49,10 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-
-import java.io.DataInputStream;
-import java.io.EOFException;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -523,7 +522,7 @@ public abstract class FSUtils {
   /**
    * Compute HDFS blocks distribution of a given file, or a portion of the file
    * @param fs file system
-   * @param FileStatus file status of the file
+   * @param status file status of the file
    * @param start start position of the portion
    * @param length length of the portion 
    * @return The HDFS blocks distribution
@@ -1104,7 +1103,7 @@ public abstract class FSUtils {
   /**
    * Update table descriptor
    * @param fs
-   * @param conf
+   * @param rootdir
    * @param hTableDescriptor
    * @throws IOException
    */

@@ -126,8 +126,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 
    * attribute which denotes if the deferred log flush option is enabled
-   * 
-   * @see #getDeferredLogFlush()
    */
   public static final String DEFERRED_LOG_FLUSH = "DEFERRED_LOG_FLUSH";
   private static final ImmutableBytesWritable DEFERRED_LOG_FLUSH_KEY =
@@ -524,7 +522,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * before these deferred edits in memory are flushed onto the filesystem. 
    * </p>
    * 
-   * @param true if that deferred log flush is enabled on the table.
+   * @param isDeferredLogFlush
    */
   public void setDeferredLogFlush(final boolean isDeferredLogFlush) {
     setValue(DEFERRED_LOG_FLUSH_KEY, isDeferredLogFlush? TRUE: FALSE);
@@ -552,8 +550,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * This get the class associated with the region split policy which 
    * determines when a region split should occur.  The class used by
-   * default is {@link ConstantSizeRegionSplitPolicy} which split the
-   * region base on a constant {@link #getMaxFileSize()}
+   * default is {@link org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy}
+   * which split the region base on a constant {@link #getMaxFileSize()}
    * 
    * @return the class name of the region split policy for this table.
    * If this returns null, the default constant size based split policy
@@ -877,7 +875,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   }
 
   /**
-   * Returns an unmodifiable collection of all the {@link HColumnDescriptors} 
+   * Returns an unmodifiable collection of all the {@link HColumnDescriptor} 
    * of all the column families of the table.
    *  
    * @return Immutable collection of {@link HColumnDescriptor} of all the
