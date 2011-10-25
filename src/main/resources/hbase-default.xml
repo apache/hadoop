@@ -326,7 +326,7 @@
   </property>
   <property>
     <name>hbase.hregion.memstore.flush.size</name>
-    <value>67108864</value>
+    <value>134217728</value>
     <description>
     Memstore will be flushed to disk if size of the memstore
     exceeds this number of bytes.  Value is checked by a thread that runs
@@ -372,11 +372,11 @@
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>
-    <value>268435456</value>
+    <value>1073741824</value>
     <description>
     Maximum HStoreFile size. If any one of a column families' HStoreFiles has
     grown to exceed this value, the hosting HRegion is split in two.
-    Default: 256M.
+    Default: 1G.
     </description>
   </property>
   <property>

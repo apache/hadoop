@@ -23,6 +23,7 @@ Release 0.92.0 - Unreleased
    HBASE-4247  Add isAborted method to the Abortable interface
                (Akash Ashok)
    HBASE-4503  Purge deprecated HBaseClusterTestCase
+   HBASE-4374  Up default regions size from 256M to 1G
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
