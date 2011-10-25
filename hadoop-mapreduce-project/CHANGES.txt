@@ -1764,6 +1764,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2821. Added missing fields (resourcePerMap & resourcePerReduce)
     to JobSummary logs. (mahadev via acmurthy)
 
+    MAPREDUCE-3253. Fixed ContextFactory to clone JobContext correctly.
+    (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
