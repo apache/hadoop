@@ -71,7 +71,7 @@ abstract class DfsServlet extends HttpServlet {
   protected UserGroupInformation getUGI(HttpServletRequest request,
                                         Configuration conf
 					) throws IOException {
-    return JspHelper.getUGI(request, conf);
+    return JspHelper.getUGI(getServletContext(), request, conf);
   }
 
   /**

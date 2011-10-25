@@ -21,9 +21,9 @@
 %>
 <%!
   static String getDelegationToken(final NameNode nn,
+                                   final UserGroupInformation ugi,
                                    HttpServletRequest request, Configuration conf) 
                                    throws IOException, InterruptedException {
-    final UserGroupInformation ugi = JspHelper.getUGI(request, conf);
     Token<DelegationTokenIdentifier> token =
       ugi.doAs(
               new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>()
@@ -36,14 +36,16 @@
   }
 
   public void redirectToRandomDataNode(
-                            NameNode nn, 
+                            ServletContext context, 
                             HttpServletRequest request,
-                            HttpServletResponse resp,
-                            Configuration conf
+                            HttpServletResponse resp
                            ) throws IOException, InterruptedException {
+    Configuration conf = (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    NameNode nn = (NameNode)context.getAttribute("name.node");
+    final UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     String tokenString = null;
     if (UserGroupInformation.isSecurityEnabled()) {
-      tokenString = getDelegationToken(nn, request, conf);
+      tokenString = getDelegationToken(nn, ugi, request, conf);
     }
     FSNamesystem fsn = nn.getNamesystem();
     String datanode = fsn.randomDataNode();
@@ -76,9 +78,7 @@
 
 <body>
 <% 
-  NameNode nn = (NameNode)application.getAttribute("name.node");
-  Configuration conf = (Configuration) application.getAttribute(JspHelper.CURRENT_CONF);
-  redirectToRandomDataNode(nn, request, response, conf); 
+  redirectToRandomDataNode(application, request, response); 
 %>
 <hr>
 

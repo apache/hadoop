@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
+import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -211,7 +212,9 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(ModificationTimeParam.NAME) @DefaultValue(ModificationTimeParam.DEFAULT)
           final ModificationTimeParam modificationTime,
       @QueryParam(AccessTimeParam.NAME) @DefaultValue(AccessTimeParam.DEFAULT)
-          final AccessTimeParam accessTime
+          final AccessTimeParam accessTime,
+      @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
+          final TokenArgumentParam delegationTokenArgument
       ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
@@ -278,7 +281,7 @@ public class NamenodeWebHdfsMethods {
     case RENEWDELEGATIONTOKEN:
     {
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
-      token.decodeFromUrlString(delegation.getValue());
+      token.decodeFromUrlString(delegationTokenArgument.getValue());
       final long expiryTime = namenode.renewDelegationToken(token);
       final String js = JsonUtil.toJsonString("long", expiryTime);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
@@ -286,7 +289,7 @@ public class NamenodeWebHdfsMethods {
     case CANCELDELEGATIONTOKEN:
     {
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
-      token.decodeFromUrlString(delegation.getValue());
+      token.decodeFromUrlString(delegationTokenArgument.getValue());
       namenode.cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_JSON).build();
     }
@@ -353,6 +356,45 @@ public class NamenodeWebHdfsMethods {
   }
 
   private static final UriFsPathParam ROOT = new UriFsPathParam("");
+  
+  /** Handle HTTP PUT request for root. */
+  @PUT
+  @Path("/")
+  @Consumes({"*/*"})
+  @Produces({MediaType.APPLICATION_JSON})
+  public Response putRoot(
+      @Context final UserGroupInformation ugi,
+      @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
+          final DelegationParam delegation,
+      @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
+          final PutOpParam op,
+      @QueryParam(DestinationParam.NAME) @DefaultValue(DestinationParam.DEFAULT)
+          final DestinationParam destination,
+      @QueryParam(OwnerParam.NAME) @DefaultValue(OwnerParam.DEFAULT)
+          final OwnerParam owner,
+      @QueryParam(GroupParam.NAME) @DefaultValue(GroupParam.DEFAULT)
+          final GroupParam group,
+      @QueryParam(PermissionParam.NAME) @DefaultValue(PermissionParam.DEFAULT)
+          final PermissionParam permission,
+      @QueryParam(OverwriteParam.NAME) @DefaultValue(OverwriteParam.DEFAULT)
+          final OverwriteParam overwrite,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize,
+      @QueryParam(ReplicationParam.NAME) @DefaultValue(ReplicationParam.DEFAULT)
+          final ReplicationParam replication,
+      @QueryParam(BlockSizeParam.NAME) @DefaultValue(BlockSizeParam.DEFAULT)
+          final BlockSizeParam blockSize,
+      @QueryParam(ModificationTimeParam.NAME) @DefaultValue(ModificationTimeParam.DEFAULT)
+          final ModificationTimeParam modificationTime,
+      @QueryParam(AccessTimeParam.NAME) @DefaultValue(AccessTimeParam.DEFAULT)
+          final AccessTimeParam accessTime,
+      @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
+          final TokenArgumentParam delegationTokenArgument
+      ) throws IOException, InterruptedException {
+    return put(ugi, delegation, ROOT, op, destination, owner, group,
+        permission, overwrite, bufferSize, replication, blockSize,
+        modificationTime, accessTime, delegationTokenArgument);
+  }
 
   /** Handle HTTP GET request for the root. */
   @GET
