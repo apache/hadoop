@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -109,7 +110,7 @@ import org.apache.zookeeper.Watcher;
  * @see HMasterRegionInterface
  * @see Watcher
  */
-public class HMaster extends Thread
+public class HMaster extends HasThread
 implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
@@ -175,7 +176,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // If 'true', the balancer is 'on'.  If 'false', the balancer will not run.
   private volatile boolean balanceSwitch = true;
 
-  private Thread catalogJanitorChore;
+  private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
 
   private MasterCoprocessorHost cpHost;
@@ -479,8 +480,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // been assigned.
     status.setStatus("Starting balancer and catalog janitor");
     this.balancerChore = getAndStartBalancerChore(this);
-    this.catalogJanitorChore =
-      Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
+    this.catalogJanitorChore = new CatalogJanitor(this, this);
+    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
 
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
@@ -628,7 +629,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       new LogCleaner(conf.getInt("hbase.master.cleaner.interval", 60 * 1000),
          this, conf, getMasterFileSystem().getFileSystem(),
          getMasterFileSystem().getOldLogDir());
-         Threads.setDaemonThreadRunning(logCleaner, n + ".oldLogCleaner");
+         Threads.setDaemonThreadRunning(logCleaner.getThread(), n + ".oldLogCleaner");
 
    // Put up info server.
    int port = this.conf.getInt("hbase.master.info.port", 60010);
@@ -678,7 +679,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         master.balance();
       }
     };
-    return Threads.setDaemonThreadRunning(chore);
+    return Threads.setDaemonThreadRunning(chore.getThread());
   }
 
   private void stopChores() {

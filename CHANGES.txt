@@ -370,6 +370,8 @@ Release 0.92.0 - Unreleased
    HBASE-3512  Shell support for listing currently loaded coprocessors (Eugene
                Koontz via apurtell)
    HBASE-4670  Fix javadoc warnings
+   HBASE-4367  Deadlock in MemStore flusher due to JDK internally synchronizing
+               on current thread
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

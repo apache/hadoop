@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -443,7 +444,7 @@ public class SplitTransaction {
    * Open daughter region in its own thread.
    * If we fail, abort this hosting server.
    */
-  class DaughterOpener extends Thread {
+  class DaughterOpener extends HasThread {
     private final Server server;
     private final HRegion r;
     private Throwable t = null;

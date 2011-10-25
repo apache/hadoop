@@ -166,7 +166,7 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   public void finishInitialization() {
-    Threads.setDaemonThreadRunning(timeoutMonitor, serverName +
+    Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), serverName +
       ".splitLogManagerTimeoutMonitor");
     // Watcher can be null during tests with Mock'd servers.
     if (this.watcher != null) {

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -323,7 +324,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   /*
    * Statistics thread. Periodically prints the cache statistics to the log.
    */
-  static class StatisticsThread extends Thread {
+  static class StatisticsThread extends HasThread {
     SlabCache ourcache;
 
     public StatisticsThread(SlabCache slabCache) {

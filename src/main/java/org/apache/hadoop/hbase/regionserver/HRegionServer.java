@@ -1353,10 +1353,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,
       conf.getInt("hbase.regionserver.executor.closemeta.threads", 1));
 
-    Threads.setDaemonThreadRunning(this.hlogRoller, n + ".logRoller", handler);
-    Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
+    Threads.setDaemonThreadRunning(this.hlogRoller.getThread(), n + ".logRoller", handler);
+    Threads.setDaemonThreadRunning(this.cacheFlusher.getThread(), n + ".cacheFlusher",
       handler);
-    Threads.setDaemonThreadRunning(this.compactionChecker, n +
+    Threads.setDaemonThreadRunning(this.compactionChecker.getThread(), n +
       ".compactionChecker", handler);
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
@@ -1572,9 +1572,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * have already been called.
    */
   protected void join() {
-    Threads.shutdown(this.compactionChecker);
-    Threads.shutdown(this.cacheFlusher);
-    Threads.shutdown(this.hlogRoller);
+    Threads.shutdown(this.compactionChecker.getThread());
+    Threads.shutdown(this.cacheFlusher.getThread());
+    Threads.shutdown(this.hlogRoller.getThread());
     if (this.compactSplitThread != null) {
       this.compactSplitThread.join();
     }

@@ -240,7 +240,7 @@ public class JVMClusterUtil {
             // The below has been replaced to debug sometime hangs on end of
             // tests.
             // this.master.join():
-            Threads.threadDumpingIsAlive(t.master);
+            Threads.threadDumpingIsAlive(t.master.getThread());
           } catch(InterruptedException e) {
             // continue
           }

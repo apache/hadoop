@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.util.HasThread;
 
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
@@ -50,7 +51,7 @@ import java.io.IOException;
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
-public class Leases extends Thread {
+public class Leases extends HasThread {
   private static final Log LOG = LogFactory.getLog(Leases.class.getName());
   private final int leasePeriod;
   private final int leaseCheckFrequency;
