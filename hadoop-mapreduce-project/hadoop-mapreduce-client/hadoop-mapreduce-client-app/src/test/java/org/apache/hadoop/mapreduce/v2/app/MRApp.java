@@ -315,15 +315,17 @@ public class MRApp extends MRAppMaster {
   }
 
   class MockContainerLauncher implements ContainerLauncher {
+
+    //We are running locally so set the shuffle port to -1 
+    int shufflePort = -1;
+
     @Override
     public void handle(ContainerLauncherEvent event) {
       switch (event.getType()) {
       case CONTAINER_REMOTE_LAUNCH:
-        //We are running locally so set the shuffle port to -1 
         getContext().getEventHandler().handle(
             new TaskAttemptContainerLaunchedEvent(event.getTaskAttemptID(),
-                -1)
-            );
+                shufflePort));
         
         attemptLaunched(event.getTaskAttemptID());
         break;
@@ -355,13 +357,9 @@ public class MRApp extends MRAppMaster {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
         cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
         cId.setId(containerCount++);
-        Container container = recordFactory.newRecordInstance(Container.class);
-        container.setId(cId);
-        container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
-        container.getNodeId().setHost("dummy");
-        container.getNodeId().setPort(1234);
-        container.setContainerToken(null);
-        container.setNodeHttpAddress("localhost:9999");
+        NodeId nodeId = BuilderUtils.newNodeId("localhost", 1234);
+        Container container = BuilderUtils.newContainer(cId, nodeId,
+            "localhost:9999", null, null, null);
         getContext().getEventHandler().handle(
             new TaskAttemptContainerAssignedEvent(event.getAttemptID(),
                 container, null));

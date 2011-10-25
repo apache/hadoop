@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.Test;
@@ -269,6 +270,9 @@ public class TestRecovery {
     
     //wait for map task to complete
     app.waitForState(mapTask1, TaskState.SUCCEEDED);
+
+    // Verify the shuffle-port
+    Assert.assertEquals(5467, task1Attempt1.getShufflePort());
     
     app.waitForState(reduceTask1, TaskState.RUNNING);
     TaskAttempt reduce1Attempt1 = reduceTask1.getAttempts().values().iterator().next();
@@ -290,7 +294,8 @@ public class TestRecovery {
 
     //rerun
     //in rerun the map will be recovered from previous run
-    app = new MRAppWithHistory(1, 2, false, this.getClass().getName(), false, ++runCount);
+    app = new MRAppWithHistory(1, 2, false, this.getClass().getName(), false,
+        ++runCount);
     conf = new Configuration();
     conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
     conf.setBoolean("mapred.mapper.new-api", true);
@@ -308,6 +313,10 @@ public class TestRecovery {
     
     // map will be recovered, no need to send done
     app.waitForState(mapTask1, TaskState.SUCCEEDED);
+
+    // Verify the shuffle-port after recovery
+    task1Attempt1 = mapTask1.getAttempts().values().iterator().next();
+    Assert.assertEquals(5467, task1Attempt1.getShufflePort());
     
     // first reduce will be recovered, no need to send done
     app.waitForState(reduceTask1, TaskState.SUCCEEDED); 
@@ -395,6 +404,13 @@ public class TestRecovery {
     public MRAppWithHistory(int maps, int reduces, boolean autoComplete,
         String testName, boolean cleanOnStart, int startCount) {
       super(maps, reduces, autoComplete, testName, cleanOnStart, startCount);
+    }
+
+    @Override
+    protected ContainerLauncher createContainerLauncher(AppContext context) {
+      MockContainerLauncher launcher = new MockContainerLauncher();
+      launcher.shufflePort = 5467;
+      return launcher;
     }
 
     @Override
