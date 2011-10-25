@@ -34,7 +34,8 @@ public class JobSummary {
   private int numFailedMaps;
   private int numFinishedReduces;
   private int numFailedReduces;
-  // private int numSlotsPerMap; | Doesn't make sense with potentially different
+  private int resourcesPerMap; // resources used per map/min resource
+  private int resourcesPerReduce; // resources used per reduce/min resource
   // resource models
   // private int numSlotsPerReduce; | Doesn't make sense with potentially
   // different resource models
@@ -112,14 +113,14 @@ public class JobSummary {
     this.numFailedMaps = numFailedMaps;
   }
 
-  // public int getNumSlotsPerMap() {
-  // return numSlotsPerMap;
-  // }
-  //
-  // public void setNumSlotsPerMap(int numSlotsPerMap) {
-  // this.numSlotsPerMap = numSlotsPerMap;
-  // }
-
+  public int getResourcesPerMap() {
+    return resourcesPerMap;
+  }
+  
+  public void setResourcesPerMap(int resourcesPerMap) {
+    this.resourcesPerMap = resourcesPerMap;
+  }
+  
   public int getNumFinishedReduces() {
     return numFinishedReduces;
   }
@@ -136,14 +137,14 @@ public class JobSummary {
     this.numFailedReduces = numFailedReduces;
   }
 
-  // public int getNumSlotsPerReduce() {
-  // return numSlotsPerReduce;
-  // }
-  //
-  // public void setNumSlotsPerReduce(int numSlotsPerReduce) {
-  // this.numSlotsPerReduce = numSlotsPerReduce;
-  // }
-
+  public int getResourcesPerReduce() {
+    return this.resourcesPerReduce;
+  }
+  
+  public void setResourcesPerReduce(int resourcesPerReduce) {
+    this.resourcesPerReduce = resourcesPerReduce;
+  }
+  
   public String getUser() {
     return user;
   }
@@ -184,14 +185,6 @@ public class JobSummary {
     this.reduceSlotSeconds = reduceSlotSeconds;
   }
 
-  // public int getClusterSlotCapacity() {
-  // return clusterSlotCapacity;
-  // }
-  //
-  // public void setClusterSlotCapacity(int clusterSlotCapacity) {
-  // this.clusterSlotCapacity = clusterSlotCapacity;
-  // }
-
   public String getJobSummaryString() {
     SummaryBuilder summary = new SummaryBuilder()
       .add("jobId", jobId)
@@ -200,6 +193,8 @@ public class JobSummary {
       .add("firstMapTaskLaunchTime", firstMapTaskLaunchTime)
       .add("firstReduceTaskLaunchTime", firstReduceTaskLaunchTime)
       .add("finishTime", jobFinishTime)
+      .add("resourcesPerMap", resourcesPerMap)
+      .add("resourcesPerReduce", resourcesPerReduce)
       .add("numMaps", numFinishedMaps + numFailedMaps)
       .add("numReduces", numFinishedReduces + numFailedReduces)
       .add("user", user)

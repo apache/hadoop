@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.util.List;
-import java.util.ArrayList;
+import junit.framework.TestCase;
 
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
-
-import junit.framework.TestCase;
 
 /**
  * Test various jobhistory events

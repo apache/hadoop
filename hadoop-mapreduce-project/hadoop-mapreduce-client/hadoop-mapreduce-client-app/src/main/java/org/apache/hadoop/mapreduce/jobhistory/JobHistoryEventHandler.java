@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -91,7 +92,8 @@ public class JobHistoryEventHandler extends AbstractService
   }
 
   /* (non-Javadoc)
-   * @see org.apache.hadoop.yarn.service.AbstractService#init(org.apache.hadoop.conf.Configuration)
+   * @see org.apache.hadoop.yarn.service.AbstractService#init(org.
+   * apache.hadoop.conf.Configuration)
    * Initializes the FileSystem and Path objects for the log and done directories.
    * Creates these directories if they do not already exist.
    */
@@ -155,14 +157,15 @@ public class JobHistoryEventHandler extends AbstractService
                 + doneDirPath
                 + "] based on conf: "
                 + MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR
-                + ". Either set to true or pre-create this directory with appropriate permissions";
+                + ". Either set to true or pre-create this directory with" +
+                " appropriate permissions";
         LOG.error(message);
         throw new YarnException(message);
       }
       }
     } catch (IOException e) {
-      LOG.error("Failed checking for the existance of history intermediate done directory: ["
-          + doneDirPath + "]");
+      LOG.error("Failed checking for the existance of history intermediate " +
+      		"done directory: [" + doneDirPath + "]");
       throw new YarnException(e);
     }
 
@@ -380,8 +383,11 @@ public class JobHistoryEventHandler extends AbstractService
       MetaInfo mi = fileMap.get(event.getJobID());
       try {
         HistoryEvent historyEvent = event.getHistoryEvent();
-        mi.writeEvent(historyEvent);
-        processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(), event.getJobID());
+        if (! (historyEvent instanceof NormalizedResourceEvent)) {
+          mi.writeEvent(historyEvent);
+        }
+        processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(),
+            event.getJobID());
         LOG.info("In HistoryEventHandler "
             + event.getHistoryEvent().getEventType());
       } catch (IOException e) {
@@ -395,7 +401,7 @@ public class JobHistoryEventHandler extends AbstractService
             (JobSubmittedEvent) event.getHistoryEvent();
         mi.getJobIndexInfo().setSubmitTime(jobSubmittedEvent.getSubmitTime());
       }
-
+     
       // If this is JobFinishedEvent, close the writer and setup the job-index
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FINISHED) {
         try {
@@ -415,7 +421,8 @@ public class JobHistoryEventHandler extends AbstractService
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FAILED
           || event.getHistoryEvent().getEventType() == EventType.JOB_KILLED) {
         try {
-          JobUnsuccessfulCompletionEvent jucEvent = (JobUnsuccessfulCompletionEvent) event
+          JobUnsuccessfulCompletionEvent jucEvent = 
+              (JobUnsuccessfulCompletionEvent) event
               .getHistoryEvent();
           mi.getJobIndexInfo().setFinishTime(jucEvent.getFinishTime());
           mi.getJobIndexInfo().setNumMaps(jucEvent.getFinishedMaps());
@@ -429,7 +436,8 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  private void processEventForJobSummary(HistoryEvent event, JobSummary summary, JobId jobId) {
+  public void processEventForJobSummary(HistoryEvent event, JobSummary summary, 
+      JobId jobId) {
     // context.getJob could be used for some of this info as well.
     switch (event.getEventType()) {
     case JOB_SUBMITTED:
@@ -438,6 +446,15 @@ public class JobHistoryEventHandler extends AbstractService
       summary.setQueue(jse.getJobQueueName());
       summary.setJobSubmitTime(jse.getSubmitTime());
       break;
+    case NORMALIZED_RESOURCE:
+      NormalizedResourceEvent normalizedResourceEvent = 
+            (NormalizedResourceEvent) event;
+      if (normalizedResourceEvent.getTaskType() == TaskType.MAP) {
+        summary.setResourcesPerMap(normalizedResourceEvent.getMemory());
+      } else if (normalizedResourceEvent.getTaskType() == TaskType.REDUCE) {
+        summary.setResourcesPerReduce(normalizedResourceEvent.getMemory());
+      }
+      break;  
     case JOB_INITED:
       JobInitedEvent jie = (JobInitedEvent) event;
       summary.setJobLaunchTime(jie.getLaunchTime());
@@ -503,7 +520,8 @@ public class JobHistoryEventHandler extends AbstractService
 
     if (!mi.isWriterActive()) {
       throw new IOException(
-          "Inactive Writer: Likely received multiple JobFinished / JobUnsuccessful events for JobId: ["
+          "Inactive Writer: Likely received multiple JobFinished / " +
+          "JobUnsuccessful events for JobId: ["
               + jobId + "]");
     }
 
@@ -594,7 +612,8 @@ public class JobHistoryEventHandler extends AbstractService
       this.historyFile = historyFile;
       this.confFile = conf;
       this.writer = writer;
-      this.jobIndexInfo = new JobIndexInfo(-1, -1, user, jobName, jobId, -1, -1, null);
+      this.jobIndexInfo = new JobIndexInfo(-1, -1, user, jobName, jobId, -1, -1,
+          null);
       this.jobSummary = new JobSummary();
     }
 

@@ -225,7 +225,7 @@
           {"name": "counters", "type": "JhCounters"}
       ]
      },
-
+     	
      {"type": "record", "name": "TaskStarted",
       "fields": [
           {"name": "taskid", "type": "string"},
@@ -256,6 +256,7 @@
           "TASK_FINISHED",
           "TASK_FAILED",
           "TASK_UPDATED",
+          "NORMALIZED_RESOURCE",
           "MAP_ATTEMPT_STARTED",
           "MAP_ATTEMPT_FINISHED",
           "MAP_ATTEMPT_FAILED",
