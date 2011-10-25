@@ -70,6 +70,10 @@ while true ; do
       HADOOP_MR_USER=$2; shift 2
       AUTOMATED=1
       ;;
+    --yarn-user)
+      HADOOP_YARN_USER=$2; shift 2
+      AUTOMATED=1
+      ;;
     --hdfs-user-keytab)
       HDFS_KEYTAB=$2; shift 2
       AUTOMATED=1
@@ -91,6 +95,7 @@ done
 
 HADOOP_GROUP=${HADOOP_GROUP:-hadoop}
 HADOOP_HDFS_USER=${HADOOP_HDFS_USER:-hdfs}
+HADOOP_YARN_USER=${HADOOP_YARN_USER:-yarn}
 HADOOP_MAPREDUCE_USER=${HADOOP_MR_USER:-mapred}
 
 if [ "${KERBEROS_REALM}" != "" ]; then

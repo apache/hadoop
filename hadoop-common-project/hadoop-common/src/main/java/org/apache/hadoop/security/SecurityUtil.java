@@ -316,17 +316,23 @@ public class SecurityUtil {
    * @param conf configuration object
    * @return the KerberosInfo or null if it has no KerberosInfo defined
    */
-  public static KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
-    for(SecurityInfo provider: testProviders) {
-      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
-      if (result != null) {
-        return result;
+  public static KerberosInfo 
+  getKerberosInfo(Class<?> protocol, Configuration conf) {
+    synchronized (testProviders) {
+      for(SecurityInfo provider: testProviders) {
+        KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }
       }
     }
-    for(SecurityInfo provider: securityInfoProviders) {
-      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
-      if (result != null) {
-        return result;
+    
+    synchronized (securityInfoProviders) {
+      for(SecurityInfo provider: securityInfoProviders) {
+        KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }
       }
     }
     return null;
@@ -340,18 +346,24 @@ public class SecurityUtil {
    * @return the TokenInfo or null if it has no KerberosInfo defined
    */
   public static TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    for(SecurityInfo provider: testProviders) {
-      TokenInfo result = provider.getTokenInfo(protocol, conf);
-      if (result != null) {
-        return result;
-      }      
-    }
-    for(SecurityInfo provider: securityInfoProviders) {
-      TokenInfo result = provider.getTokenInfo(protocol, conf);
-      if (result != null) {
-        return result;
+    synchronized (testProviders) {
+      for(SecurityInfo provider: testProviders) {
+        TokenInfo result = provider.getTokenInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }      
       }
-    } 
+    }
+    
+    synchronized (securityInfoProviders) {
+      for(SecurityInfo provider: securityInfoProviders) {
+        TokenInfo result = provider.getTokenInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }
+      } 
+    }
+    
     return null;
   }
 

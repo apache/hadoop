@@ -1811,6 +1811,16 @@ public abstract class Server {
   }
   
   /**
+   * Get the port on which the IPC Server is listening for incoming connections.
+   * This could be an ephemeral port too, in which case we return the real
+   * port on which the Server has bound.
+   * @return port on which IPC Server is listening
+   */
+  public int getPort() {
+    return port;
+  }
+  
+  /**
    * The number of open RPC conections
    * @return the number of open rpc connections
    */

@@ -1,1 +1,1 @@
-org.apache.hadoop.yarn.security.admin.AdminSecurityInfo
+org.apache.hadoop.yarn.server.resourcemanager.security.admin.AdminSecurityInfo

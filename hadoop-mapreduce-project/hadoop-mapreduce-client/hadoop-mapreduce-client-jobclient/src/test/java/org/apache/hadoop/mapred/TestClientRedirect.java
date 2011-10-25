@@ -25,7 +25,7 @@ import java.util.Iterator;
 
 import junit.framework.Assert;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -379,7 +379,7 @@ public class TestClientRedirect {
     }
 
     public void stop() {
-      server.close();
+      server.stop();
       super.stop();
     }
 

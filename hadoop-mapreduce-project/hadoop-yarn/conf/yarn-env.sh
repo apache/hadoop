@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# User for YARN daemons
+export HADOOP_YARN_USER=${HADOOP_YARN_USER:-yarn}
+
 # resolve links - $0 may be a softlink
 export YARN_CONF_DIR="${YARN_CONF_DIR:-$YARN_HOME/conf}"
 

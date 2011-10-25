@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -43,12 +44,15 @@ public class HDFSPolicyProvider extends PolicyProvider {
     new Service("security.inter.datanode.protocol.acl", 
                 InterDatanodeProtocol.class),
     new Service("security.namenode.protocol.acl", NamenodeProtocol.class),
-    new Service("security.refresh.policy.protocol.acl", 
-                RefreshAuthorizationPolicyProtocol.class),
-    new Service("security.refresh.user.mappings.protocol.acl", 
-                RefreshUserMappingsProtocol.class),
-    new Service("security.get.user.mappings.protocol.acl",
-                GetUserMappingsProtocol.class)
+    new Service(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_POLICY, 
+        RefreshAuthorizationPolicyProtocol.class),
+    new Service(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_USER_MAPPINGS, 
+        RefreshUserMappingsProtocol.class),
+    new Service(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_GET_USER_MAPPINGS,
+        GetUserMappingsProtocol.class)
   };
   
   @Override

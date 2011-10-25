@@ -281,10 +281,12 @@ public class Token<T extends TokenIdentifier> implements Writable {
       return renewer;
     }
     renewer = TRIVIAL_RENEWER;
-    for (TokenRenewer canidate: renewers) {
-      if (canidate.handleKind(this.kind)) {
-        renewer = canidate;
-        return renewer;
+    synchronized (renewers) {
+      for (TokenRenewer canidate : renewers) {
+        if (canidate.handleKind(this.kind)) {
+          renewer = canidate;
+          return renewer;
+        }
       }
     }
     LOG.warn("No TokenRenewer defined for token kind " + this.kind);

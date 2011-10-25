@@ -1758,6 +1758,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3248. Fixed log4j properties. (vinodkv via acmurthy) 
 
+    MAPREDUCE-2746. Yarn servers can't communicate with each other with 
+    hadoop.security.authorization set to true (acmurthy via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

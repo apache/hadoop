@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -40,14 +41,17 @@ public class MapReducePolicyProvider extends PolicyProvider {
                   ClientProtocol.class),
       new Service("security.task.umbilical.protocol.acl", 
                   TaskUmbilicalProtocol.class),
-      new Service("security.refresh.policy.protocol.acl", 
-                  RefreshAuthorizationPolicyProtocol.class),
-      new Service("security.refresh.user.mappings.protocol.acl", 
-                  RefreshUserMappingsProtocol.class),
+      new Service(
+          CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_POLICY, 
+          RefreshAuthorizationPolicyProtocol.class),
+      new Service(
+          CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_USER_MAPPINGS, 
+          RefreshUserMappingsProtocol.class),
       new Service("security.admin.operations.protocol.acl", 
                   AdminOperationsProtocol.class),
-      new Service("security.get.user.mappings.protocol.acl",
-                  GetUserMappingsProtocol.class)
+      new Service(
+          CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_GET_USER_MAPPINGS,
+          GetUserMappingsProtocol.class)
   };
   
   @Override
