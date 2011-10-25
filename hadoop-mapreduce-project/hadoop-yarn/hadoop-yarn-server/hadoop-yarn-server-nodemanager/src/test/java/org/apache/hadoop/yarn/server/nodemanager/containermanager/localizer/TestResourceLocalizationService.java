@@ -33,7 +33,7 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;

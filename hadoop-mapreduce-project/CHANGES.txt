@@ -1700,6 +1700,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3159. Ensure DefaultContainerExecutor doesn't delete application
     directories during app-init. (todd via acmurthy)
 
+    MAPREDUCE-2746. Yarn servers can't communicate with each other with 
+    hadoop.security.authorization set to true (acmurthy via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

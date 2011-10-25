@@ -29,4 +29,5 @@ service RMAdminProtocolService {
   rpc refreshSuperUserGroupsConfiguration(RefreshSuperUserGroupsConfigurationRequestProto) returns (RefreshSuperUserGroupsConfigurationResponseProto);
   rpc refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequestProto) returns (RefreshUserToGroupsMappingsResponseProto);
   rpc refreshAdminAcls(RefreshAdminAclsRequestProto) returns (RefreshAdminAclsResponseProto);
+  rpc refreshServiceAcls(RefreshServiceAclsRequestProto) returns (RefreshServiceAclsResponseProto);
 }

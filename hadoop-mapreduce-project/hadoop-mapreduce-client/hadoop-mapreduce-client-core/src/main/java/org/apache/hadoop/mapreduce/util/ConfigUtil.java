@@ -514,6 +514,15 @@ public class ConfigUtil {
     
     Configuration.addDeprecation("webinterface.private.actions", 
         new String[]{JTConfig.PRIVATE_ACTIONS_KEY});
+    
+    Configuration.addDeprecation("security.task.umbilical.protocol.acl", 
+        new String[] {
+        MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_TASK_UMBILICAL   
+    });
+    Configuration.addDeprecation("security.job.submission.protocol.acl", 
+        new String[] {
+        MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT   
+    });
   }
 }
 

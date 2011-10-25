@@ -93,5 +93,18 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
   public static final int IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT =
       256 * 1024;
+  
+  /**
+   * Service Authorization
+   */
+  public static final String 
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_POLICY = 
+      "security.refresh.policy.protocol.acl";
+  public static final String 
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_GET_USER_MAPPINGS =
+      "security.get.user.mappings.protocol.acl";
+  public static final String 
+  HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_USER_MAPPINGS =
+      "security.refresh.user.mappings.protocol.acl";
 }
 

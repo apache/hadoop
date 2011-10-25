@@ -20,11 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.api.impl.pb.service;
 
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService.BlockingInterface;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshNodesResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshQueuesResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshServiceAclsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshAdminAclsRequestPBImpl;
@@ -33,6 +36,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshNodesResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshQueuesRequestPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshQueuesResponsePBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshServiceAclsRequestPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshServiceAclsResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshSuperUserGroupsConfigurationRequestPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshSuperUserGroupsConfigurationResponsePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb.RefreshUserToGroupsMappingsRequestPBImpl;
@@ -117,6 +122,21 @@ public class RMAdminProtocolPBServiceImpl implements BlockingInterface {
     } catch (YarnRemoteException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public RefreshServiceAclsResponseProto refreshServiceAcls(
+      RpcController controller, RefreshServiceAclsRequestProto proto)
+      throws ServiceException {
+    RefreshServiceAclsRequestPBImpl request = 
+        new RefreshServiceAclsRequestPBImpl(proto);
+      try {
+        RefreshServiceAclsResponse response = 
+          real.refreshServiceAcls(request);
+        return ((RefreshServiceAclsResponsePBImpl)response).getProto();
+      } catch (YarnRemoteException e) {
+        throw new ServiceException(e);
+      }
   }
 
 }

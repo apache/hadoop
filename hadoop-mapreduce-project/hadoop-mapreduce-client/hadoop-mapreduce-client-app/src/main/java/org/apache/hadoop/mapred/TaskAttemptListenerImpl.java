@@ -29,10 +29,10 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -48,7 +48,9 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
+import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.CompositeService;
 
@@ -107,6 +109,14 @@ public class TaskAttemptListenerImpl extends CompositeService
               conf.getInt(MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT, 
                   MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT),
               false, conf, jobTokenSecretManager);
+      
+      // Enable service authorization?
+      if (conf.getBoolean(
+          CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
+          false)) {
+        refreshServiceAcls(conf, new MRAMPolicyProvider());
+      }
+
       server.start();
       InetSocketAddress listenerAddress = server.getListenerAddress();
       this.address =
@@ -116,6 +126,11 @@ public class TaskAttemptListenerImpl extends CompositeService
     } catch (IOException e) {
       throw new YarnException(e);
     }
+  }
+
+  void refreshServiceAcls(Configuration configuration, 
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
   }
 
   @Override

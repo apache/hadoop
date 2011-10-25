@@ -188,7 +188,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     clientRM = createClientRMService();
     addService(clientRM);
     
-    adminService = createAdminService();
+    adminService = createAdminService(clientRM, masterService, resourceTracker);
     addService(adminService);
 
     this.applicationMasterLauncher = createAMLauncher();
@@ -466,9 +466,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
 
-  protected AdminService createAdminService() {
+  protected AdminService createAdminService(
+      ClientRMService clientRMService, 
+      ApplicationMasterService applicationMasterService,
+      ResourceTrackerService resourceTrackerService) {
     return new AdminService(this.conf, scheduler, rmContext,
-        this.nodesListManager);
+        this.nodesListManager, clientRMService, applicationMasterService,
+        resourceTrackerService);
   }
 
   @Private

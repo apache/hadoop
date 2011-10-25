@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb;
 
 import java.net.InetSocketAddress;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -61,7 +61,7 @@ public class TestPBLocalizerRPC {
 
     public void stop() {
       if (server != null) {
-        server.close();
+        server.stop();
       }
     }
 

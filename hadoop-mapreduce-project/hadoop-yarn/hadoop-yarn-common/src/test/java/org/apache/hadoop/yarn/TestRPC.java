@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
@@ -162,7 +162,7 @@ public class TestRPC {
     }
     Assert.assertTrue(exception);
     
-    server.close();
+    server.stop();
     Assert.assertNotNull(status);
     Assert.assertEquals(ContainerState.RUNNING, status.getState());
   }

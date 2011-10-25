@@ -499,4 +499,14 @@ public interface MRJobConfig {
   public static final String MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL =
     "mapreduce.job.end-notification.max.retry.interval";
 
+  /*
+   * MR AM Service Authorization
+   */
+  public static final String   
+  MR_AM_SECURITY_SERVICE_AUTHORIZATION_TASK_UMBILICAL =
+      "security.job.task.protocol.acl";
+  public static final String   
+  MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT =
+      "security.job.client.protocol.acl";
+
 }

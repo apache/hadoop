@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.security.admin;
+package org.apache.hadoop.yarn.server.resourcemanager.security.admin;
 
 import java.lang.annotation.Annotation;
 
