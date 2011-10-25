@@ -158,6 +158,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolServerSideTranslatorR23;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolTranslatorR23;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeWireProtocol;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
@@ -589,7 +592,11 @@ public class DataNode extends Configured
                               conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
                                           DFS_DATANODE_HANDLER_COUNT_DEFAULT), 
                               false, conf, blockPoolTokenSecretManager);
-    ipcServer.addProtocol(InterDatanodeProtocol.class, this);
+    InterDatanodeProtocolServerSideTranslatorR23 
+        interDatanodeProtocolServerTranslator = 
+          new InterDatanodeProtocolServerSideTranslatorR23(this);
+    ipcServer.addProtocol(InterDatanodeWireProtocol.class, 
+        interDatanodeProtocolServerTranslator);
     
     // set service-level authorization security policy
     if (conf.getBoolean(
@@ -1641,15 +1648,13 @@ public class DataNode extends Configured
     if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
       InterDatanodeProtocol.LOG.debug("InterDatanodeProtocol addr=" + addr);
     }
-    UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
+    final UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     try {
       return loginUgi
           .doAs(new PrivilegedExceptionAction<InterDatanodeProtocol>() {
             public InterDatanodeProtocol run() throws IOException {
-              return (InterDatanodeProtocol) RPC.getProxy(
-                  InterDatanodeProtocol.class, InterDatanodeProtocol.versionID,
-                  addr, UserGroupInformation.getCurrentUser(), conf,
-                  NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+              return new InterDatanodeProtocolTranslatorR23(addr, loginUgi,
+                  conf, NetUtils.getDefaultSocketFactory(conf), socketTimeout);
             }
           });
     } catch (InterruptedException ie) {

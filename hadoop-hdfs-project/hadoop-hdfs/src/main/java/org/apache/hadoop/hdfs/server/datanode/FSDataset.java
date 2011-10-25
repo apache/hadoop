@@ -59,7 +59,6 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -1263,8 +1262,8 @@ public class FSDataset implements FSDatasetInterface {
       throws IOException {
     File f = validateBlockFile(bpid, b);
     if(f == null) {
-      if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
-        InterDatanodeProtocol.LOG.debug("b=" + b + ", volumeMap=" + volumeMap);
+      if (DataNode.LOG.isDebugEnabled()) {
+        DataNode.LOG.debug("b=" + b + ", volumeMap=" + volumeMap);
       }
       throw new IOException("Block " + b + " is not valid.");
     }
@@ -2003,8 +2002,8 @@ public class FSDataset implements FSDatasetInterface {
       datanode.checkDiskError();
     }
     
-    if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
-      InterDatanodeProtocol.LOG.debug("b=" + b + ", f=" + f);
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("b=" + b + ", f=" + f);
     }
     return null;
   }

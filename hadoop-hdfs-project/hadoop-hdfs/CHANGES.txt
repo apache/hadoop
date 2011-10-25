@@ -78,6 +78,8 @@ Trunk (unreleased changes)
     HDFS-2489. Move Finalize and Register to separate file out of
     DatanodeCommand.java. (suresh)
 
+    HDFS-2488. Separate datatypes for InterDatanodeProtocol. (suresh)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

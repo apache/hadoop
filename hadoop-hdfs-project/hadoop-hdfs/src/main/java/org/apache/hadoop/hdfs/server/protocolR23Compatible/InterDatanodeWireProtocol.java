@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.server.protocolR23Compatible;
 
 import java.io.IOException;
 
@@ -24,10 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
-import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeWireProtocol;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -37,27 +36,12 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface InterDatanodeProtocol extends VersionedProtocol {
-  public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
-
+public interface InterDatanodeWireProtocol extends VersionedProtocol {
+  public static final Log LOG = 
+      LogFactory.getLog(InterDatanodeWireProtocol.class);
   /**
-   * Until version 9, this class InterDatanodeProtocol served as both
-   * the interface to the DN AND the RPC protocol used to communicate with the 
-   * DN.
-   * 
-   * Post version 6L (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/InterDatanodeWireProtocol}
-   * 
-   * This class is used by both the DN to insulate from the protocol 
-   * serialization.
-   * 
-   * If you are adding/changing DN's interface then you need to 
-   * change both this class and ALSO
-   * {@link InterDatanodeWireProtocol}
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link ClientNamenodeWireProtocol}
-   * 
-   * The log of historical changes can be retrieved from the svn).
+   * The  rules for changing this protocol are the same as that for
+   * {@link ClientNamenodeWireProtocol} - see that java file for details.
    * 6: Add block pool ID to Block
    */
   public static final long versionID = 6L;
@@ -68,13 +52,22 @@ public interface InterDatanodeProtocol extends VersionedProtocol {
    * @return actual state of the replica on this data-node or 
    * null if data-node does not have the replica.
    */
-  ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
-  throws IOException;
+  ReplicaRecoveryInfoWritable initReplicaRecovery(RecoveringBlockWritable rBlock)
+      throws IOException;
 
   /**
    * Update replica with the new generation stamp and length.  
    */
-  ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
-                                   long recoveryId,
-                                   long newLength) throws IOException;
+  ExtendedBlockWritable updateReplicaUnderRecovery(
+      ExtendedBlockWritable oldBlock, long recoveryId, long newLength)
+      throws IOException;
+  
+  /**
+   * This method is defined to get the protocol signature using 
+   * the R23 protocol - hence we have added the suffix of 2 to the method name
+   * to avoid conflict.
+   */
+  public ProtocolSignatureWritable getProtocolSignature2(
+      String protocol, long clientVersion, int clientMethodsHash)
+      throws IOException;
 }
