@@ -340,12 +340,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     FsPermission appperms = new FsPermission(APPDIR_PERM);
     for (Path localDir : localDirs) {
       Path fullAppDir = getApplicationDir(localDir, user, appId);
-      if (lfs.util().exists(fullAppDir)) {
-        // this will happen on a partial execution of localizeJob. Sometimes
-        // copying job.xml to the local disk succeeds but copying job.jar might
-        // throw out an exception. We should clean up and then try again.
-        lfs.delete(fullAppDir, true);
-      }
       // create $local.dir/usercache/$user/appcache/$appId
       try {
         lfs.mkdir(fullAppDir, appperms, true);
