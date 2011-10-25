@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -37,7 +35,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -125,7 +128,7 @@ public class RMContainerAllocator extends RMContainerRequestor
   private float maxReduceRampupLimit = 0;
   private float maxReducePreemptionLimit = 0;
   private float reduceSlowStart = 0;
-
+  
   public RMContainerAllocator(ClientService clientService, AppContext context) {
     super(clientService, context);
   }
@@ -169,6 +172,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     LOG.info("Final Stats: " + getStat());
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public synchronized void handle(ContainerAllocatorEvent event) {
     LOG.info("Processing the event " + event.toString());
@@ -179,7 +183,13 @@ public class RMContainerAllocator extends RMContainerRequestor
         if (mapResourceReqt == 0) {
           mapResourceReqt = reqEvent.getCapability().getMemory();
           int minSlotMemSize = getMinContainerCapability().getMemory();
-          mapResourceReqt = (int) Math.ceil((float) mapResourceReqt/minSlotMemSize) * minSlotMemSize;
+          mapResourceReqt = (int) Math.ceil((float) mapResourceReqt/minSlotMemSize)
+              * minSlotMemSize;
+          JobID id = TypeConverter.fromYarn(applicationId);
+          JobId jobId = TypeConverter.toYarn(id);
+          eventHandler.handle(new JobHistoryEvent(jobId, 
+              new NormalizedResourceEvent(org.apache.hadoop.mapreduce.TaskType.MAP,
+              mapResourceReqt)));
           LOG.info("mapResourceReqt:"+mapResourceReqt);
           if (mapResourceReqt > getMaxContainerCapability().getMemory()) {
             String diagMsg = "MAP capability required is more than the supported " +
@@ -199,12 +209,20 @@ public class RMContainerAllocator extends RMContainerRequestor
           reduceResourceReqt = reqEvent.getCapability().getMemory();
           int minSlotMemSize = getMinContainerCapability().getMemory();
           //round off on slotsize
-          reduceResourceReqt = (int) Math.ceil((float) reduceResourceReqt/minSlotMemSize) * minSlotMemSize;
+          reduceResourceReqt = (int) Math.ceil((float) 
+              reduceResourceReqt/minSlotMemSize) * minSlotMemSize;
+          JobID id = TypeConverter.fromYarn(applicationId);
+          JobId jobId = TypeConverter.toYarn(id);
+          eventHandler.handle(new JobHistoryEvent(jobId, 
+              new NormalizedResourceEvent(
+                  org.apache.hadoop.mapreduce.TaskType.REDUCE,
+              reduceResourceReqt)));
           LOG.info("reduceResourceReqt:"+reduceResourceReqt);
           if (reduceResourceReqt > getMaxContainerCapability().getMemory()) {
-            String diagMsg = "REDUCE capability required is more than the supported " +
-            "max container capability in the cluster. Killing the Job. reduceResourceReqt: " + 
-            reduceResourceReqt + " maxContainerCapability:" + getMaxContainerCapability().getMemory();
+            String diagMsg = "REDUCE capability required is more than the " +
+            		"supported max container capability in the cluster. Killing the " +
+            		"Job. reduceResourceReqt: " + reduceResourceReqt +
+            		" maxContainerCapability:" + getMaxContainerCapability().getMemory();
             LOG.info(diagMsg);
             eventHandler.handle(new JobDiagnosticsUpdateEvent(
                 getJob().getID(), diagMsg));
@@ -217,7 +235,8 @@ public class RMContainerAllocator extends RMContainerRequestor
           //add to the front of queue for fail fast
           pendingReduces.addFirst(new ContainerRequest(reqEvent, PRIORITY_REDUCE));
         } else {
-          pendingReduces.add(new ContainerRequest(reqEvent, PRIORITY_REDUCE));//reduces are added to pending and are slowly ramped up
+          pendingReduces.add(new ContainerRequest(reqEvent, PRIORITY_REDUCE));
+          //reduces are added to pending and are slowly ramped up
         }
       }
       
@@ -411,6 +430,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         " availableResources(headroom):" + getAvailableResources();
   }
   
+  @SuppressWarnings("unchecked")
   private List<Container> getResources() throws Exception {
     int headRoom = getAvailableResources() != null ? getAvailableResources().getMemory() : 0;//first time it would be null
     AMResponse response = makeRemoteRequest();
@@ -538,6 +558,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       addContainerReq(req);
     }
     
+    @SuppressWarnings("unchecked")
     private void assign(List<Container> allocatedContainers) {
       Iterator<Container> it = allocatedContainers.iterator();
       LOG.info("Got allocated containers " + allocatedContainers.size());
@@ -694,6 +715,7 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
     
     
+    @SuppressWarnings("unchecked")
     private ContainerRequest assignToFailedMap(Container allocated) {
       //try to assign to earlierFailedMaps if present
       ContainerRequest assigned = null;
@@ -723,6 +745,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       return assigned;
     }
     
+    @SuppressWarnings("unchecked")
     private ContainerRequest assignToMap(Container allocated) {
     //try to assign to maps if present 
       //first by host, then by rack, followed by *
@@ -798,7 +821,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
 
     void preemptReduce(int toPreempt) {
-      List<TaskAttemptId> reduceList = new ArrayList(reduces.keySet());
+      List<TaskAttemptId> reduceList = new ArrayList<TaskAttemptId>
+        (reduces.keySet());
       //sort reduces on progress
       Collections.sort(reduceList,
           new Comparator<TaskAttemptId>() {

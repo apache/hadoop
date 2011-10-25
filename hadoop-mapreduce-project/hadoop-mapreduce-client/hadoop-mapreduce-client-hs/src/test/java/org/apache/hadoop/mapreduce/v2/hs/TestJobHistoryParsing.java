@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
@@ -54,27 +54,32 @@ import org.junit.Test;
 
 public class TestJobHistoryParsing {
   private static final Log LOG = LogFactory.getLog(TestJobHistoryParsing.class);
+
   @Test
   public void testHistoryParsing() throws Exception {
     Configuration conf = new Configuration();
     long amStartTimeEst = System.currentTimeMillis();
-    MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(), true);
+    MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(),
+        true);
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
     JobId jobId = job.getID();
     LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
     app.waitForState(job, JobState.SUCCEEDED);
-    
-    //make sure all events are flushed
+
+    // make sure all events are flushed
     app.waitForState(Service.STATE.STOPPED);
-    
-    String jobhistoryDir = JobHistoryUtils.getHistoryIntermediateDoneDirForUser(conf);
+
+    String jobhistoryDir = JobHistoryUtils
+        .getHistoryIntermediateDoneDirForUser(conf);
     JobHistory jobHistory = new JobHistory();
     jobHistory.init(conf);
-    
-    JobIndexInfo jobIndexInfo = jobHistory.getJobMetaInfo(jobId).getJobIndexInfo();
-    String jobhistoryFileName = FileNameIndexUtils.getDoneFileName(jobIndexInfo);
-    
+
+    JobIndexInfo jobIndexInfo = jobHistory.getJobMetaInfo(jobId)
+        .getJobIndexInfo();
+    String jobhistoryFileName = FileNameIndexUtils
+        .getDoneFileName(jobIndexInfo);
+
     Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
     FSDataInputStream in = null;
     LOG.info("JobHistoryFile is: " + historyFilePath);
@@ -86,27 +91,24 @@ public class TestJobHistoryParsing {
       LOG.info("Can not open history file: " + historyFilePath, ioe);
       throw (new Exception("Can not open History File"));
     }
-    
+
     JobHistoryParser parser = new JobHistoryParser(in);
     JobInfo jobInfo = parser.parse();
-    
-    Assert.assertEquals ("Incorrect username ",
-        "mapred", jobInfo.getUsername());
-    Assert.assertEquals("Incorrect jobName ",
-        "test", jobInfo.getJobname());
-    Assert.assertEquals("Incorrect queuename ",
-        "default", jobInfo.getJobQueueName());
-    Assert.assertEquals("incorrect conf path",
-        "test", jobInfo.getJobConfPath());
-    Assert.assertEquals("incorrect finishedMap ",
-        2, jobInfo.getFinishedMaps());
-    Assert.assertEquals("incorrect finishedReduces ",
-        1, jobInfo.getFinishedReduces());
-    Assert.assertEquals("incorrect uberized ",
-        job.isUber(), jobInfo.getUberized());
+
+    Assert.assertEquals("Incorrect username ", "mapred", jobInfo.getUsername());
+    Assert.assertEquals("Incorrect jobName ", "test", jobInfo.getJobname());
+    Assert.assertEquals("Incorrect queuename ", "default",
+        jobInfo.getJobQueueName());
+    Assert
+        .assertEquals("incorrect conf path", "test", jobInfo.getJobConfPath());
+    Assert.assertEquals("incorrect finishedMap ", 2, jobInfo.getFinishedMaps());
+    Assert.assertEquals("incorrect finishedReduces ", 1,
+        jobInfo.getFinishedReduces());
+    Assert.assertEquals("incorrect uberized ", job.isUber(),
+        jobInfo.getUberized());
     int totalTasks = jobInfo.getAllTasks().size();
     Assert.assertEquals("total number of tasks is incorrect  ", 3, totalTasks);
-    
+
     // Verify aminfo
     Assert.assertEquals(1, jobInfo.getAMInfos().size());
     Assert.assertEquals("testhost", jobInfo.getAMInfos().get(0)
@@ -120,15 +122,15 @@ public class TestJobHistoryParsing {
         && amInfo.getStartTime() >= amStartTimeEst);
 
     ContainerId fakeCid = BuilderUtils.newContainerId(-1, -1, -1, -1);
-    //Assert at taskAttempt level
+    // Assert at taskAttempt level
     for (TaskInfo taskInfo : jobInfo.getAllTasks().values()) {
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
-      Assert.assertEquals("total number of task attempts ",
-          1, taskAttemptCount);
-      TaskAttemptInfo taInfo =
-          taskInfo.getAllTaskAttempts().values().iterator().next();
+      Assert
+          .assertEquals("total number of task attempts ", 1, taskAttemptCount);
+      TaskAttemptInfo taInfo = taskInfo.getAllTaskAttempts().values()
+          .iterator().next();
       Assert.assertNotNull(taInfo.getContainerId());
-      //Verify the wrong ctor is not being used. Remove after mrv1 is removed.
+      // Verify the wrong ctor is not being used. Remove after mrv1 is removed.
       Assert.assertFalse(taInfo.getContainerId().equals(fakeCid));
     }
 
@@ -138,9 +140,8 @@ public class TestJobHistoryParsing {
           TypeConverter.fromYarn(task.getID()));
       Assert.assertNotNull("TaskInfo not found", taskInfo);
       for (TaskAttempt taskAttempt : task.getAttempts().values()) {
-        TaskAttemptInfo taskAttemptInfo =
-          taskInfo.getAllTaskAttempts().get(
-              TypeConverter.fromYarn((taskAttempt.getID())));
+        TaskAttemptInfo taskAttemptInfo = taskInfo.getAllTaskAttempts().get(
+            TypeConverter.fromYarn((taskAttempt.getID())));
         Assert.assertNotNull("TaskAttemptInfo not found", taskAttemptInfo);
         Assert.assertEquals("Incorrect shuffle port for task attempt",
             taskAttempt.getShufflePort(), taskAttemptInfo.getShufflePort());
@@ -151,6 +152,8 @@ public class TestJobHistoryParsing {
         .getIntermediateSummaryFileName(jobId);
     Path summaryFile = new Path(jobhistoryDir, summaryFileName);
     String jobSummaryString = jobHistory.getJobSummary(fc, summaryFile);
+    Assert.assertTrue(jobSummaryString.contains("resourcesPerMap=100"));
+    Assert.assertTrue(jobSummaryString.contains("resourcesPerReduce=100"));
     Assert.assertNotNull(jobSummaryString);
 
     Map<String, String> jobSummaryElements = new HashMap<String, String>();

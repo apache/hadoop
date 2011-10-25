@@ -1761,6 +1761,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2746. Yarn servers can't communicate with each other with 
     hadoop.security.authorization set to true (acmurthy via mahadev)
 
+    MAPREDUCE-2821. Added missing fields (resourcePerMap & resourcePerReduce)
+    to JobSummary logs. (mahadev via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
