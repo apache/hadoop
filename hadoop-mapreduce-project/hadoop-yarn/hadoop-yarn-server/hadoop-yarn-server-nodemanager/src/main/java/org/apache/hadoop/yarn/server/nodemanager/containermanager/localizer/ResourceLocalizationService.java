@@ -71,7 +71,6 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -320,6 +319,11 @@ public class ResourceLocalizationService extends CompositeService
           app.getAppId()));
   }
   
+  /**
+   * For each of the requested resources for a container, determines the
+   * appropriate {@link LocalResourcesTracker} and forwards a 
+   * {@link LocalResourceRequest} to that tracker.
+   */
   private void handleInitContainerResources(
       ContainerLocalizationRequestEvent rsrcReqs) {
     Container c = rsrcReqs.getContainer();
@@ -833,26 +837,7 @@ public class ResourceLocalizationService extends CompositeService
 
         // 0) init queue, etc.
         // 1) write credentials to private dir
-        DataOutputStream tokenOut = null;
-        try {
-          Credentials credentials = context.getCredentials();
-          FileContext lfs = getLocalFileContext(getConfig());
-          tokenOut =
-              lfs.create(nmPrivateCTokensPath, EnumSet.of(CREATE, OVERWRITE));
-          LOG.info("Writing credentials to the nmPrivate file "
-              + nmPrivateCTokensPath.toString() + ". Credentials list: ");
-          if (LOG.isDebugEnabled()) {
-            for (Token<? extends TokenIdentifier> tk : credentials
-                .getAllTokens()) {
-              LOG.debug(tk.getService() + " : " + tk.encodeToUrlString());
-            }
-          }
-          credentials.writeTokenStorageToStream(tokenOut);
-        } finally {
-          if (tokenOut != null) {
-            tokenOut.close();
-          }
-        }
+        writeCredentials(nmPrivateCTokensPath);
         // 2) exec initApplication and wait
         exec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
             context.getUser(),
@@ -873,6 +858,30 @@ public class ResourceLocalizationService extends CompositeService
           event.getResource().unlock();
         }
         delService.delete(null, nmPrivateCTokensPath, new Path[] {});
+      }
+    }
+
+    private void writeCredentials(Path nmPrivateCTokensPath)
+        throws IOException {
+      DataOutputStream tokenOut = null;
+      try {
+        Credentials credentials = context.getCredentials();
+        FileContext lfs = getLocalFileContext(getConfig());
+        tokenOut =
+            lfs.create(nmPrivateCTokensPath, EnumSet.of(CREATE, OVERWRITE));
+        LOG.info("Writing credentials to the nmPrivate file "
+            + nmPrivateCTokensPath.toString() + ". Credentials list: ");
+        if (LOG.isDebugEnabled()) {
+          for (Token<? extends TokenIdentifier> tk : credentials
+              .getAllTokens()) {
+            LOG.debug(tk.getService() + " : " + tk.encodeToUrlString());
+          }
+        }
+        credentials.writeTokenStorageToStream(tokenOut);
+      } finally {
+        if (tokenOut != null) {
+          tokenOut.close();
+        }
       }
     }
 

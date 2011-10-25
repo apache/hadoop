@@ -1753,6 +1753,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3252. Fix map tasks to not rewrite data an extra time when
     map output fits in spill buffer. (todd)
 
+    MAPREDUCE-3159. Ensure DefaultContainerExecutor doesn't delete application
+    directories during app-init. (todd via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

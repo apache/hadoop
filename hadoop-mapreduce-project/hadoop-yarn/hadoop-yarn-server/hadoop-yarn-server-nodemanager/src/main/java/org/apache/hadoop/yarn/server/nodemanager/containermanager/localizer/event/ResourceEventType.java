@@ -17,8 +17,17 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event;
 
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalizedResource;
+
+/**
+ * Events delivered to {@link LocalizedResource}. Each of these
+ * events is a subclass of {@link ResourceEvent}.
+ */
 public enum ResourceEventType {
+  /** See {@link ResourceRequestEvent} */
   REQUEST,
+  /** See {@link ResourceLocalizedEvent} */ 
   LOCALIZED,
+  /** See {@link ResourceReleaseEvent} */
   RELEASE
 }
