@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Reso
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
- * Event indicating that the {@link ResourceLocalizationService.LocalizerTracker}
+ * Event indicating that the {@link ResourceLocalizationService}
  * should fetch this resource.
  */
 public class LocalizerResourceRequestEvent extends LocalizerEvent {
