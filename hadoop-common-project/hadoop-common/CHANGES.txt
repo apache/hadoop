@@ -88,6 +88,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
 
+    HADOOP-7769. TestJMXJsonServlet is failing. (tomwhite)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
