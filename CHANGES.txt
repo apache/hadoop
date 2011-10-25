@@ -45,6 +45,8 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-2957. The TT should not re-init if it has no good local dirs. (eli)
 
+    MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
+
 Release 0.20.205.1 - unreleased
 
   IMPROVEMENTS

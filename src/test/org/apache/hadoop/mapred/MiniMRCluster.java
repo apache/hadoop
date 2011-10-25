@@ -216,12 +216,13 @@ public class MiniMRCluster {
           tt.run();
         }
       } catch (Throwable e) {
-        isDead = true;
         tt = null;
         LOG.error("task tracker " + trackerId + " crashed", e);
       }
+      // TaskTracker finished execution unexpectedly. So marking it as dead.
+      isDead = true;
     }
-        
+ 
     /**
      * Get the local dir for this TaskTracker.
      * This is there so that we do not break

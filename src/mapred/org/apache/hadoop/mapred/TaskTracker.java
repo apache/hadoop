@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -207,13 +208,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
      * @throws DiskErrorException if no directories are writable
      */
     synchronized void checkDirs() throws DiskErrorException {
-      for (String dir : localDirs) {
+      ListIterator<String> it = localDirs.listIterator();
+      while (it.hasNext()) {
+        final String dir = it.next();
         try {
           DiskChecker.checkDir(new File(dir));
         } catch (DiskErrorException de) {
           LOG.warn("TaskTracker local dir " + dir + " error " + 
               de.getMessage() + ", removing from local dirs");
-          localDirs.remove(dir);
+          it.remove();
           numFailures++;
         }
       }

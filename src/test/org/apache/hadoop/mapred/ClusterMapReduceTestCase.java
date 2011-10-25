@@ -57,7 +57,8 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
   }
 
   /**
-   * Starts the cluster within a testcase.
+   * Starts the cluster within a testcase with single mapred-local-dir per
+   * TaskTracker.
    * <p/>
    * Note that the cluster is already started when the testcase method
    * is invoked. This method is useful if as part of the testcase the
@@ -69,8 +70,28 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
    * @param props configuration properties to inject to the mini cluster
    * @throws Exception if the cluster could not be started
    */
-  protected synchronized void startCluster(boolean reformatDFS, Properties props)
-          throws Exception {
+  protected synchronized void startCluster(boolean reformatDFS,
+      Properties props) throws Exception {
+    startCluster(reformatDFS, props, 1);
+  }
+
+  /**
+   * Starts the cluster within a testcase with the given number of
+   * mapred-local-dirs per TaskTracker.
+   * <p/>
+   * Note that the cluster is already started when the testcase method
+   * is invoked. This method is useful if as part of the testcase the
+   * cluster has to be shutdown and restarted again.
+   * <p/>
+   * If the cluster is already running this method does nothing.
+   * @param reformatDFS indicates if DFS has to be reformated
+   * @param props configuration properties to inject to the mini cluster
+   * @param numDir 
+   * @throws Exception if the cluster could not be started
+   */
+  protected synchronized void startCluster(boolean reformatDFS,
+        Properties props, int numDir) throws Exception {
+      
     if (dfsCluster == null) {
       JobConf conf = new JobConf();
       if (props != null) {
@@ -83,7 +104,7 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
       ConfigurableMiniMRCluster.setConfiguration(props);
       //noinspection deprecation
       mrCluster = new ConfigurableMiniMRCluster(2, getFileSystem().getName(),
-                                                1, conf);
+                                                numDir, conf);
     }
   }
 
