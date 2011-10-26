@@ -724,6 +724,9 @@ Release 0.23.0 - Unreleased
     HDFS-2356.  Support case insensitive query parameter names in webhdfs.
     (szetszwo)
 
+    HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
+    hdfs-site.xml.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
