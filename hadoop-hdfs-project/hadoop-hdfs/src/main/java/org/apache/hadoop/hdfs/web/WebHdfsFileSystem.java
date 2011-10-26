@@ -404,8 +404,8 @@ public class WebHdfsFileSystem extends HftpFileSystem {
 
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
     final Map<?, ?> json  = run(op, f);
-    final Object[] array = (Object[])json.get(
-        HdfsFileStatus.class.getSimpleName());
+    final Map<?, ?> rootmap = (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName() + "es");
+    final Object[] array = (Object[])rootmap.get(HdfsFileStatus.class.getSimpleName());
 
     //convert FileStatus
     final FileStatus[] statuses = new FileStatus[array.length];

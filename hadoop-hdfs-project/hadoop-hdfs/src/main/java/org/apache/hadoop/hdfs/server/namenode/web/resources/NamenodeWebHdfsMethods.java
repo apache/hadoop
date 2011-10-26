@@ -490,7 +490,8 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintStream out = new PrintStream(outstream);
-        out.println("{\"" + HdfsFileStatus.class.getSimpleName() + "\":[");
+        out.println("{\"" + HdfsFileStatus.class.getSimpleName() + "es\":{\""
+            + HdfsFileStatus.class.getSimpleName() + "\":[");
 
         final HdfsFileStatus[] partial = first.getPartialListing();
         if (partial.length > 0) {
@@ -509,7 +510,8 @@ public class NamenodeWebHdfsMethods {
           }
         }
         
-        out.println("]}");
+        out.println();
+        out.println("]}}");
       }
     };
   }

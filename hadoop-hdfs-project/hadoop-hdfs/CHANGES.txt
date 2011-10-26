@@ -1104,6 +1104,9 @@ Release 0.23.0 - Unreleased
     to IllegalArgumentException and response it http BAD_REQUEST in webhdfs.
     (szetszwo)
 
+    HDFS-2424. Added a root element "HdfsFileStatuses" for the response
+    of webhdfs listStatus.  (szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
