@@ -313,6 +313,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
 
+    HDFS-2338. Add configuration option to enable/disable webhdfs.
+    (jitendra via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

@@ -128,7 +128,7 @@ public class NameNodeHttpServer {
               nn.getNameNodeAddress());
           httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-          setupServlets(httpServer);
+          setupServlets(httpServer, conf);
           httpServer.start();
 
           // The web-server port can be ephemeral... ensure we have the correct
@@ -159,7 +159,7 @@ public class NameNodeHttpServer {
     return httpAddress;
   }
 
-  private static void setupServlets(HttpServer httpServer) {
+  private static void setupServlets(HttpServer httpServer, Configuration conf) {
     httpServer.addInternalServlet("getDelegationToken",
         GetDelegationTokenServlet.PATH_SPEC, 
         GetDelegationTokenServlet.class, true);
@@ -182,10 +182,12 @@ public class NameNodeHttpServer {
     httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
         ContentSummaryServlet.class, false);
 
-    httpServer.addJerseyResourcePackage(
-        NamenodeWebHdfsMethods.class.getPackage().getName()
-        + ";" + Param.class.getPackage().getName(),
-        "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+    if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+      httpServer.addJerseyResourcePackage(NamenodeWebHdfsMethods.class
+          .getPackage().getName() + ";" + Param.class.getPackage().getName(),
+          "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+    }
   }
 
   public static FSImage getFsImageFromContext(ServletContext context) {
