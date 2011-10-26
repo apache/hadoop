@@ -396,20 +396,39 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus("Cleaning up temporary data from old regions");
     cleanupTmpDir();
 
-    // Load in all the HStores.  Get maximum seqid.
+    // Load in all the HStores.
+    // Get minimum of the maxSeqId across all the store.
+    //
+    // Context: During replay we want to ensure that we do not lose any data. So, we
+    // have to be conservative in how we replay logs. For each store, we calculate
+    // the maxSeqId up to which the store was flushed. But, since different stores
+    // could have a different maxSeqId, we choose the
+    // minimum across all the stores.
+    // This could potentially result in duplication of data for stores that are ahead
+    // of others. ColumnTrackers in the ScanQueryMatchers do the de-duplication, so we
+    // do not have to worry.
+    // TODO: If there is a store that was never flushed in a long time, we could replay
+    // a lot of data. Currently, this is not a problem because we flush all the stores at
+    // the same time. If we move to per-cf flushing, we might want to revisit this and send
+    // in a vector of maxSeqIds instead of sending in a single number, which has to be the
+    // min across all the max.
+    long minSeqId = -1;
     long maxSeqId = -1;
     for (HColumnDescriptor c : this.htableDescriptor.getFamilies()) {
       status.setStatus("Instantiating store for column family " + c);
       Store store = instantiateHStore(this.tableDir, c);
       this.stores.put(c.getName(), store);
       long storeSeqId = store.getMaxSequenceId();
-      if (storeSeqId > maxSeqId) {
+      if (minSeqId == -1 || storeSeqId < minSeqId) {
+        minSeqId = storeSeqId;
+      }
+      if (maxSeqId == -1 || storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
     }
     // Recover any edits if available.
-    maxSeqId = replayRecoveredEditsIfAny(
-        this.regiondir, maxSeqId, reporter, status);
+    maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
+        this.regiondir, minSeqId, reporter, status));
 
     status.setStatus("Cleaning up detritus from prior splits");
     // Get rid of any splits or merges that were lost in-progress.  Clean out
