@@ -1767,6 +1767,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3253. Fixed ContextFactory to clone JobContext correctly.
     (acmurthy) 
 
+    MAPREDUCE-3263. Fixed the MAPREDUCE-3028 commit which broke MR1. (Hitesh
+    Shah via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
