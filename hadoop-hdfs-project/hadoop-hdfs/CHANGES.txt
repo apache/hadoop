@@ -1058,6 +1058,9 @@ Release 0.23.0 - Unreleased
     HDFS-2467. HftpFileSystem uses incorrect compare for finding delegation
     tokens. (omalley)
 
+    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
+    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
