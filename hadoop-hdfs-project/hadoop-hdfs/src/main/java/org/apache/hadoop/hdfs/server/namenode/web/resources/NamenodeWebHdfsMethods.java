@@ -66,7 +66,7 @@ import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
-import org.apache.hadoop.hdfs.web.resources.DstPathParam;
+import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.GroupParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
@@ -201,8 +201,8 @@ public class NamenodeWebHdfsMethods {
       @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
           final PutOpParam op,
-      @QueryParam(DstPathParam.NAME) @DefaultValue(DstPathParam.DEFAULT)
-          final DstPathParam dstPath,
+      @QueryParam(DestinationParam.NAME) @DefaultValue(DestinationParam.DEFAULT)
+          final DestinationParam destination,
       @QueryParam(OwnerParam.NAME) @DefaultValue(OwnerParam.DEFAULT)
           final OwnerParam owner,
       @QueryParam(GroupParam.NAME) @DefaultValue(GroupParam.DEFAULT)
@@ -227,7 +227,7 @@ public class NamenodeWebHdfsMethods {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
-          + Param.toSortedString(", ", dstPath, owner, group, permission,
+          + Param.toSortedString(", ", destination, owner, group, permission,
               overwrite, bufferSize, replication, blockSize,
               modificationTime, accessTime, renameOptions));
     }
@@ -264,7 +264,7 @@ public class NamenodeWebHdfsMethods {
     {
       final EnumSet<Options.Rename> s = renameOptions.getValue();
       if (s.isEmpty()) {
-        final boolean b = np.rename(fullpath, dstPath.getValue());
+        final boolean b = np.rename(fullpath, destination.getValue());
         final String js = JsonUtil.toJsonString("boolean", b);
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       } else {

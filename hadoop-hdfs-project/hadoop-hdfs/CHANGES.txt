@@ -731,6 +731,9 @@ Release 0.23.0 - Unreleased
     HDFS-2395. Add a root element in the JSON responses of webhdfs.
     (szetszwo)
 
+    HDFS-2427. Change the default permission in webhdfs to 755 and add range
+    check/validation for all parameters.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

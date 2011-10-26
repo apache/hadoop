@@ -36,7 +36,7 @@ public class BlockSizeParam extends LongParam {
    * @param value the parameter value.
    */
   public BlockSizeParam(final Long value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, 1L, null);
   }
 
   /**
