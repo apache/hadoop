@@ -319,6 +319,9 @@ Release 0.23.0 - Unreleased
     HDFS-2318. Provide authentication to webhdfs using SPNEGO and delegation
     tokens.  (szetszwo)
 
+    HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

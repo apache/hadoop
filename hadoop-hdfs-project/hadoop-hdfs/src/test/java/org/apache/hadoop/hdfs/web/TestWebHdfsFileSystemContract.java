@@ -23,6 +23,7 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
@@ -113,5 +114,17 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     } catch(AccessControlException e) {
       // also okay for HDFS.
     }    
+  }
+  
+  public void testGetFileBlockLocations() throws IOException {
+    final String f = "/test/testGetFileBlockLocations";
+    createFile(path(f));
+    final BlockLocation[] computed = fs.getFileBlockLocations(new Path(f), 0L, 1L);
+    final BlockLocation[] expected = cluster.getFileSystem().getFileBlockLocations(
+        new Path(f), 0L, 1L);
+    assertEquals(expected.length, computed.length);
+    for(int i = 0; i < computed.length; i++) {
+      assertEquals(expected[i].toString(), computed[i].toString());
+    }
   }
 }
