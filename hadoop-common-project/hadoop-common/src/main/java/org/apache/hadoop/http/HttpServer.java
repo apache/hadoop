@@ -122,7 +122,7 @@ public class HttpServer implements FilterContainer {
 
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, Connector connector) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, connector);
+    this(name, bindAddress, port, findPort, conf, null, connector, null);
   }
 
   /**
@@ -141,11 +141,7 @@ public class HttpServer implements FilterContainer {
    */
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, String[] pathSpecs) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, null);
-    for (String path : pathSpecs) {
-        LOG.info("adding path spec: " + path);
-      addFilterPathMapping(path, webAppContext);
-    }
+    this(name, bindAddress, port, findPort, conf, null, null, pathSpecs);
   }
   
   /**
@@ -159,19 +155,20 @@ public class HttpServer implements FilterContainer {
    */
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, null);
+    this(name, bindAddress, port, findPort, conf, null, null, null);
   }
 
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl) 
       throws IOException {
-    this(name, bindAddress, port, findPort, conf, adminsAcl, null);
+    this(name, bindAddress, port, findPort, conf, adminsAcl, null, null);
   }
-  
+
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<name>.
    * @param name The name of the server
+   * @param bindAddress The address for this server
    * @param port The port to use on the server
    * @param findPort whether the server should start at the given port and 
    *        increment by 1 until it finds a free port.
@@ -181,6 +178,26 @@ public class HttpServer implements FilterContainer {
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl, 
       Connector connector) throws IOException {
+    this(name, bindAddress, port, findPort, conf, adminsAcl, connector, null);
+  }
+
+  /**
+   * Create a status server on the given port.
+   * The jsp scripts are taken from src/webapps/<name>.
+   * @param name The name of the server
+   * @param bindAddress The address for this server
+   * @param port The port to use on the server
+   * @param findPort whether the server should start at the given port and 
+   *        increment by 1 until it finds a free port.
+   * @param conf Configuration 
+   * @param adminsAcl {@link AccessControlList} of the admins
+   * @param connector A jetty connection listener
+   * @param pathSpecs Path specifications that this httpserver will be serving. 
+   *        These will be added to any filters.
+   */
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, AccessControlList adminsAcl, 
+      Connector connector, String[] pathSpecs) throws IOException {
     webServer = new Server();
     this.findPort = findPort;
     this.adminsAcl = adminsAcl;
@@ -229,7 +246,15 @@ public class HttpServer implements FilterContainer {
         c.initFilter(this, conf);
       }
     }
+
     addDefaultServlets();
+
+    if (pathSpecs != null) {
+      for (String path : pathSpecs) {
+        LOG.info("adding path spec: " + path);
+        addFilterPathMapping(path, webAppContext);
+      }
+    }
   }
 
   /**
