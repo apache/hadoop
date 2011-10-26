@@ -1082,6 +1082,8 @@ Release 0.23.0 - Unreleased
     HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
     (szetszwo)
 
+    HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
