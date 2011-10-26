@@ -30,4 +30,5 @@ bin=`cd "$bin"; pwd`
 "$bin"/yarn-daemons.sh --config $YARN_CONF_DIR  stop nodemanager
 # stop historyServer
 "$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  stop historyserver
-
+# stop proxy server
+"$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  stop proxyserver

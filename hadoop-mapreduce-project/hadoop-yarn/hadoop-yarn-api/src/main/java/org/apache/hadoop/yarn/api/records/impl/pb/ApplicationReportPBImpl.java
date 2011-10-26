@@ -91,6 +91,15 @@ implements ApplicationReport {
   }
 
   @Override
+  public String getOriginalTrackingUrl() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasOriginalTrackingUrl()) {
+      return null;
+    }
+    return p.getOriginalTrackingUrl();
+  }
+  
+  @Override
   public String getName() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasName()) {
@@ -197,6 +206,16 @@ implements ApplicationReport {
       return;
     }
     builder.setTrackingUrl(url);
+  }
+  
+  @Override
+  public void setOriginalTrackingUrl(String url) {
+    maybeInitBuilder();
+    if (url == null) {
+      builder.clearOriginalTrackingUrl();
+      return;
+    }
+    builder.setOriginalTrackingUrl(url);
   }
 
   @Override

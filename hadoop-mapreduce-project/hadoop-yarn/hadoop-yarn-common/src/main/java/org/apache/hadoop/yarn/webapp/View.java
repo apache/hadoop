@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import static org.apache.hadoop.yarn.util.StringHelper.*;
 
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,8 +176,20 @@ public abstract class View implements Params {
     moreParams().put(key, value);
   }
 
+  public String root() {
+    String root = System.getenv(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV);
+    if(root == null || root.isEmpty()) {
+      root = "/";
+    }
+    return root;
+  }
+  
   public String prefix() {
-    return context().rc.prefix;
+    if(context().rc.prefix == null) {
+      return root();
+    } else {
+      return ujoin(root(), context().rc.prefix);
+    }
   }
 
   public void setTitle(String title) {
@@ -188,6 +201,16 @@ public abstract class View implements Params {
     set(TITLE_LINK, url);
   }
 
+  /**
+   * Create an url from url components
+   * @param parts components to join
+   * @return an url string
+   */
+  public String root_url(String... parts) {
+    return ujoin(root(), parts);
+  }
+
+  
   /**
    * Create an url from url components
    * @param parts components to join

@@ -41,7 +41,7 @@ public class TwoColumnLayout extends HtmlPage {
     preHead(html);
     html.
       title($(TITLE)).
-      link("/static/yarn.css").
+      link(root_url("static","yarn.css")).
       style("#layout { height: 100%; }",
             "#layout thead td { height: 3em; }",
             "#layout #navcell { width: 11em; padding: 0 1em; }",

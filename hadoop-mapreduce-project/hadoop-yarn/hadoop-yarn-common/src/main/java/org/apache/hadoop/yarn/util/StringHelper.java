@@ -154,15 +154,24 @@ public final class StringHelper {
         if (part.startsWith("#") || isAbsUrl(part)) {
           sb.append(part);
         } else {
-          sb.append('/').append(pathPrefix).append('/').append(part);
+          uappend(sb, pathPrefix);
+          uappend(sb, part);
         }
       } else {
-        sb.append('/').append(part);
+        uappend(sb, part);
       }
     }
     return sb.toString();
   }
-
+  
+  private static void uappend(StringBuilder sb, String part) {
+    if((sb.length() <= 0 || sb.charAt(sb.length() - 1) != '/') 
+        && !part.startsWith("/")) {
+      sb.append('/');
+    }
+    sb.append(part);
+  }
+  
   public static String percent(double value) {
     return String.format("%.2f", value * 100);
   }

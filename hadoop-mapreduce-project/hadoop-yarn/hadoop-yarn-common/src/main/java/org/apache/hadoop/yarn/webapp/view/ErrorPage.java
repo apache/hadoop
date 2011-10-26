@@ -34,7 +34,7 @@ public class ErrorPage extends HtmlPage {
     String title = "Sorry, got error "+ status();
     html.
       title(title).
-      link("/static/yarn.css").
+      link(root_url("static","yarn.css")).
       _(JQueryUI.class). // an embedded sub-view
       style("#msg { margin: 1em auto; width: 88%; }",
             "#msg h1 { padding: 0.2em 1.5em; font: bold 1.3em serif; }").

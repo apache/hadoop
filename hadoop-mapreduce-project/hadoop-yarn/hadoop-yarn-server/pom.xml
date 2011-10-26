@@ -36,6 +36,7 @@
   <modules>
     <module>hadoop-yarn-server-common</module>
     <module>hadoop-yarn-server-nodemanager</module>
+    <module>hadoop-yarn-server-web-proxy</module>
     <module>hadoop-yarn-server-resourcemanager</module>
     <module>hadoop-yarn-server-tests</module>
   </modules>

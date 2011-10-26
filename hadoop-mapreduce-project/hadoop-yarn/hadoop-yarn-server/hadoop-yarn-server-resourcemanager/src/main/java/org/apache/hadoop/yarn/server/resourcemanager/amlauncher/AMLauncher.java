@@ -187,6 +187,8 @@ public class AMLauncher implements Runnable {
       throws IOException {
     Map<String, String> environment = container.getEnvironment();
 
+    environment.put(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV,
+        application.getWebProxyBase());
     // Set the AppAttemptId, containerId, NMHTTPAdress, AppSubmitTime to be
     // consumable by the AM.
     environment.put(ApplicationConstants.AM_CONTAINER_ID_ENV, container

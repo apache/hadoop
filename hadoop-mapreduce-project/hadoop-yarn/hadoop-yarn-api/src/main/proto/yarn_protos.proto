@@ -162,6 +162,7 @@ message ApplicationReportProto {
   optional int64 finishTime = 14;
   optional FinalApplicationStatusProto final_application_status = 15;
   optional ApplicationResourceUsageReportProto app_resource_Usage = 16;
+  optional string originalTrackingUrl = 17;
 }
 
 message NodeIdProto {

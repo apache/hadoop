@@ -81,12 +81,12 @@ public class JQueryUI extends HtmlBlock {
     html.
       link(join("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/themes/",
                 getTheme(), "/jquery-ui.css")).
-      link("/static/dt-1.7.5/css/jui-dt.css").
+      link(root_url("static/dt-1.7.5/css/jui-dt.css")).
       script("https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js").
       script("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/jquery-ui.min.js").
-      script("/static/dt-1.7.5/js/jquery.dataTables.min.js").
-      script("/static/yarn.dt.plugins.js").
-      script("/static/themeswitcher.js").
+      script(root_url("static/dt-1.7.5/js/jquery.dataTables.min.js")).
+      script(root_url("static/yarn.dt.plugins.js")).
+      script(root_url("static/themeswitcher.js")).
       style("#jsnotice { padding: 0.2em; text-align: center; }",
             ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
