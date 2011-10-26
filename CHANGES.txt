@@ -24,6 +24,7 @@ Release 0.92.0 - Unreleased
                (Akash Ashok)
    HBASE-4503  Purge deprecated HBaseClusterTestCase
    HBASE-4374  Up default regions size from 256M to 1G
+   HBASE-4648  Bytes.toBigDecimal() doesn't use offset (Brian Keller via Lars H)
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster

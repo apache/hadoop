@@ -819,17 +819,6 @@ public class Bytes {
    *
    * @param bytes
    * @param offset
-   * @return the char value
-   */
-  public static BigDecimal toBigDecimal(byte[] bytes, int offset) {
-    return toBigDecimal(bytes, offset, bytes.length);
-  }
-
-  /**
-   * Converts a byte array to a BigDecimal value
-   *
-   * @param bytes
-   * @param offset
    * @param length
    * @return the char value
    */
@@ -839,9 +828,9 @@ public class Bytes {
       return null;
     }
 
-    int scale = toInt(bytes, 0);
+    int scale = toInt(bytes, offset);
     byte[] tcBytes = new byte[length - SIZEOF_INT];
-    System.arraycopy(bytes, SIZEOF_INT, tcBytes, 0, length - SIZEOF_INT);
+    System.arraycopy(bytes, offset + SIZEOF_INT, tcBytes, 0, length - SIZEOF_INT);
     return new BigDecimal(new BigInteger(tcBytes), scale);
   }
 

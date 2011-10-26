@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
@@ -107,11 +108,25 @@ public class TestBytes extends TestCase {
     }
   }
 
+  public void testToInt() throws Exception {
+    int [] ints = {-1, 123, Integer.MIN_VALUE, Integer.MAX_VALUE};
+    for (int i = 0; i < ints.length; i++) {
+      byte [] b = Bytes.toBytes(ints[i]);
+      assertEquals(ints[i], Bytes.toInt(b));
+      byte [] b2 = bytesWithOffset(b);
+      assertEquals(ints[i], Bytes.toInt(b2, 1));
+      assertEquals(ints[i], Bytes.toInt(b2, 1, Bytes.SIZEOF_INT));
+    }
+  }
+
   public void testToLong() throws Exception {
-    long [] longs = {-1l, 123l, 122232323232l};
+    long [] longs = {-1l, 123l, Long.MIN_VALUE, Long.MAX_VALUE};
     for (int i = 0; i < longs.length; i++) {
       byte [] b = Bytes.toBytes(longs[i]);
       assertEquals(longs[i], Bytes.toLong(b));
+      byte [] b2 = bytesWithOffset(b);
+      assertEquals(longs[i], Bytes.toLong(b2, 1));
+      assertEquals(longs[i], Bytes.toLong(b2, 1, Bytes.SIZEOF_LONG));
     }
   }
 
@@ -120,6 +135,8 @@ public class TestBytes extends TestCase {
     for (int i = 0; i < floats.length; i++) {
       byte [] b = Bytes.toBytes(floats[i]);
       assertEquals(floats[i], Bytes.toFloat(b));
+      byte [] b2 = bytesWithOffset(b);
+      assertEquals(floats[i], Bytes.toFloat(b2, 1));
     }
   }
 
@@ -128,9 +145,30 @@ public class TestBytes extends TestCase {
     for (int i = 0; i < doubles.length; i++) {
       byte [] b = Bytes.toBytes(doubles[i]);
       assertEquals(doubles[i], Bytes.toDouble(b));
+      byte [] b2 = bytesWithOffset(b);
+      assertEquals(doubles[i], Bytes.toDouble(b2, 1));
     }
   }
 
+  public void testToBigDecimal() throws Exception {
+    BigDecimal [] decimals = {new BigDecimal("-1"), new BigDecimal("123.123"),
+      new BigDecimal("123123123123")};
+    for (int i = 0; i < decimals.length; i++) {
+      byte [] b = Bytes.toBytes(decimals[i]);
+      assertEquals(decimals[i], Bytes.toBigDecimal(b));
+      byte [] b2 = bytesWithOffset(b);
+      assertEquals(decimals[i], Bytes.toBigDecimal(b2, 1, b.length));
+    }
+  }
+  
+  private byte [] bytesWithOffset(byte [] src) {
+    // add one byte in front to test offset
+    byte [] result = new byte[src.length + 1];
+    result[0] = (byte) 0xAA;
+    System.arraycopy(src, 0, result, 1, src.length);
+    return result;
+  }
+  
   public void testBinarySearch() throws Exception {
     byte [][] arr = {
         {1},
