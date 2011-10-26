@@ -1776,6 +1776,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2977. Fix ResourceManager to renew HDFS delegation tokens for
     applications. (acmurthy) 
 
+    MAPREDUCE-3250. When AM restarts, client keeps reconnecting to the new AM 
+    and prints a lots of logs. (vinodkv via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

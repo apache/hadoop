@@ -81,7 +81,6 @@ public class ClientServiceDelegate {
   private final ApplicationId appId;
   private final ResourceMgrDelegate rm;
   private final MRClientProtocol historyServerProxy;
-  private boolean forceRefresh;
   private MRClientProtocol realProxy = null;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static String UNKNOWN_USER = "Unknown User";
@@ -122,7 +121,7 @@ public class ClientServiceDelegate {
   }
 
   private MRClientProtocol getProxy() throws YarnRemoteException {
-    if (!forceRefresh && realProxy != null) {
+    if (realProxy != null) {
       return realProxy;
     }
     
@@ -133,7 +132,9 @@ public class ClientServiceDelegate {
       trackingUrl = application.getTrackingUrl();
     }
     String serviceAddr = null;
-    while (application == null || YarnApplicationState.RUNNING == application.getYarnApplicationState()) {
+    while (application == null
+        || YarnApplicationState.RUNNING == application
+            .getYarnApplicationState()) {
       if (application == null) {
         LOG.info("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
@@ -163,7 +164,7 @@ public class ClientServiceDelegate {
         }
         LOG.info("Tracking Url of JOB is " + application.getTrackingUrl());
         LOG.info("Connecting to " + serviceAddr);
-        instantiateAMProxy(serviceAddr);
+        realProxy = instantiateAMProxy(serviceAddr);
         return realProxy;
       } catch (IOException e) {
         //possibly the AM has crashed
@@ -233,10 +234,12 @@ public class ClientServiceDelegate {
     return historyServerProxy;
   }
 
-  private void instantiateAMProxy(final String serviceAddr) throws IOException {
+  MRClientProtocol instantiateAMProxy(final String serviceAddr)
+      throws IOException {
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
     LOG.trace("Connecting to ApplicationMaster at: " + serviceAddr);
-    realProxy = currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
+    MRClientProtocol proxy = currentUser
+        .doAs(new PrivilegedAction<MRClientProtocol>() {
       @Override
       public MRClientProtocol run() {
         YarnRPC rpc = YarnRPC.create(conf);
@@ -245,6 +248,7 @@ public class ClientServiceDelegate {
       }
     });
     LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);
+    return proxy;
   }
 
   private synchronized Object invoke(String method, Class argClass,
@@ -274,12 +278,14 @@ public class ClientServiceDelegate {
             " retrying..");
         LOG.debug("Failed exception on AM/History contact", 
             e.getTargetException());
-        forceRefresh = true;
+        // Force reconnection by setting the proxy to null.
+        realProxy = null;
       } catch (Exception e) {
         LOG.info("Failed to contact AM/History for job " + jobId
             + "  Will retry..");
         LOG.debug("Failing to contact application master", e);
-        forceRefresh = true;
+        // Force reconnection by setting the proxy to null.
+        realProxy = null;
       }
     }
   }
