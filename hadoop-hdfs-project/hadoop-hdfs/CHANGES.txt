@@ -730,6 +730,9 @@ Release 0.23.0 - Unreleased
     HDFS-2368.  Move SPNEGO conf properties from hdfs-default.xml to
     hdfs-site.xml.  (szetszwo)
 
+    HDFS-2395. Add a root element in the JSON responses of webhdfs.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

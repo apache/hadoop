@@ -248,7 +248,7 @@ public class NamenodeWebHdfsMethods {
     case MKDIRS:
     {
       final boolean b = np.mkdirs(fullpath, permission.getFsPermission(), true);
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.MKDIRS, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case RENAME:
@@ -257,7 +257,7 @@ public class NamenodeWebHdfsMethods {
       if (s.isEmpty()) {
         @SuppressWarnings("deprecation")
         final boolean b = np.rename(fullpath, dstPath.getValue());
-        final String js = JsonUtil.toJsonString(PutOpParam.Op.RENAME, b);
+        final String js = JsonUtil.toJsonString("boolean", b);
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       } else {
         np.rename(fullpath, dstPath.getValue(),
@@ -268,7 +268,7 @@ public class NamenodeWebHdfsMethods {
     case SETREPLICATION:
     {
       final boolean b = np.setReplication(fullpath, replication.getValue());
-      final String js = JsonUtil.toJsonString(PutOpParam.Op.SETREPLICATION, b);
+      final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case SETOWNER:
@@ -482,7 +482,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintStream out = new PrintStream(outstream);
-        out.print('[');
+        out.println("{\"" + HdfsFileStatus[].class.getSimpleName() + "\":[");
 
         final HdfsFileStatus[] partial = first.getPartialListing();
         if (partial.length > 0) {
@@ -501,7 +501,7 @@ public class NamenodeWebHdfsMethods {
           }
         }
         
-        out.println(']');
+        out.println("]}");
       }
     };
   }
@@ -537,7 +537,7 @@ public class NamenodeWebHdfsMethods {
         case DELETE:
         {
           final boolean b = namenode.getRpcServer().delete(fullpath, recursive.getValue());
-          final String js = JsonUtil.toJsonString(DeleteOpParam.Op.DELETE, b);
+          final String js = JsonUtil.toJsonString("boolean", b);
           return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
         }
         default:
