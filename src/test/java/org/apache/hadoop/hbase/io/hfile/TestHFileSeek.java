@@ -244,8 +244,9 @@ public class TestHFileSeek extends TestCase {
     int minWordLen = 5;
     int maxWordLen = 20;
 
+    private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     String rootDir =
-      HBaseTestingUtility.getTestDir("TestTFileSeek").toString();
+      TEST_UTIL.getDataTestDir("TestTFileSeek").toString();
     String file = "TestTFileSeek";
     // String compress = "lzo"; DISABLED
     String compress = "none";

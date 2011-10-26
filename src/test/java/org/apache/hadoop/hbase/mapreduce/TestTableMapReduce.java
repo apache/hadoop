@@ -76,7 +76,7 @@ public class TestTableMapReduce {
   }
 
   @AfterClass
-  public static void afterClass() throws IOException {
+  public static void afterClass() throws Exception {
     UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }

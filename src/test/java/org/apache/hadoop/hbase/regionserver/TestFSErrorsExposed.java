@@ -68,7 +68,7 @@ public class TestFSErrorsExposed {
   @Test
   public void testHFileScannerThrowsErrors() throws IOException {
     Path hfilePath = new Path(new Path(
-        HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
+        util.getDataTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());
@@ -111,7 +111,7 @@ public class TestFSErrorsExposed {
   @Test
   public void testStoreFileScannerThrowsErrors() throws IOException {
     Path hfilePath = new Path(new Path(
-        HBaseTestingUtility.getTestDir("internalScannerExposesErrors"),
+        util.getDataTestDir("internalScannerExposesErrors"),
         "regionname"), "familyname");
     FaultyFileSystem fs = new FaultyFileSystem(util.getTestFileSystem());
     CacheConfig cacheConf = new CacheConfig(util.getConfiguration());

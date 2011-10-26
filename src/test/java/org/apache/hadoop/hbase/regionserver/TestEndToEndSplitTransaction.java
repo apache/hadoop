@@ -41,11 +41,11 @@ public class TestEndToEndSplitTransaction {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
-    TEST_UTIL.startMiniCluster(1);
+    TEST_UTIL.startMiniCluster();
   }
 
   @AfterClass
-  public static void afterAllTests() throws IOException {
+  public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
   

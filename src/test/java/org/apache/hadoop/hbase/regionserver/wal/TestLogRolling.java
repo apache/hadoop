@@ -76,11 +76,11 @@ public class TestLogRolling  {
   private HLog log;
   private String tableName;
   private byte[] value;
-  private static FileSystem fs;
-  private static MiniDFSCluster dfsCluster;
-  private static HBaseAdmin admin;
-  private static MiniHBaseCluster cluster;
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private FileSystem fs;
+  private MiniDFSCluster dfsCluster;
+  private HBaseAdmin admin;
+  private MiniHBaseCluster cluster;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
  // verbose logging on classes that are touched in these tests
  {
@@ -99,19 +99,16 @@ public class TestLogRolling  {
    * @throws Exception
    */
   public TestLogRolling()  {
-    // start one regionserver and a minidfs.
-    super();
-      this.server = null;
-      this.log = null;
-      this.tableName = null;
-      this.value = null;
+    this.server = null;
+    this.log = null;
+    this.tableName = null;
 
-      String className = this.getClass().getName();
-      StringBuilder v = new StringBuilder(className);
-      while (v.length() < 1000) {
-        v.append(className);
-      }
-      value = Bytes.toBytes(v.toString());
+    String className = this.getClass().getName();
+    StringBuilder v = new StringBuilder(className);
+    while (v.length() < 1000) {
+      v.append(className);
+    }
+    this.value = Bytes.toBytes(v.toString());
   }
 
   // Need to override this setup so we can edit the config before it gets sent
@@ -174,8 +171,7 @@ public class TestLogRolling  {
   }
 
   @After
-  public void tearDown() throws IOException  {
-    TEST_UTIL.cleanupTestDir();
+  public void tearDown() throws Exception  {
     TEST_UTIL.shutdownMiniCluster();
   }
 

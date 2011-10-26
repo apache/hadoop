@@ -105,6 +105,7 @@ public class TestMasterRestartAfterDisablingTable {
     assertEquals(
         "The assigned regions were not onlined after master switch except for the catalog tables.",
         6, regions.size());
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   private void log(String msg) {

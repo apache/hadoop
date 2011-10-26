@@ -127,7 +127,7 @@ public class TestFixedFileTrailer {
     }
 
     // Now check what happens if the trailer is corrupted.
-    Path trailerPath = new Path(HBaseTestingUtility.getTestDir(), "trailer_"
+    Path trailerPath = new Path(util.getDataTestDir(), "trailer_"
         + version);
 
     {

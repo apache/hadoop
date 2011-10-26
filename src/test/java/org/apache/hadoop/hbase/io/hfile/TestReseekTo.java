@@ -40,7 +40,7 @@ public class TestReseekTo {
   @Test
   public void testReseekTo() throws Exception {
 
-    Path ncTFile = new Path(HBaseTestingUtility.getTestDir(), "basic.hfile");
+    Path ncTFile = new Path(TEST_UTIL.getDataTestDir(), "basic.hfile");
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
     HFile.Writer writer = HFile.getWriterFactory(

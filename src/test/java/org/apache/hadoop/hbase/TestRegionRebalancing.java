@@ -56,7 +56,7 @@ public class TestRegionRebalancing {
   }
 
   @AfterClass
-  public static void afterClass() throws IOException {
+  public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
@@ -94,35 +94,35 @@ public class TestRegionRebalancing {
 
     // add a region server - total of 2
     LOG.info("Started second server=" +
-      UTIL.getHbaseCluster().startRegionServer().getRegionServer().getServerName());
-    UTIL.getHbaseCluster().getMaster().balance();
+      UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+    UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
 
     // add a region server - total of 3
     LOG.info("Started third server=" +
-        UTIL.getHbaseCluster().startRegionServer().getRegionServer().getServerName());
-    UTIL.getHbaseCluster().getMaster().balance();
+        UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+    UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
 
     // kill a region server - total of 2
-    LOG.info("Stopped third server=" + UTIL.getHbaseCluster().stopRegionServer(2, false));
-    UTIL.getHbaseCluster().waitOnRegionServer(2);
-    UTIL.getHbaseCluster().getMaster().balance();
+    LOG.info("Stopped third server=" + UTIL.getHBaseCluster().stopRegionServer(2, false));
+    UTIL.getHBaseCluster().waitOnRegionServer(2);
+    UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
 
     // start two more region servers - total of 4
     LOG.info("Readding third server=" +
-        UTIL.getHbaseCluster().startRegionServer().getRegionServer().getServerName());
+        UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
     LOG.info("Added fourth server=" +
-        UTIL.getHbaseCluster().startRegionServer().getRegionServer().getServerName());
-    UTIL.getHbaseCluster().getMaster().balance();
+        UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+    UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
 
     for (int i = 0; i < 6; i++){
       LOG.info("Adding " + (i + 5) + "th region server");
-      UTIL.getHbaseCluster().startRegionServer();
+      UTIL.getHBaseCluster().startRegionServer();
     }
-    UTIL.getHbaseCluster().getMaster().balance();
+    UTIL.getHBaseCluster().getMaster().balance();
     assertRegionsAreBalanced();
   }
 
@@ -154,7 +154,7 @@ public class TestRegionRebalancing {
 
       int regionCount = getRegionCount();
       List<HRegionServer> servers = getOnlineRegionServers();
-      double avg = UTIL.getHbaseCluster().getMaster().getAverageLoad();
+      double avg = UTIL.getHBaseCluster().getMaster().getAverageLoad();
       int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
       int avgLoadMinusSlop = (int)Math.floor(avg * (1 - slop)) - 1;
       LOG.debug("There are " + servers.size() + " servers and " + regionCount
@@ -179,7 +179,7 @@ public class TestRegionRebalancing {
           Thread.sleep(10000);
         } catch (InterruptedException e) {}
 
-        UTIL.getHbaseCluster().getMaster().balance();
+        UTIL.getHBaseCluster().getMaster().balance();
         continue;
       }
 
@@ -194,7 +194,7 @@ public class TestRegionRebalancing {
   private List<HRegionServer> getOnlineRegionServers() {
     List<HRegionServer> list = new ArrayList<HRegionServer>();
     for (JVMClusterUtil.RegionServerThread rst :
-        UTIL.getHbaseCluster().getRegionServerThreads()) {
+        UTIL.getHBaseCluster().getRegionServerThreads()) {
       if (rst.getRegionServer().isOnline()) {
         list.add(rst.getRegionServer());
       }

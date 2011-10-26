@@ -85,7 +85,7 @@ public class TestMetaReaderEditor {
     ct.start();
   }
 
-  @AfterClass public static void afterClass() throws IOException {
+  @AfterClass public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 

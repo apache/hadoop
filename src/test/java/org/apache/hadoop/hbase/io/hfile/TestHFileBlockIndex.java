@@ -43,8 +43,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -113,7 +111,7 @@ public class TestHFileBlockIndex {
 
   @Test
   public void testBlockIndex() throws IOException {
-    path = new Path(HBaseTestingUtility.getTestDir(), "block_index_" + compr);
+    path = new Path(TEST_UTIL.getDataTestDir(), "block_index_" + compr);
     writeWholeIndex();
     readIndex();
   }
@@ -458,7 +456,7 @@ public class TestHFileBlockIndex {
    */
   @Test
   public void testHFileWriterAndReader() throws IOException {
-    Path hfilePath = new Path(HBaseTestingUtility.getTestDir(),
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
         "hfile_for_block_index");
     CacheConfig cacheConf = new CacheConfig(conf);
     BlockCache blockCache = cacheConf.getBlockCache();

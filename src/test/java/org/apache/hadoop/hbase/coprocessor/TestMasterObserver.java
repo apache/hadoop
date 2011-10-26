@@ -479,7 +479,7 @@ public class TestMasterObserver {
   }
 
   @AfterClass
-  public static void teardownAfterClass() throws Exception {
+  public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 

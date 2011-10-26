@@ -59,7 +59,7 @@ public class TestHalfStoreFileReader {
   @Test
   public void testHalfScanAndReseek() throws IOException {
     HBaseTestingUtility test_util = new HBaseTestingUtility();
-    String root_dir = HBaseTestingUtility.getTestDir("TestHalfStoreFile").toString();
+    String root_dir = test_util.getDataTestDir("TestHalfStoreFile").toString();
     Path p = new Path(root_dir, "test");
 
     Configuration conf = test_util.getConfiguration();

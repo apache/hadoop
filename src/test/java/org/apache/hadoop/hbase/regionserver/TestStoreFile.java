@@ -58,29 +58,13 @@ import com.google.common.collect.Lists;
  */
 public class TestStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestStoreFile.class);
-  private MiniDFSCluster cluster;
-  private CacheConfig cacheConf;
+  private CacheConfig cacheConf =  new CacheConfig(conf);
+  private String ROOT_DIR;
 
   @Override
   public void setUp() throws Exception {
-    try {
-      this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
-      // Set the hbase.rootdir to be the home directory in mini dfs.
-      this.conf.set(HConstants.HBASE_DIR,
-        this.cluster.getFileSystem().getHomeDirectory().toString());
-      this.cacheConf = new CacheConfig(conf);
-    } catch (IOException e) {
-      shutdownDfs(cluster);
-    }
     super.setUp();
-  }
-
-  @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
-    shutdownDfs(cluster);
-    // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
-    //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
+    ROOT_DIR = new Path(this.testDir, "TestStoreFile").toString();
   }
 
   /**
@@ -330,9 +314,7 @@ public class TestStoreFile extends HBaseTestCase {
     }
   }
 
-  private static String ROOT_DIR =
-    HBaseTestingUtility.getTestDir("TestStoreFile").toString();
-  private static String localFormatter = "%010d";
+  private static final String localFormatter = "%010d";
 
   private void bloomWriteRead(StoreFile.Writer writer, FileSystem fs)
   throws Exception {
@@ -646,8 +628,7 @@ public class TestStoreFile extends HBaseTestCase {
     Configuration conf = this.conf;
 
     // Find a home for our files
-    Path baseDir = new Path(new Path(this.testDir, "regionname"),
-    "twoCOWEOC");
+    Path baseDir = new Path(new Path(this.testDir, "regionname"),"twoCOWEOC");
 
     // Grab the block cache and get the initial hit/miss counts
     BlockCache bc = new CacheConfig(conf).getBlockCache();

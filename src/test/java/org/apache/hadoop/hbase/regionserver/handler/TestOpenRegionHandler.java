@@ -25,14 +25,10 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -49,9 +45,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Test of the {@link OpenRegionHandler}.
@@ -59,17 +52,18 @@ import org.mockito.stubbing.Answer;
 public class TestOpenRegionHandler {
   static final Log LOG = LogFactory.getLog(TestOpenRegionHandler.class);
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
-  private static final HTableDescriptor TEST_HTD =
-    new HTableDescriptor("TestOpenRegionHandler.java");
+  private static HTableDescriptor TEST_HTD;
   private HRegionInfo TEST_HRI;
 
   private int testIndex = 0;
 
   @BeforeClass public static void before() throws Exception {
     HTU.startMiniZKCluster();
+    TEST_HTD = new HTableDescriptor("TestOpenRegionHandler.java");
   }
 
   @AfterClass public static void after() throws IOException {
+    TEST_HTD = null;
     HTU.shutdownMiniZKCluster();
   }
 
@@ -102,7 +96,7 @@ public class TestOpenRegionHandler {
     HTableDescriptor htd = TEST_HTD;
     final HRegionInfo hri = TEST_HRI;
     HRegion region =
-         HRegion.createHRegion(hri, HBaseTestingUtility.getTestDir(), HTU
+         HRegion.createHRegion(hri, HTU.getDataTestDir(), HTU
             .getConfiguration(), htd);
     assertNotNull(region);
     OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {

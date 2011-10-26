@@ -64,7 +64,7 @@ public class TestHRegionInfo {
   @Test
   public void testGetSetOfHTD() throws IOException {
     HBaseTestingUtility HTU = new HBaseTestingUtility();
-    final String tablename = "testGetSetOfHTD";
+        final String tablename = "testGetSetOfHTD";
 
     // Delete the temporary table directory that might still be there from the
     // previous test run.

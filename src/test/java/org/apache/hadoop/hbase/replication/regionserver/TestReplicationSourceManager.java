@@ -112,9 +112,9 @@ public class TestReplicationSourceManager {
     replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
     manager = replication.getReplicationManager();
     fs = FileSystem.get(conf);
-    oldLogDir = new Path(utility.getTestDir(),
+    oldLogDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    logDir = new Path(utility.getTestDir(),
+    logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
 
     manager.addSource(slaveId);

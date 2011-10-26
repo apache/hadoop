@@ -51,7 +51,7 @@ public class TestHTablePool {
 		}
 
     @AfterClass
-		public static void tearDownAfterClass() throws IOException {
+		public static void tearDownAfterClass() throws Exception {
 			TEST_UTIL.shutdownMiniCluster();
 		}
 

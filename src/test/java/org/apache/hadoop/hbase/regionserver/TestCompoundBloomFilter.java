@@ -293,7 +293,7 @@ public class TestCompoundBloomFilter {
     cacheConf = new CacheConfig(conf);
 
     StoreFile.Writer w = StoreFile.createWriter(fs,
-        HBaseTestingUtility.getTestDir(), BLOCK_SIZES[t], null, null, conf,
+        TEST_UTIL.getDataTestDir(), BLOCK_SIZES[t], null, null, conf,
         cacheConf, bt, 0);
 
     assertTrue(w.hasBloom());

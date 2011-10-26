@@ -374,6 +374,8 @@ Release 0.92.0 - Unreleased
    HBASE-4367  Deadlock in MemStore flusher due to JDK internally synchronizing
                on current thread
    HBASE-4645  Edits Log recovery losing data across column families
+   HBASE-4634  'test.build.data' property overused leading to write data at the
+               wrong place (nkeywal)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

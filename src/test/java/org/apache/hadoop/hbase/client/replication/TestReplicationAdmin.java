@@ -62,9 +62,9 @@ public class TestReplicationAdmin {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     admin = new ReplicationAdmin(conf);
-    Path oldLogDir = new Path(TEST_UTIL.getTestDir(),
+    Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    Path logDir = new Path(TEST_UTIL.getTestDir(),
+    Path logDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
     manager = new ReplicationSourceManager(admin.getReplicationZk(), conf,
         // The following stopper never stops so that we can respond

@@ -92,7 +92,9 @@ public class TestStore extends TestCase {
   long id = System.currentTimeMillis();
   Get get = new Get(row);
 
-  private static final String DIR = HBaseTestingUtility.getTestDir() + "/TestStore/";
+  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
+
 
   /**
    * Setup

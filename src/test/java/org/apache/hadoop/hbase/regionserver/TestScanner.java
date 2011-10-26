@@ -79,19 +79,8 @@ public class TestScanner extends HBaseTestCase {
 
   private static final long START_CODE = Long.MAX_VALUE;
 
-  private MiniDFSCluster cluster = null;
   private HRegion r;
   private HRegionIncommon region;
-
-  @Override
-  public void setUp() throws Exception {
-    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.cluster.getFileSystem().getHomeDirectory().toString());
-    super.setUp();
-
-  }
 
   /**
    * Test basic stop row filter works.
@@ -138,7 +127,6 @@ public class TestScanner extends HBaseTestCase {
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
-      shutdownDfs(this.cluster);
     }
   }
 
@@ -192,7 +180,6 @@ public class TestScanner extends HBaseTestCase {
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
-      shutdownDfs(this.cluster);
     }
   }
 
@@ -220,7 +207,6 @@ public class TestScanner extends HBaseTestCase {
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
-      shutdownDfs(this.cluster);
     }
   }
 
@@ -333,13 +319,10 @@ public class TestScanner extends HBaseTestCase {
       scan(true, address.toString());
       getRegionInfo();
 
+    } finally {
       // clean up
-
       r.close();
       r.getLog().closeAndDelete();
-
-    } finally {
-      shutdownDfs(cluster);
     }
   }
 
@@ -461,7 +444,6 @@ public class TestScanner extends HBaseTestCase {
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
-      shutdownDfs(cluster);
     }
   }
 
@@ -485,7 +467,6 @@ public class TestScanner extends HBaseTestCase {
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
-      shutdownDfs(cluster);
     }
   }
 

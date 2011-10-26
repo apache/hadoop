@@ -55,7 +55,7 @@ import org.mockito.Mockito;
 public class TestSplitTransaction {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Path testdir =
-    HBaseTestingUtility.getTestDir(this.getClass().getName());
+    TEST_UTIL.getDataTestDir(this.getClass().getName());
   private HRegion parent;
   private HLog wal;
   private FileSystem fs;

@@ -157,8 +157,8 @@ public class TestClassLoading {
     // compose a java source file.
     String javaCode = "import org.apache.hadoop.hbase.coprocessor.*;" +
       "public class " + className + " extends BaseRegionObserver {}";
-    Path baseDir = HBaseTestingUtility.getTestDir();
-    Path srcDir = new Path(HBaseTestingUtility.getTestDir(), "src");
+    Path baseDir = TEST_UTIL.getDataTestDir();
+    Path srcDir = new Path(TEST_UTIL.getDataTestDir(), "src");
     File srcDirPath = new File(srcDir.toString());
     srcDirPath.mkdirs();
     File sourceCodeFile = new File(srcDir.toString(), className + ".java");

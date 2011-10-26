@@ -45,8 +45,9 @@ import org.apache.hadoop.io.compress.GzipCodec;
  * instead.</p>
  */
 public class TestHFilePerformance extends TestCase {
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR =
-    HBaseTestingUtility.getTestDir("TestHFilePerformance").toString();
+    TEST_UTIL.getDataTestDir("TestHFilePerformance").toString();
   private FileSystem fs;
   private Configuration conf;
   private long startTimeEpoch;

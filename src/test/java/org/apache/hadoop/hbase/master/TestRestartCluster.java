@@ -44,30 +44,26 @@ import org.junit.Test;
 
 public class TestRestartCluster {
   private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
-  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static ZooKeeperWatcher zooKeeper;
+  private HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
-  private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a")};
-
-
-  private static final byte [][] TABLES = new byte[][] {
+  private static final byte [][] FAMILIES = {Bytes.toBytes("a")};
+  private static final byte [][] TABLES = {
       Bytes.toBytes("restartTableOne"),
       Bytes.toBytes("restartTableTwo"),
       Bytes.toBytes("restartTableThree")
   };
   private static final byte [] FAMILY = Bytes.toBytes("family");
 
-  @Before public void setup() throws Exception {
-  }
-
-  @After public void teardown() throws IOException {
+  @After public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
   @Test (timeout=300000) public void testRestartClusterAfterKill()
   throws Exception {
     UTIL.startMiniZKCluster();
-    zooKeeper = new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null, true);
+    ZooKeeperWatcher zooKeeper =
+      new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null, true);
 
     // create the unassigned region, throw up a region opened state for META
     String unassignedZNode = zooKeeper.assignmentZNode;
@@ -106,8 +102,7 @@ public class TestRestartCluster {
     assertEquals(3, allRegions.size());
 
     LOG.info("\n\nShutting down cluster");
-    UTIL.getHBaseCluster().shutdown();
-    UTIL.getHBaseCluster().join();
+    UTIL.shutdownMiniHBaseCluster();
 
     LOG.info("\n\nSleeping a bit");
     Thread.sleep(2000);

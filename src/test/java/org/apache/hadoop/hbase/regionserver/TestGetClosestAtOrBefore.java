@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
  */
 public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
-  private MiniDFSCluster miniHdfs;
 
   private static final byte[] T00 = Bytes.toBytes("000");
   private static final byte[] T10 = Bytes.toBytes("010");
@@ -58,24 +57,17 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final byte[] T35 = Bytes.toBytes("035");
   private static final byte[] T40 = Bytes.toBytes("040");
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.miniHdfs.getFileSystem().getHomeDirectory().toString());
-  }
+
 
   public void testUsingMetaAndBinary() throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
-    Path rootdir = filesystem.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
-    filesystem.mkdirs(rootdir);
+    Path rootdir = testDir;
     // Up flush size else we bind up when we use default catalog flush of 16k.
     HTableDescriptor.META_TABLEDESC.setMemStoreFlushSize(64 * 1024 * 1024);
 
     HRegion mr = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
       rootdir, this.conf, HTableDescriptor.META_TABLEDESC);
+    try {
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {
       HTableDescriptor htd = new HTableDescriptor("" + c);
@@ -134,6 +126,16 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
     findRow(mr, 'C', 45, -1);
     findRow(mr, 'C', 46, -1);
     findRow(mr, 'C', 43, -1);
+    } finally {
+      if (mr != null) {
+        try {
+          mr.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        mr.getLog().closeAndDelete();
+      }
+    }
   }
 
   /*
@@ -338,13 +340,5 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         region.getLog().closeAndDelete();
       }
     }
-  }
-
-  @Override
-  protected void tearDown() throws Exception {
-    if (this.miniHdfs != null) {
-      this.miniHdfs.shutdown();
-    }
-    super.tearDown();
   }
 }

@@ -49,11 +49,15 @@ import org.apache.hadoop.io.Writable;
 public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
 
-  private static String ROOT_DIR =
-    HBaseTestingUtility.getTestDir("TestHFile").toString();
+  private String ROOT_DIR;
   private final int minBlockSize = 512;
   private static String localFormatter = "%010d";
   private static CacheConfig cacheConf = null;
+
+  public void setUp() throws Exception {
+    super.setUp();
+    ROOT_DIR = this.getUnitTestdir("TestHFile").toString();
+  }
 
   /**
    * Test empty HFile.
@@ -123,7 +127,7 @@ public class TestHFile extends HBaseTestCase {
   }
 
   private FSDataOutputStream createFSOutput(Path name) throws IOException {
-    if (fs.exists(name)) fs.delete(name, true);
+    //if (fs.exists(name)) fs.delete(name, true);
     FSDataOutputStream fout = fs.create(name);
     return fout;
   }

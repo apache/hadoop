@@ -69,17 +69,7 @@ public class TestWideScanner extends HBaseTestCase {
   }
 
   /** HRegionInfo for root region */
-  MiniDFSCluster cluster = null;
   HRegion r;
-
-  @Override
-  public void setUp() throws Exception {
-    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.cluster.getFileSystem().getHomeDirectory().toString());
-    super.setUp();
-  }
 
   private int addWideContent(HRegion region) throws IOException {
     int count = 0;
@@ -153,7 +143,6 @@ public class TestWideScanner extends HBaseTestCase {
     } finally {
       this.r.close();
       this.r.getLog().closeAndDelete();
-      shutdownDfs(this.cluster);
     }
   }
 }

@@ -40,8 +40,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
@@ -70,7 +68,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
     HRegion region =
-        HRegion.createHRegion(info, HBaseTestingUtility.getTestDir(), TEST_UTIL
+        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
             .getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(10, "row");
@@ -175,7 +173,7 @@ public class TestColumnSeeking {
 
     HRegionInfo info = new HRegionInfo(Bytes.toBytes(table), null, null, false);
     HRegion region =
-        HRegion.createHRegion(info, HBaseTestingUtility.getTestDir(), TEST_UTIL
+        HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(), TEST_UTIL
             .getConfiguration(), htd);
 
     List<String> rows = generateRandomWords(10, "row");

@@ -83,11 +83,6 @@ public class TestDistributedLogSplitting {
   Configuration conf;
   HBaseTestingUtility TEST_UTIL;
 
-  @Before
-  public void before() throws Exception {
-
-  }
-
   private void startCluster(int num_rs) throws Exception{
     ZKSplitLog.Counters.resetCounters();
     LOG.info("Starting cluster");
@@ -106,7 +101,7 @@ public class TestDistributedLogSplitting {
 
   @After
   public void after() throws Exception {
-    cluster.shutdown();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test (timeout=300000)

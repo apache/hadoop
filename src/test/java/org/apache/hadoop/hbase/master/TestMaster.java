@@ -61,7 +61,7 @@ public class TestMaster {
   }
 
   @AfterClass
-  public static void afterAllTests() throws IOException {
+  public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 

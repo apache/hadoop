@@ -1241,7 +1241,7 @@ public class TestAdmin {
       throws IOException {
     // When the META table can be opened, the region servers are running
     new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
-    HRegionServer regionServer = TEST_UTIL.getHbaseCluster()
+    HRegionServer regionServer = TEST_UTIL.getHBaseCluster()
         .getRegionServerThreads().get(0).getRegionServer();
 
     // Create the test table and open it

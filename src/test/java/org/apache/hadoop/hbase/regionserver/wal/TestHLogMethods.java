@@ -31,9 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.MultithreadedTestUtil;
-import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -56,7 +53,7 @@ public class TestHLogMethods {
    */
   @Test public void testGetSplitEditFilesSorted() throws IOException {
     FileSystem fs = FileSystem.get(util.getConfiguration());
-    Path regiondir = HBaseTestingUtility.getTestDir("regiondir");
+    Path regiondir = util.getDataTestDir("regiondir");
     fs.delete(regiondir, true);
     fs.mkdirs(regiondir);
     Path recoverededits = HLog.getRegionDirRecoveredEditsDir(regiondir);

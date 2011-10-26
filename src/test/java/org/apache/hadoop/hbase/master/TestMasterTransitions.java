@@ -66,7 +66,7 @@ public class TestMasterTransitions {
     addToEachStartKey(countOfRegions);
   }
 
-  @AfterClass public static void afterAllTests() throws IOException {
+  @AfterClass public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 

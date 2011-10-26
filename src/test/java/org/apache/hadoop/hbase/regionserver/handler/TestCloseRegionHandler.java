@@ -62,7 +62,7 @@ public class TestCloseRegionHandler {
       new HRegionInfo(htd.getName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
     HRegion region =
-      HRegion.createHRegion(hri, HBaseTestingUtility.getTestDir(),
+      HRegion.createHRegion(hri, HTU.getDataTestDir(),
         HTU.getConfiguration(), htd);
     assertNotNull(region);
     // Spy on the region so can throw exception when close is called.

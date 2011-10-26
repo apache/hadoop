@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.Test;
@@ -60,8 +59,8 @@ public class TestBlocksRead extends HBaseTestCase {
   }
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() +
-    "/TestBlocksRead/";
+  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()

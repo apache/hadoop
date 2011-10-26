@@ -38,10 +38,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -53,6 +50,8 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -62,6 +61,8 @@ import org.mockito.stubbing.Answer;
  */
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
   private HRegion r = null;
   private Path compactionDir = null;
   private Path regionCompactionDir = null;
@@ -72,7 +73,6 @@ public class TestCompaction extends HBaseTestCase {
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
   final private byte[] col1, col2;
 
-  private MiniDFSCluster cluster;
 
   /** constructor */
   public TestCompaction() throws Exception {
@@ -81,7 +81,6 @@ public class TestCompaction extends HBaseTestCase {
     // Set cache flush size to 1MB
     conf.setInt("hbase.hregion.memstore.flush.size", 1024*1024);
     conf.setInt("hbase.hregion.memstore.block.multiplier", 100);
-    this.cluster = null;
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
 
     firstRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
@@ -97,10 +96,6 @@ public class TestCompaction extends HBaseTestCase {
 
   @Override
   public void setUp() throws Exception {
-    this.cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-    // Make the hbase rootdir match the minidfs we just span up
-    this.conf.set(HConstants.HBASE_DIR,
-      this.cluster.getFileSystem().getHomeDirectory().toString());
     super.setUp();
     HTableDescriptor htd = createTableDescriptor(getName());
     this.r = createNewHRegion(htd, null, null);
@@ -111,9 +106,6 @@ public class TestCompaction extends HBaseTestCase {
     HLog hlog = r.getLog();
     this.r.close();
     hlog.closeAndDelete();
-    if (this.cluster != null) {
-      shutdownDfs(cluster);
-    }
     super.tearDown();
   }
 
@@ -427,7 +419,7 @@ public class TestCompaction extends HBaseTestCase {
       assertEquals(compactionThreshold, s.getStorefilesCount());
       assertTrue(s.getStorefilesSize() > 15*1000);
       // and no new store files persisted past compactStores()
-      FileStatus[] ls = cluster.getFileSystem().listStatus(r.getTmpDir());
+      FileStatus[] ls = FileSystem.get(conf).listStatus(r.getTmpDir());
       assertEquals(0, ls.length);
 
     } finally {
@@ -498,7 +490,7 @@ public class TestCompaction extends HBaseTestCase {
     StoreFile.Writer compactedFile = store.compactStore(storeFiles, false, maxId);
 
     // Now lets corrupt the compacted file.
-    FileSystem fs = cluster.getFileSystem();
+    FileSystem fs = FileSystem.get(conf);
     Path origPath = compactedFile.getPath();
     Path homedir = store.getHomedir();
     Path dstPath = new Path(homedir, origPath.getName());

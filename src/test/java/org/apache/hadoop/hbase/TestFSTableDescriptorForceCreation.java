@@ -28,32 +28,21 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 public class TestFSTableDescriptorForceCreation {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  @BeforeClass
-  public static void setUpCluster() throws Exception {
-    UTIL.startMiniDFSCluster(1);
-  }
-
-  @AfterClass
-  public static void shutDownCluster() throws Exception {
-    UTIL.shutdownMiniDFSCluster();
-  }
 
   @Test
   public void testShouldCreateNewTableDescriptorIfForcefulCreationIsFalse()
       throws IOException {
     final String name = "newTable2";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    Path rootdir = new Path(fs.getWorkingDirectory(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     HTableDescriptor htd = new HTableDescriptor(name);
-    assertTrue("Should create new table descriptor", FSUtils
-        .createTableDescriptor(fs, rootdir, htd, false));
+
+    assertTrue("Should create new table descriptor",
+      FSUtils.createTableDescriptor(fs, rootdir, htd, false));
   }
 
   @Test
@@ -62,12 +51,12 @@ public class TestFSTableDescriptorForceCreation {
     final String name = "testAlreadyExists";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
-    Path rootdir = new Path(fs.getWorkingDirectory(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
     htds.add(htd);
     assertFalse("Should not create new table descriptor", FSUtils
-        .createTableDescriptor(fs, rootdir, htd, false));
+      .createTableDescriptor(fs, rootdir, htd, false));
   }
 
   @Test
@@ -75,10 +64,10 @@ public class TestFSTableDescriptorForceCreation {
       throws Exception {
     final String name = "createNewTableNew2";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    Path rootdir = new Path(fs.getWorkingDirectory(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     HTableDescriptor htd = new HTableDescriptor(name);
     FSUtils.createTableDescriptor(fs, rootdir, htd, false);
     assertTrue("Should create new table descriptor", FSUtils
-        .createTableDescriptor(fs, rootdir, htd, true));
+      .createTableDescriptor(fs, rootdir, htd, true));
   }
 }

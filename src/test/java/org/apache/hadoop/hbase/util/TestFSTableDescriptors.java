@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
 
 
@@ -49,7 +47,7 @@ public class TestFSTableDescriptors {
     final String name = "testRemoves";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
-    Path rootdir = new Path(HBaseTestingUtility.getTestDir(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
     htds.add(htd);
@@ -61,7 +59,7 @@ public class TestFSTableDescriptors {
     final String name = "testReadingHTDFromFS";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     HTableDescriptor htd = new HTableDescriptor(name);
-    Path rootdir = HBaseTestingUtility.getTestDir(name);
+    Path rootdir = UTIL.getDataTestDir(name);
     createHTDInFS(fs, rootdir, htd);
     HTableDescriptor htd2 =
       FSUtils.getTableDescriptor(fs, rootdir, htd.getNameAsString());
@@ -79,7 +77,7 @@ public class TestFSTableDescriptors {
     final String name = "testHTableDescriptors";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
-    Path rootdir = new Path(HBaseTestingUtility.getTestDir(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     final int count = 10;
     // Write out table infos.
     for (int i = 0; i < count; i++) {
@@ -128,7 +126,7 @@ public class TestFSTableDescriptors {
     final String name = "testNoSuchTable";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
-    Path rootdir = new Path(HBaseTestingUtility.getTestDir(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
     htds.get("NoSuchTable");
   }
@@ -138,7 +136,7 @@ public class TestFSTableDescriptors {
     final String name = "testUpdates";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
-    Path rootdir = new Path(HBaseTestingUtility.getTestDir(), name);
+    Path rootdir = new Path(UTIL.getDataTestDir(), name);
     TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
     htds.add(htd);

@@ -92,6 +92,7 @@ public class TestHLog  {
   @After
   public void tearDown() throws Exception {
   }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.

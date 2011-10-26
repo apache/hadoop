@@ -252,7 +252,7 @@ public class TestImportTsv {
       }
       assertTrue(verified);
     } finally {
-      cluster.shutdown();
+      htu1.shutdownMiniCluster();
     }
   }
   

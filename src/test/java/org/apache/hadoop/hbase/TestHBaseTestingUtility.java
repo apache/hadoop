@@ -50,26 +50,6 @@ import org.junit.Test;
 public class TestHBaseTestingUtility {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
-  private HBaseTestingUtility hbt;
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    this.hbt = new HBaseTestingUtility();
-    this.hbt.cleanupTestDir();
-  }
-
-  @After
-  public void tearDown() throws Exception {
-  }
-
   /**
    * Basic sanity test that spins up multiple HDFS and HBase clusters that share
    * the same ZK ensemble. We then create the same table in both and make sure
@@ -136,57 +116,80 @@ public class TestHBaseTestingUtility {
   }
 
   @Test public void testMiniCluster() throws Exception {
-    MiniHBaseCluster cluster = this.hbt.startMiniCluster();
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+
+    MiniHBaseCluster cluster = hbt.startMiniCluster();
     try {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
-      cluster.shutdown();
+      hbt.shutdownMiniCluster();
     }
   }
-  
+
+  /**
+   *  Test that we can start and stop multiple time a cluster
+   *   with the same HBaseTestingUtility.
+   */
+  @Test public void testMultipleStartStop() throws Exception{
+    HBaseTestingUtility htu1 = new HBaseTestingUtility();
+    Path foo = new Path("foo");
+
+    htu1.startMiniCluster();
+    htu1.getDFSCluster().getFileSystem().create(foo);
+    assertTrue( htu1.getDFSCluster().getFileSystem().exists(foo));
+    htu1.shutdownMiniCluster();
+
+    htu1.startMiniCluster();
+    assertFalse( htu1.getDFSCluster().getFileSystem().exists(foo));
+    htu1.getDFSCluster().getFileSystem().create(foo);
+    assertTrue( htu1.getDFSCluster().getFileSystem().exists(foo));
+    htu1.shutdownMiniCluster();
+  }
+
+
   @Test public void testMiniZooKeeper() throws Exception {
-    MiniZooKeeperCluster cluster1 = this.hbt.startMiniZKCluster();
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    MiniZooKeeperCluster cluster1 = hbt.startMiniZKCluster();
     try {
-      assertEquals(0, cluster1.getBackupZooKeeperServerNum());    
+      assertEquals(0, cluster1.getBackupZooKeeperServerNum());
       assertTrue((cluster1.killCurrentActiveZooKeeperServer() == -1));
     } finally {
-      cluster1.shutdown();
+      hbt.shutdownMiniZKCluster();
     }
-    
-    this.hbt.shutdownMiniZKCluster();
-    
+
     // set up zookeeper cluster with 5 zk servers
-    MiniZooKeeperCluster cluster2 = this.hbt.startMiniZKCluster(5);
+    MiniZooKeeperCluster cluster2 = hbt.startMiniZKCluster(5);
     int defaultClientPort = 21818;
     cluster2.setDefaultClientPort(defaultClientPort);
     try {
       assertEquals(4, cluster2.getBackupZooKeeperServerNum());
-      
+
       // killing the current active zk server
       assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));
-      assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));     
+      assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));
       assertEquals(2, cluster2.getBackupZooKeeperServerNum());
       assertEquals(3, cluster2.getZooKeeperServerNum());
-      
+
       // killing the backup zk servers
       cluster2.killOneBackupZooKeeperServer();
       cluster2.killOneBackupZooKeeperServer();
       assertEquals(0, cluster2.getBackupZooKeeperServerNum());
       assertEquals(1, cluster2.getZooKeeperServerNum());
-      
+
       // killing the last zk server
       assertTrue((cluster2.killCurrentActiveZooKeeperServer() == -1));
       // this should do nothing.
       cluster2.killOneBackupZooKeeperServer();
       assertEquals(-1, cluster2.getBackupZooKeeperServerNum());
-      assertEquals(0, cluster2.getZooKeeperServerNum());         
+      assertEquals(0, cluster2.getZooKeeperServerNum());
     } finally {
-      cluster2.shutdown();
+      hbt.shutdownMiniZKCluster();
     }
   }
 
   @Test public void testMiniDFSCluster() throws Exception {
-    MiniDFSCluster cluster = this.hbt.startMiniDFSCluster(1);
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    MiniDFSCluster cluster = hbt.startMiniDFSCluster(1);
     FileSystem dfs = cluster.getFileSystem();
     Path dir = new Path("dir");
     Path qualifiedDir = dfs.makeQualified(dir);
@@ -194,26 +197,32 @@ public class TestHBaseTestingUtility {
     assertFalse(dfs.exists(qualifiedDir));
     assertTrue(dfs.mkdirs(qualifiedDir));
     assertTrue(dfs.delete(qualifiedDir, true));
-    try {
-    } finally {
-      cluster.shutdown();
-    }
+    hbt.shutdownMiniCluster();
   }
 
-  @Test public void testSetupClusterTestBuildDir() {
-    File testdir = this.hbt.setupClusterTestBuildDir();
+  @Test public void testSetupClusterTestBuildDir() throws Exception {
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    Path testdir = hbt.getClusterTestDir();
     LOG.info("uuid-subdir=" + testdir);
-    assertFalse(testdir.exists());
-    assertTrue(testdir.mkdirs());
-    assertTrue(testdir.exists());
+    FileSystem fs = hbt.getTestFileSystem();
+
+    assertFalse(fs.exists(testdir));
+
+    hbt.startMiniDFSCluster(1);
+    assertTrue(fs.exists(testdir));
+
+    hbt.shutdownMiniCluster();
+    assertFalse(fs.exists(testdir));
+
   }
 
-  @Test public void testTestDir() throws IOException {
-    Path testdir = HBaseTestingUtility.getTestDir();
+  @Test public void testTestDir() throws Exception {
+    HBaseTestingUtility hbt = new HBaseTestingUtility();
+    Path testdir = hbt.getDataTestDir();
     LOG.info("testdir=" + testdir);
-    FileSystem fs = this.hbt.getTestFileSystem();
+    FileSystem fs = hbt.getTestFileSystem();
     assertTrue(!fs.exists(testdir));
     assertTrue(fs.mkdirs(testdir));
-    assertTrue(this.hbt.cleanupTestDir());
+    assertTrue(hbt.cleanupTestDir());
   }
 }

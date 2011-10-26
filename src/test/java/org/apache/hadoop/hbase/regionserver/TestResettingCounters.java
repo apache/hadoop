@@ -62,7 +62,7 @@ public class TestResettingCounters {
     for (byte [] family : families) htd.addFamily(new HColumnDescriptor(family));
 
     HRegionInfo hri = new HRegionInfo(htd.getName(), null, null, false);
-    String testDir = HBaseTestingUtility.getTestDir() + "/TestResettingCounters/";
+    String testDir = htu.getDataTestDir() + "/TestResettingCounters/";
     Path path = new Path(testDir);
     if (fs.exists(path)) {
       if (!fs.delete(path, true)) {

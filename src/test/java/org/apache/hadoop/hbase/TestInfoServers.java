@@ -49,7 +49,7 @@ public class TestInfoServers {
   }
 
   @AfterClass
-  public static void afterClass() throws IOException {
+  public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
@@ -60,10 +60,10 @@ public class TestInfoServers {
   public void testInfoServersRedirect() throws Exception {
     // give the cluster time to start up
     new HTable(UTIL.getConfiguration(), ".META.");
-    int port = UTIL.getHbaseCluster().getMaster().getInfoServer().getPort();
+    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "master-status");
-    port = UTIL.getHbaseCluster().getRegionServerThreads().get(0).getRegionServer().
+    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "rs-status");
@@ -80,10 +80,10 @@ public class TestInfoServers {
   public void testInfoServersStatusPages() throws Exception {
     // give the cluster time to start up
     new HTable(UTIL.getConfiguration(), ".META.");
-    int port = UTIL.getHbaseCluster().getMaster().getInfoServer().getPort();
+    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/master-status"), "META");
-    port = UTIL.getHbaseCluster().getRegionServerThreads().get(0).getRegionServer().
+    port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().
       getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/rs-status"), "META");

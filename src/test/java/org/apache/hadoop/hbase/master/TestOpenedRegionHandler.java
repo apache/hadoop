@@ -124,8 +124,8 @@ public class TestOpenedRegionHandler {
           "testShouldNotCompeleteOpenedRegionSuccessfullyIfVersionMismatches");
       HRegionInfo hri = new HRegionInfo(htd.getName(),
           Bytes.toBytes(testIndex), Bytes.toBytes(testIndex + 1));
-      HRegion region = HRegion.createHRegion(hri, HBaseTestingUtility
-          .getTestDir(), TEST_UTIL.getConfiguration(), htd);
+      HRegion region = HRegion.createHRegion(hri, TEST_UTIL
+          .getDataTestDir(), TEST_UTIL.getConfiguration(), htd);
       assertNotNull(region);
       AssignmentManager am = Mockito.mock(AssignmentManager.class);
       when(am.isRegionInTransition(hri)).thenReturn(

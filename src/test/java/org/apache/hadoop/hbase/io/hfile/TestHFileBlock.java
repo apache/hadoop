@@ -69,14 +69,13 @@ public class TestHFileBlock {
   private static final int NUM_READER_THREADS = 26;
 
   private static final HBaseTestingUtility TEST_UTIL =
-      new HBaseTestingUtility();
+    new HBaseTestingUtility();
   private FileSystem fs;
   private int uncompressedSizeV1;
 
   @Before
   public void setUp() throws IOException {
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    TEST_UTIL.initTestDir();
   }
 
   public void writeTestBlockContents(DataOutputStream dos) throws IOException {
@@ -154,8 +153,8 @@ public class TestHFileBlock {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
         byte[] block = createTestV1Block(algo);
-        Path path = new Path(HBaseTestingUtility.getTestDir(), "blocks_v1_"
-            + algo);
+        Path path = new Path(TEST_UTIL.getDataTestDir(),
+          "blocks_v1_"+ algo);
         LOG.info("Creating temporary file at " + path);
         FSDataOutputStream os = fs.create(path);
         int totalSize = 0;
@@ -188,7 +187,7 @@ public class TestHFileBlock {
   public void testReaderV2() throws IOException {
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
-        Path path = new Path(HBaseTestingUtility.getTestDir(), "blocks_v2_"
+        Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
             + algo);
         FSDataOutputStream os = fs.create(path);
         HFileBlock.Writer hbw = new HFileBlock.Writer(algo);
@@ -244,7 +243,7 @@ public class TestHFileBlock {
         for (boolean cacheOnWrite : BOOLEAN_VALUES) {
           Random rand = defaultRandom();
           LOG.info("Compression algorithm: " + algo + ", pread=" + pread);
-          Path path = new Path(HBaseTestingUtility.getTestDir(), "prev_offset");
+          Path path = new Path(TEST_UTIL.getDataTestDir(), "prev_offset");
           List<Long> expectedOffsets = new ArrayList<Long>();
           List<Long> expectedPrevOffsets = new ArrayList<Long>();
           List<BlockType> expectedTypes = new ArrayList<BlockType>();
@@ -400,7 +399,7 @@ public class TestHFileBlock {
   public void testConcurrentReading() throws Exception {
     for (Compression.Algorithm compressAlgo : COMPRESSION_ALGORITHMS) {
       Path path =
-          new Path(HBaseTestingUtility.getTestDir(), "concurrent_reading");
+          new Path(TEST_UTIL.getDataTestDir(), "concurrent_reading");
       Random rand = defaultRandom();
       List<Long> offsets = new ArrayList<Long>();
       List<BlockType> types = new ArrayList<BlockType>();

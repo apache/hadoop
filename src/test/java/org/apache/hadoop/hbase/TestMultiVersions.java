@@ -97,7 +97,7 @@ public class TestMultiVersions {
     Incommon incommon = new HTableIncommon(table);
     TimestampTestBase.doTestDelete(incommon, new FlushCache() {
       public void flushcache() throws IOException {
-        UTIL.getHbaseCluster().flushcache();
+        UTIL.getHBaseCluster().flushcache();
       }
      });
 

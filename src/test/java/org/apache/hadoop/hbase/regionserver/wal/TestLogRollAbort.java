@@ -113,7 +113,7 @@ public class TestLogRollAbort {
   }
 
   @After
-  public void tearDown() throws IOException {
+  public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 

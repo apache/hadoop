@@ -433,7 +433,7 @@ public class TestCatalogJanitor {
   private String setRootDirAndCleanIt(final HBaseTestingUtility htu,
       final String subdir)
   throws IOException {
-    Path testdir = HBaseTestingUtility.getTestDir(subdir);
+    Path testdir = htu.getDataTestDir(subdir);
     FileSystem fs = FileSystem.get(htu.getConfiguration());
     if (fs.exists(testdir)) assertTrue(fs.delete(testdir, true));
     htu.getConfiguration().set(HConstants.HBASE_DIR, testdir.toString());

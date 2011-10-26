@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -44,7 +42,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -91,8 +88,8 @@ public class TestHRegion extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHRegion.class);
 
   HRegion region = null;
-  private final String DIR = HBaseTestingUtility.getTestDir() +
-    "/TestHRegion/";
+  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final String DIR = TEST_UTIL.getDataTestDir("TestHRegion").toString();
 
   private final int MAX_VERSIONS = 2;
 
@@ -3023,7 +3020,7 @@ public class TestHRegion extends HBaseTestCase {
       put.add(fam2, col, 1, Bytes.toBytes("test2"));
       ht.put(put);
       
-      HRegion firstRegion = htu.getHbaseCluster().
+      HRegion firstRegion = htu.getHBaseCluster().
         getRegions(Bytes.toBytes(this.getName())).get(0);
       firstRegion.flushcache();
       HDFSBlocksDistribution blocksDistribution1 =

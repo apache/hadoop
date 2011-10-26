@@ -282,7 +282,7 @@ public class TestMultiColumnScanner {
     HRegionInfo info =
         new HRegionInfo(Bytes.toBytes(tableName), null, null, false);
     HRegion region = HRegion.createHRegion(
-        info, HBaseTestingUtility.getTestDir(), TEST_UTIL.getConfiguration(),
+        info, TEST_UTIL.getDataTestDir(), TEST_UTIL.getConfiguration(),
         htd);
     return region;
   }

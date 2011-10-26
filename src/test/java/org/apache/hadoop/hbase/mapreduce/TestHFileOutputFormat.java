@@ -175,7 +175,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-      HBaseTestingUtility.getTestDir("test_LATEST_TIMESTAMP_isReplaced");
+      util.getDataTestDir("test_LATEST_TIMESTAMP_isReplaced");
     try {
       Job job = new Job(conf);
       FileOutputFormat.setOutputPath(job, dir);
@@ -243,7 +243,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-      HBaseTestingUtility.getTestDir("test_TIMERANGE_present");
+      util.getDataTestDir("test_TIMERANGE_present");
     LOG.info("Timerange dir writing to dir: "+ dir);
     try {
       // build a record writer using HFileOutputFormat
@@ -307,7 +307,7 @@ public class TestHFileOutputFormat  {
   @Test
   public void testWritingPEData() throws Exception {
     Configuration conf = util.getConfiguration();
-    Path testDir = HBaseTestingUtility.getTestDir("testWritingPEData");
+    Path testDir = util.getDataTestDir("testWritingPEData");
     FileSystem fs = testDir.getFileSystem(conf);
     
     // Set down this value or we OOME in eclipse.
@@ -372,7 +372,7 @@ public class TestHFileOutputFormat  {
   private void doIncrementalLoadTest(
       boolean shouldChangeRegions) throws Exception {
     Configuration conf = util.getConfiguration();
-    Path testDir = HBaseTestingUtility.getTestDir("testLocalMRIncrementalLoad");
+    Path testDir = util.getDataTestDir("testLocalMRIncrementalLoad");
     byte[][] startKeys = generateRandomStartKeys(5);
     
     try {
@@ -557,7 +557,7 @@ public class TestHFileOutputFormat  {
     RecordWriter<ImmutableBytesWritable, KeyValue> writer = null;
     TaskAttemptContext context = null;
     Path dir =
-        HBaseTestingUtility.getTestDir("testColumnFamilyCompression");
+        util.getDataTestDir("testColumnFamilyCompression");
 
     HTable table = Mockito.mock(HTable.class);
 

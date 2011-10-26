@@ -73,7 +73,7 @@ public class TestLogsCleaner {
     ReplicationZookeeper zkHelper =
         new ReplicationZookeeper(server, new AtomicBoolean(true));
 
-    Path oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
+    Path oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     String fakeMachineName =
       URLEncoder.encode(server.getServerName().toString(), "UTF8");

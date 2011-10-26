@@ -63,7 +63,7 @@ public class TestHFileWriterV2 {
 
   @Test
   public void testHFileFormatV2() throws IOException {
-    Path hfilePath = new Path(HBaseTestingUtility.getTestDir(),
+    Path hfilePath = new Path(TEST_UTIL.getDataTestDir(),
         "testHFileFormatV2");
 
     final Compression.Algorithm COMPRESS_ALGO = Compression.Algorithm.GZ;

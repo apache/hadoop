@@ -76,7 +76,7 @@ public class TestDependentColumnFilter extends TestCase {
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
     HRegionInfo info = new HRegionInfo(htd.getName(), null, null, false);
-    this.region = HRegion.createHRegion(info, testUtil.getTestDir(),
+    this.region = HRegion.createHRegion(info, testUtil.getDataTestDir(),
         testUtil.getConfiguration(), htd);
     addData();
   }
