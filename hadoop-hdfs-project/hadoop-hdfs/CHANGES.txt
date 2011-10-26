@@ -1100,6 +1100,10 @@ Release 0.23.0 - Unreleased
     HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in
     webhdfs responses.  (szetszwo)
 
+    HDFS-2428. Convert com.sun.jersey.api.ParamException$QueryParamException
+    to IllegalArgumentException and response it http BAD_REQUEST in webhdfs.
+    (szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
