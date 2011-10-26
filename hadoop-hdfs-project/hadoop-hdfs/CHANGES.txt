@@ -159,6 +159,9 @@ Trunk (unreleased changes)
     HDFS-2411. The the auth to local mappings are not being respected, with 
     webhdfs enabled. (jitendra)
 
+    HDFS-2494. Close the streams and DFSClient in DatanodeWebHdfsMethods.
+    (Uma Maheswara Rao G via szetszwo)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
