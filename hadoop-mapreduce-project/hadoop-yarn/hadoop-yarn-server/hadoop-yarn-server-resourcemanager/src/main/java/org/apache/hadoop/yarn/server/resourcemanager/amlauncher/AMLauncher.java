@@ -198,8 +198,7 @@ public class AMLauncher implements Runnable {
         String.valueOf(rmContext.getRMApps()
             .get(application.getAppAttemptId().getApplicationId())
             .getSubmitTime()));
-    
-
+ 
     if (UserGroupInformation.isSecurityEnabled()) {
       // TODO: Security enabled/disabled info should come from RM.
 

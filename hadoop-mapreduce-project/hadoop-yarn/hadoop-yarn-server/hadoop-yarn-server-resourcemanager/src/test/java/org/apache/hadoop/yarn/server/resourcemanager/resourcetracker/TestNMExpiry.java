@@ -96,7 +96,7 @@ public class TestNMExpiry {
     dispatcher.register(RMNodeEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
-        null);
+        null, null);
     NMLivelinessMonitor nmLivelinessMonitor = new TestNmLivelinessMonitor(
         dispatcher);
     nmLivelinessMonitor.init(conf);

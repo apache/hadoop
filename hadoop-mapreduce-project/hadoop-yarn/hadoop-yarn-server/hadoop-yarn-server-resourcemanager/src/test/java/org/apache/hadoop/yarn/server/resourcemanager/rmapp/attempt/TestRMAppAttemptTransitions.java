@@ -138,7 +138,7 @@ public class TestRMAppAttemptTransitions {
         mock(ContainerAllocationExpirer.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     rmContext = new RMContextImpl(new MemStore(), rmDispatcher,
-      containerAllocationExpirer, amLivelinessMonitor);
+      containerAllocationExpirer, amLivelinessMonitor, null);
     
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);

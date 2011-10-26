@@ -24,7 +24,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
  
 /**
  * A factory to allow applications to deal with inconsistencies between
@@ -178,7 +177,7 @@ public class ContextFactory {
   }
   
   /**
-   * Copy a custom {@link WrappedMapper.Context}, optionally replacing 
+   * Copy a custom WrappedMapper.Context, optionally replacing 
    * the input and output.
    * @param <K1> input key type
    * @param <V1> input value type

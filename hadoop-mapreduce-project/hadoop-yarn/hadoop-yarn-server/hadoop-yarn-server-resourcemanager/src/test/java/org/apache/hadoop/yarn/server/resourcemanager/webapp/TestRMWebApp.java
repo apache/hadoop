@@ -120,7 +120,7 @@ public class TestRMWebApp {
     for (RMNode node : nodes) {
       nodesMap.put(node.getNodeID(), node);
     }
-   return new RMContextImpl(new MemStore(), null, null, null) {
+   return new RMContextImpl(new MemStore(), null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return applicationsMaps;

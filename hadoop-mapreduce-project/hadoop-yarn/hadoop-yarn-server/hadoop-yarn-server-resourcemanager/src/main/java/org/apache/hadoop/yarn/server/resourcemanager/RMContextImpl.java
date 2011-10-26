@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 
 public class RMContextImpl implements RMContext {
 
@@ -45,14 +46,17 @@ public class RMContextImpl implements RMContext {
 
   private AMLivelinessMonitor amLivelinessMonitor;
   private ContainerAllocationExpirer containerAllocationExpirer;
+  private final DelegationTokenRenewer tokenRenewer;
 
   public RMContextImpl(Store store, Dispatcher rmDispatcher,
       ContainerAllocationExpirer containerAllocationExpirer,
-      AMLivelinessMonitor amLivelinessMonitor) {
+      AMLivelinessMonitor amLivelinessMonitor,
+      DelegationTokenRenewer tokenRenewer) {
     this.store = store;
     this.rmDispatcher = rmDispatcher;
     this.containerAllocationExpirer = containerAllocationExpirer;
     this.amLivelinessMonitor = amLivelinessMonitor;
+    this.tokenRenewer = tokenRenewer;
   }
   
   @Override
@@ -88,5 +92,10 @@ public class RMContextImpl implements RMContext {
   @Override
   public AMLivelinessMonitor getAMLivelinessMonitor() {
     return this.amLivelinessMonitor;
+  }
+
+  @Override
+  public DelegationTokenRenewer getDelegationTokenRenewer() {
+    return tokenRenewer;
   }
 }

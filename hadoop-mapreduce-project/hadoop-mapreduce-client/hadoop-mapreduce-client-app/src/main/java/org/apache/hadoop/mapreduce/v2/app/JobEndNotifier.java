@@ -105,7 +105,6 @@ public class JobEndNotifier implements Configurable {
   /**
    * Notify a server of the completion of a submitted job. The server must have
    * configured MRConfig.JOB_END_NOTIFICATION_URLS
-   * @param config JobConf to read parameters from
    * @param jobReport JobReport used to read JobId and JobStatus
    * @throws InterruptedException
    */
