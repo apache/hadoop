@@ -107,7 +107,7 @@ public class TestNMWebServer {
       launchContext.setContainerId(containerId);
       launchContext.setUser(user);
       Container container =
-          new ContainerImpl(dispatcher, launchContext, null, metrics) {
+          new ContainerImpl(conf, dispatcher, launchContext, null, metrics) {
         @Override
         public ContainerState getContainerState() {
           return ContainerState.RUNNING;

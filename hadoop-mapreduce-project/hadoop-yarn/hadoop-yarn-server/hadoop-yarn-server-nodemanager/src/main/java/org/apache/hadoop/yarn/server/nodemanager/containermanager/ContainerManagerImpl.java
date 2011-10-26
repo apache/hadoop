@@ -275,7 +275,7 @@ public class ContainerManagerImpl extends CompositeService implements
     // //////////// End of parsing credentials
 
     Container container =
-        new ContainerImpl(this.dispatcher, launchContext, credentials, metrics);
+        new ContainerImpl(getConfig(), this.dispatcher, launchContext, credentials, metrics);
     ContainerId containerID = launchContext.getContainerId();
     ApplicationId applicationID = 
         containerID.getApplicationAttemptId().getApplicationId();

@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -68,6 +70,7 @@ import org.mockito.ArgumentMatcher;
 public class TestContainer {
 
   final NodeManagerMetrics metrics = NodeManagerMetrics.create();
+  final Configuration conf = new YarnConfiguration();
 
   
   /**
@@ -384,7 +387,7 @@ public class TestContainer {
   }
 
   private Container newContainer(Dispatcher disp, ContainerLaunchContext ctx) {
-    return new ContainerImpl(disp, ctx, null, metrics);
+    return new ContainerImpl(conf, disp, ctx, null, metrics);
   }
   
   @SuppressWarnings("unchecked")

@@ -406,7 +406,8 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     * Resource capability: Currently, YARN only supports memory based resource 
       requirements so the request should define how much memory is needed. The 
       value is defined in MB and has to less than the max capability of the 
-      cluster and an exact multiple of the min capability. 
+      cluster and an exact multiple of the min capability. Memory resources
+      correspond to physical memory limits imposed on the task containers.
       
     * Priority: When asking for sets of containers, an ApplicationMaster may 
       define different priorities to each set. For example, the Map-Reduce 
@@ -774,8 +775,9 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
   The two things you're interested in are physical memory and virtual memory. 
   If you have exceeded physical memory limits your app is using too much physical 
   memory. If you're running a Java app, you can use -hprof to look at what is 
-  taking up space in the heap. If you have exceeded virtual memory, things are 
-  slightly more complicated. 
+  taking up space in the heap. If you have exceeded virtual memory, you may
+  need to increase the value of the the cluster-wide configuration variable
+  <<<yarn.nodemanager.vmem-pmem-ratio>>>.
 
 * Useful Links
 

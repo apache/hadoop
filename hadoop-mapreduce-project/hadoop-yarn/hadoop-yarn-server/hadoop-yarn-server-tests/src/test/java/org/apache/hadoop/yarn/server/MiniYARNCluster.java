@@ -168,7 +168,7 @@ public class MiniYARNCluster extends CompositeService {
         getConfig().set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
         getConfig().set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             remoteLogDir.getAbsolutePath());
-        getConfig().setInt(YarnConfiguration.NM_VMEM_GB, 4); // By default AM + 2 containers
+        getConfig().setInt(YarnConfiguration.NM_PMEM_MB, 4*1024); // By default AM + 2 containers
         nodeManager = new NodeManager() {
 
           @Override

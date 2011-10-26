@@ -100,9 +100,9 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.heartBeatInterval =
         conf.getLong(YarnConfiguration.NM_TO_RM_HEARTBEAT_INTERVAL_MS,
             YarnConfiguration.DEFAULT_NM_TO_RM_HEARTBEAT_INTERVAL_MS);
-    int memory = conf.getInt(YarnConfiguration.NM_VMEM_GB, YarnConfiguration.DEFAULT_NM_VMEM_GB);
+    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
-    this.totalResource.setMemory(memory * 1024);
+    this.totalResource.setMemory(memoryMb);
     metrics.addResource(totalResource);
     super.init(conf);
   }

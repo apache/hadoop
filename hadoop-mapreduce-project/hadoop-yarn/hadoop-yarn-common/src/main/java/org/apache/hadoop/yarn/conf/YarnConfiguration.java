@@ -296,8 +296,12 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR = "/tmp/logs";
   
   /** Amount of memory in GB that can be allocated for containers.*/
-  public static final String NM_VMEM_GB = NM_PREFIX + "resource.memory-gb";
-  public static final int DEFAULT_NM_VMEM_GB = 8;
+  public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";
+  public static final int DEFAULT_NM_PMEM_MB = 8 * 1024;
+  
+  public static final String NM_VMEM_PMEM_RATIO =
+    NM_PREFIX + "vmem-pmem-ratio";
+  public static final float DEFAULT_NM_VMEM_PMEM_RATIO = 2.1f;
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
@@ -313,10 +317,6 @@ public class YarnConfiguration extends Configuration {
   /** Class that calculates containers current resource utilization.*/
   public static final String NM_CONTAINER_MON_RESOURCE_CALCULATOR =
     NM_PREFIX + "container-monitor.resource-calculator.class";
-  
-  /** Amount of physical ram to reserve for other applications, -1 disables.*/
-  public static final String NM_RESERVED_MEMORY_MB =
-    NM_PREFIX + "reserved.memory-mb";
   
   /** Frequency of running node health script.*/
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 
