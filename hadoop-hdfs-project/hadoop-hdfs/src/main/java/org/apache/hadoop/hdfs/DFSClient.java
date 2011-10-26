@@ -872,7 +872,7 @@ public class DFSClient implements java.io.Closeable {
    * 
    * @see ClientProtocol#append(String, String) 
    */
-  DFSOutputStream append(String src, int buffersize, Progressable progress) 
+  public DFSOutputStream append(String src, int buffersize, Progressable progress) 
       throws IOException {
     checkOpen();
     HdfsFileStatus stat = getFileInfo(src);

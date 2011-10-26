@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
@@ -819,6 +820,8 @@ public class MiniDFSCluster {
                              long[] simulatedCapacities,
                              boolean setupHostsFile,
                              boolean checkDataNodeAddrConfig) throws IOException {
+    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
     if (conf.get(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY) == null) {
@@ -1457,6 +1460,18 @@ public class MiniDFSCluster {
             .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     try {
       return (HftpFileSystem)FileSystem.get(new URI(uri), conf);
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   * @return a {@link WebHdfsFileSystem} object.
+   */
+  public WebHdfsFileSystem getWebHdfsFileSystem() throws IOException {
+    final String str = WebHdfsFileSystem.SCHEME  + "://" + conf.get("dfs.http.address");
+    try {
+      return (WebHdfsFileSystem)FileSystem.get(new URI(str), conf); 
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }

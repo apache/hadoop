@@ -308,6 +308,9 @@ Release 0.23.0 - Unreleased
     HDFS-2202. Add a new DFSAdmin command to set balancer bandwidth of
     datanodes without restarting.  (Eric Payne via szetszwo)
 
+    HDFS-2284. Add a new FileSystem, webhdfs://, for supporting write Http
+    access to HDFS.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

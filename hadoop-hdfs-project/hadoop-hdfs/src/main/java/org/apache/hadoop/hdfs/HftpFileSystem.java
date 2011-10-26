@@ -284,7 +284,7 @@ public class HftpFileSystem extends FileSystem {
    * @return namenode URL referring to the given path
    * @throws IOException on error constructing the URL
    */
-  URL getNamenodeURL(String path, String query) throws IOException {
+  protected URL getNamenodeURL(String path, String query) throws IOException {
     final URL url = new URL("http", nnAddr.getHostName(),
           nnAddr.getPort(), path + '?' + query);
     if (LOG.isTraceEnabled()) {
@@ -351,6 +351,7 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
+    f = f.makeQualified(getUri(), getWorkingDirectory());
     String path = "/data" + ServletUtil.encodePath(f.toUri().getPath());
     String query = addDelegationTokenParam("ugi=" + getEncodedUgiParameter());
     URL u = getNamenodeURL(path, query);    
