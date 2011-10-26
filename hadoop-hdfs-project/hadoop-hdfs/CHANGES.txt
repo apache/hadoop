@@ -1093,6 +1093,8 @@ Release 0.23.0 - Unreleased
     HDFS-2403. NamenodeWebHdfsMethods.generateDelegationToken(..) does not use
     the renewer parameter.  (szetszwo)
 
+    HDFS-2409. _HOST in dfs.web.authentication.kerberos.principal. (jitendra)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
