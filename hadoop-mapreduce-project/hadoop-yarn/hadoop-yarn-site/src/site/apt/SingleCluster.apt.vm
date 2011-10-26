@@ -119,8 +119,8 @@ Add the following configs to your <<<yarn-site.xml>>>
   </property>  
 
   <property>
-    <name>yarn.nodemanager.resource.memory-gb</name>
-    <value>10</value>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>10240</value>
     <description>the amount of memory on the NodeManager in GB</description>
   </property>
  

@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.NodeHealthCheckerService;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -83,6 +84,7 @@ public class TestNodeStatusUpdater {
   int heartBeatID = 0;
   volatile Error nmStartError = null;
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
+  private final Configuration conf = new YarnConfiguration();
 
   @After
   public void tearDown() {
@@ -168,7 +170,7 @@ public class TestNodeStatusUpdater {
         launchContext.setContainerId(firstContainerID);
         launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
         launchContext.getResource().setMemory(2);
-        Container container = new ContainerImpl(null, launchContext, null, null);
+        Container container = new ContainerImpl(conf , null, launchContext, null, null);
         this.context.getContainers().put(firstContainerID, container);
       } else if (heartBeatID == 2) {
         // Checks on the RM end
@@ -192,7 +194,7 @@ public class TestNodeStatusUpdater {
         launchContext.setContainerId(secondContainerID);
         launchContext.setResource(recordFactory.newRecordInstance(Resource.class));
         launchContext.getResource().setMemory(3);
-        Container container = new ContainerImpl(null, launchContext, null, null);
+        Container container = new ContainerImpl(conf, null, launchContext, null, null);
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
@@ -358,7 +360,7 @@ public class TestNodeStatusUpdater {
 
   private YarnConfiguration createNMConfig() {
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.NM_VMEM_GB, 5); // 5GB
+    conf.setInt(YarnConfiguration.NM_PMEM_MB, 5*1024); // 5GB
     conf.set(YarnConfiguration.NM_ADDRESS, "127.0.0.1:12345");
     conf.set(YarnConfiguration.NM_LOCALIZER_ADDRESS, "127.0.0.1:12346");
     conf.set(YarnConfiguration.NM_LOG_DIRS, new Path(basedir, "logs").toUri()

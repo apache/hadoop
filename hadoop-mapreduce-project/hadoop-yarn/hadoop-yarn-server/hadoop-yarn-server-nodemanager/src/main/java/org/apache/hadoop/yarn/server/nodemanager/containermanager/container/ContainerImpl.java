@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.StringUtils;
@@ -77,6 +78,9 @@ public class ContainerImpl implements Container {
   private int exitCode = YarnConfiguration.INVALID_CONTAINER_EXIT_STATUS;
   private final StringBuilder diagnostics;
 
+  /** The NM-wide configuration - not specific to this container */
+  private final Configuration daemonConf;
+
   private static final Log LOG = LogFactory.getLog(Container.class);
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private final Map<LocalResourceRequest,String> pendingResources =
@@ -90,9 +94,11 @@ public class ContainerImpl implements Container {
   private final List<LocalResourceRequest> appRsrcs =
     new ArrayList<LocalResourceRequest>();
 
-  public ContainerImpl(Dispatcher dispatcher,
+  public ContainerImpl(Configuration conf,
+      Dispatcher dispatcher,
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics) {
+    this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.launchContext = launchContext;
     this.diagnostics = new StringBuilder();
@@ -568,12 +574,16 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       // Inform the ContainersMonitor to start monitoring the container's
       // resource usage.
-      // TODO: Fix pmem limits below
-      long vmemBytes =
+      long pmemBytes =
           container.getLaunchContext().getResource().getMemory() * 1024 * 1024L;
+      float pmemRatio = container.daemonConf.getFloat(
+          YarnConfiguration.NM_VMEM_PMEM_RATIO,
+          YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
+      long vmemBytes = (long) (pmemRatio * pmemBytes);
+      
       container.dispatcher.getEventHandler().handle(
           new ContainerStartMonitoringEvent(container.getContainerID(),
-              vmemBytes, -1));
+              vmemBytes, pmemBytes));
       container.metrics.runningContainer();
     }
   }

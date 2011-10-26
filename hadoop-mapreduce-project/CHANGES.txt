@@ -379,6 +379,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2747. Cleaned up LinuxContainerExecutor binary sources and changed
     the configuration to use yarn names. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3205. Fix memory specifications to be physical rather than
+    virtual, allowing for a ratio between the two to be configurable. (todd
+    via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

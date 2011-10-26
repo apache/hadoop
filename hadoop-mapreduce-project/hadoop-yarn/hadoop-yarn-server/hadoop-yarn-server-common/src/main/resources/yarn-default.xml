@@ -286,9 +286,20 @@
   </property>
 
   <property>
-    <description>Amount of memory in GB that can be allocated for containers.</description>
-    <name>yarn.nodemanager.resource.memory-gb</name>
-    <value>8</value>
+    <description>Amount of physical memory, in MB, that can be allocated 
+    for containers.</description>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>8192</value>
+  </property>
+
+  <property>
+    <description>Ratio between virtual memory to physical memory when
+    setting memory limits for containers. Container allocations are
+    expressed in terms of physical memory, and virtual memory usage
+    is allowed to exceed this allocation by this ratio.
+    </description>
+    <name>yarn.nodemanager.vmem-pmem-ratio</name>
+    <value>2.1</value>
   </property>
 
   <property>
@@ -306,12 +317,6 @@
   <property>
     <description>Class that calculates containers current resource utilization.</description>
     <name>yarn.nodemanager.container-monitor.resource-calculator.class</name>
-  </property>
-
-  <property>
-    <description>Amount of physical ram to reserve for other applications, -1 disables.</description>
-    <name>yarn.nodemanager.reserved.memory-mb</name>
-    <value>-1</value>
   </property>
 
   <property>

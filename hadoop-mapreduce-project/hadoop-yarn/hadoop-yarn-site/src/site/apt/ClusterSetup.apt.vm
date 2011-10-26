@@ -241,9 +241,17 @@ Hadoop MapReduce Next Generation - Cluster Setup
 *-------------------------+-------------------------+------------------------+
 || Parameter              || Value                  || Notes                 |
 *-------------------------+-------------------------+------------------------+
-| <<<yarn.nodemanager.resource.memory-gb>>> | | |
-| | Resource i.e. available memory, in GB, for given <<<NodeManager>>> | |
-| | | Defines available resources on the <<<NodeManager>>>. |
+| <<<yarn.nodemanager.resource.memory-mb>>> | | |
+| | Resource i.e. available physical memory, in MB, for given <<<NodeManager>>> | |
+| | | Defines total available resources on the <<<NodeManager>>> to be made |
+| | | available to running containers |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.nodemanager.vmem-pmem-ratio>>> | | |
+| | Maximum ratio by which virtual memory usage of tasks may exceed |
+| | physical memory | |
+| | | The virtual memory usage of each task may exceed its physical memory |
+| | | limit by this ratio. The total amount of virtual memory used by tasks |
+| | | on the NodeManager may exceed its physical memory usage by this ratio. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.local-dirs>>> | | |
 | | Comma-separated list of paths on the local filesystem where | |
