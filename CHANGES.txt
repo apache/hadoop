@@ -54,6 +54,8 @@ Release 0.20.205.1 - unreleased
     HDFS-2427. Change the default permission in webhdfs to 755 and add range
     check/validation for all parameters.  (szetszwo)
 
+    HDFS-2501. Add version prefix and root methods to webhdfs.  (szetszwo)
+
   BUG FIXES
 
     HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in

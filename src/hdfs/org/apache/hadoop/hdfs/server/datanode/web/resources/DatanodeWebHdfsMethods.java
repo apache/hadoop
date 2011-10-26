@@ -76,8 +76,35 @@ import com.sun.jersey.spi.container.ResourceFilters;
 public class DatanodeWebHdfsMethods {
   public static final Log LOG = LogFactory.getLog(DatanodeWebHdfsMethods.class);
 
+  private static final UriFsPathParam ROOT = new UriFsPathParam("");
+
   private @Context ServletContext context;
   private @Context HttpServletResponse response;
+
+  /** Handle HTTP PUT request for the root. */
+  @PUT
+  @Path("/")
+  @Consumes({"*/*"})
+  @Produces({MediaType.APPLICATION_JSON})
+  public Response putRoot(
+      final InputStream in,
+      @Context final UserGroupInformation ugi,
+      @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
+          final PutOpParam op,
+      @QueryParam(PermissionParam.NAME) @DefaultValue(PermissionParam.DEFAULT)
+          final PermissionParam permission,
+      @QueryParam(OverwriteParam.NAME) @DefaultValue(OverwriteParam.DEFAULT)
+          final OverwriteParam overwrite,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize,
+      @QueryParam(ReplicationParam.NAME) @DefaultValue(ReplicationParam.DEFAULT)
+          final ReplicationParam replication,
+      @QueryParam(BlockSizeParam.NAME) @DefaultValue(BlockSizeParam.DEFAULT)
+          final BlockSizeParam blockSize
+      ) throws IOException, InterruptedException {
+    return put(in, ugi, ROOT, op, permission, overwrite, bufferSize,
+        replication, blockSize);
+  }
 
   /** Handle HTTP PUT request. */
   @PUT
@@ -143,6 +170,22 @@ public class DatanodeWebHdfsMethods {
     });
   }
 
+  /** Handle HTTP POST request for the root for the root. */
+  @POST
+  @Path("/")
+  @Consumes({"*/*"})
+  @Produces({MediaType.APPLICATION_JSON})
+  public Response postRoot(
+      final InputStream in,
+      @Context final UserGroupInformation ugi,
+      @QueryParam(PostOpParam.NAME) @DefaultValue(PostOpParam.DEFAULT)
+          final PostOpParam op,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize
+      ) throws IOException, InterruptedException {
+    return post(in, ugi, ROOT, op, bufferSize);
+  }
+
   /** Handle HTTP POST request. */
   @POST
   @Path("{" + UriFsPathParam.NAME + ":.*}")
@@ -192,6 +235,24 @@ public class DatanodeWebHdfsMethods {
     }
       }
     });
+  }
+
+  /** Handle HTTP GET request for the root. */
+  @GET
+  @Path("/")
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+  public Response getRoot(
+      @Context final UserGroupInformation ugi,
+      @QueryParam(GetOpParam.NAME) @DefaultValue(GetOpParam.DEFAULT)
+          final GetOpParam op,
+      @QueryParam(OffsetParam.NAME) @DefaultValue(OffsetParam.DEFAULT)
+          final OffsetParam offset,
+      @QueryParam(LengthParam.NAME) @DefaultValue(LengthParam.DEFAULT)
+          final LengthParam length,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize
+      ) throws IOException, InterruptedException {
+    return get(ugi, ROOT, op, offset, length, bufferSize); 
   }
 
   /** Handle HTTP GET request. */
