@@ -102,7 +102,7 @@ public class DatanodeWebHdfsMethods {
           final ReplicationParam replication,
       @QueryParam(BlockSizeParam.NAME) @DefaultValue(BlockSizeParam.DEFAULT)
           final BlockSizeParam blockSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
@@ -162,7 +162,7 @@ public class DatanodeWebHdfsMethods {
           final PostOpParam op,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
@@ -216,7 +216,7 @@ public class DatanodeWebHdfsMethods {
           final LengthParam length,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path + ", ugi=" + ugi
@@ -255,7 +255,11 @@ public class DatanodeWebHdfsMethods {
           }
         }
       };
-      return Response.ok(streaming).type(MediaType.APPLICATION_OCTET_STREAM).build();
+
+      final int status = offset.getValue() == 0?
+          HttpServletResponse.SC_OK: HttpServletResponse.SC_PARTIAL_CONTENT;
+      return Response.status(status).entity(streaming).type(
+          MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case GETFILECHECKSUM:
     {

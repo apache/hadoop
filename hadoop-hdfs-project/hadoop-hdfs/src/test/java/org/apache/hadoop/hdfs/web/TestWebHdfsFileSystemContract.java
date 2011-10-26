@@ -123,6 +123,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     }    
   }
   
+  //the following are new tests (i.e. not over-riding the super class methods)
+
   public void testGetFileBlockLocations() throws IOException {
     final String f = "/test/testGetFileBlockLocations";
     createFile(path(f));
@@ -170,6 +172,47 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       fail();
     } catch(FileNotFoundException fnfe) {
       WebHdfsFileSystem.LOG.info("This is expected.", fnfe);
+    }
+  }
+
+  public void testSeek() throws IOException {
+    final Path p = new Path("/test/testSeek");
+    createFile(p);
+
+    final int one_third = data.length/3;
+    final int two_third = one_third*2;
+
+    { //test seek
+      final int offset = one_third; 
+      final int len = data.length - offset;
+      final byte[] buf = new byte[len];
+
+      final FSDataInputStream in = fs.open(p);
+      in.seek(offset);
+      
+      //read all remaining data
+      in.readFully(buf);
+      in.close();
+  
+      for (int i = 0; i < buf.length; i++) {
+        assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
+            data[i + offset], buf[i]);
+      }
+    }
+
+    { //test position read (read the data after the two_third location)
+      final int offset = two_third; 
+      final int len = data.length - offset;
+      final byte[] buf = new byte[len];
+
+      final FSDataInputStream in = fs.open(p);
+      in.readFully(offset, buf);
+      in.close();
+  
+      for (int i = 0; i < buf.length; i++) {
+        assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
+            data[i + offset], buf[i]);
+      }
     }
   }
 }
