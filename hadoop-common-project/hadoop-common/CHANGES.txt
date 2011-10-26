@@ -90,6 +90,9 @@ Trunk (unreleased changes)
 
     HADOOP-7769. TestJMXJsonServlet is failing. (tomwhite)
 
+    HADOOP-7766. The auth to local mappings are not being respected, with webhdfs 
+    and security enabled. (jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
