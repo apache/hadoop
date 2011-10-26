@@ -1095,6 +1095,8 @@ Release 0.23.0 - Unreleased
 
     HDFS-2409. _HOST in dfs.web.authentication.kerberos.principal. (jitendra)
 
+    HDFS-2404. webhdfs liststatus json response is not correct. (suresh)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
