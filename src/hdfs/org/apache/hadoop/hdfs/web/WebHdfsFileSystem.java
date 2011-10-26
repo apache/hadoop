@@ -28,7 +28,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -76,6 +74,7 @@ import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
+import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
@@ -98,8 +97,10 @@ public class WebHdfsFileSystem extends FileSystem
   public static final Log LOG = LogFactory.getLog(WebHdfsFileSystem.class);
   /** File System URI: {SCHEME}://namenode:port/path/to/file */
   public static final String SCHEME = "webhdfs";
+  /** WebHdfs version. */
+  public static final int VERSION = 1;
   /** Http URI: http://namenode:port/{PATH_PREFIX}/path/to/file */
-  public static final String PATH_PREFIX = SCHEME;
+  public static final String PATH_PREFIX = "/" + SCHEME + "/v" + VERSION;
 
   /** SPNEGO authenticator */
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
@@ -272,7 +273,7 @@ public class WebHdfsFileSystem extends FileSystem
   URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
-    final String path = "/" + PATH_PREFIX
+    final String path = PATH_PREFIX
         + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
     final String query = op.toQueryString()
         + '&' + new UserParam(ugi)
