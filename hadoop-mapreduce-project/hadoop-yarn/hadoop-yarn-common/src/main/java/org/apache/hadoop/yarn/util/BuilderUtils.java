@@ -281,7 +281,8 @@ public class BuilderUtils {
       ApplicationId applicationId, String user, String queue, String name,
       String host, int rpcPort, String clientToken, YarnApplicationState state,
       String diagnostics, String url, long startTime, long finishTime,
-      FinalApplicationStatus finalStatus, ApplicationResourceUsageReport appResources) {
+      FinalApplicationStatus finalStatus, ApplicationResourceUsageReport appResources,
+      String origTrackingUrl) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -298,6 +299,7 @@ public class BuilderUtils {
     report.setFinishTime(finishTime);
     report.setFinalApplicationStatus(finalStatus);
     report.setApplicationResourceUsageReport(appResources);
+    report.setOriginalTrackingUrl(origTrackingUrl);
     return report;
   }
 

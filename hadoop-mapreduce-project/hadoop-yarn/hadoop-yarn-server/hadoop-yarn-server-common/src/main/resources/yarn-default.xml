@@ -376,4 +376,27 @@
     <name>mapreduce.job.hdfs-servers</name>
     <value>${fs.default.name}</value>
   </property>
+
+  <!-- WebAppProxy Configuration-->
+  
+  <property>
+    <description>The kerberos principal for the proxy, if the proxy is not
+    running as part of the RM.</description>
+    <name>yarn.web-proxy.principal</name>
+    <value/>
+  </property>
+  
+  <property>
+    <description>Keytab for WebAppProxy, if the proxy is not running as part of 
+    the RM.</description>
+    <name>yarn.web-proxy.keytab</name>
+  </property>
+  
+  <property>
+    <description>The address for the web proxy as HOST:PORT, if this is not
+     given or if it matches yarn.resourcemanager.address then the proxy will
+     run as part of the RM</description>
+     <name>yarn.web-proxy.address</name>
+     <value/>
+  </property>
 </configuration>

@@ -66,11 +66,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -406,11 +411,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected void startWepApp() {
-    webApp = WebApps.$for("cluster", masterService).at(
-        this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)).
-      start(new RMWebApp(this));
-
+    Builder<ApplicationMasterService> builder = 
+      WebApps.$for("cluster", masterService).at(
+          this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
+    if(YarnConfiguration.getRMWebAppHostAndPort(conf).
+        equals(YarnConfiguration.getProxyHostAndPort(conf))) {
+      AppReportFetcher fetcher = new AppReportFetcher(conf, getClientRMService());
+      builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
+          ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
+      builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
+    }
+    webApp = builder.start(new RMWebApp(this));
   }
 
   @Override

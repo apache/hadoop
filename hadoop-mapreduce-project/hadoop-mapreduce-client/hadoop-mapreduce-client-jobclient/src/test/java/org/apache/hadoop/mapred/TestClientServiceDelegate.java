@@ -231,14 +231,14 @@ public class TestClientServiceDelegate {
     return BuilderUtils.newApplicationReport(BuilderUtils.newApplicationId(
         1234, 5), "user", "queue", "appname", "host", 124, null,
         YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.SUCCEEDED, null);
+        FinalApplicationStatus.SUCCEEDED, null, "N/A");
   }
 
   private ApplicationReport getRunningApplicationReport(String host, int port) {
     return BuilderUtils.newApplicationReport(BuilderUtils.newApplicationId(
         1234, 5), "user", "queue", "appname", host, port, null,
         YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
-        FinalApplicationStatus.UNDEFINED, null);
+        FinalApplicationStatus.UNDEFINED, null, "N/A");
   }
 
   private ResourceMgrDelegate getRMDelegate() throws YarnRemoteException {

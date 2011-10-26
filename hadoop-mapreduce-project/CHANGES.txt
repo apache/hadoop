@@ -118,6 +118,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2708. Designed and implemented MR Application Master recovery to
     make MR AMs resume their progress after restart. (Sharad Agarwal via vinodkv)
 
+    MAPREDUCE-2858. Added a WebApp Proxy for applications. (Robert Evans via
+    acmurthy) 
+
   IMPROVEMENTS
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via

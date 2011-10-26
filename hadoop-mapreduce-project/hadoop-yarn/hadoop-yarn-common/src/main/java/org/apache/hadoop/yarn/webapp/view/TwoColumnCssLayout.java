@@ -35,7 +35,7 @@ public class TwoColumnCssLayout extends HtmlPage {
     preHead(html);
     html.
       title($("title")).
-      link("/static/yarn.css").
+      link(root_url("static","yarn.css")).
       style(".main { min-height: 100%; height: auto !important; height: 100%;",
             "  margin: 0 auto -4em; border: 0; }",
             ".footer, .push { height: 4em; clear: both; border: 0 }",

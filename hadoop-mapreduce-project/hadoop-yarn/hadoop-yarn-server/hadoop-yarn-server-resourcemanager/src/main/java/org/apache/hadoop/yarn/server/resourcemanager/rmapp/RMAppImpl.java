@@ -331,11 +331,13 @@ public class RMAppImpl implements RMApp {
       String clientToken = "N/A";
       String trackingUrl = "N/A";
       String host = "N/A";
+      String origTrackingUrl = "N/A";
       int rpcPort = -1;
       ApplicationResourceUsageReport appUsageReport = null;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       if (this.currentAttempt != null) {
         trackingUrl = this.currentAttempt.getTrackingUrl();
+        origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
         clientToken = this.currentAttempt.getClientToken();
         host = this.currentAttempt.getHost();
         rpcPort = this.currentAttempt.getRpcPort();
@@ -345,7 +347,8 @@ public class RMAppImpl implements RMApp {
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
           this.diagnostics.toString(), trackingUrl,
-          this.startTime, this.finishTime, finishState, appUsageReport);
+          this.startTime, this.finishTime, finishState, appUsageReport,
+          origTrackingUrl);
     } finally {
       this.readLock.unlock();
     }
@@ -381,7 +384,7 @@ public class RMAppImpl implements RMApp {
   @Override
   public String getTrackingUrl() {
     this.readLock.lock();
-
+    
     try {
       if (this.currentAttempt != null) {
         return this.currentAttempt.getTrackingUrl();
@@ -439,7 +442,7 @@ public class RMAppImpl implements RMApp {
 
     RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
         clientTokenStr, rmContext, scheduler, masterService,
-        submissionContext);
+        submissionContext, YarnConfiguration.getProxyHostAndPort(conf));
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     handler.handle(

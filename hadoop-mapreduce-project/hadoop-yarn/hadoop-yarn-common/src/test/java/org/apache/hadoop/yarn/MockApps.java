@@ -89,6 +89,7 @@ public class MockApps {
       @Override public YarnApplicationState getYarnApplicationState() { return state; }
       @Override public String getQueue() { return queue; }
       @Override public String getTrackingUrl() { return ""; }
+      @Override public String getOriginalTrackingUrl() { return ""; }
       @Override public FinalApplicationStatus getFinalApplicationStatus() { return finishState; }
       @Override
       public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
@@ -103,6 +104,7 @@ public class MockApps {
         // TODO Auto-generated method stub
 
       }
+      @Override public void setOriginalTrackingUrl(String url) { }
       @Override
       public void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources) {
         this.appUsageReport = appResources;

@@ -60,6 +60,14 @@ public interface ApplicationConstants {
 
   public static final String LOCAL_DIR_ENV = "YARN_LOCAL_DIRS";
 
+  /**
+   * The environmental variable for APPLICATION_WEB_PROXY_BASE. Set in 
+   * ApplicationMaster's environment only. This states that for all non-relative
+   * web URLs in the app masters web UI what base should they have.
+   */
+  public static final String APPLICATION_WEB_PROXY_BASE_ENV = 
+    "APPLICATION_WEB_PROXY_BASE";
+
   public static final String LOG_DIR_EXPANSION_VAR = "<LOG_DIR>";
 
   public static final String STDERR = "stderr";
