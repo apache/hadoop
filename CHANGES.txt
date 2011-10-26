@@ -78,6 +78,9 @@ Release 0.20.205.1 - unreleased
 
     HDFS-2416. Distcp with a webhdfs uri on a secure cluster fails. (jitendra)
 
+    HDFS-2494. Close the streams and DFSClient in DatanodeWebHdfsMethods.
+    (Uma Maheswara Rao G via szetszwo)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
