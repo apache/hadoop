@@ -1,7 +1,5 @@
 Hadoop HDFS Change Log
 
-    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
-
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -1106,6 +1104,12 @@ Release 0.23.0 - Unreleased
 
     HDFS-2424. Added a root element "HdfsFileStatuses" for the response
     of webhdfs listStatus.  (szetszwo)
+
+    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
+
+    HDFS-2439. Fix NullPointerException in webhdfs when opening a non-existing
+    file or creating a file without specifying the replication parameter.
+    (szetszwo)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 

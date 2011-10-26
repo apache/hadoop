@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.web;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -28,6 +29,7 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
@@ -157,5 +159,17 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
     //check if the command successes.
     assertTrue(fs.getFileStatus(p).isDirectory());
+  }
+
+  public void testOpenNonExistFile() throws IOException {
+    final Path p = new Path("/test/testOpenNonExistFile");
+    //open it as a file, should get FileNotFoundException 
+    try {
+      final FSDataInputStream in = fs.open(p);
+      in.read();
+      fail();
+    } catch(FileNotFoundException fnfe) {
+      WebHdfsFileSystem.LOG.info("This is expected.", fnfe);
+    }
   }
 }
