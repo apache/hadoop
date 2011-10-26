@@ -318,6 +318,11 @@
 </property>
 
 <property>
+  <name>fs.webhdfs.impl</name>
+  <value>org.apache.hadoop.hdfs.web.WebHdfsFileSystem</value>
+</property>
+
+<property>
   <name>fs.ftp.impl</name>
   <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
   <description>The FileSystem for ftp: uris.</description>

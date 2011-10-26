@@ -32,6 +32,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mortbay.log.Log;
 
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
@@ -62,8 +63,6 @@ public abstract class FSMainOperationsBaseTest  {
   private static String TEST_DIR_AXX = "test/hadoop/axx";
   private static int numBlocks = 2;
   
-  static  final String LOCAL_FS_ROOT_URI = "file:///tmp/test";
-  
   
   protected static FileSystem fSys;
   
@@ -83,7 +82,7 @@ public abstract class FSMainOperationsBaseTest  {
     }     
   };
   
-  private static byte[] data = getFileData(numBlocks,
+  protected static final byte[] data = getFileData(numBlocks,
       getDefaultBlockSize());
   
   @Before
@@ -183,7 +182,7 @@ public abstract class FSMainOperationsBaseTest  {
   
   @Test
   public void testWDAbsolute() throws IOException {
-    Path absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
+    Path absoluteDir = new Path(fSys.getUri() + "/test/existingDir");
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
@@ -646,7 +645,7 @@ public abstract class FSMainOperationsBaseTest  {
     writeReadAndDelete(getDefaultBlockSize() * 2);
   }
   
-  private void writeReadAndDelete(int len) throws IOException {
+  protected void writeReadAndDelete(int len) throws IOException {
     Path path = getTestRootPath(fSys, "test/hadoop/file");
     
     fSys.mkdirs(path.getParent());
@@ -768,6 +767,7 @@ public abstract class FSMainOperationsBaseTest  {
       rename(src, dst, false, false, false, Rename.NONE);
       Assert.fail("Should throw FileNotFoundException");
     } catch (IOException e) {
+      Log.info("XXX", e);
       Assert.assertTrue(unwrapException(e) instanceof FileNotFoundException);
     }
 

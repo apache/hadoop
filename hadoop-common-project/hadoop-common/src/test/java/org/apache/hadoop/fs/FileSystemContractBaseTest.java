@@ -45,7 +45,7 @@ import org.apache.hadoop.fs.Path;
 public abstract class FileSystemContractBaseTest extends TestCase {
   
   protected FileSystem fs;
-  private byte[] data = new byte[getBlockSize() * 2]; // two blocks of data
+  protected byte[] data = new byte[getBlockSize() * 2]; // two blocks of data
   {
     for (int i = 0; i < data.length; i++) {
       data[i] = (byte) (i % 10);
@@ -215,7 +215,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     writeReadAndDelete(getBlockSize() * 2);
   }
   
-  private void writeReadAndDelete(int len) throws IOException {
+  protected void writeReadAndDelete(int len) throws IOException {
     Path path = path("/test/hadoop/file");
     
     fs.mkdirs(path.getParent());
@@ -256,7 +256,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     assertEquals("Length", data.length, fs.getFileStatus(path).getLen());
     
     try {
-      fs.create(path, false);
+      fs.create(path, false).close();
       fail("Should throw IOException.");
     } catch (IOException e) {
       // Expected
