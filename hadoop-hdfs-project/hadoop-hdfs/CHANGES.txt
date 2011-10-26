@@ -1090,6 +1090,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2361. hftp is broken, fixed username checks in JspHelper. (jitendra)
 
+    HDFS-2403. NamenodeWebHdfsMethods.generateDelegationToken(..) does not use
+    the renewer parameter.  (szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
