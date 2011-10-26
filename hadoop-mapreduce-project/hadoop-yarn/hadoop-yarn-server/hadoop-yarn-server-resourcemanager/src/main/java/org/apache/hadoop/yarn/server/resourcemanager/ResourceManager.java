@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
@@ -134,8 +135,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
 
+    DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
+    addService(tokenRenewer);
+    
     this.rmContext = new RMContextImpl(this.store, this.rmDispatcher,
-        this.containerAllocationExpirer, amLivelinessMonitor);
+        this.containerAllocationExpirer, amLivelinessMonitor, tokenRenewer);
 
     addService(nodesListManager);
 
@@ -233,6 +237,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected AMLivelinessMonitor createAMLivelinessMonitor() {
     return new AMLivelinessMonitor(this.rmDispatcher);
+  }
+  
+  protected DelegationTokenRenewer createDelegationTokenRenewer() {
+    return new DelegationTokenRenewer();
   }
 
   protected RMAppManager createRMAppManager() {

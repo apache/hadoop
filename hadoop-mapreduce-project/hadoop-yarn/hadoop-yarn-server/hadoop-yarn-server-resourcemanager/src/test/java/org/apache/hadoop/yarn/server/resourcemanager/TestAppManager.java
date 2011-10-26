@@ -93,7 +93,7 @@ public class TestAppManager{
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
         rmDispatcher);
     return new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor) {
+        containerAllocationExpirer, amLivelinessMonitor, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -150,8 +150,8 @@ public class TestAppManager{
       super.checkAppNumCompletedLimit();
     }
 
-    public void addCompletedApp(ApplicationId appId) {
-      super.addCompletedApp(appId);
+    public void finishApplication(ApplicationId appId) {
+      super.finishApplication(appId);
     }
 
     public int getCompletedAppsListSize() {
@@ -172,7 +172,7 @@ public class TestAppManager{
       if (app.getState() == RMAppState.FINISHED
           || app.getState() == RMAppState.KILLED 
           || app.getState() == RMAppState.FAILED) {
-        appMonitor.addCompletedApp(app.getApplicationId());
+        appMonitor.finishApplication(app.getApplicationId());
       }
     }
   }
@@ -288,7 +288,7 @@ public class TestAppManager{
     Assert.assertEquals("Number of apps incorrect before", 10, rmContext
         .getRMApps().size());
 
-    appMonitor.addCompletedApp(null);
+    appMonitor.finishApplication(null);
 
     Assert.assertEquals("Number of completed apps incorrect after check", 0,
         appMonitor.getCompletedAppsListSize());
