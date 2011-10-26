@@ -721,6 +721,9 @@ Release 0.23.0 - Unreleased
     HDFS-2485. Improve code layout and constants in UnderReplicatedBlocks
     (stevel)
 
+    HDFS-2356.  Support case insensitive query parameter names in webhdfs.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

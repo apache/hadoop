@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 /** Buffer size parameter. */
 public class BufferSizeParam extends IntegerParam {
   /** Parameter name. */
-  public static final String NAME = "bufferSize";
+  public static final String NAME = "buffersize";
   /** Default parameter value. */
   public static final String DEFAULT = NULL;
 

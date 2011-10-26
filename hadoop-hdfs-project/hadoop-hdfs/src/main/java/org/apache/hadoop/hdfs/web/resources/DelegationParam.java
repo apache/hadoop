@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Delegation token parameter. */
 public class DelegationParam extends StringParam {
   /** Parameter name. */
-  public static final String NAME = JspHelper.DELEGATION_PARAMETER_NAME;
+  public static final String NAME = "delegation";
   /** Default parameter value. */
   public static final String DEFAULT = "";
 

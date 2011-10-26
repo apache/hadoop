@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
+import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
@@ -68,7 +69,7 @@ import org.apache.hadoop.util.VersionInfo;
 public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
   final static public String WEB_UGI_PROPERTY_NAME = DFSConfigKeys.DFS_WEB_UGI_KEY;
-  public static final String DELEGATION_PARAMETER_NAME = "delegation";
+  public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
   public static final String NAMENODE_ADDRESS = "nnaddr";
   static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
                                               "=";
