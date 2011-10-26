@@ -80,6 +80,8 @@ Trunk (unreleased changes)
 
     HDFS-2488. Separate datatypes for InterDatanodeProtocol. (suresh)
 
+    HDFS-2501. Add version prefix and root methods to webhdfs.  (szetszwo)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

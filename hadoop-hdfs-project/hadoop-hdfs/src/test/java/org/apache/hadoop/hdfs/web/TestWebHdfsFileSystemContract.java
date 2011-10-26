@@ -30,15 +30,19 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Assert;
 
 public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   private static final Configuration conf = new Configuration();
@@ -213,6 +217,44 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
         assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
             data[i + offset], buf[i]);
       }
+    }
+  }
+
+
+  public void testRootDir() throws IOException {
+    final Path root = new Path("/");
+
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fs;
+    final URL url = webhdfs.toUrl(GetOpParam.Op.NULL, root);
+    WebHdfsFileSystem.LOG.info("null url=" + url);
+    Assert.assertTrue(url.toString().contains("v1"));
+
+    //test root permission
+    final FileStatus status = fs.getFileStatus(root);
+    assertTrue(status != null);
+    assertEquals(0777, status.getPermission().toShort());
+
+    //delete root - disabled due to a sticky bit bug 
+    //assertFalse(fs.delete(root, true));
+
+    //create file using root path 
+    try {
+      final FSDataOutputStream out = fs.create(root);
+      out.write(1);
+      out.close();
+      fail();
+    } catch(IOException e) {
+      WebHdfsFileSystem.LOG.info("This is expected.", e);
+    }
+
+    //open file using root path 
+    try {
+      final FSDataInputStream in = fs.open(root);
+      in.read();
+      fail();
+      fail();
+    } catch(IOException e) {
+      WebHdfsFileSystem.LOG.info("This is expected.", e);
     }
   }
 }

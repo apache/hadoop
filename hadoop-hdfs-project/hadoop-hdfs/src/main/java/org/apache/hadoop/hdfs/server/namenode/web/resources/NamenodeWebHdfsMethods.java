@@ -101,6 +101,8 @@ import com.sun.jersey.spi.container.ResourceFilters;
 public class NamenodeWebHdfsMethods {
   public static final Log LOG = LogFactory.getLog(NamenodeWebHdfsMethods.class);
 
+  private static final UriFsPathParam ROOT = new UriFsPathParam("");
+
   private static final ThreadLocal<String> REMOTE_ADDRESS = new ThreadLocal<String>(); 
 
   /** @return the remote client address. */
@@ -179,7 +181,7 @@ public class NamenodeWebHdfsMethods {
     final String query = op.toQueryString()
         + '&' + new UserParam(ugi) + delegationQuery
         + Param.toSortedString("&", parameters);
-    final String uripath = "/" + WebHdfsFileSystem.PATH_PREFIX + path;
+    final String uripath = WebHdfsFileSystem.PATH_PREFIX + path;
 
     final URI uri = new URI("http", null, dn.getHostName(), dn.getInfoPort(),
         uripath, query, null);
@@ -187,6 +189,45 @@ public class NamenodeWebHdfsMethods {
       LOG.trace("redirectURI=" + uri);
     }
     return uri;
+  }
+
+  /** Handle HTTP PUT request for the root. */
+  @PUT
+  @Path("/")
+  @Consumes({"*/*"})
+  @Produces({MediaType.APPLICATION_JSON})
+  public Response putRoot(
+      @Context final UserGroupInformation ugi,
+      @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
+          final DelegationParam delegation,
+      @QueryParam(PutOpParam.NAME) @DefaultValue(PutOpParam.DEFAULT)
+          final PutOpParam op,
+      @QueryParam(DestinationParam.NAME) @DefaultValue(DestinationParam.DEFAULT)
+          final DestinationParam destination,
+      @QueryParam(OwnerParam.NAME) @DefaultValue(OwnerParam.DEFAULT)
+          final OwnerParam owner,
+      @QueryParam(GroupParam.NAME) @DefaultValue(GroupParam.DEFAULT)
+          final GroupParam group,
+      @QueryParam(PermissionParam.NAME) @DefaultValue(PermissionParam.DEFAULT)
+          final PermissionParam permission,
+      @QueryParam(OverwriteParam.NAME) @DefaultValue(OverwriteParam.DEFAULT)
+          final OverwriteParam overwrite,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize,
+      @QueryParam(ReplicationParam.NAME) @DefaultValue(ReplicationParam.DEFAULT)
+          final ReplicationParam replication,
+      @QueryParam(BlockSizeParam.NAME) @DefaultValue(BlockSizeParam.DEFAULT)
+          final BlockSizeParam blockSize,
+      @QueryParam(ModificationTimeParam.NAME) @DefaultValue(ModificationTimeParam.DEFAULT)
+          final ModificationTimeParam modificationTime,
+      @QueryParam(AccessTimeParam.NAME) @DefaultValue(AccessTimeParam.DEFAULT)
+          final AccessTimeParam accessTime,
+      @QueryParam(RenameOptionSetParam.NAME) @DefaultValue(RenameOptionSetParam.DEFAULT)
+          final RenameOptionSetParam renameOptions
+      ) throws IOException, InterruptedException {
+    return put(ugi, delegation, ROOT, op, destination, owner, group,
+        permission, overwrite, bufferSize, replication, blockSize,
+        modificationTime, accessTime, renameOptions);
   }
 
   /** Handle HTTP PUT request. */
@@ -305,6 +346,23 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
+  /** Handle HTTP POST request for the root. */
+  @POST
+  @Path("/")
+  @Consumes({"*/*"})
+  @Produces({MediaType.APPLICATION_JSON})
+  public Response postRoot(
+      @Context final UserGroupInformation ugi,
+      @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
+          final DelegationParam delegation,
+      @QueryParam(PostOpParam.NAME) @DefaultValue(PostOpParam.DEFAULT)
+          final PostOpParam op,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize
+      ) throws IOException, InterruptedException {
+    return post(ugi, delegation, ROOT, op, bufferSize);
+  }
+
   /** Handle HTTP POST request. */
   @POST
   @Path("{" + UriFsPathParam.NAME + ":.*}")
@@ -356,13 +414,11 @@ public class NamenodeWebHdfsMethods {
     });
   }
 
-  private static final UriFsPathParam ROOT = new UriFsPathParam("");
-
   /** Handle HTTP GET request for the root. */
   @GET
   @Path("/")
   @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
-  public Response root(
+  public Response getRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
           final DelegationParam delegation,
@@ -520,9 +576,23 @@ public class NamenodeWebHdfsMethods {
     };
   }
 
+  /** Handle HTTP DELETE request for the root. */
+  @DELETE
+  @Path("/")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response deleteRoot(
+      @Context final UserGroupInformation ugi,
+      @QueryParam(DeleteOpParam.NAME) @DefaultValue(DeleteOpParam.DEFAULT)
+          final DeleteOpParam op,
+      @QueryParam(RecursiveParam.NAME) @DefaultValue(RecursiveParam.DEFAULT)
+          final RecursiveParam recursive
+      ) throws IOException, InterruptedException {
+    return delete(ugi, ROOT, op, recursive);
+  }
+
   /** Handle HTTP DELETE request. */
   @DELETE
-  @Path("{path:.*}")
+  @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response delete(
       @Context final UserGroupInformation ugi,
