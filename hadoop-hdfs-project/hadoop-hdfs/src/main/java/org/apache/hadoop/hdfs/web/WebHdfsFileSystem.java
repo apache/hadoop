@@ -92,8 +92,10 @@ public class WebHdfsFileSystem extends HftpFileSystem {
   public static final Log LOG = LogFactory.getLog(WebHdfsFileSystem.class);
   /** File System URI: {SCHEME}://namenode:port/path/to/file */
   public static final String SCHEME = "webhdfs";
+  /** WebHdfs version. */
+  public static final int VERSION = 1;
   /** Http URI: http://namenode:port/{PATH_PREFIX}/path/to/file */
-  public static final String PATH_PREFIX = SCHEME;
+  public static final String PATH_PREFIX = "/" + SCHEME + "/v" + VERSION;
 
   private static final KerberosUgiAuthenticator AUTH = new KerberosUgiAuthenticator();
 
@@ -188,7 +190,7 @@ public class WebHdfsFileSystem extends HftpFileSystem {
   URL toUrl(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
-    final String path = "/" + PATH_PREFIX
+    final String path = PATH_PREFIX
         + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
     final String query = op.toQueryString()
         + '&' + new UserParam(ugi)

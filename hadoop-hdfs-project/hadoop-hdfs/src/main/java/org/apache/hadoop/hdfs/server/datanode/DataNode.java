@@ -550,7 +550,7 @@ public class DataNode extends Configured
     if (conf.getBoolean(DFS_WEBHDFS_ENABLED_KEY, DFS_WEBHDFS_ENABLED_DEFAULT)) {
       infoServer.addJerseyResourcePackage(DatanodeWebHdfsMethods.class
           .getPackage().getName() + ";" + Param.class.getPackage().getName(),
-          "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+          WebHdfsFileSystem.PATH_PREFIX + "/*");
     }
     this.infoServer.start();
   }

@@ -734,6 +734,8 @@ Release 0.23.0 - Unreleased
     HDFS-2427. Change the default permission in webhdfs to 755 and add range
     check/validation for all parameters.  (szetszwo)
 
+    HDFS-2501. Add version prefix and root methods to webhdfs.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
