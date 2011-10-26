@@ -311,6 +311,8 @@ Release 0.23.0 - Unreleased
     HDFS-2284. Add a new FileSystem, webhdfs://, for supporting write Http
     access to HDFS.  (szetszwo)
 
+    HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

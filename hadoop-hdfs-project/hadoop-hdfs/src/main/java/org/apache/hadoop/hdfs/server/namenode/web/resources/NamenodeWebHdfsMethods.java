@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.web.resources;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
@@ -37,11 +40,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -58,7 +63,9 @@ import org.apache.hadoop.hdfs.web.resources.DstPathParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.GroupParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
+import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.ModificationTimeParam;
+import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 import org.apache.hadoop.hdfs.web.resources.OverwriteParam;
 import org.apache.hadoop.hdfs.web.resources.OwnerParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
@@ -79,15 +86,23 @@ public class NamenodeWebHdfsMethods {
   private @Context ServletContext context;
 
   private static DatanodeInfo chooseDatanode(final NameNode namenode,
-      final String path, final HttpOpParam.Op op) throws IOException {
-    if (op == PostOpParam.Op.APPEND) {
-      final HdfsFileStatus status = namenode.getRpcServer().getFileInfo(path);
+      final String path, final HttpOpParam.Op op, final long openOffset
+      ) throws IOException {
+    if (op == GetOpParam.Op.OPEN || op == PostOpParam.Op.APPEND) {
+      final NamenodeProtocols np = namenode.getRpcServer();
+      final HdfsFileStatus status = np.getFileInfo(path);
       final long len = status.getLen();
+      if (op == GetOpParam.Op.OPEN && (openOffset < 0L || openOffset >= len)) {
+        throw new IOException("Offset=" + openOffset + " out of the range [0, "
+          + len + "); " + op + ", path=" + path);
+      }
+
       if (len > 0) {
-        final LocatedBlocks locations = namenode.getRpcServer().getBlockLocations(path, len-1, 1);
+        final long offset = op == GetOpParam.Op.OPEN? openOffset: len - 1;
+        final LocatedBlocks locations = np.getBlockLocations(path, offset, 1);
         final int count = locations.locatedBlockCount();
         if (count > 0) {
-          return JspHelper.bestNode(locations.get(count - 1));
+          return JspHelper.bestNode(locations.get(0));
         }
       }
     } 
@@ -98,9 +113,9 @@ public class NamenodeWebHdfsMethods {
   }
 
   private static URI redirectURI(final NameNode namenode,
-      final String path, final HttpOpParam.Op op,
+      final String path, final HttpOpParam.Op op, final long openOffset,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
-    final DatanodeInfo dn = chooseDatanode(namenode, path, op);
+    final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset);
     final String query = op.toQueryString() + Param.toSortedString("&", parameters);
     final String uripath = "/" + WebHdfsFileSystem.PATH_PREFIX + path;
 
@@ -148,8 +163,9 @@ public class NamenodeWebHdfsMethods {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ": " + path
-            + Param.toSortedString(", ", dstPath, owner, group, permission,
-                overwrite, bufferSize, replication, blockSize));
+          + Param.toSortedString(", ", dstPath, owner, group, permission,
+              overwrite, bufferSize, replication, blockSize,
+              modificationTime, accessTime, renameOptions));
     }
 
     final String fullpath = path.getAbsolutePath();
@@ -159,7 +175,7 @@ public class NamenodeWebHdfsMethods {
     switch(op.getValue()) {
     case CREATE:
     {
-      final URI uri = redirectURI(namenode, fullpath, op.getValue(),
+      final URI uri = redirectURI(namenode, fullpath, op.getValue(), -1L,
           permission, overwrite, bufferSize, replication, blockSize);
       return Response.temporaryRedirect(uri).build();
     } 
@@ -234,7 +250,8 @@ public class NamenodeWebHdfsMethods {
     switch(op.getValue()) {
     case APPEND:
     {
-      final URI uri = redirectURI(namenode, fullpath, op.getValue(), bufferSize);
+      final URI uri = redirectURI(namenode, fullpath, op.getValue(), -1L,
+          bufferSize);
       return Response.temporaryRedirect(uri).build();
     }
     default:
@@ -250,9 +267,15 @@ public class NamenodeWebHdfsMethods {
   @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response root(
       @QueryParam(GetOpParam.NAME) @DefaultValue(GetOpParam.DEFAULT)
-          final GetOpParam op
-      ) throws IOException {
-    return get(ROOT, op);
+          final GetOpParam op,
+      @QueryParam(OffsetParam.NAME) @DefaultValue(OffsetParam.DEFAULT)
+          final OffsetParam offset,
+      @QueryParam(LengthParam.NAME) @DefaultValue(LengthParam.DEFAULT)
+          final LengthParam length,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize
+      ) throws IOException, URISyntaxException {
+    return get(ROOT, op, offset, length, bufferSize);
   }
 
   /** Handle HTTP GET request. */
@@ -262,25 +285,87 @@ public class NamenodeWebHdfsMethods {
   public Response get(
       @PathParam(UriFsPathParam.NAME) final UriFsPathParam path,
       @QueryParam(GetOpParam.NAME) @DefaultValue(GetOpParam.DEFAULT)
-          final GetOpParam op
-      ) throws IOException {
+          final GetOpParam op,
+      @QueryParam(OffsetParam.NAME) @DefaultValue(OffsetParam.DEFAULT)
+          final OffsetParam offset,
+      @QueryParam(LengthParam.NAME) @DefaultValue(LengthParam.DEFAULT)
+          final LengthParam length,
+      @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
+          final BufferSizeParam bufferSize
+      ) throws IOException, URISyntaxException {
 
     if (LOG.isTraceEnabled()) {
       LOG.trace(op + ", " + path
-          + Param.toSortedString(", "));
+          + Param.toSortedString(", ", offset, length, bufferSize));
     }
 
+    final NameNode namenode = (NameNode)context.getAttribute("name.node");
+    final String fullpath = path.getAbsolutePath();
+    final NamenodeProtocols np = namenode.getRpcServer();
+
     switch(op.getValue()) {
+    case OPEN:
+    {
+      final URI uri = redirectURI(namenode, fullpath, op.getValue(),
+          offset.getValue(), offset, length, bufferSize);
+      return Response.temporaryRedirect(uri).build();
+    }
     case GETFILESTATUS:
-      final NameNode namenode = (NameNode)context.getAttribute("name.node");
-      final String fullpath = path.getAbsolutePath();
-      final HdfsFileStatus status = namenode.getRpcServer().getFileInfo(fullpath);
+    {
+      final HdfsFileStatus status = np.getFileInfo(fullpath);
       final String js = JsonUtil.toJsonString(status);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-
+    }
+    case LISTSTATUS:
+    {
+      final StreamingOutput streaming = getListingStream(np, fullpath);
+      return Response.ok(streaming).type(MediaType.APPLICATION_JSON).build();
+    }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }    
+  }
+
+  private static DirectoryListing getDirectoryListing(final NamenodeProtocols np,
+      final String p, byte[] startAfter) throws IOException {
+    final DirectoryListing listing = np.getListing(p, startAfter, false);
+    if (listing == null) { // the directory does not exist
+      throw new FileNotFoundException("File " + p + " does not exist.");
+    }
+    return listing;
+  }
+  
+  private static StreamingOutput getListingStream(final NamenodeProtocols np, 
+      final String p) throws IOException {
+    final DirectoryListing first = getDirectoryListing(np, p,
+        HdfsFileStatus.EMPTY_NAME);
+
+    return new StreamingOutput() {
+      @Override
+      public void write(final OutputStream outstream) throws IOException {
+        final PrintStream out = new PrintStream(outstream);
+        out.print('[');
+
+        final HdfsFileStatus[] partial = first.getPartialListing();
+        if (partial.length > 0) {
+          out.print(JsonUtil.toJsonString(partial[0]));
+        }
+        for(int i = 1; i < partial.length; i++) {
+          out.println(',');
+          out.print(JsonUtil.toJsonString(partial[i]));
+        }
+
+        for(DirectoryListing curr = first; curr.hasMore(); ) { 
+          curr = getDirectoryListing(np, p, curr.getLastName());
+          for(HdfsFileStatus s : curr.getPartialListing()) {
+            out.println(',');
+            out.print(JsonUtil.toJsonString(s));
+          }
+        }
+        
+        out.println(']');
+      }
+    };
   }
 
   /** Handle HTTP DELETE request. */

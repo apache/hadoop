@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.StreamFile;
  * is made on the successive read(). The normal input stream functions are 
  * connected to the currently active input stream. 
  */
-class ByteRangeInputStream extends FSInputStream {
+public class ByteRangeInputStream extends FSInputStream {
   
   /**
    * This class wraps a URL to allow easy mocking when testing. The URL class
@@ -71,7 +71,8 @@ class ByteRangeInputStream extends FSInputStream {
 
   StreamStatus status = StreamStatus.SEEK;
 
-  ByteRangeInputStream(final URL url) {
+  /** Create an input stream with the URL. */
+  public ByteRangeInputStream(final URL url) {
     this(new URLOpener(url), new URLOpener(null));
   }
   
