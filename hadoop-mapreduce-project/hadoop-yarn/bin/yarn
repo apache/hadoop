@@ -176,6 +176,8 @@ if [ "$YARN_LOGFILE" = "" ]; then
   YARN_LOGFILE='yarn.log'
 fi
 
+YARN_JOB_HISTORYSERVER_OPTS="-Dmapred.jobsummary.logger=${YARN_JHS_LOGGER:-INFO,console}"
+
 # restore ordinary behaviour
 unset IFS
 

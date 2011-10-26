@@ -1712,6 +1712,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3263. Fixed the MAPREDUCE-3028 commit which broke MR1. (Hitesh
     Shah via acmurthy) 
 
+    MAPREDUCE-3269. Fixed log4j properties to correctly set logging options
+    for JobHistoryServer vis-a-vis JobSummary logs. (mahadev via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
