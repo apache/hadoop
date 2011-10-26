@@ -2,6 +2,8 @@ Hadoop Change Log
 
     MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
 
+    HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES

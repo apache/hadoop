@@ -160,6 +160,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
 
       KerberosConfiguration kerberosConfiguration = new KerberosConfiguration(keytab, principal);
 
+      LOG.info("Login using keytab "+keytab+", for principal "+principal);
       loginContext = new LoginContext("", subject, null, kerberosConfiguration);
       loginContext.login();
 
