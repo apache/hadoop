@@ -46,10 +46,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
@@ -219,13 +221,13 @@ public class DatanodeWebHdfsMethods {
 
     final String fullpath = path.getAbsolutePath();
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
+    final Configuration conf = new Configuration(datanode.getConf());
+    final InetSocketAddress nnRpcAddr = NameNode.getAddress(conf);
+    final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
 
     switch(op.getValue()) {
     case OPEN:
     {
-      final Configuration conf = new Configuration(datanode.getConf());
-      final InetSocketAddress nnRpcAddr = NameNode.getAddress(conf);
-      final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
       final int b = bufferSize.getValue(conf);
       final DFSDataInputStream in = new DFSClient.DFSDataInputStream(
           dfsclient.open(fullpath, b, true));
@@ -243,6 +245,12 @@ public class DatanodeWebHdfsMethods {
         }
       };
       return Response.ok(streaming).type(MediaType.APPLICATION_OCTET_STREAM).build();
+    }
+    case GETFILECHECKSUM:
+    {
+      final MD5MD5CRC32FileChecksum checksum = dfsclient.getFileChecksum(fullpath);
+      final String js = JsonUtil.toJsonString(checksum);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");

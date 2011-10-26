@@ -322,6 +322,9 @@ Release 0.23.0 - Unreleased
     HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
     (szetszwo)
 
+    HDFS-2348. Support getContentSummary and getFileChecksum in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost
