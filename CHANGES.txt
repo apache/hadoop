@@ -376,6 +376,8 @@ Release 0.92.0 - Unreleased
    HBASE-4645  Edits Log recovery losing data across column families
    HBASE-4634  'test.build.data' property overused leading to write data at the
                wrong place (nkeywal)
+   HBASE-4673  NPE in HFileReaderV2.close during major compaction when
+               hfile.block.cache.size is set to 0 (Lars H)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
