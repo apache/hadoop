@@ -1120,6 +1120,9 @@ Release 0.23.0 - Unreleased
     getDefaultBlockSize() and getDefaultReplication() in WebHdfsFileSystem
     and cleared content type in ExceptionHandler.  (szetszwo)
 
+    HDFS-2411. The the auth to local mappings are not being respected, with 
+    webhdfs enabled. (jitendra)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
