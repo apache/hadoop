@@ -18,34 +18,38 @@
 
 package org.apache.hadoop.fs;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
-import java.util.Random;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.HashMap;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
@@ -55,13 +59,13 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NetUtilsTestResolver;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import static org.mockito.Mockito.mock;
+import org.apache.hadoop.util.Progressable;
+import org.junit.Test;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
@@ -696,5 +700,344 @@ public class TestFileSystem extends TestCase {
       }
     });
     assertNotSame(fsA, fsA1);
+  }
+  
+  // canonicalizing!
+
+  static String[] authorities = {
+    "myfs://host",
+    "myfs://host.a",
+    "myfs://host.a.b",
+  };
+
+  static String[] ips = {
+    "myfs://127.0.0.1"
+  };
+
+
+  @Test
+  public void testSetupResolver() throws Exception {
+    NetUtilsTestResolver.install();
+  }
+
+  // no ports
+
+  @Test
+  public void testShortAuthority() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host", "myfs://host.a.b:123");
+    verifyPaths(fs, authorities, -1, true);
+    verifyPaths(fs, authorities, 123, true);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testPartialAuthority() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a", "myfs://host.a.b:123");
+    verifyPaths(fs, authorities, -1, true);
+    verifyPaths(fs, authorities, 123, true);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testFullAuthority() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a.b", "myfs://host.a.b:123");
+    verifyPaths(fs, authorities, -1, true);
+    verifyPaths(fs, authorities, 123, true);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  // with default ports
+  
+  @Test
+  public void testShortAuthorityWithDefaultPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host:123", "myfs://host.a.b:123");
+    verifyPaths(fs, authorities, -1, true);
+    verifyPaths(fs, authorities, 123, true);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testPartialAuthorityWithDefaultPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a:123", "myfs://host.a.b:123");
+    verifyPaths(fs, authorities, -1, true);
+    verifyPaths(fs, authorities, 123, true);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testFullAuthorityWithDefaultPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a.b:123", "myfs://host.a.b:123");
+    verifyPaths(fs, authorities, -1, true);
+    verifyPaths(fs, authorities, 123, true);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  // with non-standard ports
+  
+  @Test
+  public void testShortAuthorityWithOtherPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host:456", "myfs://host.a.b:456");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, true);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testPartialAuthorityWithOtherPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a:456", "myfs://host.a.b:456");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, true);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testFullAuthorityWithOtherPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://host.a.b:456", "myfs://host.a.b:456");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, true);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  // ips
+  
+  @Test
+  public void testIpAuthority() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://127.0.0.1", "myfs://127.0.0.1:123");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, true);
+    verifyPaths(fs, ips, 123, true);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testIpAuthorityWithDefaultPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://127.0.0.1:123", "myfs://127.0.0.1:123");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, true);
+    verifyPaths(fs, ips, 123, true);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testIpAuthorityWithOtherPort() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://127.0.0.1:456", "myfs://127.0.0.1:456");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, true);
+  }
+
+  // bad stuff
+
+  @Test
+  public void testMismatchedSchemes() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs2://simple", "myfs2://simple:123");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testMismatchedHosts() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs://simple", "myfs://simple:123");
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testNullAuthority() throws Exception {
+    FileSystem fs = getVerifiedFS("myfs:///", "myfs:///");
+    verifyPaths(fs, new String[]{ "myfs://" }, -1, true);
+    verifyPaths(fs, authorities, -1, false);
+    verifyPaths(fs, authorities, 123, false);
+    verifyPaths(fs, authorities, 456, false);
+    verifyPaths(fs, ips, -1, false);
+    verifyPaths(fs, ips, 123, false);
+    verifyPaths(fs, ips, 456, false);
+  }
+
+  @Test
+  public void testAuthorityFromDefaultFS() throws Exception {
+    Configuration config = new Configuration();
+    
+    FileSystem fs = getVerifiedFS("myfs://host", "myfs://host.a.b:123", config);
+    verifyPaths(fs, new String[]{ "myfs://" }, -1, false);
+
+    config.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "myfs://host");
+    verifyPaths(fs, new String[]{ "myfs://" }, -1, true);
+
+    config.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "myfs2://host");
+    verifyPaths(fs, new String[]{ "myfs://" }, -1, false);
+
+    config.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "myfs://host:123");
+    verifyPaths(fs, new String[]{ "myfs://" }, -1, true);
+
+    config.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "myfs://host:456");
+    verifyPaths(fs, new String[]{ "myfs://" }, -1, false);
+  }
+
+  FileSystem getVerifiedFS(String authority, String canonical) throws Exception {
+    return getVerifiedFS(authority, canonical, new Configuration());
+  }
+
+  // create a fs from the authority, then check its uri against the given uri
+  // and the canonical.  then try to fetch paths using the canonical
+  FileSystem getVerifiedFS(String authority, String canonical, Configuration conf)
+  throws Exception {
+    URI uri = URI.create(authority);
+    URI canonicalUri = URI.create(canonical);
+
+    FileSystem fs = new DummyFileSystem(uri, conf);
+    assertEquals(uri, fs.getUri());
+    assertEquals(canonicalUri, fs.getCanonicalUri());
+    verifyCheckPath(fs, "/file", true);
+    return fs;
+  }  
+  
+  void verifyPaths(FileSystem fs, String[] uris, int port, boolean shouldPass) {
+    for (String uri : uris) {
+      if (port != -1) uri += ":"+port;
+      verifyCheckPath(fs, uri+"/file", shouldPass);
+    }
+  }
+
+  void verifyCheckPath(FileSystem fs, String path, boolean shouldPass) {
+    Path rawPath = new Path(path);
+    Path fqPath = null;
+    Exception e = null;
+    try {
+      fqPath = fs.makeQualified(rawPath);
+    } catch (IllegalArgumentException iae) {
+      e = iae;
+    }
+    if (shouldPass) {
+      assertEquals(null, e);
+      String pathAuthority = rawPath.toUri().getAuthority();
+      if (pathAuthority == null) {
+        pathAuthority = fs.getUri().getAuthority();
+      }
+      assertEquals(pathAuthority, fqPath.toUri().getAuthority());
+    } else {
+      assertNotNull("did not fail", e);
+      assertEquals("Wrong FS: "+rawPath+", expected: "+fs.getUri(),
+          e.getMessage());
+    }
+  }
+    
+  static class DummyFileSystem extends FileSystem {
+    URI uri;
+    static int defaultPort = 123;
+
+    DummyFileSystem(URI uri, Configuration conf) throws IOException {
+      this.uri = uri;
+      setConf(conf);
+    }
+    
+    @Override
+    public URI getUri() {
+      return uri;
+    }
+
+    @Override
+    protected int getDefaultPort() {
+      return defaultPort;
+    }
+    
+    @Override
+    public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public FSDataOutputStream create(Path f, FsPermission permission,
+        boolean overwrite, int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public FSDataOutputStream append(Path f, int bufferSize,
+        Progressable progress) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public boolean rename(Path src, Path dst) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public boolean delete(Path f) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public boolean delete(Path f, boolean recursive) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public FileStatus[] listStatus(Path f) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public void setWorkingDirectory(Path new_dir) {
+    }
+
+    @Override
+    public Path getWorkingDirectory() {
+      return new Path("/");
+    }
+
+    @Override
+    public boolean mkdirs(Path f, FsPermission permission) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      throw new IOException("not supposed to be here");
+    }
   }
 }

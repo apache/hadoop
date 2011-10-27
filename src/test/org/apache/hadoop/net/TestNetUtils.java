@@ -17,25 +17,25 @@
  */
 package org.apache.hadoop.net;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import java.net.InetAddress;
-import java.net.Socket;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketException;
+import java.net.URI;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetUtils.QualifiedHostResolver;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestNetUtils {
 
@@ -70,21 +70,18 @@ public class TestNetUtils {
     }
   }
 
-  static TestNetUtilsResolver resolver;
+  static NetUtilsTestResolver resolver;
+  static Configuration config;
   
   @BeforeClass
   public static void setupResolver() {
-    resolver = new TestNetUtilsResolver();
-    resolver.setSearchDomains("a.b", "b", "c");
-    resolver.addResolvedHost("host.a.b.", "1.1.1.1");
-    resolver.addResolvedHost("b-host.b.", "2.2.2.2");
-    resolver.addResolvedHost("simple.", "3.3.3.3");    
-    NetUtils.setHostResolver(resolver);
+    resolver = NetUtilsTestResolver.install();
   }
   
   @Before
   public void resetResolver() {
     resolver.reset();
+    config = new Configuration();
   }
 
   // getByExactName
@@ -243,37 +240,79 @@ public class TestNetUtils {
   }
 
   //
-
-  static class TestNetUtilsResolver extends QualifiedHostResolver {
-    Map<String, InetAddress> resolvedHosts = new HashMap<String, InetAddress>();
-    List<String> hostSearches = new LinkedList<String>();
     
-    void addResolvedHost(String host, String ip) {
-      InetAddress addr;
-      try {
-        addr = InetAddress.getByName(ip);
-        addr = InetAddress.getByAddress(host, addr.getAddress());
-      } catch (UnknownHostException e) {
-        throw new IllegalArgumentException("not an ip:"+ip);
-      }
-      resolvedHosts.put(host, addr);
-    }
+  @Test
+  public void testCanonicalUriWithPort() {
+    URI uri;
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123"), 456);
+    assertEquals("scheme://host.a.b:123", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123/"), 456);
+    assertEquals("scheme://host.a.b:123/", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123/path"), 456);
+    assertEquals("scheme://host.a.b:123/path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123/path?q#frag"), 456);
+    assertEquals("scheme://host.a.b:123/path?q#frag", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithDefaultPort() {
+    URI uri;
     
-    InetAddress getInetAddressByName(String host) throws UnknownHostException {
-      hostSearches.add(host);
-      if (!resolvedHosts.containsKey(host)) {
-        throw new UnknownHostException(host);
-      }
-      return resolvedHosts.get(host);
-    }
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host"), 123);
+    assertEquals("scheme://host.a.b:123", uri.toString());
 
-    String[] getHostSearches() {
-      return hostSearches.toArray(new String[0]);
-    }
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host/"), 123);
+    assertEquals("scheme://host.a.b:123/", uri.toString());
 
-    void reset() {
-      hostSearches.clear();
-    }
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path"), 123);
+    assertEquals("scheme://host.a.b:123/path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path?q#frag"), 123);
+    assertEquals("scheme://host.a.b:123/path?q#frag", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithPath() {
+    URI uri;
+
+    uri = NetUtils.getCanonicalUri(URI.create("path"), 2);
+    assertEquals("path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("/path"), 2);
+    assertEquals("/path", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithNoAuthority() {
+    URI uri;
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:/"), 2);
+    assertEquals("scheme:/", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:/path"), 2);
+    assertEquals("scheme:/path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:///"), 2);
+    assertEquals("scheme:///", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:///path"), 2);
+    assertEquals("scheme:///path", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithNoHost() {
+    URI uri = NetUtils.getCanonicalUri(URI.create("scheme://:123/path"), 2);
+    assertEquals("scheme://:123/path", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithNoPortNoDefaultPort() {
+    URI uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path"), -1);
+    assertEquals("scheme://host.a.b/path", uri.toString());
   }
   
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {

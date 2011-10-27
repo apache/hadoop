@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -157,6 +158,15 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
+  
+  /**
+   * Resolve the uri's hostname and add the default port if not in the uri
+   * @return URI
+   * @see NetUtils#getCanonicalUri(URI, int)
+   */
+  protected URI getCanonicalUri() {
+    return NetUtils.getCanonicalUri(getUri(), getDefaultPort());
+  }
   
   /**
    * Get the default port for this file system.
@@ -340,32 +350,31 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Check that a Path belongs to this FileSystem. */
   protected void checkPath(Path path) {
     URI uri = path.toUri();
-    if (uri.getScheme() == null)                // fs is relative 
-      return;
-    String thisScheme = this.getUri().getScheme();
     String thatScheme = uri.getScheme();
-    String thisAuthority = this.getUri().getAuthority();
-    String thatAuthority = uri.getAuthority();
+    if (thatScheme == null)                // fs is relative 
+      return;
+    URI thisUri = getCanonicalUri();
+    String thisScheme = thisUri.getScheme();
     //authority and scheme are not case sensitive
     if (thisScheme.equalsIgnoreCase(thatScheme)) {// schemes match
-      if (thisAuthority == thatAuthority ||       // & authorities match
-          (thisAuthority != null && 
-           thisAuthority.equalsIgnoreCase(thatAuthority)))
-        return;
-
+      String thisAuthority = thisUri.getAuthority();
+      String thatAuthority = uri.getAuthority();
       if (thatAuthority == null &&                // path's authority is null
           thisAuthority != null) {                // fs has an authority
-        URI defaultUri = getDefaultUri(getConf()); // & is the conf default 
-        if (thisScheme.equalsIgnoreCase(defaultUri.getScheme()) &&
-            thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
-          return;
-        try {                                     // or the default fs's uri
-          defaultUri = get(getConf()).getUri();
-        } catch (IOException e) {
-          throw new RuntimeException(e);
+        URI defaultUri = getDefaultUri(getConf());
+        if (thisScheme.equalsIgnoreCase(defaultUri.getScheme())) {
+          uri = defaultUri; // schemes match, so use this uri instead
+        } else {
+          uri = null; // can't determine auth of the path
         }
-        if (thisScheme.equalsIgnoreCase(defaultUri.getScheme()) &&
-            thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
+      }
+      if (uri != null) {
+        // canonicalize uri before comparing with this fs
+        uri = NetUtils.getCanonicalUri(uri, getDefaultPort());
+        thatAuthority = uri.getAuthority();
+        if (thisAuthority == thatAuthority ||       // authorities match
+            (thisAuthority != null && 
+             thisAuthority.equalsIgnoreCase(thatAuthority)))
           return;
       }
     }

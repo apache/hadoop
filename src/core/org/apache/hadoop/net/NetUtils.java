@@ -33,6 +33,7 @@ import java.net.ConnectException;
 import java.nio.channels.SocketChannel;
 import java.util.Map.Entry;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
 
@@ -358,8 +359,59 @@ public class NetUtils {
   /**
    * This is for testing only!
    */
-  static void setHostResolver(QualifiedHostResolver newResolver) {
+  static void setHostResolver(HostResolver newResolver) {
     hostResolver = newResolver;
+  }
+  
+  /**
+   * Resolve the uri's hostname and add the default port if not in the uri
+   * @param uri to resolve
+   * @param defaultPort if none is given
+   * @return URI
+   * @throws UnknownHostException 
+   */
+  public static URI getCanonicalUri(URI uri, int defaultPort) {
+    // skip if there is no authority, ie. "file" scheme or relative uri
+    String host = uri.getHost();
+    if (host == null) {
+      return uri;
+    }
+    String fqHost = canonicalizeHost(host);
+    int port = uri.getPort();
+    // short out if already canonical with a port
+    if (host.equals(fqHost) && port != -1) {
+      return uri;
+    }
+    // reconstruct the uri with the canonical host and port
+    try {
+      uri = new URI(uri.getScheme(), uri.getUserInfo(),
+          fqHost, (port == -1) ? defaultPort : port,
+          uri.getPath(), uri.getQuery(), uri.getFragment());
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+    return uri;
+  }  
+
+  // cache the canonicalized hostnames;  the cache currently isn't expired,
+  // but the canonicals will only change if the host's resolver configuration
+  // changes
+  private static ConcurrentHashMap<String, String> canonicalizedHostCache =
+      new ConcurrentHashMap<String, String>();
+
+  private static String canonicalizeHost(String host) {
+    // check if the host has already been canonicalized
+    String fqHost = canonicalizedHostCache.get(host);
+    if (fqHost == null) {
+      try {
+        fqHost = hostResolver.getByName(host).getHostName();
+        // slight race condition, but won't hurt 
+        canonicalizedHostCache.put(host, fqHost);
+      } catch (UnknownHostException e) {
+        fqHost = host;
+      }
+    }
+    return fqHost;
   }
     
   /**
