@@ -47,6 +47,10 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
 
+    MAPREDUCE-3184. Add a thread to the TaskTracker which monitors for
+    spinning Jetty selector threads, and shuts down the daemon when one is
+    detected. (todd)
+
 Release 0.20.205.1 - unreleased
 
   IMPROVEMENTS
