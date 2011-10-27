@@ -46,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -149,6 +150,8 @@ public class DatanodeWebHdfsMethods {
     case CREATE:
     {
       final Configuration conf = new Configuration(datanode.getConf());
+      conf.set(FsPermission.UMASK_LABEL, "000");
+
       final int b = bufferSize.getValue(conf);
       DFSClient dfsclient = new DFSClient(conf);
       FSDataOutputStream out = null;
@@ -300,12 +303,12 @@ public class DatanodeWebHdfsMethods {
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
     final Configuration conf = new Configuration(datanode.getConf());
     final InetSocketAddress nnRpcAddr = NameNode.getAddress(conf);
-    final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
 
     switch(op.getValue()) {
     case OPEN:
     {
       final int b = bufferSize.getValue(conf);
+      final DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
       DFSDataInputStream in = null;
       try {
         in = new DFSClient.DFSDataInputStream(
@@ -348,13 +351,13 @@ public class DatanodeWebHdfsMethods {
     case GETFILECHECKSUM:
     {
       MD5MD5CRC32FileChecksum checksum = null;
-      DFSClient client = dfsclient;
+      DFSClient dfsclient = new DFSClient(nnRpcAddr, conf);
       try {
-        checksum = client.getFileChecksum(fullpath);
-        client.close();
-        client = null;
+        checksum = dfsclient.getFileChecksum(fullpath);
+        dfsclient.close();
+        dfsclient = null;
       } finally {
-        IOUtils.cleanup(LOG, client);
+        IOUtils.cleanup(LOG, dfsclient);
       }
       final String js = JsonUtil.toJsonString(checksum);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
