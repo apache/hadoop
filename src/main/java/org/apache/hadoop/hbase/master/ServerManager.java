@@ -248,7 +248,7 @@ public class ServerManager {
    * @deprecated Use {@link #getLoad(HServerAddress)}
    */
   public HServerLoad getLoad(final HServerAddress address) {
-    ServerName sn = new ServerName(address.toString(), -1);
+    ServerName sn = new ServerName(address.toString(), ServerName.NON_STARTCODE);
     ServerName actual =
       ServerName.findServerWithSameHostnamePort(this.getOnlineServersList(), sn);
     return actual == null? null: getLoad(actual);

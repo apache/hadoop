@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -723,7 +724,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   @Override
   public void regionServerReport(final byte [] sn, final HServerLoad hsl)
   throws IOException {
-    this.serverManager.regionServerReport(new ServerName(sn), hsl);
+    this.serverManager.regionServerReport(ServerName.parseVersionedServerName(sn), hsl);
     if (hsl != null && this.metrics != null) {
       // Up our metrics.
       this.metrics.incrementRequests(hsl.getTotalNumberOfRequests());
@@ -732,9 +733,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   @Override
   public void reportRSFatalError(byte [] sn, String errorText) {
-    ServerName serverName = new ServerName(sn);
-    String msg = "Region server " + serverName + " reported a fatal error:\n"
-        + errorText;
+    String msg = "Region server " + Bytes.toString(sn) +
+      " reported a fatal error:\n" + errorText;
     LOG.error(msg);
     rsFatals.add(msg);
   }

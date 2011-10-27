@@ -58,8 +58,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return Server name or null if timed out.
    */
   public ServerName getMasterAddress() {
-    byte [] data = super.getData(false);
-    return data == null ? null : new ServerName(Bytes.toString(data));
+    return bytesToServerName(super.getData(false));
   }
 
   /**
@@ -70,4 +69,11 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
     return super.getData(false) != null;
   }
 
+  /**
+   * @param bytes Byte array of {@link ServerName#toString()}
+   * @return A {@link ServerName} instance.
+   */
+  private ServerName bytesToServerName(final byte [] bytes) {
+    return bytes == null ? null: ServerName.parseVersionedServerName(bytes);
+  }
 }

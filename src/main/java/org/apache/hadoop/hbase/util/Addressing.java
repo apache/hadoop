@@ -25,6 +25,21 @@ import java.net.InetSocketAddress;
  * Utility for network addresses, resolving and naming.
  */
 public class Addressing {
+  /**
+   * Regex for RFC952 hostname matching.  Does not have a '$" on the end.  Can
+   * be used as prefix on a larger regex.
+   * @see http://stackoverflow.com/questions/106179/regular-expression-to-match-hostname-or-ip-address
+   */
+  public static final String VALID_HOSTNAME_REGEX_PREFIX =
+      "^(([a-zA-Z]|[a-zA-Z][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9])";
+  /**
+   * Regex for RFC952 hostname matching.
+   * @see http://stackoverflow.com/questions/106179/regular-expression-to-match-hostname-or-ip-address
+   */
+  public static final String VALID_HOSTNAME_REGEX =
+    VALID_HOSTNAME_REGEX_PREFIX + "$";
+
+  public static final String VALID_PORT_REGEX = "[\\d]+";
   public static final String HOSTNAME_PORT_SEPARATOR = ":";
 
   /**

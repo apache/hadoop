@@ -1,6 +1,4 @@
 /**
- * Copyright 2011 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,14 +17,41 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
 public class TestServerName {
+  @Test
+  public void testRegexPatterns() {
+    assertTrue(Pattern.matches(Addressing.VALID_PORT_REGEX, "123"));
+    assertFalse(Pattern.matches(Addressing.VALID_PORT_REGEX, ""));
+    assertTrue(Pattern.matches(Addressing.VALID_HOSTNAME_REGEX, "example.org"));
+    assertTrue(Pattern.matches(Addressing.VALID_HOSTNAME_REGEX,
+      "www1.example.org"));
+    assertTrue(ServerName.SERVERNAME_PATTERN.matcher("www1.example.org,1234,567").matches());
+  }
+
+  @Test public void testParseOfBytes() {
+    final String snStr = "www.example.org,1234,5678";
+    ServerName sn = new ServerName(snStr);
+    byte [] versionedBytes = sn.getVersionedBytes();
+    assertEquals(snStr, ServerName.parseVersionedServerName(versionedBytes).toString());
+    final String hostnamePortStr = "www.example.org:1234";
+    byte [] bytes = Bytes.toBytes(hostnamePortStr);
+    String expecting =
+      hostnamePortStr.replace(":", ServerName.SERVERNAME_SEPARATOR) +
+      ServerName.SERVERNAME_SEPARATOR + ServerName.NON_STARTCODE;
+    assertEquals(expecting, ServerName.parseVersionedServerName(bytes).toString());
+  }
+
   @Test
   public void testServerName() {
     ServerName sn = new ServerName("www.example.org", 1234, 5678);

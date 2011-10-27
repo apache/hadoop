@@ -77,7 +77,7 @@ public class TestMasterAddressManager {
     int port = 1234;
     ServerName sn = new ServerName(host, port, System.currentTimeMillis());
     LOG.info("Creating master node");
-    ZKUtil.createEphemeralNodeAndWatch(zk, zk.masterAddressZNode, sn.getBytes());
+    ZKUtil.createEphemeralNodeAndWatch(zk, zk.masterAddressZNode, sn.getVersionedBytes());
 
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");

@@ -282,7 +282,7 @@ public class ReplicationZookeeper {
     }
     List<ServerName> addresses = new ArrayList<ServerName>(children.size());
     for (String child : children) {
-      addresses.add(new ServerName(child));
+      addresses.add(ServerName.parseServerName(child));
     }
     return addresses;
   }

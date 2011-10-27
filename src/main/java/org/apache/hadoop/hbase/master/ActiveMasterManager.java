@@ -145,7 +145,7 @@ class ActiveMasterManager extends ZooKeeperListener {
       this.clusterHasActiveMaster.set(true);
       byte [] bytes =
         ZKUtil.getDataAndWatch(this.watcher, this.watcher.masterAddressZNode);
-      ServerName currentMaster = new ServerName(Bytes.toString(bytes));
+      ServerName currentMaster = ServerName.parseVersionedServerName(bytes);
       if (ServerName.isSameHostnameAndPort(currentMaster, this.sn)) {
         String msg = ("Current master has this master's address, " + currentMaster +
           "; master was restarted?  Waiting on znode to expire...");

@@ -767,7 +767,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Why we do this?
     this.requestCount.set(0);
     try {
-      this.hbaseMaster.regionServerReport(this.serverNameFromMasterPOV.getBytes(), hsl);
+      this.hbaseMaster.regionServerReport(this.serverNameFromMasterPOV.getVersionedBytes(), hsl);
     } catch (IOException ioe) {
       if (ioe instanceof RemoteException) {
         ioe = ((RemoteException)ioe).unwrapRemoteException();
@@ -1538,7 +1538,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
       if (hbaseMaster != null) {
         hbaseMaster.reportRSFatalError(
-            this.serverNameFromMasterPOV.getBytes(), msg);
+            this.serverNameFromMasterPOV.getVersionedBytes(), msg);
       }
     } catch (Throwable t) {
       LOG.warn("Unable to report fatal error to master", t);

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.util.Collection;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,19 +38,45 @@ import org.apache.hadoop.hbase.util.Bytes;
  * and the startcode for the regionserver is <code>1212121212</code>, then
  * the {@link #toString()} would be <code>example.org,1234,1212121212</code>.
  * 
+ * <p>You can obtain a versioned serialized form of this class by calling
+ * {@link #getVersionedBytes()}.  To deserialize, call {@link #parseVersionedServerName(byte[])}
+ * 
  * <p>Immutable.
  */
 public class ServerName implements Comparable<ServerName> {
+  /**
+   * Version for this class.
+   * Its a short rather than a byte so I can for sure distinguish between this
+   * version of this class and the version previous to this which did not have
+   * a version.
+   */
+  private static final short VERSION = 0;
+  static final byte [] VERSION_BYTES = Bytes.toBytes(VERSION);
+
+  /**
+   * What to use if no startcode supplied.
+   */
+  public static final int NON_STARTCODE = -1;
+
   /**
    * This character is used as separator between server hostname, port and
    * startcode.
    */
   public static final String SERVERNAME_SEPARATOR = ",";
 
+  public static Pattern SERVERNAME_PATTERN =
+    Pattern.compile(Addressing.VALID_HOSTNAME_REGEX_PREFIX +
+      SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX +
+      SERVERNAME_SEPARATOR + Addressing.VALID_PORT_REGEX + "$");
+
   private final String servername;
   private final String hostname;
   private final int port;
   private final long startcode;
+
+  /**
+   * Cached bytes of this ServerName instance.
+   */
   private byte [] bytes;
 
   public ServerName(final String hostname, final int port, final long startcode) {
@@ -62,10 +89,6 @@ public class ServerName implements Comparable<ServerName> {
   public ServerName(final String serverName) {
     this(parseHostname(serverName), parsePort(serverName),
       parseStartcode(serverName));
-  }
-
-  public ServerName(final byte [] bytes) {
-    this(Bytes.toString(bytes));
   }
 
   public ServerName(final String hostAndPort, final long startCode) {
@@ -97,10 +120,13 @@ public class ServerName implements Comparable<ServerName> {
   }
 
   /**
-   * @return {@link #getServerName()} as bytes
+   * @return {@link #getServerName()} as bytes with a short-sized prefix with
+   * the {@link ServerName#VERSION} of this class.
    */
-  public synchronized byte [] getBytes() {
-    if (this.bytes == null) this.bytes = Bytes.toBytes(getServerName());
+  public synchronized byte [] getVersionedBytes() {
+    if (this.bytes == null) {
+      this.bytes = Bytes.add(VERSION_BYTES, Bytes.toBytes(getServerName()));
+    }
     return this.bytes;
   }
 
@@ -229,5 +255,35 @@ public class ServerName implements Comparable<ServerName> {
     if (right == null) return false;
     return left.getHostname().equals(right.getHostname()) &&
       left.getPort() == right.getPort();
+  }
+
+  /**
+   * Use this method instantiating a {@link ServerName} from bytes
+   * gotten from a call to {@link #getVersionedBytes()}.  Will take care of the
+   * case where bytes were written by an earlier version of hbase.
+   * @param versionedBytes Pass bytes gotten from a call to {@link #getVersionedBytes()}
+   * @return A ServerName instance.
+   * @see #getVersionedBytes()
+   */
+  public static ServerName parseVersionedServerName(final byte [] versionedBytes) {
+    // Version is a short.
+    short version = Bytes.toShort(versionedBytes);
+    if (version == VERSION) {
+      int length = versionedBytes.length - Bytes.SIZEOF_SHORT;
+      return new ServerName(Bytes.toString(versionedBytes, Bytes.SIZEOF_SHORT, length));
+    }
+    // Presume the bytes were written with an old version of hbase and that the
+    // bytes are actually a String of the form "'<hostname>' ':' '<port>'".
+    return new ServerName(Bytes.toString(versionedBytes), NON_STARTCODE);
+  }
+
+  /**
+   * @param str Either an instance of {@link ServerName#toString()} or a
+   * "'<hostname>' ':' '<port>'".
+   * @return A ServerName instance.
+   */
+  public static ServerName parseServerName(final String str) {
+    return SERVERNAME_PATTERN.matcher(str).matches()? new ServerName(str):
+      new ServerName(str, NON_STARTCODE);
   }
 }

@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
 /**
@@ -223,12 +224,12 @@ public class ClusterStatus extends VersionedWritable {
     out.writeUTF(hbaseVersion);
     out.writeInt(getServersSize());
     for (Map.Entry<ServerName, HServerLoad> e: this.liveServers.entrySet()) {
-      out.writeUTF(e.getKey().toString());
+      Bytes.writeByteArray(out, e.getKey().getVersionedBytes());
       e.getValue().write(out);
     }
     out.writeInt(deadServers.size());
     for (ServerName server: deadServers) {
-      out.writeUTF(server.toString());
+      Bytes.writeByteArray(out, server.getVersionedBytes());
     }
     out.writeInt(this.intransition.size());
     for (Map.Entry<String, RegionState> e: this.intransition.entrySet()) {
@@ -248,15 +249,15 @@ public class ClusterStatus extends VersionedWritable {
     int count = in.readInt();
     this.liveServers = new HashMap<ServerName, HServerLoad>(count);
     for (int i = 0; i < count; i++) {
-      String str = in.readUTF();
+      byte [] versionedBytes = Bytes.readByteArray(in);
       HServerLoad hsl = new HServerLoad();
       hsl.readFields(in);
-      this.liveServers.put(new ServerName(str), hsl);
+      this.liveServers.put(ServerName.parseVersionedServerName(versionedBytes), hsl);
     }
     count = in.readInt();
     deadServers = new ArrayList<ServerName>(count);
     for (int i = 0; i < count; i++) {
-      deadServers.add(new ServerName(in.readUTF()));
+      deadServers.add(ServerName.parseVersionedServerName(Bytes.readByteArray(in)));
     }
     count = in.readInt();
     this.intransition = new TreeMap<String, RegionState>();

@@ -203,7 +203,11 @@ public class MasterFileSystem {
     }
     List<ServerName> serverNames = new ArrayList<ServerName>();
     for (FileStatus status : logFolders) {
-      ServerName serverName = new ServerName(status.getPath().getName());
+      String sn = status.getPath().getName();
+      // Is this old or new style servername?  If old style, it will be
+      // hostname, colon, and port.  If new style, it will be formatted as
+      // ServerName.toString.
+      ServerName serverName = ServerName.parseServerName(sn);
       if (!onlineServers.contains(serverName)) {
         LOG.info("Log folder " + status.getPath() + " doesn't belong " +
           "to a known region server, splitting");

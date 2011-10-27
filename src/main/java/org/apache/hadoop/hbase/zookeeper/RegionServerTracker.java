@@ -74,7 +74,7 @@ public class RegionServerTracker extends ZooKeeperListener {
     synchronized(this.regionServers) {
       this.regionServers.clear();
       for (String n: servers) {
-        ServerName sn = new ServerName(ZKUtil.getNodeName(n));
+        ServerName sn = ServerName.parseServerName(ZKUtil.getNodeName(n));
         this.regionServers.add(sn);
       }
     }
@@ -92,7 +92,7 @@ public class RegionServerTracker extends ZooKeeperListener {
       String serverName = ZKUtil.getNodeName(path);
       LOG.info("RegionServer ephemeral node deleted, processing expiration [" +
         serverName + "]");
-      ServerName sn = new ServerName(serverName);
+      ServerName sn = ServerName.parseServerName(serverName);
       if (!serverManager.isServerOnline(sn)) {
         LOG.info(serverName.toString() + " is not online");
         return;

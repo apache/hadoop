@@ -97,7 +97,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
     int index = str.indexOf(ServerName.SERVERNAME_SEPARATOR);
     if (index != -1) {
       // Presume its ServerName.toString() format.
-      return new ServerName(str);
+      return ServerName.parseServerName(str);
     }
     // Presume it a hostname:port format.
     String hostname = Addressing.parseHostname(str);

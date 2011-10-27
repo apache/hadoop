@@ -187,7 +187,8 @@ public class RegionTransitionData implements Writable {
     // remaining fields are optional so prefixed with boolean
     // the name of the regionserver sending the data
     if (in.readBoolean()) {
-      this.origin = new ServerName(in.readUTF());
+      byte [] versionedBytes = Bytes.readByteArray(in);
+      this.origin = ServerName.parseVersionedServerName(versionedBytes);
     }
     if (in.readBoolean()) {
       this.payload = Bytes.readByteArray(in);
@@ -201,8 +202,8 @@ public class RegionTransitionData implements Writable {
     Bytes.writeByteArray(out, regionName);
     // remaining fields are optional so prefixed with boolean
     out.writeBoolean(this.origin != null);
-    if(this.origin != null) {
-      out.writeUTF(this.origin.toString());
+    if (this.origin != null) {
+      Bytes.writeByteArray(out, this.origin.getVersionedBytes());
     }
     out.writeBoolean(this.payload != null);
     if (this.payload != null) {

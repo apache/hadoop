@@ -381,6 +381,8 @@ Release 0.92.0 - Unreleased
    HBASE-4388  Second start after migration from 90 to trunk crashes
    HBASE-4685  TestDistributedLogSplitting.testOrphanLogCreation failing because
                of ArithmeticException: / by zero.
+   HBASE-4300  Start of new-version master fails if old master's znode is
+               hanging around
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
