@@ -39,7 +39,6 @@
   <property name="examples.final.name" value="${name}-examples-${version}"/>
   <property name="tools.final.name" value="${name}-tools-${version}"/>
   <property name="year" value="2009"/>
-  <property name="package.release" value="1"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="mapred.src.dir" value="${src.dir}/java"/> 
@@ -239,17 +238,6 @@
   <condition property="staging">
     <equals arg1="${repo}" arg2="staging"/>
   </condition>
-
-  <!-- packaging properties -->
-  <property name="package.prefix" value="/usr"/>
-  <property name="package.conf.dir" value="/etc/hadoop"/>
-  <property name="package.log.dir" value="/var/log/hadoop/mapred"/>
-  <property name="package.pid.dir" value="/var/run/hadoop"/>
-  <property name="package.var.dir" value="/var/lib/hadoop"/>
-  <property name="package.share.dir" value="/share/hadoop/${module}"/>
-  <!-- Use fixed path to build rpm for avoiding rpmbuild conflict with dash path names -->
-  <property name="package.buildroot" value="/tmp/hadoop_mapred_package_build_${user.name}"/>
-  <property name="package.build.dir" value="/tmp/hadoop_mapred_package_build_${user.name}/BUILD"/>
 
   <!-- the normal classpath -->
   <path id="classpath">
@@ -846,8 +834,7 @@
     </antcall>
   </target>
 
-  <target name="nightly" depends="test, tar">
-  </target>
+  <target name="nightly" depends="test" />
 	
   <!-- ================================================================== -->
   <!-- Run optional third-party tool targets                              --> 
@@ -880,10 +867,8 @@
    <subant target="jar">
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
-      <fileset file="${contrib.dir}/capacity-scheduler/build.xml"/>
       <fileset file="${contrib.dir}/streaming/build.xml"/>
       <fileset file="${contrib.dir}/gridmix/build.xml"/>
-      <fileset file="${contrib.dir}/mumak/build.xml"/>
     </subant>
  </target>
 
@@ -912,17 +897,13 @@
       <sourcePath path="${mapred.src.dir}"/>
       <sourcePath path="${examples.dir}" />
       <sourcePath path="${tools.src}" />
-      <sourcePath path="${basedir}/src/contrib/capacity-scheduler/src/java" />
       <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
       <sourcePath path="${basedir}/src/contrib/gridmix/src/java" />
-      <sourcePath path="${basedir}/src/contrib/mumak/src/java" />
       <class location="${basedir}/build/${final.name}.jar" />
       <class location="${basedir}/build/${examples.final.name}.jar" />
       <class location="${basedir}/build/${tools.final.name}.jar" />
-      <class location="${basedir}/build/contrib/capacity-scheduler/hadoop-${version}-capacity-scheduler.jar" />
       <class location="${basedir}/build/contrib/streaming/hadoop-${version}-streaming.jar" />
       <class location="${basedir}/build/contrib/gridmix/hadoop-${version}-gridmix.jar" />
-      <class location="${basedir}/build/contrib/mumak/hadoop-${version}-mumak.jar" />
     </findbugs>
 
         <xslt style="${findbugs.home}/src/xsl/default.xsl"
@@ -981,7 +962,6 @@
        <packageset dir="src/contrib/data_join/src/java"/>
        <packageset dir="src/contrib/gridmix/src/java"/>
        <packageset dir="src/contrib/index/src/java"/>
-       <packageset dir="src/contrib/mumak/src/java"/>
        <packageset dir="src/contrib/streaming/src/java"/>
        <packageset dir="src/contrib/vaidya/src/java"/>
        <packageset dir="src/contrib/vertica/src/java"/>
@@ -1042,8 +1022,7 @@
     	<packageset dir="${examples.dir}"/>
 
        <!-- Don't include contrib modules that use the same packages as core
-       MapReduce. This includes capacity-scheduler, dynamic-scheduler,
-       fairscheduler, mumak. See also the javadoc-dev target. -->
+       MapReduce. See also the javadoc-dev target. -->
        <packageset dir="src/contrib/data_join/src/java"/>
        <packageset dir="src/contrib/gridmix/src/java"/>
        <packageset dir="src/contrib/index/src/java"/>
@@ -1155,7 +1134,6 @@
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
-    <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
     <mkdir dir="${dist.dir}/docs/jdiff"/>
@@ -1196,10 +1174,6 @@
       <fileset file="${build.dir}/${tools.final.name}.jar"/> 
     </copy>
     
-    <copy todir="${dist.dir}/bin">
-      <fileset dir="bin"/>
-    </copy>
-
     <copy todir="${dist.dir}/conf">
       <fileset dir="${conf.dir}" excludes="**/*.template"/>
     </copy>
@@ -1237,7 +1211,6 @@
         <fileset file="${dist.dir}/src/c++/pipes/configure"/>
     </chmod>
     <chmod perm="ugo+x" type="file" parallel="false">
-        <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/src/contrib/">
           <include name="*/bin/*" />
         </fileset>
@@ -1246,290 +1219,6 @@
         <fileset dir="${dist.dir}/src/c++/pipes/debug"/>
     </chmod>
 
-  </target>
-
-  <!-- ================================================================== -->
-  <!-- Make release tarball                                               -->
-  <!-- ================================================================== -->
-  <target name="tar" depends="package" description="Make release tarball">
-    <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
-      <param.listofitems>
-        <tarfileset dir="${build.dir}" mode="664">
-          <exclude name="${final.name}/bin/*" />
-          <exclude name="${final.name}/contrib/*/bin/*" />
-          <exclude name="${final.name}/src/examples/pipes/configure"/>
-          <exclude name="${final.name}/src/c++/utils/configure"/>
-          <exclude name="${final.name}/src/c++/pipes/configure"/>
-          <include name="${final.name}/**" />
-        </tarfileset>
-        <tarfileset dir="${build.dir}" mode="755">
-          <include name="${final.name}/bin/*" />
-          <include name="${final.name}/contrib/*/bin/*" />
-          <include name="${final.name}/src/examples/pipes/configure"/>
-          <include name="${final.name}/src/c++/utils/configure"/>
-          <include name="${final.name}/src/c++/pipes/configure"/>
-        </tarfileset>
-      </param.listofitems>
-    </macro_tar>
-  </target>
-
-  <target name="bin-package" depends="compile, jar, examples, tools, jar-test, package-librecordio" 
-		description="assembles artifacts for binary target">
-    <mkdir dir="${dist.dir}"/>
-    <mkdir dir="${dist.dir}/include"/>
-    <mkdir dir="${dist.dir}/lib"/>
-    <mkdir dir="${dist.dir}/${package.share.dir}/contrib"/>
-    <mkdir dir="${dist.dir}/${package.share.dir}/lib"/>
-    <mkdir dir="${dist.dir}/${package.share.dir}/templates"/>
-    <mkdir dir="${dist.dir}/bin"/>
-    <mkdir dir="${dist.dir}/sbin"/>
-
-    <!-- enable this if there is mapred specific dependencies
-    <copy todir="${dist.dir}/${package.share.dir}/lib" includeEmptyDirs="false" flatten="true">
-      <fileset dir="${mapred.ivy.lib.dir}"/>
-    </copy> -->
-
-    <copy todir="${dist.dir}/include" includeEmptyDirs="false">
-      <fileset dir="${build.dir}/c++/${build.platform}/include" 
-               erroronmissingdir="false">
-        <include name="**"/>
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
-      <fileset dir="${build.dir}/c++/${build.platform}/lib"
-               erroronmissingdir="false">
-        <include name="**"/>
-      </fileset>
-    </copy>
-
-    <subant target="package">
-      <!--Pass down the version in case its needed again and the target
-      distribution directory so contribs know where to install to.-->
-      <property name="version" value="${version}"/>
-      <property name="dist.dir" value="${dist.dir}/${package.share.dir}"/>
-      <fileset file="${contrib.dir}/build.xml"/>
-    </subant>  	
-
-    <copy todir="${dist.dir}/${package.share.dir}"> 
-      <fileset file="${build.dir}/${final.name}*.jar"/>
-      <fileset file="${build.dir}/${test.final.name}.jar"/>
-      <fileset file="${build.dir}/${examples.final.name}.jar"/>
-      <fileset file="${build.dir}/${tools.final.name}.jar"/>
-    </copy>
-
-    <copy todir="${dist.dir}/bin">
-      <fileset dir="bin">
-        <include name="mapred"/>
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/libexec">
-      <fileset dir="bin">
-        <include name="mapred-config.sh"/>
-      </fileset>
-    </copy>
-
-    <copy todir="${dist.dir}/sbin">
-      <fileset dir="bin">
-        <include name="start-*.sh"/>
-        <include name="stop-*.sh"/>
-      </fileset>
-    </copy>
-
-    <copy file="${basedir}/src/packages/update-mapred-env.sh" tofile="${dist.dir}/sbin/update-mapred-env.sh"/>
-    <copy file="${basedir}/src/packages/rpm/init.d/hadoop-jobtracker" tofile="${dist.dir}/sbin/hadoop-jobtracker.redhat"/>
-    <copy file="${basedir}/src/packages/rpm/init.d/hadoop-tasktracker" tofile="${dist.dir}/sbin/hadoop-tasktracker.redhat"/>
-    <copy file="${basedir}/src/packages/deb/init.d/hadoop-jobtracker" tofile="${dist.dir}/sbin/hadoop-jobtracker.debian"/>
-    <copy file="${basedir}/src/packages/deb/init.d/hadoop-tasktracker" tofile="${dist.dir}/sbin/hadoop-tasktracker.debian"/>
-    
-    <copy file="${basedir}/src/packages/update-mapred-env.sh" tofile="${dist.dir}/sbin/update-mapred-env.sh"/>
-      	
-    <copy todir="${dist.dir}/etc/hadoop">
-      <fileset dir="${conf.dir}" excludes="**/*.template"/>
-    </copy>
-
-    <copy todir="${dist.dir}/${package.share.dir}/templates">
-      <fileset dir="${basedir}/src/packages/templates/conf" includes="*"/>
-    </copy>
-
-    <copy todir="${dist.dir}/${package.share.dir}/webapps">
-      <fileset dir="${build.webapps}"/>
-    </copy>
-
-    <copy todir="${dist.dir}/share/doc/hadoop/${module}">
-      <fileset dir=".">
-        <include name="*.txt" />
-      </fileset>
-    </copy>
-
-    <chmod perm="ugo+x" type="file" parallel="false">
-        <fileset dir="${dist.dir}/bin"/>
-        <fileset dir="${dist.dir}/sbin"/>
-    </chmod>  	
-  </target>
-
-  <target name="binary-system" depends="bin-package, jar-system, jar-test-system"
-     description="make system test package for deployment">
-    <!--TODO!!!!! fix this shit...-->
-    <copy todir="${system-test-build-dir}/${final.name}">
-      <fileset dir="${dist.dir}">
-      </fileset>
-    </copy>
-    <copy todir="${system-test-build-dir}/${final.name}/conf">
-      <fileset dir="${test.src.dir}/system/conf/"/>
-    </copy>
-    <copy todir="${system-test-build-dir}">
-      <fileset dir="${build.dir}">
-        <include name="${test.final.name}.jar"/>
-        <include name="${examples.final.name}.jar"/>
-      </fileset>
-    </copy>
-    <copy tofile="${system-test-build-dir}/${final.name}/lib/hadoop-common-${hadoop-common.version}.jar"
-      file="${system-test-build-dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${hadoop-common.version}.jar"
-      overwrite="true"/>
-    <copy tofile="${system-test-build-dir}/${final.name}/lib/hadoop-hdfs-${version}.jar"
-      file="${system-test-build-dir}/ivy/lib/${ant.project.name}/system/hadoop-hdfs-${herriot.suffix}-${version}.jar"
-      overwrite="true"/>
-    <copy tofile="${system-test-build-dir}/${final.name}/${final.name}.jar"
-      file="${system-test-build-dir}/${instrumented.final.name}.jar" overwrite="true"/>
-    <copy tofile="${system-test-build-dir}/${final.name}/${final.name}-sources.jar"
-      file="${system-test-build-dir}/${instrumented.final.name}-sources.jar" overwrite="true"/>
-    <macro_tar 
-      param.destfile="${system-test-build-dir}/${final.name}-bin.${herriot.suffix}.tar.gz">
-        <param.listofitems>
-          <tarfileset dir="${system-test-build-dir}" mode="664">
-            <exclude name="${final.name}/bin/*" />
-            <exclude name="${final.name}/src/**" />
-            <exclude name="${final.name}/docs/**" />
-            <include name="${final.name}/**" />
-          </tarfileset>
-        </param.listofitems>
-      </macro_tar>
-  </target>
-  
-  <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
-    <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
-      <param.listofitems>
-        <tarfileset dir="${build.dir}" mode="664">
-          <exclude name="${final.name}/bin/*" />
-          <exclude name="${final.name}/src/**" />
-          <exclude name="${final.name}/docs/**" />
-          <include name="${final.name}/**" />
-        </tarfileset>
-        <tarfileset dir="${build.dir}" mode="755">
-          <include name="${final.name}/bin/*" />
-        </tarfileset>
-      </param.listofitems>
-    </macro_tar>
-  </target>
-
-  <target name="rpm" depends="binary" description="Make rpm package">
-    <mkdir dir="${package.buildroot}/BUILD" />
-    <mkdir dir="${package.buildroot}/RPMS" />
-    <mkdir dir="${package.buildroot}/SRPMS" />
-    <mkdir dir="${package.buildroot}/SOURCES" />
-    <mkdir dir="${package.buildroot}/SPECS" />
-    <copy todir="${package.buildroot}/SOURCES">
-      <fileset dir="${build.dir}">
-        <include name="${final.name}-bin.tar.gz" />
-      </fileset>
-    </copy>
-    <copy file="${src.dir}/packages/rpm/spec/hadoop-mapred.spec" todir="${package.buildroot}/SPECS">
-      <filterchain>
-        <replacetokens>
-          <token key="final.name" value="${final.name}" />
-          <token key="version" value="${_version}" />
-          <token key="package.release" value="${package.release}" />
-          <token key="package.build.dir" value="${package.build.dir}" />
-          <token key="package.prefix" value="${package.prefix}" />
-          <token key="package.conf.dir" value="${package.conf.dir}" />
-          <token key="package.log.dir" value="${package.log.dir}" />
-          <token key="package.pid.dir" value="${package.pid.dir}" />
-          <token key="package.var.dir" value="${package.var.dir}" />
-        </replacetokens>
-      </filterchain>
-    </copy>
-    <rpm specFile="hadoop-mapred.spec" command="-bb --target ${os.arch}" topDir="${package.buildroot}" cleanBuildDir="true" failOnError="true"/>
-    <copy todir="${build.dir}/" flatten="true">
-      <fileset dir="${package.buildroot}/RPMS">
-        <include name="**/*.rpm" />
-      </fileset>
-    </copy>
-    <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
-  </target>
-
-  <target name="deb" depends="ivy-retrieve-package, binary" description="Make deb package">
-    <taskdef name="deb"
-           classname="org.vafer.jdeb.ant.DebAntTask">
-      <classpath refid="ivy-package.classpath" />
-    </taskdef>
-
-    <mkdir dir="${package.build.dir}/hadoop.control" />
-    <mkdir dir="${package.buildroot}/${package.prefix}" />
-    <copy todir="${package.buildroot}/${package.prefix}">
-      <fileset dir="${build.dir}/${final.name}">
-        <include name="**" />
-      </fileset>
-    </copy>
-    <copy todir="${package.build.dir}/hadoop.control">
-      <fileset dir="${src.dir}/packages/deb/hadoop.control">
-        <exclude name="control" />
-      </fileset>
-    </copy>
-    <copy file="${src.dir}/packages/deb/hadoop.control/control" todir="${package.build.dir}/hadoop.control">
-      <filterchain>
-        <replacetokens>
-          <token key="final.name" value="${final.name}" />
-          <token key="version" value="${_version}" />
-          <token key="package.release" value="${package.release}" />
-          <token key="package.build.dir" value="${package.build.dir}" />
-          <token key="package.prefix" value="${package.prefix}" />
-          <token key="package.conf.dir" value="${package.conf.dir}" />
-          <token key="package.log.dir" value="${package.log.dir}" />
-          <token key="package.pid.dir" value="${package.pid.dir}" />
-        </replacetokens>
-      </filterchain>
-    </copy>
-    <deb destfile="${package.buildroot}/${name}_${_version}-${package.release}_${os.arch}.deb" control="${package.build.dir}/hadoop.control">
-      <tarfileset dir="${build.dir}/${final.name}" filemode="644" prefix="${package.prefix}">
-        <exclude name="bin/*" />
-        <exclude name="${package.share.dir}/contrib/*/bin/*" />
-        <exclude name="etc" />
-        <exclude name="etc/**" />
-        <exclude name="libexec/*" />
-        <exclude name="sbin/*" />
-        <include name="**" />
-      </tarfileset>
-      <tarfileset dir="${build.dir}/${final.name}" filemode="755" prefix="${package.prefix}">
-        <include name="bin/*" />
-        <include name="sbin/*" />
-        <exclude name="sbin/*.redhat" />
-        <exclude name="sbin/*.debian" />
-        <include name="libexec/*" />
-        <include name="${package.share.dir}/contrib/*/bin/*" />
-      </tarfileset>
-      <tarfileset dir="${src.dir}/packages" filemode="755" prefix="${package.prefix}/sbin">
-        <include name="*.sh" />
-      </tarfileset>
-      <tarfileset dir="${build.dir}/${final.name}/etc/hadoop" filemode="644" prefix="${package.conf.dir}">
-        <exclude name="configuration.xsl" />
-        <exclude name="hadoop-metrics2.properties" />
-        <exclude name="core-site.xml" />
-        <exclude name="hdfs-site.xml" />
-        <exclude name="mapred-site.xml" />
-        <include name="**" />
-      </tarfileset>
-      <tarfileset dir="${basedir}/src/packages/deb/init.d" filemode="755" prefix="/etc/init.d">
-        <include name="**" />
-      </tarfileset>
-    </deb>
-    <copy todir="${build.dir}/" flatten="true">
-      <fileset dir="${package.buildroot}">
-        <include name="**/${name}*.deb" />
-      </fileset>
-    </copy>
-    <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
   </target>
 
   <target name="ant-task-download" description="To download mvn-ant-task">
@@ -1742,7 +1431,6 @@
         <exclude name="src/test/mapred/org/apache/hadoop/mapred/test.tgz"/>
         <exclude name="src/test/tools/data/rumen/**/*"/>
         <exclude name="src/test/mapred/org/apache/hadoop/mapred/*.txt"/>
-        <exclude name="src/contrib/mumak/src/test/data/*.json"/>
         <exclude name="src/contrib/index/sample/*.txt"/>
         <exclude name="src/test/mapred/org/apache/hadoop/cli/data60bytes"/>
         <exclude name="src/examples/org/apache/hadoop/examples/dancing/puzzle1.dta"/>
@@ -2090,32 +1778,16 @@
                 output="${build.dir.eclipse-tools-classes}" />
         <source path="${contrib.dir}/block_forensics/src/java"
                 output="${build.dir.eclipse-contrib-classes}/block_forensics/main" />
-        <source path="${contrib.dir}/capacity-scheduler/src/java"
-                output="${build.dir.eclipse-contrib-classes}/capacity-scheduler/main" />
-        <source path="${contrib.dir}/capacity-scheduler/src/test"
-                output="${build.dir.eclipse-contrib-classes}/capacity-scheduler/test" />
         <source path="${contrib.dir}/data_join/src/java"
                 output="${build.dir.eclipse-contrib-classes}/data_join/main" />
         <source path="${contrib.dir}/data_join/src/examples"
                 output="${build.dir.eclipse-contrib-classes}/data_join/examples" />
         <source path="${contrib.dir}/data_join/src/test"
                 output="${build.dir.eclipse-contrib-classes}/data_join/test" />
-        <source path="${contrib.dir}/dynamic-scheduler/src/java"
-                output="${build.dir.eclipse-contrib-classes}/dynamic-scheduler/main" />
-        <source path="${contrib.dir}/dynamic-scheduler/src/test"
-                output="${build.dir.eclipse-contrib-classes}/dynamic-scheduler/test" />
-        <source path="${contrib.dir}/fairscheduler/src/java"
-                output="${build.dir.eclipse-contrib-classes}/fairscheduler/main" />
-        <source path="${contrib.dir}/fairscheduler/src/test"
-                output="${build.dir.eclipse-contrib-classes}/fairscheduler/test" />
         <source path="${contrib.dir}/gridmix/src/java"
                 output="${build.dir.eclipse-contrib-classes}/gridmix/main" />
         <source path="${contrib.dir}/gridmix/src/test"
                 output="${build.dir.eclipse-contrib-classes}/gridmix/test" />
-        <source path="${contrib.dir}/mumak/src/java"
-                output="${build.dir.eclipse-contrib-classes}/mumak/main" />
-        <source path="${contrib.dir}/mumak/src/test"
-                output="${build.dir.eclipse-contrib-classes}/mumak/test" />
         <source path="${contrib.dir}/raid/src/java"
                 output="${build.dir.eclipse-contrib-classes}/raid/main" />
         <source path="${contrib.dir}/raid/src/test"
