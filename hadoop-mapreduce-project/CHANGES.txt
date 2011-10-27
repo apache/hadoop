@@ -1786,6 +1786,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3250. When AM restarts, client keeps reconnecting to the new AM 
     and prints a lots of logs. (vinodkv via mahadev)
 
+    MAPREDUCE-3254. Fixed streaming to set the job.jar by using the right
+    JobConf ctor. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
