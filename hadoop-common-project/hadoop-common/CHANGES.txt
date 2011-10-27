@@ -419,6 +419,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7509. Improve exception message thrown when Authentication is 
     required. (Ravi Prakash via suresh)
 
+    HADOOP-7545. Fix wrong variable name in exception message introduced
+    in HADOOP-7509. (Ravi Prakash via suresh)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
