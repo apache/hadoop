@@ -235,8 +235,15 @@ public class ResourceLocalizationService extends CompositeService
     cacheCleanup.scheduleWithFixedDelay(new CacheCleanup(dispatcher),
         cacheCleanupPeriod, cacheCleanupPeriod, TimeUnit.MILLISECONDS);
     server = createServer();
-    LOG.info("Localizer started on port " + server.getPort());
     server.start();
+    String host = getConfig().get(YarnConfiguration.NM_LOCALIZER_ADDRESS)
+        .split(":")[0];
+    getConfig().set(YarnConfiguration.NM_LOCALIZER_ADDRESS, host + ":" 
+        + server.getPort());
+    localizationServerAddress = NetUtils.createSocketAddr(
+        getConfig().get(YarnConfiguration.NM_LOCALIZER_ADDRESS, 
+            YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS));
+    LOG.info("Localizer started on port " + server.getPort());
     super.start();
   }
 

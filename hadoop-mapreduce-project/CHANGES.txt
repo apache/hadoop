@@ -383,6 +383,9 @@ Release 0.23.0 - Unreleased
     virtual, allowing for a ratio between the two to be configurable. (todd
     via acmurthy) 
 
+    MAPREDUCE-2986. Fixed MiniYARNCluster to support multiple NodeManagers.
+    (Anupam Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
