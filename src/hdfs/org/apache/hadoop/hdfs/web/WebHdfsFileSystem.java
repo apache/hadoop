@@ -211,25 +211,28 @@ public class WebHdfsFileSystem extends FileSystem
     return f.isAbsolute()? f: new Path(workingDir, f);
   }
 
-  @SuppressWarnings("unchecked")
-  private static <T> T jsonParse(final InputStream in) throws IOException {
+  private static Map<?, ?> jsonParse(final InputStream in) throws IOException {
     if (in == null) {
       throw new IOException("The input stream is null.");
     }
-    return (T)JSON.parse(new InputStreamReader(in));
+    return (Map<?, ?>)JSON.parse(new InputStreamReader(in));
   }
 
-  private static void validateResponse(final HttpOpParam.Op op,
+  private static Map<?, ?> validateResponse(final HttpOpParam.Op op,
       final HttpURLConnection conn) throws IOException {
     final int code = conn.getResponseCode();
     if (code != op.getExpectedHttpResponseCode()) {
-      final Map<String, Object> m;
+      final Map<?, ?> m;
       try {
         m = jsonParse(conn.getErrorStream());
       } catch(IOException e) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
             + ", message=" + conn.getResponseMessage(), e);
+      }
+
+      if (m.get(RemoteException.class.getSimpleName()) == null) {
+        return m;
       }
 
       final RemoteException re = JsonUtil.toRemoteException(m);
@@ -239,6 +242,7 @@ public class WebHdfsFileSystem extends FileSystem
           SafeModeException.class,
           NSQuotaExceededException.class);
     }
+    return null;
   }
 
   /**
@@ -336,15 +340,15 @@ public class WebHdfsFileSystem extends FileSystem
    * @param op http operation
    * @param fspath file system path
    * @param parameters parameters for the operation
-   * @return a JSON object, e.g. Object[], Map<String, Object>, etc.
+   * @return a JSON object, e.g. Object[], Map<?, ?>, etc.
    * @throws IOException
    */
-  private <T> T run(final HttpOpParam.Op op, final Path fspath,
+  private Map<?, ?> run(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     final HttpURLConnection conn = httpConnect(op, fspath, parameters);
-    validateResponse(op, conn);
     try {
-      return WebHdfsFileSystem.<T>jsonParse(conn.getInputStream());
+      final Map<?, ?> m = validateResponse(op, conn);
+      return m != null? m: jsonParse(conn.getInputStream());
     } finally {
       conn.disconnect();
     }
@@ -359,7 +363,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   private HdfsFileStatus getHdfsFileStatus(Path f) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETFILESTATUS;
-    final Map<String, Object> json = run(op, f);
+    final Map<?, ?> json = run(op, f);
     final HdfsFileStatus status = JsonUtil.toFileStatus(json, true);
     if (status == null) {
       throw new FileNotFoundException("File does not exist: " + f);
@@ -385,7 +389,7 @@ public class WebHdfsFileSystem extends FileSystem
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.MKDIRS;
-    final Map<String, Object> json = run(op, f,
+    final Map<?, ?> json = run(op, f,
         new PermissionParam(applyUMask(permission)));
     return (Boolean)json.get("boolean");
   }
@@ -394,7 +398,7 @@ public class WebHdfsFileSystem extends FileSystem
   public boolean rename(final Path src, final Path dst) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.RENAME;
-    final Map<String, Object> json = run(op, src,
+    final Map<?, ?> json = run(op, src,
         new DestinationParam(makeQualified(dst).toUri().getPath()));
     return (Boolean)json.get("boolean");
   }
@@ -424,8 +428,7 @@ public class WebHdfsFileSystem extends FileSystem
      ) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETREPLICATION;
-    final Map<String, Object> json = run(op, p,
-        new ReplicationParam(replication));
+    final Map<?, ?> json = run(op, p, new ReplicationParam(replication));
     return (Boolean)json.get("boolean");
   }
 
@@ -498,7 +501,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     final HttpOpParam.Op op = DeleteOpParam.Op.DELETE;
-    final Map<String, Object> json = run(op, f, new RecursiveParam(recursive));
+    final Map<?, ?> json = run(op, f, new RecursiveParam(recursive));
     return (Boolean)json.get("boolean");
   }
 
@@ -540,8 +543,7 @@ public class WebHdfsFileSystem extends FileSystem
     //convert FileStatus
     final FileStatus[] statuses = new FileStatus[array.length];
     for(int i = 0; i < array.length; i++) {
-      @SuppressWarnings("unchecked")
-      final Map<String, Object> m = (Map<String, Object>)array[i];
+      final Map<?, ?> m = (Map<?, ?>)array[i];
       statuses[i] = makeQualified(JsonUtil.toFileStatus(m, false), f);
     }
     return statuses;
@@ -551,7 +553,7 @@ public class WebHdfsFileSystem extends FileSystem
   public Token<DelegationTokenIdentifier> getDelegationToken(final String renewer
       ) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
-    final Map<String, Object> m = run(op, null, new RenewerParam(renewer));
+    final Map<?, ?> m = run(op, null, new RenewerParam(renewer));
     final Token<DelegationTokenIdentifier> token = JsonUtil.toDelegationToken(m); 
     SecurityUtil.setTokenService(token, nnAddr);
     return token;
@@ -582,7 +584,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
     TokenArgumentParam dtargParam = new TokenArgumentParam(
         token.encodeToUrlString());
-    final Map<String, Object> m = run(op, null, dtargParam);
+    final Map<?, ?> m = run(op, null, dtargParam);
     return (Long) m.get("long");
   }
 
@@ -604,7 +606,7 @@ public class WebHdfsFileSystem extends FileSystem
 
     final Path p = status.getPath();
     final HttpOpParam.Op op = GetOpParam.Op.GETFILEBLOCKLOCATIONS;
-    final Map<String, Object> m = run(op, p, new OffsetParam(offset),
+    final Map<?, ?> m = run(op, p, new OffsetParam(offset),
         new LengthParam(length));
     return DFSUtil.locatedBlocks2Locations(JsonUtil.toLocatedBlocks(m));
   }
@@ -614,7 +616,7 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
 
     final HttpOpParam.Op op = GetOpParam.Op.GETCONTENTSUMMARY;
-    final Map<String, Object> m = run(op, p);
+    final Map<?, ?> m = run(op, p);
     return JsonUtil.toContentSummary(m);
   }
 
@@ -624,7 +626,7 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
   
     final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
-    final Map<String, Object> m = run(op, p);
+    final Map<?, ?> m = run(op, p);
     return JsonUtil.toMD5MD5CRC32FileChecksum(m);
   }
 

@@ -41,6 +41,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.logging.Log;
@@ -62,7 +64,6 @@ import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -80,6 +81,7 @@ import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.hdfs.web.resources.RecursiveParam;
 import org.apache.hadoop.hdfs.web.resources.RenewerParam;
 import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
+import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.security.Credentials;
@@ -302,10 +304,15 @@ public class NamenodeWebHdfsMethods {
     {
       final boolean b = namenode.setReplication(fullpath, replication.getValue(conf));
       final String js = JsonUtil.toJsonString("boolean", b);
-      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      final ResponseBuilder r = b? Response.ok(): Response.status(Status.FORBIDDEN);
+      return r.entity(js).type(MediaType.APPLICATION_JSON).build();
     }
     case SETOWNER:
     {
+      if (owner.getValue() == null && group.getValue() == null) {
+        throw new IllegalArgumentException("Both owner and group are empty.");
+      }
+
       namenode.setOwner(fullpath, owner.getValue(), group.getValue());
       return Response.ok().type(MediaType.APPLICATION_JSON).build();
     }
@@ -485,13 +492,17 @@ public class NamenodeWebHdfsMethods {
       final long offsetValue = offset.getValue();
       final Long lengthValue = length.getValue();
       final LocatedBlocks locatedblocks = namenode.getBlockLocations(fullpath,
-          offsetValue, lengthValue != null? lengthValue: offsetValue + 1);
+          offsetValue, lengthValue != null? lengthValue: Long.MAX_VALUE);
       final String js = JsonUtil.toJsonString(locatedblocks);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETFILESTATUS:
     {
       final HdfsFileStatus status = namenode.getFileInfo(fullpath);
+      if (status == null) {
+        throw new FileNotFoundException("File does not exist: " + fullpath);
+      }
+
       final String js = JsonUtil.toJsonString(status, true);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
