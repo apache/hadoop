@@ -498,6 +498,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7749. Add a NetUtils createSocketAddr call which provides more
     help in exception messages. (todd)
 
+    HADOOP-7762. Common side of MR-2736. (eli)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

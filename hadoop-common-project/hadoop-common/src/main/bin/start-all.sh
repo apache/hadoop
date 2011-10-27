@@ -29,8 +29,3 @@ bin=`cd "$bin"; pwd`
 if [ -f "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh ]; then
   "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh --config $HADOOP_CONF_DIR
 fi
-
-# start mapred daemons if mapred is present
-if [ -f "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh ]; then
-  "${HADOOP_MAPRED_HOME}"/bin/start-mapred.sh --config $HADOOP_CONF_DIR
-fi

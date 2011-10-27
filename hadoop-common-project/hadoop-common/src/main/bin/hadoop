@@ -63,22 +63,6 @@ case $COMMAND in
     fi
     ;;
 
-  #mapred commands  
-  mradmin|jobtracker|tasktracker|pipes|job|queue)
-    echo "DEPRECATED: Use of this script to execute mapred command is deprecated."
-    echo "Instead use the mapred command for it."
-    echo ""
-    #try to locate mapred and if present, delegate to it.
-    if [ -f "${HADOOP_MAPRED_HOME}"/bin/mapred ]; then
-      exec "${HADOOP_MAPRED_HOME}"/bin/mapred $*
-    elif [ -f "${HADOOP_PREFIX}"/bin/mapred ]; then
-      exec "${HADOOP_PREFIX}"/bin/mapred $* 
-    else
-      echo "MAPRED not found."
-      exit
-    fi
-    ;;
-
   classpath)
     if $cygwin; then
       CLASSPATH=`cygpath -p -w "$CLASSPATH"`
