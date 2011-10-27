@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -178,7 +179,7 @@ public class WebApps {
         }
         HttpServer server =
             new HttpServer(name, bindAddress, port, findPort, conf, 
-            webapp.getServePathSpecs());
+            new AdminACLsManager(conf).getAdminAcl(), null, webapp.getServePathSpecs());
         for(ServletStruct struct: servlets) {
           server.addServlet(struct.name, struct.spec, struct.clazz);
         }

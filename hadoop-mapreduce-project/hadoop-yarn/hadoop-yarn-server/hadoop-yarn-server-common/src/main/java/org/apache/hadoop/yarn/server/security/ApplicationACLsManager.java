@@ -32,7 +32,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
 
 @InterfaceAudience.Private
 public class ApplicationACLsManager {
@@ -41,20 +41,17 @@ public class ApplicationACLsManager {
       .getLog(ApplicationACLsManager.class);
 
   private final Configuration conf;
-  private final AccessControlList adminAcl;
+  private final AdminACLsManager adminAclsManager;
   private final ConcurrentMap<ApplicationId, Map<ApplicationAccessType, AccessControlList>> applicationACLS
     = new ConcurrentHashMap<ApplicationId, Map<ApplicationAccessType, AccessControlList>>();
 
   public ApplicationACLsManager(Configuration conf) {
     this.conf = conf;
-    this.adminAcl = new AccessControlList(conf.get(
-        YarnConfiguration.YARN_ADMIN_ACL,
-        YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    this.adminAclsManager = new AdminACLsManager(conf);
   }
 
   public boolean areACLsEnabled() {
-    return conf.getBoolean(YarnConfiguration.YARN_ACL_ENABLE,
-        YarnConfiguration.DEFAULT_YARN_ACL_ENABLE);
+    return adminAclsManager.areACLsEnabled();
   }
 
   public void addApplication(ApplicationId appId,
@@ -107,7 +104,7 @@ public class ApplicationACLsManager {
         .get(applicationId).get(applicationAccessType);
 
     // Allow application-owner for any type of access on the application
-    if (this.adminAcl.isUserAllowed(callerUGI)
+    if (this.adminAclsManager.isAdmin(callerUGI)
         || user.equals(applicationOwner)
         || applicationACL.isUserAllowed(callerUGI)) {
       return true;
