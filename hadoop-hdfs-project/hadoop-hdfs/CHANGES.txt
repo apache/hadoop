@@ -1208,6 +1208,12 @@ Release 0.23.0 - Unreleased
     HDFS-2494. Close the streams and DFSClient in DatanodeWebHdfsMethods.
     (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2432. Webhdfs: response FORBIDDEN when setReplication on non-files;
+    clear umask before creating a flie; throw IllegalArgumentException if
+    setOwner with both owner and group empty; throw FileNotFoundException if
+    getFileStatus on non-existing files; fix bugs in getBlockLocations; and
+    changed getFileChecksum json response root to "FileChecksum".  (szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.

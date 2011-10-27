@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -334,7 +335,7 @@ public class JsonUtil {
     } else {
       final Object[] a = new Object[array.size()];
       for(int i = 0; i < array.size(); i++) {
-        a[i] = toJsonMap(array.get(0));
+        a[i] = toJsonMap(array.get(i));
       }
       return a;
     }
@@ -436,7 +437,7 @@ public class JsonUtil {
     m.put("algorithm", checksum.getAlgorithmName());
     m.put("length", checksum.getLength());
     m.put("bytes", StringUtils.byteToHexString(checksum.getBytes()));
-    return toJsonString(MD5MD5CRC32FileChecksum.class, m);
+    return toJsonString(FileChecksum.class, m);
   }
 
   /** Convert a Json map to a MD5MD5CRC32FileChecksum. */
@@ -446,8 +447,7 @@ public class JsonUtil {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(
-        MD5MD5CRC32FileChecksum.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)json.get(FileChecksum.class.getSimpleName());
     final String algorithm = (String)m.get("algorithm");
     final int length = (int)(long)(Long)m.get("length");
     final byte[] bytes = StringUtils.hexStringToByte((String)m.get("bytes"));
