@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -31,7 +29,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -43,9 +40,6 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
     Configurable {
-  
-  public static final String CONFIGURED_NAMENODE_ADDRESSES
-      = "dfs.ha.namenode.addresses";
   
   private static final Log LOG =
       LogFactory.getLog(ConfiguredFailoverProxyProvider.class);
@@ -93,22 +87,13 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
     try {
       ugi = UserGroupInformation.getCurrentUser();
       
-      Collection<String> addresses = conf.getTrimmedStringCollection(
-          CONFIGURED_NAMENODE_ADDRESSES);
-      if (addresses == null || addresses.size() == 0) {
-        throw new RuntimeException(this.getClass().getSimpleName() +
-            " is configured but " + CONFIGURED_NAMENODE_ADDRESSES +
-            " is not set.");
-      }
-      for (String address : addresses) {
-        proxies.add(new AddressRpcProxyPair(
-            NameNode.getAddress(new URI(address).getAuthority())));
+      Collection<InetSocketAddress> addresses = DFSUtil.getHaNnRpcAddresses(
+          conf);
+      for (InetSocketAddress address : addresses) {
+        proxies.add(new AddressRpcProxyPair(address));
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
-    } catch (URISyntaxException e) {
-      throw new RuntimeException("Malformed URI set in " +
-          CONFIGURED_NAMENODE_ADDRESSES, e);
     }
   }
 

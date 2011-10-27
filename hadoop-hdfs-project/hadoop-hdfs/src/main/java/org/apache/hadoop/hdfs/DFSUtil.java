@@ -406,17 +406,51 @@ public class DFSUtil {
     }
     
     // Get configuration suffixed with nameserviceId and/or namenodeId
-    for (String nameserviceId : nameserviceIds) {
-      for (String nnId : namenodeIds) {
-        String keySuffix = concatSuffixes(nameserviceId, nnId);
-        String address = getConfValue(null, keySuffix, conf, keys);
-        if (address == null) {
-          return null;
+    if (federationEnabled && haEnabled) {
+      for (String nameserviceId : nameserviceIds) {
+        for (String nnId : namenodeIds) {
+          String keySuffix = concatSuffixes(nameserviceId, nnId);
+          String address = getConfValue(null, keySuffix, conf, keys);
+          if (address != null) {
+            isas.add(NetUtils.createSocketAddr(address));
+          }
         }
-        isas.add(NetUtils.createSocketAddr(address));
+      }
+    } else if (!federationEnabled && haEnabled) {
+      for (String nnId : namenodeIds) {
+        String address = getConfValue(null, nnId, conf, keys);
+        if (address != null) {
+          isas.add(NetUtils.createSocketAddr(address));
+        }
+      }
+    } else if (federationEnabled && !haEnabled) {
+      for (String nameserviceId : nameserviceIds) {
+          String address = getConfValue(null, nameserviceId, conf, keys);
+          if (address != null) {
+            isas.add(NetUtils.createSocketAddr(address));
+          }
       }
     }
     return isas;
+  }
+
+  /**
+   * Returns list of InetSocketAddress corresponding to HA NN RPC addresses from
+   * the configuration.
+   * 
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   * @throws IOException if no addresses are configured
+   */
+  public static List<InetSocketAddress> getHaNnRpcAddresses(
+      Configuration conf) throws IOException {
+    List<InetSocketAddress> addressList = getAddresses(conf, null,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    if (addressList == null) {
+      throw new IOException("Incorrect configuration: HA name node addresses "
+          + DFS_NAMENODE_RPC_ADDRESS_KEY + " is not configured.");
+    }
+    return addressList;
   }
   
   /**

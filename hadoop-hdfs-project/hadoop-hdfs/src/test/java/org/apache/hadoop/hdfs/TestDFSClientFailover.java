@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -59,9 +61,16 @@ public class TestDFSClientFailover {
   // changed to exercise that.
   @Test
   public void testDfsClientFailover() throws IOException, URISyntaxException {
-    final String nameServiceId = "name-service-uri";
+    final String logicalNameNodeId = "ha-nn-uri";
     InetSocketAddress nnAddr1 = cluster.getNameNode(0).getNameNodeAddress();
     InetSocketAddress nnAddr2 = cluster.getNameNode(1).getNameNodeAddress();
+    String nameServiceId1 = DFSUtil.getNameServiceIdFromAddress(conf, nnAddr1,
+        DFS_NAMENODE_RPC_ADDRESS_KEY);
+    String nameServiceId2 = DFSUtil.getNameServiceIdFromAddress(conf, nnAddr2,
+        DFS_NAMENODE_RPC_ADDRESS_KEY);
+    
+    String nameNodeId1 = "nn1";
+    String nameNodeId2 = "nn2";
     
     ClientProtocol nn1 = DFSUtil.createNamenode(nnAddr1, conf);
     ClientProtocol nn2 = DFSUtil.createNamenode(nnAddr2, conf);
@@ -78,13 +87,16 @@ public class TestDFSClientFailover {
     
     String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();
     String address2 = "hdfs://" + nnAddr2.getHostName() + ":" + nnAddr2.getPort();
-    conf.set(ConfiguredFailoverProxyProvider.CONFIGURED_NAMENODE_ADDRESSES,
-        address1 + "," + address2);
-        
-    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + nameServiceId,
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+        nameServiceId1, nameNodeId1), address1);
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+        nameServiceId2, nameNodeId2), address2);
+    
+    conf.set(DFS_HA_NAMENODES_KEY, nameNodeId1 + "," + nameNodeId2);
+    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalNameNodeId,
         ConfiguredFailoverProxyProvider.class.getName());
     
-    FileSystem fs = FileSystem.get(new URI("hdfs://" + nameServiceId), conf);
+    FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalNameNodeId), conf);
     
     AppendTestUtil.check(fs, TEST_FILE, FILE_LENGTH_TO_VERIFY);
     cluster.getNameNode(0).stop();
