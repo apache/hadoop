@@ -5,6 +5,6 @@ do
 done > params.txt
 if [[ "$2" == "1" ]];
 then
-  cd $6;
-  exec $7;
+  cd $5;
+  exec $6;
 fi;
