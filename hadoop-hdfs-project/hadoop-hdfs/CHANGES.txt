@@ -742,6 +742,8 @@ Release 0.23.0 - Unreleased
     HDFS-2355. Federation: enable using the same configuration file across 
     all the nodes in the cluster. (suresh)
 
+    HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
