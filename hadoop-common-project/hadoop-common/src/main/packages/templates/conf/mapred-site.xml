@@ -272,4 +272,34 @@
     <name>mapred.jobtracker.retirejob.interval</name>
     <value>0</value>
   </property>
+
+  <property>
+    <name>mapreduce.cluster.mapmemory.mb</name>
+    <value>${MAPREDUCE_CLUSTER_MAPMEMORY_MB}</value>
+  </property>
+
+  <property>
+    <name>mapreduce.cluster.reducememory.mb</name>
+    <value>${MAPREDUCE_CLUSTER_REDUCEMEMORY_MB}</value>
+  </property>
+
+  <property>
+    <name>mapreduce.jobtracker.maxmapmemory.mb</name>
+    <value>${MAPREDUCE_JOBTRACKER_MAXMAPMEMORY_MB}</value>
+  </property>
+
+  <property>
+    <name>mapreduce.jobtracker.maxreducememory.mb</name>
+    <value>${MAPREDUCE_JOBTRACKER_MAXREDUCEMEMORY_MB}</value>
+  </property>
+
+  <property>
+    <name>mapreduce.map.memory.mb</name>
+    <value>${MAPREDUCE_MAP_MEMORY_MB}</value>
+  </property>
+
+  <property>
+    <name>mapreduce.reduce.memory.mb</name>
+    <value>${MAPREDUCE_REDUCE_MEMORY_MB}</value>
+  </property>
 </configuration>
