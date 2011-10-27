@@ -60,6 +60,9 @@ Release 0.20.205.1 - unreleased
 
     HDFS-2501. Add version prefix and root methods to webhdfs.  (szetszwo)
 
+    HADOOP-7728. Enable task memory management to be configurable in hadoop
+    config setup script. (ramya)
+
   BUG FIXES
 
     HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in

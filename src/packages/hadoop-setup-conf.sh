@@ -55,6 +55,16 @@ usage: $0 <parameters>
      --dfs-support-append=false|true                                 Enable append
      --hadoop-proxy-users='user1:groups:hosts;user2:groups:hosts'    Setup proxy users for hadoop
      --hbase-user=hbase                                              User which hbase is running as. Defaults to hbase
+     --mapred-cluster-map-memory-mb=memory                           Virtual memory of a map slot for the MR framework. Defaults to -1
+     --mapred-cluster-reduce-memory-mb=memory                        Virtual memory, of a reduce slot for the MR framework. Defaults to -1
+     --mapred-cluster-max-map-memory-mb=memory                       Maximum virtual memory of a single map task. Defaults to -1
+                                                                     This value should be set to (mapred.tasktracker.map.tasks.maximum * mapred.cluster.map.memory.mb)
+     --mapred-cluster-max-reduce-memory-mb=memory                    maximum virtual memory of a single reduce task. Defaults to -1
+                                                                     This value should be set to (mapred.tasktracker.reduce.tasks.maximum * mapred.cluster.reduce.memory.mb)
+     --mapred-job-map-memory-mb=memory                               Virtual memory of a single map slot for a job. Defaults to -1
+                                                                     This value should be <= mapred.cluster.max.map.memory.mb
+     --mapred-job-reduce-memory-mb=memory                            Virtual memory, of a single reduce slot for a job. Defaults to -1
+                                                                     This value should be <= mapred.cluster.max.reduce.memory.mb
   "
   exit 1
 }
@@ -199,6 +209,12 @@ OPTS=$(getopt \
   -l 'hadoop-proxy-users:' \
   -l 'dfs-support-append:' \
   -l 'hbase-user:' \
+  -l 'mapred-cluster-map-memory-mb:' \
+  -l 'mapred-cluster-reduce-memory-mb:' \
+  -l 'mapred-cluster-max-map-memory-mb:' \
+  -l 'mapred-cluster-max-reduce-memory-mb:' \
+  -l 'mapred-job-map-memory-mb:' \
+  -l 'mapred-job-reduce-memory-mb:' \
   -o 'h' \
   -- "$@") 
   
@@ -334,6 +350,30 @@ while true ; do
       HBASE_USER=$2; shift 2
       AUTOMATED=1
       ;;
+    --mapred-cluster-map-memory-mb)
+      MAPRED_CLUSTER_MAP_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapred-cluster-reduce-memory-mb)
+      MAPRED_CLUSTER_REDUCE_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapred-cluster-max-map-memory-mb)
+      MAPRED_CLUSTER_MAX_MAP_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapred-cluster-max-reduce-memory-mb)
+      MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapred-job-map-memory-mb)
+      MAPRED_JOB_MAP_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapred-job-reduce-memory-mb)
+      MAPRED_JOB_REDUCE_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
     --)
       shift ; break
       ;;
@@ -365,6 +405,12 @@ HADOOP_MR_USER=${HADOOP_MR_USER:-mr}
 DFS_WEBHDFS_ENABLED=${DFS_WEBHDFS_ENABLED:-false}
 DFS_SUPPORT_APPEND=${DFS_SUPPORT_APPEND:-false}
 HBASE_USER=${HBASE_USER:-hbase}
+MAPRED_CLUSTER_MAP_MEMORY_MB=${MAPRED_CLUSTER_MAP_MEMORY_MB:--1}
+MAPRED_CLUSTER_REDUCE_MEMORY_MB=${MAPRED_CLUSTER_REDUCE_MEMORY_MB:--1} 
+MAPRED_CLUSTER_MAX_MAP_MEMORY_MB=${MAPRED_CLUSTER_MAX_MAP_MEMORY_MB:--1} 
+MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB=${MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB:--1} 
+MAPRED_JOB_MAP_MEMORY_MB=${MAPRED_JOB_MAP_MEMORY_MB=:--1} 
+MAPRED_JOB_REDUCE_MEMORY_MB=${MAPRED_JOB_REDUCE_MEMORY_MB:--1} 
 KEYTAB_DIR=${KEYTAB_DIR:-/etc/security/keytabs}
 HDFS_KEYTAB=${HDFS_KEYTAB:-/home/hdfs/hdfs.keytab}
 MR_KEYTAB=${MR_KEYTAB:-/home/mr/mr.keytab}
