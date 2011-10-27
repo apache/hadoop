@@ -54,6 +54,11 @@ void fd_deinit(JNIEnv *env) {
  * underlying fd, or throw if unavailable
  */
 int fd_get(JNIEnv* env, jobject obj) {
+  if (obj == NULL) {
+    THROW(env, "java/lang/NullPointerException",
+          "FileDescriptor object is null");
+    return -1;
+  }
   return (*env)->GetIntField(env, obj, fd_descriptor);
 }
 

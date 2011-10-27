@@ -511,6 +511,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7445. Implement bulk checksum verification using efficient native
     code. (todd)
 
+    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
+    ReadaheadPool infrastructure for use in HDFS and MR. (todd)
+
   BUG FIXES
 
     HADOOP-7630. hadoop-metrics2.properties should have a property *.period 
