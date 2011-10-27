@@ -386,6 +386,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2986. Fixed MiniYARNCluster to support multiple NodeManagers.
     (Anupam Seth via vinodkv)
 
+    MAPREDUCE-2736. Remove unused contrib components dependent on MR1. (eli)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

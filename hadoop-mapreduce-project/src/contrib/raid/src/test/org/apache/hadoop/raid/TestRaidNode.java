@@ -693,14 +693,4 @@ public class TestRaidNode extends TestCase {
     }
     LOG.info("Test testSuspendTraversal completed.");
   }
-
-  public void testSchedulerOption() throws IOException {
-    Configuration conf = new Configuration();
-    conf.set("raid.scheduleroption",
-      "mapred.fairscheduler.pool:dummy,foo:bar");
-    org.apache.hadoop.mapreduce.Job job = DistRaid.createJob(conf);
-    Configuration jobConf = job.getConfiguration();
-    assertEquals("dummy", jobConf.get("mapred.fairscheduler.pool"));
-    assertEquals("bar", jobConf.get("foo"));
-  }
 }

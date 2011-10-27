@@ -60,13 +60,8 @@
     <subant target="test">
       <property name="continueOnFailure" value="true"/>
       <fileset dir="." includes="streaming/build.xml"/> 
-      <fileset dir="." includes="fairscheduler/build.xml"/> 
-      <fileset dir="." includes="capacity-scheduler/build.xml"/>  
-      <fileset dir="." includes="dynamic-scheduler/build.xml"/>
       <fileset dir="." includes="gridmix/build.xml"/>
       <fileset dir="." includes="vertica/build.xml"/>
-      <!-- mumak tests disabled due to timeouts. See MAPREDUCE-2348
-      <fileset dir="." includes="mumak/build.xml"/> -->
       <fileset dir="." includes="raid/build.xml"/>
     </subant>
     <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
@@ -88,18 +83,10 @@
                value="${hadoop.conf.dir.deployed}"/>
           <fileset dir="." includes="hdfsproxy/build.xml"/>
           <fileset dir="." includes="streaming/build.xml"/>
-          <fileset dir="." includes="fairscheduler/build.xml"/>
-         <fileset dir="." includes="capacity-scheduler/build.xml"/>
          <fileset dir="." includes="gridmix/build.xml"/>
       </subant>
       <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
       <fail if="testsfailed">Tests failed!</fail>
-  </target>
-
-  <target name="docs">
-    <subant target="docs">
-      <fileset dir="." includes="capacity-scheduler/build.xml"/> 
-    </subant>
   </target>
 
   <!-- ====================================================== -->
