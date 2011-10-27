@@ -117,7 +117,7 @@ public class TestLinuxContainerExecutorWithMocks {
         appSubmitter, appId, workDir);
     assertEquals(0, ret);
     assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
-        workDir.toString(), "/bin/echo", "/dev/null", pidFile),
+        workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString()),
         readMockParams());
   }
 

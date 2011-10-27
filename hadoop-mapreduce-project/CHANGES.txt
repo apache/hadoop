@@ -1750,6 +1750,8 @@ Release 0.23.0 - Unreleased
     containers (process-trees) irrespective of whether the container succeeded,
     or killed. Contributed by Hitesh Shah.
 
+    MAPREDUCE-3281. Fixed a bug in TestLinuxContainerExecutorWithMocks. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
