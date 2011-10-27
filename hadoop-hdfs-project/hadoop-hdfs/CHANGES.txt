@@ -1134,6 +1134,9 @@ Release 0.23.0 - Unreleased
     HDFS-2494. Close the streams and DFSClient in DatanodeWebHdfsMethods.
     (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
+    not include multiple methods of the same name. (cutting)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
