@@ -93,6 +93,10 @@ Trunk (unreleased changes)
     HADOOP-7766. The auth to local mappings are not being respected, with webhdfs 
     and security enabled. (jitendra)
 
+  OPTIMIZATIONS
+
+    HADOOP-7761. Improve the performance of raw comparisons. (todd)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
