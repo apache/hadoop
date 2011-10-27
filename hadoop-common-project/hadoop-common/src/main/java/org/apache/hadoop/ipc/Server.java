@@ -1171,8 +1171,12 @@ public abstract class Server {
             throw new IOException("Unable to read authentication method");
           }
           if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-            AccessControlException ae = new AccessControlException(
-                "Authentication is required");
+            AccessControlException ae = new AccessControlException("Authorization ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION
+              + ") is enabled but authentication ("
+              + CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION
+              + ") is configured as simple. Please configure another method "
+              + "like kerberos or digest.");
             setupResponse(authFailedResponse, authFailedCall, Status.FATAL,
                 null, ae.getClass().getName(), ae.getMessage());
             responder.doRespond(authFailedCall);

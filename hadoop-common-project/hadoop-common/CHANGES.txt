@@ -416,6 +416,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7668. Add a NetUtils method that can tell if an InetAddress 
     belongs to local host. (suresh)
 
+    HADOOP-7509. Improve exception message thrown when Authentication is 
+    required. (Ravi Prakash via suresh)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
