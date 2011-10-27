@@ -1,12 +1,5 @@
 Hadoop Change Log
 
-    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
-
-    HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
-
-    HADOOP-7766. The auth to local mappings are not being respected, with webhdfs 
-    and security enabled. (jitendra)
-
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -422,6 +415,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7745. Fix wrong variable name in exception message introduced
     in HADOOP-7509. (Ravi Prakash via suresh)
 
+    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -683,6 +678,11 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7764. Allow HttpServer to set both ACL list and path spec filters. 
     (Jonathan Eagles via acmurthy) 
+
+    HADOOP-7766. The auth to local mappings are not being respected, with webhdfs 
+    and security enabled. (jitendra)
+
+    HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
 
 Release 0.22.0 - Unreleased
 
