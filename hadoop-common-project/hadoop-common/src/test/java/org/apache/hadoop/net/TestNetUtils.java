@@ -21,15 +21,19 @@ import junit.framework.AssertionFailedError;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -98,6 +102,34 @@ public class TestNetUtils {
     } catch (UnknownHostException e) {
       fail("NetUtils.verifyHostnames threw unexpected UnknownHostException");
     }
+  }
+  
+  /** 
+   * Test for {@link NetUtils#isLocalAddress(java.net.InetAddress)}
+   */
+  @Test
+  public void testIsLocalAddress() throws Exception {
+    // Test - local host is local address
+    assertTrue(NetUtils.isLocalAddress(InetAddress.getLocalHost()));
+    
+    // Test - all addresses bound network interface is local address
+    Enumeration<NetworkInterface> interfaces = NetworkInterface
+        .getNetworkInterfaces();
+    if (interfaces != null) { // Iterate through all network interfaces
+      while (interfaces.hasMoreElements()) {
+        NetworkInterface i = interfaces.nextElement();
+        Enumeration<InetAddress> addrs = i.getInetAddresses();
+        if (addrs == null) {
+          continue;
+        }
+        // Iterate through all the addresses of a network interface
+        while (addrs.hasMoreElements()) {
+          InetAddress addr = addrs.nextElement();
+          assertTrue(NetUtils.isLocalAddress(addr));
+        }
+      }
+    }
+    assertFalse(NetUtils.isLocalAddress(InetAddress.getByName("8.8.8.8")));
   }
 
   @Test

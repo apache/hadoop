@@ -412,6 +412,9 @@ Release 0.23.0 - Unreleased
     help in exception messages. (todd)
 
     HADOOP-7762. Common side of MR-2736. (eli)
+    
+    HADOOP-7668. Add a NetUtils method that can tell if an InetAddress 
+    belongs to local host. (suresh)
 
   OPTIMIZATIONS
   
