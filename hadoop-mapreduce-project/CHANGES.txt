@@ -1818,6 +1818,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3228. Fixed MR AM to timeout RPCs to bad NodeManagers. (vinodkv
     via acmurthy)
 
+    MAPREDUCE-3284. Moved JobQueueClient to hadoop-mapreduce-client-core.
+    (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
