@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * An interface that should be implemented to allow pluggable 
+ * An interface that must be implemented to allow pluggable
  * DNS-name/IP-address to RackID resolvers.
  *
  */
@@ -40,8 +40,9 @@ public interface DNSToSwitchMapping {
    * Note the hostname/ip-address is not part of the returned path.
    * The network topology of the cluster would determine the number of
    * components in the network path.
-   * @param names
-   * @return list of resolved network paths
+   * @param names the list of hosts to resolve (can be empty)
+   * @return list of resolved network paths.
+   * If <i>names</i> is empty, the returned list is also empty
    */
   public List<String> resolve(List<String> names);
 }

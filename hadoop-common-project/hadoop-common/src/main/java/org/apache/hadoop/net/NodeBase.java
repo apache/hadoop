@@ -27,9 +27,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class NodeBase implements Node {
+  /** Path separator {@value} */
   public final static char PATH_SEPARATOR = '/';
+  /** Path separator as a string {@value} */
   public final static String PATH_SEPARATOR_STR = "/";
-  public final static String ROOT = ""; // string representation of root
+  /** string representation of root {@value} */
+  public final static String ROOT = "";
   
   protected String name; //host:port#
   protected String location; //string representation of this node's location
@@ -55,7 +58,7 @@ public class NodeBase implements Node {
   }
   
   /** Construct a node from its name and its location
-   * @param name this node's name 
+   * @param name this node's name (can be null, must not contain {@link #PATH_SEPARATOR})
    * @param location this node's location 
    */
   public NodeBase(String name, String location) {
@@ -63,7 +66,7 @@ public class NodeBase implements Node {
   }
   
   /** Construct a node from its name and its location
-   * @param name this node's name 
+   * @param name this node's name (can be null, must not contain {@link #PATH_SEPARATOR})
    * @param location this node's location 
    * @param parent this node's parent node
    * @param level this node's level in the tree
@@ -74,7 +77,11 @@ public class NodeBase implements Node {
     this.level = level;
   }
 
-  /* set this node's name and location */
+  /**
+   * set this node's name and location
+   * @param name the (nullable) name -which cannot contain the {@link #PATH_SEPARATOR}
+   * @param location the location
+   */
   private void set(String name, String location) {
     if (name != null && name.contains(PATH_SEPARATOR_STR))
       throw new IllegalArgumentException(
@@ -83,27 +90,43 @@ public class NodeBase implements Node {
     this.location = location;      
   }
   
-  /** Return this node's name */
+  /** @return this node's name */
+  @Override
   public String getName() { return name; }
   
-  /** Return this node's network location */
+  /** @return this node's network location */
+  @Override
   public String getNetworkLocation() { return location; }
   
-  /** Set this node's network location */
+  /** Set this node's network location
+   * @param location the location
+   */
+  @Override
   public void setNetworkLocation(String location) { this.location = location; }
   
-  /** Return this node's path */
+  /**
+   * Get the path of a node
+   * @param node a non-null node
+   * @return the path of a node
+   */
   public static String getPath(Node node) {
     return node.getNetworkLocation()+PATH_SEPARATOR_STR+node.getName();
   }
   
-  /** Return this node's string representation */
+  /** @return this node's path as its string representation */
+  @Override
   public String toString() {
     return getPath(this);
   }
 
-  /** Normalize a path */
-  static public String normalize(String path) {
+  /** Normalize a path by stripping off any trailing {@link #PATH_SEPARATOR}
+   * @param path path to normalize.
+   * @return the normalised path
+   * If <i>path</i>is null or empty {@link #ROOT} is returned
+   * @throws IllegalArgumentException if the first character of a non empty path
+   * is not {@link #PATH_SEPARATOR}
+   */
+  public static String normalize(String path) {
     if (path == null || path.length() == 0) return ROOT;
     
     if (path.charAt(0) != PATH_SEPARATOR) {
@@ -119,20 +142,28 @@ public class NodeBase implements Node {
     return path;
   }
   
-  /** Return this node's parent */
+  /** @return this node's parent */
+  @Override
   public Node getParent() { return parent; }
   
-  /** Set this node's parent */
+  /** Set this node's parent
+   * @param parent the parent
+   */
+  @Override
   public void setParent(Node parent) {
     this.parent = parent;
   }
   
-  /** Return this node's level in the tree.
+  /** @return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
+  @Override
   public int getLevel() { return level; }
   
-  /** Set this node's level in the tree */
+  /** Set this node's level in the tree
+   * @param level the level
+   */
+  @Override
   public void setLevel(int level) {
     this.level = level;
   }

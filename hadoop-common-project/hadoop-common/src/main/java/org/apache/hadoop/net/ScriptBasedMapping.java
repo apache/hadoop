@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * This class implements the {@link DNSToSwitchMapping} interface using a 
- * script configured via net.topology.script.file.name .
+ * script configured via the {@link CommonConfigurationKeys#NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -42,50 +42,86 @@ implements Configurable
   public ScriptBasedMapping() {
     super(new RawScriptBasedMapping());
   }
-  
-  // script must accept at least this many args
+
+  /**
+   * Minimum number of arguments: {@value}
+   */
   static final int MIN_ALLOWABLE_ARGS = 1;
-  
+
+  /**
+   * Default number of arguments: {@value}
+   */
   static final int DEFAULT_ARG_COUNT = 
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_DEFAULT;
-  
+
+  /**
+   * key to the script filename {@value}
+   */
   static final String SCRIPT_FILENAME_KEY = 
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY ;
-  static final String SCRIPT_ARG_COUNT_KEY = 
+  /**
+   * key to the argument count that the script supports
+   */
+  static final String SCRIPT_ARG_COUNT_KEY =
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY ;
-  
+
+  /**
+   * Create an instance from the given configuration
+   * @param conf configuration
+   */
   public ScriptBasedMapping(Configuration conf) {
     this();
     setConf(conf);
   }
-  
+
+  @Override
   public Configuration getConf() {
     return ((RawScriptBasedMapping)rawMapping).getConf();
   }
-  
+
+  @Override
   public void setConf(Configuration conf) {
     ((RawScriptBasedMapping)rawMapping).setConf(conf);
   }
-  
+
+  /**
+   * This is the uncached script mapping that is fed into the cache managed
+   * by the superclass {@link CachedDNSToSwitchMapping}
+   */
   private static final class RawScriptBasedMapping
-  implements DNSToSwitchMapping {
-  private String scriptName;
-  private Configuration conf;
-  private int maxArgs; //max hostnames per call of the script
-  private static Log LOG = 
-    LogFactory.getLog(ScriptBasedMapping.class);
-  public void setConf (Configuration conf) {
-    this.scriptName = conf.get(SCRIPT_FILENAME_KEY);
-    this.maxArgs = conf.getInt(SCRIPT_ARG_COUNT_KEY, DEFAULT_ARG_COUNT);
-    this.conf = conf;
-  }
-  public Configuration getConf () {
-    return conf;
-  }
-  
-  public RawScriptBasedMapping() {}
-  
-  public List<String> resolve(List<String> names) {
+      implements DNSToSwitchMapping {
+    private String scriptName;
+    private Configuration conf;
+    private int maxArgs; //max hostnames per call of the script
+    private static Log LOG =
+        LogFactory.getLog(ScriptBasedMapping.class);
+
+    /**
+     * Set the configuration and
+     * @param conf extract the configuration parameters of interest
+     */
+    public void setConf (Configuration conf) {
+      this.scriptName = conf.get(SCRIPT_FILENAME_KEY);
+      this.maxArgs = conf.getInt(SCRIPT_ARG_COUNT_KEY, DEFAULT_ARG_COUNT);
+      this.conf = conf;
+    }
+
+    /**
+     * Get the configuration
+     * @return the configuration
+     */
+    public Configuration getConf () {
+      return conf;
+    }
+
+    /**
+     * Constructor. The mapping is not ready to use until
+     * {@link #setConf(Configuration)} has been called
+     */
+    public RawScriptBasedMapping() {}
+
+    @Override
+    public List<String> resolve(List<String> names) {
     List <String> m = new ArrayList<String>(names.size());
     
     if (names.isEmpty()) {
@@ -123,45 +159,53 @@ implements Configurable
     return m;
   }
 
-  private String runResolveCommand(List<String> args) {
-    int loopCount = 0;
-    if (args.size() == 0) {
-      return null;
-    }
-    StringBuilder allOutput = new StringBuilder();
-    int numProcessed = 0;
-    if (maxArgs < MIN_ALLOWABLE_ARGS) {
-      LOG.warn("Invalid value " + Integer.toString(maxArgs)
-          + " for " + SCRIPT_ARG_COUNT_KEY + "; must be >= "
-          + Integer.toString(MIN_ALLOWABLE_ARGS));
-      return null;
-    }
-    
-    while (numProcessed != args.size()) {
-      int start = maxArgs * loopCount;
-      List <String> cmdList = new ArrayList<String>();
-      cmdList.add(scriptName);
-      for (numProcessed = start; numProcessed < (start + maxArgs) && 
-           numProcessed < args.size(); numProcessed++) {
-        cmdList.add(args.get(numProcessed)); 
-      }
-      File dir = null;
-      String userDir;
-      if ((userDir = System.getProperty("user.dir")) != null) {
-        dir = new File(userDir);
-      }
-      ShellCommandExecutor s = new ShellCommandExecutor(
-                                   cmdList.toArray(new String[0]), dir);
-      try {
-        s.execute();
-        allOutput.append(s.getOutput() + " ");
-      } catch (Exception e) {
-        LOG.warn("Exception: ", e);
+    /**
+     * Build and execute the resolution command. The command is
+     * executed in the directory specified by the system property
+     * "user.dir" if set; otherwise the current working directory is used
+     * @param args a list of arguments
+     * @return null if the number of arguments is out of range,
+     * or the output of the command.
+     */
+    private String runResolveCommand(List<String> args) {
+      int loopCount = 0;
+      if (args.size() == 0) {
         return null;
       }
-      loopCount++; 
+      StringBuilder allOutput = new StringBuilder();
+      int numProcessed = 0;
+      if (maxArgs < MIN_ALLOWABLE_ARGS) {
+        LOG.warn("Invalid value " + Integer.toString(maxArgs)
+            + " for " + SCRIPT_ARG_COUNT_KEY + "; must be >= "
+            + Integer.toString(MIN_ALLOWABLE_ARGS));
+        return null;
+      }
+
+      while (numProcessed != args.size()) {
+        int start = maxArgs * loopCount;
+        List<String> cmdList = new ArrayList<String>();
+        cmdList.add(scriptName);
+        for (numProcessed = start; numProcessed < (start + maxArgs) &&
+            numProcessed < args.size(); numProcessed++) {
+          cmdList.add(args.get(numProcessed));
+        }
+        File dir = null;
+        String userDir;
+        if ((userDir = System.getProperty("user.dir")) != null) {
+          dir = new File(userDir);
+        }
+        ShellCommandExecutor s = new ShellCommandExecutor(
+            cmdList.toArray(new String[0]), dir);
+        try {
+          s.execute();
+          allOutput.append(s.getOutput() + " ");
+        } catch (Exception e) {
+          LOG.warn("Exception: ", e);
+          return null;
+        }
+        loopCount++;
+      }
+      return allOutput.toString();
     }
-    return allOutput.toString();
-  }
   }
 }
