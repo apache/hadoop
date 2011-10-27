@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.yarn.event.EventHandler;
 
 public interface ContainerLauncher 
@@ -28,4 +29,12 @@ public interface ContainerLauncher
     CONTAINER_REMOTE_LAUNCH,
     CONTAINER_REMOTE_CLEANUP
   }
+
+  // Not a documented config. Only used for tests
+  static final String MR_AM_NM_COMMAND_TIMEOUT = MRJobConfig.MR_AM_PREFIX
+      + "nm-command-timeout";
+  /**
+   *  Maximum of 1 minute timeout for a Node to react to the command
+   */
+  static final int DEFAULT_NM__COMMAND_TIMEOUT = 60000;
 }
