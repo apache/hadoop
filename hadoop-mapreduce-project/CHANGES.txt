@@ -1731,6 +1731,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3264. mapreduce.job.user.name needs to be set automatically.
     (acmurthy via mahadev)
 
+    MAPREDUCE-3175. Add authorization to admin web-pages such as /stacks, /jmx
+    etc. (Jonathan Eagles via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
