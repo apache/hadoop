@@ -598,8 +598,8 @@ runTests () {
   echo ""
   echo ""
 
-  echo "$MVN clean install test -Pnative -D${PROJECT_NAME}PatchProcess"
-  $MVN clean install test -Pnative -D${PROJECT_NAME}PatchProcess
+  echo "$MVN clean install -Pnative -D${PROJECT_NAME}PatchProcess"
+  $MVN clean install -Pnative -D${PROJECT_NAME}PatchProcess
   if [[ $? != 0 ]] ; then
     ### Find and format names of failed tests
     failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
