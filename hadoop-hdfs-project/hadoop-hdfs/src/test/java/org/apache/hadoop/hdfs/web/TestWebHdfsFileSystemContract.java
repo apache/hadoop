@@ -27,6 +27,8 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -39,6 +41,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -255,6 +258,52 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       fail();
     } catch(IOException e) {
       WebHdfsFileSystem.LOG.info("This is expected.", e);
+    }
+  }
+
+  public void testResponseCode() throws IOException {
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fs;
+    final Path dir = new Path("/test/testUrl");
+    assertTrue(webhdfs.mkdirs(dir));
+
+    {//test set owner with empty parameters
+      final URL url = webhdfs.toUrl(PutOpParam.Op.SETOWNER, dir);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_BAD_REQUEST, conn.getResponseCode());
+      conn.disconnect();
+    }
+
+    {//test set replication on a directory
+      final HttpOpParam.Op op = PutOpParam.Op.SETREPLICATION;
+      final URL url = webhdfs.toUrl(op, dir);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      
+      assertFalse(webhdfs.setReplication(dir, (short)1));
+      conn.disconnect();
+    }
+
+    {//test get file status for a non-exist file.
+      final Path p = new Path(dir, "non-exist");
+      final URL url = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, p);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_NOT_FOUND, conn.getResponseCode());
+      conn.disconnect();
+    }
+
+    {//test set permission with empty parameters
+      final HttpOpParam.Op op = PutOpParam.Op.SETPERMISSION;
+      final URL url = webhdfs.toUrl(op, dir);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+      assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
+      conn.disconnect();
     }
   }
 }
