@@ -134,7 +134,9 @@ public class ContainerLauncherImpl extends AbstractService implements
               // Bump up the pool size to idealPoolSize+INITIAL_POOL_SIZE, the
               // later is just a buffer so we are not always increasing the
               // pool-size
-              launcherPool.setCorePoolSize(idealPoolSize + INITIAL_POOL_SIZE);
+              int newPoolSize = idealPoolSize + INITIAL_POOL_SIZE;
+              LOG.debug("Setting pool size to " + newPoolSize);
+              launcherPool.setCorePoolSize(newPoolSize);
             }
           }
 
