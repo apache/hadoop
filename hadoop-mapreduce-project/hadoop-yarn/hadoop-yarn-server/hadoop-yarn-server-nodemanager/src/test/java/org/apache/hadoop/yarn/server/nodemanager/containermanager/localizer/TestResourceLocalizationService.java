@@ -147,7 +147,7 @@ public class TestResourceLocalizationService {
   @Test
   @SuppressWarnings("unchecked") // mocked generics
   public void testResourceRelease() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new YarnConfiguration();
     AbstractFileSystem spylfs =
       spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
     final FileContext lfs = FileContext.getFileContext(spylfs, conf);
@@ -331,7 +331,7 @@ public class TestResourceLocalizationService {
   @Test
   @SuppressWarnings("unchecked") // mocked generics
   public void testLocalizationHeartbeat() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = new YarnConfiguration();
     AbstractFileSystem spylfs =
       spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
     final FileContext lfs = FileContext.getFileContext(spylfs, conf);

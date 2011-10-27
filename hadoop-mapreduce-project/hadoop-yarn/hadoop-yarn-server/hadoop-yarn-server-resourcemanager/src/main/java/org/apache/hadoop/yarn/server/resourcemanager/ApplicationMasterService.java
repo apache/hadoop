@@ -292,6 +292,7 @@ public class ApplicationMasterService extends AbstractService implements
   public void registerAppAttempt(ApplicationAttemptId attemptId) {
     AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
     response.setResponseId(0);
+    LOG.info("Registering " + attemptId);
     responseMap.put(attemptId, response);
   }
 

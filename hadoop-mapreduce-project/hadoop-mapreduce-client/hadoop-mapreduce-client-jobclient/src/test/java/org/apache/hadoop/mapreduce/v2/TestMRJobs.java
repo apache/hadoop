@@ -102,7 +102,7 @@ public class TestMRJobs {
     }
 
     if (mrCluster == null) {
-      mrCluster = new MiniMRYarnCluster(TestMRJobs.class.getName());
+      mrCluster = new MiniMRYarnCluster(TestMRJobs.class.getName(), 3);
       Configuration conf = new Configuration();
       mrCluster.init(conf);
       mrCluster.start();
@@ -322,7 +322,7 @@ public class TestMRJobs {
     return job;
   }
 
-//@Test
+  //@Test
   public void testSleepJobWithSecurityOn() throws IOException,
       InterruptedException, ClassNotFoundException {
 
