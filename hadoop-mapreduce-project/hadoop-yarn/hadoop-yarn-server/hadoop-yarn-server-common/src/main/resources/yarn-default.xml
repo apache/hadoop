@@ -366,6 +366,18 @@
     <!-- <value>mapreduce.shuffle</value> -->
   </property>
 
+  <property>
+    <description>No. of ms to wait between sending a SIGTERM and SIGKILL to a container</description>
+    <name>yarn.nodemanager.sleep-delay-before-sigkill.ms</name>
+    <value>250</value>
+  </property>
+
+  <property>
+    <description>Max time to wait for a process to come up when trying to cleanup a container</description>
+    <name>yarn.nodemanager.process-kill-wait.ms</name>
+    <value>2000</value>
+  </property>
+
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>

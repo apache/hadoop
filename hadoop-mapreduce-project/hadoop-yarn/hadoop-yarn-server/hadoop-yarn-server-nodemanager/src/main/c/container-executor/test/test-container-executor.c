@@ -590,6 +590,7 @@ void test_run_container() {
   fflush(stderr);
   char* container_dir = get_container_work_directory(TEST_ROOT "/local-1", 
 					      username, "app_4", "container_1");
+  const char * pid_file = TEST_ROOT "/pid.txt";
   pid_t child = fork();
   if (child == -1) {
     printf("FAIL: failed to fork process for init_app - %s\n", 
@@ -597,7 +598,7 @@ void test_run_container() {
     exit(1);
   } else if (child == 0) {
     if (launch_container_as_user(username, "app_4", "container_1", 
-                         container_dir, script_name, TEST_ROOT "creds.txt") != 0) {
+                         container_dir, script_name, TEST_ROOT "/creds.txt", pid_file) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -631,6 +632,32 @@ void test_run_container() {
     exit(1);
   }
   free(container_dir);
+
+  if(access(pid_file, R_OK) != 0) {
+    printf("FAIL: failed to create pid file %s\n", pid_file);
+    exit(1);
+  }
+  int pidfd = open(pid_file, O_RDONLY);
+  if (pidfd == -1) {
+    printf("FAIL: failed to open pid file %s - %s\n", pid_file, strerror(errno));
+    exit(1);
+  }
+
+  char pidBuf[100];
+  ssize_t bytes = read(pidfd, pidBuf, 100);
+  if (bytes == -1) {
+    printf("FAIL: failed to read from pid file %s - %s\n", pid_file, strerror(errno));
+    exit(1);
+  }
+
+  pid_t mypid = child;
+  char myPidBuf[33];
+  snprintf(myPidBuf, 33, "%d", mypid);
+  if (strncmp(pidBuf, myPidBuf, strlen(myPidBuf)) != 0) {
+    printf("FAIL: failed to find matching pid in pid file\n");
+    printf("FAIL: Expected pid %d : Got %.*s", mypid, (int)bytes, pidBuf);
+    exit(1);
+  }
 }
 
 int main(int argc, char **argv) {

@@ -166,8 +166,6 @@ public abstract class RMContainerRequestor extends RMCommunicator {
           for (ResourceRequest req : reqMap.values()) {
             if (!ask.remove(req)) {
               foundAll = false;
-            }
-            else {
               // if ask already sent to RM, we can try and overwrite it if possible.
               // send a new ask to RM with numContainers
               // specified for the blacklisted host to be 0.
@@ -181,7 +179,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
           // we can remove this request
           if (foundAll) {
             remoteRequests.remove(hostName);
-          }     
+          }
         }
         // TODO handling of rack blacklisting
         // Removing from rack should be dependent on no. of failures within the rack 

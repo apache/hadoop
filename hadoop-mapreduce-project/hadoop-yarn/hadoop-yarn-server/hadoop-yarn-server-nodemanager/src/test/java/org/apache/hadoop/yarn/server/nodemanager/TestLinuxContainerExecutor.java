@@ -185,7 +185,9 @@ public class TestLinuxContainerExecutor {
     Path scriptPath = new Path(script);
     Path tokensPath = new Path("/dev/null");
     Path workDir = new Path(workSpace.getAbsolutePath());
-    
+    Path pidFile = new Path(workDir, "pid.txt");
+
+    exec.activateContainer(cId, pidFile);
     return exec.launchContainer(container, scriptPath, tokensPath,
         appSubmitter, appId, workDir);
   }

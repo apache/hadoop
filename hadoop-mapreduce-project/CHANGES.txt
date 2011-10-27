@@ -1743,6 +1743,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3279. Fixed TestJobHistoryParsing which assumed user name to be
     mapred all the time. (Siddharth Seth via acmurthy)
 
+    MAPREDUCE-3240. Fixed NodeManager to be able to forcefully cleanup its
+    containers (process-trees) irrespective of whether the container succeeded,
+    or killed. Contributed by Hitesh Shah.
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

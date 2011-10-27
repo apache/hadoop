@@ -168,8 +168,6 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.LOCALIZED, ContainerState.LOCALIZED,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
-       // TODO race: Can lead to a CONTAINER_LAUNCHED event at state KILLING, 
-       // and a container which will never be killed by the NM.
     .addTransition(ContainerState.LOCALIZED, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
 
@@ -239,6 +237,13 @@ public class ContainerImpl implements Container {
             ContainerState.DONE,
             ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP,
             CONTAINER_DONE_TRANSITION)
+    // Handle a launched container during killing stage is a no-op
+    // as cleanup container is always handled after launch container event
+    // in the container launcher
+    .addTransition(ContainerState.KILLING,
+        ContainerState.KILLING,
+        ContainerEventType.CONTAINER_LAUNCHED,
+        new ContainerTransition())
 
     // From CONTAINER_CLEANEDUP_AFTER_KILL State.
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,

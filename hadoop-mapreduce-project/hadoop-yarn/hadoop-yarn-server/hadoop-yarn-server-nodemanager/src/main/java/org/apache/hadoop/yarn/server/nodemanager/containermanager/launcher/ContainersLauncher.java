@@ -26,15 +26,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -52,6 +54,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class ContainersLauncher extends AbstractService
     implements EventHandler<ContainersLauncherEvent> {
 
+  private static final Log LOG = LogFactory.getLog(ContainersLauncher.class);
+
   private final Context context;
   private final ContainerExecutor exec;
   private final Dispatcher dispatcher;
@@ -64,13 +68,14 @@ public class ContainersLauncher extends AbstractService
     Collections.synchronizedMap(new HashMap<ContainerId,RunningContainer>());
 
   private static final class RunningContainer {
-    public RunningContainer(String string, Future<Integer> submit) {
-      this.user = string;
+    public RunningContainer(Future<Integer> submit,
+        ContainerLaunch launcher) {
       this.runningcontainer = submit;
+      this.launcher = launcher;
     }
 
-    String user;
     Future<Integer> runningcontainer;
+    ContainerLaunch launcher;
   }
 
 
@@ -104,7 +109,6 @@ public class ContainersLauncher extends AbstractService
     // TODO: ContainersLauncher launches containers one by one!!
     Container container = event.getContainer();
     ContainerId containerId = container.getContainerID();
-    String userName = container.getUser();
     switch (event.getType()) {
       case LAUNCH_CONTAINER:
         Application app =
@@ -114,33 +118,26 @@ public class ContainersLauncher extends AbstractService
           new ContainerLaunch(getConfig(), dispatcher, exec, app,
               event.getContainer());
         running.put(containerId,
-            new RunningContainer(userName,
-                containerLauncher.submit(launch)));
+            new RunningContainer(containerLauncher.submit(launch), 
+                launch));
         break;
       case CLEANUP_CONTAINER:
         RunningContainer rContainerDatum = running.remove(containerId);
         Future<Integer> rContainer = rContainerDatum.runningcontainer;
-        if (rContainer != null) {
-  
-          if (rContainer.isDone()) {
-            // The future is already done by this time.
-            break;
-          }
-  
-          // Cancel the future so that it won't be launched if it isn't already.
+        if (rContainer != null 
+            && !rContainer.isDone()) {
+          // Cancel the future so that it won't be launched 
+          // if it isn't already.
           rContainer.cancel(false);
-  
-          // Kill the container
-          String processId = exec.getProcessId(containerId);
-          if (processId != null) {
-            try {
-              exec.signalContainer(rContainerDatum.user,
-                  processId, Signal.KILL);
-            } catch (IOException e) {
-              // TODO Auto-generated catch block
-              e.printStackTrace();
-            }
-          }
+        }
+
+        // Cleanup a container whether it is running/killed/completed, so that
+        // no sub-processes are alive.
+        try {
+          rContainerDatum.launcher.cleanupContainer();
+        } catch (IOException e) {
+          LOG.warn("Got exception while cleaning container " + containerId
+              + ". Ignoring.");
         }
         break;
     }

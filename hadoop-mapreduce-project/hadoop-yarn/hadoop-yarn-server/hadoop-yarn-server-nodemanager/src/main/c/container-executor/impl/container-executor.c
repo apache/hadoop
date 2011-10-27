@@ -45,6 +45,9 @@ FILE* ERRORFILE = NULL;
 static uid_t nm_uid = -1;
 static gid_t nm_gid = -1;
 
+char *concatenate(char *concat_pattern, char *return_path_name,
+   int numArgs, ...);
+
 void set_nm_uid(uid_t user, gid_t group) {
   nm_uid = user;
   nm_gid = group;
@@ -144,6 +147,60 @@ static int change_effective_user(uid_t user, gid_t group) {
             strerror(errno));
     return -1;
   }
+  return 0;
+}
+
+/**
+ * Write the pid of the current process into the pid file.
+ * pid_file: Path to pid file where pid needs to be written to
+ */
+static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
+  uid_t user = geteuid();
+  gid_t group = getegid();
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    return -1;
+  }
+
+  char *temp_pid_file = concatenate("%s.tmp", "pid_file_path", 1, pid_file);
+
+  // create with 700
+  int pid_fd = open(temp_pid_file, O_WRONLY|O_CREAT|O_EXCL, S_IRWXU);
+  if (pid_fd == -1) {
+    fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", temp_pid_file,
+           strerror(errno));
+    free(temp_pid_file);
+    return -1;
+  }
+
+  // write pid to temp file
+  char pid_buf[21];
+  snprintf(pid_buf, 21, "%d", pid);
+  ssize_t written = write(pid_fd, pid_buf, strlen(pid_buf));
+  close(pid_fd);
+  if (written == -1) {
+    fprintf(LOGFILE, "Failed to write pid to file %s as node manager - %s\n",
+       temp_pid_file, strerror(errno));
+    free(temp_pid_file);
+    return -1;
+  }
+
+  // rename temp file to actual pid file
+  // use rename as atomic
+  if (rename(temp_pid_file, pid_file)) {
+    fprintf(LOGFILE, "Can't move pid file from %s to %s as node manager - %s\n",
+        temp_pid_file, pid_file, strerror(errno));
+    unlink(temp_pid_file);
+    free(temp_pid_file);
+    return -1;
+  }
+
+  // Revert back to the calling user.
+  if (change_effective_user(user, group)) {
+	free(temp_pid_file);
+    return -1;
+  }
+
+  free(temp_pid_file);
   return 0;
 }
 
@@ -749,7 +806,8 @@ int initialize_app(const char *user, const char *app_id,
 
 int launch_container_as_user(const char *user, const char *app_id, 
                      const char *container_id, const char *work_dir,
-                     const char *script_name, const char *cred_file) {
+                     const char *script_name, const char *cred_file,
+                     const char* pid_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -775,6 +833,20 @@ int launch_container_as_user(const char *user, const char *app_id,
   if (cred_file_source == -1) {
     goto cleanup;
   }
+
+  // setsid 
+  pid_t pid = setsid();
+  if (pid == -1) {
+    exit_code = SETSID_OPER_FAILED;
+    goto cleanup;
+  }
+
+  // write pid to pidfile
+  if (pid_file == NULL
+      || write_pid_to_file_as_nm(pid_file, pid) != 0) {
+    exit_code = WRITE_PIDFILE_FAILED;
+    goto cleanup;
+  }  
 
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
@@ -1031,3 +1103,5 @@ int delete_as_user(const char *user,
   }
   return ret;
 }
+
+
