@@ -1224,4 +1224,12 @@
     mapreduce.job.end-notification.max.retry.interval</description>
 </property>
 
+<property>
+  <name>mapreduce.job.user.name</name>
+  <value>${user.name}</value>
+  <description>The user name for the job submitter, configurable only in
+  non-secure mode. In secure mode Kerberos authentication is necessary.
+  </description>
+</property>
+
 </configuration>
