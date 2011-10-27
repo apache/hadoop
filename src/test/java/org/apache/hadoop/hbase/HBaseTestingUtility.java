@@ -1103,10 +1103,14 @@ public class HBaseTestingUtility {
   public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
       throws IOException {
     List<byte[]> metaRows = getMetaTableRows(tableName);
-    if (metaRows == null || metaRows.size() == 0) {
+    if (metaRows == null || metaRows.isEmpty()) {
       return null;
     }
-    int index = hbaseCluster.getServerWith(metaRows.get(0));
+    LOG.debug("Found " + metaRows.size() + " rows for table " +
+      Bytes.toString(tableName));
+    byte [] firstrow = metaRows.get(0);
+    LOG.debug("FirstRow=" + Bytes.toString(firstrow));
+    int index = hbaseCluster.getServerWith(firstrow);
     return hbaseCluster.getRegionServerThreads().get(index).getRegionServer();
   }
 
