@@ -2729,6 +2729,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   /**
+   * Cancel an ongoing saveNamespace operation and wait for its
+   * threads to exit, if one is currently in progress.
+   *
+   * If no such operation is in progress, this call does nothing.
+   *
+   * @param reason a reason to be communicated to the caller saveNamespace 
+   * @throws IOException
+   */
+  void cancelSaveNamespace(String reason) throws IOException {
+    readLock();
+    try {
+      checkSuperuserPrivilege();
+      getFSImage().cancelSaveNamespace(reason);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    } finally {
+      readUnlock();
+    }
+  }
+  
+  /**
    * Enables/Disables/Checks restoring failed storage replicas if the storage becomes available again.
    * Requires superuser privilege.
    * 

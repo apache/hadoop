@@ -42,7 +42,7 @@ public abstract class MD5FileUtils {
   private static final Log LOG = LogFactory.getLog(
       MD5FileUtils.class);
 
-  private static final String MD5_SUFFIX = ".md5";
+  public static final String MD5_SUFFIX = ".md5";
   private static final Pattern LINE_REGEX =
     Pattern.compile("([0-9a-f]{32}) [ \\*](.+)");
   

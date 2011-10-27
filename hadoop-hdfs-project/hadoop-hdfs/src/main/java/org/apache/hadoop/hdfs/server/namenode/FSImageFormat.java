@@ -508,6 +508,7 @@ class FSImageFormat {
    * functions may be used to retrieve information about the file that was written.
    */
   static class Saver {
+    private final SaveNamespaceContext context;
     /** Set to true once an image has been written */
     private boolean saved = false;
     
@@ -529,6 +530,11 @@ class FSImageFormat {
         throw new IllegalStateException("FSImageSaver has already saved an image");
       }
     }
+    
+
+    Saver(SaveNamespaceContext context) {
+      this.context = context;
+    }
 
     /**
      * Return the MD5 checksum of the image file that was saved.
@@ -539,12 +545,11 @@ class FSImageFormat {
     }
 
     void save(File newFile,
-              long txid,
-              FSNamesystem sourceNamesystem,
               FSImageCompression compression)
       throws IOException {
       checkNotSaved();
 
+      final FSNamesystem sourceNamesystem = context.getSourceNamesystem();
       FSDirectory fsDir = sourceNamesystem.dir;
       long startTime = now();
       //
@@ -565,7 +570,7 @@ class FSImageFormat {
             .getNamespaceID());
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
-        out.writeLong(txid);
+        out.writeLong(context.getTxId());
 
         // write compression info and set up compressed stream
         out = compression.writeHeaderAndWrapStream(fos);
@@ -581,10 +586,12 @@ class FSImageFormat {
         saveImage(strbuf, fsDir.rootDir, out);
         // save files under construction
         sourceNamesystem.saveFilesUnderConstruction(out);
+        context.checkCancelled();
         sourceNamesystem.saveSecretManagerState(out);
         strbuf = null;
-
+        context.checkCancelled();
         out.flush();
+        context.checkCancelled();
         fout.getChannel().force(true);
       } finally {
         out.close();
@@ -603,9 +610,10 @@ class FSImageFormat {
      * This is a recursive procedure, which first saves all children of
      * a current directory and then moves inside the sub-directories.
      */
-    private static void saveImage(ByteBuffer currentDirName,
+    private void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
+      context.checkCancelled();
       List<INode> children = current.getChildrenRaw();
       if (children == null || children.isEmpty())
         return;

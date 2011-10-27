@@ -824,6 +824,8 @@ Release 0.23.0 - Unreleased
     HDFS-1869. mkdirs should use the supplied permission for all of the created
     directories. (Daryn Sharp via szetszwo)
 
+    HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
