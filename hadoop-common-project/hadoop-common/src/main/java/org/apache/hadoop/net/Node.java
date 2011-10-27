@@ -33,20 +33,31 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public interface Node {
-  /** Return the string representation of this node's network location */
+  /** @return the string representation of this node's network location */
   public String getNetworkLocation();
-  /** Set the node's network location */
+
+  /** Set this node's network location
+   * @param location the location
+   */
   public void setNetworkLocation(String location);
-  /** Return this node's name */
+  /** @return this node's name */
   public String getName();
-  /** Return this node's parent */
+
+  /** @return this node's parent */
   public Node getParent();
-  /** Set this node's parent */
+
+  /** Set this node's parent
+   * @param parent the parent
+   */
   public void setParent(Node parent);
-  /** Return this node's level in the tree.
+
+  /** @return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
   public int getLevel();
-  /** Set this node's level in the tree.*/
+
+  /** Set this node's level in the tree
+   * @param i the level
+   */
   public void setLevel(int i);
 }
