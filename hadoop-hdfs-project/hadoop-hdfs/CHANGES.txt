@@ -819,6 +819,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2501. Add version prefix and root methods to webhdfs.  (szetszwo)
 
+    HDFS-1869. mkdirs should use the supplied permission for all of the created
+    directories. (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -111,9 +111,17 @@ public class TestPermission extends TestCase {
 
       FsPermission dirPerm = new FsPermission((short)0777);
       fs.mkdirs(new Path("/a1/a2/a3"), dirPerm);
-      checkPermission(fs, "/a1", inheritPerm);
-      checkPermission(fs, "/a1/a2", inheritPerm);
+      checkPermission(fs, "/a1", dirPerm);
+      checkPermission(fs, "/a1/a2", dirPerm);
       checkPermission(fs, "/a1/a2/a3", dirPerm);
+
+      dirPerm = new FsPermission((short)0123);
+      FsPermission permission = FsPermission.createImmutable(
+        (short)(dirPerm.toShort() | 0300));
+      fs.mkdirs(new Path("/aa/1/aa/2/aa/3"), dirPerm);
+      checkPermission(fs, "/aa/1", permission);
+      checkPermission(fs, "/aa/1/aa/2", permission);
+      checkPermission(fs, "/aa/1/aa/2/aa/3", dirPerm);
 
       FsPermission filePerm = new FsPermission((short)0444);
       FSDataOutputStream out = fs.create(new Path("/b1/b2/b3.txt"), filePerm,
@@ -126,7 +134,7 @@ public class TestPermission extends TestCase {
       checkPermission(fs, "/b1/b2/b3.txt", filePerm);
       
       conf.set(FsPermission.UMASK_LABEL, "022");
-      FsPermission permission = 
+      permission = 
         FsPermission.createImmutable((short)0666);
       FileSystem.mkdirs(fs, new Path("/c1"), new FsPermission(permission));
       FileSystem.create(fs, new Path("/c1/c2.txt"),
