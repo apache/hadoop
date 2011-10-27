@@ -220,11 +220,6 @@ public final class HConstants {
   // be the first to be reassigned if the server(s) they are being served by
   // should go down.
 
-
-  //
-  // New stuff.  Making a slow transition.
-  //
-
   /** The root table's name.*/
   public static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
 
@@ -254,6 +249,22 @@ public final class HConstants {
 
   /** The upper-half split region column qualifier */
   public static final byte [] SPLITB_QUALIFIER = Bytes.toBytes("splitB");
+
+  /**
+   * The meta table version column qualifier.
+   * We keep current version of the meta table in this column in <code>-ROOT-</code>
+   * table: i.e. in the 'info:v' column.
+   */
+  public static final byte [] META_VERSION_QUALIFIER = Bytes.toBytes("v");
+
+  /**
+   * The current version of the meta table.
+   * Before this the meta had HTableDescriptor serialized into the HRegionInfo;
+   * i.e. pre-hbase 0.92.  There was no META_VERSION column in the root table
+   * in this case.  The presence of a version and its value being zero indicates
+   * meta is up-to-date.
+   */
+  public static final short META_VERSION = 0;
 
   // Other constants
 

@@ -63,17 +63,17 @@ public class MetaReader {
   }
 
   /**
-   * @param regionName
-   * @return True if <code>regionName</code> is from <code>.META.</code> table.
+   * @param row
+   * @return True if <code>row</code> is row of <code>-ROOT-</code> table.
    */
-  private static boolean isMetaRegion(final byte [] regionName) {
-    if (regionName.length < META_REGION_PREFIX.length + 2 /* ',', + '1' */) {
+  private static boolean isRootTableRow(final byte [] row) {
+    if (row.length < META_REGION_PREFIX.length + 2 /* ',', + '1' */) {
       // Can't be meta table region.
       return false;
     }
-    // Compare the prefix of regionName.  If it matches META_REGION_PREFIX prefix,
-    // then this is region from .META. table.
-    return Bytes.equals(regionName, 0, META_REGION_PREFIX.length,
+    // Compare the prefix of row.  If it matches META_REGION_PREFIX prefix,
+    // then this is row from -ROOT_ table.
+    return Bytes.equals(row, 0, META_REGION_PREFIX.length,
       META_REGION_PREFIX, 0, META_REGION_PREFIX.length);
   }
 
@@ -199,14 +199,14 @@ public class MetaReader {
   /**
    * Callers should call close on the returned {@link HTable} instance.
    * @param catalogTracker
-   * @param regionName
+   * @param row Row we are putting 
    * @return
    * @throws IOException
    */
   static HTable getCatalogHTable(final CatalogTracker catalogTracker,
-      final byte [] regionName)
+      final byte [] row)
   throws IOException {
-    return isMetaRegion(regionName)?
+    return isRootTableRow(row)?
       getRootHTable(catalogTracker):
       getMetaHTable(catalogTracker);
   }

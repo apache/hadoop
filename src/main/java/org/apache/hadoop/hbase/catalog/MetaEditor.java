@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Writes region and assignment information to <code>.META.</code>.
+ * TODO: Put MetaReader and MetaEditor together; doesn't make sense having
+ * them distinct.
  */
 public class MetaEditor {
   // TODO: Strip CatalogTracker from this class.  Its all over and in the end
@@ -77,14 +79,12 @@ public class MetaEditor {
   /**
    * Put the passed <code>p</code> to a catalog table.
    * @param ct CatalogTracker on whose back we will ride the edit.
-   * @param regionName Name of the catalog table to put too.
    * @param p Put to add
    * @throws IOException
    */
-  static void putToCatalogTable(final CatalogTracker ct,
-      final byte [] regionName, final Put p)
+  static void putToCatalogTable(final CatalogTracker ct, final Put p)
   throws IOException {
-    HTable t = MetaReader.getCatalogHTable(ct, regionName);
+    HTable t = MetaReader.getCatalogHTable(ct, p.getRow());
     put(t, p);
   }
 
@@ -254,10 +254,9 @@ public class MetaEditor {
   private static void updateLocation(final CatalogTracker catalogTracker,
       HRegionInfo regionInfo, ServerName sn)
   throws IOException {
-    final byte [] regionName = regionInfo.getRegionName();
     Put put = new Put(regionInfo.getRegionName());
     addLocation(put, sn);
-    putToCatalogTable(catalogTracker, regionName, put);
+    putToCatalogTable(catalogTracker, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " with server=" + sn);
   }

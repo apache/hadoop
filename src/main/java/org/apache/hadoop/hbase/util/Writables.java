@@ -216,16 +216,4 @@ public class Writables {
     }
     return tgt;
   }
-
-  /**
-   * Get HREgionInfoForMigration serialized from bytes.
-   * @param bytes serialized bytes
-   * @return HRegionInfoForMigration
-   * @throws IOException
-   */
-  public static HRegionInfo090x getHRegionInfoForMigration(final byte [] bytes)
-  throws IOException {
-    return (HRegionInfo090x)getWritable(bytes, new HRegionInfo090x());
-  }
-
 }

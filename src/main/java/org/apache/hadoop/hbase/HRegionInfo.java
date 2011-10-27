@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -43,8 +44,11 @@ import org.apache.hadoop.io.WritableComparable;
  * Contains HRegion id, start and end keys, a reference to this
  * HRegions' table descriptor, etc.
  */
-public class HRegionInfo extends VersionedWritable implements WritableComparable<HRegionInfo>{
-  private static final byte VERSION = 0;
+public class HRegionInfo extends VersionedWritable
+implements WritableComparable<HRegionInfo> {
+  // VERSION == 0 when HRegionInfo had an HTableDescriptor inside it.
+  public static final byte VERSION_PRE_092 = 0;
+  public static final byte VERSION = 1;
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
 
   /**
@@ -159,7 +163,6 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   // Current TableName
   private byte[] tableName = null;
-  private String tableNameAsString = null;
 
   private void setHashCode() {
     int result = Arrays.hashCode(this.regionName);
@@ -710,16 +713,41 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    this.endKey = Bytes.readByteArray(in);
-    this.offLine = in.readBoolean();
-    this.regionId = in.readLong();
-    this.regionName = Bytes.readByteArray(in);
-    this.regionNameStr = Bytes.toStringBinary(this.regionName);
-    this.split = in.readBoolean();
-    this.startKey = Bytes.readByteArray(in);
-    this.tableName = Bytes.readByteArray(in);
-    this.hashCode = in.readInt();
+    // Read the single version byte.  We don't ask the super class do it
+    // because freaks out if its not the current classes' version.  This method
+    // can deserialize version 0 and version 1 of HRI.
+    byte version = in.readByte();
+    if (version == 0) {
+      // This is the old HRI that carried an HTD.  Migrate it.  The below
+      // was copied from the old 0.90 HRI readFields.
+      this.endKey = Bytes.readByteArray(in);
+      this.offLine = in.readBoolean();
+      this.regionId = in.readLong();
+      this.regionName = Bytes.readByteArray(in);
+      this.regionNameStr = Bytes.toStringBinary(this.regionName);
+      this.split = in.readBoolean();
+      this.startKey = Bytes.readByteArray(in);
+      try {
+        HTableDescriptor htd = new HTableDescriptor();
+        htd.readFields(in);
+        this.tableName = htd.getName();
+      } catch(EOFException eofe) {
+         throw new IOException("HTD not found in input buffer", eofe);
+      }
+      this.hashCode = in.readInt();
+    } else if (getVersion() == VERSION) {
+      this.endKey = Bytes.readByteArray(in);
+      this.offLine = in.readBoolean();
+      this.regionId = in.readLong();
+      this.regionName = Bytes.readByteArray(in);
+      this.regionNameStr = Bytes.toStringBinary(this.regionName);
+      this.split = in.readBoolean();
+      this.startKey = Bytes.readByteArray(in);
+      this.tableName = Bytes.readByteArray(in);
+      this.hashCode = in.readInt();
+    } else {
+      throw new IOException("Non-migratable/unknown version=" + getVersion());
+    }
   }
 
   //

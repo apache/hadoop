@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,36 +44,19 @@ import org.apache.hadoop.hbase.util.Writables;
 public class MetaMigrationRemovingHTD {
   private static final Log LOG = LogFactory.getLog(MetaMigrationRemovingHTD.class);
 
-  /** The metaupdated column qualifier */
-  public static final byte [] META_MIGRATION_QUALIFIER =
-    Bytes.toBytes("metamigrated");
-
   /**
    * Update legacy META rows, removing HTD from HRI.
    * @param masterServices
    * @return List of table descriptors.
    * @throws IOException
    */
-  public static List<HTableDescriptor> updateMetaWithNewRegionInfo(
+  public static Set<HTableDescriptor> updateMetaWithNewRegionInfo(
       final MasterServices masterServices)
   throws IOException {
-    final List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
-    Visitor v = new Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r ==  null || r.isEmpty()) return true;
-        HRegionInfo090x hrfm = MetaMigrationRemovingHTD.getHRegionInfoForMigration(r);
-        if (hrfm == null) return true;
-        htds.add(hrfm.getTableDesc());
-        masterServices.getMasterFileSystem()
-          .createTableDescriptor(hrfm.getTableDesc());
-        updateHRI(masterServices.getCatalogTracker(), false, hrfm);
-        return true;
-      }
-    };
+    MigratingVisitor v = new MigratingVisitor(masterServices);
     MetaReader.fullScan(masterServices.getCatalogTracker(), v);
-    MetaMigrationRemovingHTD.updateRootWithMetaMigrationStatus(masterServices.getCatalogTracker(), true);
-    return htds;
+    updateRootWithMetaMigrationStatus(masterServices.getCatalogTracker());
+    return v.htds;
   }
 
   /**
@@ -81,25 +65,114 @@ public class MetaMigrationRemovingHTD {
    * @return List of table descriptors
    * @throws IOException
    */
-  public static List<HTableDescriptor> updateRootWithNewRegionInfo(
+  static Set<HTableDescriptor> updateRootWithNewRegionInfo(
       final MasterServices masterServices)
   throws IOException {
-    final List<HTableDescriptor> htds = new ArrayList<HTableDescriptor>();
-    Visitor v = new Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r ==  null || r.isEmpty()) return true;
-        HRegionInfo090x hrfm = MetaMigrationRemovingHTD.getHRegionInfoForMigration(r);
-        if (hrfm == null) return true;
-        htds.add(hrfm.getTableDesc());
-        masterServices.getMasterFileSystem().createTableDescriptor(
-            hrfm.getTableDesc());
-        updateHRI(masterServices.getCatalogTracker(), true, hrfm);
+    MigratingVisitor v = new MigratingVisitor(masterServices);
+    MetaReader.fullScan(masterServices.getCatalogTracker(), v, null, true);
+    return v.htds;
+  }
+
+  /**
+   * Meta visitor that migrates the info:regioninfo as it visits.
+   */
+  static class MigratingVisitor implements Visitor {
+    private final MasterServices services;
+    final Set<HTableDescriptor> htds = new HashSet<HTableDescriptor>();
+
+    MigratingVisitor(final MasterServices services) {
+      this.services = services;
+    }
+
+    @Override
+    public boolean visit(Result r) throws IOException {
+      if (r ==  null || r.isEmpty()) return true;
+      // Check info:regioninfo, info:splitA, and info:splitB.  Make sure all
+      // have migrated HRegionInfos... that there are no leftover 090 version
+      // HRegionInfos.
+      byte [] hriBytes = getBytes(r, HConstants.REGIONINFO_QUALIFIER);
+      // Presumes that an edit updating all three cells either succeeds or
+      // doesn't -- that we don't have case of info:regioninfo migrated but not
+      // info:splitA.
+      if (isMigrated(hriBytes)) return true;
+      // OK. Need to migrate this row in meta.
+      HRegionInfo090x hri090 = getHRegionInfo090x(hriBytes);
+      HTableDescriptor htd = hri090.getTableDesc();
+      if (htd == null) {
+        LOG.warn("A 090 HRI has null HTD? Continuing; " + hri090.toString());
         return true;
       }
-    };
-    MetaReader.fullScan(masterServices.getCatalogTracker(), v, null, true);
-    return htds;
+      if (!this.htds.contains(htd)) {
+        // If first time we are adding a table, then write it out to fs.
+        // Presumes that first region in table has THE table's schema which
+        // might not be too bad of a presumption since it'll be first region
+        // 'altered'
+        this.services.getMasterFileSystem().createTableDescriptor(htd);
+        this.htds.add(htd);
+      }
+      // This will 'migrate' the hregioninfo from 090 version to 092.
+      HRegionInfo hri = new HRegionInfo(hri090);
+      // Now make a put to write back to meta.
+      Put p = new Put(hri.getRegionName());
+      p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(hri));
+      // Now check info:splitA and info:splitB if present.  Migrate these too.
+      checkSplit(r, p, HConstants.SPLITA_QUALIFIER);
+      checkSplit(r, p, HConstants.SPLITB_QUALIFIER);
+      // Below we fake out putToCatalogTable
+      MetaEditor.putToCatalogTable(this.services.getCatalogTracker(), p);
+      LOG.info("Migrated " + Bytes.toString(p.getRow()));
+      return true;
+    }
+  }
+
+  static void checkSplit(final Result r, final Put p, final byte [] which)
+  throws IOException {
+    byte [] hriSplitBytes = getBytes(r, which);
+    if (!isMigrated(hriSplitBytes)) {
+      // This will convert the HRI from 090 to 092 HRI.
+      HRegionInfo hri = Writables.getHRegionInfo(hriSplitBytes);
+      p.add(HConstants.CATALOG_FAMILY, which, Writables.getBytes(hri));
+    }
+  }
+
+  /**
+   * @param r Result to dig in.
+   * @param qualifier Qualifier to look at in the passed <code>r</code>.
+   * @return Bytes for an HRegionInfo or null if no bytes or empty bytes found.
+   */
+  static byte [] getBytes(final Result r, final byte [] qualifier) {
+    byte [] hriBytes = r.getValue(HConstants.CATALOG_FAMILY, qualifier);
+    if (hriBytes == null || hriBytes.length <= 0) return null;
+    return hriBytes;
+  }
+
+  /**
+   * @param r Result to look in.
+   * @param qualifier What to look at in the passed result.
+   * @return Either a 090 vintage HRegionInfo OR null if no HRegionInfo or
+   * the HRegionInfo is up to date and not in need of migration.
+   * @throws IOException
+   */
+  static HRegionInfo090x get090HRI(final Result r, final byte [] qualifier)
+  throws IOException {
+    byte [] hriBytes = r.getValue(HConstants.CATALOG_FAMILY, qualifier);
+    if (hriBytes == null || hriBytes.length <= 0) return null;
+    if (isMigrated(hriBytes)) return null;
+    return getHRegionInfo090x(hriBytes);
+  }
+
+  static boolean isMigrated(final byte [] hriBytes) {
+    if (hriBytes == null || hriBytes.length <= 0) return true;
+    // Else, what version this HRegionInfo instance is at.  The first byte
+    // is the version byte in a serialized HRegionInfo.  If its same as our
+    // current HRI, then nothing to do.
+    if (hriBytes[0] == HRegionInfo.VERSION) return true;
+    if (hriBytes[0] == HRegionInfo.VERSION_PRE_092) return false;
+    // Unknown version.  Return true that its 'migrated' but log warning.
+    // Should 'never' happen.
+    assert false: "Unexpected version; bytes=" + Bytes.toStringBinary(hriBytes);
+    return true;
   }
 
   /**
@@ -115,82 +188,20 @@ public class MetaMigrationRemovingHTD {
   }
 
   /**
-   * Update the metamigrated flag in -ROOT-.
+   * Update the version flag in -ROOT-.
    * @param catalogTracker
-   * @param metaUpdated
    * @throws IOException
    */
-  public static void updateRootWithMetaMigrationStatus(
-      CatalogTracker catalogTracker, boolean metaUpdated)
+  public static void updateRootWithMetaMigrationStatus(final CatalogTracker catalogTracker)
   throws IOException {
-    Put p = new Put(HRegionInfo.ROOT_REGIONINFO.getRegionName());
-    MetaMigrationRemovingHTD.addMetaUpdateStatus(p, metaUpdated);
-    MetaEditor.putToRootTable(catalogTracker, p);
-    LOG.info("Updated -ROOT- row with metaMigrated status = " + metaUpdated);
+    Put p = new Put(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    MetaEditor.putToRootTable(catalogTracker, setMetaVersion(p));
+    LOG.info("Updated -ROOT- meta version=" + HConstants.META_VERSION);
   }
 
-  static void updateHRI(final CatalogTracker ct, final boolean rootTable,
-    final HRegionInfo090x hRegionInfo090x)
-  throws IOException {
-    HRegionInfo regionInfo = new HRegionInfo(hRegionInfo090x);
-    Put p = new Put(regionInfo.getRegionName());
-    p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-      Writables.getBytes(regionInfo));
-    if (rootTable) {
-      MetaEditor.putToRootTable(ct, p);
-    } else {
-      MetaEditor.putToMetaTable(ct, p);
-    }
-    LOG.info("Updated region " + regionInfo + " to " +
-      (rootTable? "-ROOT-": ".META."));
-  }
-
-  /**
-   * @deprecated Going away in 0.94; used for migrating to 0.92 only.
-   */
-  public static HRegionInfo090x getHRegionInfoForMigration(
-      Result data) throws IOException {
-    HRegionInfo090x info = null;
-    byte [] bytes =
-      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    if (bytes == null) return null;
-    try {
-      info = Writables.getHRegionInfoForMigration(bytes);
-    } catch(IOException ioe) {
-      if (ioe.getMessage().equalsIgnoreCase("HTD not found in input buffer")) {
-         return null;
-      } else {
-        throw ioe;
-      }
-    }
-    LOG.info("Current INFO from scan results = " + info);
-    return info;
-  }
-
-  public static List<HRegionInfo090x> fullScanMetaAndPrintHRIM(
-      CatalogTracker catalogTracker)
-  throws IOException {
-    final List<HRegionInfo090x> regions =
-      new ArrayList<HRegionInfo090x>();
-    Visitor v = new Visitor() {
-      @Override
-      public boolean visit(Result r) throws IOException {
-        if (r ==  null || r.isEmpty()) return true;
-        LOG.info("fullScanMetaAndPrint1.Current Meta Result: " + r);
-        HRegionInfo090x hrim = getHRegionInfoForMigration(r);
-        LOG.info("fullScanMetaAndPrint.HRIM Print= " + hrim);
-        regions.add(hrim);
-        return true;
-      }
-    };
-    MetaReader.fullScan(catalogTracker, v);
-    return regions;
-  }
-
-  static Put addMetaUpdateStatus(final Put p, final boolean metaUpdated) {
-    p.add(HConstants.CATALOG_FAMILY,
-      MetaMigrationRemovingHTD.META_MIGRATION_QUALIFIER,
-      Bytes.toBytes(metaUpdated));
+  static Put setMetaVersion(final Put p) {
+    p.add(HConstants.CATALOG_FAMILY, HConstants.META_VERSION_QUALIFIER,
+      Bytes.toBytes(HConstants.META_VERSION));
     return p;
   }
 
@@ -201,22 +212,27 @@ public class MetaMigrationRemovingHTD {
   // Public because used in tests
   public static boolean isMetaHRIUpdated(final MasterServices services)
       throws IOException {
-    boolean metaUpdated = false;
-    List<Result> results =
-      MetaReader.fullScanOfRoot(services.getCatalogTracker());
+    List<Result> results = MetaReader.fullScanOfRoot(services.getCatalogTracker());
     if (results == null || results.isEmpty()) {
-      LOG.info("metaUpdated = NULL.");
-      return metaUpdated;
+      LOG.info("Not migrated");
+      return false;
     }
-    // Presume only the one result.
+    // Presume only the one result because we only support on meta region.
     Result r = results.get(0);
-    byte [] metaMigrated = r.getValue(HConstants.CATALOG_FAMILY,
-      MetaMigrationRemovingHTD.META_MIGRATION_QUALIFIER);
-    if (metaMigrated != null && metaMigrated.length > 0) {
-      metaUpdated = Bytes.toBoolean(metaMigrated);
-    }
-    LOG.info("Meta updated status = " + metaUpdated);
-    return metaUpdated;
+    short version = getMetaVersion(r);
+    boolean migrated = version >= HConstants.META_VERSION;
+    LOG.info("Meta version=" + version + "; migrated=" + migrated);
+    return migrated;
+  }
+
+  /**
+   * @param r Result to look at
+   * @return Current meta table version or -1 if no version found.
+   */
+  static short getMetaVersion(final Result r) {
+    byte [] value = r.getValue(HConstants.CATALOG_FAMILY,
+        HConstants.META_VERSION_QUALIFIER);
+    return value == null || value.length <= 0? -1: Bytes.toShort(value);
   }
 
   /**
@@ -238,5 +254,22 @@ public class MetaMigrationRemovingHTD {
       throw new RuntimeException("Update ROOT/Meta with new HRI failed." +
         "Master startup aborted.");
     }
+  }
+
+  /**
+   * Get HREgionInfoForMigration serialized from bytes.
+   * @param bytes serialized bytes
+   * @return An instance of a 090 HRI or null if we failed deserialize
+   */
+  public static HRegionInfo090x getHRegionInfo090x(final byte [] bytes) {
+    if (bytes == null || bytes.length == 0) return null;
+    HRegionInfo090x hri = null;
+    try {
+      hri = (HRegionInfo090x)Writables.getWritable(bytes, new HRegionInfo090x());
+    } catch (IOException ioe) {
+      LOG.warn("Failed deserialize as a 090 HRegionInfo); bytes=" +
+        Bytes.toStringBinary(bytes), ioe);
+    }
+    return hri;
   }
 }

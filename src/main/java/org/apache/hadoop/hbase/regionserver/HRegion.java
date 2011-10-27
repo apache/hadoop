@@ -3074,16 +3074,15 @@ public class HRegion implements HeapSize { // , Writable{
     byte[] row = r.getRegionName();
     Integer lid = meta.obtainRowLock(row);
     try {
-      final List<KeyValue> edits = new ArrayList<KeyValue>(1);
+      final long now = EnvironmentEdgeManager.currentTimeMillis();
+      final List<KeyValue> edits = new ArrayList<KeyValue>(2);
       edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER,
-          EnvironmentEdgeManager.currentTimeMillis(),
-          Writables.getBytes(r.getRegionInfo())));
+        HConstants.REGIONINFO_QUALIFIER, now,
+        Writables.getBytes(r.getRegionInfo())));
+      // Set into the root table the version of the meta table.
       edits.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
-          org.apache.hadoop.hbase.catalog.MetaMigrationRemovingHTD.META_MIGRATION_QUALIFIER,
-          EnvironmentEdgeManager.currentTimeMillis(),
-          Bytes.toBytes(true)));
-
+        HConstants.META_VERSION_QUALIFIER, now,
+        Bytes.toBytes(HConstants.META_VERSION)));
       meta.put(HConstants.CATALOG_FAMILY, edits);
     } finally {
       meta.releaseRowLock(lid);

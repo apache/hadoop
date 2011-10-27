@@ -410,17 +410,6 @@ public class MasterFileSystem {
   }
 
   /**
-   * Get table info path for a table.
-   * @param tableName
-   * @return Table info path
-   */
-  private Path getTableInfoPath(byte[] tableName) {
-    Path tablePath = new Path(this.rootdir, Bytes.toString(tableName));
-    Path tableInfoPath = new Path(tablePath, HConstants.TABLEINFO_NAME);
-    return tableInfoPath;
-  }
-
-  /**
    * Create new HTableDescriptor in HDFS.
    * 
    * @param htableDescriptor
