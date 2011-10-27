@@ -115,6 +115,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     command.add(jvm.toString());
     command.add("-classpath");
     command.add(System.getProperty("java.class.path"));
+    String javaLibPath = System.getProperty("java.library.path");
+    if (javaLibPath != null) {
+      command.add("-Djava.library.path=" + javaLibPath);
+    }
     command.add(ContainerLocalizer.class.getName());
     command.add(user);
     command.add(appId);
