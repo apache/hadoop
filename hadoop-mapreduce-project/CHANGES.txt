@@ -1740,6 +1740,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3259. Added java.library.path of NodeManager to
     ContainerLocalizer in LinuxContainerExecutor. (Kihwal Lee via acmurthy) 
 
+    MAPREDUCE-3279. Fixed TestJobHistoryParsing which assumed user name to be
+    mapred all the time. (Siddharth Seth via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
