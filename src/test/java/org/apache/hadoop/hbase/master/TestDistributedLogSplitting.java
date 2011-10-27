@@ -360,20 +360,22 @@ public class TestDistributedLogSplitting {
     int n = hris.size();
     int[] counts = new int[n];
     int j = 0;
-    for (int i = 0; i < num_edits; i += 1) {
-      WALEdit e = new WALEdit();
-      byte [] row = Bytes.toBytes("r" + Integer.toString(i));
-      byte [] family = Bytes.toBytes("f");
-      byte [] qualifier = Bytes.toBytes("c" + Integer.toString(i));
-      e.add(new KeyValue(row, family, qualifier,
-          System.currentTimeMillis(), value));
-      // LOG.info("Region " + i + ": " + e);
-      j++;
-      log.append(hris.get(j % n), table, e, System.currentTimeMillis(), htd);
-      counts[j % n] += 1;
-      // if ((i % 8096) == 0) {
+    if (n > 0) {
+      for (int i = 0; i < num_edits; i += 1) {
+        WALEdit e = new WALEdit();
+        byte [] row = Bytes.toBytes("r" + Integer.toString(i));
+        byte [] family = Bytes.toBytes("f");
+        byte [] qualifier = Bytes.toBytes("c" + Integer.toString(i));
+        e.add(new KeyValue(row, family, qualifier,
+            System.currentTimeMillis(), value));
+        // LOG.info("Region " + i + ": " + e);
+        j++;
+        log.append(hris.get(j % n), table, e, System.currentTimeMillis(), htd);
+        counts[j % n] += 1;
+        // if ((i % 8096) == 0) {
         // log.sync();
-      //  }
+        //  }
+      }
     }
     log.sync();
     log.close();

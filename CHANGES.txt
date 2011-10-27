@@ -379,6 +379,8 @@ Release 0.92.0 - Unreleased
    HBASE-4673  NPE in HFileReaderV2.close during major compaction when
                hfile.block.cache.size is set to 0 (Lars H)
    HBASE-4388  Second start after migration from 90 to trunk crashes
+   HBASE-4685  TestDistributedLogSplitting.testOrphanLogCreation failing because
+               of ArithmeticException: / by zero.
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
