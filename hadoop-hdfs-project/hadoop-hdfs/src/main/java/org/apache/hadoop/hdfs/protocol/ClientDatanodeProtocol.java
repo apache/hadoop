@@ -37,9 +37,6 @@ import org.apache.hadoop.security.token.TokenInfo;
     serverPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 @TokenInfo(BlockTokenSelector.class)
 public interface ClientDatanodeProtocol extends VersionedProtocol {
-  public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
-
-  
   /**
    * Until version 9, this class ClientDatanodeProtocol served as both
    * the client interface to the DN AND the RPC protocol used to 

@@ -51,6 +51,8 @@ Trunk (unreleased changes)
 
     HDFS-2488. Separate datatypes for InterDatanodeProtocol. (suresh)
 
+    HDFS-2496. Separate datatypes for DatanodeProtocol. (suresh)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

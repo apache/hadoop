@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.server.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -24,10 +24,12 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocolR23Compatible.DatanodeIDWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ExportedBlockKeysWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.StorageInfoWritable;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -39,79 +41,45 @@ import org.apache.hadoop.io.WritableFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DatanodeRegistration extends DatanodeID
-implements Writable, NodeRegistration {
+public class DatanodeRegistrationWritable implements Writable {
   static {                                      // register a ctor
     WritableFactories.setFactory
-      (DatanodeRegistration.class,
+      (DatanodeRegistrationWritable.class,
        new WritableFactory() {
-         public Writable newInstance() { return new DatanodeRegistration(); }
+         public Writable newInstance() { return new DatanodeRegistrationWritable(); }
        });
   }
 
-  public StorageInfo storageInfo;
-  public ExportedBlockKeys exportedKeys;
+  private DatanodeIDWritable datanodeId;
+  private StorageInfoWritable storageInfo;
+  private ExportedBlockKeysWritable exportedKeys;
 
   /**
    * Default constructor.
    */
-  public DatanodeRegistration() {
-    this("");
+  public DatanodeRegistrationWritable() {
+    this("", new StorageInfo(), new ExportedBlockKeys());
   }
   
   /**
    * Create DatanodeRegistration
    */
-  public DatanodeRegistration(String nodeName) {
-    this(nodeName, new StorageInfo(), new ExportedBlockKeys());
-  }
-  
-  public DatanodeRegistration(String nodeName, StorageInfo info,
+  public DatanodeRegistrationWritable(String nodeName, StorageInfo info,
       ExportedBlockKeys keys) {
-    super(nodeName);
-    this.storageInfo = info;
-    this.exportedKeys = keys;
+    this.datanodeId = new DatanodeIDWritable(nodeName);
+    this.storageInfo = StorageInfoWritable.convert(info);
+    this.exportedKeys = ExportedBlockKeysWritable.convert(keys);
   }
   
-  public void setStorageInfo(StorageInfo storage) {
-    this.storageInfo = new StorageInfo(storage);
-  }
-  
-  @Override // NodeRegistration
-  public int getVersion() {
-    return storageInfo.getLayoutVersion();
-  }
-  
-  @Override // NodeRegistration
-  public String getRegistrationID() {
-    return Storage.getRegistrationID(storageInfo);
-  }
-
-  @Override // NodeRegistration
-  public String getAddress() {
-    return getName();
-  }
-
-  @Override
-  public String toString() {
-    return getClass().getSimpleName()
-      + "(" + name
-      + ", storageID=" + storageID
-      + ", infoPort=" + infoPort
-      + ", ipcPort=" + ipcPort
-      + ", storageInfo=" + storageInfo
-      + ")";
-  }
-
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    super.write(out);
+    datanodeId.write(out);
 
     //TODO: move it to DatanodeID once HADOOP-2797 has been committed
-    out.writeShort(ipcPort);
+    out.writeShort(datanodeId.ipcPort);
 
     storageInfo.write(out);
     exportedKeys.write(out);
@@ -119,20 +87,27 @@ implements Writable, NodeRegistration {
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
+    datanodeId.readFields(in);
 
     //TODO: move it to DatanodeID once HADOOP-2797 has been committed
-    this.ipcPort = in.readShort() & 0x0000ffff;
+    datanodeId.ipcPort = in.readShort() & 0x0000ffff;
 
     storageInfo.readFields(in);
     exportedKeys.readFields(in);
   }
-  @Override
-  public boolean equals(Object to) {
-    return super.equals(to);
+
+  public DatanodeRegistration convert() {
+    DatanodeRegistration dnReg = new DatanodeRegistration(datanodeId.name,
+        storageInfo.convert(), exportedKeys.convert());
+    dnReg.setIpcPort(datanodeId.ipcPort);
+    return dnReg;
   }
-  @Override
-  public int hashCode() {
-    return super.hashCode();
+
+  public static DatanodeRegistrationWritable convert(DatanodeRegistration dnReg) {
+    if (dnReg == null) return null;
+    DatanodeRegistrationWritable ret = new DatanodeRegistrationWritable(
+        dnReg.getName(), dnReg.storageInfo, dnReg.exportedKeys);
+    ret.datanodeId.ipcPort = dnReg.ipcPort;
+    return ret;
   }
 }

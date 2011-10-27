@@ -117,8 +117,12 @@ public class BlockRecoveryCommand extends DatanodeCommand {
    * the specified capacity for recovering blocks.
    */
   public BlockRecoveryCommand(int capacity) {
+    this(new ArrayList<RecoveringBlock>(capacity));
+  }
+  
+  public BlockRecoveryCommand(Collection<RecoveringBlock> blocks) {
     super(DatanodeProtocol.DNA_RECOVERBLOCK);
-    recoveringBlocks = new ArrayList<RecoveringBlock>(capacity);
+    recoveringBlocks = blocks;
   }
 
   /**
