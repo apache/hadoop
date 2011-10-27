@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
@@ -101,11 +102,17 @@ public class TestApplicationMasterLauncher {
 
   }
 
-  private static final class MockRMWithCustomAMLauncher extends MockRM {
+  static class MockRMWithCustomAMLauncher extends MockRM {
 
     private final ContainerManager containerManager;
 
     public MockRMWithCustomAMLauncher(ContainerManager containerManager) {
+      this(new Configuration(), containerManager);
+    }
+
+    public MockRMWithCustomAMLauncher(Configuration conf,
+        ContainerManager containerManager) {
+      super(conf);
       this.containerManager = containerManager;
     }
 

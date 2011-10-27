@@ -26,12 +26,12 @@ import java.security.AccessControlException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.ipc.Server;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
@@ -85,8 +85,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -131,8 +131,8 @@ public class MRClientService extends AbstractService
           System
               .getenv(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME);
       byte[] bytes = Base64.decodeBase64(secretKeyStr);
-      ApplicationTokenIdentifier identifier =
-          new ApplicationTokenIdentifier(this.appContext.getApplicationID());
+      ClientTokenIdentifier identifier = new ClientTokenIdentifier(
+          this.appContext.getApplicationID());
       secretManager.setMasterKey(identifier, bytes);
     }
     server =

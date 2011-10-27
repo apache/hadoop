@@ -196,8 +196,8 @@ public class TestContainerTokenSecretManager {
             YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
     final InetSocketAddress schedulerAddr =
         NetUtils.createSocketAddr(schedulerAddressString);
-    ApplicationTokenIdentifier appTokenIdentifier =
-        new ApplicationTokenIdentifier(appID);
+    ApplicationTokenIdentifier appTokenIdentifier = new ApplicationTokenIdentifier(
+        appAttempt.getAppAttemptId());
     ApplicationTokenSecretManager appTokenSecretManager =
         new ApplicationTokenSecretManager();
     appTokenSecretManager.setMasterKey(ApplicationTokenSecretManager

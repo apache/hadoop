@@ -28,17 +28,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 
 public class ClientToAMSecretManager extends
-    SecretManager<ApplicationTokenIdentifier> {
+    SecretManager<ClientTokenIdentifier> {
 
   private static Log LOG = LogFactory.getLog(ClientToAMSecretManager.class);
 
   // Per application masterkeys for managing client-tokens
   private Map<Text, SecretKey> masterKeys = new HashMap<Text, SecretKey>();
 
-  public void setMasterKey(ApplicationTokenIdentifier identifier, byte[] key) {
+  public void setMasterKey(ClientTokenIdentifier identifier, byte[] key) {
     SecretKey sk = SecretManager.createSecretKey(key);
     Text applicationID = identifier.getApplicationID();
     this.masterKeys.put(applicationID, sk);
@@ -51,7 +50,7 @@ public class ClientToAMSecretManager extends
     }
   }
 
-  private void addMasterKey(ApplicationTokenIdentifier identifier) {
+  private void addMasterKey(ClientTokenIdentifier identifier) {
     Text applicationID = identifier.getApplicationID();
     this.masterKeys.put(applicationID, generateSecret());
     if (LOG.isDebugEnabled()) {
@@ -64,7 +63,7 @@ public class ClientToAMSecretManager extends
 
   // TODO: Handle the masterKey invalidation.
   public synchronized SecretKey getMasterKey(
-      ApplicationTokenIdentifier identifier) {
+      ClientTokenIdentifier identifier) {
     Text applicationID = identifier.getApplicationID();
     if (!this.masterKeys.containsKey(applicationID)) {
       addMasterKey(identifier);
@@ -74,7 +73,7 @@ public class ClientToAMSecretManager extends
 
   @Override
   public synchronized byte[] createPassword(
-      ApplicationTokenIdentifier identifier) {
+      ClientTokenIdentifier identifier) {
     byte[] password =
         createPassword(identifier.getBytes(), getMasterKey(identifier));
     if (LOG.isDebugEnabled()) {
@@ -85,7 +84,7 @@ public class ClientToAMSecretManager extends
   }
 
   @Override
-  public byte[] retrievePassword(ApplicationTokenIdentifier identifier)
+  public byte[] retrievePassword(ClientTokenIdentifier identifier)
       throws SecretManager.InvalidToken {
     byte[] password =
         createPassword(identifier.getBytes(), getMasterKey(identifier));
@@ -97,8 +96,8 @@ public class ClientToAMSecretManager extends
   }
 
   @Override
-  public ApplicationTokenIdentifier createIdentifier() {
-    return new ApplicationTokenIdentifier();
+  public ClientTokenIdentifier createIdentifier() {
+    return new ClientTokenIdentifier();
   }
 
 }

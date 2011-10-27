@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -214,7 +215,7 @@ public class AMLauncher implements Runnable {
       }
 
       ApplicationTokenIdentifier id = new ApplicationTokenIdentifier(
-          application.getAppAttemptId().getApplicationId());
+          application.getAppAttemptId());
       Token<ApplicationTokenIdentifier> token =
           new Token<ApplicationTokenIdentifier>(id,
               this.applicationTokenSecretManager);
@@ -240,7 +241,7 @@ public class AMLauncher implements Runnable {
       container.setContainerTokens(
           ByteBuffer.wrap(dob.getData(), 0, dob.getLength()));
 
-      ApplicationTokenIdentifier identifier = new ApplicationTokenIdentifier(
+      ClientTokenIdentifier identifier = new ClientTokenIdentifier(
           application.getAppAttemptId().getApplicationId());
       SecretKey clientSecretKey =
           this.clientToAMSecretManager.getMasterKey(identifier);

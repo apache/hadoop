@@ -34,8 +34,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -233,9 +233,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       String clientTokenStr = null;
       String user = UserGroupInformation.getCurrentUser().getShortUserName();
       if (UserGroupInformation.isSecurityEnabled()) {
-        Token<ApplicationTokenIdentifier> clientToken = new 
-            Token<ApplicationTokenIdentifier>(
-            new ApplicationTokenIdentifier(applicationId),
+        Token<ClientTokenIdentifier> clientToken = new 
+            Token<ClientTokenIdentifier>(
+            new ClientTokenIdentifier(applicationId),
             this.clientToAMSecretManager);
         clientTokenStr = clientToken.encodeToUrlString();
         LOG.debug("Sending client token as " + clientTokenStr);
