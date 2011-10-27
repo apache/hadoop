@@ -55,6 +55,9 @@ Trunk (unreleased changes)
 
     HADOOP-7758. Make GlobFilter class public. (tucu)
 
+    HADOOP-7728. Enable task memory management to be configurable in hadoop
+    config setup script. (ramya)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
