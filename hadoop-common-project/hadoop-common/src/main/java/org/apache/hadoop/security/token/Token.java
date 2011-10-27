@@ -119,7 +119,7 @@ public class Token<T extends TokenIdentifier> implements Writable {
    * Get the token kind
    * @return the kind of the token
    */
-  public Text getKind() {
+  public synchronized Text getKind() {
     return kind;
   }
 

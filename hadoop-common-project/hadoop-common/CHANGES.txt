@@ -690,6 +690,8 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7721. Add log before login in KerberosAuthenticationHandler. (jitendra)
 
+    HADOOP-7778. FindBugs warning in Token.getKind(). (tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
