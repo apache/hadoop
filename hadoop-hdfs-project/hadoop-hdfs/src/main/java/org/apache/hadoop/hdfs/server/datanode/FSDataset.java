@@ -2087,10 +2087,9 @@ public class FSDataset implements FSDatasetInterface {
         volumeMap.remove(bpid, invalidBlks[i]);
       }
       File metaFile = getMetaFile(f, invalidBlks[i].getGenerationStamp());
-      long dfsBytes = f.length() + metaFile.length();
 
       // Delete the block asynchronously to make sure we can do it fast enough
-      asyncDiskService.deleteAsync(v, f, metaFile, dfsBytes,
+      asyncDiskService.deleteAsync(v, f, metaFile,
           new ExtendedBlock(bpid, invalidBlks[i]));
     }
     if (error) {

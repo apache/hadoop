@@ -1151,8 +1151,15 @@ public class DataNode extends Configured
             if (!heartbeatsDisabledForTests) {
               DatanodeCommand[] cmds = sendHeartBeat();
               metrics.addHeartbeat(now() - startTime);
+
+              long startProcessCommands = now();
               if (!processCommand(cmds))
                 continue;
+              long endProcessCommands = now();
+              if (endProcessCommands - startProcessCommands > 2000) {
+                LOG.info("Took " + (endProcessCommands - startProcessCommands) +
+                    "ms to process " + cmds.length + " commands from NN");
+              }
             }
           }
           if (pendingReceivedRequests > 0

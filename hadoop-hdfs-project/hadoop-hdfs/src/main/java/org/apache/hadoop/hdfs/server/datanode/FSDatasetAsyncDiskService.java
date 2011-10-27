@@ -152,11 +152,11 @@ class FSDatasetAsyncDiskService {
    * dfsUsed statistics accordingly.
    */
   void deleteAsync(FSDataset.FSVolume volume, File blockFile, File metaFile,
-      long dfsBytes, ExtendedBlock block) {
+      ExtendedBlock block) {
     DataNode.LOG.info("Scheduling block " + block.getLocalBlock().toString()
         + " file " + blockFile + " for deletion");
     ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(dataset,
-        volume, blockFile, metaFile, dfsBytes, block);
+        volume, blockFile, metaFile, block);
     execute(volume.getCurrentDir(), deletionTask);
   }
   
@@ -168,16 +168,14 @@ class FSDatasetAsyncDiskService {
     final FSDataset.FSVolume volume;
     final File blockFile;
     final File metaFile;
-    final long dfsBytes;
     final ExtendedBlock block;
     
     ReplicaFileDeleteTask(FSDataset dataset, FSDataset.FSVolume volume, File blockFile,
-        File metaFile, long dfsBytes, ExtendedBlock block) {
+        File metaFile, ExtendedBlock block) {
       this.dataset = dataset;
       this.volume = volume;
       this.blockFile = blockFile;
       this.metaFile = metaFile;
-      this.dfsBytes = dfsBytes;
       this.block = block;
     }
     
@@ -195,6 +193,7 @@ class FSDatasetAsyncDiskService {
 
     @Override
     public void run() {
+      long dfsBytes = blockFile.length() + metaFile.length();
       if ( !blockFile.delete() || ( !metaFile.delete() && metaFile.exists() ) ) {
         DataNode.LOG.warn("Unexpected error trying to delete block "
             + block.getBlockPoolId() + " " + block.getLocalBlock().toString()

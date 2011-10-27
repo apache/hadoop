@@ -843,6 +843,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2118. Couple dfs data dir improvements. (eli)
 
+    HDFS-2500. Avoid file system operations in BPOfferService thread while
+    processing deletes. (todd)
+
   BUG FIXES
 
     HDFS-2347. Fix checkpointTxnCount's comment about editlog size. 
