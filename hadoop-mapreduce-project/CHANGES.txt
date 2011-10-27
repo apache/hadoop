@@ -1789,6 +1789,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3254. Fixed streaming to set the job.jar by using the right
     JobConf ctor. (acmurthy) 
 
+    MAPREDUCE-3264. mapreduce.job.user.name needs to be set automatically.
+    (acmurthy via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
