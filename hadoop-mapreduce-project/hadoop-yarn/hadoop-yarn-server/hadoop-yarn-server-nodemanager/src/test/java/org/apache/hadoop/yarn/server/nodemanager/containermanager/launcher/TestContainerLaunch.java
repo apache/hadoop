@@ -32,7 +32,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -59,7 +58,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerM
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
-import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,22 +74,21 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     conf.setClass(
         YarnConfiguration.NM_CONTAINER_MON_RESOURCE_CALCULATOR,
         LinuxResourceCalculatorPlugin.class, ResourceCalculatorPlugin.class);
+    conf.setLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS, 1000);
     super.setup();
   }
 
   @Test
   public void testSpecialCharSymlinks() throws IOException  {
 
-    String rootDir = new File(System.getProperty(
-        "test.build.data", "/tmp")).getAbsolutePath();
     File shellFile = null;
     File tempFile = null;
     String badSymlink = "foo@zz%_#*&!-+= bar()";
     File symLinkFile = null;
 
     try {
-      shellFile = new File(rootDir, "hello.sh");
-      tempFile = new File(rootDir, "temp.sh");
+      shellFile = new File(tmpDir, "hello.sh");
+      tempFile = new File(tmpDir, "temp.sh");
       String timeoutCommand = "echo \"hello\"";
       PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));    
       shellFile.setExecutable(true);
@@ -113,15 +110,14 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       fos.close();
       tempFile.setExecutable(true);
 
-      File rootDirFile = new File(rootDir);
       Shell.ShellCommandExecutor shexc 
-      = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, rootDirFile);
+      = new Shell.ShellCommandExecutor(new String[]{tempFile.getAbsolutePath()}, tmpDir);
 
       shexc.execute();
       assertEquals(shexc.getExitCode(), 0);
       assert(shexc.getOutput().contains("hello"));
 
-      symLinkFile = new File(rootDir, badSymlink);      
+      symLinkFile = new File(tmpDir, badSymlink);      
     }
     finally {
       // cleanup
@@ -141,6 +137,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
   }
   
   // this is a dirty hack - but should be ok for a unittest.
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   public static void setNewEnvironmentHack(Map<String, String> newenv) throws Exception {
     Class[] classes = Collections.class.getDeclaredClasses();
     Map<String, String> env = System.getenv();
@@ -162,7 +159,6 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
    */
   @Test
   public void testContainerEnvVariables() throws Exception {
-    int exitCode = 0;
     containerManager.start();
 
     Map<String, String> envWithDummy = new HashMap<String, String>();
@@ -217,7 +213,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
-    
+
     // set up the rest of the container
     containerLaunchContext.setUser(containerLaunchContext.getUser());
     List<String> commands = new ArrayList<String>();
@@ -226,11 +222,11 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     containerLaunchContext.setCommands(commands);
     containerLaunchContext.setResource(recordFactory
         .newRecordInstance(Resource.class));
-    containerLaunchContext.getResource().setMemory(100 * 1024 * 1024);
+    containerLaunchContext.getResource().setMemory(1024);
     StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
     startRequest.setContainerLaunchContext(containerLaunchContext);
     containerManager.startContainer(startRequest);
- 
+
     int timeoutSecs = 0;
     while (!processStartFile.exists() && timeoutSecs++ < 20) {
       Thread.sleep(1000);
@@ -238,7 +234,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
     }
     Assert.assertTrue("ProcessStartFile doesn't exist!",
         processStartFile.exists());
-    
+
     // Now verify the contents of the file
     BufferedReader reader =
         new BufferedReader(new FileReader(processStartFile));
@@ -265,13 +261,13 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     BaseContainerManagerTest.waitForContainerState(containerManager, cId,
         ContainerState.COMPLETE);
-    
+
     GetContainerStatusRequest gcsRequest = 
         recordFactory.newRecordInstance(GetContainerStatusRequest.class);
     gcsRequest.setContainerId(cId);
     ContainerStatus containerStatus = 
         containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(ExitCode.KILLED.getExitCode(),
+    Assert.assertEquals(ExitCode.TERMINATED.getExitCode(),
         containerStatus.getExitStatus());
 
     // Assert that the process is not alive anymore
@@ -279,4 +275,119 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         exec.signalContainer(user,
             pid, Signal.NULL));
   }
+
+  @Test
+  public void testDelayedKill() throws Exception {
+    containerManager.start();
+
+    File processStartFile =
+        new File(tmpDir, "pid.txt").getAbsoluteFile();
+
+    // setup a script that can handle sigterm gracefully
+    File scriptFile = new File(tmpDir, "testscript.sh");
+    PrintWriter writer = new PrintWriter(new FileOutputStream(scriptFile));
+    writer.println("#!/bin/bash\n\n");
+    writer.println("echo \"Running testscript for delayed kill\"");
+    writer.println("hello=\"Got SIGTERM\"");
+    writer.println("umask 0");
+    writer.println("trap \"echo $hello >> " + processStartFile + "\" SIGTERM");
+    writer.println("echo \"Writing pid to start file\"");
+    writer.println("echo $$ >> " + processStartFile);
+    writer.println("while true; do\nsleep 1s;\ndone");
+    writer.close();
+    scriptFile.setExecutable(true);
+
+    ContainerLaunchContext containerLaunchContext = 
+        recordFactory.newRecordInstance(ContainerLaunchContext.class);
+
+    // ////// Construct the Container-id
+    ApplicationId appId = recordFactory.newRecordInstance(ApplicationId.class);
+    appId.setClusterTimestamp(1);
+    appId.setId(1);
+    ApplicationAttemptId appAttemptId = 
+        recordFactory.newRecordInstance(ApplicationAttemptId.class);
+    appAttemptId.setApplicationId(appId);
+    appAttemptId.setAttemptId(1);
+    ContainerId cId = 
+        recordFactory.newRecordInstance(ContainerId.class);
+    cId.setApplicationAttemptId(appAttemptId);
+    containerLaunchContext.setContainerId(cId);
+
+    containerLaunchContext.setUser(user);
+
+    // upload the script file so that the container can run it
+    URL resource_alpha =
+        ConverterUtils.getYarnUrlFromPath(localFS
+            .makeQualified(new Path(scriptFile.getAbsolutePath())));
+    LocalResource rsrc_alpha =
+        recordFactory.newRecordInstance(LocalResource.class);
+    rsrc_alpha.setResource(resource_alpha);
+    rsrc_alpha.setSize(-1);
+    rsrc_alpha.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc_alpha.setType(LocalResourceType.FILE);
+    rsrc_alpha.setTimestamp(scriptFile.lastModified());
+    String destinationFile = "dest_file.sh";
+    Map<String, LocalResource> localResources = 
+        new HashMap<String, LocalResource>();
+    localResources.put(destinationFile, rsrc_alpha);
+    containerLaunchContext.setLocalResources(localResources);
+
+    // set up the rest of the container
+    containerLaunchContext.setUser(containerLaunchContext.getUser());
+    List<String> commands = new ArrayList<String>();
+    commands.add(scriptFile.getAbsolutePath());
+    containerLaunchContext.setCommands(commands);
+    containerLaunchContext.setResource(recordFactory
+        .newRecordInstance(Resource.class));
+    containerLaunchContext.getResource().setMemory(1024);
+    StartContainerRequest startRequest = recordFactory.newRecordInstance(StartContainerRequest.class);
+    startRequest.setContainerLaunchContext(containerLaunchContext);
+    containerManager.startContainer(startRequest);
+
+    int timeoutSecs = 0;
+    while (!processStartFile.exists() && timeoutSecs++ < 20) {
+      Thread.sleep(1000);
+      LOG.info("Waiting for process start-file to be created");
+    }
+    Assert.assertTrue("ProcessStartFile doesn't exist!",
+        processStartFile.exists());
+
+    // Now test the stop functionality.
+    StopContainerRequest stopRequest = recordFactory.newRecordInstance(StopContainerRequest.class);
+    stopRequest.setContainerId(cId);
+    containerManager.stopContainer(stopRequest);
+
+    BaseContainerManagerTest.waitForContainerState(containerManager, cId,
+        ContainerState.COMPLETE);
+
+    // container stop sends a sigterm followed by a sigkill
+    GetContainerStatusRequest gcsRequest = 
+        recordFactory.newRecordInstance(GetContainerStatusRequest.class);
+    gcsRequest.setContainerId(cId);
+    ContainerStatus containerStatus = 
+        containerManager.getContainerStatus(gcsRequest).getStatus();
+    Assert.assertEquals(ExitCode.FORCE_KILLED.getExitCode(),
+        containerStatus.getExitStatus());
+
+    // Now verify the contents of the file
+    // Script generates a message when it receives a sigterm
+    // so we look for that
+    BufferedReader reader =
+        new BufferedReader(new FileReader(processStartFile));
+
+    boolean foundSigTermMessage = false;
+    while (true) {
+      String line = reader.readLine();
+      if (line == null) {
+        break;
+      }
+      if (line.contains("SIGTERM")) {
+        foundSigTermMessage = true;
+        break;
+      }
+    }
+    Assert.assertTrue("Did not find sigterm message", foundSigTermMessage);
+    reader.close();
+  }
+
 }

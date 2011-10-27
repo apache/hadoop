@@ -411,6 +411,20 @@ public class YarnConfiguration extends Configuration {
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";
 
+  /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
+   * to a running container */
+  public static final String NM_SLEEP_DELAY_BEFORE_SIGKILL_MS =
+      NM_PREFIX + "sleep-delay-before-sigkill.ms";
+  public static final long DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS =
+      250;
+
+  /** Max time to wait for a process to come up when trying to cleanup
+   * container resources */
+  public static final String NM_PROCESS_KILL_WAIT_MS =
+      NM_PREFIX + "process-kill-wait.ms";
+  public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
+      2000;
+
   public YarnConfiguration() {
     super();
   }

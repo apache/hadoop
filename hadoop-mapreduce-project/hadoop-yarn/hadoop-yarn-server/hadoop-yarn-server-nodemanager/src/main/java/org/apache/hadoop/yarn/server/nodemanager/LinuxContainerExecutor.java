@@ -155,36 +155,45 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     ContainerId containerId = container.getContainerID();
     String containerIdStr = ConverterUtils.toString(containerId);
-    List<String> command = new ArrayList<String>(
-      Arrays.asList(containerExecutorExe, 
-                    user, 
-                    Integer.toString(Commands.LAUNCH_CONTAINER.getValue()),
-                    appId,
-                    containerIdStr,
-                    containerWorkDir.toString(),
-                    nmPrivateCotainerScriptPath.toUri().getPath().toString(),
-                    nmPrivateTokensPath.toUri().getPath().toString()));
-    String[] commandArray = command.toArray(new String[command.size()]);
-    ShellCommandExecutor shExec = 
-        new ShellCommandExecutor(
-            commandArray,
-            null,                                              // NM's cwd
-            container.getLaunchContext().getEnvironment());    // sanitized env
-    launchCommandObjs.put(containerId, shExec);
-    // DEBUG
-    LOG.info("launchContainer: " + Arrays.toString(commandArray));
+
+    ShellCommandExecutor shExec = null;
+
     try {
-      shExec.execute();
-      if (LOG.isDebugEnabled()) {
-        logOutput(shExec.getOutput());
+      Path pidFilePath = getPidFilePath(containerId);
+      if (pidFilePath != null) {
+        List<String> command = new ArrayList<String>(Arrays.asList(
+            containerExecutorExe, user, Integer
+                .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
+            containerIdStr, containerWorkDir.toString(),
+            nmPrivateCotainerScriptPath.toUri().getPath().toString(),
+            nmPrivateTokensPath.toUri().getPath().toString(), pidFilePath
+                .toString()));
+        String[] commandArray = command.toArray(new String[command.size()]);
+        shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
+            container.getLaunchContext().getEnvironment()); // sanitized env
+        // DEBUG
+        LOG.info("launchContainer: " + Arrays.toString(commandArray));
+        shExec.execute();
+        if (LOG.isDebugEnabled()) {
+          logOutput(shExec.getOutput());
+        }
+      } else {
+        LOG.info("Container was marked as inactive. Returning terminated error");
+        return ExitCode.TERMINATED.getExitCode();
       }
     } catch (ExitCodeException e) {
+
+      if (null == shExec) {
+        return -1;
+      }
+
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from container is : " + exitCode);
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
       // terminated/killed forcefully. In all other cases, log the
       // container-executor's output
-      if (exitCode != 143 && exitCode != 137) {
+      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
+          && exitCode != ExitCode.TERMINATED.getExitCode()) {
         LOG.warn("Exception from container-launch : ", e);
         logOutput(shExec.getOutput());
         String diagnostics = "Exception from container-launch: \n"
@@ -197,7 +206,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
       return exitCode;
     } finally {
-      launchCommandObjs.remove(containerId);
+      ; //
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Output from LinuxContainerExecutor's launchContainer follows:");

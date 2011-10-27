@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
   const char * cred_file = NULL;
   const char * script_file = NULL;
   const char * current_dir = NULL;
+  const char * pid_file = NULL;
 
   int exit_code = 0;
 
@@ -141,7 +142,7 @@ int main(int argc, char **argv) {
                                argv + optind);
     break;
   case LAUNCH_CONTAINER:
-    if (argc < 8) {
+    if (argc < 9) {
       fprintf(ERRORFILE, "Too few arguments (%d vs 8) for launch container\n",
 	      argc);
       fflush(ERRORFILE);
@@ -152,8 +153,9 @@ int main(int argc, char **argv) {
     current_dir = argv[optind++];
     script_file = argv[optind++];
     cred_file = argv[optind++];
+    pid_file = argv[optind++];
     exit_code = launch_container_as_user(user_detail->pw_name, app_id, container_id,
-                                 current_dir, script_file, cred_file);
+                                 current_dir, script_file, cred_file, pid_file);
     break;
   case SIGNAL_CONTAINER:
     if (argc < 5) {

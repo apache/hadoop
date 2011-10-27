@@ -19,12 +19,13 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 
 public abstract class ContainerExecutor implements Configurable {
 
@@ -43,8 +45,12 @@ public abstract class ContainerExecutor implements Configurable {
     FsPermission.createImmutable((short) 0700);
 
   private Configuration conf;
-  protected ConcurrentMap<ContainerId, ShellCommandExecutor> launchCommandObjs =
-      new ConcurrentHashMap<ContainerId, ShellCommandExecutor>();
+  private ConcurrentMap<ContainerId, Path> pidFiles =
+      new ConcurrentHashMap<ContainerId, Path>();
+
+  private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final ReadLock readLock = lock.readLock();
+  private final WriteLock writeLock = lock.writeLock();
 
   @Override
   public void setConf(Configuration conf) {
@@ -102,7 +108,8 @@ public abstract class ContainerExecutor implements Configurable {
       throws IOException, InterruptedException;
 
   public enum ExitCode {
-    KILLED(137);
+    FORCE_KILLED(137),
+    TERMINATED(143);
     private final int code;
 
     private ExitCode(int exitCode) {
@@ -150,6 +157,66 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   /**
+   * Get the pidFile of the container.
+   * @param containerId
+   * @return the path of the pid-file for the given containerId.
+   */
+  protected Path getPidFilePath(ContainerId containerId) {
+    try {
+      readLock.lock();
+      return (this.pidFiles.get(containerId));
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Is the container still active?
+   * @param containerId
+   * @return true if the container is active else false.
+   */
+  protected boolean isContainerActive(ContainerId containerId) {
+    try {
+      readLock.lock();
+      return (this.pidFiles.containsKey(containerId));
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  /**
+   * Mark the container as active
+   * 
+   * @param containerId
+   *          the ContainerId
+   * @param pidFilePath
+   *          Path where the executor should write the pid of the launched
+   *          process
+   */
+  public void activateContainer(ContainerId containerId, Path pidFilePath) {
+    try {
+      writeLock.lock();
+      this.pidFiles.put(containerId, pidFilePath);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * Mark the container as inactive.
+   * Done iff the container is still active. Else treat it as
+   * a no-op
+   */
+  public void deactivateContainer(ContainerId containerId) {
+    try {
+      writeLock.lock();
+      this.pidFiles.remove(containerId);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
    * Get the process-identifier for the container
    * 
    * @param containerID
@@ -158,28 +225,15 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public String getProcessId(ContainerId containerID) {
     String pid = null;
-    ShellCommandExecutor shExec = launchCommandObjs.get(containerID);
-    if (shExec == null) {
+    Path pidFile = pidFiles.get(containerID);
+    if (pidFile == null) {
       // This container isn't even launched yet.
       return pid;
     }
-    Process proc = shExec.getProcess();
-    if (proc == null) {
-      // This happens if the command is not yet started
-      return pid;
-    }
     try {
-      Field pidField = proc.getClass().getDeclaredField("pid");
-      pidField.setAccessible(true);
-      pid = ((Integer) pidField.get(proc)).toString();
-    } catch (SecurityException e) {
-      // SecurityManager not expected with yarn. Ignore.
-    } catch (NoSuchFieldException e) {
-      // Yarn only on UNIX for now. Ignore.
-    } catch (IllegalArgumentException e) {
-      ;
-    } catch (IllegalAccessException e) {
-      ;
+      pid = ProcessIdFileReader.getProcessId(pidFile);
+    } catch (IOException e) {
+      LOG.error("Got exception reading pid from pid-file " + pidFile, e);
     }
     return pid;
   }

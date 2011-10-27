@@ -168,7 +168,7 @@ public class TestContainer {
       wc.localizeResources();
       wc.launchContainer();
       reset(wc.localizerBus);
-      wc.containerFailed(ExitCode.KILLED.getExitCode());
+      wc.containerFailed(ExitCode.FORCE_KILLED.getExitCode());
       assertEquals(ContainerState.EXITED_WITH_FAILURE, 
           wc.c.getContainerState());
       verifyCleanupCall(wc);
@@ -268,6 +268,26 @@ public class TestContainer {
     }
   }
 
+  @Test
+  public void testLaunchAfterKillRequest() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(14, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.killContainer();
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      wc.launchContainer();
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      wc.containerKilledOnRequest();
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+  
   private void verifyCleanupCall(WrappedContainer wc) throws Exception {
     ResourcesReleasedMatcher matchesReq =
         new ResourcesReleasedMatcher(wc.localResources, EnumSet.of(
@@ -511,7 +531,7 @@ public class TestContainer {
 
     public void containerKilledOnRequest() {
       c.handle(new ContainerExitEvent(cId,
-          ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ExitCode.KILLED
+          ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ExitCode.FORCE_KILLED
               .getExitCode()));
       drainDispatcherEvents();
     }

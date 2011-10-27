@@ -60,7 +60,8 @@ public class TestLinuxContainerExecutorWithMocks {
   
   private List<String> readMockParams() throws IOException {
     LinkedList<String> ret = new LinkedList<String>();
-    LineNumberReader reader = new LineNumberReader(new FileReader(mockParamFile));
+    LineNumberReader reader = new LineNumberReader(new FileReader(
+        mockParamFile));
     String line;
     while((line = reader.readLine()) != null) {
       ret.add(line);
@@ -70,7 +71,7 @@ public class TestLinuxContainerExecutorWithMocks {
   }
   
   @Before
-  public void setup() throws IOException {
+  public void setup() {
     File f = new File("./src/test/resources/mock-container-executor");
     if(!f.canExecute()) {
       f.setExecutable(true);
@@ -83,7 +84,7 @@ public class TestLinuxContainerExecutorWithMocks {
   }
 
   @After
-  public void tearDown() throws IOException {
+  public void tearDown() {
     deleteMockParamFile();
   }
   
@@ -109,11 +110,14 @@ public class TestLinuxContainerExecutorWithMocks {
     Path scriptPath = new Path("file:///bin/echo");
     Path tokensPath = new Path("file:///dev/null");
     Path workDir = new Path("/tmp");
-    int ret = mockExec.launchContainer(container, scriptPath, tokensPath, 
+    Path pidFile = new Path(workDir, "pid.txt");
+
+    mockExec.activateContainer(cId, pidFile);
+    int ret = mockExec.launchContainer(container, scriptPath, tokensPath,
         appSubmitter, appId, workDir);
     assertEquals(0, ret);
-    assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId, 
-        workDir.toString(), "/bin/echo", "/dev/null"),
+    assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
+        workDir.toString(), "/bin/echo", "/dev/null", pidFile),
         readMockParams());
   }
 

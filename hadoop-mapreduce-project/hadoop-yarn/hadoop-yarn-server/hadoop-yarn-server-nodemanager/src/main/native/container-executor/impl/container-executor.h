@@ -51,7 +51,9 @@ enum errorcodes {
   UNABLE_TO_BUILD_PATH, //21
   INVALID_CONTAINER_EXEC_PERMISSIONS, //22
   // PREPARE_JOB_LOGS_FAILED (NOT USED) 23
-  INVALID_CONFIG_FILE =  24
+  INVALID_CONFIG_FILE =  24,
+  SETSID_OPER_FAILED = 25,
+  WRITE_PIDFILE_FAILED = 26
 };
 
 #define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
@@ -106,11 +108,13 @@ int initialize_app(const char *user, const char *app_id,
  * @param script_name the name of the script to be run to launch the container.
  * @param cred_file the credentials file that needs to be compied to the
  * working directory.
+ * @param pid_file file where pid of process should be written to
  * @return -1 or errorcode enum value on error (should never return on success).
  */
 int launch_container_as_user(const char * user, const char *app_id,
                      const char *container_id, const char *work_dir,
-                     const char *script_name, const char *cred_file);
+                     const char *script_name, const char *cred_file,
+                     const char *pid_file);
 
 /**
  * Function used to signal a container launched by the user.
