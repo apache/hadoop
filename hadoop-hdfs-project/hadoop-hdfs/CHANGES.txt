@@ -788,6 +788,8 @@ Release 0.23.0 - Unreleased
     HDFS-2363. Move datanodes size printing from FSNamesystem.metasave(..)
     to BlockManager.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
