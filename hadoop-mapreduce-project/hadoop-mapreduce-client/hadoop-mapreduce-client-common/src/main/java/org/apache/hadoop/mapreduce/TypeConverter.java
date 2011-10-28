@@ -380,6 +380,7 @@ public class TypeConverter {
 
   public static JobStatus.State fromYarn(YarnApplicationState state) {
     switch (state) {
+    case NEW:
     case SUBMITTED:
       return State.PREP;
     case RUNNING:

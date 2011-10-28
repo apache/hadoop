@@ -20,6 +20,9 @@ package org.apache.hadoop.mapreduce;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -28,12 +31,38 @@ import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.QueueState;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.junit.Test;
 
 public class TestTypeConverter {
+  @Test
+  public void testEnums() throws Exception {
+    for (YarnApplicationState applicationState : YarnApplicationState.values()) {
+      TypeConverter.fromYarn(applicationState);
+    }
+    
+    for (TaskType taskType : TaskType.values()) {
+      TypeConverter.fromYarn(taskType);
+    }
+    
+    for (JobState jobState : JobState.values()) {
+      TypeConverter.fromYarn(jobState);
+    }
+    
+    for (QueueState queueState : QueueState.values()) {
+      TypeConverter.fromYarn(queueState);
+    }
+    
+    for (TaskState taskState : TaskState.values()) {
+      TypeConverter.fromYarn(taskState);
+    }
+    
+    
+  }
+  
   @Test
   public void testFromYarn() throws Exception {
     int appStartTime = 612354;
