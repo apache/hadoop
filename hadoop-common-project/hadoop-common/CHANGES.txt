@@ -431,6 +431,8 @@ Release 0.23.0 - Unreleased
     HADOOP-7737. normalize hadoop-mapreduce & hadoop-dist dist/tar build with
     common/hdfs. (tucu)
 
+    HADOOP-7743. Add Maven profile to create a full source tarball. (tucu)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
