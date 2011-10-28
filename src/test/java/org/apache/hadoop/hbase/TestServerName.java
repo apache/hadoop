@@ -33,10 +33,11 @@ public class TestServerName {
   public void testRegexPatterns() {
     assertTrue(Pattern.matches(Addressing.VALID_PORT_REGEX, "123"));
     assertFalse(Pattern.matches(Addressing.VALID_PORT_REGEX, ""));
-    assertTrue(Pattern.matches(Addressing.VALID_HOSTNAME_REGEX, "example.org"));
-    assertTrue(Pattern.matches(Addressing.VALID_HOSTNAME_REGEX,
-      "www1.example.org"));
     assertTrue(ServerName.SERVERNAME_PATTERN.matcher("www1.example.org,1234,567").matches());
+    ServerName.parseServerName("a.b.c,58102,1319771740322");
+    ServerName.parseServerName("192.168.1.199,58102,1319771740322");
+    ServerName.parseServerName("a.b.c:58102");
+    ServerName.parseServerName("192.168.1.199:58102");
   }
 
   @Test public void testParseOfBytes() {

@@ -187,7 +187,7 @@ public class TestActiveMasterManager {
       ServerName expectedAddress)
   throws KeeperException {
     ServerName readAddress =
-      new ServerName(Bytes.toString(ZKUtil.getData(zk, zk.masterAddressZNode)));
+      ServerName.parseVersionedServerName(ZKUtil.getData(zk, zk.masterAddressZNode));
     assertNotNull(readAddress);
     assertTrue(expectedAddress.equals(readAddress));
   }

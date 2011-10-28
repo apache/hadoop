@@ -42,7 +42,7 @@ import org.apache.zookeeper.KeeperException;
  * for the active master to fail.
  *
  * <p>This class is instantiated in the HMaster constructor and the method
- * {@link #blockUntilBecomingActiveMaster()} is called to wait until becoming
+ * #blockUntilBecomingActiveMaster() is called to wait until becoming
  * the active master of the cluster.
  */
 class ActiveMasterManager extends ZooKeeperListener {
@@ -128,10 +128,11 @@ class ActiveMasterManager extends ZooKeeperListener {
   boolean blockUntilBecomingActiveMaster(MonitoredTask startupStatus) {
     startupStatus.setStatus("Trying to register in ZK as active master");
     boolean cleanSetOfActiveMaster = true;
-    // Try to become the active master, watch if there is another master
+    // Try to become the active master, watch if there is another master.
+    // Write out our ServerName as versioned bytes.
     try {
       if (ZKUtil.createEphemeralNodeAndWatch(this.watcher,
-          this.watcher.masterAddressZNode, Bytes.toBytes(this.sn.toString()))) {
+          this.watcher.masterAddressZNode, sn.getVersionedBytes())) {
         // We are the master, return
         startupStatus.setStatus("Successfully registered as active master.");
         this.clusterHasActiveMaster.set(true);

@@ -385,6 +385,7 @@ Release 0.92.0 - Unreleased
                hanging around
    HBASE-4679  Thrift null mutation error
    HBASE-4304  requestsPerSecond counter stuck at 0 (Li Pi)
+   HBASE-4692  HBASE-4300 broke the build
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
