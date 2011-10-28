@@ -124,6 +124,11 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_util_NativeCrc32_nativeVerifyChunk
       "bad offsets or lengths");
     return;
   }
+  if (unlikely(bytes_per_checksum) <= 0) {
+    THROW(env, "java/lang/IllegalArgumentException",
+      "invalid bytes_per_checksum");
+    return;
+  }
 
   uint32_t *sums = (uint32_t *)(sums_addr + sums_offset);
   uint8_t *data = data_addr + data_offset;

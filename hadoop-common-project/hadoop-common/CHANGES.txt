@@ -520,6 +520,9 @@ Release 0.23.0 - Unreleased
     HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
     ReadaheadPool infrastructure for use in HDFS and MR. (todd)
 
+    HADOOP-7446. Implement CRC32C native code using SSE4.2 instructions.
+    (Kihwal Lee and todd via todd)
+
   BUG FIXES
 
     HADOOP-7740. Fixed security audit logger configuration. (Arpit Gupta via Eric Yang)
