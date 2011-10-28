@@ -56,4 +56,7 @@ public interface DatanodeStatistics {
    * The block related entries are set to -1.
    */
   public long[] getStats();
+
+  /** @return the expired heartbeats */
+  public int getExpiredHeartbeats();
 }
