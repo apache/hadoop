@@ -626,6 +626,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-3156. Allow TestMRCLI to be run against a cluster (cos)
 
+    MAPREDUCE-2328. Add memory-related configuration parameters to
+    mapred-default.xml. (Harsh J via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

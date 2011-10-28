@@ -1097,4 +1097,52 @@
 
 <!--  end of node health script variables -->
 
+<!-- begin JT/TT memory requirements configuration -->
+
+<property>
+  <name>mapreduce.cluster.mapmemory.mb</name>
+  <value>-1</value>
+  <description>Cluster-wide value of *memory* to use per map *slot*. Used to determine number of slots to take up per map task, based on its memory requirements. For instance, if this value is N and a map task demands N*2 memory in total, then two map slots are utilized up in the cluster to run it. Set to -1 to have no limit (default).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.cluster.reducememory.mb</name>
+  <value>-1</value>
+  <description>Cluster-wide value of *memory* to use per reduce *slot*. Used to determine number of slots to take up per reduce task, based on its memory requirements. For instance, if this value is N and a reduce task demands N*2 memory in total, then two reduce slots are utilized up in the cluster to run it. Set to -1 to have no limit (default).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.map.memory.mb</name>
+  <value>-1</value>
+  <description>Per-job property of the maximum amount of memory each map task can consume, in MB. Set to -1 for no limit (default).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.memory.mb</name>
+  <value>-1</value>
+  <description>Per-job property of the maximum amount of memory each reduce task can consume, in MB. Set to -1 for no limit (default).
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.maxmapmemory.mb</name>
+  <value>-1</value>
+  <description>
+  Max value specifiable by mapreduce.map.memory.mb in submitted jobs, in MB (Checked at the JobTracker). If a Job requires a value higher than the specified value, it would be failed during submission.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.maxreducememory.mb</name>
+  <value>-1</value>
+  <description>
+  Max value specifiable by mapreduce.reduce.memory.mb in submitted jobs, in MB (Checked at the JobTracker). If a Job requires a value higher than the specified value, it would be failed during submission.
+  </description>
+</property>
+
+<!-- end of JT/TT memory requirements configuration -->
+
 </configuration>
