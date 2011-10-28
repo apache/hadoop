@@ -28,7 +28,6 @@
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
-    <mr.basedir>../</mr.basedir>
   </properties>
 
 
@@ -258,7 +257,22 @@
     </dependency>
 
   </dependencies>
-
+ 
+  <build>
+    <plugins>
+       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+         <configuration>
+          <findbugsXmlOutput>true</findbugsXmlOutput>
+          <xmlOutput>true</xmlOutput>
+          <excludeFilterFile>${mr.basedir}/dev-support/findbugs-exclude.xml</excludeFilterFile>
+          <effort>Max</effort>
+       </configuration>
+     </plugin>
+    </plugins>
+  </build>
+ 
   <modules>
     <module>hadoop-mapreduce-client-core</module>
     <module>hadoop-mapreduce-client-common</module>
