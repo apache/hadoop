@@ -103,6 +103,9 @@ case $COMMAND in
     fi
     shift
     
+    #make sure security appender is turned off
+    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
+
     if $cygwin; then
       CLASSPATH=`cygpath -p -w "$CLASSPATH"`
     fi

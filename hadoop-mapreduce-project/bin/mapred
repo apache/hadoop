@@ -115,5 +115,12 @@ if [ "$COMMAND" = "classpath" ] ; then
   exit
 fi
 
+#turn security logger on the jobtracker
+if [ $COMMAND = "jobtracker" ]; then
+  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,DRFAS}"
+else
+  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
+fi
+
 export CLASSPATH
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"
