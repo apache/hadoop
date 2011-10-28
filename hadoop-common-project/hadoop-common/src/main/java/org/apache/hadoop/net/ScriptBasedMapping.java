@@ -23,11 +23,11 @@ import java.io.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.*;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
@@ -145,7 +145,7 @@ implements Configurable
       
       if (m.size() != names.size()) {
         // invalid number of entries returned by the script
-        LOG.warn("Script " + scriptName + " returned "
+        LOG.error("Script " + scriptName + " returned "
             + Integer.toString(m.size()) + " values when "
             + Integer.toString(names.size()) + " were expected.");
         return null;

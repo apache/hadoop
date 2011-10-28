@@ -49,6 +49,9 @@ Trunk (unreleased changes)
     HADOOP-7728. Enable task memory management to be configurable in hadoop
     config setup script. (ramya)
 
+    HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
+    (Uma Maheswara Rao G via eli)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
