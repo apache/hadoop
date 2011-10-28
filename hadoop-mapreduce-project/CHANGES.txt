@@ -1792,6 +1792,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3304. Fixed intermittent test failure due to a race in
     TestRMContainerAllocator#testBlackListedNodes. (Ravi Prakash via acmurthy) 
 
+    MAPREDUCE-3306. Fixed a bug in NodeManager ApplicationImpl that was causing
+    NodeManager to crash. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

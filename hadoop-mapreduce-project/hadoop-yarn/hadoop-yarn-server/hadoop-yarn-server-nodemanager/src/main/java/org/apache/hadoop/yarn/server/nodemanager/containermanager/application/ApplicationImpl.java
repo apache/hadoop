@@ -61,6 +61,7 @@ public class ApplicationImpl implements Application {
   final String user;
   final ApplicationId appId;
   final Credentials credentials;
+  Map<ApplicationAccessType, String> applicationACLs;
   final ApplicationACLsManager aclsManager;
   private final ReadLock readLock;
   private final WriteLock writeLock;
@@ -200,8 +201,8 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
       ApplicationInitEvent initEvent = (ApplicationInitEvent)event;
-      app.aclsManager.addApplication(app.getAppId(), initEvent
-          .getApplicationACLs());
+      app.applicationACLs = initEvent.getApplicationACLs();
+      app.aclsManager.addApplication(app.getAppId(), app.applicationACLs);
       app.dispatcher.getEventHandler().handle(
           new ApplicationLocalizationEvent(
               LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
@@ -248,15 +249,11 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
-      Map<ApplicationAccessType, String> appAcls =
-          app.getContainers().values().iterator().next().getLaunchContext()
-              .getApplicationACLs();
-
       // Inform the logAggregator
       app.dispatcher.getEventHandler().handle(
           new LogAggregatorAppStartedEvent(app.appId, app.user,
               app.credentials, ContainerLogsRetentionPolicy.ALL_CONTAINERS,
-              appAcls)); 
+              app.applicationACLs)); 
 
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
