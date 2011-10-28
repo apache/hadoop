@@ -26,6 +26,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
+    <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
     <hadoop-common.version>0.23.0-SNAPSHOT</hadoop-common.version>
     <hadoop-hdfs.version>0.23.0-SNAPSHOT</hadoop-hdfs.version>
     <hadoop-mapreduce.version>0.23.0-SNAPSHOT</hadoop-mapreduce.version>
@@ -325,13 +326,33 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-assemblies</artifactId>
+            <version>${hadoop.assemblies.version}</version>
+          </dependency>
+        </dependencies>
         <configuration>
           <tarLongFileMode>gnu</tarLongFileMode>
-          <descriptors>
-            <descriptor>assembly/all.xml</descriptor>
-          </descriptors>
+          <appendAssemblyId>false</appendAssemblyId>
+          <attach>false</attach>
+          <finalName>${project.artifactId}-${project.version}</finalName>
+          <descriptorRefs>
+            <descriptorRef>hadoop-mapreduce-dist</descriptorRef>
+          </descriptorRefs>
         </configuration>
+        <executions>
+          <execution>
+            <id>tar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.atlassian.maven.plugins</groupId>

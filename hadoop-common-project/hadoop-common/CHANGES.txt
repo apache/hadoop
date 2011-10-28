@@ -956,6 +956,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7624. Set things up for a top level hadoop-tools module. (tucu)
 
+    HADOOP-7642. create hadoop-dist module where TAR stitching would happen.
+    (Thomas White via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
