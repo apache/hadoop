@@ -40,6 +40,7 @@
     <module>hadoop-common-project</module>
     <module>hadoop-hdfs-project</module>
     <module>hadoop-mapreduce-project</module>
+    <module>hadoop-tools</module>
   </modules>
 
   <build>
