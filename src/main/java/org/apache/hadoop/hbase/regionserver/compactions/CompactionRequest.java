@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -199,7 +198,7 @@ public class CompactionRequest implements Comparable<CompactionRequest>,
         server.checkFileSystem();
       } finally {
         s.finishRequest(this);
-        LOG.debug("CompactSplitThread Status: " + server.compactSplitThread);
+        LOG.debug("CompactSplitThread status: " + server.compactSplitThread);
       }
     }
 

@@ -553,9 +553,6 @@ public class HLog implements Syncable {
       long currentFilenum = this.filenum;
       this.filenum = System.currentTimeMillis();
       Path newPath = computeFilename();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Enabling new writer for "+FSUtils.getPath(newPath));
-      }
       HLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
       // Can we get at the dfsclient outputstream?  If an instance of
       // SFLW, it'll have done the necessary reflection to get at the
@@ -582,7 +579,7 @@ public class HLog implements Syncable {
             this.numEntries.get() +
             ", filesize=" +
             this.fs.getFileStatus(oldFile).getLen() + ". ": "") +
-          "New hlog " + FSUtils.getPath(newPath));
+          " for " + FSUtils.getPath(newPath));
         this.numEntries.set(0);
       }
       // Can we delete any of the old log files?

@@ -173,25 +173,27 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
 
       HRegion regionToFlush;
       if (bestFlushableRegion != null &&
-	  bestAnyRegion.memstoreSize.get() > 2 * bestFlushableRegion.memstoreSize.get()) {
+          bestAnyRegion.memstoreSize.get() > 2 * bestFlushableRegion.memstoreSize.get()) {
         // Even if it's not supposed to be flushed, pick a region if it's more than twice
         // as big as the best flushable one - otherwise when we're under pressure we make
         // lots of little flushes and cause lots of compactions, etc, which just makes
         // life worse!
-        LOG.info("Under global heap pressure: " +
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Under global heap pressure: " +
             "Region " + bestAnyRegion.getRegionNameAsString() + " has too many " +
             "store files, but is " +
             StringUtils.humanReadableInt(bestAnyRegion.memstoreSize.get()) +
             " vs best flushable region's " +
             StringUtils.humanReadableInt(bestFlushableRegion.memstoreSize.get()) +
             ". Choosing the bigger.");
-	regionToFlush = bestAnyRegion;
+        }
+        regionToFlush = bestAnyRegion;
       } else {
-	  if (bestFlushableRegion == null) {
-	      regionToFlush = bestAnyRegion;
-	  } else {
-	      regionToFlush = bestFlushableRegion;
-	  }
+        if (bestFlushableRegion == null) {
+          regionToFlush = bestAnyRegion;
+        } else {
+          regionToFlush = bestFlushableRegion;
+        }
       }
 
       Preconditions.checkState(regionToFlush.memstoreSize.get() > 0);
@@ -216,7 +218,8 @@ class MemStoreFlusher extends HasThread implements FlushRequester {
         fqe = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
         if (fqe == null || fqe instanceof WakeupFlushThread) {
           if (isAboveLowWaterMark()) {
-            LOG.info("Flush thread woke up with memory above low water.");
+            LOG.debug("Flush thread woke up because memory above low water=" +
+              StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark));
             if (!flushOneForGlobalPressure()) {
               // Wasn't able to flush any region, but we're above low water mark
               // This is unlikely to happen, but might happen when closing the

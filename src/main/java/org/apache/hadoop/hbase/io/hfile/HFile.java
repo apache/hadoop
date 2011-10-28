@@ -247,7 +247,6 @@ public class HFile {
   public static final WriterFactory getWriterFactory(Configuration conf,
       CacheConfig cacheConf) {
     int version = getFormatVersion(conf);
-    LOG.debug("Using HFile format version " + version);
     switch (version) {
     case 1:
       return new HFileWriterV1.WriterFactoryV1(conf, cacheConf);

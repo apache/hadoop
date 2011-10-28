@@ -93,8 +93,9 @@ public class SequenceFileLogWriter implements HLog.Writer {
     this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
     this.syncFs = getSyncFs();
     this.hflush = getHFlush();
-    String msg =
-      "syncFs=" + (this.syncFs != null) + ", hflush=" + (this.hflush != null);
+    String msg = "Path=" + path +
+      ", syncFs=" + (this.syncFs != null) +
+      ", hflush=" + (this.hflush != null);
     if (this.syncFs != null || this.hflush != null) {
       LOG.debug(msg);
     } else {

@@ -229,20 +229,6 @@ public class DefaultLoadBalancer implements LoadBalancer {
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad =
       new TreeMap<ServerAndLoad, List<HRegionInfo>>();
     int numRegions = 0;
-    StringBuilder strBalanceParam = new StringBuilder("Server information: ");
-    // Iterate so we can count regions as we build the map
-    for (Map.Entry<ServerName, List<HRegionInfo>> server: clusterState.entrySet()) {
-      List<HRegionInfo> regions = server.getValue();
-      int sz = regions.size();
-      if (sz == 0) emptyRegionServerPresent = true;
-      numRegions += sz;
-      serversByLoad.put(new ServerAndLoad(server.getKey(), sz), regions);
-      strBalanceParam.append(server.getKey().getServerName()).append("=").
-        append(server.getValue().size()).append(", ");
-    }
-    strBalanceParam.delete(strBalanceParam.length() - 2,
-      strBalanceParam.length());
-    LOG.debug(strBalanceParam.toString());
 
     // Check if we even need to do any load balancing
     float average = (float)numRegions / numServers; // for logging
@@ -262,13 +248,13 @@ public class DefaultLoadBalancer implements LoadBalancer {
     int min = numRegions / numServers;
     int max = numRegions % numServers == 0 ? min : min + 1;
 
-    // Using to check banance result.
-    strBalanceParam.delete(0, strBalanceParam.length());
+    // Using to check balance result.
+    StringBuilder strBalanceParam = new StringBuilder();
     strBalanceParam.append("Balance parameter: numRegions=").append(numRegions)
         .append(", numServers=").append(numServers).append(", max=").append(max)
         .append(", min=").append(min);
     LOG.debug(strBalanceParam.toString());
-    
+
     // Balance the cluster
     // TODO: Look at data block locality or a more complex load to do this
     MinMaxPriorityQueue<RegionPlan> regionsToMove =

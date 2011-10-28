@@ -139,12 +139,12 @@ public final class BloomFilterFactory {
       CacheConfig cacheConf, BloomType bloomType, int maxKeys,
       HFile.Writer writer) {
     if (!isBloomEnabled(conf)) {
-      LOG.info("Bloom filters are disabled by configuration for "
+      LOG.debug("Bloom filters are disabled by configuration for "
           + writer.getPath()
           + (conf == null ? " (configuration is null)" : ""));
       return null;
     } else if (bloomType == BloomType.NONE) {
-      LOG.info("Bloom filter is turned off for the column family");
+      LOG.debug("Bloom filter is turned off for the column family");
       return null;
     }
 

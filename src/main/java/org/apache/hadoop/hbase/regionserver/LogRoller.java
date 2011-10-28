@@ -85,7 +85,7 @@ class LogRoller extends HasThread implements WALActionsListener {
           LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
         }
       } else if (LOG.isDebugEnabled()) {
-        LOG.debug("HLog roll manually triggered");
+        LOG.debug("HLog roll requested");
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {

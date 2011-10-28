@@ -370,7 +370,7 @@ public class Store implements HeapSize {
     }
 
     Path dstPath = StoreFile.getRandomFilename(fs, homedir);
-    LOG.info("Renaming bulk load file " + srcPath + " to " + dstPath);
+    LOG.debug("Renaming bulk load file " + srcPath + " to " + dstPath);
     StoreFile.rename(fs, srcPath, dstPath);
 
     StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
@@ -524,7 +524,7 @@ public class Store implements HeapSize {
     Path dstPath = new Path(homedir, fileName);
     validateStoreFile(writer.getPath());
     String msg = "Renaming flushed file at " + writer.getPath() + " to " + dstPath;
-    LOG.info(msg);
+    LOG.debug(msg);
     status.setStatus("Flushing " + this + ": " + msg);
     if (!fs.rename(writer.getPath(), dstPath)) {
       LOG.warn("Unable to rename " + writer.getPath() + " to " + dstPath);
@@ -536,7 +536,7 @@ public class Store implements HeapSize {
     StoreFile.Reader r = sf.createReader();
     this.storeSize += r.length();
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
-    if(LOG.isInfoEnabled()) {
+    if (LOG.isInfoEnabled()) {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
@@ -664,7 +664,7 @@ public class Store implements HeapSize {
     LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
         + this.storeNameStr + " of "
         + this.region.getRegionInfo().getRegionNameAsString()
-        + " into " + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
+        + " into tmpdir=" + region.getTmpDir() + ", seqid=" + maxId + ", totalSize="
         + StringUtils.humanReadableInt(cr.getSize()));
 
     StoreFile sf = null;
@@ -685,8 +685,9 @@ public class Store implements HeapSize {
     LOG.info("Completed" + (cr.isMajor() ? " major " : " ") + "compaction of "
         + filesToCompact.size() + " file(s) in " + this.storeNameStr + " of "
         + this.region.getRegionInfo().getRegionNameAsString()
-        + "; new storefile name=" + (sf == null ? "none" : sf.toString())
-        + ", size=" + (sf == null ? "none" :
+        + " into " +
+        (sf == null ? "none" : sf.getPath().getName()) +
+        ", size=" + (sf == null ? "none" :
           StringUtils.humanReadableInt(sf.getReader().length()))
         + "; total size for store is "
         + StringUtils.humanReadableInt(storeSize));

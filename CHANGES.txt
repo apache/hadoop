@@ -651,6 +651,7 @@ Release 0.92.0 - Unreleased
    HBASE-3929  Add option to HFile tool to produce basic stats (Matteo
                Bertozzi and todd via todd)
    HBASE-4699  Cleanup the UIs
+   HBASE-4694  Some cleanup of log messages in RS and M
 
 
   TASKS

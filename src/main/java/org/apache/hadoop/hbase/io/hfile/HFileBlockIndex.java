@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Provides functionality to write ({@link BlockIndexWriter}) and read
@@ -750,12 +751,15 @@ public class HFileBlockIndex {
       totalBlockUncompressedSize +=
           blockWriter.getUncompressedSizeWithoutHeader();
 
-      LOG.info("Wrote a " + numLevels + "-level index with root level at pos "
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Wrote a " + numLevels + "-level index with root level at pos "
           + out.getPos() + ", " + rootChunk.getNumEntries()
           + " root-level entries, " + totalNumEntries + " total entries, "
-          + totalBlockOnDiskSize + " bytes total on-disk size, "
-          + totalBlockUncompressedSize + " bytes total uncompressed size.");
-
+          + StringUtils.humanReadableInt(this.totalBlockOnDiskSize) +
+          " on-disk size, "
+          + StringUtils.humanReadableInt(totalBlockUncompressedSize) +
+          " total uncompressed size.");
+      }
       return rootLevelIndexPos;
     }
 

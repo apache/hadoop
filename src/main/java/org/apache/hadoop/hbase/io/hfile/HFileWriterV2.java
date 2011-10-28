@@ -178,7 +178,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     // Meta data block index writer
     metaBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter();
 
-    LOG.debug("HFileWriter initialized with " + cacheConf);
+    LOG.debug("Initialized with " + cacheConf);
   }
 
   /**
