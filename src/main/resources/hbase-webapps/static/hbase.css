@@ -20,9 +20,12 @@ table { border: thin solid DodgerBlue }
 tr { border: thin solid DodgerBlue }
 td { border: thin solid DodgerBlue }
 th { border: thin solid DodgerBlue }
-#logo {float: left;}
+#logo {float: right;}
 #logo img {border: none;}
-#page_title {padding-top: 27px;}
+#page_title {}
+#tasks_menu {
+  padding: 10px;
+}
 
 div.warning {
   border: 1px solid #666;

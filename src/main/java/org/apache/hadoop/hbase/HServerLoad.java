@@ -544,10 +544,6 @@ implements WritableComparable<HServerLoad> {
     sb = Strings.appendKeyValue(sb, "usedHeapMB",
       Integer.valueOf(this.usedHeapMB));
     sb = Strings.appendKeyValue(sb, "maxHeapMB", Integer.valueOf(maxHeapMB));
-    String coprocessors = Arrays.toString(getCoprocessors());
-    if (coprocessors != null) {
-      sb = Strings.appendKeyValue(sb, "coprocessors", coprocessors);
-    }
     return sb.toString();
   }
 

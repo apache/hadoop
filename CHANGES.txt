@@ -650,6 +650,7 @@ Release 0.92.0 - Unreleased
                instead of one per method (nkeywal)
    HBASE-3929  Add option to HFile tool to produce basic stats (Matteo
                Bertozzi and todd via todd)
+   HBASE-4699  Cleanup the UIs
 
 
   TASKS

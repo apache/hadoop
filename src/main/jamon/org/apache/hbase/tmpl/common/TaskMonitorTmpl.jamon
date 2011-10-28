@@ -56,15 +56,15 @@ boolean first = true;
 <%if format.equals("json")%>
 [<%for MonitoredTask task : tasks%><%if first%><%java>first = false;</%java><%else>,</%if><% task.toJSON() %></%for>]
 <%else>
-  <div style="float:right;">
-    <a href="?filter=all">Show All Monitored Tasks</a> |
-    <a href="?filter=general">Show non-RPC Tasks</a> |
-    <a href="?filter=handler">Show All RPC Handler Tasks</a> |
-    <a href="?filter=rpc">Show Active RPC Calls</a> |
-    <a href="?filter=operation">Show Client Operations</a> |
+<h2>Tasks</h2>
+  <div id="tasks_menu">
+    <a href="?filter=all">Show All Monitored Tasks</a>
+    <a href="?filter=general">Show non-RPC Tasks</a>
+    <a href="?filter=handler">Show All RPC Handler Tasks</a>
+    <a href="?filter=rpc">Show Active RPC Calls</a>
+    <a href="?filter=operation">Show Client Operations</a>
     <a href="?format=json&filter=<% filter %>">View as JSON</a>
   </div>
-  <h2>Recent tasks</h2>
   <%if tasks.isEmpty()%>
     No tasks currently running on this node.
   <%else>

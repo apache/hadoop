@@ -55,7 +55,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 -->
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>HBase Master: <% master.getServerName().getHostAndPort() %></title>
+<title>HBase Master: <% master.getServerName() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 <body>
@@ -87,13 +87,12 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </%if>
 
 <hr id="head_rule" />
-
-<h2>Master Attributes</h2>
-<table>
+<h2>Attributes</h2>
+<table id="attributes_table">
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-<tr><td>HBase Version</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
+<tr><td>HBase Version</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and revision</td></tr>
 <tr><td>HBase Compiled</td><td><% org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <% org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
-<tr><td>Hadoop Version</td><td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
+<tr><td>Hadoop Version</td><td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and revision</td></tr>
 <tr><td>Hadoop Compiled</td><td><% org.apache.hadoop.util.VersionInfo.getDate() %>, <% org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>HBase Root Directory</td><td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td><td>Location of HBase home directory</td></tr>
 <tr><td>HBase Cluster ID</td><td><% master.getClusterId() != null ? master.getClusterId() : "Not set" %><td>Unique identifier generated for each HBase cluster</td></tr>
@@ -132,10 +131,10 @@ org.apache.hadoop.hbase.HTableDescriptor;
 
 
 <%def catalogTables>
-<h2>Catalog Tables</h2>
+<h2>Tables</h2>
 <table>
 <tr>
-    <th>Table</th>
+    <th>Catalog Table</th>
     <%if (frags != null) %>
         <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
     </%if>
@@ -162,7 +161,6 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </%def>
 
 <%def userTables>
-<h2>User Tables</h2>
 <%java>
    HTableDescriptor[] tables = admin.listTables();
    HConnectionManager.deleteConnection(admin.getConfiguration(), false);
@@ -170,7 +168,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 <%if (tables != null && tables.length > 0)%>
 <table>
 <tr>
-    <th>Table</th>
+    <th>User Table</th>
 <%if (frags != null) %>
         <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
 </%if>
@@ -200,7 +198,7 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </%java>
 
 <table>
-<tr><th rowspan="<% servers.size() + 1%>"></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
+<tr><th rowspan="<% servers.size() + 1%>"></th><th>ServerName</th><th>Load</th></tr>
 <%java>
    ServerName [] serverNames = servers.toArray(new ServerName[servers.size()]);
      Arrays.sort(serverNames);
@@ -208,21 +206,19 @@ org.apache.hadoop.hbase.HTableDescriptor;
        // TODO: this is incorrect since this conf might differ from RS to RS
        // or be set to 0 to get ephemeral ports
        int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
-       String hostname = serverName.getHostname() + ":" + infoPort;
-       String url = "http://" + hostname + "/";
+       String url = "http://" + serverName.getHostname() + ":" + infoPort + "/";
        HServerLoad hsl = master.getServerManager().getLoad(serverName);
        String loadStr = hsl == null? "-": hsl.toString();
        if (hsl != null) {
          totalRegions += hsl.getNumberOfRegions();
          totalRequests += hsl.getNumberOfRequests();
        }
-       long startCode = serverName.getStartcode();
 </%java>
-<tr><td><a href="<% url %>"><% hostname %></a></td><td><% startCode %><% serverName %></td><td><% loadStr %></td></tr>
+<tr><td><a href="<% url %>"><% serverName %></a></td></td><td><% loadStr %></td></tr>
 <%java>
     }
 </%java>
-<tr><th>Total: </th><td>servers: <% servers.size() %></td><td>&nbsp;</td><td>requestsPerSecond=<% totalRequests %>, numberOfOnlineRegions=<% totalRegions %></td></tr>
+<tr><th>Total: </th><td>servers: <% servers.size() %></td><td>requestsPerSecond=<% totalRequests %>, numberOfOnlineRegions=<% totalRegions %></td></tr>
 </table>
 
 <p>Load is requests per second and count of regions loaded</p>
@@ -230,20 +226,18 @@ org.apache.hadoop.hbase.HTableDescriptor;
 </%def>
 
 <%def deadRegionServers>
-<h2>Dead Region Servers</h2>
+<h3>Dead Region Servers</h3>
 <%if (deadServers != null && deadServers.size() > 0)%>
 
 <table>
-<tr><th rowspan="<% deadServers.size() + 1%>"></th><th>Address</th><th>Start Code</th></tr>
+<tr><th rowspan="<% deadServers.size() + 1%>"></th><th>ServerName</th></tr>
 <%java>
    ServerName [] deadServerNames = deadServers.toArray(new ServerName[deadServers.size()]);
      Arrays.sort(deadServerNames);
      for (ServerName deadServerName: deadServerNames) {
        int infoPort = master.getConfiguration().getInt("hbase.regionserver.info.port", 60030);
-       String hostname = deadServerName.getHostname() + ":" + infoPort;
-       long startcode = deadServerName.getStartcode();
 </%java>
-<tr><td><% hostname %></td><td><% startcode %></tr>
+<tr><td><% deadServerName %></td></tr>
 <%java>
     }
 </%java>
