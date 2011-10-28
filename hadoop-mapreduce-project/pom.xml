@@ -15,9 +15,15 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>0.23.0-SNAPSHOT</version>
+    <relativePath>../hadoop-project</relativePath>
+  </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce</artifactId>
-  <version>${hadoop-mapreduce.version}</version>
+  <version>0.23.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>hadoop-mapreduce</name>
   <url>http://hadoop.apache.org/mapreduce/</url>
@@ -26,36 +32,15 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
-    <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
-    <hadoop-common.version>0.23.0-SNAPSHOT</hadoop-common.version>
-    <hadoop-hdfs.version>0.23.0-SNAPSHOT</hadoop-hdfs.version>
-    <hadoop-mapreduce.version>0.23.0-SNAPSHOT</hadoop-mapreduce.version>
-    <yarn.version>0.23.0-SNAPSHOT</yarn.version>
-    <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
-    <install.file>${install.pom}</install.file>
     <fork.mode>once</fork.mode>
     <mr.basedir>${basedir}</mr.basedir>
   </properties>
-
-  <repositories>
-    <repository>
-      <id>repository.jboss.org</id>
-      <url>http://repository.jboss.org/nexus/content/groups/public/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </repository>
-    <repository>
-      <id>apache.snapshots</id>
-      <url>http://repository.apache.org/snapshots</url>
-      <!-- until we move to hadoop-common/hdfs trunk and/or maven 3 -->
-      <!-- cf. MNG-4326 -->
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-  </repositories>
-
+  
+  <modules>
+    <module>hadoop-yarn</module>
+    <module>hadoop-mapreduce-client</module>
+  </modules>
+  
   <dependencies>
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -96,7 +81,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop-common.version}</version>
+      <version>${project.version}</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -121,7 +106,7 @@
         </exclusion>
       </exclusions>
     </dependency>
-
+ 
     <dependency>
      <groupId>org.slf4j</groupId>
        <artifactId>slf4j-api</artifactId>
@@ -135,7 +120,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-annotations</artifactId>
-      <version>${hadoop-common.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -146,7 +131,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop-common.version}</version>
+      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -154,7 +139,7 @@
       <groupId>org.apache.hadoop</groupId>
       <!-- needed for security and runtime -->
       <artifactId>hadoop-hdfs</artifactId>
-      <version>${hadoop-hdfs.version}</version>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.inject.extensions</groupId>
@@ -181,9 +166,9 @@
       <artifactId>clover</artifactId>
       <version>3.0.2</version>
     </dependency>
-
+ 
   </dependencies>
-
+  
   <build>
     <pluginManagement>
       <plugins>
@@ -277,37 +262,6 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
-            <id>santize-pom</id>
-            <phase>package</phase>
-            <configuration>
-              <target>
-                <copy file="pom.xml" tofile="${install.pom}">
-                  <filterchain>
-                    <!-- we'll have to wait for ant 1.8.3 for the following
-                    <expandproperties>
-                      <propertyset regex=".*version$">
-                      </propertyset>
-                    </expandproperties>
-                    until then an even uglier workaround: -->
-                    <tokenfilter>
-                      <replaceregex pattern="\$\{hadoop-common.version}"
-                          replace="${hadoop-common.version}" flags="g"/>
-                      <replaceregex pattern="\$\{hadoop-hdfs.version}"
-                          replace="${hadoop-hdfs.version}" flags="g"/>
-                      <replaceregex pattern="\$\{hadoop-mapreduce.version}"
-                          replace="${hadoop-mapreduce.version}" flags="g"/>
-                      <replaceregex pattern="\$\{yarn.version}"
-                          replace="${yarn.version}" flags="g"/>
-                    </tokenfilter>
-                  </filterchain>
-                </copy>
-              </target>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-          <execution>
             <id>tar</id>
             <phase>package</phase>
             <goals>
@@ -333,22 +287,6 @@
                 </exec>
               </target>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-install-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>install-sanitized-pom</id>
-            <configuration>
-              <file>${install.file}</file>
-              <pomFile>${install.pom}</pomFile>
-            </configuration>
-            <phase>install</phase>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
@@ -447,10 +385,6 @@
     </profile>
   </profiles>
 
-  <modules>
-    <module>hadoop-yarn</module>
-    <module>hadoop-mapreduce-client</module>
-  </modules>
 
   <reporting>
     <plugins>

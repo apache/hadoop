@@ -16,15 +16,15 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${hadoop-mapreduce.version}</version>
+    <version>0.23.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
+  <version>0.23.0-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-shuffle</name>
 
   <properties>
-    <install.file>${project.artifact.file}</install.file>
     <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
   </properties>
 

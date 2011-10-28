@@ -148,6 +148,7 @@
    <exclude org="javax.jms"/> 
    <exclude org="javax.mail"/> 
    <exclude org="org.apache.hadoop" module="avro"/> 
+   <exclude org="org.apache.commons" module="commons-daemon"/> 
 
  </dependencies>
   

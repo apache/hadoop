@@ -49,6 +49,7 @@ Maven build goals:
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar]
+ * Change Hadoop version     : mvn versions:set -DnewVersion=NEWVERSION
 
  Build options:
 
