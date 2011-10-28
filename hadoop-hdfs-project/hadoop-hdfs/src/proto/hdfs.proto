@@ -23,13 +23,19 @@ option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "HdfsProtos";
 option java_generate_equals_and_hash = true;
 
+/**
+ * Extended block idenfies a block
+ */
 message ExtendedBlockProto {
-  required string poolId = 1;
-  required uint64 blockId = 2;
-  required uint64 numBytes = 3;
-  required uint64 generationStamp = 4;
+  required string poolId = 1;   // Block pool id - gloablly unique across clusters
+  required uint64 blockId = 2;  // the local id within a pool
+  required uint64 generationStamp = 3;
+  optional uint64 numBytes = 4;  // block len does not belong in ebid - here for historical reasons
 }
 
+/**
+ * Block Token
+ */
 message BlockTokenIdentifierProto {
   required bytes identifier = 1;
   required bytes password = 2;
@@ -37,12 +43,20 @@ message BlockTokenIdentifierProto {
   required string service = 4;
 }
 
+/**
+ * Identifies a Datanode
+ */
 message DatanodeIDProto {
-  required string name = 1;
-  required string storageID = 2;
-  required uint32 infoPort = 3;
+  required string name = 1;      // hostname:portNumber
+  required string storageID = 2; // Unique storage id
+  required uint32 infoPort = 3;  // the port where the infoserver is running
+  required uint32 ipcPort = 4;   // the port where the ipc Server is running
 }
 
+
+/**
+ * The status of a Datanode
+ */
 message DatanodeInfoProto {
   required DatanodeIDProto id = 1;
   optional uint64 capacity = 2;
@@ -62,3 +76,116 @@ message DatanodeInfoProto {
   optional AdminState adminState = 10;
 }
 
+
+/**
+ * Summary of a file or directory
+ */
+message ContentSummaryProto {
+  required uint64 length = 1;
+  required uint64 fileCount = 2;
+  required uint64 directoryCount = 3;
+  required uint64 quota = 4;
+  required uint64 spaceConsumed = 5;
+  required uint64 spaceQuota = 6;
+}
+
+/**
+ * Contains a list of paths corresponding to corrupt files and a cookie
+ * used for iterative calls to NameNode.listCorruptFileBlocks.
+ *
+ */
+message CorruptFileBlocksProto {
+ repeated string files = 1;
+ required string   cookie = 2;
+}
+
+/**
+ * File or Directory permision - same spec as posix
+ */
+message FsPermissionProto {
+  required uint32 perm = 1;       // Actually a short - only 16bits used
+}
+
+
+/**
+ * A LocatedBlock gives information about a block and its location.
+ */ 
+message LocatedBlockProto {
+  required ExtendedBlockProto b  = 1;
+  required uint64 offset = 2;           // offset of first byte of block in the file
+  repeated DatanodeInfoProto locs = 3;  // Locations ordered by proximity to client ip
+  required bool corrupt = 4;            // true if all replicas of a block are corrupt, else false
+                                        // If block has few corrupt replicas, they are filtered and 
+                                        // their locations are not part of this object
+
+  required BlockTokenIdentifierProto blockToken = 5;
+ }
+
+
+/**
+ * A set of file blocks and their locations.
+ */
+message LocatedBlocksProto {
+  required uint64 fileLength = 1;
+  repeated LocatedBlockProto blocks = 2;
+  required bool underConstruction = 3;
+  optional LocatedBlockProto lastBlock = 4;
+  required bool isLastBlockComplete = 5;
+}
+
+
+/**
+ * Status of a file, directory  or symlink
+ * Optionally includes a file's block locations if requested by client on the rpc call.
+ */
+message HdfsFileStatusProto {
+  enum FileType {
+    IS_DIR = 1;
+    IS_FILE = 2;
+    IS_SYMLINK = 3;
+  }
+  required FileType fileType = 1;
+  required bytes path = 2;          // local name of inode encoded java UTF8
+  required uint64 length = 3;
+  required FsPermissionProto permission = 4;
+  required string owner = 5;
+  required string group = 6;
+  required uint64 modification_time = 7;
+  required uint64 access_time = 8;
+  //
+  // Optional fields for symlink
+  optional bytes symlink = 9;         // if symlink, target encoded java UTF8 
+  //
+  // Optional fields for file
+  optional uint32 block_replication = 10; // Actually a short - only 16bits used
+  optional uint64 blocksize = 11;
+  optional LocatedBlocksProto locations = 12;  // suppled only if asked by client
+} 
+
+/**
+ * HDFS Server Defaults
+ */
+message FsServerDefaultsProto {
+  required uint64 blockSize = 1;
+  required uint32 bytesPerChecksum = 2;
+  required uint32 writePacketSize = 3;
+  required uint32 replication = 4; // Actually a short - only 16bits used
+  required uint32 fileBufferSize = 5;
+}
+
+
+/**
+ * Directory listing
+ */
+message DirectoryListingProto {
+  repeated HdfsFileStatusProto partialListing = 1;
+  required uint32 remainingEntries  = 2;
+}
+
+/**
+ * Status of current cluster upgrade from one version to another
+ */
+message UpgradeStatusReportProto {
+  required uint32 version = 1;;
+  required uint32 upgradeStatus = 2; // Between 0 and 100 indicating the % complete
+}

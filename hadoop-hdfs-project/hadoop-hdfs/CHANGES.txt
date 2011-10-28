@@ -48,6 +48,8 @@ Trunk (unreleased changes)
 
     HDFS-2496. Separate datatypes for DatanodeProtocol. (suresh)
 
+    HDFS-2479 HDFS Client Data Types in Protocol Buffers (sanjay)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
