@@ -25,6 +25,7 @@
 
   <properties>
     <install.file>${project.artifact.file}</install.file>
+    <fork.mode>always</fork.mode>
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
   </properties>
 

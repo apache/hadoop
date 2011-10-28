@@ -30,6 +30,7 @@
     <yarn.version>0.23.0-SNAPSHOT</yarn.version>
     <install.pom>${project.build.directory}/saner-pom.xml</install.pom>
     <install.file>${install.pom}</install.file>
+    <fork.mode>once</fork.mode>
     <yarn.basedir>${basedir}</yarn.basedir>
   </properties>
 
@@ -270,6 +271,7 @@
             <failIfNoTests>false</failIfNoTests>
             <redirectTestOutputToFile>${test.logs}</redirectTestOutputToFile>
             <forkedProcessTimeoutInSeconds>${test.timeout}</forkedProcessTimeoutInSeconds>
+            <forkMode>${fork.mode}</forkMode>
             <environmentVariables>
               <JAVA_HOME>${java.home}</JAVA_HOME>
             </environmentVariables>
