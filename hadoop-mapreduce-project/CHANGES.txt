@@ -1808,6 +1808,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
 
+    MAPREDUCE-3199. Fixed pom files to include correct log4j configuration for
+    tests. (vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
