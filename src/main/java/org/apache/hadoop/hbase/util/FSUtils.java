@@ -156,16 +156,16 @@ public abstract class FSUtils {
    * @return true if dfs is in safemode, false otherwise.
    *
    */
-  private static boolean isInSafeMode(FileSystem fs) throws IOException {
+  private static boolean isInSafeMode(FileSystem fs, Path rootDir)
+      throws IOException {
     // Refactored safe-mode check for HBASE-4510
     if (fs instanceof DistributedFileSystem) {
-      Path rootPath = new Path("/");
-      FsPermission rootPerm = fs.getFileStatus(rootPath).getPermission();
+      FsPermission rootPerm = fs.getFileStatus(rootDir).getPermission();
       try {
         // Should be harmless to set back the path we retrieved.
         // The first check server-side is the safemode, so if
         // other exceptions are spewed out, we're not interested.
-        fs.setPermission(rootPath, rootPerm);
+        fs.setPermission(rootDir, rootPerm);
       } catch (SafeModeException e) {
         return true;
       }
@@ -180,8 +180,9 @@ public abstract class FSUtils {
    */
   public static void checkDfsSafeMode(final Configuration conf) 
   throws IOException {
+    Path rootDir = getRootDir(conf);
     FileSystem fs = FileSystem.get(conf);
-    if (isInSafeMode(fs)) {
+    if (isInSafeMode(fs, rootDir)) {
       throw new IOException("File system is in safemode, it can't be written now");
     }
   }
@@ -451,9 +452,10 @@ public abstract class FSUtils {
   public static void waitOnSafeMode(final Configuration conf,
     final long wait)
   throws IOException {
+    Path rootDir = getRootDir(conf);
     FileSystem fs = FileSystem.get(conf);
     // Make sure dfs is not in safe mode
-    while (isInSafeMode(fs)) {
+    while (isInSafeMode(fs, rootDir)) {
       LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);
