@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -199,7 +200,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    */
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
-    this.conf = conf;
+    this.conf = new Configuration(conf);
+    // Disable the block cache on the master
+    this.conf.setFloat(CacheConfig.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     // Set how many times to retry talking to another server over HConnection.
     HConnectionManager.setServerSideHConnectionRetries(this.conf, LOG);
     // Server to handle client requests.
