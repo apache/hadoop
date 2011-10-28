@@ -91,7 +91,8 @@ public class AllContainersPage extends NMView {
             ._()
             .td()._(container.getContainerState())._()
             .td()
-                .a(url("containerlogs", containerIdStr), "logs")._()
+                .a(url("containerlogs", containerIdStr, container.getUser()),
+                    "logs")._()
           ._();
       }
       tableBody._()._()._();

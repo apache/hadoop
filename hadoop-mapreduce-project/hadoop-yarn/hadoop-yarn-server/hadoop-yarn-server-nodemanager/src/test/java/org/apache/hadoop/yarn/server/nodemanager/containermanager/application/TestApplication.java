@@ -20,6 +20,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -351,6 +352,7 @@ public class TestApplication {
     final EventHandler<LogAggregatorEvent> logAggregationBus;
     final String user;
     final List<Container> containers;
+    final Context context;
 
     final ApplicationId appId;
     final Application app;
@@ -373,11 +375,13 @@ public class TestApplication {
       dispatcher.register(ContainerEventType.class, containerBus);
       dispatcher.register(LogAggregatorEventType.class, logAggregationBus);
 
+      context = mock(Context.class);
+      
       this.user = user;
       this.appId = BuilderUtils.newApplicationId(timestamp, id);
 
       app = new ApplicationImpl(dispatcher, new ApplicationACLsManager(
-          new Configuration()), this.user, appId, null);
+          new Configuration()), this.user, appId, null, context);
       containers = new ArrayList<Container>();
       for (int i = 0; i < numContainers; i++) {
         containers.add(createMockedContainer(this.appId, i));

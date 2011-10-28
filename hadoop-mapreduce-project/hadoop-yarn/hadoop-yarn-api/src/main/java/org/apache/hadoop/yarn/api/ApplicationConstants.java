@@ -42,12 +42,24 @@ public interface ApplicationConstants {
    * only
    */
   public static final String AM_CONTAINER_ID_ENV = "AM_CONTAINER_ID";
-  
+
   /**
-   * The environment variable for NM_HTTP_ADDRESS. Set in AppMaster environment
+   * The environment variable for the NM_HOST. Set in the AppMaster environment
    * only
    */
-  public static final String NM_HTTP_ADDRESS_ENV = "NM_HTTP_ADDRESS";
+  public static final String NM_HOST_ENV = "NM_HOST";
+  
+  /**
+   * The environment variable for the NM_PORT. Set in the AppMaster environment
+   * only
+   */
+  public static final String NM_PORT_ENV = "NM_PORT";
+  
+  /**
+   * The environment variable for the NM_HTTP_PORT. Set in the AppMaster environment
+   * only
+   */
+  public static final String NM_HTTP_PORT_ENV = "NM_HTTP_PORT";
   
   /**
    * The environment variable for APP_SUBMIT_TIME. Set in AppMaster environment

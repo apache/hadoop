@@ -388,6 +388,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2736. Remove unused contrib components dependent on MR1. (eli)
 
+    MAPREDUCE-2989. Modified JobHistory to link to task and AM logs from the
+    JobHistoryServer. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

@@ -16,9 +16,18 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager;
+package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-public enum ContainerManagerEventType {
-  FINISH_APPS,
-  FINISH_CONTAINERS,
+import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+
+public class AggregatedLogsNavBlock extends HtmlBlock implements NMWebParams {
+
+  @Override
+  protected void render(Block html) {
+    html
+      .div("#nav")
+        .h3()._("Logs")._() // 
+      ._()
+      .div("#themeswitcher")._();
+  }
 }

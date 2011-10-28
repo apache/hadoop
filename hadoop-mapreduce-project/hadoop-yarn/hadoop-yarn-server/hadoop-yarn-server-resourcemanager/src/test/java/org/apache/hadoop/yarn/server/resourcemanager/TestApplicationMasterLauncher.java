@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,7 +61,9 @@ public class TestApplicationMasterLauncher {
     boolean cleanedup = false;
     String attemptIdAtContainerManager = null;
     String containerIdAtContainerManager = null;
-    String nmAddressAtContainerManager = null;
+    String nmHostAtContainerManager = null;
+    int nmPortAtContainerManager;
+    int nmHttpPortAtContainerManager;
     long submitTimeAtContainerManager;
 
     @Override
@@ -69,20 +72,22 @@ public class TestApplicationMasterLauncher {
             throws YarnRemoteException {
       LOG.info("Container started by MyContainerManager: " + request);
       launched = true;
+      Map<String, String> env =
+          request.getContainerLaunchContext().getEnvironment();
       containerIdAtContainerManager =
-          request.getContainerLaunchContext().getEnvironment()
-              .get(ApplicationConstants.AM_CONTAINER_ID_ENV);
+          env.get(ApplicationConstants.AM_CONTAINER_ID_ENV);
       ContainerId containerId =
           ConverterUtils.toContainerId(containerIdAtContainerManager);
       attemptIdAtContainerManager =
           containerId.getApplicationAttemptId().toString();
-      nmAddressAtContainerManager =
-          request.getContainerLaunchContext().getEnvironment()
-              .get(ApplicationConstants.NM_HTTP_ADDRESS_ENV);
+      nmHostAtContainerManager = env.get(ApplicationConstants.NM_HOST_ENV);
+      nmPortAtContainerManager =
+          Integer.parseInt(env.get(ApplicationConstants.NM_PORT_ENV));
+      nmHttpPortAtContainerManager =
+          Integer.parseInt(env.get(ApplicationConstants.NM_HTTP_PORT_ENV));
       submitTimeAtContainerManager =
-          Long.parseLong(request.getContainerLaunchContext().getEnvironment()
-              .get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
-      
+          Long.parseLong(env.get(ApplicationConstants.APP_SUBMIT_TIME_ENV));
+
       return null;
     }
 
@@ -168,8 +173,12 @@ public class TestApplicationMasterLauncher {
     Assert.assertEquals(app.getRMAppAttempt(appAttemptId)
         .getSubmissionContext().getAMContainerSpec().getContainerId()
         .toString(), containerManager.containerIdAtContainerManager);
-    Assert.assertEquals(nm1.getHttpAddress(),
-        containerManager.nmAddressAtContainerManager);
+    Assert.assertEquals(nm1.getNodeId().getHost(),
+        containerManager.nmHostAtContainerManager);
+    Assert.assertEquals(nm1.getNodeId().getPort(),
+        containerManager.nmPortAtContainerManager);
+    Assert.assertEquals(nm1.getHttpPort(),
+        containerManager.nmHttpPortAtContainerManager);
 
     MockAM am = new MockAM(rm.getRMContext(), rm
         .getApplicationMasterService(), appAttemptId);

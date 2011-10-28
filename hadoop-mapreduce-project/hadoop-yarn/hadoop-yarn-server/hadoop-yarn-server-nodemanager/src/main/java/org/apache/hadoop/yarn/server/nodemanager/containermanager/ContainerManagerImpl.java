@@ -168,7 +168,7 @@ public class ContainerManagerImpl extends CompositeService implements
 
   protected LogAggregationService createLogAggregationService(Context context,
       DeletionService deletionService) {
-    return new LogAggregationService(context, deletionService);
+    return new LogAggregationService(this.dispatcher, context, deletionService);
   }
 
   public ContainersMonitor getContainersMonitor() {
@@ -289,8 +289,9 @@ public class ContainerManagerImpl extends CompositeService implements
     }
 
     // Create the application
-    Application application = new ApplicationImpl(dispatcher,
-        this.aclsManager, launchContext.getUser(), applicationID, credentials);
+    Application application =
+        new ApplicationImpl(dispatcher, this.aclsManager,
+            launchContext.getUser(), applicationID, credentials, context);
     if (null ==
         context.getApplications().putIfAbsent(applicationID, application)) {
       LOG.info("Creating a new application reference for app "
@@ -319,6 +320,7 @@ public class ContainerManagerImpl extends CompositeService implements
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public StopContainerResponse stopContainer(StopContainerRequest request)
       throws YarnRemoteException {
 
@@ -398,20 +400,20 @@ public class ContainerManagerImpl extends CompositeService implements
 
     @Override
     public void handle(ApplicationEvent event) {
-      Application app = 
-      ContainerManagerImpl.this.context.getApplications().get(
-          event.getApplicationID());
+      Application app =
+          ContainerManagerImpl.this.context.getApplications().get(
+              event.getApplicationID());
       if (app != null) {
         app.handle(event);
       } else {
-        LOG.warn("Event " + event + " sent to absent application " +
-            event.getApplicationID());
+        LOG.warn("Event " + event + " sent to absent application "
+            + event.getApplicationID());
       }
     }
-    
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public void handle(ContainerManagerEvent event) {
     switch (event.getType()) {
     case FINISH_APPS:

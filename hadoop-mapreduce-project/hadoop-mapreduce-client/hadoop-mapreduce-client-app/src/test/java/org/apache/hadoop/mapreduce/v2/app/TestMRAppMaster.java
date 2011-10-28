@@ -44,7 +44,7 @@ public class TestMRAppMaster {
         .toApplicationAttemptId(applicationAttemptIdStr);
     ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
     MRAppMasterTest appMaster =
-        new MRAppMasterTest(applicationAttemptId, containerId, "host", -1,
+        new MRAppMasterTest(applicationAttemptId, containerId, "host", -1, -1,
             System.currentTimeMillis());
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, stagingDir);
@@ -60,8 +60,9 @@ class MRAppMasterTest extends MRAppMaster {
   private Configuration conf;
 
   public MRAppMasterTest(ApplicationAttemptId applicationAttemptId,
-      ContainerId containerId, String host, int port, long submitTime) {
-    super(applicationAttemptId, containerId, host, port, submitTime);
+      ContainerId containerId, String host, int port, int httpPort,
+      long submitTime) {
+    super(applicationAttemptId, containerId, host, port, httpPort, submitTime);
   }
 
   @Override

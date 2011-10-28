@@ -136,7 +136,7 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName, 
       boolean cleanOnStart, int startCount) {
     super(getApplicationAttemptId(applicationId, startCount), getContainerId(
-        applicationId, startCount), "testhost", 3333, System.currentTimeMillis());
+        applicationId, startCount), "testhost", 2222, 3333, System.currentTimeMillis());
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("PathUsed: " + testAbsPath);

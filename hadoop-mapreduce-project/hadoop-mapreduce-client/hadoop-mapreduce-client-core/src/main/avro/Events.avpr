@@ -75,6 +75,7 @@
           {"name": "startTime", "type": "long"},
           {"name": "containerId", "type": "string"},
           {"name": "nodeManagerHost", "type": "string"},
+          {"name": "nodeManagerPort", "type": "int"},
           {"name": "nodeManagerHttpPort", "type": "int"}
       ]
      },

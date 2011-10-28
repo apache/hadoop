@@ -99,7 +99,8 @@ public class WebServer extends AbstractService {
           "application");
       route(pajoin("/container", CONTAINER_ID), NMController.class,
           "container");
-      route(pajoin("/containerlogs", CONTAINER_ID, CONTAINER_LOG_TYPE),
+      route(
+          pajoin("/containerlogs", CONTAINER_ID, APP_OWNER, CONTAINER_LOG_TYPE),
           NMController.class, "logs");
     }
 

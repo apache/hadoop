@@ -83,7 +83,7 @@ import org.junit.Test;
 
     public TestMRApp(ApplicationAttemptId applicationAttemptId) {
       super(applicationAttemptId, BuilderUtils.newContainerId(
-          applicationAttemptId, 1), "testhost", 3333, System
+          applicationAttemptId, 1), "testhost", 2222, 3333, System
           .currentTimeMillis());
     }
      

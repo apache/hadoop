@@ -137,6 +137,9 @@ public class YarnConfiguration extends Configuration {
     YARN_PREFIX + "admin.acl";
   public static final String DEFAULT_YARN_ADMIN_ACL = "*";
   
+  /** ACL used in case none is found. Allows nothing. */
+  public static final String DEFAULT_YARN_APP_ACL = " ";
+
   /** The address of the RM admin interface.*/
   public static final String RM_ADMIN_ADDRESS = 
     RM_PREFIX + "admin.address";
@@ -290,10 +293,25 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_DIRS = NM_PREFIX + "log-dirs";
   public static final String DEFAULT_NM_LOG_DIRS = "/tmp/logs";
   
+  /** Whether to enable log aggregation */
+  public static final String NM_LOG_AGGREGATION_ENABLED = NM_PREFIX
+      + "log-aggregation.enable";
+  
   /** Where to aggregate logs to.*/
   public static final String NM_REMOTE_APP_LOG_DIR = 
     NM_PREFIX + "remote-app-log-dir";
   public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR = "/tmp/logs";
+
+  /**
+   * The remote log dir will be created at
+   * NM_REMOTE_APP_LOG_DIR/${user}/NM_REMOTE_APP_LOG_DIR_SUFFIX/${appId}
+   */
+  public static final String NM_REMOTE_APP_LOG_DIR_SUFFIX = 
+    NM_PREFIX + "remote-app-log-dir-suffix";
+  public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX="logs";
+
+  public static final String YARN_LOG_SERVER_URL =
+    YARN_PREFIX + "log.server.url";
   
   /** Amount of memory in GB that can be allocated for containers.*/
   public static final String NM_PMEM_MB = NM_PREFIX + "resource.memory-mb";

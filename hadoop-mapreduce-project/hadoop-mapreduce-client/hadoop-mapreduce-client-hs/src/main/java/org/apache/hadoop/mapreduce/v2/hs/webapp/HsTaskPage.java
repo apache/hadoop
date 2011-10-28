@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TFOOT;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
@@ -111,6 +112,8 @@ public class HsTaskPage extends HsView {
         String taid = MRApps.toString(ta.getID());
 
         String nodeHttpAddr = ta.getNodeHttpAddress();
+        String containerIdString = ta.getAssignedContainerID().toString();
+        String nodeIdString = ta.getAssignedContainerMgrAddress();
         
         long attemptStartTime = ta.getLaunchTime();
         long shuffleFinishTime = -1;
@@ -134,12 +137,16 @@ public class HsTaskPage extends HsView {
         int sortId = ta.getID().getId() + (ta.getID().getTaskId().getId() * 10000);
         
         TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
-        row.
-            td().
-              br().$title(String.valueOf(sortId))._(). // sorting
-              _(taid)._().
-            td(ta.getState().toString()).
-            td().a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr)._();
+        TD<TR<TBODY<TABLE<Hamlet>>>> td = row.td();
+
+        td.br().$title(String.valueOf(sortId))._()
+            . // sorting
+            _(taid)._().td(ta.getState().toString()).td()
+            .a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
+        td._(" ").a(".logslink",
+            url("logs", nodeIdString, containerIdString, taid, app.getJob()
+                .getUserName()), "logs");
+        td._();
         
         row.td().
           br().$title(String.valueOf(attemptStartTime))._().

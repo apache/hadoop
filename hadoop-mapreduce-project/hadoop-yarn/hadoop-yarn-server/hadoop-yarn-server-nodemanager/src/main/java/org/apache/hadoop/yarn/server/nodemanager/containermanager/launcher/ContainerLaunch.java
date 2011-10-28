@@ -119,11 +119,11 @@ public class ContainerLaunch implements Callable<Integer> {
       // /////////////////////////// Variable expansion
       // Before the container script gets written out.
       List<String> newCmds = new ArrayList<String>(command.size());
-      String appIdStr = app.toString();
+      String appIdStr = app.getAppId().toString();
       Path containerLogDir =
-          this.logDirsSelector.getLocalPathForWrite(appIdStr + Path.SEPARATOR
-              + containerIdStr, LocalDirAllocator.SIZE_UNKNOWN, this.conf, 
-              false);
+          this.logDirsSelector.getLocalPathForWrite(ContainerLaunch
+              .getRelativeContainerLogDir(appIdStr, containerIdStr),
+              LocalDirAllocator.SIZE_UNKNOWN, this.conf, false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
@@ -382,6 +382,11 @@ public class ContainerLaunch implements Callable<Integer> {
       }
     }
     return processId;
+  }
+
+  public static String getRelativeContainerLogDir(String appIdStr,
+      String containerIdStr) {
+    return appIdStr + Path.SEPARATOR + containerIdStr;
   }
 
   private String getContainerPrivateDir(String appIdStr, String containerIdStr) {

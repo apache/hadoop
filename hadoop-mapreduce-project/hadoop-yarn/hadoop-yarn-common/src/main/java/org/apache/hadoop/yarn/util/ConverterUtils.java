@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -127,6 +128,21 @@ public class ConverterUtils {
 
   public static String toString(ContainerId cId) {
     return cId.toString();
+  }
+
+  public static NodeId toNodeId(String nodeIdStr) {
+    String[] parts = nodeIdStr.split(":");
+    if (parts.length != 2) {
+      throw new IllegalArgumentException("Invalid NodeId [" + nodeIdStr
+          + "]. Expected host:port");
+    }
+    try {
+      NodeId nodeId =
+          BuilderUtils.newNodeId(parts[0], Integer.parseInt(parts[1]));
+      return nodeId;
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("Invalid port: " + parts[1], e);
+    }
   }
 
   public static ContainerId toContainerId(String containerIdStr) {

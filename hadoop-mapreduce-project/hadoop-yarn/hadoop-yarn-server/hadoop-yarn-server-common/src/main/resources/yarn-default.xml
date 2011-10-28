@@ -280,10 +280,23 @@
   </property>
 
   <property>
+    <description>Whether to enable log aggregation</description>
+    <name>yarn.nodemanager.log-aggregation.enable</name>
+    <value>false</value>
+  </property>
+  <property>
     <description>Where to aggregate logs to.</description>
     <name>yarn.nodemanager.remote-app-log-dir</name>
     <value>/tmp/logs</value>
   </property>
+  <property>
+    <description>The remote log dir will be created at 
+      {yarn.nodemanager.remote-app-log-dir}/${user}/{thisParam}
+    </description>
+    <name>yarn.nodemanager.remote-app-log-dir-suffix</name>
+    <value>logs</value>
+  </property>
+
 
   <property>
     <description>Amount of physical memory, in MB, that can be allocated 

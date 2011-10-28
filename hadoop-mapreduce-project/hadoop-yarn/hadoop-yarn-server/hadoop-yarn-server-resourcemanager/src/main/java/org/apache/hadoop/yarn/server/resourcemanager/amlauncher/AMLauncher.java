@@ -194,8 +194,13 @@ public class AMLauncher implements Runnable {
     // consumable by the AM.
     environment.put(ApplicationConstants.AM_CONTAINER_ID_ENV, container
         .getContainerId().toString());
-    environment.put(ApplicationConstants.NM_HTTP_ADDRESS_ENV, application
-        .getMasterContainer().getNodeHttpAddress());
+    environment.put(ApplicationConstants.NM_HOST_ENV, application
+        .getMasterContainer().getNodeId().getHost());
+    environment.put(ApplicationConstants.NM_PORT_ENV,
+        String.valueOf(application.getMasterContainer().getNodeId().getPort()));
+    String parts[] =
+        application.getMasterContainer().getNodeHttpAddress().split(":");
+    environment.put(ApplicationConstants.NM_HTTP_PORT_ENV, parts[1]);
     environment.put(
         ApplicationConstants.APP_SUBMIT_TIME_ENV,
         String.valueOf(rmContext.getRMApps()

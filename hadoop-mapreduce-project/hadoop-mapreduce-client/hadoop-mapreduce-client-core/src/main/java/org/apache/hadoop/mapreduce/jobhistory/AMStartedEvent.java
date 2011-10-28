@@ -46,15 +46,19 @@ public class AMStartedEvent implements HistoryEvent {
    *          the containerId of the AM.
    * @param nodeManagerHost
    *          the node on which the AM is running.
+   * @param nodeManagerPort
+   *          the port on which the AM is running.
    * @param nodeManagerHttpPort
    *          the httpPort for the node running the AM.
    */
   public AMStartedEvent(ApplicationAttemptId appAttemptId, long startTime,
-      ContainerId containerId, String nodeManagerHost, int nodeManagerHttpPort) {
+      ContainerId containerId, String nodeManagerHost, int nodeManagerPort,
+      int nodeManagerHttpPort) {
     datum.applicationAttemptId = new Utf8(appAttemptId.toString());
     datum.startTime = startTime;
     datum.containerId = new Utf8(containerId.toString());
     datum.nodeManagerHost = new Utf8(nodeManagerHost);
+    datum.nodeManagerPort = nodeManagerPort;
     datum.nodeManagerHttpPort = nodeManagerHttpPort;
   }
 
@@ -98,6 +102,13 @@ public class AMStartedEvent implements HistoryEvent {
     return datum.nodeManagerHost.toString();
   }
 
+  /**
+   * @return the node manager port.
+   */
+  public int getNodeManagerPort() {
+    return datum.nodeManagerPort;
+  }
+  
   /**
    * @return the http port for the tracker.
    */
