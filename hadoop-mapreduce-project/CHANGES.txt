@@ -60,6 +60,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-3204. mvn site:site fails on MapReduce. (tucu)
 
+    MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
+    by default. (tucu)
+
 Release 0.23.0 - Unreleased
 
   INCOMPATIBLE CHANGES
