@@ -1763,6 +1763,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3282. bin/mapred job -list throws exception. (acmurthy via 
     mahadev)
 
+    MAPREDUCE-3186. User jobs are getting hanged if the Resource manager process goes down 
+    and comes up while job is getting executed. (Eric Payne via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
