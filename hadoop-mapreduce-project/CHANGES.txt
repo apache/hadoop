@@ -1833,6 +1833,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3258. Fixed AM & JobHistory web-ui to display counters properly.
     (Siddharth Seth via acmurthy)
 
+    MAPREDUCE-3290. Fixed a NPE in ClientRMService. (acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
