@@ -1803,6 +1803,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3295. TestAMAuthorization failing on branch 0.23. (vinodkv via mahadev)
 
+    MAPREDUCE-3183. hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml
+    missing license header. (Hitesh Shah via tucu).
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
