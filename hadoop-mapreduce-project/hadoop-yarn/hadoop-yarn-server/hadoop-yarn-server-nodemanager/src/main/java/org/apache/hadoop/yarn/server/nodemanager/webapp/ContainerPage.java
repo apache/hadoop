@@ -89,7 +89,8 @@ public class ContainerPage extends NMView implements NMWebParams {
         ._("User", container.getUser())
         ._("TotalMemoryNeeded",
             container.getLaunchContext().getResource().getMemory())
-        ._("logs", ujoin("containerlogs", $(CONTAINER_ID)), "Link to logs");
+        ._("logs", ujoin("containerlogs", $(CONTAINER_ID), container.getUser()),
+            "Link to logs");
       html._(InfoBlock.class);
     }
   }

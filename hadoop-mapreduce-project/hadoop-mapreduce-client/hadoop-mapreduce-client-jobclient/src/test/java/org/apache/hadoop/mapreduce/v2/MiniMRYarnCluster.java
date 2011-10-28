@@ -119,6 +119,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
           LOG.info("Waiting for HistoryServer to start...");
           Thread.sleep(1500);
         }
+        //TODO Add a timeout. State.STOPPED check ?
         if (historyServer.getServiceState() != STATE.STARTED) {
           throw new IOException("HistoryServer failed to start");
         }

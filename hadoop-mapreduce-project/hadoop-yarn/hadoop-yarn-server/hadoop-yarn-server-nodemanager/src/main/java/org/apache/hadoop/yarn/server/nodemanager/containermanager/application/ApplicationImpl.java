@@ -29,8 +29,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -48,7 +50,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * The state machine for the representation of an Application
@@ -63,6 +64,7 @@ public class ApplicationImpl implements Application {
   final ApplicationACLsManager aclsManager;
   private final ReadLock readLock;
   private final WriteLock writeLock;
+  private final Context context;
 
   private static final Log LOG = LogFactory.getLog(Application.class);
 
@@ -71,12 +73,13 @@ public class ApplicationImpl implements Application {
 
   public ApplicationImpl(Dispatcher dispatcher,
       ApplicationACLsManager aclsManager, String user, ApplicationId appId,
-      Credentials credentials) {
+      Credentials credentials, Context context) {
     this.dispatcher = dispatcher;
     this.user = user.toString();
     this.appId = appId;
     this.credentials = credentials;
     this.aclsManager = aclsManager;
+    this.context = context;
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
     writeLock = lock.writeLock();
@@ -173,7 +176,13 @@ public class ApplicationImpl implements Application {
                ApplicationState.FINISHED,
                ApplicationEventType.APPLICATION_RESOURCES_CLEANEDUP,
                new AppCompletelyDoneTransition())
-
+           
+           // Transitions from FINISHED state
+           .addTransition(ApplicationState.FINISHED,
+               ApplicationState.FINISHED,
+               ApplicationEventType.APPLICATION_LOG_AGGREGATION_FINISHED,
+               new AppLogsAggregatedTransition())
+               
            // create the topology tables
            .installTopology();
 
@@ -239,11 +248,15 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
+      Map<ApplicationAccessType, String> appAcls =
+          app.getContainers().values().iterator().next().getLaunchContext()
+              .getApplicationACLs();
+
       // Inform the logAggregator
       app.dispatcher.getEventHandler().handle(
-            new LogAggregatorAppStartedEvent(app.appId, app.user,
-                app.credentials,
-                ContainerLogsRetentionPolicy.ALL_CONTAINERS)); // TODO: Fix
+          new LogAggregatorAppStartedEvent(app.appId, app.user,
+              app.credentials, ContainerLogsRetentionPolicy.ALL_CONTAINERS,
+              appAcls)); 
 
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
@@ -339,13 +352,20 @@ public class ApplicationImpl implements Application {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
 
-      app.aclsManager.removeApplication(app.getAppId());
-
       // Inform the logService
       app.dispatcher.getEventHandler().handle(
           new LogAggregatorAppFinishedEvent(app.appId));
 
-      // TODO: Also make logService write the acls to the aggregated file.
+    }
+  }
+
+  static class AppLogsAggregatedTransition implements
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
+    @Override
+    public void transition(ApplicationImpl app, ApplicationEvent event) {
+      ApplicationId appId = event.getApplicationID();
+      app.context.getApplications().remove(appId);
+      app.aclsManager.removeApplication(appId);
     }
   }
 
@@ -377,6 +397,6 @@ public class ApplicationImpl implements Application {
 
   @Override
   public String toString() {
-    return ConverterUtils.toString(appId);
+    return appId.toString();
   }
 }

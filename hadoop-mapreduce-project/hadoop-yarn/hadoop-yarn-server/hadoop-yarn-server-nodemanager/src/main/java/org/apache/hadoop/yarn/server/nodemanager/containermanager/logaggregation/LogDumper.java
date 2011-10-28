@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -110,7 +111,12 @@ public class LogDumper extends Configured implements Tool {
       AggregatedLogFormat.LogReader reader =
           new AggregatedLogFormat.LogReader(getConf(),
               LogAggregationService.getRemoteNodeLogFileForApp(
-                  remoteRootLogDir, appId, nodeAddress));
+                  remoteRootLogDir,
+                  appId,
+                  UserGroupInformation.getCurrentUser().getShortUserName(),
+                  ConverterUtils.toNodeId(nodeAddress),
+                  getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+                      YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)));
       return dumpAContainerLogs(containerIdStr, reader, out);
     }
 
@@ -152,16 +158,21 @@ public class LogDumper extends Configured implements Tool {
     Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    String logDirSuffix =
+        getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
+    //TODO Change this to get a list of files from the LAS.
     Path remoteAppLogDir =
-        LogAggregationService.getRemoteAppLogDir(remoteRootLogDir, appId);
+        LogAggregationService.getRemoteAppLogDir(remoteRootLogDir, appId, user,
+            logDirSuffix);
     RemoteIterator<FileStatus> nodeFiles =
         FileContext.getFileContext().listStatus(remoteAppLogDir);
     while (nodeFiles.hasNext()) {
       FileStatus thisNodeFile = nodeFiles.next();
       AggregatedLogFormat.LogReader reader =
           new AggregatedLogFormat.LogReader(getConf(),
-              LogAggregationService.getRemoteNodeLogFileForApp(
-                  remoteRootLogDir, appId, thisNodeFile.getPath().getName()));
+              new Path(remoteAppLogDir, thisNodeFile.getPath().getName()));
       try {
 
         DataInputStream valueStream;

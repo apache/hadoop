@@ -42,11 +42,6 @@ public class JobHistoryServer extends CompositeService {
   private HistoryClientService clientService;
   private JobHistory jobHistoryService;
 
-  static{
-    Configuration.addDefaultResource("mapred-default.xml");
-    Configuration.addDefaultResource("mapred-site.xml");
-  }
-
   public JobHistoryServer() {
     super(JobHistoryServer.class.getName());
   }

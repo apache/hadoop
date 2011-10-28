@@ -325,9 +325,9 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
   
   * When the ApplicationMaster starts up, several parameters are made available
     to it via the environment. These include the ContainerId for the
-    ApplicationMaster container, the application submission time and the HTTP
-    address of the NodeManager running the container. Ref ApplicationConstants
-    for parameter names.
+    ApplicationMaster container, the application submission time and details
+    about the NodeManager host running the Application Master.
+    Ref ApplicationConstants for parameter names.
 
   * All interactions with the ResourceManager require an ApplicationAttemptId 
     (there can be multiple attempts per application in case of failures). The 

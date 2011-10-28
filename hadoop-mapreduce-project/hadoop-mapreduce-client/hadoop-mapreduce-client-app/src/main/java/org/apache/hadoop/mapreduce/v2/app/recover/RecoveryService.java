@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /*
  * Recovers the completed tasks from the previous life of Application Master.
@@ -393,9 +394,8 @@ public class RecoveryService extends CompositeService implements Recovery {
         TaskAttemptInfo attemptInfo) {
       LOG.info("Sending assigned event to " + yarnAttemptID);
       ContainerId cId = attemptInfo.getContainerId();
-      String[] splits = attemptInfo.getHostname().split(":");
-      NodeId nodeId = BuilderUtils.newNodeId(splits[0], Integer
-          .parseInt(splits[1]));
+
+      NodeId nodeId = ConverterUtils.toNodeId(attemptInfo.getHostname());
       // Resource/Priority/ApplicationACLs are only needed while launching the
       // container on an NM, these are already completed tasks, so setting them
       // to null

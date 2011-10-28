@@ -54,8 +54,8 @@ public class MockNM {
     return nodeId;
   }
 
-  public String getHttpAddress() {
-    return nodeId.getHost() + ":" + String.valueOf(httpPort);
+  public int getHttpPort() {
+    return httpPort;
   }
 
   public void containerStatus(Container container) throws Exception {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AppController;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.View;
 
 import com.google.inject.Inject;
@@ -31,6 +32,7 @@ import com.google.inject.Inject;
  * This class renders the various pages that the History Server WebApp supports
  */
 public class HsController extends AppController {
+  
   
   @Inject HsController(App app, Configuration conf, RequestContext ctx) {
     super(app, conf, ctx, "History");
@@ -167,6 +169,20 @@ public class HsController extends AppController {
    */
   public void about() {
     render(aboutPage());
+  }
+  
+  /**
+   * Render the logs page.
+   */
+  public void logs() {
+    render(HsLogsPage.class);
+  }
+
+  /**
+   * Render the nm logs page.
+   */
+  public void nmlogs() {
+    render(AggregatedLogsPage.class);
   }
   
   /*

@@ -222,6 +222,7 @@ public class TestRecovery {
       Assert.assertEquals(amInfo.getAppAttemptId(), amInfo.getContainerId()
           .getApplicationAttemptId());
       Assert.assertEquals("testhost", amInfo.getNodeManagerHost());
+      Assert.assertEquals(2222, amInfo.getNodeManagerPort());
       Assert.assertEquals(3333, amInfo.getNodeManagerHttpPort());
     }
     long am1StartTimeReal = job.getAMInfos().get(0).getStartTime();

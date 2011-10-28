@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.List;
@@ -85,7 +84,6 @@ import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanerImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -142,6 +140,7 @@ public class MRAppMaster extends CompositeService {
   private final ApplicationAttemptId appAttemptID;
   private final ContainerId containerID;
   private final String nmHost;
+  private final int nmPort;
   private final int nmHttpPort;
   protected final MRAppMetrics metrics;
   private Set<TaskId> completedTasksFromPreviousRun;
@@ -168,14 +167,15 @@ public class MRAppMaster extends CompositeService {
   private UserGroupInformation currentUser; // Will be setup during init
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
-      ContainerId containerId, String nmHost, int nmHttpPort, long appSubmitTime) {
-    this(applicationAttemptId, containerId, nmHost, nmHttpPort,
+      ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
+      long appSubmitTime) {
+    this(applicationAttemptId, containerId, nmHost, nmPort, nmHttpPort,
         new SystemClock(), appSubmitTime);
   }
 
   public MRAppMaster(ApplicationAttemptId applicationAttemptId,
-      ContainerId containerId, String nmHost, int nmHttpPort, Clock clock,
-      long appSubmitTime) {
+      ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
+      Clock clock, long appSubmitTime) {
     super(MRAppMaster.class.getName());
     this.clock = clock;
     this.startTime = clock.getTime();
@@ -183,6 +183,7 @@ public class MRAppMaster extends CompositeService {
     this.appAttemptID = applicationAttemptId;
     this.containerID = containerId;
     this.nmHost = nmHost;
+    this.nmPort = nmPort;
     this.nmHttpPort = nmHttpPort;
     this.metrics = MRAppMetrics.create();
     LOG.info("Created MRAppMaster for application " + applicationAttemptId);
@@ -757,7 +758,8 @@ public class MRAppMaster extends CompositeService {
       amInfos = new LinkedList<AMInfo>();
     }
     AMInfo amInfo =
-        new AMInfo(appAttemptID, startTime, containerID, nmHost, nmHttpPort);
+        new AMInfo(appAttemptID, startTime, containerID, nmHost, nmPort,
+            nmHttpPort);
     amInfos.add(amInfo);
 
     // /////////////////// Create the job itself.
@@ -770,7 +772,8 @@ public class MRAppMaster extends CompositeService {
       dispatcher.getEventHandler().handle(
           new JobHistoryEvent(job.getID(), new AMStartedEvent(info
               .getAppAttemptId(), info.getStartTime(), info.getContainerId(),
-              info.getNodeManagerHost(), info.getNodeManagerHttpPort())));
+              info.getNodeManagerHost(), info.getNodeManagerPort(), info
+                  .getNodeManagerHttpPort())));
     }
 
     // metrics system init is really init & start.
@@ -872,41 +875,44 @@ public class MRAppMaster extends CompositeService {
     }
   }
 
+  private static void validateInputParam(String value, String param)
+      throws IOException {
+    if (value == null) {
+      String msg = param + " is null";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+  }
+
   public static void main(String[] args) {
     try {
       String containerIdStr =
           System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
-      String nodeHttpAddressStr =
-          System.getenv(ApplicationConstants.NM_HTTP_ADDRESS_ENV);
+      String nodeHostString = System.getenv(ApplicationConstants.NM_HOST_ENV);
+      String nodePortString = System.getenv(ApplicationConstants.NM_PORT_ENV);
+      String nodeHttpPortString =
+          System.getenv(ApplicationConstants.NM_HTTP_PORT_ENV);
       String appSubmitTimeStr =
           System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
-      if (containerIdStr == null) {
-        String msg = ApplicationConstants.AM_CONTAINER_ID_ENV + " is null";
-        LOG.error(msg);
-        throw new IOException(msg);
-      }
-      if (nodeHttpAddressStr == null) {
-        String msg = ApplicationConstants.NM_HTTP_ADDRESS_ENV + " is null";
-        LOG.error(msg);
-        throw new IOException(msg);
-      }
-      if (appSubmitTimeStr == null) {
-        String msg = ApplicationConstants.APP_SUBMIT_TIME_ENV + " is null";
-        LOG.error(msg);
-        throw new IOException(msg);
-      }
+      
+      validateInputParam(containerIdStr,
+          ApplicationConstants.AM_CONTAINER_ID_ENV);
+      validateInputParam(nodeHostString, ApplicationConstants.NM_HOST_ENV);
+      validateInputParam(nodePortString, ApplicationConstants.NM_PORT_ENV);
+      validateInputParam(nodeHttpPortString,
+          ApplicationConstants.NM_HTTP_PORT_ENV);
+      validateInputParam(appSubmitTimeStr,
+          ApplicationConstants.APP_SUBMIT_TIME_ENV);
 
       ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
       ApplicationAttemptId applicationAttemptId =
           containerId.getApplicationAttemptId();
-      InetSocketAddress nodeHttpInetAddr =
-        NetUtils.createSocketAddr(nodeHttpAddressStr);
       long appSubmitTime = Long.parseLong(appSubmitTimeStr);
       
       MRAppMaster appMaster =
-          new MRAppMaster(applicationAttemptId, containerId,
-              nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(),
-              appSubmitTime);
+          new MRAppMaster(applicationAttemptId, containerId, nodeHostString,
+              Integer.parseInt(nodePortString),
+              Integer.parseInt(nodeHttpPortString), appSubmitTime);
       Runtime.getRuntime().addShutdownHook(
           new CompositeServiceShutdownHook(appMaster));
       YarnConfiguration conf = new YarnConfiguration(new JobConf());

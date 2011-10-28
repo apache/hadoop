@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -58,6 +59,7 @@ import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MockJobs extends MockApps {
@@ -492,8 +494,21 @@ public class MockJobs extends MockApps {
 
       @Override
       public List<AMInfo> getAMInfos() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        List<AMInfo> amInfoList = new LinkedList<AMInfo>();
+        amInfoList.add(createAMInfo(1));
+        amInfoList.add(createAMInfo(2));
+        return amInfoList;
       }
     };
+  }
+  
+  private static AMInfo createAMInfo(int attempt) {
+    ApplicationAttemptId appAttemptId =
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(100, 1), attempt);
+    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
+    return new AMInfo(appAttemptId, System.currentTimeMillis(), containerId,
+        "testhost", 2222, 3333);
+
   }
 }

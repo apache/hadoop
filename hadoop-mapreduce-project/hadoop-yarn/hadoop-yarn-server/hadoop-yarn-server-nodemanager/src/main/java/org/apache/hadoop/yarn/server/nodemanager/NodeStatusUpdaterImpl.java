@@ -266,6 +266,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   new CMgrCompletedAppsEvent(appsToCleanup));
             }
           } catch (Throwable e) {
+            // TODO Better error handling. Thread can die with the rest of the
+            // NM still running.
             LOG.error("Caught exception in status-updater", e);
             break;
           }

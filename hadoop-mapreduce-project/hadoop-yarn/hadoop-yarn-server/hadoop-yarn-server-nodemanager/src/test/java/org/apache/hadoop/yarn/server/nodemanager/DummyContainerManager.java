@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -56,8 +57,6 @@ public class DummyContainerManager extends ContainerManagerImpl {
 
   private static final Log LOG = LogFactory
       .getLog(DummyContainerManager.class);
-
-  private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   public DummyContainerManager(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
@@ -150,7 +149,8 @@ public class DummyContainerManager extends ContainerManagerImpl {
   @Override
   protected LogAggregationService createLogAggregationService(Context context, 
       DeletionService deletionService) {
-    return new LogAggregationService(context, deletionService) {
+    return new LogAggregationService(new AsyncDispatcher(), context,
+        deletionService) {
       @Override
       public void handle(LogAggregatorEvent event) {
         switch (event.getType()) {

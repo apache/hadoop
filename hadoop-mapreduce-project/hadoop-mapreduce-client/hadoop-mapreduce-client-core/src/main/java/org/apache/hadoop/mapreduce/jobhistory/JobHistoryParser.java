@@ -320,6 +320,7 @@ public class JobHistoryParser {
     amInfo.startTime = event.getStartTime();
     amInfo.containerId = event.getContainerId();
     amInfo.nodeManagerHost = event.getNodeManagerHost();
+    amInfo.nodeManagerPort = event.getNodeManagerPort();
     amInfo.nodeManagerHttpPort = event.getNodeManagerHttpPort();
     if (info.amInfos == null) {
       info.amInfos = new LinkedList<AMInfo>();
@@ -613,6 +614,7 @@ public class JobHistoryParser {
     long startTime;
     ContainerId containerId;
     String nodeManagerHost;
+    int nodeManagerPort;
     int nodeManagerHttpPort;
 
     /**
@@ -626,11 +628,13 @@ public class JobHistoryParser {
     }
 
     public AMInfo(ApplicationAttemptId appAttemptId, long startTime,
-        ContainerId containerId, String nodeManagerHost, int nodeManagerHttpPort) {
+        ContainerId containerId, String nodeManagerHost, int nodeManagerPort,
+        int nodeManagerHttpPort) {
       this.appAttemptId = appAttemptId;
       this.startTime = startTime;
       this.containerId = containerId;
       this.nodeManagerHost = nodeManagerHost;
+      this.nodeManagerPort = nodeManagerPort;
       this.nodeManagerHttpPort = nodeManagerHttpPort;
     }
 
@@ -642,6 +646,7 @@ public class JobHistoryParser {
       System.out.println("START_TIME: " + startTime);
       System.out.println("CONTAINER_ID: " + containerId.toString());
       System.out.println("NODE_MANAGER_HOST: " + nodeManagerHost);
+      System.out.println("NODE_MANAGER_PORT: " + nodeManagerPort);
       System.out.println("NODE_MANAGER_HTTP_PORT: " + nodeManagerHttpPort);
     }
 
@@ -663,6 +668,11 @@ public class JobHistoryParser {
     /** @return the host name for the node manager on which the AM is running */
     public String getNodeManagerHost() {
       return nodeManagerHost;
+    }
+
+    /** @return the port for the node manager running the AM */
+    public int getNodeManagerPort() {
+      return nodeManagerPort;
     }
 
     /** @return the http port for the node manager running the AM */
