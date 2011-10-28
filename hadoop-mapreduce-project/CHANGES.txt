@@ -1795,6 +1795,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3306. Fixed a bug in NodeManager ApplicationImpl that was causing
     NodeManager to crash. (vinodkv)
 
+    MAPREDUCE-3295. TestAMAuthorization failing on branch 0.23. (vinodkv via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
