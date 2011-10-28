@@ -220,6 +220,10 @@ public class MockRM extends ResourceManager {
       }
     };
   }
+  
+  public NodesListManager getNodesListManager() {
+    return this.nodesListManager;
+  }
 
   @Override
   protected void startWepApp() {

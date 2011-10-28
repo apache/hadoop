@@ -32,11 +32,12 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.HeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.HeartbeatResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 
-
-    
-public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> implements HeartbeatResponse {
+public class HeartbeatResponsePBImpl extends
+    ProtoBase<HeartbeatResponseProto> implements HeartbeatResponse {
   HeartbeatResponseProto proto = HeartbeatResponseProto.getDefaultInstance();
   HeartbeatResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -100,16 +101,24 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
     builder.setResponseId((responseId));
   }
   @Override
-  public boolean getReboot() {
+  public NodeAction getNodeAction() {
     HeartbeatResponseProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getReboot());
+    if(!p.hasNodeAction()) {
+      return null;
+    }
+    return (convertFromProtoFormat(p.getNodeAction()));
   }
 
   @Override
-  public void setReboot(boolean reboot) {
+  public void setNodeAction(NodeAction nodeAction) {
     maybeInitBuilder();
-    builder.setReboot((reboot));
+    if (nodeAction == null) {
+      builder.clearNodeAction();
+      return;
+    }
+    builder.setNodeAction(convertToProtoFormat(nodeAction));
   }
+
   @Override
   public List<ContainerId> getContainersToCleanupList() {
     initContainersToCleanup();
@@ -296,7 +305,12 @@ public class HeartbeatResponsePBImpl extends ProtoBase<HeartbeatResponseProto> i
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl)t).getProto();
   }
-
-
-
+  
+  private NodeAction convertFromProtoFormat(NodeActionProto p) {
+    return  NodeAction.valueOf(p.name());
+  }
+  
+  private NodeActionProto convertToProtoFormat(NodeAction t) {
+    return NodeActionProto.valueOf(t.name());
+  }
 }  

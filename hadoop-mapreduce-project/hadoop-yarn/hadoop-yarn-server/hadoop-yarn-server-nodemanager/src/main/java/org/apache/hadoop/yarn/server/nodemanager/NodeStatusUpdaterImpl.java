@@ -30,8 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -45,11 +45,11 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.server.RMNMSecurityInfoClass;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -160,6 +160,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     request.setNodeId(this.nodeId);
     RegistrationResponse regResponse =
         this.resourceTracker.registerNodeManager(request).getRegistrationResponse();
+    // if the Resourcemanager instructs NM to shutdown.
+    if (NodeAction.SHUTDOWN.equals(regResponse.getNodeAction())) {
+      throw new YarnException(
+          "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed");
+    }
+    
     if (UserGroupInformation.isSecurityEnabled()) {
       this.secretKeyBytes = regResponse.getSecretKey().array();
     }
@@ -248,10 +254,25 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             NodeStatus nodeStatus = getNodeStatus();
             nodeStatus.setResponseId(lastHeartBeatID);
             
-            NodeHeartbeatRequest request = recordFactory.newRecordInstance(NodeHeartbeatRequest.class);
+            NodeHeartbeatRequest request = recordFactory
+                .newRecordInstance(NodeHeartbeatRequest.class);
             request.setNodeStatus(nodeStatus);            
             HeartbeatResponse response =
               resourceTracker.nodeHeartbeat(request).getHeartbeatResponse();
+            if (response.getNodeAction() == NodeAction.SHUTDOWN) {
+              LOG
+                  .info("Recieved SHUTDOWN signal from Resourcemanager as part of heartbeat," +
+                  		" hence shutting down.");
+              NodeStatusUpdaterImpl.this.stop();
+              break;
+            }
+            if (response.getNodeAction() == NodeAction.REBOOT) {
+              LOG.info("Node is out of sync with ResourceManager,"
+                  + " hence shutting down.");
+              NodeStatusUpdaterImpl.this.stop();
+              break;
+            }
+
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
                 .getContainersToCleanupList();
@@ -269,7 +290,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             // TODO Better error handling. Thread can die with the rest of the
             // NM still running.
             LOG.error("Caught exception in status-updater", e);
-            break;
           }
         }
       }

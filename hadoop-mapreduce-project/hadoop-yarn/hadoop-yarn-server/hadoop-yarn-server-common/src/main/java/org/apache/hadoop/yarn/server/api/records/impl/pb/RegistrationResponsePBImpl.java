@@ -21,17 +21,15 @@ package org.apache.hadoop.yarn.server.api.records.impl.pb;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
-import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeActionProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.RegistrationResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.RegistrationResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 
-
-    
-public class RegistrationResponsePBImpl extends ProtoBase<RegistrationResponseProto> implements RegistrationResponse {
+public class RegistrationResponsePBImpl extends
+    ProtoBase<RegistrationResponseProto> implements RegistrationResponse {
   RegistrationResponseProto proto = RegistrationResponseProto.getDefaultInstance();
   RegistrationResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -96,6 +94,33 @@ public class RegistrationResponsePBImpl extends ProtoBase<RegistrationResponsePr
     if (secretKey == null) 
       builder.clearSecretKey();
     this.secretKey = secretKey;
+  }
+
+  @Override
+  public NodeAction getNodeAction() {
+    RegistrationResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if(!p.hasNodeAction()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getNodeAction());
+  }
+
+  @Override
+  public void setNodeAction(NodeAction nodeAction) {
+    maybeInitBuilder();
+    if (nodeAction == null) {
+      builder.clearNodeAction();
+      return;
+    }
+    builder.setNodeAction(convertToProtoFormat(nodeAction));
+  }
+  
+  private NodeAction convertFromProtoFormat(NodeActionProto p) {
+    return  NodeAction.valueOf(p.name());
+  }
+  
+  private NodeActionProto convertToProtoFormat(NodeAction t) {
+    return NodeActionProto.valueOf(t.name());
   }
 
 }  
