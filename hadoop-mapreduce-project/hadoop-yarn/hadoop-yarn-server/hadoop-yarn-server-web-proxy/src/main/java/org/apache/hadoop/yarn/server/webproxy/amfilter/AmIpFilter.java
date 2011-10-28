@@ -59,8 +59,8 @@ public class AmIpFilter implements Filter {
   
   private Set<String> getProxyAddresses() throws ServletException {
     long now = System.currentTimeMillis();
-    if(proxyAddresses == null || (lastUpdate + updateInterval) >= now) {
-      synchronized(this) {
+    synchronized(this) {
+      if(proxyAddresses == null || (lastUpdate + updateInterval) >= now) {
         try {
           proxyAddresses = new HashSet<String>();
           for(InetAddress add : InetAddress.getAllByName(proxyHost)) {
@@ -71,8 +71,8 @@ public class AmIpFilter implements Filter {
           throw new ServletException("Could not locate "+proxyHost, e);
         }
       }
+      return proxyAddresses;
     }
-    return proxyAddresses;
   }
 
   @Override

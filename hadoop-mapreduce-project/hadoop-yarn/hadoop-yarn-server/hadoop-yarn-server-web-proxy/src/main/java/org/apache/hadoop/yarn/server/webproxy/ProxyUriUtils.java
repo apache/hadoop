@@ -92,7 +92,7 @@ public class ProxyUriUtils {
     newp.append(getPath(id, path));
     boolean first = appendQuery(newp, query, true);
     if(approved) {
-      first = appendQuery(newp, PROXY_APPROVAL_PARAM+"=true", first);
+      appendQuery(newp, PROXY_APPROVAL_PARAM+"=true", first);
     }
     return newp.toString();
   }
