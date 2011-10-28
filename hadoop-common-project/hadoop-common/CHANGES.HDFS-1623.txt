@@ -5,3 +5,4 @@ branch is merged.
 ------------------------------
 
 HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
+HADOOP-7774. HA: Administrative CLI to control HA daemons. (todd)
