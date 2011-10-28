@@ -1838,6 +1838,10 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3185. RM Web UI does not sort the columns in some cases.
     (Jonathan Eagles via mahadev)
 
+   MAPREDUCE-3292. In secure mode job submission fails with Provider 
+   org.apache.hadoop.mapreduce.security.token.JobTokenIndentifier$Renewer 
+   not found. (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
