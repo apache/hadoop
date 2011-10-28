@@ -179,6 +179,14 @@ public class TestThriftServer {
     size = handler.getRow(tableAname, rowBname).size();
     assertEquals(0, size);
 
+    // Try null mutation
+    List<Mutation> mutations = new ArrayList<Mutation>();
+    mutations.add(new Mutation(false, columnAname, null));
+    handler.mutateRow(tableAname, rowAname, mutations);
+    TRowResult rowResult3 = handler.getRow(tableAname, rowAname).get(0);
+    assertEquals(rowAname, rowResult3.row);
+    assertEquals(0, rowResult3.columns.get(columnAname).value.array().length);
+
     // Teardown
     handler.disableTable(tableAname);
     handler.deleteTable(tableAname);

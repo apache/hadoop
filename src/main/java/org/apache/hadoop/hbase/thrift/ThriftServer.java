@@ -595,9 +595,13 @@ public class ThriftServer {
             }
           } else {
             if(famAndQf.length == 1) {
-              put.add(famAndQf[0], new byte[0], getBytes(m.value));
+              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
+                  m.value != null ? m.value.array()
+                      : HConstants.EMPTY_BYTE_ARRAY);
             } else {
-              put.add(famAndQf[0], famAndQf[1], getBytes(m.value));
+              put.add(famAndQf[0], famAndQf[1],
+                  m.value != null ? m.value.array()
+                      : HConstants.EMPTY_BYTE_ARRAY);
             }
           }
         }
@@ -640,9 +644,13 @@ public class ThriftServer {
             }
           } else {
             if(famAndQf.length == 1) {
-              put.add(famAndQf[0], new byte[0], getBytes(m.value));
+              put.add(famAndQf[0], HConstants.EMPTY_BYTE_ARRAY,
+                  m.value != null ? m.value.array()
+                      : HConstants.EMPTY_BYTE_ARRAY);
             } else {
-              put.add(famAndQf[0], famAndQf[1], getBytes(m.value));
+              put.add(famAndQf[0], famAndQf[1],
+                  m.value != null ? m.value.array()
+                      : HConstants.EMPTY_BYTE_ARRAY);
             }
           }
         }
