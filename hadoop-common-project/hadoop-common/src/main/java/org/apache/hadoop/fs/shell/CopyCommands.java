@@ -27,10 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathOperationException;
@@ -131,12 +129,10 @@ class CopyCommands {
     private static final String COPYTOLOCAL_PREFIX = "_copyToLocal_";
     private boolean copyCrc;
     private boolean verifyChecksum;
-    private LocalFileSystem localFs;
 
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
-      localFs = FileSystem.getLocal(getConf());
       CommandFormat cf = new CommandFormat(
           1, Integer.MAX_VALUE, "crc", "ignoreCrc");
       cf.parse(args);
@@ -157,16 +153,15 @@ class CopyCommands {
         copyCrc = false;
       }      
 
-      File targetFile = localFs.pathToFile(target.path);
       if (src.stat.isFile()) {
         // copy the file and maybe its crc
-        copyFileToLocal(src, target.path);
+        copyFileToLocal(src, target);
         if (copyCrc) {
-          copyCrcToLocal(src, target.path);
+          copyFileToLocal(src.getChecksumFile(), target.getChecksumFile());
         }
       } else if (src.stat.isDirectory()) {
         // create the remote directory structure locally
-        if (!targetFile.mkdirs()) {
+        if (!target.toFile().mkdirs()) {
           throw new PathIOException(target.toString());
         }
       } else {
@@ -174,9 +169,9 @@ class CopyCommands {
       }
     }
 
-    private void copyFileToLocal(PathData src, Path target)
+    private void copyFileToLocal(PathData src, PathData target)
     throws IOException {
-      File targetFile = localFs.pathToFile(target);
+      File targetFile = target.toFile();
       File tmpFile = FileUtil.createLocalTempFile(
           targetFile, COPYTOLOCAL_PREFIX, true);
       // too bad we can't tell exactly why it failed...
@@ -194,14 +189,6 @@ class CopyCommands {
         e.setTargetPath(targetFile.toString());
         throw e;
       }
-    }
-
-    private void copyCrcToLocal(PathData src, Path target)
-    throws IOException {
-      ChecksumFileSystem srcFs = (ChecksumFileSystem)src.fs;
-      Path srcPath = srcFs.getChecksumFile(src.path);
-      src = new PathData(srcFs.getRawFileSystem(), srcPath);
-      copyFileToLocal(src, localFs.getChecksumFile(target));    
     }
   }
 

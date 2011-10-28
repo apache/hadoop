@@ -81,6 +81,6 @@ public class Count extends FsCommand {
   @Override
   protected void processPath(PathData src) throws IOException {
     ContentSummary summary = src.fs.getContentSummary(src.path);
-    out.println(summary.toString(showQuotas) + src.path);
+    out.println(summary.toString(showQuotas) + src);
   }
 }

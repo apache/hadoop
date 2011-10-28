@@ -21,27 +21,34 @@ package org.apache.hadoop.fs.shell;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
+import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
  * The stat field will be null if the path does not exist.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 
 public class PathData {
-  protected String string = null;
+  protected final URI uri;
+  public final FileSystem fs;
   public final Path path;
   public FileStatus stat;
-  public final FileSystem fs;
   public boolean exists;
 
   /**
@@ -53,10 +60,7 @@ public class PathData {
    * @throws IOException if anything goes wrong...
    */
   public PathData(String pathString, Configuration conf) throws IOException {
-    this.string = pathString;
-    this.path = new Path(pathString);
-    this.fs = path.getFileSystem(conf);
-    setStat(getStat(fs, path));
+    this(FileSystem.get(URI.create(pathString), conf), pathString);
   }
   
   /**
@@ -68,87 +72,116 @@ public class PathData {
    * @throws IOException if anything goes wrong...
    */
   public PathData(File localPath, Configuration conf) throws IOException {
-    this.string = localPath.toString();
-    this.path = new Path(this.string);
-    this.fs = FileSystem.getLocal(conf);
-    setStat(getStat(fs, path));
+    this(FileSystem.getLocal(conf), localPath.toString());
   }
 
   /**
-   * Creates an object to wrap the given parameters as fields. 
-   * @param fs the FileSystem
-   * @param path a Path
-   * @param stat the FileStatus (may be null if the path doesn't exist)
-   */
-  public PathData(FileSystem fs, Path path, FileStatus stat) {
-    this.string = path.toString();
-    this.path = path;
-    this.fs = fs;
-    setStat(stat);
-  }
-
-  /**
-   * Convenience ctor that looks up the file status for a path.  If the path
+   * Looks up the file status for a path.  If the path
    * doesn't exist, then the status will be null
    * @param fs the FileSystem for the path
-   * @param path the pathname to lookup 
+   * @param pathString a string for a path 
    * @throws IOException if anything goes wrong
    */
-  public PathData(FileSystem fs, Path path) throws IOException {
-    this(fs, path, getStat(fs, path));
+  private PathData(FileSystem fs, String pathString) throws IOException {
+    this(fs, pathString, lookupStat(fs, pathString, true));
   }
 
   /**
    * Creates an object to wrap the given parameters as fields.  The string
    * used to create the path will be recorded since the Path object does not
-   * return exactly the same string used to initialize it.  If the FileStatus
-   * is not null, then its Path will be used to initialized the path, else
-   * the string of the path will be used.
+   * return exactly the same string used to initialize it.
    * @param fs the FileSystem
    * @param pathString a String of the path
    * @param stat the FileStatus (may be null if the path doesn't exist)
    */
-  public PathData(FileSystem fs, String pathString, FileStatus stat) {
-    this.string = pathString;
-    this.path = (stat != null) ? stat.getPath() : new Path(pathString);
+  private PathData(FileSystem fs, String pathString, FileStatus stat)
+  throws IOException {
     this.fs = fs;
+    this.uri = stringToUri(pathString);
+    this.path = fs.makeQualified(new Path(uri));
     setStat(stat);
   }
 
   // need a static method for the ctor above
-  private static FileStatus getStat(FileSystem fs, Path path)
-  throws IOException {  
+  /**
+   * Get the FileStatus info
+   * @param ignoreFNF if true, stat will be null if the path doesn't exist
+   * @return FileStatus for the given path
+   * @throws IOException if anything goes wrong
+   */
+  private static
+  FileStatus lookupStat(FileSystem fs, String pathString, boolean ignoreFNF)
+  throws IOException {
     FileStatus status = null;
     try {
-      status = fs.getFileStatus(path);
-    } catch (FileNotFoundException e) {} // ignore FNF
+      status = fs.getFileStatus(new Path(pathString));
+    } catch (FileNotFoundException e) {
+      if (!ignoreFNF) throw new PathNotFoundException(pathString);
+    }
+    // TODO: should consider wrapping other exceptions into Path*Exceptions
     return status;
   }
   
-  private void setStat(FileStatus theStat) {
-    stat = theStat;
+  private void setStat(FileStatus stat) {
+    this.stat = stat;
     exists = (stat != null);
   }
 
-  /**
-   * Convenience ctor that extracts the path from the given file status
-   * @param fs the FileSystem for the FileStatus
-   * @param stat the FileStatus 
-   */
-  public PathData(FileSystem fs, FileStatus stat) {
-    this(fs, stat.getPath(), stat);
-  }
-  
   /**
    * Updates the paths's file status
    * @return the updated FileStatus
    * @throws IOException if anything goes wrong...
    */
   public FileStatus refreshStatus() throws IOException {
-    setStat(fs.getFileStatus(path));
-    return stat;
+    FileStatus status = null;
+    try {
+      status = lookupStat(fs, toString(), false);
+    } finally {
+      // always set the status.  the caller must get the correct result
+      // if it catches the exception and later interrogates the status
+      setStat(status);
+    }
+    return status;
+  }
+
+  protected enum FileTypeRequirement {
+    SHOULD_NOT_BE_DIRECTORY, SHOULD_BE_DIRECTORY
+  };
+
+  /**
+   * Ensure that the file exists and if it is or is not a directory
+   * @param typeRequirement Set it to the desired requirement.
+   * @throws PathIOException if file doesn't exist or the type does not match
+   * what was specified in typeRequirement.
+   */
+  private void checkIfExists(FileTypeRequirement typeRequirement) 
+  throws PathIOException {
+    if (!exists) {
+      throw new PathNotFoundException(toString());      
+    }
+
+    if ((typeRequirement == FileTypeRequirement.SHOULD_BE_DIRECTORY)
+       && !stat.isDirectory()) {
+      throw new PathIsNotDirectoryException(toString());
+    } else if ((typeRequirement == FileTypeRequirement.SHOULD_NOT_BE_DIRECTORY)
+              && stat.isDirectory()) {
+      throw new PathIsDirectoryException(toString());
+    }
   }
   
+  /**
+   * Return the corresponding crc data for a file.  Avoids exposing the fs
+   * contortions to the caller.  
+   * @return PathData of the crc file
+   * @throws IOException is anything goes wrong
+   */
+  public PathData getChecksumFile() throws IOException {
+    checkIfExists(FileTypeRequirement.SHOULD_NOT_BE_DIRECTORY);
+    ChecksumFileSystem srcFs = (ChecksumFileSystem)fs;
+    Path srcPath = srcFs.getChecksumFile(path);
+    return new PathData(srcFs.getRawFileSystem(), srcPath.toString());
+  }
+
   /**
    * Returns a list of PathData objects of the items contained in the given
    * directory.
@@ -156,18 +189,13 @@ public class PathData {
    * @throws IOException if anything else goes wrong...
    */
   public PathData[] getDirectoryContents() throws IOException {
-    if (!stat.isDirectory()) {
-      throw new PathIsNotDirectoryException(string);
-    }
-
+    checkIfExists(FileTypeRequirement.SHOULD_BE_DIRECTORY);
     FileStatus[] stats = fs.listStatus(path);
     PathData[] items = new PathData[stats.length];
     for (int i=0; i < stats.length; i++) {
       // preserve relative paths
-      String basename = stats[i].getPath().getName();
-      String parent = string;
-      if (!parent.endsWith(Path.SEPARATOR)) parent += Path.SEPARATOR;
-      items[i] = new PathData(fs, parent + basename, stats[i]);
+      String child = getStringForChildPath(stats[i].getPath());
+      items[i] = new PathData(fs, child, stats[i]);
     }
     return items;
   }
@@ -179,12 +207,30 @@ public class PathData {
    * @throws IOException if this object does not exist or is not a directory
    */
   public PathData getPathDataForChild(PathData child) throws IOException {
-    if (!stat.isDirectory()) {
-      throw new PathIsNotDirectoryException(string);
-    }
-    return new PathData(fs, new Path(path, child.path.getName()));
+    checkIfExists(FileTypeRequirement.SHOULD_BE_DIRECTORY);
+    return new PathData(fs, getStringForChildPath(child.path));
   }
 
+  /**
+   * Given a child of this directory, use the directory's path and the child's
+   * basename to construct the string to the child.  This preserves relative
+   * paths since Path will fully qualify.
+   * @param child a path contained within this directory
+   * @return String of the path relative to this directory
+   */
+  private String getStringForChildPath(Path childPath) {
+    String basename = childPath.getName();
+    if (Path.CUR_DIR.equals(toString())) {
+      return basename;
+    }
+    // check getPath() so scheme slashes aren't considered part of the path
+    String separator = uri.getPath().endsWith(Path.SEPARATOR)
+        ? "" : Path.SEPARATOR;
+    return uri + separator + basename;
+  }
+  
+  protected enum PathType { HAS_SCHEME, SCHEMELESS_ABSOLUTE, RELATIVE };
+  
   /**
    * Expand the given path as a glob pattern.  Non-existent paths do not
    * throw an exception because creation commands like touch and mkdir need
@@ -207,35 +253,184 @@ public class PathData {
     if (stats == null) {
       // not a glob & file not found, so add the path with a null stat
       items = new PathData[]{ new PathData(fs, pattern, null) };
-    } else if (
-        // this is very ugly, but needed to avoid breaking hdfs tests...
-        // if a path has no authority, then the FileStatus from globStatus
-        // will add the "-fs" authority into the path, so we need to sub
-        // it back out to satisfy the tests
-        stats.length == 1
-        &&
-        stats[0].getPath().equals(fs.makeQualified(globPath)))
-    {
-      // if the fq path is identical to the pattern passed, use the pattern
-      // to initialize the string value
-      items = new PathData[]{ new PathData(fs, pattern, stats[0]) };
     } else {
+      // figure out what type of glob path was given, will convert globbed
+      // paths to match the type to preserve relativity
+      PathType globType;
+      URI globUri = globPath.toUri();
+      if (globUri.getScheme() != null) {
+        globType = PathType.HAS_SCHEME;
+      } else if (new File(globUri.getPath()).isAbsolute()) {
+        globType = PathType.SCHEMELESS_ABSOLUTE;
+      } else {
+        globType = PathType.RELATIVE;
+      }
+
       // convert stats to PathData
       items = new PathData[stats.length];
       int i=0;
       for (FileStatus stat : stats) {
-        items[i++] = new PathData(fs, stat);
+        URI matchUri = stat.getPath().toUri();
+        String globMatch = null;
+        switch (globType) {
+          case HAS_SCHEME: // use as-is, but remove authority if necessary
+            if (globUri.getAuthority() == null) {
+              matchUri = removeAuthority(matchUri);
+            }
+            globMatch = matchUri.toString();
+            break;
+          case SCHEMELESS_ABSOLUTE: // take just the uri's path
+            globMatch = matchUri.getPath();
+            break;
+          case RELATIVE: // make it relative to the current working dir
+            URI cwdUri = fs.getWorkingDirectory().toUri();
+            globMatch = relativize(cwdUri, matchUri, stat.isDirectory());
+            break;
+        }
+        items[i++] = new PathData(fs, globMatch, stat);
       }
     }
     return items;
   }
 
+  private static URI removeAuthority(URI uri) {
+    try {
+      uri = new URI(
+          uri.getScheme(), "",
+          uri.getPath(), uri.getQuery(), uri.getFragment()
+      );
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e.getLocalizedMessage());
+    }
+    return uri;
+  }
+  
+  private static String relativize(URI cwdUri, URI srcUri, boolean isDir) {
+    String uriPath = srcUri.getPath();
+    String cwdPath = cwdUri.getPath();
+    if (cwdPath.equals(uriPath)) {
+      return Path.CUR_DIR;
+    }
+
+    // find common ancestor
+    int lastSep = findLongestDirPrefix(cwdPath, uriPath, isDir);
+    
+    StringBuilder relPath = new StringBuilder();    
+    // take the remaining path fragment after the ancestor
+    if (lastSep < uriPath.length()) {
+      relPath.append(uriPath.substring(lastSep+1));
+    }
+
+    // if cwd has a path fragment after the ancestor, convert them to ".."
+    if (lastSep < cwdPath.length()) {
+      while (lastSep != -1) {
+        if (relPath.length() != 0) relPath.insert(0, Path.SEPARATOR);
+        relPath.insert(0, "..");
+        lastSep = cwdPath.indexOf(Path.SEPARATOR, lastSep+1);
+      }
+    }
+    return relPath.toString();
+  }
+
+  private static int findLongestDirPrefix(String cwd, String path, boolean isDir) {
+    // add the path separator to dirs to simplify finding the longest match
+    if (!cwd.endsWith(Path.SEPARATOR)) {
+      cwd += Path.SEPARATOR;
+    }
+    if (isDir && !path.endsWith(Path.SEPARATOR)) {
+      path += Path.SEPARATOR;
+    }
+
+    // find longest directory prefix 
+    int len = Math.min(cwd.length(), path.length());
+    int lastSep = -1;
+    for (int i=0; i < len; i++) {
+      if (cwd.charAt(i) != path.charAt(i)) break;
+      if (cwd.charAt(i) == Path.SEPARATOR_CHAR) lastSep = i;
+    }
+    return lastSep;
+  }
+  
   /**
    * Returns the printable version of the path that is either the path
    * as given on the commandline, or the full path
    * @return String of the path
    */
   public String toString() {
-    return (string != null) ? string : path.toString();
+    String scheme = uri.getScheme();
+    // No interpretation of symbols. Just decode % escaped chars.
+    String decodedRemainder = uri.getSchemeSpecificPart();
+
+    if (scheme == null) {
+      return decodedRemainder;
+    } else {
+      StringBuilder buffer = new StringBuilder();
+      buffer.append(scheme);
+      buffer.append(":");
+      buffer.append(decodedRemainder);
+      return buffer.toString();
+    }
   }
+  
+  /**
+   * Get the path to a local file
+   * @return File representing the local path
+   * @throws IllegalArgumentException if this.fs is not the LocalFileSystem
+   */
+  public File toFile() {
+    if (!(fs instanceof LocalFileSystem)) {
+       throw new IllegalArgumentException("Not a local path: " + path);
+    }
+    return ((LocalFileSystem)fs).pathToFile(path);
+  }
+
+  /** Construct a URI from a String with unescaped special characters
+   *  that have non-standard sematics. e.g. /, ?, #. A custom parsing
+   *  is needed to prevent misbihaviors.
+   *  @param pathString The input path in string form
+   *  @return URI
+   */
+  private static URI stringToUri(String pathString) {
+    // We can't use 'new URI(String)' directly. Since it doesn't do quoting
+    // internally, the internal parser may fail or break the string at wrong
+    // places. Use of multi-argument ctors will quote those chars for us,
+    // but we need to do our own parsing and assembly.
+    
+    // parse uri components
+    String scheme = null;
+    String authority = null;
+
+    int start = 0;
+
+    // parse uri scheme, if any
+    int colon = pathString.indexOf(':');
+    int slash = pathString.indexOf('/');
+    if (colon > 0 && (slash == colon +1)) {
+      // has a non zero-length scheme
+      scheme = pathString.substring(0, colon);
+      start = colon + 1;
+    }
+
+    // parse uri authority, if any
+    if (pathString.startsWith("//", start) &&
+        (pathString.length()-start > 2)) {
+      start += 2;
+      int nextSlash = pathString.indexOf('/', start);
+      int authEnd = nextSlash > 0 ? nextSlash : pathString.length();
+      authority = pathString.substring(start, authEnd);
+      start = authEnd;
+    }
+
+    // uri path is the rest of the string. ? or # are not interpreated,
+    // but any occurrence of them will be quoted by the URI ctor.
+    String path = pathString.substring(start, pathString.length());
+
+    // Construct the URI
+    try {
+      return new URI(scheme, authority, path, null, null);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+
 }
