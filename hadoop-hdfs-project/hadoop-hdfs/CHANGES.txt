@@ -28,11 +28,6 @@ Trunk (unreleased changes)
     HDFS-2351 Change Namenode and Datanode to register each of their protocols
     seperately. (Sanjay Radia)
 
-    HDFS-2355. Federation: enable using the same configuration file across 
-    all the nodes in the cluster. (suresh)
-
-    HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
-
     HDFS-2158. Add JournalSet to manage the set of journals. (jitendra)
 
     HDFS-2459. Separate datatypes for JournalProtocol. (suresh)
@@ -74,9 +69,6 @@ Trunk (unreleased changes)
 
     HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
-
-    HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
-    not include multiple methods of the same name. (cutting)
 
     HDFS-2349. Corruption detected during block transfers between DNs
                should log a WARN instead of INFO. (harsh)
@@ -824,6 +816,11 @@ Release 0.23.0 - Unreleased
     HDFS-1869. mkdirs should use the supplied permission for all of the created
     directories. (Daryn Sharp via szetszwo)
 
+    HDFS-2355. Federation: enable using the same configuration file across 
+    all the nodes in the cluster. (suresh)
+
+    HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
+
     HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
 
   OPTIMIZATIONS
@@ -1207,6 +1204,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2494. Close the streams and DFSClient in DatanodeWebHdfsMethods.
     (Uma Maheswara Rao G via szetszwo)
+
+    HDFS-2298. Fix TestDfsOverAvroRpc by changing ClientProtocol to
+    not include multiple methods of the same name. (cutting)
 
     HDFS-2432. Webhdfs: response FORBIDDEN when setReplication on non-files;
     clear umask before creating a flie; throw IllegalArgumentException if
