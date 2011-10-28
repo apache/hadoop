@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Daemon;
 
 /**
@@ -55,17 +55,14 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Heartbeat monitor thread */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
 
-  final Namesystem namesystem;
-  final BlockManager blockManager;
+  final FSNamesystem namesystem;
 
-  HeartbeatManager(final Namesystem namesystem, final BlockManager blockManager,
-      final Configuration conf) {
+  HeartbeatManager(final FSNamesystem namesystem, final Configuration conf) {
     this.heartbeatRecheckInterval = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
 
     this.namesystem = namesystem;
-    this.blockManager = blockManager;
   }
 
   void activate(Configuration conf) {
@@ -139,11 +136,6 @@ class HeartbeatManager implements DatanodeStatistics {
                        getBlockPoolUsed()};
   }
 
-  @Override
-  public synchronized int getExpiredHeartbeats() {
-    return stats.expiredHeartbeats;
-  }
-
   synchronized void register(final DatanodeDescriptor d) {
     if (!datanodes.contains(d)) {
       addDatanode(d);
@@ -199,7 +191,7 @@ class HeartbeatManager implements DatanodeStatistics {
    * effect causes more datanodes to be declared dead.
    */
   void heartbeatCheck() {
-    final DatanodeManager dm = blockManager.getDatanodeManager();
+    final DatanodeManager dm = namesystem.getBlockManager().getDatanodeManager();
     // It's OK to check safe mode w/o taking the lock here, we re-check
     // for safe mode after taking the lock before removing a datanode.
     if (namesystem.isInSafeMode()) {
@@ -212,7 +204,7 @@ class HeartbeatManager implements DatanodeStatistics {
       synchronized(this) {
         for (DatanodeDescriptor d : datanodes) {
           if (dm.isDatanodeDead(d)) {
-            stats.incrExpiredHeartbeats();
+            namesystem.incrExpiredHeartbeats();
             dead = d;
             break;
           }
@@ -252,7 +244,8 @@ class HeartbeatManager implements DatanodeStatistics {
             heartbeatCheck();
             lastHeartbeatCheck = now;
           }
-          if (blockManager.shouldUpdateBlockKey(now - lastBlockKeyUpdate)) {
+          if (namesystem.getBlockManager().shouldUpdateBlockKey(
+              now - lastBlockKeyUpdate)) {
             synchronized(HeartbeatManager.this) {
               for(DatanodeDescriptor d : datanodes) {
                 d.needKeyUpdate = true;
@@ -281,8 +274,6 @@ class HeartbeatManager implements DatanodeStatistics {
     private long blockPoolUsed = 0L;
     private int xceiverCount = 0;
 
-    private int expiredHeartbeats = 0;
-
     private void add(final DatanodeDescriptor node) {
       capacityUsed += node.getDfsUsed();
       blockPoolUsed += node.getBlockPoolUsed();
@@ -305,11 +296,6 @@ class HeartbeatManager implements DatanodeStatistics {
       } else {
         capacityTotal -= node.getDfsUsed();
       }
-    }
-    
-    /** Increment expired heartbeat counter. */
-    private void incrExpiredHeartbeats() {
-      expiredHeartbeats++;
     }
   }
 }

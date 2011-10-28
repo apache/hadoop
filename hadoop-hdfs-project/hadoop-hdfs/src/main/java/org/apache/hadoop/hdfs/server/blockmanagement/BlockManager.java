@@ -53,7 +53,7 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
@@ -70,6 +70,8 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Keeps information related to the blocks stored in the Hadoop cluster.
+ * This class is a helper class for {@link FSNamesystem} and requires several
+ * methods to be called with lock held on {@link FSNamesystem}.
  */
 @InterfaceAudience.Private
 public class BlockManager {
@@ -172,16 +174,15 @@ public class BlockManager {
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
   
-  public BlockManager(final Namesystem namesystem, final FSClusterStats stats,
-      final Configuration conf) throws IOException {
-    this.namesystem = namesystem;
-    datanodeManager = new DatanodeManager(this, namesystem, conf);
+  public BlockManager(FSNamesystem fsn, Configuration conf) throws IOException {
+    namesystem = fsn;
+    datanodeManager = new DatanodeManager(this, fsn, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
     invalidateBlocks = new InvalidateBlocks(datanodeManager);
 
     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
     blockplacement = BlockPlacementPolicy.getInstance(
-        conf, stats, datanodeManager.getNetworkTopology());
+        conf, fsn, datanodeManager.getNetworkTopology());
     pendingReplications = new PendingReplicationBlocks(conf.getInt(
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
       DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_DEFAULT) * 1000L);
@@ -2555,7 +2556,7 @@ public class BlockManager {
 
     workFound = this.computeReplicationWork(blocksToProcess);
 
-    // Update counters
+    // Update FSNamesystemMetrics counters
     namesystem.writeLock();
     try {
       this.updateState();
