@@ -270,4 +270,8 @@
       <!-- backward compatibility -->
       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS"/>
     </Match>
+    <Match>
+      <!-- protobuf generated code -->
+      <Class name="org.apache.hadoop.ipc.protobuf.HadoopRpcProtos"/>
+    </Match>
  </FindBugsFilter>

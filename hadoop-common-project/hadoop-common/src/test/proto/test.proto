@@ -15,31 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ipc;
 
-/**
- * Indicates an exception on the RPC server 
- */
-public class RpcServerException extends RpcException {
-  private static final long serialVersionUID = 1L;
+option java_package = "org.apache.hadoop.ipc.protobuf";
+option java_outer_classname = "TestProtos";
+option java_generate_equals_and_hash = true;
 
-  /**
-   * Constructs exception with the specified detail message.
-   * @param message detailed message.
-   */
-  public RpcServerException(final String message) {
-    super(message);
-  }
-  
-  /**
-   * Constructs exception with the specified detail message and cause.
-   * 
-   * @param message message.
-   * @param cause the cause (can be retried by the {@link #getCause()} method).
-   *          (A <tt>null</tt> value is permitted, and indicates that the cause
-   *          is nonexistent or unknown.)
-   */
-  public RpcServerException(final String message, final Throwable cause) {
-    super(message, cause);
-  }
+message EmptyRequestProto {
+}
+
+message EmptyResponseProto {
+}
+
+message EchoRequestProto {
+  required string message = 1;
+}
+
+message EchoResponseProto {
+  required string message = 1;
 }
