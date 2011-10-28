@@ -316,7 +316,7 @@ public class ViewFs extends AbstractFileSystem {
       UnresolvedLinkException, IOException {
     InodeTree.ResolveResult<AbstractFileSystem> res = 
       fsState.resolve(getUriPath(f), true);
-    return res.targetFileSystem.getFileChecksum(f);
+    return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
 
   @Override
