@@ -311,7 +311,7 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <target>
+              <target unless="windows.build">
                 <condition property="commons.daemon.os.name" value="darwin">
                     <os name="Mac OS X"/>
                 </condition>
@@ -353,6 +353,18 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>windows</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <windows.build>true</windows.build>
+      </properties>
+    </profile>
     <profile>
       <id>native</id>
       <activation>
