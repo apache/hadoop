@@ -420,6 +420,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
 
+    HADOOP-7360. Preserve relative paths that do not contain globs in FsShell.
+    (Daryn Sharp and Kihwal Lee via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
