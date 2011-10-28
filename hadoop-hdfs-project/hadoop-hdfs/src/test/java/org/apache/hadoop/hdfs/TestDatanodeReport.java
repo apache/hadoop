@@ -77,7 +77,7 @@ public class TestDatanodeReport extends TestCase {
                    NUM_OF_DATANODES);
 
       Thread.sleep(5000);
-      assertCounter("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
+      assertGauge("ExpiredHeartbeats", 1, getMetrics("FSNamesystem"));
     }finally {
       cluster.shutdown();
     }
