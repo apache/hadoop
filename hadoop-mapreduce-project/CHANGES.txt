@@ -391,6 +391,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2989. Modified JobHistory to link to task and AM logs from the
     JobHistoryServer. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
+    by default. (tucu)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and

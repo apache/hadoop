@@ -25,10 +25,9 @@ clean workspace: mvn clean
 compile and test: mvn install
 skip tests: mvn install -DskipTests
 skip test execution but compile: mvn install -Dmaven.test.skip.exec=true
-skip native build: mvn -fn install -P-cbuild
 clean and test: mvn clean install
 run selected test after compile: mvn test -Dtest=TestClassName (combined: mvn clean install -Dtest=TestClassName)
-create runnable binaries after install: mvn assembly:assembly (combined: mvn clean install assembly:assembly)
+create runnable binaries after install: mvn assembly:assembly -Pnative (combined: mvn clean install assembly:assembly -Pnative)
 
 Eclipse Projects
 ----------------

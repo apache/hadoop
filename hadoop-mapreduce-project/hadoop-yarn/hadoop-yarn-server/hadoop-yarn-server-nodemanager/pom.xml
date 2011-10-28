@@ -38,7 +38,7 @@
 
   <profiles>
     <profile>
-      <id>cbuild</id>
+      <id>native</id>
       <build>
         <plugins>
           <plugin>
@@ -117,7 +117,7 @@
         </plugins>
       </build>
       <activation>
-        <activeByDefault>true</activeByDefault>
+        <activeByDefault>false</activeByDefault>
       </activation>
     </profile>
     <profile>
