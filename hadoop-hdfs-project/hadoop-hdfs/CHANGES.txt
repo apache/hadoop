@@ -825,6 +825,9 @@ Release 0.23.0 - Unreleased
 
     HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
 
+    HDFS-2493. Remove reference to FSNamesystem in blockmanagement classes.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
