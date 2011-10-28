@@ -752,6 +752,9 @@ Release 0.23.0 - Unreleased
     HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be
     fetched. (tucu)
 
+    HDFS-2509. Add a test for DistributedFileSystem.getFileChecksum(..) on
+    directories or non existing files.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
