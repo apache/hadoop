@@ -697,6 +697,9 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7778. FindBugs warning in Token.getKind(). (tomwhite)
 
+    HADOOP-7770. ViewFS getFileChecksum throws FileNotFoundException for files in 
+    /tmp and /user. (Ravi Prakash via jitendra)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

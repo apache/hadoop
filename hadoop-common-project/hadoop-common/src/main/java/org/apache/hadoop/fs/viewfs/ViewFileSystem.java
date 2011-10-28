@@ -318,7 +318,7 @@ public class ViewFileSystem extends FileSystem {
       IOException {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
-    return res.targetFileSystem.getFileChecksum(f);
+    return res.targetFileSystem.getFileChecksum(res.remainingPath);
   }
 
   @Override
