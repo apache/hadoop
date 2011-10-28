@@ -50,9 +50,11 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
+import org.apache.hadoop.yarn.service.ServiceStateChangeListener;
 import org.apache.hadoop.yarn.util.Records;
 
-public class NodeManager extends CompositeService {
+public class NodeManager extends CompositeService implements
+    ServiceStateChangeListener {
   private static final Log LOG = LogFactory.getLog(NodeManager.class);
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   protected ContainerTokenSecretManager containerTokenSecretManager;
@@ -123,6 +125,8 @@ public class NodeManager extends CompositeService {
     NodeStatusUpdater nodeStatusUpdater =
         createNodeStatusUpdater(context, dispatcher, healthChecker, 
         this.containerTokenSecretManager);
+    
+    nodeStatusUpdater.register(this);
 
     NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
     addService(nodeResourceMonitor);
@@ -206,6 +210,16 @@ public class NodeManager extends CompositeService {
     }
   }
 
+  
+  @Override
+  public void stateChanged(Service service) {
+    // Shutdown the Nodemanager when the NodeStatusUpdater is stopped.
+    if (NodeStatusUpdaterImpl.class.getName().equals(service.getName())
+        && STATE.STOPPED.equals(service.getServiceState())) {
+      stop();
+    }
+  }
+  
   public static void main(String[] args) {
     StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
     try {
@@ -220,5 +234,4 @@ public class NodeManager extends CompositeService {
       System.exit(-1);
     }
   }
-
 }

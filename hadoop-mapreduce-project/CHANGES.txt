@@ -1786,6 +1786,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3296. Fixed the remaining nine FindBugs warnings. (vinodkv)
 
+    MAPREDUCE-2775. Fixed ResourceManager and NodeManager to force a
+    decommissioned node to shutdown. (Devaraj K via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
+package org.apache.hadoop.yarn.server.api.records;
 
-public enum RMNodeState {
-  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST
+/**
+ * The NodeManager is instructed to perform the given action.
+ * 
+ */
+
+public enum NodeAction {
+  NORMAL, REBOOT, SHUTDOWN
 }

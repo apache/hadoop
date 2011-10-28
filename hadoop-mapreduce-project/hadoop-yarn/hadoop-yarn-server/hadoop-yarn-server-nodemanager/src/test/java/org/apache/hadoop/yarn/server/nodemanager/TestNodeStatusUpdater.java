@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
@@ -85,10 +86,15 @@ public class TestNodeStatusUpdater {
   volatile Error nmStartError = null;
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private final Configuration conf = new YarnConfiguration();
+  private NodeManager nm;
 
   @After
   public void tearDown() {
     this.registeredNodes.clear();
+    heartBeatID = 0;
+    if (nm != null) {
+      nm.stop();
+    }
     DefaultMetricsSystem.shutdown();
   }
 
@@ -220,6 +226,7 @@ public class TestNodeStatusUpdater {
   }
 
   private class MyNodeStatusUpdater extends NodeStatusUpdaterImpl {
+    public ResourceTracker resourceTracker = new MyResourceTracker(this.context);
     private Context context;
 
     public MyNodeStatusUpdater(Context context, Dispatcher dispatcher,
@@ -232,10 +239,44 @@ public class TestNodeStatusUpdater {
 
     @Override
     protected ResourceTracker getRMClient() {
-      return new MyResourceTracker(this.context);
+      return resourceTracker;
     }
   }
+  
+  // 
+  private class MyResourceTracker2 implements ResourceTracker {
+    public NodeAction heartBeatNodeAction = NodeAction.NORMAL;
+    public NodeAction registerNodeAction = NodeAction.NORMAL;
 
+    @Override
+    public RegisterNodeManagerResponse registerNodeManager(
+        RegisterNodeManagerRequest request) throws YarnRemoteException {
+      
+      RegisterNodeManagerResponse response = recordFactory
+          .newRecordInstance(RegisterNodeManagerResponse.class);
+      RegistrationResponse regResponse = recordFactory
+      .newRecordInstance(RegistrationResponse.class);
+      regResponse.setNodeAction(registerNodeAction );
+      response.setRegistrationResponse(regResponse);
+      return response;
+    }
+    @Override
+    public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
+        throws YarnRemoteException {
+      NodeStatus nodeStatus = request.getNodeStatus();
+      nodeStatus.setResponseId(heartBeatID++);
+      HeartbeatResponse response = recordFactory
+          .newRecordInstance(HeartbeatResponse.class);
+      response.setResponseId(heartBeatID);
+      response.setNodeAction(heartBeatNodeAction);
+      
+      NodeHeartbeatResponse nhResponse = recordFactory
+      .newRecordInstance(NodeHeartbeatResponse.class);
+      nhResponse.setHeartbeatResponse(response);
+      return nhResponse;
+    }
+  }
+  
   @Before
   public void clearError() {
     nmStartError = null;
@@ -249,7 +290,7 @@ public class TestNodeStatusUpdater {
 
   @Test
   public void testNMRegistration() throws InterruptedException {
-    final NodeManager nm = new NodeManager() {
+    nm = new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
           Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
@@ -295,13 +336,84 @@ public class TestNodeStatusUpdater {
       Assert.fail("NodeManager failed to start");
     }
 
-    while (heartBeatID <= 3) {
+    waitCount = 0;
+    while (heartBeatID <= 3 && waitCount++ != 20) {
       Thread.sleep(500);
     }
+    Assert.assertFalse(heartBeatID <= 3);
     Assert.assertEquals("Number of registered NMs is wrong!!", 1,
         this.registeredNodes.size());
 
     nm.stop();
+  }
+  
+  @Test
+  public void testNodeDecommision() throws Exception {
+    nm = getNodeManager(NodeAction.SHUTDOWN);
+    YarnConfiguration conf = createNMConfig();
+    nm.init(conf);
+    Assert.assertEquals(STATE.INITED, nm.getServiceState());
+    nm.start();
+
+    int waitCount = 0;
+    while (heartBeatID < 1 && waitCount++ != 20) {
+      Thread.sleep(500);
+    }
+    Assert.assertFalse(heartBeatID < 1);
+
+    // NM takes a while to reach the STOPPED state.
+    waitCount = 0;
+    while (nm.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to stop..");
+      Thread.sleep(1000);
+    }
+
+    Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
+  }
+
+  @Test
+  public void testNodeReboot() throws Exception {
+    nm = getNodeManager(NodeAction.REBOOT);
+    YarnConfiguration conf = createNMConfig();
+    nm.init(conf);
+    Assert.assertEquals(STATE.INITED, nm.getServiceState());
+    nm.start();
+
+    int waitCount = 0;
+    while (heartBeatID < 1 && waitCount++ != 20) {
+      Thread.sleep(500);
+    }
+    Assert.assertFalse(heartBeatID < 1);
+
+    // NM takes a while to reach the STOPPED state.
+    waitCount = 0;
+    while (nm.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to stop..");
+      Thread.sleep(1000);
+    }
+
+    Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
+  }
+  
+  @Test
+  public void testNMShutdownForRegistrationFailure() {
+
+    nm = new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
+          ContainerTokenSecretManager containerTokenSecretManager) {
+        MyNodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater(
+            context, dispatcher, healthChecker, metrics,
+            containerTokenSecretManager);
+        MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
+        myResourceTracker2.registerNodeAction = NodeAction.SHUTDOWN;
+        nodeStatusUpdater.resourceTracker = myResourceTracker2;
+        return nodeStatusUpdater;
+      }
+    };
+    verifyNodeStartFailure("org.apache.hadoop.yarn.YarnException: "
+        + "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed");
   }
 
   /**
@@ -314,7 +426,7 @@ public class TestNodeStatusUpdater {
   @Test
   public void testNoRegistrationWhenNMServicesFail() {
 
-    final NodeManager nm = new NodeManager() {
+    nm = new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
           Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
@@ -341,16 +453,22 @@ public class TestNodeStatusUpdater {
       }
     };
 
+    verifyNodeStartFailure("Starting of RPC Server failed");
+  }
+
+  private void verifyNodeStartFailure(String errMessage) {
     YarnConfiguration conf = createNMConfig();
     nm.init(conf);
     try {
       nm.start();
       Assert.fail("NM should have failed to start. Didn't get exception!!");
     } catch (Exception e) {
-      Assert.assertEquals("Starting of RPC Server failed", e.getCause()
+      Assert.assertEquals(errMessage, e.getCause()
           .getMessage());
     }
-
+    
+    // the state change to stopped occurs only if the startup is success, else
+    // state change doesn't occur
     Assert.assertEquals("NM state is wrong!", Service.STATE.INITED, nm
         .getServiceState());
 
@@ -370,5 +488,22 @@ public class TestNodeStatusUpdater {
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, new Path(basedir, "nm0")
         .toUri().getPath());
     return conf;
+  }
+  
+  private NodeManager getNodeManager(final NodeAction nodeHeartBeatAction) {
+    return new NodeManager() {
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
+          ContainerTokenSecretManager containerTokenSecretManager) {
+        MyNodeStatusUpdater myNodeStatusUpdater = new MyNodeStatusUpdater(
+            context, dispatcher, healthChecker, metrics,
+            containerTokenSecretManager);
+        MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
+        myResourceTracker2.heartBeatNodeAction = nodeHeartBeatAction;
+        myNodeStatusUpdater.resourceTracker = myResourceTracker2;
+        return myNodeStatusUpdater;
+      }
+    };
   }
 }

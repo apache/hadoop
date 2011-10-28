@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.resourcetracker;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -34,12 +32,13 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
-import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager.NodeEventDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -55,8 +54,6 @@ public class TestNMExpiry {
   ResourceTrackerService resourceTrackerService;
   ContainerTokenSecretManager containerTokenSecretManager = 
     new ContainerTokenSecretManager();
-  AtomicInteger test = new AtomicInteger();
-  AtomicInteger notify = new AtomicInteger();
 
   private class TestNmLivelinessMonitor extends NMLivelinessMonitor {
     public TestNmLivelinessMonitor(Dispatcher dispatcher) {
@@ -68,22 +65,6 @@ public class TestNMExpiry {
       conf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 1000);
       super.init(conf);
     }
-    @Override
-    protected void expire(NodeId id) {
-        LOG.info("Expired  " + id);
-        if (test.addAndGet(1) == 2) {
-          try {
-            /* delay atleast 2 seconds to make sure the 3rd one does not expire
-             * 
-             */
-            Thread.sleep(2000);
-          } catch(InterruptedException ie){}
-          synchronized(notify) {
-            notify.addAndGet(1);
-            notify.notifyAll();
-          }
-        }
-    }
   }
 
   @Before
@@ -91,12 +72,12 @@ public class TestNMExpiry {
     Configuration conf = new Configuration();
     // Dispatcher that processes events inline
     Dispatcher dispatcher = new InlineDispatcher();
+    RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
+        null, null);
     dispatcher.register(SchedulerEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     dispatcher.register(RMNodeEventType.class,
-        new InlineDispatcher.EmptyEventHandler());
-    RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
-        null, null);
+        new NodeEventDispatcher(context));
     NMLivelinessMonitor nmLivelinessMonitor = new TestNmLivelinessMonitor(
         dispatcher);
     nmLivelinessMonitor.init(conf);
@@ -166,6 +147,14 @@ public class TestNMExpiry {
     request2.setHttpPort(0);
     request2.setResource(capability);
     resourceTrackerService.registerNodeManager(request2);
+    
+    int waitCount = 0;
+    while(ClusterMetrics.getMetrics().getNumLostNMs()!=2 && waitCount ++<20){
+      synchronized (this) {
+        wait(100);
+      }
+    }
+    Assert.assertEquals(2, ClusterMetrics.getMetrics().getNumLostNMs());
 
     request3 = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
@@ -175,20 +164,13 @@ public class TestNMExpiry {
     request3.setNodeId(nodeId3);
     request3.setHttpPort(0);
     request3.setResource(capability);
-    RegistrationResponse thirdNodeRegResponse = resourceTrackerService
+    resourceTrackerService
         .registerNodeManager(request3).getRegistrationResponse();
 
     /* test to see if hostanme 3 does not expire */
     stopT = false;
     new ThirdNodeHeartBeatThread().start();
-    int timeOut = 0;
-    synchronized (notify) {
-      while (notify.get() == 0 && timeOut++ < 30) {
-        notify.wait(1000);
-      }
-    }
-    Assert.assertEquals(2, test.get()); 
-
+    Assert.assertEquals(2,ClusterMetrics.getMetrics().getNumLostNMs());
     stopT = true;
   }
 }
