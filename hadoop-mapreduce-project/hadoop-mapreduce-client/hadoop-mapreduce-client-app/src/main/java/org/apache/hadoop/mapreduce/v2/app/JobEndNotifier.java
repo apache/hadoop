@@ -44,8 +44,8 @@ import org.mortbay.log.Log;
  * </p>
  */
 public class JobEndNotifier implements Configurable {
-  final String JOB_ID = "$jobId";
-  final String JOB_STATUS = "$jobStatus";
+  private static final String JOB_ID = "$jobId";
+  private static final String JOB_STATUS = "$jobStatus";
 
   private Configuration conf;
   protected String userUrl;
