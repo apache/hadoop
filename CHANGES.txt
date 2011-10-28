@@ -389,6 +389,8 @@ Release 0.92.0 - Unreleased
    HBASE-4680  FSUtils.isInSafeMode() checks should operate on HBase root dir,
                where we have permissions
    HBASE-4641  Block cache can be mistakenly instantiated on Master (jgray)
+   HBASE-4687  regionserver may miss zk-heartbeats to master when replaying
+               edits at region open (prakash via jgray)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
