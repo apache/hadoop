@@ -1789,6 +1789,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2775. Fixed ResourceManager and NodeManager to force a
     decommissioned node to shutdown. (Devaraj K via vinodkv)
 
+    MAPREDUCE-3304. Fixed intermittent test failure due to a race in
+    TestRMContainerAllocator#testBlackListedNodes. (Ravi Prakash via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

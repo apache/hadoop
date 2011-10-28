@@ -567,6 +567,7 @@ public class TestRMContainerAllocator {
     Assert.assertEquals("No of assignments must be 0", 0, assigned.size());    
 
     nodeManager3.nodeHeartbeat(true); // Node heartbeat
+    dispatcher.await();
     assigned = allocator.schedule();    
     dispatcher.await();
         
