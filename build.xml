@@ -1429,6 +1429,7 @@
   <!-- ================================================================== -->
   <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc"
 	  description="Build distribution">
+    <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/libexec"/>
@@ -1573,6 +1574,7 @@
 
   <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc" 
 		description="assembles artifacts for binary target">
+    <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc/hadoop"/>

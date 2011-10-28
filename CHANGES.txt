@@ -69,6 +69,9 @@ Release 0.20.205.1 - unreleased
 
   BUG FIXES
 
+    HADOOP-7765. Clean packaging working directory for Debian packaging.
+    (Eric Yang)
+
     HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in
     webhdfs responses.  (szetszwo)
 
