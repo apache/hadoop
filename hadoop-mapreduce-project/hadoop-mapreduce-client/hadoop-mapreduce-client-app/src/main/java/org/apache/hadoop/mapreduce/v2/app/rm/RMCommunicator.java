@@ -233,6 +233,9 @@ public abstract class RMCommunicator extends AbstractService  {
             Thread.sleep(rmPollInterval);
             try {
               heartbeat();
+            } catch (YarnException e) {
+              LOG.error("Error communicating with RM: " + e.getMessage() , e);
+              return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
               // TODO: for other exceptions
