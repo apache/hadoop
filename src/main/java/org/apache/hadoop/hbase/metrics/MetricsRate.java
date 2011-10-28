@@ -56,10 +56,14 @@ public class MetricsRate extends MetricsBase {
     value++;
   }
 
-  private synchronized void intervalHeartBeat() {
+  public synchronized void intervalHeartBeat() {
     long now = System.currentTimeMillis();
-    long diff = (now-ts)/1000;
-    if (diff == 0) diff = 1; // sigh this is crap.
+    long diff = (now-ts) / 1000;
+    if (diff < 1){
+        // To make sure our averages aren't skewed by fast repeated calls,
+        // we simply ignore fast repeated calls.
+    	return;
+    }
     this.prevRate = (float)value / diff;
     this.value = 0;
     this.ts = now;

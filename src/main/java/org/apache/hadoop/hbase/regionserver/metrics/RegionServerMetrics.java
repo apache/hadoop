@@ -116,7 +116,7 @@ public class RegionServerMetrics implements Updater {
   /*
    * Count of requests to the regionservers since last call to metrics update
    */
-  private final MetricsRate requests = new MetricsRate("requests", registry);
+  public final MetricsRate requests = new MetricsRate("requests", registry);
 
   /**
    * Count of stores open on the regionserver.
