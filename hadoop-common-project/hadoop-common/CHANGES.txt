@@ -423,6 +423,14 @@ Release 0.23.0 - Unreleased
     HADOOP-7360. Preserve relative paths that do not contain globs in FsShell.
     (Daryn Sharp and Kihwal Lee via szetszwo)
 
+    HADOOP-7624. Set things up for a top level hadoop-tools module. (tucu)
+
+    HADOOP-7642. create hadoop-dist module where TAR stitching would happen.
+    (Thomas White via tucu)
+
+    HADOOP-7737. normalize hadoop-mapreduce & hadoop-dist dist/tar build with
+    common/hdfs. (tucu)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
@@ -953,11 +961,6 @@ Release 0.22.0 - Unreleased
     a hyphen. (Brock Noland via todd)
 
     HADOOP-7772. javadoc the topology classes (stevel)
-
-    HADOOP-7624. Set things up for a top level hadoop-tools module. (tucu)
-
-    HADOOP-7642. create hadoop-dist module where TAR stitching would happen.
-    (Thomas White via tucu)
 
   OPTIMIZATIONS
 
