@@ -1301,7 +1301,7 @@ public class HConnectionManager {
      };
    }
 
-    public void processBatch(List<Row> list,
+    public void processBatch(List<? extends Row> list,
         final byte[] tableName,
         ExecutorService pool,
         Object[] results) throws IOException, InterruptedException {
@@ -1546,31 +1546,6 @@ public class HConnectionManager {
         throw new RetriesExhaustedWithDetailsException(exceptions,
             actions,
             addresses);
-      }
-    }
-
-    /**
-     * @deprecated Use HConnectionManager::processBatch instead.
-     */
-    public void processBatchOfPuts(List<Put> list,
-        final byte[] tableName,
-        ExecutorService pool) throws IOException {
-      Object[] results = new Object[list.size()];
-      try {
-        processBatch((List) list, tableName, pool, results);
-      } catch (InterruptedException e) {
-        throw new IOException(e);
-      } finally {
-
-        // mutate list so that it is empty for complete success, or contains only failed records
-        // results are returned in the same order as the requests in list
-        // walk the list backwards, so we can remove from list without impacting the indexes of earlier members
-        for (int i = results.length - 1; i>=0; i--) {
-          if (results[i] instanceof Result) {
-            // successful Puts are removed from the list here.
-            list.remove(i);
-          }
-        }
       }
     }
 

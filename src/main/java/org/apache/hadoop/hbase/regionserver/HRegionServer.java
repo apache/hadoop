@@ -84,8 +84,6 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiPut;
-import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -2987,25 +2985,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       }
     }
     return response;
-  }
-
-  /**
-   * @deprecated Use HRegionServer.multi( MultiAction action) instead
-   */
-  @Override
-  public MultiPutResponse multiPut(MultiPut puts) throws IOException {
-    checkOpen();
-    MultiPutResponse resp = new MultiPutResponse();
-
-    // do each region as it's own.
-    for (Map.Entry<byte[], List<Put>> e : puts.puts.entrySet()) {
-      int result = put(e.getKey(), e.getValue());
-      resp.addResult(e.getKey(), result);
-
-      e.getValue().clear(); // clear some RAM
-    }
-
-    return resp;
   }
 
   /**

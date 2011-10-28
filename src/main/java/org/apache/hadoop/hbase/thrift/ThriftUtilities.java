@@ -135,7 +135,7 @@ public class ThriftUtilities {
         TRowResult result = new TRowResult();
         result.row = ByteBuffer.wrap(result_.getRow());
         result.columns = new TreeMap<ByteBuffer, TCell>();
-        for(KeyValue kv : result_.sorted()) {
+        for(KeyValue kv : result_.raw()) {
           result.columns.put(
               ByteBuffer.wrap(KeyValue.makeColumn(kv.getFamily(),
                   kv.getQualifier())),

@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiPut;
-import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -309,15 +307,6 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    * @throws IOException
    */
   public <R> MultiResponse multi(MultiAction<R> multi) throws IOException;
-
-  /**
-   * Multi put for putting multiple regions worth of puts at once.
-   *
-   * @param puts the request
-   * @return the reply
-   * @throws IOException e
-   */
-  public MultiPutResponse multiPut(MultiPut puts) throws IOException;
 
   /**
    * Bulk load an HFile into an open region

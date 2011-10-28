@@ -55,22 +55,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   // Version 8 -- reintroduction of bloom filters, changed from boolean to enum
   private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)8;
 
-  /**
-   * The type of compression.
-   * @see org.apache.hadoop.io.SequenceFile.Writer
-   * @deprecated Compression now means which compression library
-   * rather than 'what' to compress.
-   */
-  @Deprecated
-  public static enum CompressionType {
-    /** Do not compress records. */
-    NONE,
-    /** Compress values only, each separately. */
-    RECORD,
-    /** Compress sequences of records together in blocks. */
-    BLOCK
-  }
-
   public static final String COMPRESSION = "COMPRESSION";
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
   public static final String BLOCKCACHE = "BLOCKCACHE";

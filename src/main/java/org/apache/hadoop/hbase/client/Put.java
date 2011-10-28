@@ -424,19 +424,4 @@ public class Put extends Mutation
     }
     writeAttributes(out);
   }
-
-  /**
-   * Add the specified column and value, with the specified timestamp as
-   * its version to this Put operation.
-   * @param column Old style column name with family and qualifier put together
-   * with a colon.
-   * @param ts version timestamp
-   * @param value column value
-   * @deprecated use {@link #add(byte[], byte[], long, byte[])} instead
-   * @return true
-   */
-  public Put add(byte [] column, long ts, byte [] value) {
-    byte [][] parts = KeyValue.parseColumn(column);
-    return add(parts[0], parts[1], ts, value);
-  }
 }

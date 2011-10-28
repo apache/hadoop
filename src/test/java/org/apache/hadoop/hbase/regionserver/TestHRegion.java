@@ -2749,7 +2749,7 @@ public class TestHRegion extends HBaseTestCase {
         // TODO this was removed, now what dangit?!
         // search looking for the qualifier in question?
         long timestamp = 0;
-        for (KeyValue kv : result.sorted()) {
+        for (KeyValue kv : result.raw()) {
           if (Bytes.equals(kv.getFamily(), families[0])
             && Bytes.equals(kv.getQualifier(), qualifiers[0])) {
             timestamp = kv.getTimestamp();
@@ -3074,7 +3074,7 @@ public class TestHRegion extends HBaseTestCase {
         get.addColumn(family, qf);
       }
       Result result = newReg.get(get, null);
-      KeyValue [] raw = result.sorted();
+      KeyValue [] raw = result.raw();
       assertEquals(families.length, result.size());
       for(int j=0; j<families.length; j++) {
         assertEquals(0, Bytes.compareTo(row, raw[j].getRow()));

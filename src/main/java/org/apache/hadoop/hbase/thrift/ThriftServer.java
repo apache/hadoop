@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
@@ -316,7 +315,7 @@ public class ThriftServer {
           get.addColumn(family, qualifier);
         }
         Result result = table.get(get);
-        return ThriftUtilities.cellFromHBase(result.sorted());
+        return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -344,7 +343,7 @@ public class ThriftServer {
         get.addColumn(family, qualifier);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
-        return ThriftUtilities.cellFromHBase(result.sorted());
+        return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -376,7 +375,7 @@ public class ThriftServer {
         get.setTimeRange(Long.MIN_VALUE, timestamp);
         get.setMaxVersions(numVersions);
         Result result = table.get(get);
-        return ThriftUtilities.cellFromHBase(result.sorted());
+        return ThriftUtilities.cellFromHBase(result.raw());
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }

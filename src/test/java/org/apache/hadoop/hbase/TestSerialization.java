@@ -355,10 +355,10 @@ public class TestSerialization {
     Result deResult = (Result)Writables.getWritable(rb, new Result());
 
     assertTrue("results are not equivalent, first key mismatch",
-        result.sorted()[0].equals(deResult.sorted()[0]));
+        result.raw()[0].equals(deResult.raw()[0]));
 
     assertTrue("results are not equivalent, second key mismatch",
-        result.sorted()[1].equals(deResult.sorted()[1]));
+        result.raw()[1].equals(deResult.raw()[1]));
 
     // Test empty Result
     Result r = new Result();
@@ -394,9 +394,9 @@ public class TestSerialization {
     // Call sorted() first
     deResult = (Result)Writables.getWritable(rb, new Result());
     assertTrue("results are not equivalent, first key mismatch",
-        result.sorted()[0].equals(deResult.sorted()[0]));
+        result.raw()[0].equals(deResult.raw()[0]));
     assertTrue("results are not equivalent, second key mismatch",
-        result.sorted()[1].equals(deResult.sorted()[1]));
+        result.raw()[1].equals(deResult.raw()[1]));
 
     // Call raw() first
     deResult = (Result)Writables.getWritable(rb, new Result());
@@ -443,8 +443,8 @@ public class TestSerialization {
     assertTrue(results.length == deResults.length);
 
     for(int i=0;i<results.length;i++) {
-      KeyValue [] keysA = results[i].sorted();
-      KeyValue [] keysB = deResults[i].sorted();
+      KeyValue [] keysA = results[i].raw();
+      KeyValue [] keysB = deResults[i].raw();
       assertTrue(keysA.length == keysB.length);
       for(int j=0;j<keysA.length;j++) {
         assertTrue("Expected equivalent keys but found:\n" +

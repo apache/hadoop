@@ -20,18 +20,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.WritableWithSize;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Writable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -42,6 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.WritableWithSize;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
@@ -166,19 +161,6 @@ public class Result implements Writable, WritableWithSize {
       readFields();
     }
     return isEmpty()? null: Arrays.asList(raw());
-  }
-
-  /**
-   * Returns a sorted array of KeyValues in this Result.
-   * <p>
-   * Since HBase 0.20.5 this is equivalent to {@link #raw}. Use
-   * {@link #raw} instead.
-   *
-   * @return sorted array of KeyValues
-   * @deprecated
-   */
-  public KeyValue[] sorted() {
-    return raw(); // side effect of loading this.kvs
   }
 
   /**
@@ -397,32 +379,6 @@ public class Result implements Writable, WritableWithSize {
       returnMap.put(entry.getKey(), value);
     }
     return returnMap;
-  }
-
-  private Map.Entry<Long,byte[]> getKeyValue(byte[] family, byte[] qualifier) {
-    if(this.familyMap == null) {
-      getMap();
-    }
-    if(isEmpty()) {
-      return null;
-    }
-    NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap =
-      familyMap.get(family);
-    if(qualifierMap == null) {
-      return null;
-    }
-    NavigableMap<Long, byte[]> versionMap =
-      getVersionMap(qualifierMap, qualifier);
-    if(versionMap == null) {
-      return null;
-    }
-    return versionMap.firstEntry();
-  }
-
-  private NavigableMap<Long, byte[]> getVersionMap(
-      NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap, byte [] qualifier) {
-    return qualifier != null?
-      qualifierMap.get(qualifier): qualifierMap.get(new byte[0]);
   }
 
   /**
@@ -675,8 +631,8 @@ public class Result implements Writable, WritableWithSize {
       throw new Exception("This row doesn't have the same number of KVs: "
           + res1.toString() + " compared to " + res2.toString());
     }
-    KeyValue[] ourKVs = res1.sorted();
-    KeyValue[] replicatedKVs = res2.sorted();
+    KeyValue[] ourKVs = res1.raw();
+    KeyValue[] replicatedKVs = res2.raw();
     for (int i = 0; i < res1.size(); i++) {
       if (!ourKVs[i].equals(replicatedKVs[i]) &&
           !Bytes.equals(ourKVs[i].getValue(), replicatedKVs[i].getValue())) {

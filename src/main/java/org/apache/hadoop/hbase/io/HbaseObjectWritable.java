@@ -50,8 +50,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.MultiPut;
-import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.MultiResponse;
@@ -201,9 +199,6 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(DependentColumnFilter.class, code++);
 
     addToMap(Delete [].class, code++);
-
-    addToMap(MultiPut.class, code++);
-    addToMap(MultiPutResponse.class, code++);
 
     addToMap(HLog.Entry.class, code++);
     addToMap(HLog.Entry[].class, code++);

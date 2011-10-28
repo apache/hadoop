@@ -106,7 +106,7 @@ public class TimestampTestBase extends HBaseTestCase {
     get.setMaxVersions(3);
     Result result = incommon.get(get);
     assertEquals(1, result.size());
-    long time = Bytes.toLong(result.sorted()[0].getValue());
+    long time = Bytes.toLong(result.raw()[0].getValue());
     assertEquals(time, currentTime);
   }
 
@@ -135,7 +135,7 @@ public class TimestampTestBase extends HBaseTestCase {
     get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
     get.setMaxVersions(tss.length);
     Result result = incommon.get(get);
-    KeyValue [] kvs = result.sorted();
+    KeyValue [] kvs = result.raw();
     assertEquals(kvs.length, tss.length);
     for(int i=0;i<kvs.length;i++) {
       t = Bytes.toLong(kvs[i].getValue());
@@ -151,7 +151,7 @@ public class TimestampTestBase extends HBaseTestCase {
     get.setTimeRange(0, maxStamp);
     get.setMaxVersions(kvs.length - 1);
     result = incommon.get(get);
-    kvs = result.sorted();
+    kvs = result.raw();
     assertEquals(kvs.length, tss.length - 1);
     for(int i=1;i<kvs.length;i++) {
       t = Bytes.toLong(kvs[i-1].getValue());

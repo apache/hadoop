@@ -1861,15 +1861,15 @@ public class TestFromClientSide {
     result = scanner.next();
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    assertTrue(Bytes.equals(result.sorted()[0].getRow(), ROWS[3]));
-    assertTrue(Bytes.equals(result.sorted()[0].getValue(), VALUES[0]));
+    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[3]));
+    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[0]));
     result = scanner.next();
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertTrue(Bytes.equals(result.sorted()[0].getRow(), ROWS[4]));
-    assertTrue(Bytes.equals(result.sorted()[1].getRow(), ROWS[4]));
-    assertTrue(Bytes.equals(result.sorted()[0].getValue(), VALUES[1]));
-    assertTrue(Bytes.equals(result.sorted()[1].getValue(), VALUES[2]));
+    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[4]));
+    assertTrue(Bytes.equals(result.raw()[1].getRow(), ROWS[4]));
+    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[1]));
+    assertTrue(Bytes.equals(result.raw()[1].getValue(), VALUES[2]));
     scanner.close();
 
     // Add test of bulk deleting.
@@ -1995,7 +1995,7 @@ public class TestFromClientSide {
     Get get = new Get(ROWS[numRows-1]);
     Result result = ht.get(get);
     assertNumKeys(result, numColsPerRow);
-    KeyValue [] keys = result.sorted();
+    KeyValue [] keys = result.raw();
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
@@ -2006,7 +2006,7 @@ public class TestFromClientSide {
     int rowCount = 0;
     while((result = scanner.next()) != null) {
       assertNumKeys(result, numColsPerRow);
-      KeyValue [] kvs = result.sorted();
+      KeyValue [] kvs = result.raw();
       for(int i=0;i<numColsPerRow;i++) {
         assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
@@ -2024,7 +2024,7 @@ public class TestFromClientSide {
     get = new Get(ROWS[numRows-1]);
     result = ht.get(get);
     assertNumKeys(result, numColsPerRow);
-    keys = result.sorted();
+    keys = result.raw();
     for(int i=0;i<result.size();i++) {
       assertKey(keys[i], ROWS[numRows-1], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
     }
@@ -2035,7 +2035,7 @@ public class TestFromClientSide {
     rowCount = 0;
     while((result = scanner.next()) != null) {
       assertNumKeys(result, numColsPerRow);
-      KeyValue [] kvs = result.sorted();
+      KeyValue [] kvs = result.raw();
       for(int i=0;i<numColsPerRow;i++) {
         assertKey(kvs[i], ROWS[rowCount], FAMILY, QUALIFIERS[i], QUALIFIERS[i]);
       }
@@ -2857,7 +2857,7 @@ public class TestFromClientSide {
     assertTrue("Expected " + idxs.length + " keys but result contains "
         + result.size(), result.size() == idxs.length);
 
-    KeyValue [] keys = result.sorted();
+    KeyValue [] keys = result.raw();
 
     for(int i=0;i<keys.length;i++) {
       byte [] family = families[idxs[i][0]];
@@ -2887,7 +2887,7 @@ public class TestFromClientSide {
     int expectedResults = end - start + 1;
     assertEquals(expectedResults, result.size());
 
-    KeyValue [] keys = result.sorted();
+    KeyValue [] keys = result.raw();
 
     for (int i=0; i<keys.length; i++) {
       byte [] value = values[end-i];
@@ -2921,7 +2921,7 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected two keys but result contains " + result.size(),
         result.size() == 2);
-    KeyValue [] kv = result.sorted();
+    KeyValue [] kv = result.raw();
     KeyValue kvA = kv[0];
     assertTrue("(A) Expected family [" + Bytes.toString(familyA) + "] " +
         "Got family [" + Bytes.toString(kvA.getFamily()) + "]",
@@ -2952,7 +2952,7 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected a single key but result contains " + result.size(),
         result.size() == 1);
-    KeyValue kv = result.sorted()[0];
+    KeyValue kv = result.raw()[0];
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
         "Got family [" + Bytes.toString(kv.getFamily()) + "]",
         equals(family, kv.getFamily()));
@@ -2972,7 +2972,7 @@ public class TestFromClientSide {
         equals(row, result.getRow()));
     assertTrue("Expected a single key but result contains " + result.size(),
         result.size() == 1);
-    KeyValue kv = result.sorted()[0];
+    KeyValue kv = result.raw()[0];
     assertTrue("Expected family [" + Bytes.toString(family) + "] " +
         "Got family [" + Bytes.toString(kv.getFamily()) + "]",
         equals(family, kv.getFamily()));
@@ -3511,7 +3511,7 @@ public class TestFromClientSide {
     scan.addColumn(CONTENTS_FAMILY, null);
     ResultScanner scanner = table.getScanner(scan);
     for (Result r : scanner) {
-      for(KeyValue key : r.sorted()) {
+      for(KeyValue key : r.raw()) {
         System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
       }
     }
@@ -3691,7 +3691,7 @@ public class TestFromClientSide {
       int index = 0;
       Result r = null;
       while ((r = s.next()) != null) {
-        for(KeyValue key : r.sorted()) {
+        for(KeyValue key : r.raw()) {
           times[index++] = key.getTimestamp();
         }
       }
@@ -3725,7 +3725,7 @@ public class TestFromClientSide {
       int index = 0;
       Result r = null;
       while ((r = s.next()) != null) {
-        for(KeyValue key : r.sorted()) {
+        for(KeyValue key : r.raw()) {
           times[index++] = key.getTimestamp();
         }
       }
@@ -3792,7 +3792,7 @@ public class TestFromClientSide {
     try {
       for (Result r : s) {
         put = new Put(r.getRow());
-        for (KeyValue kv : r.sorted()) {
+        for (KeyValue kv : r.raw()) {
           put.add(kv);
         }
         b.put(put);

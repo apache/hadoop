@@ -852,7 +852,23 @@ public class HTable implements HTableInterface, Closeable {
   @Override
   public void flushCommits() throws IOException {
     try {
-      this.connection.processBatchOfPuts(writeBuffer, tableName, pool);
+      Object[] results = new Object[writeBuffer.size()];
+      try {
+        this.connection.processBatch(writeBuffer, tableName, pool, results);
+      } catch (InterruptedException e) {
+        throw new IOException(e);
+      } finally {
+        // mutate list so that it is empty for complete success, or contains
+        // only failed records results are returned in the same order as the
+        // requests in list walk the list backwards, so we can remove from list
+        // without impacting the indexes of earlier members
+        for (int i = results.length - 1; i>=0; i--) {
+          if (results[i] instanceof Result) {
+            // successful Puts are removed from the list here.
+            writeBuffer.remove(i);
+          }
+        }
+      }
     } finally {
       if (clearBufferOnFail) {
         writeBuffer.clear();

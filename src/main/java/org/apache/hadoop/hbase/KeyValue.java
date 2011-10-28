@@ -1654,20 +1654,6 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * @param row - row key (arbitrary byte array)
-   * @param c column - {@link #parseColumn(byte[])} is called to split
-   * the column.
-   * @param ts - timestamp
-   * @return First possible key on passed <code>row</code>, column and timestamp
-   * @deprecated
-   */
-  public static KeyValue createFirstOnRow(final byte [] row, final byte [] c,
-      final long ts) {
-    byte [][] split = parseColumn(c);
-    return new KeyValue(row, split[0], split[1], ts, Type.Maximum);
-  }
-
-  /**
    * Create a KeyValue for the specified row, family and qualifier that would be
    * smaller than all other possible KeyValues that have the same row,family,qualifier.
    * Used for seeking.
