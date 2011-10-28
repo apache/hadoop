@@ -175,6 +175,14 @@ public class TestHSWebApp {
                          new TestAppContext());
   }
   
+  @Test public void testJobCounterView() {
+    LOG.info("JobCounterView");
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = TestAMWebApp.getJobParams(appContext);
+    WebAppTests.testPage(HsCountersPage.class, AppContext.class,
+                         appContext, params);
+  }
+  
   @Test public void testSingleCounterView() {
     LOG.info("HsSingleCounterPage");
     WebAppTests.testPage(HsSingleCounterPage.class, AppContext.class,
