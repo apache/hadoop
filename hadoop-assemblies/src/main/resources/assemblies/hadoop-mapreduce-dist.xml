@@ -9,11 +9,8 @@
   <!-- TODO: this layout is wrong. We need module specific bin files in module specific dirs -->
   <fileSets>
     <fileSet>
-      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/target/classes/bin</directory>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/target/native/target/usr/local/bin</directory>
       <outputDirectory>bin</outputDirectory>
-      <includes>
-        <include>container-executor</include>
-      </includes>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
@@ -54,7 +51,6 @@
         <exclude>**/SecurityAuth.audit*</exclude>
       </excludes>
       <includes>
-        <include>assembly/**</include>
         <include>pom.xml</include>
         <include>build*.xml</include>
         <include>ivy.xml</include>

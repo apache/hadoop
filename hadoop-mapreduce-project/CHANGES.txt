@@ -394,6 +394,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
     by default. (tucu)
 
+    MAPREDUCE-3171. normalize nodemanager native code compilation with common/hdfs
+    native. (tucu)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
