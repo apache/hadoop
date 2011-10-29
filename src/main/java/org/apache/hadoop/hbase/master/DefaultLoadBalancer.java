@@ -229,7 +229,14 @@ public class DefaultLoadBalancer implements LoadBalancer {
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad =
       new TreeMap<ServerAndLoad, List<HRegionInfo>>();
     int numRegions = 0;
-
+    // Iterate so we can count regions as we build the map
+    for (Map.Entry<ServerName, List<HRegionInfo>> server: clusterState.entrySet()) {
+      List<HRegionInfo> regions = server.getValue();
+      int sz = regions.size();
+      if (sz == 0) emptyRegionServerPresent = true;
+      numRegions += sz;
+      serversByLoad.put(new ServerAndLoad(server.getKey(), sz), regions);
+    }
     // Check if we even need to do any load balancing
     float average = (float)numRegions / numServers; // for logging
     // HBASE-3681 check sloppiness first
