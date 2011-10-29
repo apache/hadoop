@@ -755,6 +755,9 @@ Release 0.23.0 - Unreleased
     HDFS-2509. Add a test for DistributedFileSystem.getFileChecksum(..) on
     directories or non existing files.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2436. Change FSNamesystem.setTimes(..) for allowing setting times on
+    directories.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

@@ -1250,13 +1250,21 @@ public class FSDirectory implements Closeable {
    * Get {@link INode} associated with the file.
    */
   INodeFile getFileINode(String src) throws UnresolvedLinkException {
+    INode inode = getINode(src);
+    if (inode == null || inode.isDirectory())
+      return null;
+    assert !inode.isLink();
+    return (INodeFile) inode;
+  }
+  
+  /**
+   * Get {@link INode} associated with the file / directory.
+   */
+  INode getINode(String src) throws UnresolvedLinkException {
     readLock();
     try {
-      INode inode = rootDir.getNode(src, true);
-      if (inode == null || inode.isDirectory())
-        return null;
-      assert !inode.isLink();      
-      return (INodeFile)inode;
+      INode iNode = rootDir.getNode(src, true);
+      return iNode;
     } finally {
       readUnlock();
     }
@@ -1991,9 +1999,9 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Sets the access time on the file. Logs it in the transaction log.
+   * Sets the access time on the file/directory. Logs it in the transaction log.
    */
-  void setTimes(String src, INodeFile inode, long mtime, long atime, boolean force) {
+  void setTimes(String src, INode inode, long mtime, long atime, boolean force) {
     boolean status = false;
     writeLock();
     try {
@@ -2009,11 +2017,11 @@ public class FSDirectory implements Closeable {
   boolean unprotectedSetTimes(String src, long mtime, long atime, boolean force) 
       throws UnresolvedLinkException {
     assert hasWriteLock();
-    INodeFile inode = getFileINode(src);
+    INode inode = getINode(src);
     return unprotectedSetTimes(src, inode, mtime, atime, force);
   }
 
-  private boolean unprotectedSetTimes(String src, INodeFile inode, long mtime,
+  private boolean unprotectedSetTimes(String src, INode inode, long mtime,
                                       long atime, boolean force) {
     assert hasWriteLock();
     boolean status = false;

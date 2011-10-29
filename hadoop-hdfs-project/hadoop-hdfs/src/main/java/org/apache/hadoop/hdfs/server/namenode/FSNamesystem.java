@@ -940,7 +940,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkPathAccess(src, FsAction.WRITE);
       }
-      INodeFile inode = dir.getFileINode(src);
+      INode inode = dir.getINode(src);
       if (inode != null) {
         dir.setTimes(src, inode, mtime, atime, true);
         if (auditLog.isInfoEnabled() && isExternalInvocation()) {
@@ -950,7 +950,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                         "setTimes", src, null, stat);
         }
       } else {
-        throw new FileNotFoundException("File " + src + " does not exist.");
+        throw new FileNotFoundException("File/Directory " + src + " does not exist.");
       }
     } finally {
       writeUnlock();
