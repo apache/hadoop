@@ -242,6 +242,24 @@
 </property>
 
 <property>
+  <name>mapreduce.tasktracker.outofband.heartbeat.damper</name>
+  <value>1000000</value>
+  <description>When out-of-band heartbeats are enabled, provides
+  damping to avoid overwhelming the JobTracker if too many out-of-band
+  heartbeats would occur. The damping is calculated such that the
+  heartbeat interval is divided by (T*D + 1) where T is the number
+  of completed tasks and D is the damper value.
+  
+  Setting this to a high value like the default provides no damping --
+  as soon as any task finishes, a heartbeat will be sent. Setting this
+  parameter to 0 is equivalent to disabling the out-of-band heartbeat feature.
+  A value of 1 would indicate that, after one task has completed, the
+  time to wait before the next heartbeat would be 1/2 the usual time.
+  After two tasks have finished, it would be 1/3 the usual time, etc.
+  </description>
+</property>
+
+<property>
   <name>mapred.jobtracker.restart.recover</name>
   <value>false</value>
   <description>"true" to enable (job) recovery upon restart,
