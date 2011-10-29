@@ -158,6 +158,24 @@ public class TestSetTimes extends TestCase {
       assertTrue(atime2 == stat.getAccessTime());
       assertTrue(mtime2 == mtime3);
 
+      long mtime4 = System.currentTimeMillis() - (3600L * 1000L);
+      long atime4 = System.currentTimeMillis();
+      fileSys.setTimes(dir1, mtime4, atime4);
+      // check new modification time on file
+      stat = fileSys.getFileStatus(dir1);
+      assertTrue("Not matching the modification times", mtime4 == stat
+          .getModificationTime());
+      assertTrue("Not matching the access times", atime4 == stat
+          .getAccessTime());
+
+      Path nonExistingDir = new Path(dir1, "/nonExistingDir/");
+      try {
+        fileSys.setTimes(nonExistingDir, mtime4, atime4);
+        fail("Expecting FileNotFoundException");
+      } catch (FileNotFoundException e) {
+        assertTrue(e.getMessage().contains(
+            "File/Directory " + nonExistingDir.toString() + " does not exist."));
+      }
       // shutdown cluster and restart
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
