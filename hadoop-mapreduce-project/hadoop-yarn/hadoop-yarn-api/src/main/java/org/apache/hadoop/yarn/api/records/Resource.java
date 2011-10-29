@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
  */
 @Public
 @Stable
-public interface Resource extends Comparable<Resource> {
+public abstract class Resource implements Comparable<Resource> {
 
   /**
    * Get <em>memory</em> of the resource.
@@ -53,5 +53,31 @@ public interface Resource extends Comparable<Resource> {
   @Public
   @Stable
   public abstract void setMemory(int memory);
-  
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + getMemory();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    Resource other = (Resource) obj;
+    if (getMemory() != other.getMemory())
+      return false;
+    return true;
+  }
+
+  @Override
+  public String toString() {
+    return "memory: " + getMemory();
+  }
 }

@@ -21,11 +21,13 @@ package org.apache.hadoop.mapreduce.v2.app.launcher;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -83,10 +85,14 @@ public class ContainerLauncherImpl extends AbstractService implements
   private BlockingQueue<ContainerLauncherEvent> eventQueue =
       new LinkedBlockingQueue<ContainerLauncherEvent>();
   private RecordFactory recordFactory;
-  //have a cache/map of UGIs so as to avoid creating too many RPC
-  //client connection objects to the same NodeManager
-  private ConcurrentMap<String, UserGroupInformation> ugiMap = 
-    new ConcurrentHashMap<String, UserGroupInformation>();
+
+  // To track numNodes.
+  Set<String> allNodes = new HashSet<String>();
+
+  // have a cache/map of proxies so as to avoid creating multiple RPC
+  // client connection objects for the same container.
+  private Map<ContainerId, ContainerManager> clientCache
+    = new HashMap<ContainerId, ContainerManager>();
 
   public ContainerLauncherImpl(AppContext context) {
     super(ContainerLauncherImpl.class.getName());
@@ -134,7 +140,7 @@ public class ContainerLauncherImpl extends AbstractService implements
 
             // nodes where containers will run at *this* point of time. This is
             // *not* the cluster size and doesn't need to be.
-            int numNodes = ugiMap.size();
+            int numNodes = allNodes.size();
             int idealPoolSize = Math.min(limitOnPoolSize, numNodes);
 
             if (poolSize <= idealPoolSize) {
@@ -142,7 +148,8 @@ public class ContainerLauncherImpl extends AbstractService implements
               // later is just a buffer so we are not always increasing the
               // pool-size
               int newPoolSize = idealPoolSize + INITIAL_POOL_SIZE;
-              LOG.debug("Setting pool size to " + newPoolSize);
+              LOG.info("Setting ContainerLauncher pool size to "
+                  + newPoolSize);
               launcherPool.setCorePoolSize(newPoolSize);
             }
           }
@@ -167,37 +174,43 @@ public class ContainerLauncherImpl extends AbstractService implements
     super.stop();
   }
 
-  protected ContainerManager getCMProxy(
+  protected ContainerManager getCMProxy(ContainerId containerID,
       final String containerManagerBindAddr, ContainerToken containerToken)
       throws IOException {
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
-    if (UserGroupInformation.isSecurityEnabled()) {
+    synchronized (this.clientCache) {
 
-      Token<ContainerTokenIdentifier> token = new Token<ContainerTokenIdentifier>(
-          containerToken.getIdentifier().array(), containerToken
-              .getPassword().array(), new Text(containerToken.getKind()),
-          new Text(containerToken.getService()));
-      // the user in createRemoteUser in this context is not important
-      UserGroupInformation ugi = UserGroupInformation
-          .createRemoteUser(containerManagerBindAddr);
-      ugi.addToken(token);
-      ugiMap.putIfAbsent(containerManagerBindAddr, ugi);
+      if (this.clientCache.containsKey(containerID)) {
+        return this.clientCache.get(containerID);
+      }
 
-      user = ugiMap.get(containerManagerBindAddr);    
+      this.allNodes.add(containerManagerBindAddr);
+
+      if (UserGroupInformation.isSecurityEnabled()) {
+        Token<ContainerTokenIdentifier> token = new Token<ContainerTokenIdentifier>(
+            containerToken.getIdentifier().array(), containerToken
+                .getPassword().array(), new Text(containerToken.getKind()),
+            new Text(containerToken.getService()));
+        // the user in createRemoteUser in this context has to be ContainerID
+        user = UserGroupInformation.createRemoteUser(containerID.toString());
+        user.addToken(token);
+      }
+
+      ContainerManager proxy = user
+          .doAs(new PrivilegedAction<ContainerManager>() {
+            @Override
+            public ContainerManager run() {
+              YarnRPC rpc = YarnRPC.create(getConfig());
+              return (ContainerManager) rpc.getProxy(ContainerManager.class,
+                  NetUtils.createSocketAddr(containerManagerBindAddr),
+                  getConfig());
+            }
+          });
+      this.clientCache.put(containerID, proxy);
+      return proxy;
     }
-    ContainerManager proxy =
-        user.doAs(new PrivilegedAction<ContainerManager>() {
-          @Override
-          public ContainerManager run() {
-            YarnRPC rpc = YarnRPC.create(getConfig());
-            return (ContainerManager) rpc.getProxy(ContainerManager.class,
-                NetUtils.createSocketAddr(containerManagerBindAddr),
-                getConfig());
-          }
-        });
-    return proxy;
   }
 
   private static class CommandTimer extends TimerTask {
@@ -213,7 +226,6 @@ public class ContainerLauncherImpl extends AbstractService implements
           + ". Interrupting and returning";
     }
 
-    
     @Override
     public void run() {
       LOG.warn(this.message);
@@ -255,8 +267,8 @@ public class ContainerLauncherImpl extends AbstractService implements
           timer.schedule(new CommandTimer(Thread.currentThread(), event),
               nmTimeOut);
 
-          ContainerManager proxy = getCMProxy(containerManagerBindAddr,
-              containerToken);
+          ContainerManager proxy = getCMProxy(containerID,
+              containerManagerBindAddr, containerToken);
 
           // Interruped during getProxy, but that didn't throw exception
           if (Thread.currentThread().isInterrupted()) {
@@ -331,8 +343,8 @@ public class ContainerLauncherImpl extends AbstractService implements
             timer.schedule(new CommandTimer(Thread.currentThread(), event),
                 nmTimeOut);
 
-            ContainerManager proxy = getCMProxy(containerManagerBindAddr,
-                containerToken);
+            ContainerManager proxy = getCMProxy(containerID,
+                containerManagerBindAddr, containerToken);
 
             if (Thread.currentThread().isInterrupted()) {
               // The timer cancelled the command in the mean while. No need to

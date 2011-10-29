@@ -1807,7 +1807,7 @@ Release 0.23.0 - Unreleased
     etc. (Jonathan Eagles via acmurthy)
 
     MAPREDUCE-3257. Added authorization checks for the protocol between
-    ResourceManager and ApplicatoinMaster. (vinodkv via acmurthy) 
+    ResourceManager and ApplicationMaster. (vinodkv via acmurthy) 
 
     MAPREDUCE-3259. Added java.library.path of NodeManager to
     ContainerLocalizer in LinuxContainerExecutor. (Kihwal Lee via acmurthy) 
@@ -1858,6 +1858,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3306. Fixed a bug in NodeManager ApplicationImpl that was causing
     NodeManager to crash. (vinodkv)
+
+    MAPREDUCE-3256. Added authorization checks for the protocol between
+    NodeManager and ApplicationMaster. (vinodkv via acmurthy) 
 
 Release 0.22.0 - Unreleased
 

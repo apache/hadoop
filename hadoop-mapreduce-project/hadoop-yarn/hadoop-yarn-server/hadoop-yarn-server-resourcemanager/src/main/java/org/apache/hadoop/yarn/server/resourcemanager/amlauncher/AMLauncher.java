@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -101,9 +100,7 @@ public class AMLauncher implements Runnable {
   private void connect() throws IOException {
     ContainerId masterContainerID = application.getMasterContainer().getId();
     
-    containerMgrProxy =
-        getContainerMgrProxy(
-            masterContainerID.getApplicationAttemptId().getApplicationId());
+    containerMgrProxy = getContainerMgrProxy(masterContainerID);
   }
   
   private void launch() throws IOException {
@@ -133,7 +130,7 @@ public class AMLauncher implements Runnable {
   }
 
   protected ContainerManager getContainerMgrProxy(
-      final ApplicationId applicationID) throws IOException {
+      final ContainerId containerId) {
 
     Container container = application.getMasterContainer();
 
@@ -141,8 +138,8 @@ public class AMLauncher implements Runnable {
 
     final YarnRPC rpc = YarnRPC.create(conf); // TODO: Don't create again and again.
 
-    UserGroupInformation currentUser =
-        UserGroupInformation.createRemoteUser("yarn"); // TODO
+    UserGroupInformation currentUser = UserGroupInformation
+        .createRemoteUser(containerId.toString());
     if (UserGroupInformation.isSecurityEnabled()) {
       ContainerToken containerToken = container.getContainerToken();
       Token<ContainerTokenIdentifier> token =

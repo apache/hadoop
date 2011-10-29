@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sec
 
 import java.util.Collection;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -28,23 +30,23 @@ import org.apache.hadoop.security.token.TokenSelector;
 public class LocalizerTokenSelector implements
     TokenSelector<LocalizerTokenIdentifier> {
 
+  private static final Log LOG = LogFactory
+      .getLog(LocalizerTokenSelector.class);
+
+  @SuppressWarnings("unchecked")
   @Override
   public Token<LocalizerTokenIdentifier> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {
-    System.err.print("=========== Using localizerTokenSelector");
-//    if (service == null) {
-//      return null;
-//    }
+
+    LOG.debug("Using localizerTokenSelector.");
+
     for (Token<? extends TokenIdentifier> token : tokens) {
-      System.err.print("============ token of kind " + token.getKind() + " is found");
-      if (LocalizerTokenIdentifier.KIND.equals(token.getKind())
-          //&& service.equals(token.getService())
-          ) {
+      LOG.debug("Token of kind " + token.getKind() + " is found");
+      if (LocalizerTokenIdentifier.KIND.equals(token.getKind())) {
         return (Token<LocalizerTokenIdentifier>) token;
       }
     }
-    System.err.print("returning null ========== ");
+    LOG.debug("Returning null.");
     return null;
   }
-
 }
