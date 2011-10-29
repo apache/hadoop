@@ -106,11 +106,10 @@ public class Threads {
     if (t == null) {
       return;
     }
-    long startTime = System.currentTimeMillis();
+
     while (t.isAlive()) {
-      Thread.sleep(1000);
-      if (System.currentTimeMillis() - startTime > 60000) {
-        startTime = System.currentTimeMillis();
+      t.join(60 * 1000);
+      if (t.isAlive()) {
         ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
             "Automatic Stack Trace every 60 seconds waiting on " +
             t.getName());
