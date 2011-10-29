@@ -33,23 +33,22 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class ContainerTokenIdentifier extends TokenIdentifier {
 
-  private static Log LOG = LogFactory
-      .getLog(ContainerTokenIdentifier.class);
+  private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);
 
   public static final Text KIND = new Text("ContainerToken");
 
   private ContainerId containerId;
-  private String nmHostName;
+  private String nmHostAddr;
   private Resource resource;
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
       Resource r) {
     this.containerId = containerID;
-    this.nmHostName = hostName;
+    this.nmHostAddr = hostName;
     this.resource = r;
   }
 
@@ -57,66 +56,52 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   }
 
   public ContainerId getContainerID() {
-    return containerId;
+    return this.containerId;
   }
 
-  public String getNmHostName() {
-    return nmHostName;
+  public String getNmHostAddress() {
+    return this.nmHostAddr;
   }
 
   public Resource getResource() {
-    return resource;
+    return this.resource;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    LOG.debug("Writing ContainerTokenIdentifier to RPC layer");
-    ApplicationAttemptId applicationAttemptId = 
-        containerId.getApplicationAttemptId();
+    LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
+    ApplicationAttemptId applicationAttemptId = this.containerId
+        .getApplicationAttemptId();
     ApplicationId applicationId = applicationAttemptId.getApplicationId();
     out.writeLong(applicationId.getClusterTimestamp());
     out.writeInt(applicationId.getId());
     out.writeInt(applicationAttemptId.getAttemptId());
     out.writeInt(this.containerId.getId());
-    out.writeUTF(this.nmHostName);
+    out.writeUTF(this.nmHostAddr);
     out.writeInt(this.resource.getMemory());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    this.containerId = 
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            ContainerId.class);
-    ApplicationAttemptId applicationAttemptId =
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            ApplicationAttemptId.class);
-    ApplicationId applicationId =
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            ApplicationId.class);
-    applicationId.setClusterTimestamp(in.readLong());
-    applicationId.setId(in.readInt());
-    applicationAttemptId.setApplicationId(applicationId);
-    applicationAttemptId.setAttemptId(in.readInt());
-    this.containerId.setApplicationAttemptId(applicationAttemptId);
-    this.containerId.setId(in.readInt());
-    this.nmHostName = in.readUTF();
-    this.resource = 
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            Resource.class);
-    this.resource.setMemory(in.readInt());
+    ApplicationId applicationId = BuilderUtils.newApplicationId(
+        in.readLong(), in.readInt());
+    ApplicationAttemptId applicationAttemptId = BuilderUtils
+        .newApplicationAttemptId(applicationId, in.readInt());
+    this.containerId = BuilderUtils.newContainerId(applicationAttemptId, in
+        .readInt());
+    this.nmHostAddr = in.readUTF();
+    this.resource = BuilderUtils.newResource(in.readInt());
   }
 
-  @SuppressWarnings("static-access")
   @Override
   public Text getKind() {
-    return this.KIND;
+    return KIND;
   }
 
   @Override
   public UserGroupInformation getUser() {
     return UserGroupInformation.createRemoteUser(this.containerId.toString());
   }
-
 
   @InterfaceAudience.Private
   public static class Renewer extends Token.TrivialRenewer {

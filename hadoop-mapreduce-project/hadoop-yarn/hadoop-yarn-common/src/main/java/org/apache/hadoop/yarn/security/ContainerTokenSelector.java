@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.security;
 
 import java.util.Collection;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -28,6 +30,10 @@ import org.apache.hadoop.security.token.TokenSelector;
 public class ContainerTokenSelector implements
     TokenSelector<ContainerTokenIdentifier> {
 
+  private static final Log LOG = LogFactory
+      .getLog(ContainerTokenSelector.class);
+
+  @SuppressWarnings("unchecked")
   @Override
   public Token<ContainerTokenIdentifier> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {
@@ -35,6 +41,10 @@ public class ContainerTokenSelector implements
       return null;
     }
     for (Token<? extends TokenIdentifier> token : tokens) {
+      if (LOG.isDebugEnabled()) {
+        LOG.info("Looking for service: " + service + ". Current token is "
+            + token);
+      }
       if (ContainerTokenIdentifier.KIND.equals(token.getKind()) && 
           service.equals(token.getService())) {
         return (Token<ContainerTokenIdentifier>) token;

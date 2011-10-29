@@ -19,14 +19,11 @@
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProtoOrBuilder;
 
-
-    
-public class ResourcePBImpl extends ProtoBase<ResourceProto> implements Resource {
+public class ResourcePBImpl extends Resource {
   ResourceProto proto = ResourceProto.getDefaultInstance();
   ResourceProto.Builder builder = null;
   boolean viaProto = false;

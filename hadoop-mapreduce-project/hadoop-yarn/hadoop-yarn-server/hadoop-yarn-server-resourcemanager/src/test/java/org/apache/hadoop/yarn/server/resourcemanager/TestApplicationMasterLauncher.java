@@ -133,7 +133,7 @@ public class TestApplicationMasterLauncher {
               getConfig()) {
             @Override
             protected ContainerManager getContainerMgrProxy(
-                ApplicationId applicationID) throws IOException {
+                ContainerId containerId) {
               return containerManager;
             }
           };

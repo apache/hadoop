@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.junit.Test;
 
@@ -109,7 +110,7 @@ public class TestContainerLauncher {
     protected ContainerLauncher createContainerLauncher(AppContext context) {
       return new ContainerLauncherImpl(context) {
         @Override
-        protected ContainerManager getCMProxy(
+        protected ContainerManager getCMProxy(ContainerId containerID,
             String containerManagerBindAddr, ContainerToken containerToken)
             throws IOException {
           try {
