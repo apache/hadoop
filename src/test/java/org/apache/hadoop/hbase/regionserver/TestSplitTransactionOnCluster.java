@@ -405,7 +405,8 @@ public class TestSplitTransactionOnCluster {
       HRegionServer hrs = getOtherRegionServer(cluster, metaRegionServer);
       LOG.info("Moving " + hri.getRegionNameAsString() + " to " +
         hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
-      admin.move(hri.getEncodedNameAsBytes(), hrs.getServerName().getVersionedBytes());
+      admin.move(hri.getEncodedNameAsBytes(),
+        Bytes.toBytes(hrs.getServerName().toString()));
     }
     // Wait till table region is up on the server that is NOT carrying .META..
     while (true) {

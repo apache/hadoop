@@ -392,6 +392,8 @@ Release 0.92.0 - Unreleased
    HBASE-4687  regionserver may miss zk-heartbeats to master when replaying
                edits at region open (prakash via jgray)
    HBASE-4701  TestMasterObserver fails up on jenkins
+   HBASE-4700  TestSplitTransactionOnCluster fails on occasion when it tries
+               to move a region
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
