@@ -32,6 +32,10 @@
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
     </snapshotRepository>
+    <site>
+      <id>apache.website</id>
+      <url>scpexe://people.apache.org/www/hadoop.apache.org/docs/r${project.version}</url>
+    </site>
   </distributionManagement>
 
   <repositories>
@@ -103,7 +107,11 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>2.2</version>
+          <version>3.0</version>
+          <configuration>
+            <!-- Reports are generated at the site level -->
+            <generateReports>false</generateReports>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -157,9 +165,21 @@
           </includes>
         </configuration>
       </plugin>
+            <plugin>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>3.0</version>
+        <executions>
+          <execution>
+            <id>attach-descriptor</id>
+            <goals>
+              <goal>attach-descriptor</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
-
+  
   <profiles>
     <profile>
       <id>src</id>

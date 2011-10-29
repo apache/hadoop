@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project name="Hadoop">
+  <bannerLeft>
+    <name>Hadoop</name>
+    <src>http://hadoop.apache.org/images/hadoop-logo.jpg</src>
+    <href>http://hadoop.apache.org/</href>
+  </bannerLeft>
+  <bannerRight>
+    <src>http://www.apache.org/images/asf_logo_wide.png</src>
+    <href>http://www.apache.org/</href>
+  </bannerRight>
+
+  <publishDate position="right"/>
+  <version position="right"/>
+
+  <skin>
+    <groupId>org.apache.maven.skins</groupId>
+    <artifactId>maven-stylus-skin</artifactId>
+    <version>1.2</version>
+  </skin>
+
+  <body>
+    <links position="left">
+      <item name="Wiki" href="http://wiki.apache.org/hadoop" />
+      <item name="SVN" href="https://svn.apache.org/repos/asf/hadoop/" />
+    </links>
+
+    <breadcrumbs position="left">
+      <item name="Apache" href="http://www.apache.org/" />
+      <item name="Hadoop" href="http://hadoop.apache.org/"/>
+    </breadcrumbs>
+
+    <menu name="Auth" inherit="top">
+      <item name="Overview" href="hadoop-auth/index.html"/>
+      <item name="Examples" href="hadoop-auth/Examples.html"/>
+      <item name="Configuration" href="hadoop-auth/Configuration.html"/>
+      <item name="Building" href="hadoop-auth/BuildingIt.html"/>
+    </menu>
+    
+    <menu name="Common" inherit="top">
+    </menu>
+    
+    <menu name="HDFS" inherit="top">
+      <item name="Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
+    </menu>
+
+    <menu name="MapReduce" inherit="top">
+      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/index.html"/>
+      <item name="Single Node Setup" href="hadoop-yarn/hadoop-yarn-site/SingleCluster.html"/>
+      <item name="Cluster Setup" href="hadoop-yarn/hadoop-yarn-site/ClusterSetup.html"/>
+      <item name="Writing Yarn Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
+      <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
+    </menu>
+    
+    <menu name="Configuration Reference" inherit="top">
+      <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
+      <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
+      <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
+      <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>
+    </menu>
+
+  </body>
+
+</project>

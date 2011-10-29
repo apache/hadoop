@@ -64,6 +64,24 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <copy file="src/main/resources/mapred-default.xml" todir="src/site/resources"/>
+                <copy file="../../../hadoop-common-project/hadoop-common/src/main/xsl/configuration.xsl" todir="src/site/resources"/>
+              </tasks>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>
