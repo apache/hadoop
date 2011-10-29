@@ -391,6 +391,7 @@ Release 0.92.0 - Unreleased
    HBASE-4641  Block cache can be mistakenly instantiated on Master (jgray)
    HBASE-4687  regionserver may miss zk-heartbeats to master when replaying
                edits at region open (prakash via jgray)
+   HBASE-4701  TestMasterObserver fails up on jenkins
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

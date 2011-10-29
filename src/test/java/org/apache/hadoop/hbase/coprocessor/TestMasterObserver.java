@@ -29,8 +29,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,8 +42,6 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -56,6 +58,7 @@ import org.junit.Test;
  * interface hooks at all appropriate times during normal HMaster operations.
  */
 public class TestMasterObserver {
+  private static final Log LOG = LogFactory.getLog(TestMasterObserver.class);
 
   public static class CPMasterObserver implements MasterObserver {
 
@@ -642,27 +645,37 @@ public class TestMasterObserver {
 
     HTable table = UTIL.createTable(TEST_TABLE, TEST_FAMILY);
     UTIL.createMultiRegions(table, TEST_FAMILY);
-
-    Map<HRegionInfo,HServerAddress> regions = table.getRegionsInfo();
-    assertFalse(regions.isEmpty());
-    Map.Entry<HRegionInfo, HServerAddress> firstRegion =
-        regions.entrySet().iterator().next();
-
-    // try to force a move
-    Collection<ServerName> servers = master.getClusterStatus().getServers();
-    String destName = null;
-    for (ServerName info : servers) {
-      HServerAddress hsa =
-        new HServerAddress(info.getHostname(), info.getPort());
-      if (!hsa.equals(firstRegion.getValue())) {
-        destName = info.toString();
+    NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
+    Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
+    for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
+      if (e.getValue() != null) {
+        firstGoodPair = e;
         break;
       }
     }
-    master.move(firstRegion.getKey().getEncodedNameAsBytes(),
-        Bytes.toBytes(destName));
+    assertNotNull("Found a non-null entry", firstGoodPair);
+    LOG.info("Found " + firstGoodPair.toString());
+    // Try to force a move
+    Collection<ServerName> servers = master.getClusterStatus().getServers();
+    String destName = null;
+    String firstRegionHostnamePortStr = firstGoodPair.getValue().toString();
+    LOG.info("firstRegionHostnamePortStr=" + firstRegionHostnamePortStr);
+    boolean found = false;
+    // Find server that is NOT carrying the first region
+    for (ServerName info : servers) {
+      LOG.info("ServerName=" + info);
+      if (!firstRegionHostnamePortStr.equals(info.getHostAndPort())) {
+        destName = info.toString();
+        found = true;
+        break;
+      }
+    }
+    assertTrue("Found server", found);
+    LOG.info("Found " + destName);
+    master.move(firstGoodPair.getKey().getEncodedNameAsBytes(),
+      Bytes.toBytes(destName));
     assertTrue("Coprocessor should have been called on region move",
-        cp.wasMoveCalled());
+      cp.wasMoveCalled());
 
     // make sure balancer is on
     master.balanceSwitch(true);

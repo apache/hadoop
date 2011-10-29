@@ -75,7 +75,8 @@ public class ServerName implements Comparable<ServerName> {
   private final long startcode;
 
   /**
-   * Cached bytes of this ServerName instance.
+   * Cached versioned bytes of this ServerName instance.
+   * @see #getVersionedBytes()
    */
   private byte [] bytes;
 
@@ -121,7 +122,7 @@ public class ServerName implements Comparable<ServerName> {
 
   /**
    * @return {@link #getServerName()} as bytes with a short-sized prefix with
-   * the {@link ServerName#VERSION} of this class.
+   * the ServerName#VERSION of this class.
    */
   public synchronized byte [] getVersionedBytes() {
     if (this.bytes == null) {
