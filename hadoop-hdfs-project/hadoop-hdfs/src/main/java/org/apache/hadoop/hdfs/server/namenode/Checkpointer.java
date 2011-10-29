@@ -241,8 +241,12 @@ class Checkpointer extends Daemon {
   
       rollForwardByApplyingLogs(manifest, bnImage, backupNode.getNamesystem());
     }
-
+    
     long txid = bnImage.getLastAppliedTxId();
+    
+    backupNode.namesystem.dir.setReady();
+    backupNode.namesystem.setBlockTotal();
+    
     bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
     bnStorage.writeAll();
 

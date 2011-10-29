@@ -1816,6 +1816,9 @@ Release 0.22.0 - Unreleased
     HDFS-2452. OutOfMemoryError in DataXceiverServer takes down the DataNode
     (Uma Maheswara Rao via cos)
 
+    HDFS-2285. BackupNode should reject requests to modify namespace.
+    (shv and Uma Maheswara Rao)
+
 Release 0.21.1 - Unreleased
 
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)

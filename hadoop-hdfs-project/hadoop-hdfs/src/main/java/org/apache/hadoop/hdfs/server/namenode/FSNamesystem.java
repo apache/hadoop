@@ -3344,7 +3344,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Set the total number of blocks in the system. 
    */
-  private void setBlockTotal() {
+  void setBlockTotal() {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)

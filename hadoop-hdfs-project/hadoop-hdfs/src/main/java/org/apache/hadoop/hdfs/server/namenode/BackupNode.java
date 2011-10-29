@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocolR23Compatible.JournalProtocolServerSideTranslatorR23;
 import org.apache.hadoop.hdfs.protocolR23Compatible.JournalWireProtocol;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
@@ -137,6 +138,10 @@ public class BackupNode extends NameNode {
                  CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
     NamespaceInfo nsInfo = handshake(conf);
     super.initialize(conf);
+    if (false == namesystem.isInSafeMode()) {
+      namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    }
+
     // Backup node should never do lease recovery,
     // therefore lease hard limit should never expire.
     namesystem.leaseManager.setLeasePeriod(
@@ -190,7 +195,12 @@ public class BackupNode extends NameNode {
     // Stop name-node threads
     super.stop();
   }
-
+  
+  /* @Override */// NameNode
+  public boolean setSafeMode(SafeModeAction action) throws IOException {
+    throw new UnsupportedActionException("setSafeMode");
+  }
+  
   static class BackupNodeRpcServer extends NameNodeRpcServer implements
       JournalProtocol {
     private final String nnRpcAddress;
