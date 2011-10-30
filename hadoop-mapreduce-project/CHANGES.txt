@@ -1862,6 +1862,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3256. Added authorization checks for the protocol between
     NodeManager and ApplicationMaster. (vinodkv via acmurthy) 
 
+    MAPREDUCE-3274. Fixed a race condition in MRAppMaster that was causing a
+    task-scheduling deadlock. (Robert Joseph Evans via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

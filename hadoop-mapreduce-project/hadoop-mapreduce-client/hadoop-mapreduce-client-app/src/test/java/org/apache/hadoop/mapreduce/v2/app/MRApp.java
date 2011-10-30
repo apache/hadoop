@@ -294,10 +294,13 @@ public class MRApp extends MRAppMaster {
         return null;
       }
       @Override
-      public void register(TaskAttemptId attemptID, 
+      public void registerLaunchedTask(TaskAttemptId attemptID, 
           org.apache.hadoop.mapred.Task task, WrappedJvmID jvmID) {}
       @Override
       public void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID) {
+      }
+      @Override
+      public void registerPendingTask(WrappedJvmID jvmID) {
       }
     };
   }
