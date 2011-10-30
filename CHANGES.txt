@@ -405,6 +405,7 @@ Release 0.92.0 - Unreleased
                with evictOnClose (jgray)
    HBASE-4651  ConcurrentModificationException might be thrown in
                TestHCM.testConnectionUniqueness (Jinchao)
+   HBASE-4690  Intermittent TestRegionServerCoprocessorExceptionWithAbort failure
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
