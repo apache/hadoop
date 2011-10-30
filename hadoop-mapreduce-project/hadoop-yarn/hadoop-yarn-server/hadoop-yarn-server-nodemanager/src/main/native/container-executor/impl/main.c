@@ -31,18 +31,22 @@
 
 #define _STRINGIFY(X) #X
 #define STRINGIFY(X) _STRINGIFY(X)
-#define CONF_FILENAME "taskcontroller.cfg"
+#define CONF_FILENAME "container-executor.cfg"
+
+#ifndef HADOOP_CONF_DIR
+  #error HADOOP_CONF_DIR must be defined
+#endif
 
 void display_usage(FILE *stream) {
   fprintf(stream,
       "Usage: container-executor user command command-args\n");
   fprintf(stream, "Commands:\n");
-  fprintf(stream, "   initialize job: %2d jobid tokens cmd args\n",
-	  INITIALIZE_JOB);
-  fprintf(stream, "   launch task:    %2d jobid taskid workdir task-script jobTokens\n",
-	  LAUNCH_TASK_JVM);
-  fprintf(stream, "   signal task:    %2d task-pid signal\n",
-	  SIGNAL_TASK);
+  fprintf(stream, "   initialize container: %2d appid tokens cmd app...\n",
+	  INITIALIZE_CONTAINER);
+  fprintf(stream, "   launch container:    %2d appid containerid workdir container-script tokens\n",
+	  LAUNCH_CONTAINER);
+  fprintf(stream, "   signal container:    %2d container-pid signal\n",
+	  SIGNAL_CONTAINER);
   fprintf(stream, "   delete as user: %2d relative-path\n",
 	  DELETE_AS_USER);
 }
@@ -55,12 +59,14 @@ int main(int argc, char **argv) {
   }
 
   LOGFILE = stdout;
+  ERRORFILE = stderr;
   int command;
-  const char * job_id = NULL;
-  const char * task_id = NULL;
+  const char * app_id = NULL;
+  const char * container_id = NULL;
   const char * cred_file = NULL;
   const char * script_file = NULL;
   const char * current_dir = NULL;
+  const char * pid_file = NULL;
 
   int exit_code = 0;
 
@@ -68,54 +74,46 @@ int main(int argc, char **argv) {
 
   char *executable_file = get_executable();
 
-#ifndef HADOOP_CONF_DIR
-  #error HADOOP_CONF_DIR must be defined
-#endif
-
   char *orig_conf_file = STRINGIFY(HADOOP_CONF_DIR) "/" CONF_FILENAME;
   char *conf_file = realpath(orig_conf_file, NULL);
 
   if (conf_file == NULL) {
-    fprintf(LOGFILE, "Configuration file %s not found.\n", orig_conf_file);
-    fflush(LOGFILE);
-    return INVALID_CONFIG_FILE;
+    fprintf(ERRORFILE, "Configuration file %s not found.\n", orig_conf_file);
+    exit(INVALID_CONFIG_FILE);
   }
   if (check_configuration_permissions(conf_file) != 0) {
-    return INVALID_CONFIG_FILE;
+    exit(INVALID_CONFIG_FILE);
   }
   read_config(conf_file);
   free(conf_file);
 
-  // look up the task tracker group in the config file
-  char *tt_group = get_value(TT_GROUP_KEY);
-  if (tt_group == NULL) {
-    fprintf(LOGFILE, "Can't get configured value for %s.\n", TT_GROUP_KEY);
-    fflush(LOGFILE);
+  // look up the node manager group in the config file
+  char *nm_group = get_value(NM_GROUP_KEY);
+  if (nm_group == NULL) {
+    fprintf(ERRORFILE, "Can't get configured value for %s.\n", NM_GROUP_KEY);
     exit(INVALID_CONFIG_FILE);
   }
-  struct group *group_info = getgrnam(tt_group);
+  struct group *group_info = getgrnam(nm_group);
   if (group_info == NULL) {
-    fprintf(LOGFILE, "Can't get group information for %s - %s.\n", tt_group,
+    fprintf(ERRORFILE, "Can't get group information for %s - %s.\n", nm_group,
             strerror(errno));
     fflush(LOGFILE);
     exit(INVALID_CONFIG_FILE);
   }
-  set_tasktracker_uid(getuid(), group_info->gr_gid);
+  set_nm_uid(getuid(), group_info->gr_gid);
   // if we are running from a setuid executable, make the real uid root
   setuid(0);
-  // set the real and effective group id to the task tracker group
+  // set the real and effective group id to the node manager group
   setgid(group_info->gr_gid);
 
-  if (check_taskcontroller_permissions(executable_file) != 0) {
-    fprintf(LOGFILE, "Invalid permissions on container-executor binary.\n");
-    fflush(LOGFILE);
-    return INVALID_TASKCONTROLLER_PERMISSIONS;
+  if (check_executor_permissions(executable_file) != 0) {
+    fprintf(ERRORFILE, "Invalid permissions on container-executor binary.\n");
+    return INVALID_CONTAINER_EXEC_PERMISSIONS;
   }
 
   //checks done for user name
   if (argv[optind] == NULL) {
-    fprintf(LOGFILE, "Invalid user name \n");
-    fflush(LOGFILE);
+    fprintf(ERRORFILE, "Invalid user name.\n");
     return INVALID_USER_NAME;
   }
   int ret = set_user(argv[optind]);
@@ -128,53 +126,60 @@ int main(int argc, char **argv) {
 
   fprintf(LOGFILE, "main : command provided %d\n",command);
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
+  fflush(LOGFILE);
 
   switch (command) {
-  case INITIALIZE_JOB:
+  case INITIALIZE_CONTAINER:
     if (argc < 6) {
-      fprintf(LOGFILE, "Too few arguments (%d vs 6) for initialize job\n",
+      fprintf(ERRORFILE, "Too few arguments (%d vs 6) for initialize container\n",
 	      argc);
+      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
-    job_id = argv[optind++];
+    app_id = argv[optind++];
     cred_file = argv[optind++];
-    exit_code = initialize_job(user_detail->pw_name, job_id, cred_file,
+    exit_code = initialize_app(user_detail->pw_name, app_id, cred_file,
                                argv + optind);
     break;
-  case LAUNCH_TASK_JVM:
-    if (argc < 8) {
-      fprintf(LOGFILE, "Too few arguments (%d vs 8) for launch task\n",
+  case LAUNCH_CONTAINER:
+    if (argc < 9) {
+      fprintf(ERRORFILE, "Too few arguments (%d vs 8) for launch container\n",
 	      argc);
+      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     }
-    job_id = argv[optind++];
-    task_id = argv[optind++];
+    app_id = argv[optind++];
+    container_id = argv[optind++];
     current_dir = argv[optind++];
     script_file = argv[optind++];
     cred_file = argv[optind++];
-    exit_code = run_task_as_user(user_detail->pw_name, job_id, task_id,
-                                 current_dir, script_file, cred_file);
+    pid_file = argv[optind++];
+    exit_code = launch_container_as_user(user_detail->pw_name, app_id, container_id,
+                                 current_dir, script_file, cred_file, pid_file);
     break;
-  case SIGNAL_TASK:
+  case SIGNAL_CONTAINER:
     if (argc < 5) {
-      fprintf(LOGFILE, "Too few arguments (%d vs 5) for signal task\n",
+      fprintf(ERRORFILE, "Too few arguments (%d vs 5) for signal container\n",
 	      argc);
+      fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
     } else {
       char* end_ptr = NULL;
       char* option = argv[optind++];
-      int task_pid = strtol(option, &end_ptr, 10);
+      int container_pid = strtol(option, &end_ptr, 10);
       if (option == end_ptr || *end_ptr != '\0') {
-        fprintf(LOGFILE, "Illegal argument for task pid %s\n", option);
+        fprintf(ERRORFILE, "Illegal argument for container pid %s\n", option);
+        fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
       }
       option = argv[optind++];
       int signal = strtol(option, &end_ptr, 10);
       if (option == end_ptr || *end_ptr != '\0') {
-        fprintf(LOGFILE, "Illegal argument for signal %s\n", option);
+        fprintf(ERRORFILE, "Illegal argument for signal %s\n", option);
+        fflush(ERRORFILE);
         return INVALID_ARGUMENT_NUMBER;
       }
-      exit_code = signal_user_task(user_detail->pw_name, task_pid, signal);
+      exit_code = signal_container_as_user(user_detail->pw_name, container_pid, signal);
     }
     break;
   case DELETE_AS_USER:
@@ -183,8 +188,11 @@ int main(int argc, char **argv) {
                               argv + optind);
     break;
   default:
+    fprintf(ERRORFILE, "Invalid command %d not supported.",command);
+    fflush(ERRORFILE);
     exit_code = INVALID_COMMAND_PROVIDED;
   }
   fclose(LOGFILE);
+  fclose(ERRORFILE);
   return exit_code;
 }

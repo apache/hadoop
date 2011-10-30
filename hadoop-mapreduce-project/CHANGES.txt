@@ -1821,6 +1821,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3274. Fixed a race condition in MRAppMaster that was causing a
     task-scheduling deadlock. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3171 merge from trunk reverted changes from MAPREDUCE-2747 MAPREDUCE-3240.
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

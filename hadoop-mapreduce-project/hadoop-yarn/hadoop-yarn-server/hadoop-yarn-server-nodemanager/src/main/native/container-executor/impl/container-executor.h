@@ -21,9 +21,9 @@
 
 //command definitions
 enum command {
-  INITIALIZE_JOB = 0,
-  LAUNCH_TASK_JVM = 1,
-  SIGNAL_TASK = 2,
+  INITIALIZE_CONTAINER = 0,
+  LAUNCH_CONTAINER = 1,
+  SIGNAL_CONTAINER = 2,
   DELETE_AS_USER = 3,
 };
 
@@ -31,37 +31,38 @@ enum errorcodes {
   INVALID_ARGUMENT_NUMBER = 1,
   INVALID_USER_NAME, //2
   INVALID_COMMAND_PROVIDED, //3
-  SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS, //4
-  INVALID_TT_ROOT, //5
+  // SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS (NOT USED) 4
+  INVALID_NM_ROOT_DIRS = 5,
   SETUID_OPER_FAILED, //6
-  UNABLE_TO_EXECUTE_TASK_SCRIPT, //7
-  UNABLE_TO_KILL_TASK, //8
-  INVALID_TASK_PID, //9
-  ERROR_RESOLVING_FILE_PATH, //10
-  RELATIVE_PATH_COMPONENTS_IN_FILE_PATH, //11
-  UNABLE_TO_STAT_FILE, //12
-  FILE_NOT_OWNED_BY_TASKTRACKER, //13
-  PREPARE_ATTEMPT_DIRECTORIES_FAILED, //14
-  INITIALIZE_JOB_FAILED, //15
-  PREPARE_TASK_LOGS_FAILED, //16
-  INVALID_TT_LOG_DIR, //17
-  OUT_OF_MEMORY, //18
-  INITIALIZE_DISTCACHEFILE_FAILED, //19
-  INITIALIZE_USER_FAILED, //20
+  UNABLE_TO_EXECUTE_CONTAINER_SCRIPT, //7
+  UNABLE_TO_SIGNAL_CONTAINER, //8
+  INVALID_CONTAINER_PID, //9
+  // ERROR_RESOLVING_FILE_PATH (NOT_USED) 10
+  // RELATIVE_PATH_COMPONENTS_IN_FILE_PATH (NOT USED) 11
+  // UNABLE_TO_STAT_FILE (NOT USED) 12
+  // FILE_NOT_OWNED_BY_ROOT (NOT USED) 13
+  // PREPARE_CONTAINER_DIRECTORIES_FAILED (NOT USED) 14
+  // INITIALIZE_CONTAINER_FAILED (NOT USED) 15
+  // PREPARE_CONTAINER_LOGS_FAILED (NOT USED) 16
+  // INVALID_LOG_DIR (NOT USED) 17
+  OUT_OF_MEMORY = 18,
+  // INITIALIZE_DISTCACHEFILE_FAILED (NOT USED) 19
+  INITIALIZE_USER_FAILED = 20,
   UNABLE_TO_BUILD_PATH, //21
-  INVALID_TASKCONTROLLER_PERMISSIONS, //22
-  PREPARE_JOB_LOGS_FAILED, //23
-  INVALID_CONFIG_FILE, // 24
+  INVALID_CONTAINER_EXEC_PERMISSIONS, //22
+  // PREPARE_JOB_LOGS_FAILED (NOT USED) 23
+  INVALID_CONFIG_FILE =  24,
+  SETSID_OPER_FAILED = 25,
+  WRITE_PIDFILE_FAILED = 26
 };
 
-#define TT_GROUP_KEY "mapreduce.tasktracker.group"
+#define NM_GROUP_KEY "yarn.nodemanager.linux-container-executor.group"
 #define USER_DIR_PATTERN "%s/usercache/%s"
-#define TT_JOB_DIR_PATTERN USER_DIR_PATTERN "/appcache/%s"
-#define ATTEMPT_DIR_PATTERN TT_JOB_DIR_PATTERN "/%s"
-#define TASK_SCRIPT "task.sh"
-#define TT_LOCAL_TASK_DIR_PATTERN TT_JOB_DIR_PATTERN "/%s"
-#define TT_SYS_DIR_KEY "mapreduce.cluster.local.dir"
-#define TT_LOG_DIR_KEY "hadoop.log.dir"
+#define NM_APP_DIR_PATTERN USER_DIR_PATTERN "/appcache/%s"
+#define CONTAINER_DIR_PATTERN NM_APP_DIR_PATTERN "/%s"
+#define CONTAINER_SCRIPT "launch_container.sh"
+#define NM_SYS_DIR_KEY "yarn.nodemanager.local-dirs"
+#define NM_LOG_DIR_KEY "yarn.nodemanager.log-dirs"
 #define CREDENTIALS_FILENAME "container_tokens"
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
@@ -70,23 +71,61 @@ extern struct passwd *user_detail;
 
 // the log file for messages
 extern FILE *LOGFILE;
+// the log file for error messages
+extern FILE *ERRORFILE;
+
 
 // get the executable's filename
 char* get_executable();
 
-int check_taskcontroller_permissions(char *executable_file);
+/**
+ * Check the permissions on the container-executor to make sure that security is
+ * permissible. For this, we need container-executor binary to
+ *    * be user-owned by root
+ *    * be group-owned by a configured special group.
+ *    * others do not have any permissions
+ *    * be setuid/setgid
+ * @param executable_file the file to check
+ * @return -1 on error 0 on success.
+ */
+int check_executor_permissions(char *executable_file);
 
-// initialize the job directory
-int initialize_job(const char *user, const char *jobid,
+// initialize the application directory
+int initialize_app(const char *user, const char *app_id,
                    const char *credentials, char* const* args);
 
-// run the task as the user
-int run_task_as_user(const char * user, const char *jobid, const char *taskid,
-                     const char *work_dir, const char *script_name,
-                     const char *cred_file);
+/*
+ * Function used to launch a container as the provided user. It does the following :
+ * 1) Creates container work dir and log dir to be accessible by the child
+ * 2) Copies the script file from the TT to the work directory
+ * 3) Sets up the environment
+ * 4) Does an execlp on the same in order to replace the current image with
+ *    container image.
+ * @param user the user to become
+ * @param app_id the application id
+ * @param container_id the container id
+ * @param work_dir the working directory for the container.
+ * @param script_name the name of the script to be run to launch the container.
+ * @param cred_file the credentials file that needs to be compied to the
+ * working directory.
+ * @param pid_file file where pid of process should be written to
+ * @return -1 or errorcode enum value on error (should never return on success).
+ */
+int launch_container_as_user(const char * user, const char *app_id,
+                     const char *container_id, const char *work_dir,
+                     const char *script_name, const char *cred_file,
+                     const char *pid_file);
 
-// send a signal as the user
-int signal_user_task(const char *user, int pid, int sig);
+/**
+ * Function used to signal a container launched by the user.
+ * The function sends appropriate signal to the process group
+ * specified by the pid.
+ * @param user the user to send the signal as.
+ * @param pid the process id to send the signal to.
+ * @param sig the signal to send.
+ * @return an errorcode enum value on error, or 0 on success.
+ */
+int signal_container_as_user(const char *user, int pid, int sig);
 
 // delete a directory (or file) recursively as the user. The directory
 // could optionally be relative to the baseDir set of directories (if the same
@@ -97,8 +136,9 @@ int delete_as_user(const char *user,
                    const char *dir_to_be_deleted,
                    char* const* baseDirs);
 
-// set the task tracker's uid and gid
-void set_tasktracker_uid(uid_t user, gid_t group);
+// set the uid and gid of the node manager.  This is used when doing some
+// priviledged operations for setting the effective uid and gid.
+void set_nm_uid(uid_t user, gid_t group);
 
 /**
  * Is the user a real user account?
@@ -115,22 +155,22 @@ int set_user(const char *user);
 
 // methods to get the directories
 
-char *get_user_directory(const char *tt_root, const char *user);
+char *get_user_directory(const char *nm_root, const char *user);
 
-char *get_job_directory(const char * tt_root, const char *user,
-                        const char *jobid);
+char *get_app_directory(const char * nm_root, const char *user,
+                        const char *app_id);
 
-char *get_attempt_work_directory(const char *tt_root, const char *user,
-				 const char *job_dir, const char *attempt_id);
+char *get_container_work_directory(const char *nm_root, const char *user,
+				 const char *app_id, const char *container_id);
 
-char *get_task_launcher_file(const char* work_dir);
+char *get_container_launcher_file(const char* work_dir);
 
-char *get_task_credentials_file(const char* work_dir);
+char *get_container_credentials_file(const char* work_dir);
 
 /**
- * Get the job log directory under log_root
+ * Get the app log directory under log_root
  */
-char* get_job_log_directory(const char* log_root, const char* jobid);
+char* get_app_log_directory(const char* log_root, const char* appid);
 
 /**
  * Ensure that the given path and all of the parent directories are created
@@ -147,7 +187,7 @@ int initialize_user(const char *user);
  * Create a top level directory for the user.
  * It assumes that the parent directory is *not* writable by the user.
  * It creates directories with 02700 permissions owned by the user
- * and with the group set to the task tracker group.
+ * and with the group set to the node manager group.
  * return non-0 on failure
  */
 int create_directory_for_user(const char* path);

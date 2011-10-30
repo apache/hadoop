@@ -69,16 +69,16 @@ void free_configurations() {
 static int is_only_root_writable(const char *file) {
   struct stat file_stat;
   if (stat(file, &file_stat) != 0) {
-    fprintf(LOGFILE, "Can't stat file %s - %s\n", file, strerror(errno));
+    fprintf(ERRORFILE, "Can't stat file %s - %s\n", file, strerror(errno));
     return 0;
   }
   if (file_stat.st_uid != 0) {
-    fprintf(LOGFILE, "File %s must be owned by root, but is owned by %d\n",
+    fprintf(ERRORFILE, "File %s must be owned by root, but is owned by %d\n",
             file, file_stat.st_uid);
     return 0;
   }
   if ((file_stat.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
-    fprintf(LOGFILE, 
+    fprintf(ERRORFILE, 
 	    "File %s must not be world or group writable, but is %03o\n",
 	    file, file_stat.st_mode & (~S_IFMT));
     return 0;
@@ -109,7 +109,6 @@ int check_configuration_permissions(const char* file_name) {
 
 //function used to load the configurations present in the secure config
 void read_config(const char* file_name) {
-  fprintf(LOGFILE, "Reading task controller config from %s\n" , file_name);
   FILE *conf_file;
   char *line;
   char *equaltok;
@@ -118,7 +117,7 @@ void read_config(const char* file_name) {
   int size_read = 0;
 
   if (file_name == NULL) {
-    fprintf(LOGFILE, "Null configuration filename passed in\n");
+    fprintf(ERRORFILE, "Null configuration filename passed in\n");
     exit(INVALID_CONFIG_FILE);
   }
 
@@ -132,30 +131,33 @@ void read_config(const char* file_name) {
   config.size = 0;
   conf_file = fopen(file_name, "r");
   if (conf_file == NULL) {
-    fprintf(LOGFILE, "Invalid conf file provided : %s \n", file_name);
+    fprintf(ERRORFILE, "Invalid conf file provided : %s \n", file_name);
     exit(INVALID_CONFIG_FILE);
   }
   while(!feof(conf_file)) {
     line = (char *) malloc(linesize);
     if(line == NULL) {
-      fprintf(LOGFILE, "malloc failed while reading configuration file.\n");
+      fprintf(ERRORFILE, "malloc failed while reading configuration file.\n");
       exit(OUT_OF_MEMORY);
     }
     size_read = getline(&line,&linesize,conf_file);
+ 
     //feof returns true only after we read past EOF.
     //so a file with no new line, at last can reach this place
     //if size_read returns negative check for eof condition
     if (size_read == -1) {
+      free(line);
       if(!feof(conf_file)){
-        fprintf(LOGFILE, "getline returned error.\n");
         exit(INVALID_CONFIG_FILE);
-      }else {
-        free(line);
+      } else {
         break;
       }
     }
-    //trim the ending new line
-    line[strlen(line)-1] = '\0';
+    int eol = strlen(line) - 1;
+    if(line[eol] == '\n') {
+        //trim the ending new line
+        line[eol] = '\0';
+    }
     //comment line
     if(line[0] == '#') {
       free(line);
@@ -217,14 +219,15 @@ void read_config(const char* file_name) {
     config.size++;
     free(line);
   }
-
+ 
   //close the file
   fclose(conf_file);
 
   if (config.size == 0) {
-    fprintf(LOGFILE, "Invalid configuration provided in %s\n", file_name);
+    fprintf(ERRORFILE, "Invalid configuration provided in %s\n", file_name);
     exit(INVALID_CONFIG_FILE);
   }
+
   //clean up allocated file name
   return;
   //free spaces alloced.

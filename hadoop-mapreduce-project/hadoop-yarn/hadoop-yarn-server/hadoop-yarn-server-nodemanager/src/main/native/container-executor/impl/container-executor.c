@@ -40,13 +40,17 @@ static const char* DEFAULT_BANNED_USERS[] = {"mapred", "hdfs", "bin", 0};
 struct passwd *user_detail = NULL;
 
 FILE* LOGFILE = NULL;
+FILE* ERRORFILE = NULL;
 
-static uid_t tt_uid = -1;
-static gid_t tt_gid = -1;
+static uid_t nm_uid = -1;
+static gid_t nm_gid = -1;
 
-void set_tasktracker_uid(uid_t user, gid_t group) {
-  tt_uid = user;
-  tt_gid = group;
+char *concatenate(char *concat_pattern, char *return_path_name,
+   int numArgs, ...);
+
+void set_nm_uid(uid_t user, gid_t group) {
+  nm_uid = user;
+  nm_gid = group;
 }
 
 /**
@@ -58,11 +62,11 @@ char* get_executable() {
   char *filename = malloc(PATH_MAX);
   ssize_t len = readlink(buffer, filename, PATH_MAX);
   if (len == -1) {
-    fprintf(stderr, "Can't get executable name from %s - %s\n", buffer,
+    fprintf(ERRORFILE, "Can't get executable name from %s - %s\n", buffer,
             strerror(errno));
     exit(-1);
   } else if (len >= PATH_MAX) {
-    fprintf(LOGFILE, "Executable name %.*s is longer than %d characters.\n",
+    fprintf(ERRORFILE, "Executable name %.*s is longer than %d characters.\n",
             PATH_MAX, filename, PATH_MAX);
     exit(-1);
   }
@@ -70,20 +74,12 @@ char* get_executable() {
   return filename;
 }
 
-/**
- * Check the permissions on taskcontroller to make sure that security is
- * promisable. For this, we need container-executor binary to
- *    * be user-owned by root
- *    * be group-owned by a configured special group.
- *    * others do not have any permissions
- *    * be setuid/setgid
- */
-int check_taskcontroller_permissions(char *executable_file) {
+int check_executor_permissions(char *executable_file) {
 
   errno = 0;
   char * resolved_path = realpath(executable_file, NULL);
   if (resolved_path == NULL) {
-    fprintf(LOGFILE,
+    fprintf(ERRORFILE,
         "Error resolving the canonical name for the executable : %s!",
         strerror(errno));
     return -1;
@@ -92,7 +88,7 @@ int check_taskcontroller_permissions(char *executable_file) {
   struct stat filestat;
   errno = 0;
   if (stat(resolved_path, &filestat) != 0) {
-    fprintf(LOGFILE, 
+    fprintf(ERRORFILE, 
             "Could not stat the executable : %s!.\n", strerror(errno));
     return -1;
   }
@@ -108,7 +104,7 @@ int check_taskcontroller_permissions(char *executable_file) {
   }
 
   if (binary_gid != getgid()) {
-    fprintf(LOGFILE, "The configured tasktracker group %d is different from"
+    fprintf(LOGFILE, "The configured nodemanager group %d is different from"
             " the group of the executable %d\n", getgid(), binary_gid);
     return -1;
   }
@@ -151,6 +147,60 @@ static int change_effective_user(uid_t user, gid_t group) {
             strerror(errno));
     return -1;
   }
+  return 0;
+}
+
+/**
+ * Write the pid of the current process into the pid file.
+ * pid_file: Path to pid file where pid needs to be written to
+ */
+static int write_pid_to_file_as_nm(const char* pid_file, pid_t pid) {
+  uid_t user = geteuid();
+  gid_t group = getegid();
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
+    return -1;
+  }
+
+  char *temp_pid_file = concatenate("%s.tmp", "pid_file_path", 1, pid_file);
+
+  // create with 700
+  int pid_fd = open(temp_pid_file, O_WRONLY|O_CREAT|O_EXCL, S_IRWXU);
+  if (pid_fd == -1) {
+    fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", temp_pid_file,
+           strerror(errno));
+    free(temp_pid_file);
+    return -1;
+  }
+
+  // write pid to temp file
+  char pid_buf[21];
+  snprintf(pid_buf, 21, "%d", pid);
+  ssize_t written = write(pid_fd, pid_buf, strlen(pid_buf));
+  close(pid_fd);
+  if (written == -1) {
+    fprintf(LOGFILE, "Failed to write pid to file %s as node manager - %s\n",
+       temp_pid_file, strerror(errno));
+    free(temp_pid_file);
+    return -1;
+  }
+
+  // rename temp file to actual pid file
+  // use rename as atomic
+  if (rename(temp_pid_file, pid_file)) {
+    fprintf(LOGFILE, "Can't move pid file from %s to %s as node manager - %s\n",
+        temp_pid_file, pid_file, strerror(errno));
+    unlink(temp_pid_file);
+    free(temp_pid_file);
+    return -1;
+  }
+
+  // Revert back to the calling user.
+  if (change_effective_user(user, group)) {
+	free(temp_pid_file);
+    return -1;
+  }
+
+  free(temp_pid_file);
   return 0;
 }
 
@@ -223,62 +273,45 @@ char *concatenate(char *concat_pattern, char *return_path_name,
 }
 
 /**
- * Get the job-directory path from tt_root, user name and job-id
+ * Get the app-directory path from nm_root, user name and app-id
  */
-char *get_job_directory(const char * tt_root, const char *user,
-                        const char *jobid) {
-  return concatenate(TT_JOB_DIR_PATTERN, "job_dir_path", 3, tt_root, user,
-      jobid);
+char *get_app_directory(const char * nm_root, const char *user,
+                        const char *app_id) {
+  return concatenate(NM_APP_DIR_PATTERN, "app_dir_path", 3, nm_root, user,
+      app_id);
 }
 
 /**
  * Get the user directory of a particular user
  */
-char *get_user_directory(const char *tt_root, const char *user) {
-  return concatenate(USER_DIR_PATTERN, "user_dir_path", 2, tt_root, user);
-}
-
-char *get_job_work_directory(const char *job_dir) {
-  return concatenate("%s/work", "job work", 1, job_dir);
+char *get_user_directory(const char *nm_root, const char *user) {
+  return concatenate(USER_DIR_PATTERN, "user_dir_path", 2, nm_root, user);
 }
 
 /**
- * Get the attempt directory for the given attempt_id
+ * Get the container directory for the given container_id
  */
-char *get_attempt_work_directory(const char *tt_root, const char *user,
-				 const char *job_id, const char *attempt_id) {
-  return concatenate(ATTEMPT_DIR_PATTERN, "attempt_dir_path", 4,
-                     tt_root, user, job_id, attempt_id);
+char *get_container_work_directory(const char *nm_root, const char *user,
+				 const char *app_id, const char *container_id) {
+  return concatenate(CONTAINER_DIR_PATTERN, "container_dir_path", 4,
+                     nm_root, user, app_id, container_id);
 }
 
-char *get_task_launcher_file(const char* work_dir) {
-  return concatenate("%s/%s", "task launcher", 2, work_dir, TASK_SCRIPT);
+char *get_container_launcher_file(const char* work_dir) {
+  return concatenate("%s/%s", "container launcher", 2, work_dir, CONTAINER_SCRIPT);
 }
 
-char *get_task_credentials_file(const char* work_dir) {
-  return concatenate("%s/%s", "task crednetials", 2, work_dir,
+char *get_container_credentials_file(const char* work_dir) {
+  return concatenate("%s/%s", "container credentials", 2, work_dir,
       CREDENTIALS_FILENAME);
 }
 
 /**
- * Get the job log directory under the given log_root
+ * Get the app log directory under the given log_root
  */
-char* get_job_log_directory(const char *log_root, const char* jobid) {
-  return concatenate("%s/%s", "job log dir", 2, log_root,
-                             jobid);
-}
-
-/*
- * Get a user subdirectory.
- */
-char *get_user_subdirectory(const char *tt_root,
-                            const char *user,
-                            const char *subdir) {
-  char * user_dir = get_user_directory(tt_root, user);
-  char * result = concatenate("%s/%s", "user subdir", 2,
-                              user_dir, subdir);
-  free(user_dir);
-  return result;
+char* get_app_log_directory(const char *log_root, const char* app_id) {
+  return concatenate("%s/%s", "app log dir", 2, log_root,
+                             app_id);
 }
 
 /**
@@ -320,43 +353,42 @@ int mkdirs(const char* path, mode_t perm) {
 }
 
 /**
- * Function to prepare the attempt directories for the task JVM.
- * It creates the task work and log directories.
+ * Function to prepare the container directories.
+ * It creates the container work and log directories.
  */
-static int create_attempt_directories(const char* user, const char *job_id, 
-					const char *task_id) {
+static int create_container_directories(const char* user, const char *app_id, 
+					const char *container_id) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
-  if (job_id == NULL || task_id == NULL || user == NULL) {
+  if (app_id == NULL || container_id == NULL || user == NULL) {
     fprintf(LOGFILE, 
-            "Either task_id is null or the user passed is null.\n");
+            "Either app_id, container_id or the user passed is null.\n");
     return -1;
   }
 
   int result = -1;
 
-  char **local_dir = get_values(TT_SYS_DIR_KEY);
+  char **local_dir = get_values(NM_SYS_DIR_KEY);
 
   if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
+    fprintf(LOGFILE, "%s is not configured.\n", NM_SYS_DIR_KEY);
     return -1;
   }
 
   char **local_dir_ptr;
   for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
-    char *task_dir = get_attempt_work_directory(*local_dir_ptr, user, job_id, 
-                                                task_id);
-    if (task_dir == NULL) {
+    char *container_dir = get_container_work_directory(*local_dir_ptr, user, app_id, 
+                                                container_id);
+    if (container_dir == NULL) {
       free_values(local_dir);
       return -1;
     }
-    if (mkdirs(task_dir, perms) != 0) {
-      // continue on to create other task directories
-      free(task_dir);
-    } else {
+    if (mkdirs(container_dir, perms) == 0) {
       result = 0;
-      free(task_dir);
     }
+    // continue on to create other work directories
+    free(container_dir);
+
   }
   free_values(local_dir);
   if (result != 0) {
@@ -364,34 +396,36 @@ static int create_attempt_directories(const char* user, const char *job_id,
   }
 
   result = -1;
-  // also make the directory for the task logs
-  char *job_task_name = malloc(strlen(job_id) + strlen(task_id) + 2);
-  if (job_task_name == NULL) {
-    fprintf(LOGFILE, "Malloc of job task name failed\n");
+  // also make the directory for the container logs
+  char *combined_name = malloc(strlen(app_id) + strlen(container_id) + 2);
+  if (combined_name == NULL) {
+    fprintf(LOGFILE, "Malloc of combined name failed\n");
     result = -1;
   } else {
-    sprintf(job_task_name, "%s/%s", job_id, task_id);
+    sprintf(combined_name, "%s/%s", app_id, container_id);
 
-    char **log_dir = get_values(TT_LOG_DIR_KEY);
+    char **log_dir = get_values(NM_LOG_DIR_KEY);
     if (log_dir == NULL) {
-      fprintf(LOGFILE, "%s is not configured.\n", TT_LOG_DIR_KEY);
+      free(combined_name);
+      fprintf(LOGFILE, "%s is not configured.\n", NM_LOG_DIR_KEY);
       return -1;
     }
 
     char **log_dir_ptr;
     for(log_dir_ptr = log_dir; *log_dir_ptr != NULL; ++log_dir_ptr) {
-      char *job_log_dir = get_job_log_directory(*log_dir_ptr, job_task_name);
-      if (job_log_dir == NULL) {
+      char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
+      if (container_log_dir == NULL) {
+        free(combined_name);
         free_values(log_dir);
         return -1;
-      } else if (mkdirs(job_log_dir, perms) != 0) {
-    	free(job_log_dir);
+      } else if (mkdirs(container_log_dir, perms) != 0) {
+    	free(container_log_dir);
       } else {
     	result = 0;
-    	free(job_log_dir);
+    	free(container_log_dir);
       }
     }
-    free(job_task_name);
+    free(combined_name);
     free_values(log_dir);
   }
   return result;
@@ -461,11 +495,14 @@ struct passwd* check_user(const char *user) {
   for(; *banned_user; ++banned_user) {
     if (strcmp(*banned_user, user) == 0) {
       free(user_info);
+      if (banned_users != (char**)DEFAULT_BANNED_USERS) {
+        free_values(banned_users);
+      }
       fprintf(LOGFILE, "Requested user %s is banned\n", user);
       return NULL;
     }
   }
-  if (banned_users != NULL) {
+  if (banned_users != NULL && banned_users != (char**)DEFAULT_BANNED_USERS) {
     free_values(banned_users);
   }
   return user_info;
@@ -512,7 +549,7 @@ static int change_owner(const char* path, uid_t user, gid_t group) {
  * Create a top level directory for the user.
  * It assumes that the parent directory is *not* writable by the user.
  * It creates directories with 02750 permissions owned by the user
- * and with the group set to the task tracker group.
+ * and with the group set to the node manager group.
  * return non-0 on failure
  */
 int create_directory_for_user(const char* path) {
@@ -524,7 +561,7 @@ int create_directory_for_user(const char* path) {
   int ret = 0;
 
   if(getuid() == root) {
-    ret = change_effective_user(root, tt_gid);
+    ret = change_effective_user(root, nm_gid);
   }
 
   if (ret == 0) {
@@ -534,8 +571,8 @@ int create_directory_for_user(const char* path) {
         fprintf(LOGFILE, "Can't chmod %s to add the sticky bit - %s\n",
                 path, strerror(errno));
         ret = -1;
-      } else if (change_owner(path, user, tt_gid) != 0) {
-        fprintf(LOGFILE, "Failed to chown %s to %d:%d: %s\n", path, user, tt_gid,
+      } else if (change_owner(path, user, nm_gid) != 0) {
+        fprintf(LOGFILE, "Failed to chown %s to %d:%d: %s\n", path, user, nm_gid,
             strerror(errno));
         ret = -1;
       }
@@ -554,18 +591,18 @@ int create_directory_for_user(const char* path) {
 }
 
 /**
- * Open a file as the tasktracker and return a file descriptor for it.
+ * Open a file as the node manager and return a file descriptor for it.
  * Returns -1 on error
  */
-static int open_file_as_task_tracker(const char* filename) {
+static int open_file_as_nm(const char* filename) {
   uid_t user = geteuid();
   gid_t group = getegid();
-  if (change_effective_user(tt_uid, tt_gid) != 0) {
+  if (change_effective_user(nm_uid, nm_gid) != 0) {
     return -1;
   }
   int result = open(filename, O_RDONLY);
   if (result == -1) {
-    fprintf(LOGFILE, "Can't open file %s as task tracker - %s\n", filename,
+    fprintf(LOGFILE, "Can't open file %s as node manager - %s\n", filename,
 	    strerror(errno));
   }
   if (change_effective_user(user, group)) {
@@ -624,10 +661,10 @@ static int copy_file(int input, const char* in_filename,
  * Function to initialize the user directories of a user.
  */
 int initialize_user(const char *user) {
-  char **local_dir = get_values(TT_SYS_DIR_KEY);
+  char **local_dir = get_values(NM_SYS_DIR_KEY);
   if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
-    return INVALID_TT_ROOT;
+    fprintf(LOGFILE, "%s is not configured.\n", NM_SYS_DIR_KEY);
+    return INVALID_NM_ROOT_DIRS;
   }
 
   char *user_dir;
@@ -650,12 +687,12 @@ int initialize_user(const char *user) {
 }
 
 /**
- * Function to prepare the job directories for the task JVM.
+ * Function to prepare the application directories for the container.
  */
-int initialize_job(const char *user, const char *jobid, 
+int initialize_app(const char *user, const char *app_id, 
 		   const char* nmPrivate_credentials_file, char* const* args) {
-  if (jobid == NULL || user == NULL) {
-    fprintf(LOGFILE, "Either jobid is null or the user passed is null.\n");
+  if (app_id == NULL || user == NULL) {
+    fprintf(LOGFILE, "Either app_id is null or the user passed is null.\n");
     return INVALID_ARGUMENT_NUMBER;
   }
 
@@ -666,35 +703,35 @@ int initialize_job(const char *user, const char *jobid,
   }
 
   ////////////// create the log directories for the app on all disks
-  char **log_roots = get_values(TT_LOG_DIR_KEY);
+  char **log_roots = get_values(NM_LOG_DIR_KEY);
   if (log_roots == NULL) {
     return INVALID_CONFIG_FILE;
   }
   char **log_root;
-  char *any_one_job_log_dir = NULL;
+  char *any_one_app_log_dir = NULL;
   for(log_root=log_roots; *log_root != NULL; ++log_root) {
-    char *job_log_dir = get_job_log_directory(*log_root, jobid);
-    if (job_log_dir == NULL) {
+    char *app_log_dir = get_app_log_directory(*log_root, app_id);
+    if (app_log_dir == NULL) {
       // try the next one
-    } else if (create_directory_for_user(job_log_dir) != 0) {
-      free(job_log_dir);
+    } else if (create_directory_for_user(app_log_dir) != 0) {
+      free(app_log_dir);
       return -1;
-    } else if (any_one_job_log_dir == NULL) {
-    	any_one_job_log_dir = job_log_dir;
+    } else if (any_one_app_log_dir == NULL) {
+      any_one_app_log_dir = app_log_dir;
     } else {
-      free(job_log_dir);
+      free(app_log_dir);
     }
   }
   free_values(log_roots);
-  if (any_one_job_log_dir == NULL) {
-    fprintf(LOGFILE, "Did not create any job-log directories\n");
+  if (any_one_app_log_dir == NULL) {
+    fprintf(LOGFILE, "Did not create any app-log directories\n");
     return -1;
   }
-  free(any_one_job_log_dir);
+  free(any_one_app_log_dir);
   ////////////// End of creating the log directories for the app on all disks
 
   // open up the credentials file
-  int cred_file = open_file_as_task_tracker(nmPrivate_credentials_file);
+  int cred_file = open_file_as_nm(nmPrivate_credentials_file);
   if (cred_file == -1) {
     return -1;
   }
@@ -706,29 +743,29 @@ int initialize_job(const char *user, const char *jobid,
 
   // 750
   mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP;
-  char **tt_roots = get_values(TT_SYS_DIR_KEY);
+  char **nm_roots = get_values(NM_SYS_DIR_KEY);
 
-  if (tt_roots == NULL) {
+  if (nm_roots == NULL) {
     return INVALID_CONFIG_FILE;
   }
 
-  char **tt_root;
-  char *primary_job_dir = NULL;
-  for(tt_root=tt_roots; *tt_root != NULL; ++tt_root) {
-    char *job_dir = get_job_directory(*tt_root, user, jobid);
-    if (job_dir == NULL) {
+  char **nm_root;
+  char *primary_app_dir = NULL;
+  for(nm_root=nm_roots; *nm_root != NULL; ++nm_root) {
+    char *app_dir = get_app_directory(*nm_root, user, app_id);
+    if (app_dir == NULL) {
       // try the next one
-    } else if (mkdirs(job_dir, permissions) != 0) {
-      free(job_dir);
-    } else if (primary_job_dir == NULL) {
-      primary_job_dir = job_dir;
+    } else if (mkdirs(app_dir, permissions) != 0) {
+      free(app_dir);
+    } else if (primary_app_dir == NULL) {
+      primary_app_dir = app_dir;
     } else {
-      free(job_dir);
+      free(app_dir);
     }
   }
-  free_values(tt_roots);
-  if (primary_job_dir == NULL) {
-    fprintf(LOGFILE, "Did not create any job directories\n");
+  free_values(nm_roots);
+  if (primary_app_dir == NULL) {
+    fprintf(LOGFILE, "Did not create any app directories\n");
     return -1;
   }
 
@@ -736,7 +773,7 @@ int initialize_job(const char *user, const char *jobid,
   // TODO: FIXME. The user's copy of creds should go to a path selected by
   // localDirAllocatoir
   char *cred_file_name = concatenate("%s/%s", "cred file", 2,
-				   primary_job_dir, basename(nmPrivate_credentials_file_copy));
+				   primary_app_dir, basename(nmPrivate_credentials_file_copy));
   if (cred_file_name == NULL) {
 	free(nmPrivate_credentials_file_copy);
     return -1;
@@ -754,53 +791,62 @@ int initialize_job(const char *user, const char *jobid,
   if (LOGFILE != stdout) {
     fclose(stdout);
   }
-  fclose(stderr);
-  if (chdir(primary_job_dir) != 0) {
-    fprintf(LOGFILE, "Failed to chdir to job dir - %s\n", strerror(errno));
+  if (ERRORFILE != stderr) {
+    fclose(stderr);
+  }
+  if (chdir(primary_app_dir) != 0) {
+    fprintf(LOGFILE, "Failed to chdir to app dir - %s\n", strerror(errno));
     return -1;
   }
   execvp(args[0], args);
-  fprintf(LOGFILE, "Failure to exec job initialization process - %s\n",
+  fprintf(ERRORFILE, "Failure to exec app initialization process - %s\n",
 	  strerror(errno));
   return -1;
 }
 
-/*
- * Function used to launch a task as the provided user. It does the following :
- * 1) Creates attempt work dir and log dir to be accessible by the child
- * 2) Copies the script file from the TT to the work directory
- * 3) Sets up the environment
- * 4) Does an execlp on the same in order to replace the current image with
- *    task image.
- */
-int run_task_as_user(const char *user, const char *job_id, 
-                     const char *task_id, const char *work_dir,
-                     const char *script_name, const char *cred_file) {
+int launch_container_as_user(const char *user, const char *app_id, 
+                     const char *container_id, const char *work_dir,
+                     const char *script_name, const char *cred_file,
+                     const char* pid_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
-  script_file_dest = get_task_launcher_file(work_dir);
+  script_file_dest = get_container_launcher_file(work_dir);
   if (script_file_dest == NULL) {
     exit_code = OUT_OF_MEMORY;
     goto cleanup;
   }
-  cred_file_dest = get_task_credentials_file(work_dir);
+  cred_file_dest = get_container_credentials_file(work_dir);
   if (NULL == cred_file_dest) {
     exit_code = OUT_OF_MEMORY;
     goto cleanup;
   }
 
   // open launch script
-  int task_file_source = open_file_as_task_tracker(script_name);
-  if (task_file_source == -1) {
+  int container_file_source = open_file_as_nm(script_name);
+  if (container_file_source == -1) {
     goto cleanup;
   }
 
   // open credentials
-  int cred_file_source = open_file_as_task_tracker(cred_file);
+  int cred_file_source = open_file_as_nm(cred_file);
   if (cred_file_source == -1) {
     goto cleanup;
   }
+
+  // setsid 
+  pid_t pid = setsid();
+  if (pid == -1) {
+    exit_code = SETSID_OPER_FAILED;
+    goto cleanup;
+  }
+
+  // write pid to pidfile
+  if (pid_file == NULL
+      || write_pid_to_file_as_nm(pid_file, pid) != 0) {
+    exit_code = WRITE_PIDFILE_FAILED;
+    goto cleanup;
+  }  
 
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
@@ -808,13 +854,13 @@ int run_task_as_user(const char *user, const char *job_id,
     goto cleanup;
   }
 
-  if (create_attempt_directories(user, job_id, task_id) != 0) {
-    fprintf(LOGFILE, "Could not create attempt dirs");
+  if (create_container_directories(user, app_id, container_id) != 0) {
+    fprintf(LOGFILE, "Could not create container dirs");
     goto cleanup;
   }
 
   // 700
-  if (copy_file(task_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
+  if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
     goto cleanup;
   }
 
@@ -832,9 +878,9 @@ int run_task_as_user(const char *user, const char *job_id,
     goto cleanup;
   }
   if (execlp(script_file_dest, script_file_dest, NULL) != 0) {
-    fprintf(LOGFILE, "Couldn't execute the task jvm file %s - %s", 
+    fprintf(LOGFILE, "Couldn't execute the container launch file %s - %s", 
             script_file_dest, strerror(errno));
-    exit_code = UNABLE_TO_EXECUTE_TASK_SCRIPT;
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
   }
   exit_code = 0;
@@ -845,14 +891,9 @@ int run_task_as_user(const char *user, const char *job_id,
   return exit_code;
 }
 
-/**
- * Function used to signal a task launched by the user.
- * The function sends appropriate signal to the process group
- * specified by the task_pid.
- */
-int signal_user_task(const char *user, int pid, int sig) {
+int signal_container_as_user(const char *user, int pid, int sig) {
   if(pid <= 0) {
-    return INVALID_TASK_PID;
+    return INVALID_CONTAINER_PID;
   }
 
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
@@ -864,9 +905,9 @@ int signal_user_task(const char *user, int pid, int sig) {
   if (kill(-pid,0) < 0) {
     if (kill(pid, 0) < 0) {
       if (errno == ESRCH) {
-        return INVALID_TASK_PID;
+        return INVALID_CONTAINER_PID;
       }
-      fprintf(LOGFILE, "Error signalling task %d with %d - %s\n",
+      fprintf(LOGFILE, "Error signalling container %d with %d - %s\n",
 	      pid, sig, strerror(errno));
       return -1;
     } else {
@@ -879,9 +920,13 @@ int signal_user_task(const char *user, int pid, int sig) {
       fprintf(LOGFILE, 
               "Error signalling process group %d with signal %d - %s\n", 
               -pid, sig, strerror(errno));
-      return UNABLE_TO_KILL_TASK;
+      fprintf(stderr, 
+              "Error signalling process group %d with signal %d - %s\n", 
+              -pid, sig, strerror(errno));
+      fflush(LOGFILE);
+      return UNABLE_TO_SIGNAL_CONTAINER;
     } else {
-      return INVALID_TASK_PID;
+      return INVALID_CONTAINER_PID;
     }
   }
   fprintf(LOGFILE, "Killing process %s%d with %d\n",
@@ -890,12 +935,12 @@ int signal_user_task(const char *user, int pid, int sig) {
 }
 
 /**
- * Delete a final directory as the task tracker user.
+ * Delete a final directory as the node manager user.
  */
-static int rmdir_as_tasktracker(const char* path) {
+static int rmdir_as_nm(const char* path) {
   int user_uid = geteuid();
   int user_gid = getegid();
-  int ret = change_effective_user(tt_uid, tt_gid);
+  int ret = change_effective_user(nm_uid, nm_gid);
   if (ret == 0) {
     if (rmdir(path) != 0) {
       fprintf(LOGFILE, "rmdir of %s failed - %s\n", path, strerror(errno));
@@ -1016,8 +1061,8 @@ static int delete_path(const char *full_path,
     if (needs_tt_user) {
       // If the delete failed, try a final rmdir as root on the top level.
       // That handles the case where the top level directory is in a directory
-      // that is owned by the task tracker.
-      exit_code = rmdir_as_tasktracker(full_path);
+      // that is owned by the node manager.
+      exit_code = rmdir_as_nm(full_path);
     }
     free(paths[0]);
   }
@@ -1025,7 +1070,7 @@ static int delete_path(const char *full_path,
 }
 
 /**
- * Delete the given directory as the user from each of the tt_root directories
+ * Delete the given directory as the user from each of the directories
  * user: the user doing the delete
  * subdir: the subdir to delete (if baseDirs is empty, this is treated as
            an absolute path)
@@ -1058,3 +1103,5 @@ int delete_as_user(const char *user,
   }
   return ret;
 }
+
+
