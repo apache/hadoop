@@ -657,6 +657,8 @@ Release 0.92.0 - Unreleased
                Bertozzi and todd via todd)
    HBASE-4699  Cleanup the UIs
    HBASE-4694  Some cleanup of log messages in RS and M
+   HBASE-4603  Uneeded sleep time for tests in
+               hbase.master.ServerManager#waitForRegionServers (nkeywal)
 
 
   TASKS

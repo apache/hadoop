@@ -23,6 +23,12 @@
 -->
 <configuration>
   <property>
+    <name>hbase.master.wait.on.regionservers.interval</name>
+    <value>100</value>
+    <description>How long we wait on regionservers to check in
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.msginterval</name>
     <value>1000</value>
     <description>Interval between messages from the RegionServer to HMaster
