@@ -54,6 +54,7 @@ import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.State;
@@ -811,5 +812,12 @@ public class LocalJobRunner implements ClientProtocol {
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                       ) throws IOException,InterruptedException{
     return 0;
+  }
+
+  @Override
+  public LogParams getLogFileParams(org.apache.hadoop.mapreduce.JobID jobID,
+      org.apache.hadoop.mapreduce.TaskAttemptID taskAttemptID)
+      throws IOException, InterruptedException {
+    throw new UnsupportedOperationException("Not supported");
   }
 }

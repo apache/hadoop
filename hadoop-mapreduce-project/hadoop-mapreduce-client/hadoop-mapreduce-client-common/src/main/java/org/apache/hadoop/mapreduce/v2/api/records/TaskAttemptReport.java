@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.api.records;
 
+import org.apache.hadoop.yarn.api.records.ContainerId;
+
 public interface TaskAttemptReport {
   public abstract TaskAttemptId getTaskAttemptId();
   public abstract TaskAttemptState getTaskAttemptState();
@@ -32,6 +34,10 @@ public interface TaskAttemptReport {
   public abstract String getDiagnosticInfo();
   public abstract String getStateString();
   public abstract Phase getPhase();
+  public abstract String getNodeManagerHost();
+  public abstract int getNodeManagerPort();
+  public abstract int getNodeManagerHttpPort();
+  public abstract ContainerId getContainerId();
 
   public abstract void setTaskAttemptId(TaskAttemptId taskAttemptId);
   public abstract void setTaskAttemptState(TaskAttemptState taskAttemptState);
@@ -42,6 +48,10 @@ public interface TaskAttemptReport {
   public abstract void setDiagnosticInfo(String diagnosticInfo);
   public abstract void setStateString(String stateString);
   public abstract void setPhase(Phase phase);
+  public abstract void setNodeManagerHost(String nmHost);
+  public abstract void setNodeManagerPort(int nmPort);
+  public abstract void setNodeManagerHttpPort(int nmHttpPort);
+  public abstract void setContainerId(ContainerId containerId);
   
   /** 
    * Set the shuffle finish time. Applicable only for reduce attempts

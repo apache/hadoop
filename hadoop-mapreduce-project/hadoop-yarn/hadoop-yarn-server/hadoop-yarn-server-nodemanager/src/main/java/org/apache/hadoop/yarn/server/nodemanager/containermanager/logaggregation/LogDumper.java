@@ -50,6 +50,7 @@ public class LogDumper extends Configured implements Tool {
   private static final String CONTAINER_ID_OPTION = "containerId";
   private static final String APPLICATION_ID_OPTION = "applicationId";
   private static final String NODE_ADDRESS_OPTION = "nodeAddress";
+  private static final String APP_OWNER_OPTION = "appOwner";
 
   @Override
   public int run(String[] args) throws Exception {
@@ -58,6 +59,7 @@ public class LogDumper extends Configured implements Tool {
     opts.addOption(APPLICATION_ID_OPTION, true, "ApplicationId");
     opts.addOption(CONTAINER_ID_OPTION, true, "ContainerId");
     opts.addOption(NODE_ADDRESS_OPTION, true, "NodeAddress");
+    opts.addOption(APP_OWNER_OPTION, true, "AppOwner");
 
     if (args.length < 1) {
       HelpFormatter formatter = new HelpFormatter();
@@ -69,11 +71,13 @@ public class LogDumper extends Configured implements Tool {
     String appIdStr = null;
     String containerIdStr = null;
     String nodeAddress = null;
+    String appOwner = null;
     try {
       CommandLine commandLine = parser.parse(opts, args, true);
       appIdStr = commandLine.getOptionValue(APPLICATION_ID_OPTION);
       containerIdStr = commandLine.getOptionValue(CONTAINER_ID_OPTION);
       nodeAddress = commandLine.getOptionValue(NODE_ADDRESS_OPTION);
+      appOwner = commandLine.getOptionValue(APP_OWNER_OPTION);
     } catch (ParseException e) {
       System.out.println("options parsing failed: " + e.getMessage());
 
@@ -96,8 +100,11 @@ public class LogDumper extends Configured implements Tool {
 
     DataOutputStream out = new DataOutputStream(System.out);
 
+    if (appOwner == null || appOwner.isEmpty()) {
+      appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
+    }
     if (containerIdStr == null && nodeAddress == null) {
-      dumpAllContainersLogs(appId, out);
+      dumpAllContainersLogs(appId, appOwner, out);
     } else if ((containerIdStr == null && nodeAddress != null)
         || (containerIdStr != null && nodeAddress == null)) {
       System.out.println("ContainerId or NodeAddress cannot be null!");
@@ -113,7 +120,7 @@ public class LogDumper extends Configured implements Tool {
               LogAggregationService.getRemoteNodeLogFileForApp(
                   remoteRootLogDir,
                   appId,
-                  UserGroupInformation.getCurrentUser().getShortUserName(),
+                  appOwner,
                   ConverterUtils.toNodeId(nodeAddress),
                   getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
                       YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)));
@@ -121,6 +128,21 @@ public class LogDumper extends Configured implements Tool {
     }
 
     return 0;
+  }
+
+  public void dumpAContainersLogs(String appId, String containerId,
+      String nodeId, String jobOwner) throws IOException {
+    Path remoteRootLogDir =
+        new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    String suffix = LogAggregationService.getRemoteNodeLogDirSuffix(getConf());
+    AggregatedLogFormat.LogReader reader =
+        new AggregatedLogFormat.LogReader(getConf(),
+            LogAggregationService.getRemoteNodeLogFileForApp(remoteRootLogDir,
+                ConverterUtils.toApplicationId(appId), jobOwner,
+                ConverterUtils.toNodeId(nodeId), suffix));
+    DataOutputStream out = new DataOutputStream(System.out);
+    dumpAContainerLogs(containerId, reader, out);
   }
 
   private int dumpAContainerLogs(String containerIdStr,
@@ -152,13 +174,12 @@ public class LogDumper extends Configured implements Tool {
     return 0;
   }
 
-  private void
-      dumpAllContainersLogs(ApplicationId appId, DataOutputStream out)
-          throws IOException {
+  private void dumpAllContainersLogs(ApplicationId appId, String appOwner,
+      DataOutputStream out) throws IOException {
     Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    String user = appOwner;
     String logDirSuffix =
         getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);

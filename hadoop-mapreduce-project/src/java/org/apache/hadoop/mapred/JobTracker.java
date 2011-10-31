@@ -95,6 +95,7 @@ import org.apache.hadoop.mapreduce.server.jobtracker.State;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -4829,6 +4830,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return secretManager.renewToken(token, user);
   }
 
+  @Override
+  public LogParams getLogFileParams(org.apache.hadoop.mapreduce.JobID jobID,
+      org.apache.hadoop.mapreduce.TaskAttemptID taskAttemptID)
+      throws IOException, InterruptedException {
+    throw new UnsupportedOperationException("Not supported by JobTracker");
+  }
+  
   JobACLsManager getJobACLsManager() {
     return aclsManager.getJobACLsManager();
   }

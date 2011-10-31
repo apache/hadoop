@@ -218,7 +218,8 @@ public class TestHSWebApp {
 
     params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
         .toString());
-    params.put(NM_NODENAME, BuilderUtils.newNodeId("testhost", 2222).toString());
+    params.put(NM_NODENAME, 
+        BuilderUtils.newNodeId(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
     params.put(ENTITY_STRING, "container_10_0001_01_000001");
     params.put(APP_OWNER, "owner");
 
@@ -229,7 +230,8 @@ public class TestHSWebApp {
     verify(spyPw).write(
         "Logs not available for container_10_0001_01_000001. Aggregation "
             + "may not be complete,"
-            + " Check back later or try the nodemanager on testhost:2222");
+            + " Check back later or try the nodemanager on "
+            + MockJobs.NM_HOST + ":" + MockJobs.NM_PORT);
   }
 }
   

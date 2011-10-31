@@ -39,10 +39,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
@@ -221,9 +221,9 @@ public class TestRecovery {
           .getAttemptId());
       Assert.assertEquals(amInfo.getAppAttemptId(), amInfo.getContainerId()
           .getApplicationAttemptId());
-      Assert.assertEquals("testhost", amInfo.getNodeManagerHost());
-      Assert.assertEquals(2222, amInfo.getNodeManagerPort());
-      Assert.assertEquals(3333, amInfo.getNodeManagerHttpPort());
+      Assert.assertEquals(MRApp.NM_HOST, amInfo.getNodeManagerHost());
+      Assert.assertEquals(MRApp.NM_PORT, amInfo.getNodeManagerPort());
+      Assert.assertEquals(MRApp.NM_HTTP_PORT, amInfo.getNodeManagerHttpPort());
     }
     long am1StartTimeReal = job.getAMInfos().get(0).getStartTime();
     long am2StartTimeReal = job.getAMInfos().get(1).getStartTime();

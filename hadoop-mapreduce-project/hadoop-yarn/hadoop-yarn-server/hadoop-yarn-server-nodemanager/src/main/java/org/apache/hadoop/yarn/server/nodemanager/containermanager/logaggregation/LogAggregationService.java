@@ -140,7 +140,7 @@ public class LogAggregationService extends AbstractService implements
     }
     super.stop();
   }
-
+  
   /**
    * Constructs the full filename for an application's log file per node.
    * @param remoteRootLogDir

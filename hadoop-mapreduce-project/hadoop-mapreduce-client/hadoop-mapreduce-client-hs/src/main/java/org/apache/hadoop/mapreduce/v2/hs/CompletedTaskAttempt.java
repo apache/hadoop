@@ -79,6 +79,15 @@ public class CompletedTaskAttempt implements TaskAttempt {
 //    report.setPhase(attemptInfo.get); //TODO
     report.setStateString(attemptInfo.getState());
     report.setCounters(getCounters());
+    report.setContainerId(attemptInfo.getContainerId());
+    String []hostSplits = attemptInfo.getHostname().split(":");
+    if (hostSplits.length != 2) {
+      report.setNodeManagerHost("UNKNOWN");
+    } else {
+      report.setNodeManagerHost(hostSplits[0]);
+      report.setNodeManagerPort(Integer.parseInt(hostSplits[1]));
+    }
+    report.setNodeManagerHttpPort(attemptInfo.getHttpPort());
   }
 
   @Override

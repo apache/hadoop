@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -212,7 +213,20 @@ public class Cluster {
       throws IOException, InterruptedException {
     return client.getQueue(name);
   }
-  
+
+  /**
+   * Get log parameters for the specified jobID or taskAttemptID
+   * @param jobID the job id.
+   * @param taskAttemptID the task attempt id. Optional.
+   * @return the LogParams
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public LogParams getLogParams(JobID jobID, TaskAttemptID taskAttemptID)
+      throws IOException, InterruptedException {
+    return client.getLogFileParams(jobID, taskAttemptID);
+  }
+
   /**
    * Get current cluster status.
    * 

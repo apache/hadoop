@@ -126,6 +126,14 @@ public class ConverterUtils {
     return appAttemptId;
   }
 
+  private static ApplicationId toApplicationId(
+      Iterator<String> it) throws NumberFormatException {
+    ApplicationId appId = Records.newRecord(ApplicationId.class);
+    appId.setClusterTimestamp(Long.parseLong(it.next()));
+    appId.setId(Integer.parseInt(it.next()));
+    return appId;
+  }
+
   public static String toString(ContainerId cId) {
     return cId.toString();
   }
@@ -178,4 +186,18 @@ public class ConverterUtils {
     }
   }
   
+  public static ApplicationId toApplicationId(
+      String appIdStr) {
+    Iterator<String> it = _split(appIdStr).iterator();
+    if (!it.next().equals(APPLICATION_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
+          + appIdStr);
+    }
+    try {
+      return toApplicationId(it);
+    } catch (NumberFormatException n) {
+      throw new IllegalArgumentException("Invalid AppAttemptId: "
+          + appIdStr, n);
+    }
+  }
 }
