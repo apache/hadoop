@@ -358,7 +358,8 @@ public class Balancer {
       if (response.getStatus() != Status.SUCCESS) {
         if (response.getStatus() == Status.ERROR_ACCESS_TOKEN)
           throw new IOException("block move failed due to access token error");
-        throw new IOException("block move is failed");
+        throw new IOException("block move is failed: " +
+            response.getMessage());
       }
     }
 

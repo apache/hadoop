@@ -836,6 +836,9 @@ Release 0.23.0 - Unreleased
     HDFS-2436. Change FSNamesystem.setTimes(..) for allowing setting times on
     directories.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2512. Add textual error message to data transfer protocol responses
+    (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
