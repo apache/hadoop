@@ -1865,6 +1865,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3274. Fixed a race condition in MRAppMaster that was causing a
     task-scheduling deadlock. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3313. Fixed initialization of ClusterMetrics which was failing
+    TestResourceTrackerService sometimes. (Hitesh Shah via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.apache.hadoop.metrics2.lib.Interns.info;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -35,6 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 @Metrics(context="yarn")
 public class ClusterMetrics {
   
+  private static AtomicBoolean isInitialized = new AtomicBoolean(false);
+  
   @Metric("# of NMs") MutableGaugeInt numNMs;
   @Metric("# of decommissioned NMs") MutableCounterInt numDecommissionedNMs;
   @Metric("# of lost NMs") MutableCounterInt numLostNMs;
@@ -48,11 +52,12 @@ public class ClusterMetrics {
   private static MetricsRegistry registry;
   
   public static ClusterMetrics getMetrics() {
-    if(INSTANCE == null){
+    if(!isInitialized.get()){
       synchronized (ClusterMetrics.class) {
         if(INSTANCE == null){
           INSTANCE = new ClusterMetrics();
           registerMetrics();
+          isInitialized.set(true);
         }
       }
     }
