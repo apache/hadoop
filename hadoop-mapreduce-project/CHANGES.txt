@@ -1,4 +1,6 @@
 Hadoop MapReduce Change Log
+    MAPREDUCE-3157. [Rumen] Fix TraceBuilder to handle 0.20 history file
+                    names also. (Ravi Gummadi via amarrk)
 
     MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
 

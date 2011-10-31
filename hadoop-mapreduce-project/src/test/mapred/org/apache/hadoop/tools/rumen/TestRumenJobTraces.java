@@ -246,8 +246,57 @@ public class TestRumenJobTraces {
   }
 
   /**
-   * Tests if {@link TraceBuilder} can correctly identify and parse jobhistory
-   * filenames. The testcase checks if {@link TraceBuilder}
+   * Validate the parsing of given history file name. Also validate the history
+   * file name suffixed with old/stale file suffix.
+   * @param jhFileName job history file path
+   * @param jid JobID
+   */
+  private void validateHistoryFileNameParsing(Path jhFileName,
+      org.apache.hadoop.mapred.JobID jid) {
+    JobID extractedJID =
+      JobID.forName(JobHistoryUtils.extractJobID(jhFileName.getName()));
+    assertEquals("TraceBuilder failed to parse the current JH filename"
+                 + jhFileName, jid, extractedJID);
+    // test jobhistory filename with old/stale file suffix
+    jhFileName = jhFileName.suffix(JobHistory.getOldFileSuffix("123"));
+    extractedJID =
+      JobID.forName(JobHistoryUtils.extractJobID(jhFileName.getName()));
+    assertEquals("TraceBuilder failed to parse the current JH filename"
+                 + "(old-suffix):" + jhFileName,
+                 jid, extractedJID);
+  }
+
+  /**
+   * Validate the parsing of given history conf file name. Also validate the
+   * history conf file name suffixed with old/stale file suffix.
+   * @param jhConfFileName job history conf file path
+   * @param jid JobID
+   */
+  private void validateJHConfFileNameParsing(Path jhConfFileName,
+      org.apache.hadoop.mapred.JobID jid) {
+    assertTrue("TraceBuilder failed to parse the JH conf filename:"
+               + jhConfFileName,
+               JobHistoryUtils.isJobConfXml(jhConfFileName.getName()));
+    JobID extractedJID =
+      JobID.forName(JobHistoryUtils.extractJobID(jhConfFileName.getName()));
+    assertEquals("TraceBuilder failed to parse the current JH conf filename:"
+                 + jhConfFileName, jid, extractedJID);
+    // Test jobhistory conf filename with old/stale file suffix
+    jhConfFileName = jhConfFileName.suffix(JobHistory.getOldFileSuffix("123"));
+    assertTrue("TraceBuilder failed to parse the current JH conf filename"
+               + " (old suffix):" + jhConfFileName,
+               JobHistoryUtils.isJobConfXml(jhConfFileName.getName()));
+    extractedJID =
+      JobID.forName(JobHistoryUtils.extractJobID(jhConfFileName.getName()));
+    assertEquals("TraceBuilder failed to parse the JH conf filename"
+                 + "(old-suffix):" + jhConfFileName,
+                 jid, extractedJID);
+  }
+
+  /**
+   * Tests if {@link TraceBuilder} can correctly identify and parse different
+   * versions of jobhistory filenames. The testcase checks if
+   * {@link TraceBuilder}
    *   - correctly identifies a jobhistory filename without suffix
    *   - correctly parses a jobhistory filename without suffix to extract out 
    *     the jobid
@@ -261,36 +310,36 @@ public class TestRumenJobTraces {
   public void testJobHistoryFilenameParsing() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);
-    String user = "test";
+    String user = "testUser";
     org.apache.hadoop.mapred.JobID jid = 
       new org.apache.hadoop.mapred.JobID("12345", 1);
     final Path rootInputDir =
       new Path(System.getProperty("test.tools.input.dir", ""))
             .makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
     
-    // Check if jobhistory filename are detected properly
+    // Check if current jobhistory filenames are detected properly
     Path jhFilename = JobHistory.getJobHistoryFile(rootInputDir, jid, user);
-    JobID extractedJID = 
-      JobID.forName(TraceBuilder.extractJobID(jhFilename.getName()));
-    assertEquals("TraceBuilder failed to parse the current JH filename", 
-                 jid, extractedJID);
-    // test jobhistory filename with old/stale file suffix
-    jhFilename = jhFilename.suffix(JobHistory.getOldFileSuffix("123"));
-    extractedJID =
-      JobID.forName(TraceBuilder.extractJobID(jhFilename.getName()));
-    assertEquals("TraceBuilder failed to parse the current JH filename"
-                 + "(old-suffix)", 
-                 jid, extractedJID);
-    
-    // Check if the conf filename in jobhistory are detected properly
+    validateHistoryFileNameParsing(jhFilename, jid);
+
+    // Check if Pre21 V1 jophistory file names are detected properly
+    jhFilename = new Path("jt-identifier_" + jid + "_user-name_job-name");
+    validateHistoryFileNameParsing(jhFilename, jid);
+
+    // Check if Pre21 V2 jobhistory file names are detected properly
+    jhFilename = new Path(jid + "_user-name_job-name");
+    validateHistoryFileNameParsing(jhFilename, jid);
+
+    // Check if the current jobhistory conf filenames are detected properly
     Path jhConfFilename = JobHistory.getConfFile(rootInputDir, jid);
-    assertTrue("TraceBuilder failed to parse the current JH conf filename", 
-               TraceBuilder.isJobConfXml(jhConfFilename.getName(), null));
-    // test jobhistory conf filename with old/stale file suffix
-    jhConfFilename = jhConfFilename.suffix(JobHistory.getOldFileSuffix("123"));
-    assertTrue("TraceBuilder failed to parse the current JH conf filename" 
-               + " (old suffix)", 
-               TraceBuilder.isJobConfXml(jhConfFilename.getName(), null));
+    validateJHConfFileNameParsing(jhConfFilename, jid);
+
+    // Check if Pre21 V1 jobhistory conf file names are detected properly
+    jhConfFilename = new Path("jt-identifier_" + jid + "_conf.xml");
+    validateJHConfFileNameParsing(jhConfFilename, jid);
+
+    // Check if Pre21 V2 jobhistory conf file names are detected properly
+    jhConfFilename = new Path(jid + "_conf.xml");
+    validateJHConfFileNameParsing(jhConfFilename, jid);
   }
 
   /**
