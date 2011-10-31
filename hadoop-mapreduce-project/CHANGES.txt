@@ -30,6 +30,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-3241. [Rumen] Fix Rumen to ignore the AMStartedEvent. (amarrk)
+
     MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
     on current history file name format. (Ravi Gummadi)
 

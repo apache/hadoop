@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.jobhistory.AMStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobInfoChangeEvent;
@@ -129,7 +130,11 @@ public class JobBuilder {
     }
 
     // these are in lexicographical order by class name.
-    if (event instanceof JobFinishedEvent) {
+    if (event instanceof AMStartedEvent) {
+      // ignore this event as Rumen currently doesnt need this event
+      //TODO Enhance Rumen to process this event and capture restarts
+      return;
+    } else if (event instanceof JobFinishedEvent) {
       processJobFinishedEvent((JobFinishedEvent) event);
     } else if (event instanceof JobInfoChangeEvent) {
       processJobInfoChangeEvent((JobInfoChangeEvent) event);
