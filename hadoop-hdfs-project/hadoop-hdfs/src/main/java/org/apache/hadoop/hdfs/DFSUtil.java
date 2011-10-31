@@ -28,12 +28,15 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDR
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.StringTokenizer;
+
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -714,5 +717,15 @@ public class DFSUtil {
           + addressKey + " is missing in configuration with name service Id");
     }
     return nameserviceId;
+  }
+
+  /** Create a URI from the scheme and address */
+  public static URI createUri(String scheme, InetSocketAddress address) {
+    try {
+      return new URI(scheme, null, address.getHostName(), address.getPort(),
+          null, null, null);
+    } catch (URISyntaxException ue) {
+      throw new IllegalArgumentException(ue);
+    }
   }
 }
