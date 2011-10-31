@@ -119,6 +119,9 @@ message BlockOpResponseProto {
 
   optional string firstBadLink = 2;
   optional OpBlockChecksumResponseProto checksumResponse = 3;
+
+  /** explanatory text which may be useful to log on the client side */
+  optional string message = 4;
 }
 
 /**

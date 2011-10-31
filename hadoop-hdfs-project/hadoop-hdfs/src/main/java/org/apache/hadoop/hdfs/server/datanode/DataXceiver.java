@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto.Builder;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProtoOrBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
@@ -225,13 +227,14 @@ class DataXceiver extends Receiver implements Runnable {
         blockSender = new BlockSender(block, blockOffset, length,
             true, true, false, datanode, clientTraceFmt);
       } catch(IOException e) {
-        LOG.info("opReadBlock " + block + " received exception " + e);
-        sendResponse(s, ERROR, datanode.socketWriteTimeout);
+        String msg = "opReadBlock " + block + " received exception " + e; 
+        LOG.info(msg);
+        sendResponse(s, ERROR, msg, datanode.socketWriteTimeout);
         throw e;
       }
       
       // send op status
-      sendResponse(s, SUCCESS, datanode.socketWriteTimeout);
+      sendResponse(s, SUCCESS, null, datanode.socketWriteTimeout);
 
       long read = blockSender.sendBlock(out, baseStream, null); // send data
 
@@ -452,7 +455,7 @@ class DataXceiver extends Receiver implements Runnable {
           if (LOG.isTraceEnabled()) {
             LOG.trace("TRANSFER: send close-ack");
           }
-          writeResponse(SUCCESS, replyOut);
+          writeResponse(SUCCESS, null, replyOut);
         }
       }
 
@@ -507,7 +510,7 @@ class DataXceiver extends Receiver implements Runnable {
         NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
     try {
       datanode.transferReplicaForPipelineRecovery(blk, targets, clientName);
-      writeResponse(Status.SUCCESS, out);
+      writeResponse(Status.SUCCESS, null, out);
     } finally {
       IOUtils.closeStream(out);
     }
@@ -577,16 +580,17 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.warn("Invalid access token in request from " + remoteAddress
             + " for OP_COPY_BLOCK for block " + block + " : "
             + e.getLocalizedMessage());
-        sendResponse(s, ERROR_ACCESS_TOKEN, datanode.socketWriteTimeout);
+        sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token", datanode.socketWriteTimeout);
         return;
       }
 
     }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
-      LOG.info("Not able to copy block " + block.getBlockId() + " to " 
-          + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
-      sendResponse(s, ERROR, datanode.socketWriteTimeout);
+      String msg = "Not able to copy block " + block.getBlockId() + " to " 
+      + s.getRemoteSocketAddress() + " because threads quota is exceeded."; 
+      LOG.info(msg);
+      sendResponse(s, ERROR, msg, datanode.socketWriteTimeout);
       return;
     }
 
@@ -606,7 +610,7 @@ class DataXceiver extends Receiver implements Runnable {
           baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
 
       // send status first
-      writeResponse(SUCCESS, reply);
+      writeResponse(SUCCESS, null, reply);
       // send block content to the target
       long read = blockSender.sendBlock(reply, baseStream, 
                                         dataXceiverServer.balanceThrottler);
@@ -653,21 +657,24 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.warn("Invalid access token in request from " + remoteAddress
             + " for OP_REPLACE_BLOCK for block " + block + " : "
             + e.getLocalizedMessage());
-        sendResponse(s, ERROR_ACCESS_TOKEN, datanode.socketWriteTimeout);
+        sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token",
+            datanode.socketWriteTimeout);
         return;
       }
     }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
-      LOG.warn("Not able to receive block " + block.getBlockId() + " from " 
-          + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
-      sendResponse(s, ERROR, datanode.socketWriteTimeout);
+      String msg = "Not able to receive block " + block.getBlockId() + " from " 
+          + s.getRemoteSocketAddress() + " because threads quota is exceeded."; 
+      LOG.warn(msg);
+      sendResponse(s, ERROR, msg, datanode.socketWriteTimeout);
       return;
     }
 
     Socket proxySock = null;
     DataOutputStream proxyOut = null;
     Status opStatus = SUCCESS;
+    String errMsg = null;
     BlockReceiver blockReceiver = null;
     DataInputStream proxyReply = null;
     
@@ -720,7 +727,8 @@ class DataXceiver extends Receiver implements Runnable {
       
     } catch (IOException ioe) {
       opStatus = ERROR;
-      LOG.info("opReplaceBlock " + block + " received exception " + ioe);
+      errMsg = "opReplaceBlock " + block + " received exception " + ioe; 
+      LOG.info(errMsg);
       throw ioe;
     } finally {
       // receive the last byte that indicates the proxy released its thread resource
@@ -736,7 +744,7 @@ class DataXceiver extends Receiver implements Runnable {
       
       // send response back
       try {
-        sendResponse(s, opStatus, datanode.socketWriteTimeout);
+        sendResponse(s, opStatus, errMsg, datanode.socketWriteTimeout);
       } catch (IOException ioe) {
         LOG.warn("Error writing reply back to " + s.getRemoteSocketAddress());
       }
@@ -759,21 +767,22 @@ class DataXceiver extends Receiver implements Runnable {
    * @param opStatus status message to write
    * @param timeout send timeout
    **/
-  private void sendResponse(Socket s, Status status,
+  private void sendResponse(Socket s, Status status, String message,
       long timeout) throws IOException {
     DataOutputStream reply = 
       new DataOutputStream(NetUtils.getOutputStream(s, timeout));
     
-    writeResponse(status, reply);
+    writeResponse(status, message, reply);
   }
   
-  private void writeResponse(Status status, OutputStream out)
+  private void writeResponse(Status status, String message, OutputStream out)
   throws IOException {
-    BlockOpResponseProto response = BlockOpResponseProto.newBuilder()
-      .setStatus(status)
-      .build();
-    
-    response.writeDelimitedTo(out);
+    BlockOpResponseProto.Builder response = BlockOpResponseProto.newBuilder()
+      .setStatus(status);
+    if (message != null) {
+      response.setMessage(message);
+    }
+    response.build().writeDelimitedTo(out);
     out.flush();
   }
   
