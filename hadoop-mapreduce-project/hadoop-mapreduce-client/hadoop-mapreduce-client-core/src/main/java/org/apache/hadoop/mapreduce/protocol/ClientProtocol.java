@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -115,6 +116,8 @@ public interface ClientProtocol extends VersionedProtocol {
    *             MAPREDUCE-2337.
    * Version 37: More efficient serialization format for framework counters
    *             (MAPREDUCE-901)
+   * Version 38: Added getLogFilePath(JobID, TaskAttemptID) as part of 
+   *             MAPREDUCE-3146
    */
   public static final long versionID = 37L;
 
@@ -351,4 +354,16 @@ public interface ClientProtocol extends VersionedProtocol {
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
                                     ) throws IOException,
                                              InterruptedException;
+  
+  /**
+   * Gets the location of the log file for a job if no taskAttemptId is
+   * specified, otherwise gets the log location for the taskAttemptId.
+   * @param jobID the jobId.
+   * @param taskAttemptID the taskAttemptId.
+   * @return log params.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public LogParams getLogFileParams(JobID jobID, TaskAttemptID taskAttemptID)
+      throws IOException, InterruptedException;
 }

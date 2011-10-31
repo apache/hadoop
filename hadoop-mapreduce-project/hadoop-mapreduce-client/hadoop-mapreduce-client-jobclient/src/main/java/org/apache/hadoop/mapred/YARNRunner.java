@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.Credentials;
@@ -503,5 +504,11 @@ public class YARNRunner implements ClientProtocol {
       long clientVersion, int clientMethodsHash) throws IOException {
     return ProtocolSignature.getProtocolSignature(this, protocol, clientVersion,
         clientMethodsHash);
+  }
+
+  @Override
+  public LogParams getLogFileParams(JobID jobID, TaskAttemptID taskAttemptID)
+      throws IOException {
+    return clientCache.getClient(jobID).getLogFilePath(jobID, taskAttemptID);
   }
 }

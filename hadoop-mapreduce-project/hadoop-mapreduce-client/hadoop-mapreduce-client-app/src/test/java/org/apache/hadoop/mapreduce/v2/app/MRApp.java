@@ -96,6 +96,10 @@ public class MRApp extends MRAppMaster {
 
   private File testWorkDir;
   private Path testAbsPath;
+  
+  public static String NM_HOST = "localhost";
+  public static int NM_PORT = 1234;
+  public static int NM_HTTP_PORT = 9999;
 
   private static final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -136,7 +140,8 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName, 
       boolean cleanOnStart, int startCount) {
     super(getApplicationAttemptId(applicationId, startCount), getContainerId(
-        applicationId, startCount), "testhost", 2222, 3333, System.currentTimeMillis());
+        applicationId, startCount), NM_HOST, NM_PORT, NM_HTTP_PORT, System
+        .currentTimeMillis());
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("PathUsed: " + testAbsPath);
@@ -363,9 +368,9 @@ public class MRApp extends MRAppMaster {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
         cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
         cId.setId(containerCount++);
-        NodeId nodeId = BuilderUtils.newNodeId("localhost", 1234);
+        NodeId nodeId = BuilderUtils.newNodeId(NM_HOST, NM_PORT);
         Container container = BuilderUtils.newContainer(cId, nodeId,
-            "localhost:9999", null, null, null);
+            NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
         JobID id = TypeConverter.fromYarn(applicationId);
         JobId jobId = TypeConverter.toYarn(id);
         getContext().getEventHandler().handle(new JobHistoryEvent(jobId, 

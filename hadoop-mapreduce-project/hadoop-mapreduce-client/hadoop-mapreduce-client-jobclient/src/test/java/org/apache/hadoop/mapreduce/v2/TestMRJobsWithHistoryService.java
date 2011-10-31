@@ -20,13 +20,13 @@ package org.apache.hadoop.mapreduce.v2;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import junit.framework.Assert;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.FailingMapper;
 import org.apache.hadoop.SleepJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,8 +35,20 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -105,6 +117,8 @@ public class TestMRJobsWithHistoryService {
       return;
     }
 
+
+    
     SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(mrCluster.getConfig());
     // Job with 3 maps and 2 reduces
@@ -113,7 +127,8 @@ public class TestMRJobsWithHistoryService {
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
     job.waitForCompletion(true);
     Counters counterMR = job.getCounters();
-    ApplicationId appID = TypeConverter.toYarn(job.getJobID()).getAppId();
+    JobId jobId = TypeConverter.toYarn(job.getJobID());
+    ApplicationId appID = jobId.getAppId();
     while (true) {
       Thread.sleep(1000);
       if (mrCluster.getResourceManager().getRMContext().getRMApps()
@@ -126,6 +141,36 @@ public class TestMRJobsWithHistoryService {
     LOG.info("CounterHS " + counterHS);
     LOG.info("CounterMR " + counterMR);
     Assert.assertEquals(counterHS, counterMR);
+    
+    MRClientProtocol historyClient = instantiateHistoryProxy();
+    GetJobReportRequest gjReq = Records.newRecord(GetJobReportRequest.class);
+    gjReq.setJobId(jobId);
+    JobReport jobReport = historyClient.getJobReport(gjReq).getJobReport();
+    verifyJobReport(jobReport, jobId);
   }
 
+  private void verifyJobReport(JobReport jobReport, JobId jobId) {
+    List<AMInfo> amInfos = jobReport.getAMInfos();
+    Assert.assertEquals(1, amInfos.size());
+    AMInfo amInfo = amInfos.get(0);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(jobId.getAppId(), 1);
+    ContainerId amContainerId = BuilderUtils.newContainerId(appAttemptId, 1);  
+    Assert.assertEquals(appAttemptId, amInfo.getAppAttemptId());
+    Assert.assertEquals(amContainerId, amInfo.getContainerId());
+    Assert.assertTrue(jobReport.getSubmitTime() > 0);
+    Assert.assertTrue(jobReport.getStartTime() > 0
+        && jobReport.getStartTime() >= jobReport.getSubmitTime());
+    Assert.assertTrue(jobReport.getFinishTime() > 0
+        && jobReport.getFinishTime() >= jobReport.getStartTime());
+  }
+  
+  private MRClientProtocol instantiateHistoryProxy() {
+    final String serviceAddr =
+        mrCluster.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS);
+    final YarnRPC rpc = YarnRPC.create(conf);
+    MRClientProtocol historyClient =
+        (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
+            NetUtils.createSocketAddr(serviceAddr), mrCluster.getConfig());
+    return historyClient;
+  }
 }

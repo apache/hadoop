@@ -36,8 +36,8 @@ import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
@@ -94,6 +95,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
             JobReport.class);
     report.setJobId(jobId);
     report.setJobState(JobState.valueOf(jobInfo.getJobStatus()));
+    report.setSubmitTime(jobInfo.getSubmitTime());
     report.setStartTime(jobInfo.getLaunchTime());
     report.setFinishTime(jobInfo.getFinishTime());
     report.setJobName(jobInfo.getJobname());
@@ -103,6 +105,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setJobFile(confFile.toString());
     report.setTrackingUrl(JobHistoryUtils.getHistoryUrl(conf, TypeConverter
         .toYarn(TypeConverter.fromYarn(jobId)).getAppId()));
+    report.setAMInfos(getAMInfos());
   }
 
   @Override
@@ -341,6 +344,17 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public List<AMInfo> getAMInfos() {
-    return jobInfo.getAMInfos();
+    List<AMInfo> amInfos = new LinkedList<AMInfo>();
+    for (org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo jhAmInfo : jobInfo
+        .getAMInfos()) {
+      AMInfo amInfo =
+          MRBuilderUtils.newAMInfo(jhAmInfo.getAppAttemptId(),
+              jhAmInfo.getStartTime(), jhAmInfo.getContainerId(),
+              jhAmInfo.getNodeManagerHost(), jhAmInfo.getNodeManagerPort(),
+              jhAmInfo.getNodeManagerHttpPort());
+   
+      amInfos.add(amInfo);
+    }
+    return amInfos;
   }
 }

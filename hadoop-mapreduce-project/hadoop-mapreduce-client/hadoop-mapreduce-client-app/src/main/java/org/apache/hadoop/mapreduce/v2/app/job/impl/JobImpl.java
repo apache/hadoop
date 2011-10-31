@@ -48,7 +48,6 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobInfoChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobInitedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
@@ -61,6 +60,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
@@ -580,13 +580,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
       if (getState() == JobState.NEW) {
         return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-            startTime, finishTime, setupProgress, 0.0f,
-            0.0f, cleanupProgress, remoteJobConfFile.toString());
+            appSubmitTime, startTime, finishTime, setupProgress, 0.0f, 0.0f,
+            cleanupProgress, remoteJobConfFile.toString(), amInfos);
       }
 
       return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-          startTime, finishTime, setupProgress, computeProgress(mapTasks),
-          computeProgress(reduceTasks), cleanupProgress, remoteJobConfFile.toString());
+          appSubmitTime, startTime, finishTime, setupProgress,
+          computeProgress(mapTasks), computeProgress(reduceTasks),
+          cleanupProgress, remoteJobConfFile.toString(), amInfos);
     } finally {
       readLock.unlock();
     }

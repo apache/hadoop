@@ -32,8 +32,11 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompleti
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsRequest;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
@@ -103,8 +106,9 @@ public class TestMRClientService {
     GetJobReportRequest gjrRequest =
         recordFactory.newRecordInstance(GetJobReportRequest.class);
     gjrRequest.setJobId(job.getID());
-    Assert.assertNotNull("JobReport is null",
-        proxy.getJobReport(gjrRequest).getJobReport());
+    JobReport jr = proxy.getJobReport(gjrRequest).getJobReport();
+    verifyJobReport(jr);
+    
 
     GetTaskAttemptCompletionEventsRequest gtaceRequest =
         recordFactory.newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
@@ -123,8 +127,10 @@ public class TestMRClientService {
     GetTaskAttemptReportRequest gtarRequest =
         recordFactory.newRecordInstance(GetTaskAttemptReportRequest.class);
     gtarRequest.setTaskAttemptId(attempt.getID());
-    Assert.assertNotNull("TaskAttemptReport is null", 
-        proxy.getTaskAttemptReport(gtarRequest).getTaskAttemptReport());
+    TaskAttemptReport tar =
+        proxy.getTaskAttemptReport(gtarRequest).getTaskAttemptReport();
+    verifyTaskAttemptReport(tar);
+    
 
     GetTaskReportRequest gtrRequest =
         recordFactory.newRecordInstance(GetTaskReportRequest.class);
@@ -164,6 +170,31 @@ public class TestMRClientService {
     app.waitForState(job, JobState.SUCCEEDED);
   }
 
+  private void verifyJobReport(JobReport jr) {
+    Assert.assertNotNull("JobReport is null", jr);
+    List<AMInfo> amInfos = jr.getAMInfos();
+    Assert.assertEquals(1, amInfos.size());
+    Assert.assertEquals(JobState.RUNNING, jr.getJobState());
+    AMInfo amInfo = amInfos.get(0);
+    Assert.assertEquals(MRApp.NM_HOST, amInfo.getNodeManagerHost());
+    Assert.assertEquals(MRApp.NM_PORT, amInfo.getNodeManagerPort());
+    Assert.assertEquals(MRApp.NM_HTTP_PORT, amInfo.getNodeManagerHttpPort());
+    Assert.assertEquals(1, amInfo.getAppAttemptId().getAttemptId());
+    Assert.assertEquals(1, amInfo.getContainerId().getApplicationAttemptId()
+        .getAttemptId());
+    Assert.assertTrue(amInfo.getStartTime() > 0);
+  }
+  
+  private void verifyTaskAttemptReport(TaskAttemptReport tar) {
+    Assert.assertEquals(TaskAttemptState.RUNNING, tar.getTaskAttemptState());
+    Assert.assertNotNull("TaskAttemptReport is null", tar);
+    Assert.assertEquals(MRApp.NM_HOST, tar.getNodeManagerHost());
+    Assert.assertEquals(MRApp.NM_PORT, tar.getNodeManagerPort());
+    Assert.assertEquals(MRApp.NM_HTTP_PORT, tar.getNodeManagerHttpPort());
+    Assert.assertEquals(1, tar.getContainerId().getApplicationAttemptId()
+        .getAttemptId());
+  }
+  
   class MRAppWithClientService extends MRApp {
     MRClientService clientService = null;
     MRAppWithClientService(int maps, int reduces, boolean autoComplete) {

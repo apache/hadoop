@@ -107,6 +107,7 @@ import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -158,6 +159,8 @@ public abstract class TaskAttemptImpl implements
   private long finishTime;
   private WrappedProgressSplitsBlock progressSplitBlock;
   private int shufflePort = -1;
+  private String trackerName;
+  private int httpPort;
 
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
@@ -423,7 +426,7 @@ public abstract class TaskAttemptImpl implements
     stateMachine;
 
   private ContainerId containerID;
-  private String nodeHostName;
+  private NodeId containerNodeId;
   private String containerMgrAddress;
   private String nodeHttpAddress;
   private WrappedJvmID jvmID;
@@ -763,6 +766,12 @@ public abstract class TaskAttemptImpl implements
       result.setPhase(reportedStatus.phase);
       result.setStateString(reportedStatus.stateString);
       result.setCounters(getCounters());
+      result.setContainerId(this.getAssignedContainerID());
+      result.setNodeManagerHost(trackerName);
+      result.setNodeManagerHttpPort(httpPort);
+      if (this.containerNodeId != null) {
+        result.setNodeManagerPort(this.containerNodeId.getPort());
+      }
       return result;
     } finally {
       readLock.unlock();
@@ -1001,8 +1010,8 @@ public abstract class TaskAttemptImpl implements
       final TaskAttemptContainerAssignedEvent cEvent = 
         (TaskAttemptContainerAssignedEvent) event;
       taskAttempt.containerID = cEvent.getContainer().getId();
-      taskAttempt.nodeHostName = cEvent.getContainer().getNodeId().getHost();
-      taskAttempt.containerMgrAddress = cEvent.getContainer().getNodeId()
+      taskAttempt.containerNodeId = cEvent.getContainer().getNodeId();
+      taskAttempt.containerMgrAddress = taskAttempt.containerNodeId
           .toString();
       taskAttempt.nodeHttpAddress = cEvent.getContainer().getNodeHttpAddress();
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
@@ -1113,6 +1122,8 @@ public abstract class TaskAttemptImpl implements
       InetSocketAddress nodeHttpInetAddr =
           NetUtils.createSocketAddr(taskAttempt.nodeHttpAddress); // TODO:
                                                                   // Costly?
+      taskAttempt.trackerName = nodeHttpInetAddr.getHostName();
+      taskAttempt.httpPort = nodeHttpInetAddr.getPort();
       JobCounterUpdateEvent jce =
           new JobCounterUpdateEvent(taskAttempt.attemptId.getTaskId()
               .getJobId());

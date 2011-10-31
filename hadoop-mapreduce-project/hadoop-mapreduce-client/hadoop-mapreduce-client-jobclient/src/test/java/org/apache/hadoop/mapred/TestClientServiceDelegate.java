@@ -168,7 +168,7 @@ public class TestClientServiceDelegate {
     GetJobReportResponse jobReportResponse1 = mock(GetJobReportResponse.class);
     when(jobReportResponse1.getJobReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "jobName-firstGen", "user",
-            JobState.RUNNING, 0, 0, 0, 0, 0, 0, "anything"));
+            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null));
 
     // First AM returns a report with jobName firstGen and simulates AM shutdown
     // on second invocation.
@@ -180,7 +180,7 @@ public class TestClientServiceDelegate {
     GetJobReportResponse jobReportResponse2 = mock(GetJobReportResponse.class);
     when(jobReportResponse2.getJobReport()).thenReturn(
         MRBuilderUtils.newJobReport(jobId, "jobName-secondGen", "user",
-            JobState.RUNNING, 0, 0, 0, 0, 0, 0, "anything"));
+            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null));
 
     // Second AM generation returns a report with jobName secondGen
     MRClientProtocol secondGenAMProxy = mock(MRClientProtocol.class);

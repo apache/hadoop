@@ -21,7 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.recover;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.event.Dispatcher;

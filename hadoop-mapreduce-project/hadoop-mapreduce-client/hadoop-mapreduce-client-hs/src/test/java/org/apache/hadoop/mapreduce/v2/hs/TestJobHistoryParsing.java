@@ -112,11 +112,11 @@ public class TestJobHistoryParsing {
 
     // Verify aminfo
     Assert.assertEquals(1, jobInfo.getAMInfos().size());
-    Assert.assertEquals("testhost", jobInfo.getAMInfos().get(0)
+    Assert.assertEquals(MRApp.NM_HOST, jobInfo.getAMInfos().get(0)
         .getNodeManagerHost());
     AMInfo amInfo = jobInfo.getAMInfos().get(0);
-    Assert.assertEquals(2222, amInfo.getNodeManagerPort());
-    Assert.assertEquals(3333, amInfo.getNodeManagerHttpPort());
+    Assert.assertEquals(MRApp.NM_PORT, amInfo.getNodeManagerPort());
+    Assert.assertEquals(MRApp.NM_HTTP_PORT, amInfo.getNodeManagerHttpPort());
     Assert.assertEquals(1, amInfo.getAppAttemptId().getAttemptId());
     Assert.assertEquals(amInfo.getAppAttemptId(), amInfo.getContainerId()
         .getApplicationAttemptId());
