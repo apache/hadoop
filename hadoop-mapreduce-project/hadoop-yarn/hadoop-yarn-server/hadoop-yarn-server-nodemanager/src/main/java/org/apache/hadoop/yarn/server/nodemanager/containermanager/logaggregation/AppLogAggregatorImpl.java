@@ -179,7 +179,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     
     this.dispatcher.getEventHandler().handle(
         new ApplicationEvent(this.appId,
-            ApplicationEventType.APPLICATION_LOG_AGGREGATION_FINISHED));
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
         
     this.appAggregationFinished.set(true);
   }

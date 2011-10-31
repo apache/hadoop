@@ -16,28 +16,8 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event;
 
-import org.apache.hadoop.yarn.api.records.ContainerId;
-
-public class LogAggregatorContainerFinishedEvent extends LogAggregatorEvent {
-
-  private final ContainerId containerId;
-  private final int exitCode;
-
-  public LogAggregatorContainerFinishedEvent(ContainerId containerId,
-      int exitCode) {
-    super(LogAggregatorEventType.CONTAINER_FINISHED);
-    this.containerId = containerId;
-    this.exitCode = exitCode;
-  }
-
-  public ContainerId getContainerId() {
-    return this.containerId;
-  }
-
-  public int getExitCode() {
-    return this.exitCode;
-  }
-
+public enum LogHandlerEventType {
+  APPLICATION_STARTED, CONTAINER_FINISHED, APPLICATION_FINISHED
 }

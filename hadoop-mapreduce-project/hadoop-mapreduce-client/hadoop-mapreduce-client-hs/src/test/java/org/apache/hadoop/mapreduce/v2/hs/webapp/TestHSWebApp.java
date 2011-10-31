@@ -228,9 +228,7 @@ public class TestHSWebApp {
             params);
     PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
     verify(spyPw).write(
-        "Logs not available for container_10_0001_01_000001. Aggregation "
-            + "may not be complete,"
-            + " Check back later or try the nodemanager on "
+        "Aggregation is not enabled. Try the nodemanager at "
             + MockJobs.NM_HOST + ":" + MockJobs.NM_PORT);
   }
 }

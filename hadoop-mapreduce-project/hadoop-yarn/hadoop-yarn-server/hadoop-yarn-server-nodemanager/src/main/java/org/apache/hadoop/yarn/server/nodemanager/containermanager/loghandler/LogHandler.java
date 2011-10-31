@@ -16,22 +16,11 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.application;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
-public enum ApplicationEventType {
+import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 
-  // Source: ContainerManager
-  INIT_APPLICATION,
-  INIT_CONTAINER,
-  FINISH_APPLICATION,
-
-  // Source: ResourceLocalizationService
-  APPLICATION_INITED,
-  APPLICATION_RESOURCES_CLEANEDUP,
-
-  // Source: Container
-  APPLICATION_CONTAINER_FINISHED,
-
-  // Source: Log Handler
-  APPLICATION_LOG_HANDLING_FINISHED
+public interface LogHandler extends EventHandler<LogHandlerEvent> {
+  public void handle(LogHandlerEvent event);
 }

@@ -1874,6 +1874,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-2766. Fixed NM to set secure permissions for files and directories
     in distributed-cache. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-2696. Fixed NodeManager to cleanup logs in a thread when logs'
+    aggregation is not enabled. (Siddharth Seth via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
