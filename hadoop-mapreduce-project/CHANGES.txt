@@ -407,6 +407,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3146. Added a MR specific command line to dump logs for a
     given TaskAttemptID. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3275. Added documentation for AM WebApp Proxy. (Robert Evans via
+    acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
