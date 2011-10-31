@@ -77,7 +77,7 @@ public class ReduceAttempt20LineHistoryEventEmitter
              Long.parseLong(shuffleFinish),
              Long.parseLong(sortFinish),
              Long.parseLong(finishTime),
-             hostName,
+             hostName, null,
              state, maybeParseCounters(counters),
              null);
         }

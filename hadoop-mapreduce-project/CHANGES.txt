@@ -1883,6 +1883,9 @@ Release 0.23.0 - Unreleased
     a couple of events in failure states correctly. (Hitesh Shah and Siddharth
     Seth via vinodkv)
 
+    MAPREDUCE-3035. Fixed MR JobHistory to ensure rack information is present.
+    (chakravarthy via acmurthy)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

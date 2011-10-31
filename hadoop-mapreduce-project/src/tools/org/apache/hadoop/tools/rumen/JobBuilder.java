@@ -522,7 +522,8 @@ public class JobBuilder {
       return;
     }
     attempt.setResult(getPre21Value(event.getTaskStatus()));
-    attempt.setHostName(event.getHostname());
+    attempt.setHostName(event.getHostname(), event.getRackName());
+
     // XXX There may be redundant location info available in the event.
     // We might consider extracting it from this event. Currently this
     // is redundant, but making this will add future-proofing.
@@ -545,7 +546,8 @@ public class JobBuilder {
       return;
     }
     attempt.setResult(getPre21Value(event.getTaskStatus()));
-    attempt.setHostName(event.getHostname());
+    attempt.setHostName(event.getHostname(), event.getRackname());
+
     // XXX There may be redundant location info available in the event.
     // We might consider extracting it from this event. Currently this
     // is redundant, but making this will add future-proofing.

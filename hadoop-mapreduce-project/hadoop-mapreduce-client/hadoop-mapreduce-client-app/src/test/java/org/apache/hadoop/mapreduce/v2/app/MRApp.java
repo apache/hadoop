@@ -330,6 +330,7 @@ public class MRApp extends MRAppMaster {
     //We are running locally so set the shuffle port to -1 
     int shufflePort = -1;
 
+    @SuppressWarnings("unchecked")
     @Override
     public void handle(ContainerLauncherEvent event) {
       switch (event.getType()) {

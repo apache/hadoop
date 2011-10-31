@@ -279,6 +279,11 @@ public class MockJobs extends MockApps {
       public long getSortFinishTime() {
         return 0;
       }
+
+	@Override
+	public String getNodeRackName() {
+		return "/default-rack";
+	}
     };
   }
 
