@@ -323,6 +323,9 @@ Release 0.23.0 - Unreleased
     HDFS-2348. Support getContentSummary and getFileChecksum in webhdfs.
     (szetszwo)
 
+    HDFS-2385. Support renew and cancel delegation tokens in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

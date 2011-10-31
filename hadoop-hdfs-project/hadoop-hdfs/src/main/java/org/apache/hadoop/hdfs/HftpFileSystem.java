@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -32,9 +31,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.TimeZone;
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.Delayed;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -49,6 +45,8 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenRenewer;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
@@ -79,9 +77,14 @@ import org.xml.sax.helpers.XMLReaderFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HftpFileSystem extends FileSystem {
+public class HftpFileSystem extends FileSystem
+    implements DelegationTokenRenewer.Renewable {
+  private static final DelegationTokenRenewer<HftpFileSystem> dtRenewer
+      = new DelegationTokenRenewer<HftpFileSystem>(HftpFileSystem.class);
+  
   static {
     HttpURLConnection.setFollowRedirects(true);
+    dtRenewer.start();
   }
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
@@ -96,7 +99,6 @@ public class HftpFileSystem extends FileSystem {
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
   private Token<?> delegationToken;
   private Token<?> renewToken;
-  public static final String HFTP_SERVICE_NAME_KEY = "hdfs.service.host_";
   
   public static final SimpleDateFormat getDateFormat() {
     final SimpleDateFormat df = new SimpleDateFormat(HFTP_DATE_FORMAT);
@@ -111,14 +113,18 @@ public class HftpFileSystem extends FileSystem {
     }
   };
 
-  private static RenewerThread renewer = new RenewerThread();
-  static {
-    renewer.start();
-  }
-
   @Override
   protected int getDefaultPort() {
-    return DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT;
+    return getDefaultSecurePort();
+
+    //TODO: un-comment the following once HDFS-7510 is committed. 
+//    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
+//        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
+  }
+
+  protected int getDefaultSecurePort() {
+    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 
   @Override
@@ -132,7 +138,6 @@ public class HftpFileSystem extends FileSystem {
   }
 
 
-  @SuppressWarnings("unchecked")
   @Override
   public void initialize(final URI name, final Configuration conf)
   throws IOException {
@@ -161,7 +166,7 @@ public class HftpFileSystem extends FileSystem {
     // if one uses RPC port different from the Default one,  
     // one should specify what is the setvice name for this delegation token
     // otherwise it is hostname:RPC_PORT
-    String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY
+    String key = DelegationTokenSelector.SERVICE_NAME_KEY
         + SecurityUtil.buildDTServiceName(name,
             DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
     if(LOG.isDebugEnabled()) {
@@ -205,7 +210,7 @@ public class HftpFileSystem extends FileSystem {
       //since we don't already have a token, go get one over https
       if (delegationToken == null) {
         setDelegationToken(getDelegationToken(null));
-        renewer.addTokenToRenew(this);
+        dtRenewer.addRenewAction(this);
       }
     }
   }
@@ -222,7 +227,25 @@ public class HftpFileSystem extends FileSystem {
     return hostname + ":" + port;
   }
 
-  private <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+  //TODO: un-comment the following once HDFS-7510 is committed. 
+//  protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
+//    Text serviceName = SecurityUtil.buildTokenService(nnSecureAddr);
+//    return hftpTokenSelector.selectToken(serviceName, ugi.getTokens());      
+//  }
+  
+  protected Token<DelegationTokenIdentifier> selectHdfsDelegationToken() {
+    return  DelegationTokenSelector.selectHdfsDelegationToken(
+        nnAddr, ugi, getConf());
+  }
+  
+
+  @Override
+  public Token<?> getRenewToken() {
+    return renewToken;
+  }
+
+  @Override
+  public <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
     renewToken = token;
     // emulate the 203 usage of the tokens
     // by setting the kind and service as if they were hdfs tokens
@@ -628,150 +651,6 @@ public class HftpFileSystem extends FileSystem {
     return cs != null? cs: super.getContentSummary(f);
   }
 
-
-  /**
-   * An action that will renew and replace the hftp file system's delegation 
-   * tokens automatically.
-   */
-  private static class RenewAction implements Delayed {
-    // when should the renew happen
-    private long timestamp;
-    // a weak reference to the file system so that it can be garbage collected
-    private final WeakReference<HftpFileSystem> weakFs;
-
-    RenewAction(long timestamp, HftpFileSystem fs) {
-      this.timestamp = timestamp;
-      this.weakFs = new WeakReference<HftpFileSystem>(fs);
-    }
-
-    /**
-     * Get the delay until this event should happen.
-     */
-    @Override
-    public long getDelay(TimeUnit unit) {
-      long millisLeft = timestamp - System.currentTimeMillis();
-      return unit.convert(millisLeft, TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Compare two events in the same queue.
-     */
-    @Override
-    public int compareTo(Delayed o) {
-      if (o.getClass() != RenewAction.class) {
-        throw new IllegalArgumentException
-                  ("Illegal comparision to non-RenewAction");
-      }
-      RenewAction other = (RenewAction) o;
-      return timestamp < other.timestamp ? -1 :
-        (timestamp == other.timestamp ? 0 : 1);
-    }
-    
-    @Override
-    public int hashCode() {
-      assert false : "hashCode not designed";
-    return 33;  
-    }
-    /**
-     * equals
-     */
-    @Override
-    public boolean equals(Object o) {
-      if(!( o instanceof Delayed))
-        return false;
-      
-      return compareTo((Delayed) o) == 0;
-    }
-
-    /**
-     * Set a new time for the renewal. Can only be called when the action
-     * is not in the queue.
-     * @param newTime the new time
-     */
-    public void setNewTime(long newTime) {
-      timestamp = newTime;
-    }
-
-    /**
-     * Renew or replace the delegation token for this file system.
-     * @return
-     * @throws IOException
-     */
-    public boolean renew() throws IOException, InterruptedException {
-      final HftpFileSystem fs = weakFs.get();
-      if (fs != null) {
-        synchronized (fs) {
-          try {
-            fs.renewToken.renew(fs.getConf());
-          } catch (IOException ie) {
-            try {
-              fs.setDelegationToken(fs.getDelegationToken(null));
-            } catch (IOException ie2) {
-              throw new IOException("Can't renew or get new delegation "
-                  + "token ", ie);
-            }
-          }
-        }
-      }
-      return fs != null;
-    }
-
-    public String toString() {
-      StringBuilder result = new StringBuilder();
-      HftpFileSystem fs = weakFs.get();
-      if (fs == null) {
-        return "evaporated token renew";
-      }
-      synchronized (fs) {
-        result.append(fs.delegationToken);
-      }
-      result.append(" renew in ");
-      result.append(getDelay(TimeUnit.SECONDS));
-      result.append(" secs");
-      return result.toString();
-    }
-  }
-
-  /**
-   * A daemon thread that waits for the next file system to renew.
-   */
-  private static class RenewerThread extends Thread {
-    private DelayQueue<RenewAction> queue = new DelayQueue<RenewAction>();
-    // wait for 95% of a day between renewals
-    private static final int RENEW_CYCLE = (int) (0.95 * 24 * 60 * 60 * 1000);
-
-    public RenewerThread() {
-      super("HFTP Delegation Token Renewer");
-      setDaemon(true);
-    }
-
-    public void addTokenToRenew(HftpFileSystem fs) {
-      queue.add(new RenewAction(RENEW_CYCLE + System.currentTimeMillis(), fs));
-    }
-
-    public void run() {
-      RenewAction action = null;
-      while (true) {
-        try {
-          action = queue.take();
-          if (action.renew()) {
-            action.setNewTime(RENEW_CYCLE + System.currentTimeMillis());
-            queue.add(action);
-          }
-          action = null;
-        } catch (InterruptedException ie) {
-          return;
-        } catch (Exception ie) {
-          if (action != null) {
-            LOG.warn("Failure to renew token " + action, ie);
-          } else {
-            LOG.warn("Failure in renew queue", ie);
-          }
-        }
-      }
-    }
-  }
-  
   @InterfaceAudience.Private
   public static class TokenManager extends TokenRenewer {
 
