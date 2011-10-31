@@ -43,19 +43,19 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorAppFinishedEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorAppStartedEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorContainerFinishedEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class LogAggregationService extends AbstractService implements
-    EventHandler<LogAggregatorEvent> {
+    LogHandler {
 
   private static final Log LOG = LogFactory
       .getLog(LogAggregationService.class);
@@ -87,7 +87,6 @@ public class LogAggregationService extends AbstractService implements
   Path remoteRootLogDir;
   String remoteRootLogDirSuffix;
   private NodeId nodeId;
-  private boolean isLogAggregationEnabled = false;
 
   private final ConcurrentMap<ApplicationId, AppLogAggregator> appLogAggregators;
 
@@ -117,8 +116,6 @@ public class LogAggregationService extends AbstractService implements
     this.remoteRootLogDirSuffix =
         conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
-    this.isLogAggregationEnabled =
-        conf.getBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED, false);
 
     super.init(conf);
   }
@@ -411,31 +408,30 @@ public class LogAggregationService extends AbstractService implements
   }
 
   @Override
-  public void handle(LogAggregatorEvent event) {
-    if (this.isLogAggregationEnabled) {
-      switch (event.getType()) {
-        case APPLICATION_STARTED:
-          LogAggregatorAppStartedEvent appStartEvent =
-              (LogAggregatorAppStartedEvent) event;
-          initApp(appStartEvent.getApplicationId(), appStartEvent.getUser(),
-              appStartEvent.getCredentials(),
-              appStartEvent.getLogRetentionPolicy(),
-              appStartEvent.getApplicationAcls());
-          break;
-        case CONTAINER_FINISHED:
-          LogAggregatorContainerFinishedEvent containerFinishEvent =
-              (LogAggregatorContainerFinishedEvent) event;
-          stopContainer(containerFinishEvent.getContainerId(),
-              containerFinishEvent.getExitCode());
-          break;
-        case APPLICATION_FINISHED:
-          LogAggregatorAppFinishedEvent appFinishedEvent =
-              (LogAggregatorAppFinishedEvent) event;
-          stopApp(appFinishedEvent.getApplicationId());
-          break;
-        default:
-          ; // Ignore
-      }
+  public void handle(LogHandlerEvent event) {
+    switch (event.getType()) {
+      case APPLICATION_STARTED:
+        LogHandlerAppStartedEvent appStartEvent =
+            (LogHandlerAppStartedEvent) event;
+        initApp(appStartEvent.getApplicationId(), appStartEvent.getUser(),
+            appStartEvent.getCredentials(),
+            appStartEvent.getLogRetentionPolicy(),
+            appStartEvent.getApplicationAcls());
+        break;
+      case CONTAINER_FINISHED:
+        LogHandlerContainerFinishedEvent containerFinishEvent =
+            (LogHandlerContainerFinishedEvent) event;
+        stopContainer(containerFinishEvent.getContainerId(),
+            containerFinishEvent.getExitCode());
+        break;
+      case APPLICATION_FINISHED:
+        LogHandlerAppFinishedEvent appFinishedEvent =
+            (LogHandlerAppFinishedEvent) event;
+        stopApp(appFinishedEvent.getApplicationId());
+        break;
+      default:
+        ; // Ignore
     }
+
   }
 }

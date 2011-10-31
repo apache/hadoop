@@ -87,7 +87,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogAggregationService;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.NonAggregatingLogHandler;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorImpl;
@@ -154,9 +156,6 @@ public class ContainerManagerImpl extends CompositeService implements
         new ContainersMonitorImpl(exec, dispatcher, this.context);
     addService(this.containersMonitor);
 
-    LogAggregationService logAggregationService =
-        createLogAggregationService(this.context, this.deletionService);
-    addService(logAggregationService);
 
     dispatcher.register(ContainerEventType.class,
         new ContainerEventDispatcher());
@@ -166,13 +165,35 @@ public class ContainerManagerImpl extends CompositeService implements
     dispatcher.register(AuxServicesEventType.class, auxiliaryServices);
     dispatcher.register(ContainersMonitorEventType.class, containersMonitor);
     dispatcher.register(ContainersLauncherEventType.class, containersLauncher);
-    dispatcher.register(LogAggregatorEventType.class, logAggregationService);
+    
     addService(dispatcher);
   }
 
-  protected LogAggregationService createLogAggregationService(Context context,
+  @Override
+  public void init(Configuration conf) {
+    LogHandler logHandler =
+      createLogHandler(conf, this.context, this.deletionService);
+    addIfService(logHandler);
+    dispatcher.register(LogHandlerEventType.class, logHandler);
+    
+    super.init(conf);
+  }
+
+  private void addIfService(Object object) {
+    if (object instanceof Service) {
+      addService((Service) object);
+    }
+  }
+
+  protected LogHandler createLogHandler(Configuration conf, Context context,
       DeletionService deletionService) {
-    return new LogAggregationService(this.dispatcher, context, deletionService);
+    if (conf.getBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED,
+        YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_ENABLED)) {
+      return new LogAggregationService(this.dispatcher, context,
+          deletionService);
+    } else {
+      return new NonAggregatingLogHandler(this.dispatcher, deletionService);
+    }
   }
 
   public ContainersMonitor getContainersMonitor() {

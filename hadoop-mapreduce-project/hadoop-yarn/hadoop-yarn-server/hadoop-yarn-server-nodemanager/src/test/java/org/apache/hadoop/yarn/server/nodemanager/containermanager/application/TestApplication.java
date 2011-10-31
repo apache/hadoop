@@ -33,8 +33,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -349,7 +349,7 @@ public class TestApplication {
     final EventHandler<ContainersMonitorEvent> monitorBus;
     final EventHandler<AuxServicesEvent> auxBus;
     final EventHandler<ContainerEvent> containerBus;
-    final EventHandler<LogAggregatorEvent> logAggregationBus;
+    final EventHandler<LogHandlerEvent> logAggregationBus;
     final String user;
     final List<Container> containers;
     final Context context;
@@ -373,7 +373,7 @@ public class TestApplication {
       dispatcher.register(ContainersMonitorEventType.class, monitorBus);
       dispatcher.register(AuxServicesEventType.class, auxBus);
       dispatcher.register(ContainerEventType.class, containerBus);
-      dispatcher.register(LogAggregatorEventType.class, logAggregationBus);
+      dispatcher.register(LogHandlerEventType.class, logAggregationBus);
 
       context = mock(Context.class);
       

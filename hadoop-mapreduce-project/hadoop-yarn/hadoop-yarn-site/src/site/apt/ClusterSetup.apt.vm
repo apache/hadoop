@@ -224,18 +224,13 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | <<<ResourceManager>>> Scheduler class. | |
 | | | <<<CapacityScheduler>>> (recommended) or <<<FifoScheduler>>> |
 *-------------------------+-------------------------+------------------------+
-| <<<yarn.nodemanager.remote-app-log-dir>>> | | |
-| | </logs> | |
-| | | HDFS directory where the application logs are moved on application |
-| | | completion. Need to set appropriate permissions. |
-*-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.nodes.include-path>>> / | | | 
 | <<<yarn.resourcemanager.nodes.exclude-path>>> | | |  
 | | List of permitted/excluded NodeManagers. | |
 | | | If necessary, use these files to control the list of allowable | 
 | | | NodeManagers. |
 *-------------------------+-------------------------+------------------------+
-| 
+ 
         * Configurations for NodeManager:
 
 *-------------------------+-------------------------+------------------------+
@@ -262,6 +257,27 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | Comma-separated list of paths on the local filesystem where logs  | |
 | | are written. | |
 | | | Multiple paths help spread disk i/o. |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.nodemanager.log-aggregation-enable>>> | | |
+| | <false> | |
+| | | Configuration to enable or disable log aggregation |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.nodemanager.log.retain-seconds>>> | | |
+| | <10800> | |
+| | | Default time (in seconds) to retain log files on the NodeManager |
+| | | Only applicable if log-aggregation is disabled. |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.nodemanager.remote-app-log-dir>>> | | |
+| | </logs> | |
+| | | HDFS directory where the application logs are moved on application |
+| | | completion. Need to set appropriate permissions. |
+| | | Only applicable if log-aggregation is enabled. |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.nodemanager.remote-app-log-dir-suffix>>> | | |
+| | <logs> | |
+| | | Suffix appended to the remote log dir. Logs will be aggregated to  |
+| | | $\{yarn.nodemanager.remote-app-log-dir\}/$\{user\}/$\{thisParam\} |
+| | | Only applicable if log-aggregation is enabled. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.aux-services>>> | | |
 | | mapreduce.shuffle  | |

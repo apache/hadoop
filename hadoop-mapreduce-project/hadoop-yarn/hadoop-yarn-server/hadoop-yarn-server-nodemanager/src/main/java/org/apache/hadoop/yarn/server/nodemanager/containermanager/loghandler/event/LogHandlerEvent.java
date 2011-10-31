@@ -16,21 +16,14 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.event.AbstractEvent;
 
-public class LogAggregatorAppFinishedEvent extends LogAggregatorEvent {
+public class LogHandlerEvent extends AbstractEvent<LogHandlerEventType>{
 
-  private final ApplicationId applicationId;
-
-  public LogAggregatorAppFinishedEvent(ApplicationId appId) {
-    super(LogAggregatorEventType.APPLICATION_FINISHED);
-    this.applicationId = appId;
-  }
-
-  public ApplicationId getApplicationId() {
-    return this.applicationId;
+  public LogHandlerEvent(LogHandlerEventType type) {
+    super(type);
   }
 
 }

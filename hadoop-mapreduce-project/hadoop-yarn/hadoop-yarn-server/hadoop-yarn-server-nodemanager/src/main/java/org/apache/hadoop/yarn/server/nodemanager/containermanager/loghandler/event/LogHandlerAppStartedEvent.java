@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event;
 
 import java.util.Map;
 
@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.ContainerLogsRetentionPolicy;
 
-public class LogAggregatorAppStartedEvent extends LogAggregatorEvent {
+public class LogHandlerAppStartedEvent extends LogHandlerEvent {
 
   private final ApplicationId applicationId;
   private final ContainerLogsRetentionPolicy retentionPolicy;
@@ -33,10 +33,10 @@ public class LogAggregatorAppStartedEvent extends LogAggregatorEvent {
   private final Credentials credentials;
   private final Map<ApplicationAccessType, String> appAcls;
 
-  public LogAggregatorAppStartedEvent(ApplicationId appId, String user,
+  public LogHandlerAppStartedEvent(ApplicationId appId, String user,
       Credentials credentials, ContainerLogsRetentionPolicy retentionPolicy,
       Map<ApplicationAccessType, String> appAcls) {
-    super(LogAggregatorEventType.APPLICATION_STARTED);
+    super(LogHandlerEventType.APPLICATION_STARTED);
     this.applicationId = appId;
     this.user = user;
     this.credentials = credentials;

@@ -16,8 +16,21 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event;
+package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event;
 
-public enum LogAggregatorEventType {
-  APPLICATION_STARTED, CONTAINER_FINISHED, APPLICATION_FINISHED
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+
+public class LogHandlerAppFinishedEvent extends LogHandlerEvent {
+
+  private final ApplicationId applicationId;
+
+  public LogHandlerAppFinishedEvent(ApplicationId appId) {
+    super(LogHandlerEventType.APPLICATION_FINISHED);
+    this.applicationId = appId;
+  }
+
+  public ApplicationId getApplicationId() {
+    return this.applicationId;
+  }
+
 }

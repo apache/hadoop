@@ -281,9 +281,18 @@
 
   <property>
     <description>Whether to enable log aggregation</description>
-    <name>yarn.nodemanager.log-aggregation.enable</name>
+    <name>yarn.nodemanager.log-aggregation-enable</name>
     <value>false</value>
   </property>
+  
+  <property>
+    <description>Time in seconds to retain user logs. Only applicable if
+    log aggregation is disabled
+    </description>
+    <name>yarn.nodemanager.log.retain-seconds</name>
+    <value>10800</value>
+  </property>
+
   <property>
     <description>Where to aggregate logs to.</description>
     <name>yarn.nodemanager.remote-app-log-dir</name>

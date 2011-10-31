@@ -53,6 +53,14 @@ public class AggregatedLogsBlock extends HtmlBlock {
       logEntity = containerId.toString();
     }
 
+    if (!conf.getBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED,
+        YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_ENABLED)) {
+      html.h1()
+          ._("Aggregation is not enabled. Try the nodemanager at " + nodeId)
+          ._();
+      return;
+    }
+    
     Path remoteRootLogDir =
         new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
@@ -69,7 +77,7 @@ public class AggregatedLogsBlock extends HtmlBlock {
           ._("Logs not available for "
               + logEntity
               + ". Aggregation may not be complete, "
-              + "Check back later or try the nodemanager on "
+              + "Check back later or try the nodemanager at "
               + nodeId)._();
       return;
     } catch (IOException e) {
