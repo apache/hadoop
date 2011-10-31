@@ -325,9 +325,12 @@ public class Store implements HeapSize {
     return this.storefiles;
   }
 
-  public void bulkLoadHFile(String srcPathStr) throws IOException {
-    Path srcPath = new Path(srcPathStr);
-
+  /**
+   * This throws a WrongRegionException if the bulkHFile does not fit in this
+   * region.
+   *
+   */
+  void assertBulkLoadHFileOk(Path srcPath) throws IOException {
     HFile.Reader reader  = null;
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
@@ -351,12 +354,21 @@ public class Store implements HeapSize {
       HRegionInfo hri = region.getRegionInfo();
       if (!hri.containsRange(firstKey, lastKey)) {
         throw new WrongRegionException(
-            "Bulk load file " + srcPathStr + " does not fit inside region "
+            "Bulk load file " + srcPath.toString() + " does not fit inside region "
             + this.region);
       }
     } finally {
       if (reader != null) reader.close();
     }
+  }
+
+  /**
+   * This method should only be called from HRegion.  It is assumed that the 
+   * ranges of values in the HFile fit within the stores assigned region. 
+   * (assertBulkLoadHFileOk checks this)
+   */
+  void bulkLoadHFile(String srcPathStr) throws IOException {
+    Path srcPath = new Path(srcPathStr);
 
     // Move the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);

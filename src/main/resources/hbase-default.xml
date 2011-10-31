@@ -129,6 +129,14 @@
     server, getting a cell's value, starting a row update, etc.
     Default: 10.
     </description>
+  </property> 
+  <property>
+    <name>hbase.bulkload.retries.number</name>
+    <value>10</value>
+    <description>Maximum retries.  This is maximum number of iterations
+    to atomic bulk loads are attempted in the face of splitting operations
+    Default: 10.
+    </description>
   </property>
   <property>
     <name>hbase.client.scanner.caching</name>

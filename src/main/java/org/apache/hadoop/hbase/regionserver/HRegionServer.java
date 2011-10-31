@@ -2338,12 +2338,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
+  /**
+   * Atomically bulk load several HFiles into an open region
+   */
   @Override
-  public void bulkLoadHFile(String hfilePath, byte[] regionName,
-      byte[] familyName) throws IOException {
+  public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
+      byte[] regionName) throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
-    region.bulkLoadHFile(hfilePath, familyName);
+    region.bulkLoadHFiles(familyPaths);
   }
 
   Map<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();

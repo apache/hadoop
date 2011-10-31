@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
@@ -61,7 +62,7 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
   // maintained a single global version number on all HBase Interfaces.  This
   // meant all HBase RPC was broke though only one of the three RPC Interfaces
   // had changed.  This has since been undone.
-  public static final long VERSION = 28L;
+  public static final long VERSION = 29L;
 
   /**
    * Get metainfo about an HRegion
@@ -309,9 +310,13 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
   public <R> MultiResponse multi(MultiAction<R> multi) throws IOException;
 
   /**
-   * Bulk load an HFile into an open region
+   * Atomically bulk load multiple HFiles (say from different column families)
+   * into an open region.
+   * 
+   * @param familyPaths List of (family, hfile path) pairs
+   * @param regionName name of region to load hfiles into
    */
-  public void bulkLoadHFile(String hfilePath, byte[] regionName, byte[] familyName)
+  public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths, byte[] regionName)
   throws IOException;
 
   // Master methods

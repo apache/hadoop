@@ -396,6 +396,7 @@ Release 0.92.0 - Unreleased
                to move a region
    HBASE-4613  hbase.util.Threads#threadDumpingIsAlive sleeps 1 second,
                slowing down the shutdown by 0.5s
+   HBASE-4552  multi-CF bulk load is not atomic across column families (Jonathan Hsieh)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

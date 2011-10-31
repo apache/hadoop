@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 import org.cliffc.high_scale_lib.Counter;
@@ -2605,23 +2606,89 @@ public class HRegion implements HeapSize { // , Writable{
     return lid;
   }
 
-  public void bulkLoadHFile(String hfilePath, byte[] familyName)
+  /**
+   * Attempts to atomically load a group of hfiles.  This is critical for loading
+   * rows with multiple column families atomically.
+   *
+   * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   */
+  public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
   throws IOException {
-    startRegionOperation();
+    startBulkRegionOperation();
     this.writeRequestsCount.increment();
+    List<IOException> ioes = new ArrayList<IOException>();
+    List<Pair<byte[], String>> failures = new ArrayList<Pair<byte[], String>>();
+    boolean rangesOk = true;
     try {
-      Store store = getStore(familyName);
-      if (store == null) {
-        throw new DoNotRetryIOException(
-            "No such column family " + Bytes.toStringBinary(familyName));
+      // There possibly was a split that happend between when the split keys
+      // were gathered and before the HReiogn's write lock was taken.  We need
+      // to validate the HFile region before attempting to bulk load all of them
+      for (Pair<byte[], String> p : familyPaths) {
+        byte[] familyName = p.getFirst();
+        String path = p.getSecond();
+
+        Store store = getStore(familyName);
+        if (store == null) {
+          IOException ioe = new DoNotRetryIOException(
+              "No such column family " + Bytes.toStringBinary(familyName));
+          ioes.add(ioe);
+          failures.add(p);
+        }
+
+        try {
+          store.assertBulkLoadHFileOk(new Path(path));
+        } catch (IOException ioe) {
+          rangesOk = false;
+          ioes.add(ioe);
+          failures.add(p);
+        }
       }
-      store.bulkLoadHFile(hfilePath);
+
+      if (ioes.size() != 0) {
+        // validation failed, bail out before doing anything permanent.
+        return;
+      }
+
+      for (Pair<byte[], String> p : familyPaths) {
+        byte[] familyName = p.getFirst();
+        String path = p.getSecond();
+        Store store = getStore(familyName);
+        try {
+          store.bulkLoadHFile(path);
+        } catch (IOException ioe) {
+          // a failure here causes an atomicity violation that we currently 
+          // cannot recover from since it is likely a failed hdfs operation.
+          ioes.add(ioe);
+          failures.add(p);
+          break;
+        }
+      }
     } finally {
-      closeRegionOperation();
+      closeBulkRegionOperation();
+      if (ioes.size() != 0) {
+        StringBuilder list = new StringBuilder();
+        for (Pair<byte[], String> p : failures) {
+          list.append("\n").append(Bytes.toString(p.getFirst())).append(" : ")
+            .append(p.getSecond());
+        }
+
+        if (rangesOk) {
+          // TODO Need a better story for reverting partial failures due to HDFS.
+          LOG.error("There was a partial failure due to IO.   These " +
+              "(family,hfile) pairs were not loaded: " + list);
+        } else {
+          // problem when validating
+          LOG.info("There was a recoverable bulk load failure likely due to a" +
+              " split.  These (family, HFile) pairs were not loaded: " + list);
+        }
+
+        if (ioes.size() == 1) {
+          throw ioes.get(0);
+        }
+        throw MultipleIOException.createIOException(ioes);
+      }
     }
-
   }
-
 
   @Override
   public boolean equals(Object o) {
@@ -4050,6 +4117,34 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private void closeRegionOperation(){
     lock.readLock().unlock();
+  }
+
+  /**
+   * This method needs to be called before any public call that reads or
+   * modifies stores in bulk. It has to be called just before a try.
+   * #closeBulkRegionOperation needs to be called in the try's finally block
+   * Acquires a writelock and checks if the region is closing or closed.
+   * @throws NotServingRegionException when the region is closing or closed
+   */
+  private void startBulkRegionOperation() throws NotServingRegionException {
+    if (this.closing.get()) {
+      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
+          " is closing");
+    }
+    lock.writeLock().lock();
+    if (this.closed.get()) {
+      lock.writeLock().unlock();
+      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
+          " is closed");
+    }
+  }
+
+  /**
+   * Closes the lock. This needs to be called in the finally block corresponding
+   * to the try block of #startRegionOperation
+   */
+  private void closeBulkRegionOperation(){
+    lock.writeLock().unlock();
   }
 
   /**
