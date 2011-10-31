@@ -50,6 +50,8 @@ Trunk (unreleased changes)
 
     HDFS-2479 HDFS Client Data Types in Protocol Buffers (sanjay)
 
+    HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

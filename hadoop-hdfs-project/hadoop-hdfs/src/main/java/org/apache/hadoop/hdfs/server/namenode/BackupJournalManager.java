@@ -77,6 +77,9 @@ class BackupJournalManager implements JournalManager {
   public void recoverUnfinalizedSegments() throws IOException {
   }
 
+  @Override 
+  public void close() throws IOException {}
+
   public boolean matchesRegistration(NamenodeRegistration bnReg) {
     return bnReg.getAddress().equals(this.bnReg.getAddress());
   }
