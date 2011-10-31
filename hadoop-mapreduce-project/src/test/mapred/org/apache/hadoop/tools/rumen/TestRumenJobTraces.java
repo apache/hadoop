@@ -310,7 +310,7 @@ public class TestRumenJobTraces {
   public void testJobHistoryFilenameParsing() throws IOException {
     final Configuration conf = new Configuration();
     final FileSystem lfs = FileSystem.getLocal(conf);
-    String user = "testUser";
+
     org.apache.hadoop.mapred.JobID jid = 
       new org.apache.hadoop.mapred.JobID("12345", 1);
     final Path rootInputDir =
@@ -318,7 +318,8 @@ public class TestRumenJobTraces {
             .makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
     
     // Check if current jobhistory filenames are detected properly
-    Path jhFilename = JobHistory.getJobHistoryFile(rootInputDir, jid, user);
+    Path jhFilename = org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils
+        .getStagingJobHistoryFile(rootInputDir, jid.toString(), 1);
     validateHistoryFileNameParsing(jhFilename, jid);
 
     // Check if Pre21 V1 jophistory file names are detected properly
