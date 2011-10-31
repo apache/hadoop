@@ -1823,6 +1823,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3171 merge from trunk reverted changes from MAPREDUCE-2747 MAPREDUCE-3240.
 
+    MAPREDUCE-3313. Fixed initialization of ClusterMetrics which was failing
+    TestResourceTrackerService sometimes. (Hitesh Shah via vinodkv)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
