@@ -33,6 +33,7 @@ public class LocalResourceRequest
   private final Path loc;
   private final long timestamp;
   private final LocalResourceType type;
+  private final LocalResourceVisibility visibility;
 
   /**
    * Wrap API resource to match against cache of localized resources.
@@ -43,13 +44,16 @@ public class LocalResourceRequest
       throws URISyntaxException {
     this(ConverterUtils.getPathFromYarnURL(resource.getResource()),
         resource.getTimestamp(),
-        resource.getType());
+        resource.getType(),
+        resource.getVisibility());
   }
 
-  LocalResourceRequest(Path loc, long timestamp, LocalResourceType type) {
+  LocalResourceRequest(Path loc, long timestamp, LocalResourceType type,
+      LocalResourceVisibility visibility) {
     this.loc = loc;
     this.timestamp = timestamp;
     this.type = type;
+    this.visibility = visibility;
   }
 
   @Override
@@ -114,7 +118,7 @@ public class LocalResourceRequest
 
   @Override
   public LocalResourceVisibility getVisibility() {
-    throw new UnsupportedOperationException();
+    return visibility;
   }
 
   @Override
