@@ -158,6 +158,19 @@ public class ContainerImpl implements Container {
         ContainerState.LOCALIZATION_FAILED,
         ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
         UPDATE_DIAGNOSTICS_TRANSITION)
+    // container not launched so kill is a no-op
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.KILL_CONTAINER)
+    // container cleanup triggers a release of all resources
+    // regardless of whether they were localized or not
+    // LocalizedResource handles release event in all states
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.RESOURCE_LOCALIZED)
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.RESOURCE_FAILED)
 
     // From LOCALIZED State
     .addTransition(ContainerState.LOCALIZED, ContainerState.RUNNING,
@@ -222,6 +235,9 @@ public class ContainerImpl implements Container {
         ContainerState.KILLING,
         ContainerEventType.RESOURCE_LOCALIZED,
         new LocalizedResourceDuringKillTransition())
+    .addTransition(ContainerState.KILLING, 
+        ContainerState.KILLING, 
+        ContainerEventType.RESOURCE_FAILED)
     .addTransition(ContainerState.KILLING, ContainerState.KILLING,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
@@ -242,8 +258,7 @@ public class ContainerImpl implements Container {
     // in the container launcher
     .addTransition(ContainerState.KILLING,
         ContainerState.KILLING,
-        ContainerEventType.CONTAINER_LAUNCHED,
-        new ContainerTransition())
+        ContainerEventType.CONTAINER_LAUNCHED)
 
     // From CONTAINER_CLEANEDUP_AFTER_KILL State.
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,

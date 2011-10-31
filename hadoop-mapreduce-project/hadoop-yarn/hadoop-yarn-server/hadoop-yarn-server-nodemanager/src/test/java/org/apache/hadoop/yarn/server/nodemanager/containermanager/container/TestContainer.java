@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -217,6 +218,89 @@ public class TestContainer {
       assertEquals(ContainerState.KILLING, wc.c.getContainerState());
       wc.containerKilledOnRequest();
       
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+  
+  @Test
+  public void testKillOnLocalizationFailed() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(15, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.failLocalizeResources(wc.getLocalResourceCount());
+      assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      wc.killContainer();
+      assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+  
+  @Test
+  public void testResourceLocalizedOnLocalizationFailed() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(16, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      int failCount = wc.getLocalResourceCount()/2;
+      if (failCount == 0) {
+        failCount = 1;
+      }
+      wc.failLocalizeResources(failCount);
+      assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      wc.localizeResourcesFromInvalidState(failCount);
+      assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+  
+  @Test
+  public void testResourceFailedOnLocalizationFailed() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(16, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      
+      Iterator<String> lRsrcKeys = wc.localResources.keySet().iterator();
+      String key1 = lRsrcKeys.next();
+      String key2 = lRsrcKeys.next();
+      wc.failLocalizeSpecificResource(key1);
+      assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      wc.failLocalizeSpecificResource(key2);
+      assertEquals(ContainerState.LOCALIZATION_FAILED, wc.c.getContainerState());
+      verifyCleanupCall(wc);
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+  
+  @Test
+  public void testResourceFailedOnKilling() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(16, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      
+      Iterator<String> lRsrcKeys = wc.localResources.keySet().iterator();
+      String key1 = lRsrcKeys.next();
+      wc.killContainer();
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      wc.failLocalizeSpecificResource(key1);
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
       verifyCleanupCall(wc);
     } finally {
       if (wc != null) {
@@ -491,11 +575,20 @@ public class TestContainer {
       drainDispatcherEvents();
     }
 
-    public Map<Path, String> localizeResources() throws URISyntaxException {
+    // Localize resources 
+    // Skip some resources so as to consider them failed
+    public Map<Path, String> doLocalizeResources(boolean checkLocalizingState,
+        int skipRsrcCount) throws URISyntaxException {
       Path cache = new Path("file:///cache");
       Map<Path, String> localPaths = new HashMap<Path, String>();
+      int counter = 0;
       for (Entry<String, LocalResource> rsrc : localResources.entrySet()) {
-        assertEquals(ContainerState.LOCALIZING, c.getContainerState());
+        if (counter++ < skipRsrcCount) {
+          continue;
+        }
+        if (checkLocalizingState) {
+          assertEquals(ContainerState.LOCALIZING, c.getContainerState());
+        }
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Path p = new Path(cache, rsrc.getKey());
         localPaths.put(p, rsrc.getKey());
@@ -505,6 +598,42 @@ public class TestContainer {
       }
       drainDispatcherEvents();
       return localPaths;
+    }
+    
+    
+    public Map<Path, String> localizeResources() throws URISyntaxException {
+      return doLocalizeResources(true, 0);
+    }
+    
+    public void localizeResourcesFromInvalidState(int skipRsrcCount)
+        throws URISyntaxException {
+      doLocalizeResources(false, skipRsrcCount);
+    }
+    
+    public void failLocalizeSpecificResource(String rsrcKey)
+        throws URISyntaxException {
+      LocalResource rsrc = localResources.get(rsrcKey);
+      LocalResourceRequest req = new LocalResourceRequest(rsrc);
+      Exception e = new Exception("Fake localization error");
+      c.handle(new ContainerResourceFailedEvent(c.getContainerID(), req, e));
+      drainDispatcherEvents();
+    }
+
+    // fail to localize some resources
+    public void failLocalizeResources(int failRsrcCount)
+        throws URISyntaxException {
+      int counter = 0;
+      for (Entry<String, LocalResource> rsrc : localResources.entrySet()) {
+        if (counter >= failRsrcCount) {
+          break;
+        }
+        ++counter;
+        LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
+        Exception e = new Exception("Fake localization error");
+        c.handle(new ContainerResourceFailedEvent(c.getContainerID(), 
+                 req, e));
+      }
+      drainDispatcherEvents();     
     }
 
     public void launchContainer() {
@@ -534,6 +663,10 @@ public class TestContainer {
           ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ExitCode.FORCE_KILLED
               .getExitCode()));
       drainDispatcherEvents();
+    }
+    
+    public int getLocalResourceCount() {
+      return localResources.size();
     }
   }
 }
