@@ -40,6 +40,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
@@ -56,7 +57,13 @@ public class FSDownload implements Callable<Path> {
   private Configuration conf;
   private LocalResource resource;
   private LocalDirAllocator dirs;
-  private FsPermission cachePerms = new FsPermission((short) 0755);
+  private static final FsPermission cachePerms = new FsPermission(
+      (short) 0755);
+  static final FsPermission PUBLIC_FILE_PERMS = new FsPermission((short) 0555);
+  static final FsPermission PRIVATE_FILE_PERMS = new FsPermission(
+      (short) 0500);
+  static final FsPermission PUBLIC_DIR_PERMS = new FsPermission((short) 0755);
+  static final FsPermission PRIVATE_DIR_PERMS = new FsPermission((short) 0700);
 
   FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
       LocalDirAllocator dirs, LocalResource resource, Random rand) {
@@ -150,6 +157,7 @@ public class FSDownload implements Callable<Path> {
             };
       });
       unpack(new File(dTmp.toUri()), new File(dFinal.toUri()));
+      changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(dst_work, dst, Rename.OVERWRITE);
     } catch (Exception e) {
       try { files.delete(dst, true); } catch (IOException ignore) { }
@@ -163,9 +171,54 @@ public class FSDownload implements Callable<Path> {
       conf = null;
       resource = null;
       dirs = null;
-      cachePerms = null;
     }
     return files.makeQualified(new Path(dst, sCopy.getName()));
+  }
+
+  /**
+   * Recursively change permissions of all files/dirs on path based 
+   * on resource visibility.
+   * Change to 755 or 700 for dirs, 555 or 500 for files.
+   * @param fs FileSystem
+   * @param path Path to modify perms for
+   * @throws IOException
+   * @throws InterruptedException 
+   */
+  private void changePermissions(FileSystem fs, final Path path)
+      throws IOException, InterruptedException {
+    FileStatus fStatus = fs.getFileStatus(path);
+    FsPermission perm = cachePerms;
+    // set public perms as 755 or 555 based on dir or file
+    if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
+      perm = fStatus.isDirectory() ? PUBLIC_DIR_PERMS : PUBLIC_FILE_PERMS;
+    }
+    // set private perms as 700 or 500
+    else {
+      // PRIVATE:
+      // APPLICATION:
+      perm = fStatus.isDirectory() ? PRIVATE_DIR_PERMS : PRIVATE_FILE_PERMS;
+    }
+    LOG.debug("Changing permissions for path " + path
+        + " to perm " + perm);
+    final FsPermission fPerm = perm;
+    if (null == userUgi) {
+      files.setPermission(path, perm);
+    }
+    else {
+      userUgi.doAs(new PrivilegedExceptionAction<Void>() {
+        public Void run() throws Exception {
+          files.setPermission(path, fPerm);
+          return null;
+        }
+      });
+    }
+    if (fStatus.isDirectory()
+        && !fStatus.isSymlink()) {
+      FileStatus[] statuses = fs.listStatus(path);
+      for (FileStatus status : statuses) {
+        changePermissions(fs, status.getPath());
+      }
+    }
   }
 
   private static long getEstimatedSize(LocalResource rsrc) {
