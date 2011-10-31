@@ -73,7 +73,7 @@ public class MapAttempt20LineHistoryEventEmitter extends
               that.originalTaskType, status,
              Long.parseLong(finishTime),
              Long.parseLong(finishTime),
-             hostName, state, maybeParseCounters(counters),
+             hostName, null, state, maybeParseCounters(counters),
              null);
         }
       }

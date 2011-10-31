@@ -114,7 +114,8 @@ public class HsTaskPage extends HsView {
         String nodeHttpAddr = ta.getNodeHttpAddress();
         String containerIdString = ta.getAssignedContainerID().toString();
         String nodeIdString = ta.getAssignedContainerMgrAddress();
-        
+        String nodeRackName = ta.getNodeRackName();        
+
         long attemptStartTime = ta.getLaunchTime();
         long shuffleFinishTime = -1;
         long sortFinishTime = -1;
@@ -139,10 +140,10 @@ public class HsTaskPage extends HsView {
         TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
         TD<TR<TBODY<TABLE<Hamlet>>>> td = row.td();
 
-        td.br().$title(String.valueOf(sortId))._()
-            . // sorting
-            _(taid)._().td(ta.getState().toString()).td()
-            .a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
+        td.br().$title(String.valueOf(sortId))._(). // sorting
+            _(taid)._().td(ta.getState().toString()).td().a(".nodelink",
+                url("http://", nodeHttpAddr),
+                nodeRackName + "/" + nodeHttpAddr);
         td._(" ").a(".logslink",
             url("logs", nodeIdString, containerIdString, taid, app.getJob()
                 .getUserName()), "logs");

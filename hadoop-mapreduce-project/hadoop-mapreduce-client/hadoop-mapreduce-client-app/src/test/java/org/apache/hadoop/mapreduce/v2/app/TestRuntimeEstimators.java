@@ -688,6 +688,11 @@ public class TestRuntimeEstimators {
     public String getNodeHttpAddress() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+    
+    @Override
+    public String getNodeRackName() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
 
     @Override
     public long getLaunchTime() {

@@ -104,6 +104,11 @@ public class CompletedTaskAttempt implements TaskAttempt {
   public String getNodeHttpAddress() {
     return attemptInfo.getTrackerName() + ":" + attemptInfo.getHttpPort();
   }
+  
+  @Override
+  public String getNodeRackName() {
+    return attemptInfo.getRackname();
+  }
 
   @Override
   public Counters getCounters() {

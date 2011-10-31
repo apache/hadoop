@@ -209,6 +209,7 @@ public class JobHistoryParser {
     attemptInfo.sortFinishTime = event.getSortFinishTime();
     attemptInfo.counters = event.getCounters();
     attemptInfo.hostname = event.getHostname();
+    attemptInfo.rackname = event.getRackName();
   }
 
   private void handleMapAttemptFinishedEvent(MapAttemptFinishedEvent event) {
@@ -221,6 +222,7 @@ public class JobHistoryParser {
     attemptInfo.mapFinishTime = event.getMapFinishTime();
     attemptInfo.counters = event.getCounters();
     attemptInfo.hostname = event.getHostname();
+    attemptInfo.rackname = event.getRackname();
   }
 
   private void handleTaskAttemptFailedEvent(
@@ -540,6 +542,7 @@ public class JobHistoryParser {
     int httpPort;
     int shufflePort;
     String hostname;
+    String rackname;
     ContainerId containerId;
 
     /** Create a Task Attempt Info which will store attempt level information
@@ -548,7 +551,7 @@ public class JobHistoryParser {
     public TaskAttemptInfo() {
       startTime = finishTime = shuffleFinishTime = sortFinishTime = 
         mapFinishTime = -1;
-      error =  state =  trackerName = hostname = "";
+      error =  state =  trackerName = hostname = rackname = "";
       httpPort = -1;
       shufflePort = -1;
     }
@@ -596,6 +599,8 @@ public class JobHistoryParser {
     public String getTrackerName() { return trackerName; }
     /** @return the host name */
     public String getHostname() { return hostname; }
+    /** @return the rack name */
+    public String getRackname() { return rackname; }
     /** @return the counters for the attempt */
     public Counters getCounters() { return counters; }
     /** @return the HTTP port for the tracker */

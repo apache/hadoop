@@ -19,7 +19,9 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
@@ -28,13 +30,15 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
-import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.AMInfo;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -47,18 +51,31 @@ import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.RackResolver;
 import org.junit.Test;
 
 public class TestJobHistoryParsing {
   private static final Log LOG = LogFactory.getLog(TestJobHistoryParsing.class);
 
+  public static class MyResolver implements DNSToSwitchMapping {
+    @Override
+    public List<String> resolve(List<String> names) {
+      return Arrays.asList(new String[]{"MyRackName"});
+    }
+  }
+
   @Test
   public void testHistoryParsing() throws Exception {
     Configuration conf = new Configuration();
     long amStartTimeEst = System.currentTimeMillis();
+    conf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        MyResolver.class, DNSToSwitchMapping.class);
+    RackResolver.init(conf);
     MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(),
         true);
     app.submit(conf);
@@ -107,7 +124,8 @@ public class TestJobHistoryParsing {
         jobInfo.getFinishedReduces());
     Assert.assertEquals("incorrect uberized ", job.isUber(),
         jobInfo.getUberized());
-    int totalTasks = jobInfo.getAllTasks().size();
+    Map<TaskID, TaskInfo> allTasks = jobInfo.getAllTasks();
+    int totalTasks = allTasks.size();
     Assert.assertEquals("total number of tasks is incorrect  ", 3, totalTasks);
 
     // Verify aminfo
@@ -125,7 +143,7 @@ public class TestJobHistoryParsing {
 
     ContainerId fakeCid = BuilderUtils.newContainerId(-1, -1, -1, -1);
     // Assert at taskAttempt level
-    for (TaskInfo taskInfo : jobInfo.getAllTasks().values()) {
+    for (TaskInfo taskInfo : allTasks.values()) {
       int taskAttemptCount = taskInfo.getAllTaskAttempts().size();
       Assert
           .assertEquals("total number of task attempts ", 1, taskAttemptCount);
@@ -138,7 +156,7 @@ public class TestJobHistoryParsing {
 
     // Deep compare Job and JobInfo
     for (Task task : job.getTasks().values()) {
-      TaskInfo taskInfo = jobInfo.getAllTasks().get(
+      TaskInfo taskInfo = allTasks.get(
           TypeConverter.fromYarn(task.getID()));
       Assert.assertNotNull("TaskInfo not found", taskInfo);
       for (TaskAttempt taskAttempt : task.getAttempts().values()) {
@@ -147,6 +165,10 @@ public class TestJobHistoryParsing {
         Assert.assertNotNull("TaskAttemptInfo not found", taskAttemptInfo);
         Assert.assertEquals("Incorrect shuffle port for task attempt",
             taskAttempt.getShufflePort(), taskAttemptInfo.getShufflePort());
+
+        // Verify rack-name
+        Assert.assertEquals("rack-name is incorrect", taskAttemptInfo
+            .getRackname(), "MyRackName");
       }
     }
 

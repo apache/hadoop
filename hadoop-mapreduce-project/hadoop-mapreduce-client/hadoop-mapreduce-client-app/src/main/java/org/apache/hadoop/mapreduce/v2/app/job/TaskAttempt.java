@@ -58,6 +58,11 @@ public interface TaskAttempt {
    * @return node's http address if a container is assigned, otherwise null.
    */
   String getNodeHttpAddress();
+  
+  /**
+   * @return node's rack name if a container is assigned, otherwise null.
+   */
+  String getNodeRackName();
 
   /** 
    * @return time at which container is launched. If container is not launched

@@ -429,6 +429,7 @@ public abstract class TaskAttemptImpl implements
   private NodeId containerNodeId;
   private String containerMgrAddress;
   private String nodeHttpAddress;
+  private String nodeRackName;
   private WrappedJvmID jvmID;
   private ContainerToken containerToken;
   private Resource assignedCapability;
@@ -727,6 +728,19 @@ public abstract class TaskAttemptImpl implements
       readLock.unlock();
     }
   }
+  
+  /**
+   * If container Assigned then return the node's rackname, otherwise null.
+   */
+  @Override
+  public String getNodeRackName() {
+    this.readLock.lock();
+    try {
+      return this.nodeRackName;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
 
   protected abstract org.apache.hadoop.mapred.Task createRemoteTask();
 
@@ -1014,6 +1028,8 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.containerMgrAddress = taskAttempt.containerNodeId
           .toString();
       taskAttempt.nodeHttpAddress = cEvent.getContainer().getNodeHttpAddress();
+      taskAttempt.nodeRackName = RackResolver.resolve(
+          taskAttempt.containerNodeId.getHost()).getNetworkLocation();
       taskAttempt.containerToken = cEvent.getContainer().getContainerToken();
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();
       // this is a _real_ Task (classic Hadoop mapred flavor):
@@ -1254,8 +1270,10 @@ public abstract class TaskAttemptImpl implements
          TypeConverter.fromYarn(attemptId.getTaskId().getTaskType()),
          state.toString(),
          this.reportedStatus.mapFinishTime,
-         finishTime, this.containerMgrAddress == null ? "UNKNOWN" 
-             : this.containerMgrAddress,
+         finishTime,
+         this.containerNodeId == null ? "UNKNOWN"
+             : this.containerNodeId.getHost(),
+         this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),
          getProgressSplitBlock().burst());
@@ -1268,8 +1286,10 @@ public abstract class TaskAttemptImpl implements
          state.toString(),
          this.reportedStatus.shuffleFinishTime,
          this.reportedStatus.sortFinishTime,
-         finishTime, this.containerMgrAddress == null ? "UNKNOWN" 
-             : this.containerMgrAddress,
+         finishTime,
+         this.containerNodeId == null ? "UNKNOWN"
+                                         : this.containerNodeId.getHost(),
+         this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),
          getProgressSplitBlock().burst());
