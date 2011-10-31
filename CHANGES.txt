@@ -386,8 +386,6 @@ Release 0.92.0 - Unreleased
    HBASE-4679  Thrift null mutation error
    HBASE-4304  requestsPerSecond counter stuck at 0 (Li Pi)
    HBASE-4692  HBASE-4300 broke the build
-   HBASE-4680  FSUtils.isInSafeMode() checks should operate on HBase root dir,
-               where we have permissions
    HBASE-4641  Block cache can be mistakenly instantiated on Master (jgray)
    HBASE-4687  regionserver may miss zk-heartbeats to master when replaying
                edits at region open (prakash via jgray)
