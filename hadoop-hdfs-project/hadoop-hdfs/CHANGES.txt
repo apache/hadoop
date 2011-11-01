@@ -764,6 +764,9 @@ Release 0.23.0 - 2011-11-01
     HDFS-2521. Remove custom checksum headers from data transfer protocol
     (todd)
 
+    HDFS-2308. NamenodeProtocol.endCheckpoint is vestigial and can be removed.
+    (eli)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image

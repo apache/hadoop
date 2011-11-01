@@ -3440,15 +3440,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
-    writeLock();
+    readLock();
     try {
       if (isInSafeMode()) {
         throw new SafeModeException("Checkpoint not ended", safeMode);
       }
       LOG.info("End checkpoint for " + registration.getAddress());
-      getFSImage().endCheckpoint(sig, registration.getRole());
+      getFSImage().endCheckpoint(sig);
     } finally {
-      writeUnlock();
+      readUnlock();
     }
   }
 
