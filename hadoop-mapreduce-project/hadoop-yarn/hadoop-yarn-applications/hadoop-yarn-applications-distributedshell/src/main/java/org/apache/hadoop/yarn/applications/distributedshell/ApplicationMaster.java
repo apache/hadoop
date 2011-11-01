@@ -40,6 +40,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -109,6 +111,8 @@ import org.apache.hadoop.yarn.util.Records;
  * <p> After the job has been completed, the <code>ApplicationMaster</code> has to send a {@link FinishApplicationMasterRequest} 
  * to the <code>ResourceManager</code> to inform it that the <code>ApplicationMaster</code> has been completed. 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class ApplicationMaster {
 
   private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
