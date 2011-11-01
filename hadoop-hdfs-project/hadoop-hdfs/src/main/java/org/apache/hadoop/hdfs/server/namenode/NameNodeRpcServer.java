@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
@@ -156,6 +157,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     this.server.addProtocol(RefreshAuthorizationPolicyProtocol.class, this);
     this.server.addProtocol(RefreshUserMappingsProtocol.class, this);
     this.server.addProtocol(GetUserMappingsProtocol.class, this);
+    this.server.addProtocol(HAServiceProtocol.class, this);
     
 
     // set service-level authorization security policy
@@ -225,6 +227,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       return RefreshUserMappingsProtocol.versionID;
     } else if (protocol.equals(GetUserMappingsProtocol.class.getName())){
       return GetUserMappingsProtocol.versionID;
+    } else if (protocol.equals(HAServiceProtocol.class.getName())) {
+      return HAServiceProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }

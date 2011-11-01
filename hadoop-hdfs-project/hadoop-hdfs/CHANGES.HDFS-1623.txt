@@ -19,3 +19,5 @@ HDFS-2231. Configuration changes for HA namenode. (suresh)
 HDFS-2418. Change ConfiguredFailoverProxyProvider to take advantage of HDFS-2231. (atm)
 
 HDFS-2393. Mark appropriate methods of ClientProtocol with the idempotent annotation. (atm)
+
+HDFS-2523. Small NN fixes to include HAServiceProtocol and prevent NPE on shutdown. (todd)

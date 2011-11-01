@@ -572,7 +572,9 @@ public class NameNode {
       stopRequested = true;
     }
     try {
-      state.exitState(haContext);
+      if (state != null) {
+        state.exitState(haContext);
+      }
     } catch (ServiceFailedException e) {
       LOG.warn("Encountered exception while exiting state ", e);
     }
