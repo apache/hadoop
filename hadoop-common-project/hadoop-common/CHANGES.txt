@@ -515,6 +515,8 @@ Release 0.23.0 - 2011-11-01
 
     HADOOP-7782. Aggregate project javadocs. (tomwhite)
 
+    HADOOP-7789. Improvements to site navigation. (acmurthy) 
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

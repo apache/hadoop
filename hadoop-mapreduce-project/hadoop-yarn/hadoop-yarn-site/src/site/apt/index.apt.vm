@@ -11,32 +11,12 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Apache Hadoop 0.23
+  Apache Hadoop NextGen MapReduce
   ---
   ---
   ${maven.build.timestamp}
-
-Apache Hadoop 0.23
-
-  Apache Hadoop 0.23 consists of significant improvements over the previous 
-  stable release (hadoop-0.20.205).
-
-  Here is a short overview of the improvments to both HDFS and MapReduce.
-
-* {HDFS Federation}
-
-  In order to scale the name service horizontally, <federation> uses multiple 
-  independent Namenodes/Namespaces. The Namenodes are federated, that is, the 
-  Namenodes are independent and don't require coordination with each other. 
-  The datanodes are used as common storage for blocks by all the Namenodes. 
-  Each datanode registers with all the Namenodes in the cluster. Datanodes 
-  send periodic heartbeats and block reports and handles commands from the 
-  Namenodes.
-
-  More details are available in the {{{./Federation.html}HDFS Federation}}
-  document.
   
-* {MapReduce NextGen aka YARN aka MRv2}
+MapReduce NextGen aka YARN aka MRv2
 
   The new architecture introduced in hadoop-0.23, divides the two major 
   functions of the JobTracker: resource management and job life-cycle management 
@@ -59,23 +39,12 @@ Apache Hadoop 0.23
   More details are available in the {{{./YARN.html}YARN}}
   document.
 
-* Release Documentation
-
-  * {{{./SingleCluster.html}Setting up a Single Node Cluster}}
-
-  * {{{./ClusterSetup.html}Setting up a full-fledged Hadoop Cluster}}
-  
-  * {{{./CapacityScheduler.html}Capacity Scheduler}}
-
-  * {{{./Federation.html}HDFS Federation feature description, configuration and 
-    management}}
+* Documentation
 
   * {{{./YARN.html}NextGen MapReduce}}
-
-* User Documentation
-
+  
   * {{{./WritingYarnApplications.html}Writing Yarn Applications}}
 
-  * {{{./apidocs/index.html}JavaDocs}}
+  * {{{./CapacityScheduler.html}Capacity Scheduler}}
 
 

@@ -46,14 +46,10 @@
       <item name="Hadoop" href="http://hadoop.apache.org/"/>
     </breadcrumbs>
 
-    <menu name="Auth" inherit="top">
-      <item name="Overview" href="hadoop-auth/index.html"/>
-      <item name="Examples" href="hadoop-auth/Examples.html"/>
-      <item name="Configuration" href="hadoop-auth/Configuration.html"/>
-      <item name="Building" href="hadoop-auth/BuildingIt.html"/>
-    </menu>
-    
     <menu name="Common" inherit="top">
+      <item name="Overview" href="index.html"/>
+      <item name="Single Node Setup" href="hadoop-yarn/hadoop-yarn-site/SingleCluster.html"/>
+      <item name="Cluster Setup" href="hadoop-yarn/hadoop-yarn-site/ClusterSetup.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
@@ -61,14 +57,20 @@
     </menu>
 
     <menu name="MapReduce" inherit="top">
-      <item name="Overview" href="hadoop-yarn/hadoop-yarn-site/index.html"/>
-      <item name="Single Node Setup" href="hadoop-yarn/hadoop-yarn-site/SingleCluster.html"/>
-      <item name="Cluster Setup" href="hadoop-yarn/hadoop-yarn-site/ClusterSetup.html"/>
+      <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
       <item name="Writing Yarn Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
     </menu>
     
+    <menu name="Auth" inherit="top">
+      <item name="Overview" href="hadoop-auth/index.html"/>
+      <item name="Examples" href="hadoop-auth/Examples.html"/>
+      <item name="Configuration" href="hadoop-auth/Configuration.html"/>
+      <item name="Building" href="hadoop-auth/BuildingIt.html"/>
+    </menu>
+    
     <menu name="Reference" inherit="top">
+      <item name="Release Notes" href="hadoop-project-dist/hadoop-common/releasenotes.html"/>
       <item name="API docs" href="api/index.html"/>
       <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
       <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
