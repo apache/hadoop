@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.ftpserver.command.impl.STAT;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -301,7 +302,7 @@ public class TestFsShellReturnCode {
     // arguments is valid - fsshell should work
     FsShell shell = new FsShell();
     Configuration conf = new Configuration();
-    FsConfig.setDefaultFS(conf, "hhhh://doesnotexist/");
+    conf.set(FS_DEFAULT_NAME_KEY, "hhhh://doesnotexist/");
     shell.setConf(conf);
     String [] args = new String[2];
     args[0] = "-ls";
