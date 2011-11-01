@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -254,6 +255,25 @@ public class TestDistributedFileSystem {
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
     final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         current.getShortUserName() + "x", new String[]{"user"});
+
+    try {
+      ((DistributedFileSystem) hdfs).getFileChecksum(new Path(
+          "/test/TestNonExistingFile"));
+      fail("Expecting FileNotFoundException");
+    } catch (FileNotFoundException e) {
+      assertTrue("Not throwing the intended exception message", e.getMessage()
+          .contains("File does not exist: /test/TestNonExistingFile"));
+    }
+
+    try {
+      Path path = new Path("/test/TestExistingDir/");
+      hdfs.mkdirs(path);
+      ((DistributedFileSystem) hdfs).getFileChecksum(path);
+      fail("Expecting FileNotFoundException");
+    } catch (FileNotFoundException e) {
+      assertTrue("Not throwing the intended exception message", e.getMessage()
+          .contains("File does not exist: /test/TestExistingDir"));
+    }
 
     //hftp
     final String hftpuri = "hftp://" + nnAddr;

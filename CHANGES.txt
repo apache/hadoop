@@ -52,6 +52,9 @@ Release 0.20.205.1 - unreleased
     getFileStatus on non-existing files; fix bugs in getBlockLocations; and
     changed getFileChecksum json response root to "FileChecksum".  (szetszwo)
 
+    HDFS-2065. Add null checks in DFSClient.getFileChecksum(..).  (Uma
+    Maheswara Rao G via szetszwo)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
