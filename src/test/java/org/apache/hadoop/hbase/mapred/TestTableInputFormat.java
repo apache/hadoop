@@ -67,12 +67,12 @@ public class TestTableInputFormat {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    UTIL.startMiniCluster(1);
+    UTIL.startMiniCluster();
   }
 
   @AfterClass
-  public static void afterClass() throws IOException {
-    UTIL.getMiniHBaseCluster().shutdown();
+  public static void afterClass() throws Exception {
+    UTIL.shutdownMiniCluster();
   }
 
   @Before

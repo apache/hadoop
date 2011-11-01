@@ -477,7 +477,7 @@ public class TestMasterObserver {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         CPMasterObserver.class.getName());
-
+    // We need more than one data server on this test
     UTIL.startMiniCluster(2);
   }
 

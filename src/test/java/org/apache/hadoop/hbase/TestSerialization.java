@@ -146,6 +146,7 @@ public class TestSerialization {
     byte[] val = "val".getBytes();
 
     Put put = new Put(row);
+    put.setWriteToWAL(false);
     put.add(fam, qf1, ts, val);
     put.add(fam, qf2, ts, val);
     put.add(fam, qf3, ts, val);

@@ -27,12 +27,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -46,6 +41,7 @@ import org.apache.hadoop.util.ToolRunner;
 /** Test stand alone merge tool that can merge arbitrary regions */
 public class TestMergeTool extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestMergeTool.class);
+  HBaseTestingUtility TEST_UTIL;
 //  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   static final byte [] FAMILY = Bytes.toBytes("contents");
   static final byte [] QUALIFIER = Bytes.toBytes("dc");
@@ -123,7 +119,8 @@ public class TestMergeTool extends HBaseTestCase {
         "row_1000", "row_1000", "row_1000", "row_1000" });
 
     // Start up dfs
-    this.dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    TEST_UTIL = new HBaseTestingUtility(conf);
+    this.dfsCluster = TEST_UTIL.startMiniDFSCluster(2);
     this.fs = this.dfsCluster.getFileSystem();
     System.out.println("fs=" + this.fs);
     this.conf.set("fs.defaultFS", fs.getUri().toString());
@@ -162,7 +159,7 @@ public class TestMergeTool extends HBaseTestCase {
       closeRootAndMeta();
 
     } catch (Exception e) {
-      shutdownDfs(dfsCluster);
+      TEST_UTIL.shutdownMiniCluster();
       throw e;
     }
   }
@@ -170,7 +167,7 @@ public class TestMergeTool extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    shutdownDfs(dfsCluster);
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   /*

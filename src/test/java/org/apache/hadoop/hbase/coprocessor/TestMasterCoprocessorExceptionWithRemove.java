@@ -120,7 +120,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         BuggyMasterObserver.class.getName());
-    UTIL.startMiniCluster(2);
+    UTIL.startMiniCluster();
   }
 
   @AfterClass

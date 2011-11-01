@@ -72,7 +72,7 @@ public class TestRegionObserverInterface {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver");
 
-    util.startMiniCluster(2);
+    util.startMiniCluster();
     cluster = util.getMiniHBaseCluster();
   }
 
@@ -327,9 +327,10 @@ public class TestRegionObserverInterface {
     HTable table = new HTable(util.getConfiguration(), compactTable);
     for (long i=1; i<=10; i++) {
       byte[] iBytes = Bytes.toBytes(i);
-      Put p = new Put(iBytes);
-      p.add(A, A, iBytes);
-      table.put(p);
+      Put put = new Put(iBytes);
+      put.setWriteToWAL(false);
+      put.add(A, A, iBytes);
+      table.put(put);
     }
 
     HRegion firstRegion = cluster.getRegions(compactTable).get(0);

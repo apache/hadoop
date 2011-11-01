@@ -376,7 +376,7 @@ public class MiniHBaseCluster {
    */
   public boolean waitForActiveAndReadyMaster() throws InterruptedException {
     List<JVMClusterUtil.MasterThread> mts;
-    while ((mts = getMasterThreads()).size() > 0) {
+    while (!(mts = getMasterThreads()).isEmpty()) {
       for (JVMClusterUtil.MasterThread mt : mts) {
         if (mt.getMaster().isActiveMaster() && mt.getMaster().isInitialized()) {
           return true;

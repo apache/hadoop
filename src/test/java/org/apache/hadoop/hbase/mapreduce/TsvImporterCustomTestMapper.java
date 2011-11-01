@@ -56,6 +56,7 @@ public class TsvImporterCustomTestMapper extends TsvImporterMapper {
     ImmutableBytesWritable rowKey =
       new ImmutableBytesWritable(Bytes.toBytes(valueTokens[0]));
     Put put = new Put(rowKey.copyBytes());
+    put.setWriteToWAL(false);
 
     //The value should look like this: VALUE1 or VALUE2. Let's multiply
     //the integer by 3

@@ -298,6 +298,7 @@ public class TestMetaMigrationRemovingHTD {
       HRegionInfo090x hri = new HRegionInfo090x(htd,
         startKeys[i], startKeys[j]);
       Put put = new Put(hri.getRegionName());
+      put.setWriteToWAL(false);
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(hri));
       meta.put(put);
@@ -341,6 +342,7 @@ public class TestMetaMigrationRemovingHTD {
       HRegionInfo hri = new HRegionInfo(htd.getName(),
         startKeys[i], startKeys[j]);
       Put put = new Put(hri.getRegionName());
+      put.setWriteToWAL(false);
       put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
         Writables.getBytes(hri));
       meta.put(put);

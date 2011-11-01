@@ -53,9 +53,8 @@ public class TestLruBlockCache extends TestCase {
     // Let the eviction run
     int n = 0;
     while(cache.getEvictionCount() == 0) {
-      System.out.println("sleep");
-      Thread.sleep(1000);
-      assertTrue(n++ < 2);
+      Thread.sleep(200);
+      assertTrue(n++ < 10);
     }
     System.out.println("Background Evictions run: " + cache.getEvictionCount());
 

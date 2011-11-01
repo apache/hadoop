@@ -81,6 +81,7 @@ public class TestWideScanner extends HBaseTestCase {
         byte[] b = Bytes.toBytes(String.format("%10d", i));
         for (j = 0; j < 100; j++) {
           Put put = new Put(row);
+          put.setWriteToWAL(false);
           put.add(COLUMNS[rng.nextInt(COLUMNS.length)], b, ++ts, b);
           region.put(put);
           count++;

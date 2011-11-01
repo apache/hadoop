@@ -53,7 +53,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestHFileBlock {
-
+  // change this value to activate more logs
+  private static final boolean detailedLogging = false;
   private static final boolean[] BOOLEAN_VALUES = new boolean[] { false, true };
 
   private static final Log LOG = LogFactory.getLog(TestHFileBlock.class);
@@ -250,7 +251,7 @@ public class TestHFileBlock {
           List<ByteBuffer> expectedContents = cacheOnWrite
               ? new ArrayList<ByteBuffer>() : null;
           long totalSize = writeBlocks(rand, algo, path, expectedOffsets,
-              expectedPrevOffsets, expectedTypes, expectedContents, true);
+              expectedPrevOffsets, expectedTypes, expectedContents);
 
           FSDataInputStream is = fs.open(path);
           HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, algo,
@@ -263,10 +264,13 @@ public class TestHFileBlock {
             }
 
             assertEquals(expectedOffsets.get(i).longValue(), curOffset);
-
-            LOG.info("Reading block #" + i + " at offset " + curOffset);
+            if (detailedLogging) {
+              LOG.info("Reading block #" + i + " at offset " + curOffset);
+            }
             HFileBlock b = hbr.readBlockData(curOffset, -1, -1, pread);
-            LOG.info("Block #" + i + ": " + b);
+            if (detailedLogging) {
+              LOG.info("Block #" + i + ": " + b);
+            }
             assertEquals("Invalid block #" + i + "'s type:",
                 expectedTypes.get(i), b.getBlockType());
             assertEquals("Invalid previous block offset for block " + i
@@ -388,8 +392,9 @@ public class TestHFileBlock {
           ++numWithOnDiskSize;
       }
       LOG.info("Client " + clientId + " successfully read " + numBlocksRead +
-          " blocks (with pread: " + numPositionalRead + ", with onDiskSize " +
-          "specified: " + numWithOnDiskSize + ")");
+        " blocks (with pread: " + numPositionalRead + ", with onDiskSize " +
+        "specified: " + numWithOnDiskSize + ")");
+
       return true;
     }
 
@@ -403,7 +408,7 @@ public class TestHFileBlock {
       Random rand = defaultRandom();
       List<Long> offsets = new ArrayList<Long>();
       List<BlockType> types = new ArrayList<BlockType>();
-      writeBlocks(rand, compressAlgo, path, offsets, null, types, null, false);
+      writeBlocks(rand, compressAlgo, path, offsets, null, types, null);
       FSDataInputStream is = fs.open(path);
       long fileSize = fs.getFileStatus(path).getLen();
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(is, compressAlgo,
@@ -421,9 +426,11 @@ public class TestHFileBlock {
       for (int i = 0; i < NUM_READER_THREADS; ++i) {
         Future<Boolean> result = ecs.take();
         assertTrue(result.get());
-        LOG.info(String.valueOf(i + 1)
+        if (detailedLogging) {
+          LOG.info(String.valueOf(i + 1)
             + " reader threads finished successfully (algo=" + compressAlgo
             + ")");
+        }
       }
 
       is.close();
@@ -432,8 +439,8 @@ public class TestHFileBlock {
 
   private long writeBlocks(Random rand, Compression.Algorithm compressAlgo,
       Path path, List<Long> expectedOffsets, List<Long> expectedPrevOffsets,
-      List<BlockType> expectedTypes, List<ByteBuffer> expectedContents,
-      boolean detailedLogging) throws IOException {
+      List<BlockType> expectedTypes, List<ByteBuffer> expectedContents
+  ) throws IOException {
     boolean cacheOnWrite = expectedContents != null;
     FSDataOutputStream os = fs.create(path);
     HFileBlock.Writer hbw = new HFileBlock.Writer(compressAlgo);

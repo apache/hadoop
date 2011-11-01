@@ -75,7 +75,7 @@ public class TestRemoteTable {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     LOG.info("Admin Connection=" + admin.getConnection() + ", " + 

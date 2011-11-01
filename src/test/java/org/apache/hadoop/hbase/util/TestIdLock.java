@@ -41,7 +41,7 @@ public class TestIdLock {
 
   private static final int NUM_IDS = 16;
   private static final int NUM_THREADS = 128;
-  private static final int NUM_SECONDS = 20;
+  private static final int NUM_SECONDS = 15;
 
   private IdLock idLock = new IdLock();
 
@@ -63,7 +63,6 @@ public class TestIdLock {
       while (System.currentTimeMillis() < endTime) {
         long id = rand.nextInt(NUM_IDS);
 
-        LOG.info(clientId + " is waiting for id " + id);
         IdLock.Entry lockEntry = idLock.getLockEntry(id);
         try {
           int sleepMs = 1 + rand.nextInt(4);
@@ -75,10 +74,7 @@ public class TestIdLock {
           }
 
           idOwner.put(id, clientId);
-          LOG.info(clientId + " took id " + id + ", sleeping for " +
-              sleepMs + "ms");
           Thread.sleep(sleepMs);
-          LOG.info(clientId + " is releasing id " + id);
           idOwner.remove(id);
 
         } finally {

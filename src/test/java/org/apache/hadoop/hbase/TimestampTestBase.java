@@ -242,6 +242,7 @@ public class TimestampTestBase extends HBaseTestCase {
     final long ts)
   throws IOException {
     Put put = new Put(ROW, ts, null);
+    put.setWriteToWAL(false);
     put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
   }

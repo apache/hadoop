@@ -489,6 +489,7 @@ public class TestMasterTransitions {
       // If start key, add 'aaa'.
       byte [] row = getStartKey(hri);
       Put p = new Put(row);
+      p.setWriteToWAL(false);
       p.add(getTestFamily(), getTestQualifier(), row);
       t.put(p);
       rows++;

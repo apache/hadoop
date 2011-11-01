@@ -34,43 +34,25 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestRemoteAdmin {
-
   private static final String TABLE_1 = "TestRemoteAdmin_Table_1";
-  private static final String TABLE_2 = "TestRemoteAdmin_Table_2";
   private static final byte[] COLUMN_1 = Bytes.toBytes("a");
-
-  static final HTableDescriptor DESC_1;
-  static {
-    DESC_1 = new HTableDescriptor(TABLE_1);
-    DESC_1.addFamily(new HColumnDescriptor(COLUMN_1));
-  }
-  static final HTableDescriptor DESC_2;
-  static {
-    DESC_2 = new HTableDescriptor(TABLE_2);
-    DESC_2.addFamily(new HColumnDescriptor(COLUMN_1));
-  }
-
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  static final HTableDescriptor DESC_1 =  new HTableDescriptor(TABLE_1);
+  private static final HBaseTestingUtility TEST_UTIL =
+    new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
     new HBaseRESTTestingUtility();
-  private static HBaseAdmin localAdmin;
   private static RemoteAdmin remoteAdmin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    DESC_1.addFamily(new HColumnDescriptor(COLUMN_1));
+
+    TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    localAdmin = TEST_UTIL.getHBaseAdmin();
+
     remoteAdmin = new RemoteAdmin(new Client(
       new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
       TEST_UTIL.getConfiguration());
-    if (localAdmin.tableExists(TABLE_1)) {
-      localAdmin.disableTable(TABLE_1);
-      localAdmin.deleteTable(TABLE_1);
-    }
-    if (!localAdmin.tableExists(TABLE_2)) {
-      localAdmin.createTable(DESC_2);
-    }
   }
 
   @AfterClass
@@ -80,16 +62,11 @@ public class TestRemoteAdmin {
   }
 
   @Test
-  public void testCreateTable() throws Exception {
+  public void testCreateAnDeleteTable() throws Exception {
     assertFalse(remoteAdmin.isTableAvailable(TABLE_1));
     remoteAdmin.createTable(DESC_1);
     assertTrue(remoteAdmin.isTableAvailable(TABLE_1));
-  }
-
-  @Test
-  public void testDeleteTable() throws Exception {
-    assertTrue(remoteAdmin.isTableAvailable(TABLE_2));
-    remoteAdmin.deleteTable(TABLE_2);
-    assertFalse(remoteAdmin.isTableAvailable(TABLE_2));
+    remoteAdmin.deleteTable(TABLE_1);
+    assertFalse(remoteAdmin.isTableAvailable(TABLE_1));
   }
 }

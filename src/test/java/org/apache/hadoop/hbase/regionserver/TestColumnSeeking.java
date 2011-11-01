@@ -101,6 +101,7 @@ public class TestColumnSeeking {
     for (String value : values) {
       for (String row : rows) {
         Put p = new Put(Bytes.toBytes(row));
+        p.setWriteToWAL(false);
         for (String column : allColumns) {
           for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
             KeyValue kv =
@@ -205,6 +206,7 @@ public class TestColumnSeeking {
 
     for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
+      p.setWriteToWAL(false);
       for (String column : allColumns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           KeyValue kv =

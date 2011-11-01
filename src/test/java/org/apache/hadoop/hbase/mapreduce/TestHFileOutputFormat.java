@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -410,7 +411,7 @@ public class TestHFileOutputFormat  {
         admin.disableTable(table.getTableName());
         while(util.getMiniHBaseCluster().getMaster().getAssignmentManager().
             isRegionsInTransition()) {
-          Threads.sleep(1000);
+          Threads.sleep(200);
           LOG.info("Waiting on table to finish disabling");
         }
         byte[][] newStartKeys = generateRandomStartKeys(15);
@@ -419,7 +420,7 @@ public class TestHFileOutputFormat  {
         admin.enableTable(table.getTableName());
         while (table.getRegionsInfo().size() != 15 ||
             !admin.isTableAvailable(table.getTableName())) {
-          Thread.sleep(1000);
+          Thread.sleep(200);
           LOG.info("Waiting for new region assignment to happen");
         }
       }
@@ -449,7 +450,7 @@ public class TestHFileOutputFormat  {
       // Cause regions to reopen
       admin.disableTable(TABLE_NAME);
       while (!admin.isTableDisabled(TABLE_NAME)) {
-        Thread.sleep(1000);
+        Thread.sleep(200);
         LOG.info("Waiting for table to disable"); 
       }
       admin.enableTable(TABLE_NAME);
@@ -469,9 +470,11 @@ public class TestHFileOutputFormat  {
     setupRandomGeneratorMapper(job);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     FileOutputFormat.setOutputPath(job, outDir);
-    
+
+    Assert.assertFalse( util.getTestFileSystem().exists(outDir)) ;
+
     assertEquals(table.getRegionsInfo().size(),
-        job.getNumReduceTasks());
+      job.getNumReduceTasks());
     
     assertTrue(job.waitForCompletion(true));
   }

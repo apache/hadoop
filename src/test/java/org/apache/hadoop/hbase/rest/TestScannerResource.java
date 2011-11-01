@@ -88,6 +88,7 @@ public class TestScannerResource {
             k[1] = b2;
             k[2] = b3;
             Put put = new Put(k);
+            put.setWriteToWAL(false);
             put.add(famAndQf[0], famAndQf[1], k);
             table.put(put);
             count++;
@@ -149,7 +150,7 @@ public class TestScannerResource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));

@@ -48,7 +48,6 @@ import org.junit.Test;
 public class TestReplicationSink {
   private static final Log LOG = LogFactory.getLog(TestReplicationSink.class);
   private static final int BATCH_SIZE = 10;
-  private static final long SLEEP_TIME = 500;
 
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
@@ -112,7 +111,6 @@ public class TestReplicationSink {
   public void setUp() throws Exception {
     table1 = TEST_UTIL.truncateTable(TABLE_NAME1);
     table2 = TEST_UTIL.truncateTable(TABLE_NAME2);
-    Thread.sleep(SLEEP_TIME);
   }
 
   /**

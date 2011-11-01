@@ -54,7 +54,7 @@ public class TestVersionResource {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     client = new Client(new Cluster().add("localhost", 
       REST_TEST_UTIL.getServletPort()));

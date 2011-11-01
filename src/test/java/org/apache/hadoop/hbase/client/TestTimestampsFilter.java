@@ -53,7 +53,7 @@ public class TestTimestampsFilter {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
   }
 
   /**
@@ -363,6 +363,7 @@ public class TestTimestampsFilter {
     byte row[] = Bytes.toBytes("row:" + rowIdx);
     byte column[] = Bytes.toBytes("column:" + colIdx);
     Put put = new Put(row);
+    put.setWriteToWAL(false);
 
     for (long idx = versionStart; idx <= versionEnd; idx++) {
       put.add(cf, column, idx, Bytes.toBytes("value-version-" + idx));

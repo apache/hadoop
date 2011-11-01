@@ -86,20 +86,6 @@ public class TestTableInputFormatScan {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    // nothing
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    Configuration c = TEST_UTIL.getConfiguration();
-    FileUtil.fullyDelete(new File(c.get("hadoop.tmp.dir")));
-  }
-
   /**
    * Pass the key and value to reduce.
    */

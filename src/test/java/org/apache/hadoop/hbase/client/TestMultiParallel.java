@@ -58,8 +58,8 @@ public class TestMultiParallel {
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
   }
 
-  @AfterClass public static void afterClass() throws IOException {
-    UTIL.getMiniHBaseCluster().shutdown();
+  @AfterClass public static void afterClass() throws Exception {
+    UTIL.shutdownMiniCluster();
   }
 
   @Before public void before() throws IOException {
@@ -472,7 +472,6 @@ public class TestMultiParallel {
   private void validateLoadedData(HTable table) throws IOException {
     // get the data back and validate that it is correct
     for (byte[] k : KEYS) {
-      LOG.info("Assert=" + Bytes.toString(k));
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
       Result r = table.get(get);

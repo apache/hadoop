@@ -116,6 +116,7 @@ public class TestBlocksRead extends HBaseTestCase {
   throws IOException {
     byte columnBytes[] = Bytes.toBytes(col);
     Put put = new Put(Bytes.toBytes(row));
+    put.setWriteToWAL(false);
 
     for (long version = versionStart; version <= versionEnd; version++) {
       put.add(cf, columnBytes, version, genValue(row, col, version));

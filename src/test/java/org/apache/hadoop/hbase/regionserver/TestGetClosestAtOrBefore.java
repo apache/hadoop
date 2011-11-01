@@ -78,6 +78,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
           i == 0? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i),
           i == last? HConstants.EMPTY_BYTE_ARRAY: Bytes.toBytes((byte)i + interval));
         Put put = new Put(hri.getRegionName());
+        put.setWriteToWAL(false);
         put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
                 Writables.getBytes(hri));
         mr.put(put, false);

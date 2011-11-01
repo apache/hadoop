@@ -51,7 +51,6 @@ public class TestMemoryBoundedLogMessageBuffer {
     StringWriter sw = new StringWriter();
     buf.dumpTo(new PrintWriter(sw));
     String dump = sw.toString();
-    System.out.println(dump);
     assertFalse("The early log messages should be evicted",
         dump.contains("hello 1\n"));
     assertTrue("The late log messages should be retained",

@@ -57,7 +57,7 @@ public class TestSchemaResource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));

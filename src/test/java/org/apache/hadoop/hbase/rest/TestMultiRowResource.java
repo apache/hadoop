@@ -71,7 +71,7 @@ public class TestMultiRowResource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     context = JAXBContext.newInstance(
             CellModel.class,

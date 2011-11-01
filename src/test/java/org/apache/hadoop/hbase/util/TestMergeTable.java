@@ -143,6 +143,7 @@ public class TestMergeTable {
     LOG.info("Created region " + region.getRegionNameAsString());
     for(int i = firstRow; i < firstRow + nrows; i++) {
       Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
+      put.setWriteToWAL(false);
       put.add(COLUMN_NAME, null,  VALUE);
       region.put(put);
       if (i % 10000 == 0) {

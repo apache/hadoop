@@ -124,6 +124,7 @@ public class TestTimeRangeMapRed {
 
       for (Long ts : tsList) {
         Put put = new Put(key.get());
+        put.setWriteToWAL(false);
         put.add(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
         table.put(put);
       }
@@ -163,6 +164,7 @@ public class TestTimeRangeMapRed {
   private void prepareTest(final HTable table) throws IOException {
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
+      put.setWriteToWAL(false);
       put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
       table.put(put);
     }

@@ -319,6 +319,7 @@ public class TestHRegion extends HBaseTestCase {
       System.out.println(String.format("Saving row: %s, with value %s", row,
         value));
       Put put = new Put(Bytes.toBytes(row));
+      put.setWriteToWAL(false);
       put.add(Bytes.toBytes("trans-blob"), null,
         Bytes.toBytes("value for blob"));
       put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
@@ -2452,6 +2453,7 @@ public class TestHRegion extends HBaseTestCase {
     boolean toggle=true;
     for (long i = 0; i < numRows; i++) {
       Put put = new Put(Bytes.toBytes(i));
+      put.setWriteToWAL(false);
       put.add(family, qual1, Bytes.toBytes(i % 10));
       region.put(put);
 
@@ -2662,6 +2664,7 @@ public class TestHRegion extends HBaseTestCase {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
             Put put = new Put(row);
+            put.setWriteToWAL(false);
             byte[] value = Bytes.toBytes(String.valueOf(numPutsFinished));
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
@@ -2879,6 +2882,7 @@ public class TestHRegion extends HBaseTestCase {
       for (int i = 0; i < duplicate_multiplier; i ++) {
         for (int j = 0; j < num_unique_rows; j++) {
           Put put = new Put(Bytes.toBytes("row" + j));
+          put.setWriteToWAL(false);
     			put.add(fam1, qf1, version++, val1);
           region.put(put);
         }
@@ -2932,6 +2936,7 @@ public class TestHRegion extends HBaseTestCase {
     byte row[] = Bytes.toBytes("row:" + 0);
     byte column[] = Bytes.toBytes("column:" + 0);
     Put put = new Put(row);
+    put.setWriteToWAL(false);
     for (long idx = 1; idx <= 4; idx++) {
       put.add(FAMILY, column, idx, Bytes.toBytes("value-version-" + idx));
     }
@@ -3057,6 +3062,7 @@ public class TestHRegion extends HBaseTestCase {
   throws IOException {
     for(int i=startRow; i<startRow+numRows; i++) {
       Put put = new Put(Bytes.toBytes("" + i));
+      put.setWriteToWAL(false);
       for(byte [] family : families) {
         put.add(family, qf, null);
       }

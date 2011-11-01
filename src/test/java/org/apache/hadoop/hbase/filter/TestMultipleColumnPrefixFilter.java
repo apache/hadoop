@@ -72,6 +72,7 @@ public class TestMultipleColumnPrefixFilter {
 
     for (String row: rows) {
       Put p = new Put(Bytes.toBytes(row));
+      p.setWriteToWAL(false);
       for (String column: columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
@@ -131,6 +132,7 @@ public class TestMultipleColumnPrefixFilter {
 
     for (String row: rows) {
       Put p = new Put(Bytes.toBytes(row));
+      p.setWriteToWAL(false);
       for (String column: columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           double rand = Math.random();
@@ -185,6 +187,7 @@ public class TestMultipleColumnPrefixFilter {
 
     for (String row: rows) {
       Put p = new Put(Bytes.toBytes(row));
+      p.setWriteToWAL(false);
       for (String column: columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,

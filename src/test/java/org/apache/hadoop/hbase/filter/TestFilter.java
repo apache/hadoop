@@ -98,6 +98,7 @@ public class TestFilter extends HBaseTestCase {
     // Insert first half
     for(byte [] ROW : ROWS_ONE) {
       Put p = new Put(ROW);
+      p.setWriteToWAL(false);
       for(byte [] QUALIFIER : QUALIFIERS_ONE) {
         p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
       }
@@ -105,6 +106,7 @@ public class TestFilter extends HBaseTestCase {
     }
     for(byte [] ROW : ROWS_TWO) {
       Put p = new Put(ROW);
+      p.setWriteToWAL(false);
       for(byte [] QUALIFIER : QUALIFIERS_TWO) {
         p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
       }
@@ -117,6 +119,7 @@ public class TestFilter extends HBaseTestCase {
     // Insert second half (reverse families)
     for(byte [] ROW : ROWS_ONE) {
       Put p = new Put(ROW);
+      p.setWriteToWAL(false);
       for(byte [] QUALIFIER : QUALIFIERS_ONE) {
         p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
       }
@@ -124,6 +127,7 @@ public class TestFilter extends HBaseTestCase {
     }
     for(byte [] ROW : ROWS_TWO) {
       Put p = new Put(ROW);
+      p.setWriteToWAL(false);
       for(byte [] QUALIFIER : QUALIFIERS_TWO) {
         p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
       }
@@ -1182,7 +1186,9 @@ public class TestFilter extends HBaseTestCase {
     };
 
     for(KeyValue kv : srcKVs) {
-      this.region.put(new Put(kv.getRow()).add(kv));
+      Put put = new Put(kv.getRow()).add(kv);
+      put.setWriteToWAL(false);
+      this.region.put(put);
     }
 
     // Match VALUES[0] against QUALIFIERS_ONE[0] with filterIfMissing = false

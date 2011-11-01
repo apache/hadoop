@@ -73,7 +73,6 @@ public class TestReseekTo {
       String value = valueList.get(i);
       long start = System.nanoTime();
       scanner.seekTo(Bytes.toBytes(key));
-      System.out.println("Seek Finished in: " + (System.nanoTime() - start)/1000 + " micro s");
       assertEquals(value, scanner.getValueString());
     }
 
@@ -83,7 +82,6 @@ public class TestReseekTo {
       String value = valueList.get(i);
       long start = System.nanoTime();
       scanner.reseekTo(Bytes.toBytes(key));
-      System.out.println("Reseek Finished in: " + (System.nanoTime() - start)/1000 + " micro s");
       assertEquals(value, scanner.getValueString());
     }
   }

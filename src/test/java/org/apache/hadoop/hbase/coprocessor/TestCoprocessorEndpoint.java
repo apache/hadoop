@@ -75,12 +75,17 @@ public class TestCoprocessorEndpoint {
 
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
+      put.setWriteToWAL(false);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
       table.put(put);
     }
 
     // sleep here is an ugly hack to allow region transitions to finish
-    Thread.sleep(5000);
+    long timeout = System.currentTimeMillis() + (15 * 1000);
+    while ((System.currentTimeMillis() < timeout) &&
+      (table.getRegionsInfo().size() != 2)) {
+      Thread.sleep(250);
+    }
   }
 
   @AfterClass

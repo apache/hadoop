@@ -395,6 +395,7 @@ public class TestCompaction extends HBaseTestCase {
       for (int i = 0; i < compactionThreshold; i++) {
         HRegionIncommon loader = new HRegionIncommon(r);
         Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        p.setWriteToWAL(false);
         for (int j = 0; j < jmax; j++) {
           p.add(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }

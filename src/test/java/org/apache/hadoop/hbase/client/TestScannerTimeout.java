@@ -59,6 +59,7 @@ public class TestScannerTimeout {
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setInt("hbase.regionserver.lease.period", SCANNER_TIMEOUT);
+    // We need more than one region server for this test
     TEST_UTIL.startMiniCluster(2);
     HTable table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
      for (int i = 0; i < NB_ROWS; i++) {

@@ -139,6 +139,7 @@ public class TestScannersWithFilters {
       // Insert first half
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);
+        p.setWriteToWAL(false);
         for(byte [] QUALIFIER : QUALIFIERS_ONE) {
           p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
         }
@@ -146,6 +147,7 @@ public class TestScannersWithFilters {
       }
       for(byte [] ROW : ROWS_TWO) {
         Put p = new Put(ROW);
+        p.setWriteToWAL(false);
         for(byte [] QUALIFIER : QUALIFIERS_TWO) {
           p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
         }
@@ -155,6 +157,7 @@ public class TestScannersWithFilters {
       // Insert second half (reverse families)
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);
+        p.setWriteToWAL(false);
         for(byte [] QUALIFIER : QUALIFIERS_ONE) {
           p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
         }
@@ -162,6 +165,7 @@ public class TestScannersWithFilters {
       }
       for(byte [] ROW : ROWS_TWO) {
         Put p = new Put(ROW);
+        p.setWriteToWAL(false);
         for(byte [] QUALIFIER : QUALIFIERS_TWO) {
           p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
         }

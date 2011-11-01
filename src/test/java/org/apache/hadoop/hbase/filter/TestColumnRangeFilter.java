@@ -129,7 +129,7 @@ public class TestColumnRangeFilter {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
   }
 
   /**
@@ -183,6 +183,7 @@ public class TestColumnRangeFilter {
 
     for (String row : rows) {
       Put p = new Put(Bytes.toBytes(row));
+      p.setWriteToWAL(false);
       for (String column : columns) {
         for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
           KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
@@ -200,11 +201,6 @@ public class TestColumnRangeFilter {
     }
 
     TEST_UTIL.flush();
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException i) {
-        // ignore
-    }
 
     ColumnRangeFilter filter;
     Scan scan = new Scan();

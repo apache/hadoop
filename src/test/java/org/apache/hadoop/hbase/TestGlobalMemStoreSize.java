@@ -99,6 +99,8 @@ public class TestGlobalMemStoreSize {
       assertEquals(server.getRegionServerAccounting().getGlobalMemstoreSize(),
           0);
     }
+
+    TEST_UTIL.shutdownMiniCluster();
   }
   
   /** figure out how many regions are currently being served. */
@@ -128,7 +130,7 @@ public class TestGlobalMemStoreSize {
     while (getRegionCount() < totalRegionNum) {
       LOG.debug("Waiting for there to be "+totalRegionNum+" regions, but there are " + getRegionCount() + " right now.");
       try {
-        Thread.sleep(1000);
+        Thread.sleep(100);
       } catch (InterruptedException e) {}
     }
   }

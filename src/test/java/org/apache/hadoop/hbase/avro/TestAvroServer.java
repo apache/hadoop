@@ -62,7 +62,7 @@ public class TestAvroServer {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniCluster();
   }
 
   /**

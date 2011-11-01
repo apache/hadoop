@@ -97,6 +97,7 @@ public class TestTableResource {
           k[1] = b2;
           k[2] = b3;
           Put put = new Put(k);
+          put.setWriteToWAL(false);
           put.add(famAndQf[0], famAndQf[1], k);
           table.put(put);
         }
@@ -109,13 +110,18 @@ public class TestTableResource {
     // tell the master to split the table
     admin.split(TABLE);
     // give some time for the split to happen
-    try {
-      Thread.sleep(15 * 1000);
-    } catch (InterruptedException e) {
-      LOG.warn(StringUtils.stringifyException(e));
+
+    long timeout = System.currentTimeMillis() + (15 * 1000);
+    while (System.currentTimeMillis() < timeout && m.size()!=2){
+      try {
+        Thread.sleep(250);
+      } catch (InterruptedException e) {
+        LOG.warn(StringUtils.stringifyException(e));
+      }
+      // check again
+      m = table.getRegionsInfo();
     }
-    // check again
-    m = table.getRegionsInfo();
+
     // should have two regions now
     assertEquals(m.size(), 2);
     regionMap = m;

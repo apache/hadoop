@@ -122,6 +122,7 @@ public class TestHBaseFsck {
         // When we find a diff RS, change the assignment and break
         if (startCode != sn.getStartcode()) {
           Put put = new Put(res.getRow());
+          put.setWriteToWAL(false);
           put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
             Bytes.toBytes(sn.getHostAndPort()));
           put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
@@ -135,13 +136,12 @@ public class TestHBaseFsck {
     // Try to fix the data
     assertErrors(doFsck(true), new ERROR_CODE[]{
         ERROR_CODE.SERVER_DOES_NOT_MATCH_META});
-    Thread.sleep(15000);
 
     // Should be fixed now
     assertNoErrors(doFsck(false));
 
     // comment needed - what is the purpose of this line
-    new HTable(conf, Bytes.toBytes(table)).getScanner(new Scan());;
+    new HTable(conf, Bytes.toBytes(table)).getScanner(new Scan());
   }
 
   private HRegionInfo createRegion(Configuration conf, final HTableDescriptor
