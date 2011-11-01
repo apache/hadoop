@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
@@ -124,6 +125,8 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   
   //The number of jobs to maintain in the job list cache.
   private int jobListCacheSize;
+  
+  private JobACLsManager aclsMgr;
   
   //The number of loaded jobs.
   private int loadedJobCacheSize;
@@ -203,7 +206,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
           + intermediateDoneDirPath + "]", e);
     }
     
-    
+    this.aclsMgr = new JobACLsManager(conf);
     
     jobListCacheSize = conf.getInt(JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,
         DEFAULT_JOBLIST_CACHE_SIZE);
@@ -648,7 +651,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
       try {
         Job job = new CompletedJob(conf, metaInfo.getJobIndexInfo().getJobId(), 
             metaInfo.getHistoryFile(), true, metaInfo.getJobIndexInfo().getUser(),
-            metaInfo.getConfFile());
+            metaInfo.getConfFile(), this.aclsMgr);
         addToLoadedJobCache(job);
         return job;
       } catch (IOException e) {

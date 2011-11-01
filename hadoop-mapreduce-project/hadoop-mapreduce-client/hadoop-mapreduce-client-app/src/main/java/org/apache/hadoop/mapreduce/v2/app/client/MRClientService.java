@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.app.client;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.security.AccessControlException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -32,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
@@ -196,13 +193,6 @@ public class MRClientService extends AbstractService
       if (job == null) {
         throw RPCUtil.getRemoteException("Unknown job " + jobID);
       }
-      //TODO fix job acls.
-      //JobACL operation = JobACL.VIEW_JOB;
-      //if (modifyAccess) {
-      //  operation = JobACL.MODIFY_JOB;
-      //}
-      //TO disable check access ofr now.
-      //checkAccess(job, operation);
       return job;
     }
  
@@ -224,24 +214,6 @@ public class MRClientService extends AbstractService
         throw RPCUtil.getRemoteException("Unknown TaskAttempt " + attemptID);
       }
       return attempt;
-    }
-
-    private void checkAccess(Job job, JobACL jobOperation) 
-      throws YarnRemoteException {
-      if (!UserGroupInformation.isSecurityEnabled()) {
-        return;
-      }
-      UserGroupInformation callerUGI;
-      try {
-        callerUGI = UserGroupInformation.getCurrentUser();
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
-      }
-      if(!job.checkAccess(callerUGI, jobOperation)) {
-        throw RPCUtil.getRemoteException(new AccessControlException("User "
-            + callerUGI.getShortUserName() + " cannot perform operation "
-            + jobOperation.name() + " on " + job.getID()));
-      }
     }
 
     @Override
@@ -304,6 +276,7 @@ public class MRClientService extends AbstractService
       return response;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public KillJobResponse killJob(KillJobRequest request) 
       throws YarnRemoteException {
@@ -320,6 +293,7 @@ public class MRClientService extends AbstractService
       return response;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public KillTaskResponse killTask(KillTaskRequest request) 
       throws YarnRemoteException {
@@ -334,6 +308,7 @@ public class MRClientService extends AbstractService
       return response;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public KillTaskAttemptResponse killTaskAttempt(
         KillTaskAttemptRequest request) throws YarnRemoteException {
@@ -363,6 +338,7 @@ public class MRClientService extends AbstractService
       return response;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public FailTaskAttemptResponse failTaskAttempt(
         FailTaskAttemptRequest request) throws YarnRemoteException {
