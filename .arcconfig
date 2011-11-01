@@ -1,0 +1,11 @@
+{
+  "project_id" : "hbase",
+  "conduit_uri" : "https://reviews.facebook.net/",
+  "copyright_holder" : "Apache Software Foundation",
+  "phutil_libraries" : {
+    "arclib" : ".arc_jira_lib"
+  },
+  "arcanist_configuration" : "ArcJIRAConfiguration",
+  "jira_project" : "HBASE",
+  "jira_api_url" : "https://issues.apache.org/jira/si/"
+}

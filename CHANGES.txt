@@ -664,6 +664,7 @@ Release 0.92.0 - Unreleased
    HBASE-4603  Uneeded sleep time for tests in
                hbase.master.ServerManager#waitForRegionServers (nkeywal)
    HBASE-4703  Improvements in tests (nkeywal)
+   HBASE-4611  Add support for Phabricator/Differential as an alternative code review tool
 
 
   TASKS

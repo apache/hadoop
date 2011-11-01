@@ -558,6 +558,37 @@
         <version>1.6</version>
         <executions>
           <execution>
+            <id>arc-setup</id>
+            <phase>initialize</phase>
+            <configuration>
+              <tasks if="arc">
+                <get dest="${project.build.directory}/arc-jira.tar.gz"
+                     src="https://github.com/facebook/arc-jira/tarball/master"/>
+                <untar src="${project.build.directory}/arc-jira.tar.gz" compression="gzip"
+                 dest="${project.build.directory}">
+                  <patternset>
+                    <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
+                  </patternset>
+                </untar>
+                <move todir="${basedir}">
+                  <fileset dir="${project.build.directory}">
+                    <include name="facebook-arc-jira-*/arc_jira_lib/**"/>
+                   </fileset>
+                  <mapper type="regexp" from="^facebook-arc-jira-([^/])*/(.*)" to="\.\2"/>
+                </move>
+                <delete includeemptydirs="true">
+                  <fileset dir="${project.build.directory}">
+                    <include name="facebook-arc-jira-*"/>
+                    <include name="arc-jira.tar.gz"/>
+                  </fileset>
+                </delete>
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
             <id>generate</id>
             <phase>generate-sources</phase>
             <configuration>
