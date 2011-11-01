@@ -1857,6 +1857,9 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3220. Fixed TestCombineOutputCollector. (Devaraj K via acmurthy) 
 
+    MAPREDUCE-3103. Implement Job ACLs for MRAppMaster. 
+    (mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

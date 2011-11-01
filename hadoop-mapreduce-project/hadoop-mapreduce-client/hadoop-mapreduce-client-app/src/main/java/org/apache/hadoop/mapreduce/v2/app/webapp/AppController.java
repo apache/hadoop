@@ -28,9 +28,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.util.Times;
@@ -267,6 +270,29 @@ public class AppController extends Controller implements AMParams {
     setStatus(HttpServletResponse.SC_NOT_FOUND);
     setTitle(join("Not found: ", s));
   }
+  
+  /**
+   * Render a ACCESS_DENIED error.
+   * @param s the error message to include.
+   */
+  void accessDenied(String s) {
+    setStatus(HttpServletResponse.SC_FORBIDDEN);
+    setTitle(join("Access denied: ", s));
+    throw new RuntimeException("Access denied: " + s);
+  }
+
+  /**
+   * check for job access.
+   * @param job the job that is being accessed
+   */
+  void checkAccess(Job job) {
+    UserGroupInformation callerUgi = UserGroupInformation.createRemoteUser(
+        request().getRemoteUser());
+    if (!job.checkAccess(callerUgi, JobACL.VIEW_JOB)) {
+      accessDenied("User " + request().getRemoteUser() + " does not have " +
+          " permissions.");
+    }
+  }
 
   /**
    * Ensure that a JOB_ID was passed into the page.
@@ -281,6 +307,9 @@ public class AppController extends Controller implements AMParams {
       if (app.getJob() == null) {
         notFound($(JOB_ID));
       }
+      /* check for acl access */
+      Job job = app.context.getJob(jobID);
+      checkAccess(job);
     } catch (Exception e) {
       badRequest(e.getMessage() == null ? 
           e.getClass().getName() : e.getMessage());
@@ -296,7 +325,8 @@ public class AppController extends Controller implements AMParams {
         throw new RuntimeException("missing task ID");
       }
       TaskId taskID = MRApps.toTaskID($(TASK_ID));
-      app.setJob(app.context.getJob(taskID.getJobId()));
+      Job job = app.context.getJob(taskID.getJobId());
+      app.setJob(job);
       if (app.getJob() == null) {
         notFound(MRApps.toString(taskID.getJobId()));
       } else {
@@ -305,6 +335,7 @@ public class AppController extends Controller implements AMParams {
           notFound($(TASK_ID));
         }
       }
+      checkAccess(job);
     } catch (Exception e) {
       badRequest(e.getMessage());
     }
