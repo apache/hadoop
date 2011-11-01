@@ -1165,6 +1165,9 @@ Release 0.23.0 - Unreleased
     getFileStatus on non-existing files; fix bugs in getBlockLocations; and
     changed getFileChecksum json response root to "FileChecksum".  (szetszwo)
 
+    HDFS-2065. Add null checks in DFSClient.getFileChecksum(..).  (Uma
+    Maheswara Rao G via szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
