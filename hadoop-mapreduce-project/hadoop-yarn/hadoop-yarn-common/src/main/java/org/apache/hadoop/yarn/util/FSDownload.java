@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
+package org.apache.hadoop.yarn.util;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -65,7 +65,7 @@ public class FSDownload implements Callable<Path> {
   static final FsPermission PUBLIC_DIR_PERMS = new FsPermission((short) 0755);
   static final FsPermission PRIVATE_DIR_PERMS = new FsPermission((short) 0700);
 
-  FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
+  public FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
       LocalDirAllocator dirs, LocalResource resource, Random rand) {
     this.conf = conf;
     this.dirs = dirs;

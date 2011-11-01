@@ -110,6 +110,7 @@ import org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProv
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.FSDownload;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 

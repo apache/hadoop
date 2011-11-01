@@ -163,17 +163,6 @@ public class TestMRWithDistributedCache extends TestCase {
     testWithConf(c);
   }
 
-  /** Tests using a full MiniMRCluster. */
-  public void testMiniMRJobRunner() throws Exception {
-    MiniMRCluster m = new MiniMRCluster(1, "file:///", 1);
-    try {
-      testWithConf(m.createJobConf());
-    } finally {
-      m.shutdown();
-    }
-
-  }
-
   private Path createTempFile(String filename, String contents)
       throws IOException {
     Path path = new Path(TEST_ROOT_DIR, filename);

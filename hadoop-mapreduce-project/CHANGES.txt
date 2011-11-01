@@ -1900,6 +1900,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3192. Fix Javadoc warning in JobClient.java and Cluster.java.
     (jitendra)
 
+    MAPREDUCE-3237. Move LocalJobRunner to hadoop-mapreduce-client-core.
+    (tomwhite via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

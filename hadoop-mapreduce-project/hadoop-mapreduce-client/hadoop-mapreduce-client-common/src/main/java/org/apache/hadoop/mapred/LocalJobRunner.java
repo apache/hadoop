@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -27,8 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,28 +37,23 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
+import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
-import org.apache.hadoop.mapreduce.filecache.DistributedCache;
-import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager;
-import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.apache.hadoop.mapreduce.server.jobtracker.State;
-import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
-import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
@@ -67,6 +61,7 @@ import org.apache.hadoop.security.token.Token;
 /** Implements MapReduce locally, in-process, for debugging. */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
+@SuppressWarnings("deprecation")
 public class LocalJobRunner implements ClientProtocol {
   public static final Log LOG =
     LogFactory.getLog(LocalJobRunner.class);
@@ -82,7 +77,7 @@ public class LocalJobRunner implements ClientProtocol {
   private int reduce_tasks = 0;
   final Random rand = new Random();
   
-  private JobTrackerInstrumentation myMetrics = null;
+  private LocalJobRunnerMetrics myMetrics = null;
 
   private static final String jobDir =  "localRunner/";
 
@@ -125,8 +120,7 @@ public class LocalJobRunner implements ClientProtocol {
     private FileSystem localFs;
     boolean killed = false;
     
-    private TrackerDistributedCacheManager trackerDistributerdCacheManager;
-    private TaskDistributedCacheManager taskDistributedCacheManager;
+    private LocalDistributedCacheManager localDistributedCacheManager;
 
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TaskUmbilicalProtocol.versionID;
@@ -150,27 +144,8 @@ public class LocalJobRunner implements ClientProtocol {
 
       // Manage the distributed cache.  If there are files to be copied,
       // this will trigger localFile to be re-written again.
-      this.trackerDistributerdCacheManager =
-          new TrackerDistributedCacheManager(conf, new DefaultTaskController());
-      this.taskDistributedCacheManager = 
-          trackerDistributerdCacheManager.newTaskDistributedCacheManager(conf);
-      taskDistributedCacheManager.setup(
-          new LocalDirAllocator(MRConfig.LOCAL_DIR), 
-          new File(systemJobDir.toString()),
-          "archive", "archive");
-      
-      if (DistributedCache.getSymlink(conf)) {
-        // This is not supported largely because, 
-        // for a Child subprocess, the cwd in LocalJobRunner
-        // is not a fresh slate, but rather the user's working directory.
-        // This is further complicated because the logic in
-        // setupWorkDir only creates symlinks if there's a jarfile
-        // in the configuration.
-        LOG.warn("LocalJobRunner does not support " +
-        		"symlinking into current working dir.");
-      }
-      // Setup the symlinks for the distributed cache.
-      TaskRunner.setupWorkDir(conf, new File(localJobDir.toUri()).getAbsoluteFile());
+      localDistributedCacheManager = new LocalDistributedCacheManager();
+      localDistributedCacheManager.setup(conf);
       
       // Write out configuration file.  Instead of copying it from
       // systemJobFile, we re-write it, since setup(), above, may have
@@ -184,8 +159,8 @@ public class LocalJobRunner implements ClientProtocol {
       this.job = new JobConf(localJobFile);
 
       // Job (the current object) is a Thread, so we wrap its class loader.
-      if (!taskDistributedCacheManager.getClassPaths().isEmpty()) {
-        setContextClassLoader(taskDistributedCacheManager.makeClassLoader(
+      if (localDistributedCacheManager.hasLocalClasspaths()) {
+        setContextClassLoader(localDistributedCacheManager.makeClassLoader(
                 getContextClassLoader()));
       }
       
@@ -198,10 +173,6 @@ public class LocalJobRunner implements ClientProtocol {
       jobs.put(id, this);
 
       this.start();
-    }
-
-    JobProfile getProfile() {
-      return profile;
     }
 
     /**
@@ -239,7 +210,7 @@ public class LocalJobRunner implements ClientProtocol {
             info.getSplitIndex(), 1);
           map.setUser(UserGroupInformation.getCurrentUser().
               getShortUserName());
-          TaskRunner.setupChildMapredLocalDirs(map, localConf);
+          setupChildMapredLocalDirs(map, localConf);
 
           MapOutputFile mapOutput = new MROutputFiles();
           mapOutput.setConf(localConf);
@@ -333,7 +304,6 @@ public class LocalJobRunner implements ClientProtocol {
       return executor;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void run() {
       JobID jobId = profile.getJobID();
@@ -399,7 +369,7 @@ public class LocalJobRunner implements ClientProtocol {
                 getShortUserName());
             JobConf localConf = new JobConf(job);
             localConf.set("mapreduce.jobtracker.address", "local");
-            TaskRunner.setupChildMapredLocalDirs(reduce, localConf);
+            setupChildMapredLocalDirs(reduce, localConf);
             // move map output to reduce input  
             for (int i = 0; i < mapIds.size(); i++) {
               if (!this.isInterrupted()) {
@@ -473,8 +443,7 @@ public class LocalJobRunner implements ClientProtocol {
           fs.delete(systemJobFile.getParent(), true);  // delete submit dir
           localFs.delete(localJobFile, true);              // delete local copy
           // Cleanup distributed cache
-          taskDistributedCacheManager.release();
-          trackerDistributerdCacheManager.purgeCache();
+          localDistributedCacheManager.close();
         } catch (IOException e) {
           LOG.warn("Error cleaning up "+id+": "+e);
         }
@@ -593,7 +562,7 @@ public class LocalJobRunner implements ClientProtocol {
   public LocalJobRunner(JobConf conf) throws IOException {
     this.fs = FileSystem.getLocal(conf);
     this.conf = conf;
-    myMetrics = new JobTrackerMetricsInst(null, new JobConf(conf));
+    myMetrics = new LocalJobRunnerMetrics(new JobConf(conf));
   }
 
   // JobSubmissionProtocol methods
@@ -661,14 +630,6 @@ public class LocalJobRunner implements ClientProtocol {
         reduce_tasks, 0, 0, 1, 1, jobs.size(), 1, 0, 0);
   }
 
-  /**
-   * @deprecated Use {@link #getJobTrackerStatus()} instead.
-   */
-  @Deprecated
-  public State getJobTrackerState() throws IOException, InterruptedException {
-    return State.RUNNING;
-  }
-  
   public JobTrackerStatus getJobTrackerStatus() {
     return JobTrackerStatus.RUNNING;
   }
@@ -723,7 +684,7 @@ public class LocalJobRunner implements ClientProtocol {
   }
 
   /**
-   * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getQueueAdmins()
+   * @see org.apache.hadoop.mapreduce.protocol.ClientProtocol#getQueueAdmins(String)
    */
   public AccessControlList getQueueAdmins(String queueName) throws IOException {
 	  return new AccessControlList(" ");// no queue admins for local job runner
@@ -820,4 +781,37 @@ public class LocalJobRunner implements ClientProtocol {
       throws IOException, InterruptedException {
     throw new UnsupportedOperationException("Not supported");
   }
+  
+  static void setupChildMapredLocalDirs(Task t, JobConf conf) {
+    String[] localDirs = conf.getTrimmedStrings(MRConfig.LOCAL_DIR);
+    String jobId = t.getJobID().toString();
+    String taskId = t.getTaskID().toString();
+    boolean isCleanup = t.isTaskCleanupTask();
+    String user = t.getUser();
+    StringBuffer childMapredLocalDir =
+        new StringBuffer(localDirs[0] + Path.SEPARATOR
+            + getLocalTaskDir(user, jobId, taskId, isCleanup));
+    for (int i = 1; i < localDirs.length; i++) {
+      childMapredLocalDir.append("," + localDirs[i] + Path.SEPARATOR
+          + getLocalTaskDir(user, jobId, taskId, isCleanup));
+    }
+    LOG.debug(MRConfig.LOCAL_DIR + " for child : " + childMapredLocalDir);
+    conf.set(MRConfig.LOCAL_DIR, childMapredLocalDir.toString());
+  }
+  
+  static final String TASK_CLEANUP_SUFFIX = ".cleanup";
+  static final String SUBDIR = jobDir;
+  static final String JOBCACHE = "jobcache";
+  
+  static String getLocalTaskDir(String user, String jobid, String taskid,
+      boolean isCleanupAttempt) {
+    String taskDir = SUBDIR + Path.SEPARATOR + user + Path.SEPARATOR + JOBCACHE
+      + Path.SEPARATOR + jobid + Path.SEPARATOR + taskid;
+    if (isCleanupAttempt) {
+      taskDir = taskDir + TASK_CLEANUP_SUFFIX;
+    }
+    return taskDir;
+  }
+  
+  
 }
