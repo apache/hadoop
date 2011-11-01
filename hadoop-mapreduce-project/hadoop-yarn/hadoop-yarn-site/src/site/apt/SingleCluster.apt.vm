@@ -20,6 +20,8 @@ Hadoop MapReduce Next Generation - Setting up a Single Node Cluster.
 
   \[ {{{./index.html}Go Back}} \]
 
+%{toc|section=1|fromDepth=0}
+
 * Mapreduce Tarball
 
   You should be able to obtain the MapReduce tarball from the release.
