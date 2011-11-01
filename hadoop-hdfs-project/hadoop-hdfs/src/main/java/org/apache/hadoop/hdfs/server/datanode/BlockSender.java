@@ -134,8 +134,6 @@ class BlockSender implements java.io.Closeable {
   private final int checksumSize;
   /** If true, failure to read checksum is ignored */
   private final boolean corruptChecksumOk;
-  /** true if chunk offset is needed to be sent in Checksum header */
-  private final boolean chunkOffsetOK;
   /** Sequence number of packet being sent */
   private long seqno;
   /** Set to true if transferTo is allowed for sending data to the client */
@@ -173,19 +171,17 @@ class BlockSender implements java.io.Closeable {
    * @param startOffset starting offset to read from
    * @param length length of data to read
    * @param corruptChecksumOk
-   * @param chunkOffsetOK need to send check offset in checksum header
    * @param verifyChecksum verify checksum while reading the data
    * @param datanode datanode from which the block is being read
    * @param clientTraceFmt format string used to print client trace logs
    * @throws IOException
    */
   BlockSender(ExtendedBlock block, long startOffset, long length,
-              boolean corruptChecksumOk, boolean chunkOffsetOK,
-              boolean verifyChecksum, DataNode datanode, String clientTraceFmt)
+              boolean corruptChecksumOk, boolean verifyChecksum,
+              DataNode datanode, String clientTraceFmt)
       throws IOException {
     try {
       this.block = block;
-      this.chunkOffsetOK = chunkOffsetOK;
       this.corruptChecksumOk = corruptChecksumOk;
       this.verifyChecksum = verifyChecksum;
       this.clientTraceFmt = clientTraceFmt;
@@ -600,8 +596,6 @@ class BlockSender implements java.io.Closeable {
 
     final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
     try {
-      writeChecksumHeader(out);
-      
       int maxChunksPerPacket;
       int pktSize = PacketHeader.PKT_HEADER_LEN;
       boolean transferTo = transferToAllowed && !verifyChecksum
@@ -691,22 +685,6 @@ class BlockSender implements java.io.Closeable {
     return (endOffset - offset) > LONG_READ_THRESHOLD_BYTES;
   }
 
-  
-  /**
-   * Write checksum header to the output stream
-   */
-  private void writeChecksumHeader(DataOutputStream out) throws IOException {
-    try {
-      checksum.writeHeader(out);
-      if (chunkOffsetOK) {
-        out.writeLong(offset);
-      }
-      out.flush();
-    } catch (IOException e) { //socket error
-      throw ioeToSocketException(e);
-    }
-  }
-    
   /**
    * Write packet header into {@code pkt}
    */
@@ -719,5 +697,20 @@ class BlockSender implements java.io.Closeable {
   
   boolean didSendEntireByteRange() {
     return sentEntireByteRange;
+  }
+
+  /**
+   * @return the checksum type that will be used with this block transfer.
+   */
+  DataChecksum getChecksum() {
+    return checksum;
+  }
+
+  /**
+   * @return the offset into the block file where the sender is currently
+   * reading.
+   */
+  long getOffset() {
+    return offset;
   }
 }

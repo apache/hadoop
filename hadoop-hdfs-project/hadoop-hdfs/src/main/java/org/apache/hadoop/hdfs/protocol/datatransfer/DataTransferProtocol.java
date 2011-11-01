@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
 
 /**
  * Transfer data to/from datanode using a streaming protocol.
@@ -84,7 +85,8 @@ public interface DataTransferProtocol {
       final int pipelineSize,
       final long minBytesRcvd,
       final long maxBytesRcvd,
-      final long latestGenerationStamp) throws IOException;
+      final long latestGenerationStamp,
+      final DataChecksum requestedChecksum) throws IOException;
 
   /**
    * Transfer a block to another datanode.
