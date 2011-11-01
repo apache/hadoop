@@ -627,7 +627,7 @@
 		          </tr>
                   <tr>
                     <td>conf/hdfs-site.xml</td>
-                    <td>dfs.block.size</td>
+                    <td>dfs.blocksize</td>
                     <td>134217728</td>
                     <td>HDFS blocksize of 128MB for large file-systems.</td>
                   </tr>
