@@ -1870,6 +1870,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3316. Rebooted link is not working properly. 
     (Bhallamudi Venkata Siva Kamesh via mahadev)
 
+    MAPREDUCE-3317. Rumen TraceBuilder is emiting null as hostname.
+    (Ravi Gummadi via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
