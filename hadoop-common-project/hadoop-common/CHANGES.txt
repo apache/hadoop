@@ -433,6 +433,10 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7743. Add Maven profile to create a full source tarball. (tucu)
 
+    HADOOP-7771. FsShell -copyToLocal, -get, etc. commands throw NPE if the
+    destination directory does not exist.  (John George and Daryn Sharp
+    via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole
