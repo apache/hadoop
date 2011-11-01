@@ -782,7 +782,7 @@ public abstract class BlockFixer extends Configured implements Runnable {
         DatanodeInfo[] nodes = new DatanodeInfo[]{datanode};
         new Sender(out).writeBlock(block.getBlock(), block.getBlockToken(), "",
             nodes, null, BlockConstructionStage.PIPELINE_SETUP_CREATE,
-            1, 0L, blockSize, 0L);
+            1, 0L, blockSize, 0L, DataChecksum.newDataChecksum(metadataIn));
         blockSender.sendBlock(out, baseStream);
         
         LOG.info("Sent block " + block.getBlock() + " to " + datanode.name);
