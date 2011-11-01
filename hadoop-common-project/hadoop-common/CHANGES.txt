@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
     (Uma Maheswara Rao G via eli)
 
+    HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
+    (jitendra)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
