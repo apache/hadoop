@@ -1855,6 +1855,8 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3321. Disabled a few MR tests for 0.23. (Hitesh Shah via
     acmurthy) 
 
+    MAPREDUCE-3220. Fixed TestCombineOutputCollector. (Devaraj K via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
