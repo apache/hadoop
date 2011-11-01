@@ -50,6 +50,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 class RootDocProcessor {
   
   static String stability = StabilityOptions.UNSTABLE_OPTION;
+  static boolean treatUnannotatedClassesAsPrivate = false;
   
   public static RootDoc process(RootDoc root) {
     return (RootDoc) process(root, RootDoc.class);
@@ -201,6 +202,17 @@ class RootDocProcessor {
 	    }
 	  }
 	}
+        for (AnnotationDesc annotation : annotations) {
+          String qualifiedTypeName =
+            annotation.annotationType().qualifiedTypeName();
+          if (qualifiedTypeName.equals(
+              InterfaceAudience.Public.class.getCanonicalName())) {
+            return false;
+          }
+        }
+      }
+      if (treatUnannotatedClassesAsPrivate) {
+        return doc.isClass() || doc.isInterface() || doc.isAnnotationType();
       }
       return false;
     }

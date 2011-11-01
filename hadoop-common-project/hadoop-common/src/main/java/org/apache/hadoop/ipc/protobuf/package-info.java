@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,33 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.applications.distributedshell;
-
+@InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
+@InterfaceStability.Evolving
+package org.apache.hadoop.ipc.protobuf;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-/**
- * Constants used in both Client and Application Master
- */
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public class DSConstants {
-
-  /**
-   * Environment key name pointing to the shell script's location
-   */
-  public static final String DISTRIBUTEDSHELLSCRIPTLOCATION = "DISTRIBUTEDSHELLSCRIPTLOCATION";
-
-  /**
-   * Environment key name denoting the file timestamp for the shell script. 
-   * Used to validate the local resource. 
-   */
-  public static final String DISTRIBUTEDSHELLSCRIPTTIMESTAMP = "DISTRIBUTEDSHELLSCRIPTTIMESTAMP";
-
-  /**
-   * Environment key name denoting the file content length for the shell script. 
-   * Used to validate the local resource. 
-   */
-  public static final String DISTRIBUTEDSHELLSCRIPTLEN = "DISTRIBUTEDSHELLSCRIPTLEN";
-}

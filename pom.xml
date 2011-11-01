@@ -109,8 +109,7 @@
           <artifactId>maven-site-plugin</artifactId>
           <version>3.0</version>
           <configuration>
-            <!-- Reports are generated at the site level -->
-            <generateReports>false</generateReports>
+            <generateReports>true</generateReports>
           </configuration>
         </plugin>
       </plugins>
@@ -179,6 +178,70 @@
       </plugin>
     </plugins>
   </build>
+  
+  <reporting>
+    <excludeDefaults>true</excludeDefaults>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.8</version>
+        <reportSets>
+          <reportSet>
+            <id>aggregate</id>
+            <configuration>
+              <maxmemory>1024m</maxmemory>
+              <linksource>true</linksource>
+              <quiet>true</quiet>
+              <verbose>false</verbose>
+              <source>${maven.compile.source}</source>
+              <charset>${maven.compile.encoding}</charset>
+              <reportOutputDirectory>${project.build.directory}/site</reportOutputDirectory>
+              <destDir>hadoop-project/api</destDir>
+              <!-- Non-public APIs -->
+              <excludePackageNames>org.apache.hadoop.authentication*,org.apache.hadoop.hdfs*,org.apache.hadoop.mapreduce.v2.proto,org.apache.hadoop.yarn.proto,org.apache.hadoop.yarn.server*,org.apache.hadoop.yarn.webapp*</excludePackageNames>
+              <groups>
+                <group>
+                  <title>Common</title>
+                  <packages>org.apache.hadoop*</packages>
+                </group>
+                <group>
+                  <title>MapReduce</title>
+                  <packages>org.apache.hadoop.mapred*</packages>
+                </group>
+                <group>
+                  <title>YARN</title>
+                  <packages>org.apache.hadoop.yarn*</packages>
+                </group>
+              </groups>
+              <doclet>org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet</doclet>
+              <docletArtifacts>
+                <docletArtifact>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-annotations</artifactId>
+                  <version>${project.version}</version>
+                </docletArtifact>
+              </docletArtifacts>
+              <useStandardDocletOptions>true</useStandardDocletOptions>
+    
+              <!-- switch on dependency-driven aggregation -->
+              <includeDependencySources>false</includeDependencySources>
+    
+              <dependencySourceIncludes>
+                <!-- include ONLY dependencies I control -->
+                <dependencySourceInclude>org.apache.hadoop:hadoop-annotations</dependencySourceInclude>
+              </dependencySourceIncludes>
+    
+            </configuration>
+            <reports>
+              <report>aggregate</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+
+    </plugins>
+  </reporting>
   
   <profiles>
     <profile>
