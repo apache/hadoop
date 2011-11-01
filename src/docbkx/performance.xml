@@ -119,7 +119,10 @@
         must be explicitly enabled in HBase 0.90.x (Its defaulted to be on in
         0.92.x HBase). See <code>hbase.hregion.memstore.mslab.enabled</code>
         to true in your <classname>Configuration</classname>. See the cited
-        slides for background and detail.</para>
+        slides for background and detail<footnote><para>The latest jvms do better
+        regards fragmentation so make sure you are running a recent release.
+        Read down in the message,
+        <link xlink:href="http://osdir.com/ml/hotspot-gc-use/2011-11/msg00002.html">Identifying concurrent mode failures caused by fragmentation</link>.</para></footnote>.</para>
         <para>For more information about GC logs, see <xref linkend="trouble.log.gc" />.
         </para>
       </section>
