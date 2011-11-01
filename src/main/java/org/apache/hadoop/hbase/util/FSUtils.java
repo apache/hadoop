@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -152,36 +150,21 @@ public abstract class FSUtils {
   }
 
   /**
-   * Utility to check if provided FS is in safemode.
-   * @return true if dfs is in safemode, false otherwise.
-   *
-   */
-  private static boolean isInSafeMode(FileSystem fs) throws IOException {
-    // Refactored safe-mode check for HBASE-4510
-    if (fs instanceof DistributedFileSystem) {
-      Path rootPath = new Path("/");
-      FsPermission rootPerm = fs.getFileStatus(rootPath).getPermission();
-      try {
-        // Should be harmless to set back the path we retrieved.
-        // The first check server-side is the safemode, so if
-        // other exceptions are spewed out, we're not interested.
-        fs.setPermission(rootPath, rootPerm);
-      } catch (SafeModeException e) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * Check whether dfs is in safemode. 
-   * @param conf Configuration to use
-   * @throws IOException if dfs is in safemode
+   * @param conf
+   * @return true if dfs is in safemode.
+   * @throws IOException
    */
   public static void checkDfsSafeMode(final Configuration conf) 
   throws IOException {
+    boolean isInSafeMode = false;
     FileSystem fs = FileSystem.get(conf);
-    if (isInSafeMode(fs)) {
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs = (DistributedFileSystem)fs;
+      // Check whether dfs is on safemode.
+      isInSafeMode = dfs.setSafeMode(org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);
+    }
+    if (isInSafeMode) {
       throw new IOException("File system is in safemode, it can't be written now");
     }
   }
@@ -452,8 +435,10 @@ public abstract class FSUtils {
     final long wait)
   throws IOException {
     FileSystem fs = FileSystem.get(conf);
+    if (!(fs instanceof DistributedFileSystem)) return;
+    DistributedFileSystem dfs = (DistributedFileSystem)fs;
     // Make sure dfs is not in safe mode
-    while (isInSafeMode(fs)) {
+    while (dfs.setSafeMode(org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET)) {
       LOG.info("Waiting for dfs to exit safe mode...");
       try {
         Thread.sleep(wait);

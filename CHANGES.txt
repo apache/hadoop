@@ -399,6 +399,7 @@ Release 0.92.0 - Unreleased
    HBASE-4710  UnknownProtocolException should abort client retries
    HBASE-4695  WAL logs get deleted before region server can fully flush
                (gaojinchao)
+   HBASE-4708  Revert safemode related pieces of hbase-4510 (Harsh J)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
