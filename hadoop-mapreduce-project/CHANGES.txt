@@ -1867,6 +1867,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3237. Move LocalJobRunner to hadoop-mapreduce-client-core.
     (tomwhite via acmurthy) 
 
+    MAPREDUCE-3316. Rebooted link is not working properly. 
+    (Bhallamudi Venkata Siva Kamesh via mahadev)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
