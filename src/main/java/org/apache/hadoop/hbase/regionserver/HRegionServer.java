@@ -708,12 +708,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } else if (abortRequested) {
       if (this.fsOk) {
         closeAllRegions(abortRequested); // Don't leave any open file handles
-        closeWAL(false);
       }
       LOG.info("aborting server " + this.serverNameFromMasterPOV);
     } else {
       closeAllRegions(abortRequested);
-      closeWAL(true);
       closeAllScanners();
       LOG.info("stopping server " + this.serverNameFromMasterPOV);
     }
@@ -725,7 +723,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       LOG.info("stopping server " + this.serverNameFromMasterPOV +
         "; all regions closed.");
     }
-
+    
+    //fsOk flag may be changed when closing regions throws exception. 
+    if (!this.killed && this.fsOk) {
+      closeWAL(abortRequested ? false : true);
+    }
+    
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
       HBaseRPC.stopProxy(this.hbaseMaster);

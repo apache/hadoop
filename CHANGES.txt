@@ -397,6 +397,8 @@ Release 0.92.0 - Unreleased
                slowing down the shutdown by 0.5s
    HBASE-4552  multi-CF bulk load is not atomic across column families (Jonathan Hsieh)
    HBASE-4710  UnknownProtocolException should abort client retries
+   HBASE-4695  WAL logs get deleted before region server can fully flush
+               (gaojinchao)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
