@@ -24,10 +24,14 @@ import java.io.IOException;
  * infer namenode RPC protocols. */
 public class TestDfsOverAvroRpc extends TestLocalDFS {
 
+  // Commenting the test in 0.23. This can be uncommented once
+  // HADOOP-7524 and HADOOP-7693 is merged into 0.23
+  /*
   public void testWorkingDirectory() throws IOException {
     System.setProperty("hdfs.rpc.engine",
                        "org.apache.hadoop.ipc.AvroRpcEngine");
     super.testWorkingDirectory();
   }
+  */
 
 }
