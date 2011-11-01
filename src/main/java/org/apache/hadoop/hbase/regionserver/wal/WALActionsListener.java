@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -32,7 +34,7 @@ public interface WALActionsListener {
    * The WAL was rolled.
    * @param newFile the path to the new hlog
    */
-  public void logRolled(Path newFile);
+  public void logRolled(Path newFile) throws IOException;
 
   /**
    * A request was made that the WAL be rolled.

@@ -400,6 +400,7 @@ Release 0.92.0 - Unreleased
    HBASE-4695  WAL logs get deleted before region server can fully flush
                (gaojinchao)
    HBASE-4708  Revert safemode related pieces of hbase-4510 (Harsh J)
+   HBASE-3515  [replication] ReplicationSource can miss a log after RS comes out of GC
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

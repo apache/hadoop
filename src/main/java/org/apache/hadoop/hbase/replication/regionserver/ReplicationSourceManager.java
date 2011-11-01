@@ -210,7 +210,14 @@ public class ReplicationSourceManager {
       if (this.latestPath != null) {
         String name = this.latestPath.getName();
         this.hlogsById.get(id).add(name);
-        this.zkHelper.addLogToList(name, src.getPeerClusterZnode());
+        try {
+          this.zkHelper.addLogToList(name, src.getPeerClusterZnode());
+        } catch (KeeperException ke) {
+          String message = "Cannot add log to zk for" +
+            " replication when creating a new source";
+          stopper.stop(message);
+          throw new IOException(message, ke);
+        }
         src.enqueueLog(this.latestPath);
       }
     }
@@ -247,7 +254,7 @@ public class ReplicationSourceManager {
     return this.sources;
   }
 
-  void logRolled(Path newLog) {
+  void logRolled(Path newLog) throws IOException {
     if (!this.replicating.get()) {
       LOG.warn("Replication stopped, won't add new log");
       return;
@@ -256,7 +263,11 @@ public class ReplicationSourceManager {
     synchronized (this.hlogsById) {
       String name = newLog.getName();
       for (ReplicationSourceInterface source : this.sources) {
-        this.zkHelper.addLogToList(name, source.getPeerClusterZnode());
+        try {
+          this.zkHelper.addLogToList(name, source.getPeerClusterZnode());
+        } catch (KeeperException ke) {
+          throw new IOException("Cannot add log to zk for replication", ke);
+        }
       }
       for (SortedSet<String> hlogs : this.hlogsById.values()) {
         if (this.sources.isEmpty()) {

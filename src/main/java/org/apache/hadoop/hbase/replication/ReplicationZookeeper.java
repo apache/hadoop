@@ -432,14 +432,11 @@ public class ReplicationZookeeper {
    * @param filename name of the hlog's znode
    * @param peerId name of the cluster's znode
    */
-  public void addLogToList(String filename, String peerId) {
-    try {
-      String znode = ZKUtil.joinZNode(this.rsServerNameZnode, peerId);
-      znode = ZKUtil.joinZNode(znode, filename);
-      ZKUtil.createWithParents(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Failed add log to list", e);
-    }
+  public void addLogToList(String filename, String peerId)
+    throws KeeperException{
+    String znode = ZKUtil.joinZNode(this.rsServerNameZnode, peerId);
+    znode = ZKUtil.joinZNode(znode, filename);
+    ZKUtil.createWithParents(this.zookeeper, znode);
   }
 
   /**
