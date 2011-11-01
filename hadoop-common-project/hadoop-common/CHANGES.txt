@@ -92,7 +92,7 @@ Trunk (unreleased changes)
     HADOOP-7773. Add support for protocol buffer based RPC engine.
     (suresh)
 
-Release 0.23.0 - Unreleased
+Release 0.23.0 - 2011-10-31 
 
   INCOMPATIBLE CHANGES
 
