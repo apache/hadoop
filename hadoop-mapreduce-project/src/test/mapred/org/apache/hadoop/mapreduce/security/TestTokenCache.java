@@ -56,6 +56,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
@@ -386,6 +387,7 @@ public class TestTokenCache {
     String hostName = "foo";
     String domainName = "@BAR";
     Configuration conf = new Configuration();
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
     conf.set(JTConfig.JT_IPC_ADDRESS, hostName + ":8888");
     conf.set(JTConfig.JT_USER_NAME, serviceName + SecurityUtil.HOSTNAME_PATTERN
         + domainName);

@@ -106,7 +106,7 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
       (TaskAttemptID id, TaskType taskType, String taskStatus, 
        long mapFinishTime, long finishTime, String hostname,
        String state, Counters counters) {
-    this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, null,
+    this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, "",
         state, counters, null);
   }
   
