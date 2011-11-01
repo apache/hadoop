@@ -25,6 +25,7 @@ Release 0.92.0 - Unreleased
    HBASE-4503  Purge deprecated HBaseClusterTestCase
    HBASE-4374  Up default regions size from 256M to 1G
    HBASE-4648  Bytes.toBigDecimal() doesn't use offset (Brian Keller via Lars H)
+   HBASE-4715  Remove stale broke .rb scripts from bin dir
 
   BUG FIXES
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
