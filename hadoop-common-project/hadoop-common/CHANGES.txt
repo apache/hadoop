@@ -509,6 +509,10 @@ Release 0.23.0 - Unreleased
     HADOOP-7360. Preserve relative paths that do not contain globs in FsShell.
     (Daryn Sharp and Kihwal Lee via szetszwo)
 
+    HADOOP-7771. FsShell -copyToLocal, -get, etc. commands throw NPE if the
+    destination directory does not exist.  (John George and Daryn Sharp
+    via szetszwo)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

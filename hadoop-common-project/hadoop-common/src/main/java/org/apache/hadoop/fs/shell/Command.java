@@ -55,6 +55,7 @@ abstract public class Command extends Configured {
   protected int exitCode = 0;
   protected int numErrors = 0;
   protected boolean recursive = false;
+  private int depth = 0;
   protected ArrayList<Exception> exceptions = new ArrayList<Exception>();
 
   private static final Log LOG = LogFactory.getLog(Command.class);
@@ -86,6 +87,10 @@ abstract public class Command extends Configured {
     return recursive;
   }
 
+  protected int getDepth() {
+    return depth;
+  }
+  
   /** 
    * Execute the command on the input path
    * 
@@ -269,6 +274,7 @@ abstract public class Command extends Configured {
   protected void processPathArgument(PathData item) throws IOException {
     // null indicates that the call is not via recursion, ie. there is
     // no parent directory that was expanded
+    depth = 0;
     processPaths(null, item);
   }
   
@@ -326,7 +332,12 @@ abstract public class Command extends Configured {
    *  @throws IOException if anything goes wrong...
    */
   protected void recursePath(PathData item) throws IOException {
-    processPaths(item, item.getDirectoryContents());
+    try {
+      depth++;
+      processPaths(item, item.getDirectoryContents());
+    } finally {
+      depth--;
+    }
   }
 
   /**

@@ -183,6 +183,19 @@ public class PathData {
   }
 
   /**
+   * Returns a temporary file for this PathData with the given extension.
+   * The file will be deleted on exit.
+   * @param extension for the temporary file
+   * @return PathData
+   * @throws IOException shouldn't happen
+   */
+  public PathData createTempFile(String extension) throws IOException {
+    PathData tmpFile = new PathData(fs, uri+"._COPYING_");
+    fs.deleteOnExit(tmpFile.path);
+    return tmpFile;
+  }
+
+  /**
    * Returns a list of PathData objects of the items contained in the given
    * directory.
    * @return list of PathData objects for its children
