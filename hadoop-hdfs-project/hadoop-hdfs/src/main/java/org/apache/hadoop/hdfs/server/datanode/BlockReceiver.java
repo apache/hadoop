@@ -108,7 +108,8 @@ class BlockReceiver implements Closeable {
       final BlockConstructionStage stage, 
       final long newGs, final long minBytesRcvd, final long maxBytesRcvd, 
       final String clientname, final DatanodeInfo srcDataNode,
-      final DataNode datanode) throws IOException {
+      final DataNode datanode, DataChecksum requestedChecksum)
+      throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -177,7 +178,7 @@ class BlockReceiver implements Closeable {
         }
       }
       // read checksum meta information
-      this.checksum = DataChecksum.newDataChecksum(in);
+      this.checksum = requestedChecksum;
       this.bytesPerChecksum = checksum.getBytesPerChecksum();
       this.checksumSize = checksum.getChecksumSize();
       this.dropCacheBehindWrites = datanode.shouldDropCacheBehindWrites();
@@ -686,11 +687,6 @@ class BlockReceiver implements Closeable {
       LOG.warn("Couldn't drop os cache behind writer for " + block, t);
     }
   }
-
-  void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
-    checksum.writeHeader(mirrorOut);
-  }
- 
 
   void receiveBlock(
       DataOutputStream mirrOut, // output to next datanode

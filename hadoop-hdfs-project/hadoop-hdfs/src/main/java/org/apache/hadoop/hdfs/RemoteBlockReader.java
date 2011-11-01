@@ -33,10 +33,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -408,11 +411,14 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
         vintPrefixed(in));
     checkSuccess(status, sock, block, file);
-    DataChecksum checksum = DataChecksum.newDataChecksum( in );
+    ReadOpChecksumInfoProto checksumInfo =
+      status.getReadOpChecksumInfo();
+    DataChecksum checksum = DataTransferProtoUtil.fromProto(
+        checksumInfo.getChecksum());
     //Warning when we get CHECKSUM_NULL?
     
     // Read the first chunk offset.
-    long firstChunkOffset = in.readLong();
+    long firstChunkOffset = checksumInfo.getChunkOffset();
     
     if ( firstChunkOffset < 0 || firstChunkOffset > startOffset ||
         firstChunkOffset >= (startOffset + checksum.getBytesPerChecksum())) {

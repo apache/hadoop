@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProtoOrBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -225,7 +227,7 @@ class DataXceiver extends Receiver implements Runnable {
     try {
       try {
         blockSender = new BlockSender(block, blockOffset, length,
-            true, true, false, datanode, clientTraceFmt);
+            true, false, datanode, clientTraceFmt);
       } catch(IOException e) {
         String msg = "opReadBlock " + block + " received exception " + e; 
         LOG.info(msg);
@@ -234,7 +236,8 @@ class DataXceiver extends Receiver implements Runnable {
       }
       
       // send op status
-      sendResponse(s, SUCCESS, null, datanode.socketWriteTimeout);
+      writeSuccessWithChecksumInfo(blockSender,
+          getStreamWithTimeout(s, datanode.socketWriteTimeout));
 
       long read = blockSender.sendBlock(out, baseStream, null); // send data
 
@@ -292,7 +295,8 @@ class DataXceiver extends Receiver implements Runnable {
       final int pipelineSize,
       final long minBytesRcvd,
       final long maxBytesRcvd,
-      final long latestGenerationStamp) throws IOException {
+      final long latestGenerationStamp,
+      DataChecksum requestedChecksum) throws IOException {
     updateCurrentThreadName("Receiving block " + block + " client=" + clientname);
     final boolean isDatanode = clientname.length() == 0;
     final boolean isClient = !isDatanode;
@@ -351,7 +355,7 @@ class DataXceiver extends Receiver implements Runnable {
             s.getRemoteSocketAddress().toString(),
             s.getLocalSocketAddress().toString(),
             stage, latestGenerationStamp, minBytesRcvd, maxBytesRcvd,
-            clientname, srcDataNode, datanode);
+            clientname, srcDataNode, datanode, requestedChecksum);
       } else {
         datanode.data.recoverClose(block, latestGenerationStamp, minBytesRcvd);
       }
@@ -381,11 +385,8 @@ class DataXceiver extends Receiver implements Runnable {
 
           new Sender(mirrorOut).writeBlock(originalBlock, blockToken,
               clientname, targets, srcDataNode, stage, pipelineSize,
-              minBytesRcvd, maxBytesRcvd, latestGenerationStamp);
+              minBytesRcvd, maxBytesRcvd, latestGenerationStamp, requestedChecksum);
 
-          if (blockReceiver != null) { // send checksum header
-            blockReceiver.writeChecksumHeader(mirrorOut);
-          }
           mirrorOut.flush();
 
           // read connect ack (only for clients, not for replication req)
@@ -600,8 +601,8 @@ class DataXceiver extends Receiver implements Runnable {
 
     try {
       // check if the block exists or not
-      blockSender = new BlockSender(block, 0, -1, false, false, false, 
-          datanode, null);
+      blockSender = new BlockSender(block, 0, -1, false, false, datanode, 
+          null);
 
       // set up response stream
       OutputStream baseStream = NetUtils.getOutputStream(
@@ -610,7 +611,7 @@ class DataXceiver extends Receiver implements Runnable {
           baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
 
       // send status first
-      writeResponse(SUCCESS, null, reply);
+      writeSuccessWithChecksumInfo(blockSender, reply);
       // send block content to the target
       long read = blockSender.sendBlock(reply, baseStream, 
                                         dataXceiverServer.balanceThrottler);
@@ -709,11 +710,16 @@ class DataXceiver extends Receiver implements Runnable {
         throw new IOException("Copy block " + block + " from "
             + proxySock.getRemoteSocketAddress() + " failed");
       }
+      
+      // get checksum info about the block we're copying
+      ReadOpChecksumInfoProto checksumInfo = copyResponse.getReadOpChecksumInfo();
+      DataChecksum remoteChecksum = DataTransferProtoUtil.fromProto(
+          checksumInfo.getChecksum());
       // open a block receiver and check if the block does not exist
       blockReceiver = new BlockReceiver(
           block, proxyReply, proxySock.getRemoteSocketAddress().toString(),
           proxySock.getLocalSocketAddress().toString(),
-          null, 0, 0, 0, "", null, datanode);
+          null, 0, 0, 0, "", null, datanode, remoteChecksum);
 
       // receive a block
       blockReceiver.receiveBlock(null, null, null, null, 
@@ -767,15 +773,19 @@ class DataXceiver extends Receiver implements Runnable {
    * @param opStatus status message to write
    * @param timeout send timeout
    **/
-  private void sendResponse(Socket s, Status status, String message,
+  private static void sendResponse(Socket s, Status status, String message,
       long timeout) throws IOException {
-    DataOutputStream reply = 
-      new DataOutputStream(NetUtils.getOutputStream(s, timeout));
+    DataOutputStream reply = getStreamWithTimeout(s, timeout);
     
     writeResponse(status, message, reply);
   }
   
-  private void writeResponse(Status status, String message, OutputStream out)
+  private static DataOutputStream getStreamWithTimeout(Socket s, long timeout)
+      throws IOException {
+    return new DataOutputStream(NetUtils.getOutputStream(s, timeout));
+  }
+
+  private static void writeResponse(Status status, String message, OutputStream out)
   throws IOException {
     BlockOpResponseProto.Builder response = BlockOpResponseProto.newBuilder()
       .setStatus(status);
@@ -783,6 +793,22 @@ class DataXceiver extends Receiver implements Runnable {
       response.setMessage(message);
     }
     response.build().writeDelimitedTo(out);
+    out.flush();
+  }
+  
+  private void writeSuccessWithChecksumInfo(BlockSender blockSender,
+      DataOutputStream out) throws IOException {
+
+    ReadOpChecksumInfoProto ckInfo = ReadOpChecksumInfoProto.newBuilder()
+      .setChecksum(DataTransferProtoUtil.toProto(blockSender.getChecksum()))
+      .setChunkOffset(blockSender.getOffset())
+      .build();
+      
+    BlockOpResponseProto response = BlockOpResponseProto.newBuilder()
+      .setStatus(SUCCESS)
+      .setReadOpChecksumInfo(ckInfo)
+      .build();
+    response.writeDelimitedTo(out);
     out.flush();
   }
   

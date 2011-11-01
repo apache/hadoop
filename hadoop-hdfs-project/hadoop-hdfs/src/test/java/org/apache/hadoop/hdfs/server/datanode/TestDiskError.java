@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.util.DataChecksum;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -140,14 +141,13 @@ public class TestDiskError {
     // write the header.
     DataOutputStream out = new DataOutputStream(s.getOutputStream());
 
+    DataChecksum checksum = DataChecksum.newDataChecksum(
+        DataChecksum.CHECKSUM_CRC32, 512);
     new Sender(out).writeBlock(block.getBlock(),
         BlockTokenSecretManager.DUMMY_TOKEN, "",
         new DatanodeInfo[0], null,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L);
-
-    // write check header
-    out.writeByte( 1 );
-    out.writeInt( 512 );
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
+        checksum);
     out.flush();
 
     // close the connection before sending the content of the block

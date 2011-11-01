@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpTransferBlockP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
 
 import com.google.protobuf.Message;
 
@@ -93,10 +95,14 @@ public class Sender implements DataTransferProtocol {
       final int pipelineSize,
       final long minBytesRcvd,
       final long maxBytesRcvd,
-      final long latestGenerationStamp) throws IOException {
+      final long latestGenerationStamp,
+      DataChecksum requestedChecksum) throws IOException {
     ClientOperationHeaderProto header = DataTransferProtoUtil.buildClientHeader(
         blk, clientName, blockToken);
     
+    ChecksumProto checksumProto =
+      DataTransferProtoUtil.toProto(requestedChecksum);
+
     OpWriteBlockProto.Builder proto = OpWriteBlockProto.newBuilder()
       .setHeader(header)
       .addAllTargets(toProtos(targets, 1))
@@ -104,7 +110,8 @@ public class Sender implements DataTransferProtocol {
       .setPipelineSize(pipelineSize)
       .setMinBytesRcvd(minBytesRcvd)
       .setMaxBytesRcvd(maxBytesRcvd)
-      .setLatestGenerationStamp(latestGenerationStamp);
+      .setLatestGenerationStamp(latestGenerationStamp)
+      .setRequestedChecksum(checksumProto);
     
     if (source != null) {
       proto.setSource(toProto(source));
