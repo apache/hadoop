@@ -1,18 +1,4 @@
 Hadoop MapReduce Change Log
-    MAPREDUCE-3241. [Rumen] Fix Rumen to ignore the AMStartedEvent. (amarrk)
-
-    MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
-    on current history file name format. (Ravi Gummadi via amarrk)
-
-    MAPREDUCE-3157. [Rumen] Fix TraceBuilder to handle 0.20 history file
-                    names also. (Ravi Gummadi via amarrk)
-
-    MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
-
-    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
-
-    MAPREDUCE-3192. Fix Javadoc warning in JobClient.java and Cluster.java.
-    (jitendra)
 
 Release 0.23.0 - Unreleased
 
@@ -1862,6 +1848,21 @@ Release 0.23.0 - Unreleased
 
     MAPREDUCE-3103. Implement Job ACLs for MRAppMaster. 
     (mahadev)
+    
+    MAPREDUCE-3241. [Rumen] Fix Rumen to ignore the AMStartedEvent. (amarrk)
+
+    MAPREDUCE-3166. [Rumen] Make Rumen use job history api instead of relying
+    on current history file name format. (Ravi Gummadi via amarrk)
+
+    MAPREDUCE-3157. [Rumen] Fix TraceBuilder to handle 0.20 history file
+                    names also. (Ravi Gummadi via amarrk)
+
+    MAPREDUCE-3081. Fix vaidya startup script. (gkesavan via suhas).
+
+    MAPREDUCE-2764. Fix renewal of dfs delegation tokens. (Owen via jitendra)
+
+    MAPREDUCE-3192. Fix Javadoc warning in JobClient.java and Cluster.java.
+    (jitendra)
 
 Release 0.22.0 - Unreleased
 
