@@ -85,7 +85,7 @@ Trunk (unreleased changes)
 
     HDFS-2497 Fix TestBackupNode failure. (suresh)
 
-Release 0.23.0 - 2011-10-31 
+Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
 
