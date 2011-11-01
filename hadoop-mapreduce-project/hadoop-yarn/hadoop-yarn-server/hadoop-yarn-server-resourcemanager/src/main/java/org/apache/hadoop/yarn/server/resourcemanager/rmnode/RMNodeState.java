@@ -19,5 +19,5 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 public enum RMNodeState {
-  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST
+  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED
 }
