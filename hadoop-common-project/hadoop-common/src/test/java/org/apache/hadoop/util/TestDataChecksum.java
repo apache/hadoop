@@ -114,6 +114,26 @@ public class TestDataChecksum {
       assertTrue(ce.getMessage().contains("fake file"));
     }
   }
+  
+  @Test
+  public void testEquality() {
+    assertEquals(
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512),
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512));
+    assertFalse(
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512).equals(
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 1024)));
+    assertFalse(
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512).equals(
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32C, 512)));        
+  }
+  
+  @Test
+  public void testToString() {
+    assertEquals("DataChecksum(type=CRC32, chunkSize=512)",
+        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512)
+          .toString());
+  }
 
   private static void corruptBufferOffset(ByteBuffer buf, int offset) {
     buf.put(offset, (byte)(buf.get(offset) + 1));    

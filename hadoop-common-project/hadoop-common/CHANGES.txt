@@ -531,6 +531,8 @@ Release 0.23.0 - Unreleased
 
     HADOOP-7763. Add top-level navigation to APT docs. (tomwhite)
 
+    HADOOP-7785. Add equals, hashcode, toString to DataChecksum (todd)
+
   BUG FIXES
 
     HADOOP-7740. Fixed security audit logger configuration. (Arpit Gupta via Eric Yang)
