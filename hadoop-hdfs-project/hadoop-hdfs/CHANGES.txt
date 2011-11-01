@@ -1168,7 +1168,7 @@ Release 0.23.0 - Unreleased
     HDFS-2065. Add null checks in DFSClient.getFileChecksum(..).  (Uma
     Maheswara Rao G via szetszwo)
 
-    HDFS-2552. Disable TestDfsOverAvroRpc test. (suresh)
+    HDFS-2522. Disable TestDfsOverAvroRpc test. (suresh)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
