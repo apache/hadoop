@@ -1106,8 +1106,11 @@ public class DFSClient implements java.io.Closeable {
       ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout
       ) throws IOException {
     //get all block locations
-    List<LocatedBlock> locatedblocks
-        = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE).getLocatedBlocks();
+    LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
+    if (null == blockLocations) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+    List<LocatedBlock> locatedblocks = blockLocations.getLocatedBlocks();
     final DataOutputBuffer md5out = new DataOutputBuffer();
     int bytesPerCRC = 0;
     long crcPerBlock = 0;
@@ -1117,8 +1120,11 @@ public class DFSClient implements java.io.Closeable {
     //get block checksum for each block
     for(int i = 0; i < locatedblocks.size(); i++) {
       if (refetchBlocks) {  // refetch to get fresh tokens
-        locatedblocks = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE)
-            .getLocatedBlocks();
+        blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
+        if (null == blockLocations) {
+          throw new FileNotFoundException("File does not exist: " + src);
+        }
+        locatedblocks = blockLocations.getLocatedBlocks();
         refetchBlocks = false;
       }
       LocatedBlock lb = locatedblocks.get(i);
