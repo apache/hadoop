@@ -108,7 +108,7 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
      String hostname, String state, Counters counters) {
     this(id, taskType, taskStatus,
          shuffleFinishTime, sortFinishTime, finishTime,
-         hostname, null, state, counters, null);
+         hostname, "", state, counters, null);
   }
 
   ReduceAttemptFinishedEvent() {}
