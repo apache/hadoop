@@ -396,6 +396,7 @@ Release 0.92.0 - Unreleased
    HBASE-4613  hbase.util.Threads#threadDumpingIsAlive sleeps 1 second,
                slowing down the shutdown by 0.5s
    HBASE-4552  multi-CF bulk load is not atomic across column families (Jonathan Hsieh)
+   HBASE-4710  UnknownProtocolException should abort client retries
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
@@ -406,7 +407,6 @@ Release 0.92.0 - Unreleased
    HBASE-4651  ConcurrentModificationException might be thrown in
                TestHCM.testConnectionUniqueness (Jinchao)
    HBASE-4690  Intermittent TestRegionServerCoprocessorExceptionWithAbort failure
-   HBASE-4710  UnknownProtocolException should abort client retries
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
