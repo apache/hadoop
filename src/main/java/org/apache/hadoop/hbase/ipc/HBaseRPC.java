@@ -185,6 +185,11 @@ public class HBaseRPC {
   public static class UnknownProtocolException extends DoNotRetryIOException {
     private Class<?> protocol;
 
+    public UnknownProtocolException(String mesg) {
+      // required for unwrapping from a RemoteException
+      super(mesg);
+    }
+
     public UnknownProtocolException(Class<?> protocol) {
       this(protocol, "Server is not handling protocol "+protocol.getName());
     }
