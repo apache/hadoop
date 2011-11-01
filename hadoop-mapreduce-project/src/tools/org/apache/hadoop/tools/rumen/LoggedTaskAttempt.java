@@ -49,7 +49,6 @@ public class LoggedTaskAttempt implements DeepCompare {
   long startTime = -1L;
   long finishTime = -1L;
   String hostName;
-  String rackName;
 
   long hdfsBytesRead = -1L;
   long hdfsBytesWritten = -1L;
@@ -329,9 +328,11 @@ public class LoggedTaskAttempt implements DeepCompare {
     return hostName;
   }
 
+
+  // hostName is saved in the format rackName/NodeName
   void setHostName(String hostName, String rackName) {
-    this.hostName = hostName == null || this.rackName == null ? null
-        : hostName.intern() + "/" + rackName.intern();
+    this.hostName = hostName == null || rackName == null ? null
+        : rackName.intern() + "/" + hostName.intern();
   }
 
   public long getHdfsBytesRead() {
