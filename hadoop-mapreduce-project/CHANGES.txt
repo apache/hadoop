@@ -455,6 +455,9 @@ Release 0.23.0 - Unreleased
     MAPREDUCE-3275. Added documentation for AM WebApp Proxy. (Robert Evans via
     acmurthy)
 
+    MAPREDUCE-3322. Added a better index.html and an brief overview of YARN
+    architecture. (acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-2026. Make JobTracker.getJobCounters() and
