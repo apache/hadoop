@@ -3842,6 +3842,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
      */
     SafeModeInfo(Configuration conf) {
       this.threshold = conf.getFloat(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT);
+      if(threshold > 1.0) {
+    	  LOG.warn("The threshold value should't be greater than 1, threshold: " + threshold);
+      }
       this.datanodeThreshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
         DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT);
@@ -4054,7 +4057,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           msg += String.format(
             "The reported blocks %d needs additional %d"
             + " blocks to reach the threshold %.4f of total blocks %d.",
-            blockSafe, (blockThreshold - blockSafe), threshold, blockTotal);
+            blockSafe, (blockThreshold - blockSafe) + 1, threshold, blockTotal);
         }
         if (numLive < datanodeThreshold) {
           if (!"".equals(msg)) {
@@ -4063,7 +4066,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           msg += String.format(
             "The number of live datanodes %d needs an additional %d live "
             + "datanodes to reach the minimum number %d.",
-            numLive, datanodeThreshold - numLive, datanodeThreshold);
+            numLive, (datanodeThreshold - numLive) + 1 , datanodeThreshold);
         }
         msg += " " + leaveMsg;
       } else {
