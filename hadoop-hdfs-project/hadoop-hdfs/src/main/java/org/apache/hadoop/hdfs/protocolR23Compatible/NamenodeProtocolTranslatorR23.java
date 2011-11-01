@@ -57,7 +57,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Stable
 public class NamenodeProtocolTranslatorR23 implements
     NamenodeProtocol, Closeable {
-  final private NamenodeWireProtocol rpcProxyWithoutRetry;
   final private NamenodeWireProtocol rpcProxy;
 
   private static NamenodeWireProtocol createNamenode(
@@ -97,16 +96,11 @@ public class NamenodeProtocolTranslatorR23 implements
 
   public NamenodeProtocolTranslatorR23(InetSocketAddress nameNodeAddr,
       Configuration conf, UserGroupInformation ugi) throws IOException {
-    rpcProxyWithoutRetry = createNamenode(nameNodeAddr, conf, ugi);
-    rpcProxy = createNamenodeWithRetry(rpcProxyWithoutRetry);
-  }
-
-  public Object getProxyWithoutRetry() {
-    return rpcProxyWithoutRetry;
+    rpcProxy = createNamenodeWithRetry(createNamenode(nameNodeAddr, conf, ugi));
   }
 
   public void close() {
-    RPC.stopProxy(rpcProxyWithoutRetry);
+    RPC.stopProxy(rpcProxy);
   }
 
   @Override

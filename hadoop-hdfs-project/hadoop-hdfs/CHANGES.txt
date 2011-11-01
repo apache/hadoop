@@ -85,6 +85,9 @@ Trunk (unreleased changes)
 
     HDFS-2497 Fix TestBackupNode failure. (suresh)
 
+    HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
+               reference to rpcProxyWithoutRetry (atm)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

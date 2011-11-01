@@ -79,7 +79,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 @InterfaceStability.Stable
 public class ClientNamenodeProtocolTranslatorR23 implements
     ClientProtocol, Closeable {
-  final private ClientNamenodeWireProtocol rpcProxyWithoutRetry;
   final private ClientNamenodeWireProtocol rpcProxy;
 
   private static ClientNamenodeWireProtocol createNamenode(
@@ -118,16 +117,11 @@ public class ClientNamenodeProtocolTranslatorR23 implements
 
   public ClientNamenodeProtocolTranslatorR23(InetSocketAddress nameNodeAddr,
       Configuration conf, UserGroupInformation ugi) throws IOException {
-    rpcProxyWithoutRetry = createNamenode(nameNodeAddr, conf, ugi);
-    rpcProxy = createNamenodeWithRetry(rpcProxyWithoutRetry);
-  }
-
-  public Object getProxyWithoutRetry() {
-    return rpcProxyWithoutRetry;
+    rpcProxy = createNamenodeWithRetry(createNamenode(nameNodeAddr, conf, ugi));
   }
 
   public void close() {
-    RPC.stopProxy(rpcProxyWithoutRetry);
+    RPC.stopProxy(rpcProxy);
   }
 
   @Override
