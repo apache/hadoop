@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
     HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
 
+    HDFS-2477. Optimize computing the diff between a block report and the
+               namenode state. (Tomasz Nykiel via hairong)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 

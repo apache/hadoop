@@ -75,6 +75,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class BlockManager {
+
   static final Log LOG = LogFactory.getLog(BlockManager.class);
 
   /** Default load factor of map */
@@ -1443,7 +1444,10 @@ public class BlockManager {
     BlockInfo delimiter = new BlockInfo(new Block(), 1);
     boolean added = dn.addBlock(delimiter);
     assert added : "Delimiting block cannot be present in the node";
-    if(newReport == null)
+    int headIndex = 0; //currently the delimiter is in the head of the list
+    int curIndex;
+
+    if (newReport == null)
       newReport = new BlockListAsLongs();
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
@@ -1453,8 +1457,9 @@ public class BlockManager {
       BlockInfo storedBlock = processReportedBlock(dn, iblk, iState,
                                   toAdd, toInvalidate, toCorrupt, toUC);
       // move block to the head of the list
-      if(storedBlock != null && storedBlock.findDatanode(dn) >= 0)
-        dn.moveBlockToHead(storedBlock);
+      if (storedBlock != null && (curIndex = storedBlock.findDatanode(dn)) >= 0) {
+        headIndex = dn.moveBlockToHead(storedBlock, curIndex, headIndex);
+      }
     }
     // collect blocks that have not been reported
     // all of them are next to the delimiter
