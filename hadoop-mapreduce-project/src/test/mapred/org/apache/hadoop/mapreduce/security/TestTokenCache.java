@@ -56,6 +56,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
@@ -63,6 +64,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.tools.HadoopArchives;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
@@ -386,6 +388,7 @@ public class TestTokenCache {
     String hostName = "foo";
     String domainName = "@BAR";
     Configuration conf = new Configuration();
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
     conf.set(JTConfig.JT_IPC_ADDRESS, hostName + ":8888");
     conf.set(JTConfig.JT_USER_NAME, serviceName + SecurityUtil.HOSTNAME_PATTERN
         + domainName);
@@ -427,5 +430,30 @@ public class TestTokenCache {
       }
       assertTrue("didn't find token for [" + lp1 + ", " + lp2 + "]", found);
     }
+  }
+
+  @Test
+  public void testGetTokensForUriWithoutAuth() throws IOException {
+    FileSystem fs = dfsCluster.getFileSystem();
+    HadoopArchives har = new HadoopArchives(jConf);
+    Path archivePath = new Path(fs.getHomeDirectory(), "tmp");
+    String[] args = new String[6];
+    args[0] = "-archiveName";
+    args[1] = "foo1.har";
+    args[2] = "-p";
+    args[3] = fs.getHomeDirectory().toString();
+    args[4] = "test";
+    args[5] = archivePath.toString();
+    try {
+      int ret = ToolRunner.run(har, args);
+    } catch (Exception e) {
+      fail("Could not create har file");
+    }
+    Path finalPath = new Path(archivePath, "foo1.har");
+    Path filePath = new Path(finalPath, "test");
+    
+    Credentials credentials = new Credentials();
+    TokenCache.obtainTokensForNamenodesInternal(
+      credentials, new Path [] {finalPath}, jConf);
   }
 }

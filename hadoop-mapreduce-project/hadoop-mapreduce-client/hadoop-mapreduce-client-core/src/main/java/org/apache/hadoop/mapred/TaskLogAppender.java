@@ -93,7 +93,9 @@ public class TaskLogAppender extends FileAppender {
   }
   
   public void flush() {
-    qw.flush();
+    if (qw != null) {
+      qw.flush();
+    }
   }
 
   @Override

@@ -21,11 +21,14 @@ package org.apache.hadoop.test;
 import static com.google.common.base.Preconditions.*;
 
 import org.hamcrest.Description;
+import org.junit.Assert;
 
 import static org.mockito.Mockito.*;
 import org.mockito.stubbing.Answer;
+import org.mockito.internal.matchers.GreaterThan;
 import org.mockito.invocation.InvocationOnMock;
-import static org.mockito.AdditionalMatchers.*;
+
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 
 import org.apache.commons.logging.Log;
@@ -44,6 +47,7 @@ import static org.apache.hadoop.metrics2.lib.Interns.*;
 public class MetricsAsserts {
 
   final static Log LOG = LogFactory.getLog(MetricsAsserts.class);
+  private static final double EPSILON = 0.00001;
 
   public static MetricsSystem mockMetricsSystem() {
     MetricsSystem ms = mock(MetricsSystem.class);
@@ -139,7 +143,15 @@ public class MetricsAsserts {
    */
   public static void assertGauge(String name, int expected,
                                  MetricsRecordBuilder rb) {
-    verify(rb).addGauge(eqName(info(name, "")), eq(expected));
+    Assert.assertEquals("Bad value for metric " + name,
+        expected, getIntGauge(name, rb));
+  }
+
+  public static int getIntGauge(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Integer> captor = ArgumentCaptor.forClass(Integer.class);
+    verify(rb, atLeast(0)).addGauge(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
   }
 
   /**
@@ -150,9 +162,18 @@ public class MetricsAsserts {
    */
   public static void assertCounter(String name, int expected,
                                    MetricsRecordBuilder rb) {
-    verify(rb).addCounter(eqName(info(name, "")), eq(expected));
+    Assert.assertEquals("Bad value for metric " + name,
+        expected, getIntCounter(name, rb));
   }
 
+  public static int getIntCounter(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Integer> captor = ArgumentCaptor.forClass(
+        Integer.class);
+    verify(rb, atLeast(0)).addCounter(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
+  }
+  
   /**
    * Assert a long gauge metric as expected
    * @param name  of the metric
@@ -161,7 +182,15 @@ public class MetricsAsserts {
    */
   public static void assertGauge(String name, long expected,
                                  MetricsRecordBuilder rb) {
-    verify(rb).addGauge(eqName(info(name, "")), eq(expected));
+    Assert.assertEquals("Bad value for metric " + name,
+        expected, getLongGauge(name, rb));
+  }
+
+  public static long getLongGauge(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+    verify(rb, atLeast(0)).addGauge(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
   }
 
    /**
@@ -172,7 +201,15 @@ public class MetricsAsserts {
    */
   public static void assertGauge(String name, double expected,
                                  MetricsRecordBuilder rb) {
-    verify(rb).addGauge(eqName(info(name, "")), eq(expected));
+    Assert.assertEquals("Bad value for metric " + name,
+        expected, getDoubleGauge(name, rb), EPSILON);
+  }
+
+  public static double getDoubleGauge(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Double> captor = ArgumentCaptor.forClass(Double.class);
+    verify(rb, atLeast(0)).addGauge(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
   }
 
   /**
@@ -183,7 +220,23 @@ public class MetricsAsserts {
    */
   public static void assertCounter(String name, long expected,
                                    MetricsRecordBuilder rb) {
-    verify(rb).addCounter(eqName(info(name, "")), eq(expected));
+    Assert.assertEquals("Bad value for metric " + name,
+        expected, getLongCounter(name, rb));
+  }
+
+  public static long getLongCounter(String name, MetricsRecordBuilder rb) {
+    ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+    verify(rb, atLeast(0)).addCounter(eqName(info(name, "")), captor.capture());
+    checkCaptured(captor, name);
+    return captor.getValue();
+  }
+
+  /**
+   * Check that this metric was captured exactly once.
+   */
+  private static void checkCaptured(ArgumentCaptor<?> captor, String name) {
+    Assert.assertEquals("Expected exactly one metric for name " + name,
+        1, captor.getAllValues().size());
   }
 
   /**
@@ -238,7 +291,8 @@ public class MetricsAsserts {
    */
   public static void assertCounterGt(String name, long greater,
                                      MetricsRecordBuilder rb) {
-    verify(rb).addCounter(eqName(info(name, "")), gt(greater));
+    Assert.assertThat("Bad value for metric " + name, getLongCounter(name, rb),
+        new GreaterThan<Long>(greater));
   }
 
   /**
@@ -260,7 +314,8 @@ public class MetricsAsserts {
    */
   public static void assertGaugeGt(String name, double greater,
                                    MetricsRecordBuilder rb) {
-    verify(rb).addGauge(eqName(info(name, "")), gt(greater));
+    Assert.assertThat("Bad value for metric " + name, getDoubleGauge(name, rb),
+        new GreaterThan<Double>(greater));
   }
 
   /**

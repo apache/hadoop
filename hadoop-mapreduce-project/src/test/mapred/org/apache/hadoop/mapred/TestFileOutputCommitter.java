@@ -175,7 +175,12 @@ public class TestFileOutputCommitter extends TestCase {
     // do setup
     committer.setupJob(jContext);
     committer.setupTask(tContext);
+    
     String file = "test.txt";
+    String taskBaseDirName = committer.getTaskAttemptBaseDirName(tContext);
+    File jobTmpDir = new File(outDir.toString(), committer.getJobAttemptBaseDirName(jContext));
+    File taskTmpDir = new File(outDir.toString(), taskBaseDirName);
+    File expectedFile = new File(taskTmpDir, file);
 
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
@@ -183,7 +188,7 @@ public class TestFileOutputCommitter extends TestCase {
     FileSystem localFs = new FakeFileSystem();
     TextOutputFormat theOutputFormat = new TextOutputFormat();
     RecordWriter theRecordWriter = theOutputFormat.getRecordWriter(localFs,
-        job, file, reporter);
+        job, expectedFile.getAbsolutePath(), reporter);
     writeOutput(theRecordWriter, reporter);
 
     // do abort
@@ -196,10 +201,6 @@ public class TestFileOutputCommitter extends TestCase {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    File jobTmpDir = new File(new Path(outDir,
-        FileOutputCommitter.TEMP_DIR_NAME).toString());
-    File taskTmpDir = new File(jobTmpDir, "_" + taskID);
-    File expectedFile = new File(taskTmpDir, file);
     assertTrue(expectedFile + " does not exists", expectedFile.exists());
 
     th = null;

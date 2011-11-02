@@ -69,6 +69,17 @@
       ]
      },
 
+     {"type": "record", "name": "AMStarted",
+      "fields": [
+          {"name": "applicationAttemptId", "type": "string"},
+          {"name": "startTime", "type": "long"},
+          {"name": "containerId", "type": "string"},
+          {"name": "nodeManagerHost", "type": "string"},
+          {"name": "nodeManagerPort", "type": "int"},
+          {"name": "nodeManagerHttpPort", "type": "int"}
+      ]
+     },
+
      {"type": "record", "name": "JobSubmitted",
       "fields": [
           {"name": "jobid", "type": "string"},
@@ -125,6 +136,7 @@
           {"name": "mapFinishTime", "type": "long"},
           {"name": "finishTime", "type": "long"},
           {"name": "hostname", "type": "string"},
+          {"name": "rackname", "type": "string"},
           {"name": "state", "type": "string"},
           {"name": "counters", "type": "JhCounters"},
           {"name": "clockSplits", "type": { "type": "array", "items": "int"}},
@@ -144,6 +156,7 @@
           {"name": "sortFinishTime", "type": "long"},
           {"name": "finishTime", "type": "long"},
           {"name": "hostname", "type": "string"},
+          {"name": "rackname", "type": "string"},
           {"name": "state", "type": "string"},
           {"name": "counters", "type": "JhCounters"},
           {"name": "clockSplits", "type": { "type": "array", "items": "int"}},
@@ -173,7 +186,9 @@
           {"name": "attemptId", "type": "string"},
           {"name": "startTime", "type": "long"},
           {"name": "trackerName", "type": "string"},
-          {"name": "httpPort", "type": "int"}
+          {"name": "httpPort", "type": "int"},
+          {"name": "shufflePort", "type": "int"},
+          {"name": "containerId", "type": "string"}
       ]
      },
 
@@ -213,7 +228,7 @@
           {"name": "counters", "type": "JhCounters"}
       ]
      },
-
+     	
      {"type": "record", "name": "TaskStarted",
       "fields": [
           {"name": "taskid", "type": "string"},
@@ -244,6 +259,7 @@
           "TASK_FINISHED",
           "TASK_FAILED",
           "TASK_UPDATED",
+          "NORMALIZED_RESOURCE",
           "MAP_ATTEMPT_STARTED",
           "MAP_ATTEMPT_FINISHED",
           "MAP_ATTEMPT_FAILED",
@@ -259,7 +275,8 @@
           "CLEANUP_ATTEMPT_STARTED",
           "CLEANUP_ATTEMPT_FINISHED",
           "CLEANUP_ATTEMPT_FAILED",
-          "CLEANUP_ATTEMPT_KILLED"
+          "CLEANUP_ATTEMPT_KILLED",
+          "AM_STARTED"
           ]
      },
 
@@ -271,6 +288,7 @@
                "JobFinished",
                "JobInfoChange",
                "JobInited",
+               "AMStarted",
                "JobPriorityChange",
                "JobStatusChanged",
                "JobSubmitted",

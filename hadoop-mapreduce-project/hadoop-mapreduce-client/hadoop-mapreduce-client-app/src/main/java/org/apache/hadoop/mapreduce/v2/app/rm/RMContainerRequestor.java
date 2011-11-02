@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,7 +65,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   //Key->ResourceName (e.g., hostname, rackname, *)
   //Value->Map
   //Key->Resource Capability
-  //Value->ResourceReqeust
+  //Value->ResourceRequest
   private final Map<Priority, Map<String, Map<Resource, ResourceRequest>>>
   remoteRequestsTable =
       new TreeMap<Priority, Map<String, Map<Resource, ResourceRequest>>>();
@@ -87,14 +89,22 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     final String[] racks;
     //final boolean earlierAttemptFailed;
     final Priority priority;
+    
     public ContainerRequest(ContainerRequestEvent event, Priority priority) {
-      this.attemptID = event.getAttemptID();
-      this.capability = event.getCapability();
-      this.hosts = event.getHosts();
-      this.racks = event.getRacks();
-      //this.earlierAttemptFailed = event.getEarlierAttemptFailed();
+      this(event.getAttemptID(), event.getCapability(), event.getHosts(),
+          event.getRacks(), priority);
+    }
+    
+    public ContainerRequest(TaskAttemptId attemptID,
+        Resource capability, String[] hosts, String[] racks, 
+        Priority priority) {
+      this.attemptID = attemptID;
+      this.capability = capability;
+      this.hosts = hosts;
+      this.racks = racks;
       this.priority = priority;
     }
+    
   }
 
   @Override
@@ -149,14 +159,35 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       //remove all the requests corresponding to this hostname
       for (Map<String, Map<Resource, ResourceRequest>> remoteRequests 
           : remoteRequestsTable.values()){
-        //remove from host
-        Map<Resource, ResourceRequest> reqMap = remoteRequests.remove(hostName);
+        //remove from host if no pending allocations
+        boolean foundAll = true;
+        Map<Resource, ResourceRequest> reqMap = remoteRequests.get(hostName);
         if (reqMap != null) {
           for (ResourceRequest req : reqMap.values()) {
-            ask.remove(req);
+            if (!ask.remove(req)) {
+              foundAll = false;
+              // if ask already sent to RM, we can try and overwrite it if possible.
+              // send a new ask to RM with numContainers
+              // specified for the blacklisted host to be 0.
+              ResourceRequest zeroedRequest = BuilderUtils.newResourceRequest(req);
+              zeroedRequest.setNumContainers(0);
+              // to be sent to RM on next heartbeat
+              ask.add(zeroedRequest);
+            }
+          }
+          // if all requests were still in ask queue
+          // we can remove this request
+          if (foundAll) {
+            remoteRequests.remove(hostName);
           }
         }
-        //TODO: remove from rack
+        // TODO handling of rack blacklisting
+        // Removing from rack should be dependent on no. of failures within the rack 
+        // Blacklisting a rack on the basis of a single node's blacklisting 
+        // may be overly aggressive. 
+        // Node failures could be co-related with other failures on the same rack 
+        // but we probably need a better approach at trying to decide how and when 
+        // to blacklist a rack
       }
     } else {
       nodeFailures.put(hostName, failures);
@@ -171,7 +202,9 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     // Create resource requests
     for (String host : req.hosts) {
       // Data-local
-      addResourceRequest(req.priority, host, req.capability);
+      if (!isNodeBlacklisted(host)) {
+        addResourceRequest(req.priority, host, req.capability);
+      }      
     }
 
     // Nothing Rack-local for now
@@ -234,6 +267,14 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     Map<String, Map<Resource, ResourceRequest>> remoteRequests =
       this.remoteRequestsTable.get(priority);
     Map<Resource, ResourceRequest> reqMap = remoteRequests.get(resourceName);
+    if (reqMap == null) {
+      // as we modify the resource requests by filtering out blacklisted hosts 
+      // when they are added, this value may be null when being 
+      // decremented
+      LOG.debug("Not decrementing resource as " + resourceName
+          + " is not present in request table");
+      return;
+    }
     ResourceRequest remoteRequest = reqMap.get(capability);
 
     LOG.info("BEFORE decResourceRequest:" + " applicationId=" + applicationId.getId()
@@ -267,4 +308,23 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     release.add(containerId);
   }
   
+  protected boolean isNodeBlacklisted(String hostname) {
+    if (!nodeBlacklistingEnabled) {
+      return false;
+    }
+    return blacklistedNodes.contains(hostname);
+  }
+  
+  protected ContainerRequest getFilteredContainerRequest(ContainerRequest orig) {
+    ArrayList<String> newHosts = new ArrayList<String>();
+    for (String host : orig.hosts) {
+      if (!isNodeBlacklisted(host)) {
+        newHosts.add(host);      
+      }
+    }
+    String[] hosts = newHosts.toArray(new String[newHosts.size()]);
+    ContainerRequest newReq = new ContainerRequest(orig.attemptID, orig.capability,
+        hosts, orig.racks, orig.priority); 
+    return newReq;
+  }
 }

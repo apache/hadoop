@@ -17,80 +17,180 @@
  */
 package org.apache.hadoop.fs.shell;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.util.Arrays;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class TestPathData {
   protected static Configuration conf;
   protected static FileSystem fs;
   protected static String dirString;
-  protected static Path dir;
+  protected static Path testDir;
   protected static PathData item;
-
+  
+  protected static String[] d1Paths =
+    new String[] { "d1/f1", "d1/f1.1", "d1/f2" };
+  protected static String[] d2Paths =
+    new String[] { "d2/f3" };
+        
   @BeforeClass
   public static void initialize() throws Exception {
     conf = new Configuration();
-    fs = FileSystem.getLocal(conf); 
+    fs = FileSystem.getLocal(conf);
+    testDir = new Path(
+        System.getProperty("test.build.data", "build/test/data") + "/testPD"
+    );
+    // don't want scheme on the path, just an absolute path
+    testDir = new Path(fs.makeQualified(testDir).toUri().getPath());
+    FileSystem.setDefaultUri(conf, fs.getUri());    
+    fs.setWorkingDirectory(testDir);
+    fs.mkdirs(new Path("d1"));
+    fs.createNewFile(new Path("d1", "f1"));
+    fs.createNewFile(new Path("d1", "f1.1"));
+    fs.createNewFile(new Path("d1", "f2"));
+    fs.mkdirs(new Path("d2"));
+    fs.create(new Path("d2","f3"));
   }
 
   @Test
-  public void testWithFsAndPath() throws Exception {
-    dirString = "/tmp";
-    dir = new Path(dirString);
-    item = new PathData(fs, dir);
+  public void testWithDirStringAndConf() throws Exception {
+    dirString = "d1";
+    item = new PathData(dirString, conf);
     checkPathData();
-  }
 
-  @Test
-  public void testWithStringAndConf() throws Exception {
-    dirString = "/tmp";
-    dir = new Path(dirString);
+    // properly implementing symlink support in various commands will require
+    // trailing slashes to be retained
+    dirString = "d1/";
     item = new PathData(dirString, conf);
     checkPathData();
   }
 
   @Test
   public void testUnqualifiedUriContents() throws Exception {
-    dirString = "/tmp";
+    dirString = "d1";
     item = new PathData(dirString, conf);
     PathData[] items = item.getDirectoryContents();
-    for (PathData item : items) {
-      assertTrue(item.toString().startsWith(dirString));
-    }
+    assertEquals(
+        sortedString("d1/f1", "d1/f1.1", "d1/f2"),
+        sortedString(items)
+    );
   }
 
   @Test
   public void testQualifiedUriContents() throws Exception {
-    dirString = "file:/tmp";
+    dirString = fs.makeQualified(new Path("d1")).toString();
     item = new PathData(dirString, conf);
     PathData[] items = item.getDirectoryContents();
-    for (PathData item : items) {
-      assertTrue(item.toString().startsWith(dirString));
-    }
+    assertEquals(
+        sortedString(dirString+"/f1", dirString+"/f1.1", dirString+"/f2"),
+        sortedString(items)
+    );
+  }
+
+  @Test
+  public void testCwdContents() throws Exception {
+    dirString = Path.CUR_DIR;
+    item = new PathData(dirString, conf);
+    PathData[] items = item.getDirectoryContents();
+    assertEquals(
+        sortedString("d1", "d2"),
+        sortedString(items)
+    );
+  }
+
+
+	@Test
+	public void testToFile() throws Exception {
+    item = new PathData(".", conf);
+    assertEquals(new File(testDir.toString()), item.toFile());
+	  item = new PathData("d1/f1", conf);
+	  assertEquals(new File(testDir+"/d1/f1"), item.toFile());
+    item = new PathData(testDir+"/d1/f1", conf);
+    assertEquals(new File(testDir+"/d1/f1"), item.toFile());
+	}
+	
+  @Test
+  public void testAbsoluteGlob() throws Exception {
+    PathData[] items = PathData.expandAsGlob(testDir+"/d1/f1*", conf);
+    assertEquals(
+        sortedString(testDir+"/d1/f1", testDir+"/d1/f1.1"),
+        sortedString(items)
+    );
+  }
+
+  @Test
+  public void testRelativeGlob() throws Exception {
+    PathData[] items = PathData.expandAsGlob("d1/f1*", conf);
+    assertEquals(
+        sortedString("d1/f1", "d1/f1.1"),
+        sortedString(items)
+    );
+  }
+
+  @Test
+  public void testRelativeGlobBack() throws Exception {
+    fs.setWorkingDirectory(new Path("d1"));
+    PathData[] items = PathData.expandAsGlob("../d2/*", conf);
+    assertEquals(
+        sortedString("../d2/f3"),
+        sortedString(items)
+    );
   }
 
   @Test
   public void testWithStringAndConfForBuggyPath() throws Exception {
     dirString = "file:///tmp";
-    dir = new Path(dirString);
+    testDir = new Path(dirString);
     item = new PathData(dirString, conf);
     // this may fail some day if Path is fixed to not crunch the uri
     // if the authority is null, however we need to test that the PathData
     // toString() returns the given string, while Path toString() does
     // the crunching
-    assertEquals("file:/tmp", dir.toString());
+    assertEquals("file:/tmp", testDir.toString());
     checkPathData();
   }
 
   public void checkPathData() throws Exception {
-    assertEquals(fs, item.fs);
-    assertEquals(dirString, item.toString());
-    assertEquals(dir, item.path);
-    assertTrue(item.stat != null);
-    assertTrue(item.stat.isDirectory());
+    assertEquals("checking fs", fs, item.fs);
+    assertEquals("checking string", dirString, item.toString());
+    assertEquals("checking path",
+        fs.makeQualified(new Path(item.toString())), item.path
+    );
+    assertTrue("checking exist", item.stat != null);
+    assertTrue("checking isDir", item.stat.isDirectory());
+  }
+  
+  /* junit does a lousy job of comparing arrays
+   * if the array lengths differ, it just says that w/o showing contents
+   * this sorts the paths, and builds a string of "i:<value>, ..." suitable
+   * for a string compare
+   */
+  private static String sortedString(Object ... list) {
+    String[] strings = new String[list.length];
+    for (int i=0; i < list.length; i++) {
+      strings[i] = String.valueOf(list[i]);
+    }
+    Arrays.sort(strings);
+    
+    StringBuilder result = new StringBuilder();
+    for (int i=0; i < strings.length; i++) {
+      if (result.length() > 0) {
+        result.append(", ");
+      }
+      result.append(i+":<"+strings[i]+">");
+    }
+    return result.toString();
+  }
+  
+  private static String sortedString(PathData ... items) {
+    return sortedString((Object[])items);
   }
 }

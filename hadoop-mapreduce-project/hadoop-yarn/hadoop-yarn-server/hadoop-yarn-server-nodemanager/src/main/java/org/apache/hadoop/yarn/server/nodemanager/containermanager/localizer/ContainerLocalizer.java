@@ -65,6 +65,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.secu
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.util.FSDownload;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ContainerLocalizer {
 
@@ -178,7 +181,8 @@ public class ContainerLocalizer {
   }
 
   ExecutorService createDownloadThreadPool() {
-    return Executors.newSingleThreadExecutor();
+    return Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
+      .setNameFormat("ContainerLocalizer Downloader").build());
   }
 
   Callable<Path> download(LocalDirAllocator lda, LocalResource rsrc,

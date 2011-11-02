@@ -55,6 +55,16 @@ usage: $0 <parameters>
      --dfs-support-append=false|true                                 Enable append
      --hadoop-proxy-users='user1:groups:hosts;user2:groups:hosts'    Setup proxy users for hadoop
      --hbase-user=hbase                                              User which hbase is running as. Defaults to hbase
+     --mapreduce-cluster-mapmemory-mb=memory                         Virtual memory of a map slot for the MR framework. Defaults to -1
+     --mapreduce-cluster-reducememory-mb=memory                      Virtual memory, of a reduce slot for the MR framework. Defaults to -1
+     --mapreduce-jobtracker-maxmapmemory-mb=memory                   Maximum virtual memory of a single map task. Defaults to -1
+                                                                     This value should be set to (mapreduce.cluster.mapmemory.mb * mapreduce.tasktracker.map.tasks.maximum)
+     --mapreduce-jobtracker-maxreducememory-mb=memory                Maximum virtual memory of a single reduce task. Defaults to -1
+                                                                     This value should be set to (mapreduce.cluster.reducememory.mb * mapreduce.tasktracker.reduce.tasks.maximum)
+     --mapreduce-map-memory-mb=memory                                Virtual memory of a single map slot for a job. Defaults to -1
+                                                                     This value should be <= mapred.cluster.max.map.memory.mb
+     --mapreduce-reduce-memory-mb=memory                             Virtual memory, of a single reduce slot for a job. Defaults to -1
+                                                                     This value should be <= mapred.cluster.max.reduce.memory.mb
   "
   exit 1
 }
@@ -139,6 +149,7 @@ function addPropertyToXMLConf
 #########################################
 function setupProxyUsers
 {
+  local conf_file="${HADOOP_CONF_DIR}/core-site.xml"
   #if hadoop proxy users are sent, setup hadoop proxy
   if [ ! -z $HADOOP_PROXY_USERS ]
   then
@@ -156,10 +167,10 @@ function setupProxyUsers
       #determine the property names and values
       proxy_groups_property="hadoop.proxyuser.${user}.groups"
       proxy_groups_val="$groups"
-      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_groups_property" "$proxy_groups_val"
+      addPropertyToXMLConf "$conf_file" "$proxy_groups_property" "$proxy_groups_val"
       proxy_hosts_property="hadoop.proxyuser.${user}.hosts"
       proxy_hosts_val="$hosts"
-      addPropertyToXMLConf "${HADOOP_CONF_DIR}/hdfs-site.xml" "$proxy_hosts_property" "$proxy_hosts_val"
+      addPropertyToXMLConf "$conf_file" "$proxy_hosts_property" "$proxy_hosts_val"
       IFS=';'
     done
     IFS=$oldIFS
@@ -198,6 +209,12 @@ OPTS=$(getopt \
   -l 'hadoop-proxy-users:' \
   -l 'dfs-support-append:' \
   -l 'hbase-user:' \
+  -l 'mapreduce-cluster-mapmemory-mb:' \
+  -l 'mapreduce-cluster-reducememory-mb:' \
+  -l 'mapreduce-jobtracker-maxmapmemory-mb:' \
+  -l 'mapreduce-jobtracker-maxreducememory-mb:' \
+  -l 'mapreduce-map-memory-mb:' \
+  -l 'mapreduce-reduce-memory-mb:' \
   -o 'h' \
   -- "$@") 
   
@@ -333,6 +350,30 @@ while true ; do
       HBASE_USER=$2; shift 2
       AUTOMATED=1
       ;;
+    --mapreduce-cluster-mapmemory-mb)
+      MAPREDUCE_CLUSTER_MAPMEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapreduce-cluster-reducememory-mb)
+      MAPREDUCE_CLUSTER_REDUCEMEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapreduce-jobtracker-maxmapmemory-mb)
+      MAPREDUCE_JOBTRACKER_MAXMAPMEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapreduce-jobtracker-maxreducememory-mb)
+      MAPREDUCE_JOBTRACKER_MAXREDUCEMEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapreduce-map-memory-mb)
+      MAPREDUCE_MAP_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --mapreduce-reduce-memory-mb)
+      MAPREDUCE_REDUCE_MEMORY_MB=$2; shift 2
+      AUTOMATED=1
+      ;;
     --)
       shift ; break
       ;;
@@ -364,6 +405,12 @@ HADOOP_MR_USER=${HADOOP_MR_USER:-mr}
 DFS_WEBHDFS_ENABLED=${DFS_WEBHDFS_ENABLED:-false}
 DFS_SUPPORT_APPEND=${DFS_SUPPORT_APPEND:-false}
 HBASE_USER=${HBASE_USER:-hbase}
+MAPREDUCE_CLUSTER_MAPMEMORY_MB=${MAPREDUCE_CLUSTER_MAPMEMORY_MB:--1}
+MAPREDUCE_CLUSTER_REDUCEMEMORY_MB=${MAPREDUCE_CLUSTER_REDUCEMEMORY_MB:--1}
+MAPREDUCE_JOBTRACKER_MAXMAPMEMORY_MB=${MAPREDUCE_JOBTRACKER_MAXMAPMEMORY_MB:--1}
+MAPREDUCE_JOBTRACKER_MAXREDUCEMEMORY_MB=${MAPREDUCE_JOBTRACKER_MAXREDUCEMEMORY_MB:--1}
+MAPREDUCE_MAP_MEMORY_MB=${MAPREDUCE_MAP_MEMORY_MB:--1}
+MAPREDUCE_REDUCE_MEMORY_MB=${MAPREDUCE_REDUCE_MEMORY_MB:--1}
 KEYTAB_DIR=${KEYTAB_DIR:-/etc/security/keytabs}
 HDFS_KEYTAB=${HDFS_KEYTAB:-/home/hdfs/hdfs.keytab}
 MR_KEYTAB=${MR_KEYTAB:-/home/mr/mr.keytab}

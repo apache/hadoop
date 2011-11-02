@@ -19,6 +19,7 @@ package org.apache.hadoop.io.nativeio;
 
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -208,6 +209,66 @@ public class TestNativeIO {
     assertPermissions(toChmod, 0000);
     NativeIO.chmod(toChmod.getAbsolutePath(), 0644);
     assertPermissions(toChmod, 0644);
+  }
+
+
+  @Test
+  public void testPosixFadvise() throws Exception {
+    FileInputStream fis = new FileInputStream("/dev/zero");
+    try {
+      NativeIO.posix_fadvise(fis.getFD(), 0, 0,
+                             NativeIO.POSIX_FADV_SEQUENTIAL);
+    } catch (UnsupportedOperationException uoe) {
+      // we should just skip the unit test on machines where we don't
+      // have fadvise support
+      assumeTrue(false);
+    } finally {
+      fis.close();
+    }
+
+    try {
+      NativeIO.posix_fadvise(fis.getFD(), 0, 1024,
+                             NativeIO.POSIX_FADV_SEQUENTIAL);
+
+      fail("Did not throw on bad file");
+    } catch (NativeIOException nioe) {
+      assertEquals(Errno.EBADF, nioe.getErrno());
+    }
+    
+    try {
+      NativeIO.posix_fadvise(null, 0, 1024,
+                             NativeIO.POSIX_FADV_SEQUENTIAL);
+
+      fail("Did not throw on null file");
+    } catch (NullPointerException npe) {
+      // expected
+    }
+  }
+
+  @Test
+  public void testSyncFileRange() throws Exception {
+    FileOutputStream fos = new FileOutputStream(
+      new File(TEST_DIR, "testSyncFileRange"));
+    try {
+      fos.write("foo".getBytes());
+      NativeIO.sync_file_range(fos.getFD(), 0, 1024,
+                               NativeIO.SYNC_FILE_RANGE_WRITE);
+      // no way to verify that this actually has synced,
+      // but if it doesn't throw, we can assume it worked
+    } catch (UnsupportedOperationException uoe) {
+      // we should just skip the unit test on machines where we don't
+      // have fadvise support
+      assumeTrue(false);
+    } finally {
+      fos.close();
+    }
+    try {
+      NativeIO.sync_file_range(fos.getFD(), 0, 1024,
+                               NativeIO.SYNC_FILE_RANGE_WRITE);
+      fail("Did not throw on bad file");
+    } catch (NativeIOException nioe) {
+      assertEquals(Errno.EBADF, nioe.getErrno());
+    }
   }
 
   private void assertPermissions(File f, int expected) throws IOException {

@@ -18,20 +18,18 @@
 
 package org.apache.hadoop.mapreduce.v2.app.client;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.security.AccessControlException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.avro.ipc.Server;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
@@ -72,21 +70,20 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -131,8 +128,8 @@ public class MRClientService extends AbstractService
           System
               .getenv(ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME);
       byte[] bytes = Base64.decodeBase64(secretKeyStr);
-      ApplicationTokenIdentifier identifier =
-          new ApplicationTokenIdentifier(this.appContext.getApplicationID());
+      ClientTokenIdentifier identifier = new ClientTokenIdentifier(
+          this.appContext.getApplicationID());
       secretManager.setMasterKey(identifier, bytes);
     }
     server =
@@ -140,6 +137,14 @@ public class MRClientService extends AbstractService
             conf, secretManager,
             conf.getInt(MRJobConfig.MR_AM_JOB_CLIENT_THREAD_COUNT, 
                 MRJobConfig.DEFAULT_MR_AM_JOB_CLIENT_THREAD_COUNT));
+    
+    // Enable service authorization?
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
+        false)) {
+      refreshServiceAcls(conf, new MRAMPolicyProvider());
+    }
+
     server.start();
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
@@ -154,8 +159,13 @@ public class MRClientService extends AbstractService
     super.start();
   }
 
+  void refreshServiceAcls(Configuration configuration, 
+      PolicyProvider policyProvider) {
+    this.server.refreshServiceAcl(configuration, policyProvider);
+  }
+
   public void stop() {
-    server.close();
+    server.stop();
     if (webApp != null) {
       webApp.stop();
     }
@@ -183,13 +193,6 @@ public class MRClientService extends AbstractService
       if (job == null) {
         throw RPCUtil.getRemoteException("Unknown job " + jobID);
       }
-      //TODO fix job acls.
-      //JobACL operation = JobACL.VIEW_JOB;
-      //if (modifyAccess) {
-      //  operation = JobACL.MODIFY_JOB;
-      //}
-      //TO disable check access ofr now.
-      //checkAccess(job, operation);
       return job;
     }
  
@@ -211,24 +214,6 @@ public class MRClientService extends AbstractService
         throw RPCUtil.getRemoteException("Unknown TaskAttempt " + attemptID);
       }
       return attempt;
-    }
-
-    private void checkAccess(Job job, JobACL jobOperation) 
-      throws YarnRemoteException {
-      if (!UserGroupInformation.isSecurityEnabled()) {
-        return;
-      }
-      UserGroupInformation callerUGI;
-      try {
-        callerUGI = UserGroupInformation.getCurrentUser();
-      } catch (IOException e) {
-        throw RPCUtil.getRemoteException(e);
-      }
-      if(!job.checkAccess(callerUGI, jobOperation)) {
-        throw RPCUtil.getRemoteException(new AccessControlException("User "
-            + callerUGI.getShortUserName() + " cannot perform operation "
-            + jobOperation.name() + " on " + job.getID()));
-      }
     }
 
     @Override
@@ -291,6 +276,7 @@ public class MRClientService extends AbstractService
       return response;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public KillJobResponse killJob(KillJobRequest request) 
       throws YarnRemoteException {
@@ -307,6 +293,7 @@ public class MRClientService extends AbstractService
       return response;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public KillTaskResponse killTask(KillTaskRequest request) 
       throws YarnRemoteException {
@@ -321,6 +308,7 @@ public class MRClientService extends AbstractService
       return response;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public KillTaskAttemptResponse killTaskAttempt(
         KillTaskAttemptRequest request) throws YarnRemoteException {
@@ -350,6 +338,7 @@ public class MRClientService extends AbstractService
       return response;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public FailTaskAttemptResponse failTaskAttempt(
         FailTaskAttemptRequest request) throws YarnRemoteException {

@@ -75,6 +75,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
     public String toString() {
       return value;
     }
+    
+    public static AdminStates fromValue(final String value) {
+      for (AdminStates as : AdminStates.values()) {
+        if (as.value.equals(value)) return as;
+      }
+      return NORMAL;
+    }
   }
 
   @Nullable
@@ -110,10 +117,19 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.adminState = null;    
   }
   
-  protected DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
+  public DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
     this(nodeID);
     this.location = location;
     this.hostName = hostName;
+  }
+  
+  public DatanodeInfo(DatanodeID nodeID, String location, String hostName,
+      final long capacity, final long dfsUsed, final long remaining,
+      final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
+      final AdminStates adminState) {
+    this(nodeID.getName(), nodeID.getStorageID(), nodeID.getInfoPort(), nodeID
+        .getIpcPort(), capacity, dfsUsed, remaining, blockPoolUsed, lastUpdate,
+        xceiverCount, location, hostName, adminState);
   }
 
   /** Constructor */

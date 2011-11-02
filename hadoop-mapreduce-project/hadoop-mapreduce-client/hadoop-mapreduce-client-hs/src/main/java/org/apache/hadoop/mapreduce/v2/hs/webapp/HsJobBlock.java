@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -37,8 +38,13 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
@@ -86,7 +92,7 @@ public class HsJobBlock extends HtmlBlock {
       return;
     }
     Map<JobACL, AccessControlList> acls = job.getJobACLs();
-    
+    List<AMInfo> amInfos = job.getAMInfos();
     JobReport jobReport = job.getReport();
     int mapTasks = job.getTotalMaps();
     int mapTasksComplete = job.getCompletedMaps();
@@ -104,6 +110,9 @@ public class HsJobBlock extends HtmlBlock {
         _("Finished:", new Date(finishTime)).
         _("Elapsed:", StringUtils.formatTime(
             Times.elapsed(startTime, finishTime, false)));
+    
+    String amString =
+        amInfos.size() == 1 ? "ApplicationMaster" : "ApplicationMasters"; 
     
     List<String> diagnostics = job.getDiagnostics();
     if(diagnostics != null && !diagnostics.isEmpty()) {
@@ -127,10 +136,44 @@ public class HsJobBlock extends HtmlBlock {
       infoBlock._("ACL "+entry.getKey().getAclName()+":",
           entry.getValue().getAclString());
     }
-    html.
+    DIV<Hamlet> div = html.
       _(InfoBlock.class).
-      div(_INFO_WRAP).
-
+      div(_INFO_WRAP);
+    
+      // MRAppMasters Table
+        TABLE<DIV<Hamlet>> table = div.table("#job");
+        table.
+          tr().
+            th(amString).
+          _().
+          tr().
+            th(_TH, "Attempt Number").
+            th(_TH, "Start Time").
+            th(_TH, "Node").
+            th(_TH, "Logs").
+            _();
+          for (AMInfo amInfo : amInfos) {
+            String nodeHttpAddress = amInfo.getNodeManagerHost() + 
+                ":" + amInfo.getNodeManagerHttpPort();
+            NodeId nodeId = BuilderUtils.newNodeId(
+                amInfo.getNodeManagerHost(), amInfo.getNodeManagerPort());
+            
+            table.tr().
+              td(String.valueOf(amInfo.getAppAttemptId().getAttemptId())).
+              td(new Date(amInfo.getStartTime()).toString()).
+              td().a(".nodelink", url("http://", nodeHttpAddress), 
+                  nodeHttpAddress)._().
+              td().a(".logslink", url("logs", nodeId.toString(), 
+                  amInfo.getContainerId().toString(), jid, job.getUserName()), 
+                      "logs")._().
+            _();
+          }
+          table._();
+          div._();
+          
+        
+        html.div(_INFO_WRAP).        
+      
       // Tasks table
         table("#job").
           tr().

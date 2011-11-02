@@ -1,5 +1,4 @@
-
-Build instructions for Hadoop Common/HDFS using Maven
+Build instructions for Hadoop
 
 ----------------------------------------------------------------------------------
 Requirements:
@@ -9,19 +8,24 @@ Requirements:
 * Maven 3.0
 * Forrest 0.8 (if generating docs)
 * Findbugs 1.3.9 (if running findbugs)
+* ProtocolBuffer 2.4.1+ (for MapReduce)
 * Autotools (if compiling native code)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 ----------------------------------------------------------------------------------
-Maven modules:
+Maven main modules:
 
-  hadoop                       (Main Hadoop project)
-         - hadoop-project      (Parent POM for all Hadoop Maven modules.             )
-                               (All plugins & dependencies versions are defined here.)
-         - hadoop-project-dist (Parent POM for modules that generate distributions.)
-         - hadoop-annotations  (Generates the Hadoop doclet used to generated the Javadocs)
-         - hadoop-common       (Hadoop Common)
-         - hadoop-hdfs         (Hadoop HDFS)
+  hadoop                            (Main Hadoop project)
+         - hadoop-project           (Parent POM for all Hadoop Maven modules.             )
+                                    (All plugins & dependencies versions are defined here.)
+         - hadoop-project-dist      (Parent POM for modules that generate distributions.)
+         - hadoop-annotations       (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-assemblies        (Maven assemblies used by the different modules)
+         - hadoop-common-project    (Hadoop Common)
+         - hadoop-hdfs-project      (Hadoop HDFS)
+         - hadoop-mapreduce-project (Hadoop MapReduce)
+         - hadoop-tools             (Hadoop tools like Streaming, Distcp, etc.)
+         - hadoop-dist              (Hadoop distribution assembler)
 
 ----------------------------------------------------------------------------------
 Where to run Maven from?
@@ -45,6 +49,7 @@ Maven build goals:
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
  * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar]
+ * Change Hadoop version     : mvn versions:set -DnewVersion=NEWVERSION
 
  Build options:
 
@@ -52,15 +57,34 @@ Maven build goals:
   * Use -Dsnappy.prefix=(/usr/local) & -Dbundle.snappy=(false) to compile
     Snappy JNI bindings and to bundle Snappy SO files
   * Use -Pdocs to generate & bundle the documentation in the distribution (using -Pdist)
-  * Use -Psrc to bundle the source in the distribution (using -Pdist)
+  * Use -Psrc to create a project source TAR.GZ
   * Use -Dtar to create a TAR with the distribution (using -Pdist)
 
    Tests options:
 
   * Use -DskipTests to skip tests when running the following Maven goals:
     'package',  'install', 'deploy' or 'verify'
-  * -Dtest=<TESTCLASSNAME>,....
+  * -Dtest=<TESTCLASSNAME>,<TESTCLASSNAME#METHODNAME>,....
   * -Dtest.exclude=<TESTCLASSNAME>
   * -Dtest.exclude.pattern=**/<TESTCLASSNAME1>.java,**/<TESTCLASSNAME2>.java
+
+----------------------------------------------------------------------------------
+Building distributions:
+
+Create binary distribution without native code and without documentation:
+
+  $ mvn package -Pdist -DskipTests -Dtar
+
+Create binary distribution with native code and with documentation:
+
+  $ mvn package -Pdist,native,docs -DskipTests -Dtar
+
+Create source distribution:
+
+  $ mvn package -Psrc -DskipTests
+
+Create source and binary distributions with native code and documentation:
+
+  $ mvn package -Pdist,native,docs,src -DskipTests -Dtar
 
 ----------------------------------------------------------------------------------

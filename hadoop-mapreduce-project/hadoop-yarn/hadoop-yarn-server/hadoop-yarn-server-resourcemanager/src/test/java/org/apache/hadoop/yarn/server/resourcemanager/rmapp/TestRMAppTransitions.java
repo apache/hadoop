@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import java.util.List;
 
 import junit.framework.Assert;
 
@@ -51,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 
 import org.junit.Before;
-import org.junit.After;
 import org.junit.Test;
 
 
@@ -61,7 +59,7 @@ public class TestRMAppTransitions {
   private RMContext rmContext;
   private static int maxRetries = 4;
   private static int appId = 1;
-  private AsyncDispatcher rmDispatcher;
+//  private AsyncDispatcher rmDispatcher;
 
   // ignore all the RM application attempt events
   private static final class TestApplicationAttemptEventDispatcher implements
@@ -121,7 +119,7 @@ public class TestRMAppTransitions {
         mock(ContainerAllocationExpirer.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     this.rmContext = new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor);
+        containerAllocationExpirer, amLivelinessMonitor, null);
 
     rmDispatcher.register(RMAppAttemptEventType.class,
         new TestApplicationAttemptEventDispatcher(this.rmContext));
@@ -152,7 +150,7 @@ public class TestRMAppTransitions {
         conf, name, user,
         queue, submissionContext, clientTokenStr,
         appStore, scheduler,
-        masterService);
+        masterService, System.currentTimeMillis());
 
     testAppStartState(applicationId, user, name, queue, application);
     return application;

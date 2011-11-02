@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.ipc;
 
 import java.net.InetSocketAddress;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;

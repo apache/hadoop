@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -60,6 +61,7 @@ public class MetricsOverviewTable extends HtmlBlock {
     
     ResourceScheduler rs = rm.getResourceScheduler();
     QueueMetrics metrics = rs.getRootQueueMetrics();
+    ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
     
     int appsSubmitted = metrics.getAppsSubmitted();
     int reservedGB = metrics.getReservedGB();
@@ -67,30 +69,13 @@ public class MetricsOverviewTable extends HtmlBlock {
     int allocatedGB = metrics.getAllocatedGB();
     int containersAllocated = metrics.getAllocatedContainers();
     int totalGB = availableGB + reservedGB + allocatedGB;
-    
-    ConcurrentMap<NodeId,RMNode> nodes = rmContext.getRMNodes();
-    int totalNodes = nodes.size();
-    int lostNodes = 0;
-    int unhealthyNodes = 0;
-    int decommissionedNodes = 0;
-    for(RMNode node: nodes.values()) {
-      if(node == null || node.getState() == null) {
-        lostNodes++;
-        continue;
-      }
-      switch(node.getState()) {
-      case DECOMMISSIONED:
-        decommissionedNodes++;
-        break;
-      case LOST:
-        lostNodes++;
-        break;
-      case UNHEALTHY:
-        unhealthyNodes++;
-        break;
-      //RUNNING noop
-      }
-    }
+
+    int totalNodes = clusterMetrics.getNumNMs();
+    int lostNodes = clusterMetrics.getNumLostNMs();
+    int unhealthyNodes = clusterMetrics.getUnhealthyNMs();
+    int decommissionedNodes = clusterMetrics.getNumDecommisionedNMs();
+    int rebootedNodes = clusterMetrics.getNumRebootedNMs();
+
     
     DIV<Hamlet> div = html.div().$class("metrics");
     
@@ -106,6 +91,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Decommissioned Nodes")._().
         th().$class("ui-state-default")._("Lost Nodes")._().
         th().$class("ui-state-default")._("Unhealthy Nodes")._().
+        th().$class("ui-state-default")._("Rebooted Nodes")._().
       _().
     _().
     tbody().$class("ui-widget-content").
@@ -116,9 +102,10 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(StringUtils.byteDesc(totalGB * BYTES_IN_GB)).
         td(StringUtils.byteDesc(reservedGB * BYTES_IN_GB)).
         td().a(url("nodes"),String.valueOf(totalNodes))._(). 
-        td().a(url("nodes/DECOMMISSIONED"),String.valueOf(decommissionedNodes))._(). 
-        td().a(url("nodes/LOST"),String.valueOf(lostNodes))._().
-        td().a(url("nodes/UNHEALTHY"),String.valueOf(unhealthyNodes))._().
+        td().a(url("nodes/decommissioned"),String.valueOf(decommissionedNodes))._(). 
+        td().a(url("nodes/lost"),String.valueOf(lostNodes))._().
+        td().a(url("nodes/unhealthy"),String.valueOf(unhealthyNodes))._().
+        td().a(url("nodes/rebooted"),String.valueOf(rebootedNodes))._().
       _().
     _()._();
     

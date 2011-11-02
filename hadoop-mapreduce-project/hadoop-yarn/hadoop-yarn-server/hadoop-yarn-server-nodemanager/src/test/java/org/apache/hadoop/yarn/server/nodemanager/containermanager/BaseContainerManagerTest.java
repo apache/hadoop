@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.After;
@@ -146,9 +147,9 @@ public abstract class BaseContainerManagerTest {
     delSrvc.init(conf);
 
     exec = createContainerExecutor();
-    containerManager =
-        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
-                                 metrics, this.containerTokenSecretManager);
+    containerManager = new ContainerManagerImpl(context, exec, delSrvc,
+        nodeStatusUpdater, metrics, this.containerTokenSecretManager,
+        new ApplicationACLsManager(conf));
     containerManager.init(conf);
   }
 

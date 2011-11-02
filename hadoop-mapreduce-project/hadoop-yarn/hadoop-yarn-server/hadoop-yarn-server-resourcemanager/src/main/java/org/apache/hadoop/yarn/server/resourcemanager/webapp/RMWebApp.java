@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
 /**
@@ -43,6 +44,8 @@ public class RMWebApp extends WebApp {
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());
+      bind(ApplicationACLsManager.class).toInstance(
+          rm.getApplicationACLsManager());
     }
     route("/", RmController.class);
     route(pajoin("/nodes", NODE_STATE), RmController.class, "nodes");

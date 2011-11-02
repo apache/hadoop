@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -59,7 +58,8 @@ class AppsBlock extends HtmlBlock {
     for (RMApp app : list.apps.values()) {
       String appId = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
-      String ui = trackingUrl == null || trackingUrl.isEmpty() ? "UNASSIGNED" :
+      boolean trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
+	  String ui = trackingUrlIsNotReady ? "UNASSIGNED" :
           (app.getFinishTime() == 0 ? 
               "ApplicationMaster" : "History");
       String percent = String.format("%.1f", app.getProgress() * 100);
@@ -80,7 +80,7 @@ class AppsBlock extends HtmlBlock {
               div(_PROGRESSBAR_VALUE).
                 $style(join("width:", percent, '%'))._()._()._().
           td().
-            a(trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
+            a(trackingUrlIsNotReady ?
               "#" : join("http://", trackingUrl), ui)._().
           td(app.getDiagnostics().toString())._();
       if (list.rendering != Render.HTML && ++i >= 20) break;

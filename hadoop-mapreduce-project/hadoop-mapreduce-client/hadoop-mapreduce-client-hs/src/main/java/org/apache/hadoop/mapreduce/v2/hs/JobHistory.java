@@ -32,6 +32,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -47,6 +48,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
@@ -64,6 +66,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 
 /*
  * Loads and manages the Job history cache.
@@ -71,7 +75,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
 public class JobHistory extends AbstractService implements HistoryContext   {
 
   private static final int DEFAULT_JOBLIST_CACHE_SIZE = 20000;
-  private static final int DEFAULT_LOADEDJOB_CACHE_SIZE = 2000;
+  private static final int DEFAULT_LOADEDJOB_CACHE_SIZE = 5;
   private static final int DEFAULT_DATESTRING_CACHE_SIZE = 200000;
   private static final long DEFAULT_MOVE_THREAD_INTERVAL = 3 * 60 * 1000l; //3 minutes
   private static final int DEFAULT_MOVE_THREAD_COUNT = 3;
@@ -121,6 +125,8 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   
   //The number of jobs to maintain in the job list cache.
   private int jobListCacheSize;
+  
+  private JobACLsManager aclsMgr;
   
   //The number of loaded jobs.
   private int loadedJobCacheSize;
@@ -200,7 +206,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
           + intermediateDoneDirPath + "]", e);
     }
     
-    
+    this.aclsMgr = new JobACLsManager(conf);
     
     jobListCacheSize = conf.getInt(JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,
         DEFAULT_JOBLIST_CACHE_SIZE);
@@ -256,7 +262,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     if (startCleanerService) {
       long maxAgeOfHistoryFiles = conf.getLong(
           JHAdminConfig.MR_HISTORY_MAX_AGE_MS, DEFAULT_HISTORY_MAX_AGE);
-    cleanerScheduledExecutor = new ScheduledThreadPoolExecutor(1);
+      cleanerScheduledExecutor = new ScheduledThreadPoolExecutor(1,
+          new ThreadFactoryBuilder().setNameFormat("LogCleaner").build()
+      );
       long runInterval = conf.getLong(
           JHAdminConfig.MR_HISTORY_CLEANER_INTERVAL_MS, DEFAULT_RUN_INTERVAL);
       cleanerScheduledExecutor
@@ -594,8 +602,11 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     
     MoveIntermediateToDoneRunnable(long sleepTime, int numMoveThreads) {
       this.sleepTime = sleepTime;
+      ThreadFactory tf = new ThreadFactoryBuilder()
+        .setNameFormat("MoveIntermediateToDone Thread #%d")
+        .build();
       moveToDoneExecutor = new ThreadPoolExecutor(1, numMoveThreads, 1, 
-          TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
+          TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
       running = true;
     }
   
@@ -640,7 +651,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
       try {
         Job job = new CompletedJob(conf, metaInfo.getJobIndexInfo().getJobId(), 
             metaInfo.getHistoryFile(), true, metaInfo.getJobIndexInfo().getUser(),
-            metaInfo.getConfFile());
+            metaInfo.getConfFile(), this.aclsMgr);
         addToLoadedJobCache(job);
         return job;
       } catch (IOException e) {

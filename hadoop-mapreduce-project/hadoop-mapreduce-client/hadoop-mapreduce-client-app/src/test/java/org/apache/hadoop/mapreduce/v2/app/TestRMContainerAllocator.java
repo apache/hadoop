@@ -34,6 +34,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -44,6 +45,7 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
@@ -115,8 +117,8 @@ public class TestRMContainerAllocator {
     JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
-        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING,
-            0, 0, 0, 0, 0, 0, "jobfile"));
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0, 
+            0, 0, 0, 0, 0, 0, "jobfile", null));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -192,8 +194,8 @@ public class TestRMContainerAllocator {
     JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
-        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING,
-            0, 0, 0, 0, 0, 0, "jobfile"));
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -258,8 +260,8 @@ public class TestRMContainerAllocator {
     JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
     Job mockJob = mock(Job.class);
     when(mockJob.getReport()).thenReturn(
-        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING,
-            0, 0, 0, 0, 0, 0, "jobfile"));
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null));
     MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
         appAttemptId, mockJob);
 
@@ -340,10 +342,10 @@ public class TestRMContainerAllocator {
 
     public FakeJob(ApplicationAttemptId appAttemptID, Configuration conf,
         int numMaps, int numReduces) {
-      super(appAttemptID, conf, null, null, null, null, null, null, null,
-          null);
-      this.jobId = MRBuilderUtils
-          .newJobId(appAttemptID.getApplicationId(), 0);
+      super(MRBuilderUtils.newJobId(appAttemptID.getApplicationId(), 0),
+          appAttemptID, conf, null, null, null, null, null, null, null, null,
+          true, null, System.currentTimeMillis(), null);
+      this.jobId = getID();
       this.numMaps = numMaps;
       this.numReduces = numReduces;
     }
@@ -372,8 +374,8 @@ public class TestRMContainerAllocator {
     @Override
     public JobReport getReport() {
       return MRBuilderUtils.newJobReport(this.jobId, "job", "user",
-          JobState.RUNNING, 0, 0, this.setupProgress, this.mapProgress,
-          this.reduceProgress, this.cleanupProgress, "jobfile");
+          JobState.RUNNING, 0, 0, 0, this.setupProgress, this.mapProgress,
+          this.reduceProgress, this.cleanupProgress, "jobfile", null);
     }
   }
 
@@ -478,6 +480,106 @@ public class TestRMContainerAllocator {
     Assert.assertEquals(100.0f, app.getProgress(), 0.0);
   }
 
+  @Test
+  public void testBlackListedNodes() throws Exception {
+    
+    LOG.info("Running testBlackListedNodes");
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_AM_JOB_NODE_BLACKLISTING_ENABLE, true);
+    conf.setInt(MRJobConfig.MAX_TASK_FAILURES_PER_TRACKER, 1);
+    
+    MyResourceManager rm = new MyResourceManager(conf);
+    rm.start();
+    DrainDispatcher dispatcher = (DrainDispatcher) rm.getRMContext()
+        .getDispatcher();
+
+    // Submit the application
+    RMApp app = rm.submitApp(1024);
+    dispatcher.await();
+
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    amNodeManager.nodeHeartbeat(true);
+    dispatcher.await();
+
+    ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
+        .getAppAttemptId();
+    rm.sendAMLaunched(appAttemptId);
+    dispatcher.await();
+    
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "job", "user", JobState.RUNNING, 0,
+            0, 0, 0, 0, 0, 0, "jobfile", null));
+    MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
+        appAttemptId, mockJob);
+
+    // add resources to scheduler
+    MockNM nodeManager1 = rm.registerNode("h1:1234", 10240);
+    MockNM nodeManager2 = rm.registerNode("h2:1234", 10240);
+    MockNM nodeManager3 = rm.registerNode("h3:1234", 10240);
+    dispatcher.await();
+
+    // create the container request
+    ContainerRequestEvent event1 = createReq(jobId, 1, 1024,
+        new String[] { "h1" });
+    allocator.sendRequest(event1);
+
+    // send 1 more request with different resource req
+    ContainerRequestEvent event2 = createReq(jobId, 2, 1024,
+        new String[] { "h2" });
+    allocator.sendRequest(event2);
+
+    // send another request with different resource and priority
+    ContainerRequestEvent event3 = createReq(jobId, 3, 1024,
+        new String[] { "h3" });
+    allocator.sendRequest(event3);
+
+    // this tells the scheduler about the requests
+    // as nodes are not added, no allocations
+    List<TaskAttemptContainerAssignedEvent> assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals("No of assignments must be 0", 0, assigned.size());
+
+    // Send events to blacklist nodes h1 and h2
+    ContainerFailedEvent f1 = createFailEvent(jobId, 1, "h1", false);            
+    allocator.sendFailure(f1);
+    ContainerFailedEvent f2 = createFailEvent(jobId, 1, "h2", false);            
+    allocator.sendFailure(f2);
+
+    // update resources in scheduler
+    nodeManager1.nodeHeartbeat(true); // Node heartbeat
+    nodeManager2.nodeHeartbeat(true); // Node heartbeat
+    dispatcher.await();
+
+    assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals("No of assignments must be 0", 0, assigned.size());    
+
+    // mark h1/h2 as bad nodes
+    nodeManager1.nodeHeartbeat(false);
+    nodeManager2.nodeHeartbeat(false);
+    dispatcher.await();
+
+    assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals("No of assignments must be 0", 0, assigned.size());    
+
+    nodeManager3.nodeHeartbeat(true); // Node heartbeat
+    dispatcher.await();
+    assigned = allocator.schedule();    
+    dispatcher.await();
+        
+    Assert.assertTrue("No of assignments must be 3", assigned.size() == 3);
+    
+    // validate that all containers are assigned to h3
+    for (TaskAttemptContainerAssignedEvent assig : assigned) {
+      Assert.assertTrue("Assigned container host not correct", "h3".equals(assig
+          .getContainer().getNodeId().getHost()));
+    }
+  }
+  
   private static class MyFifoScheduler extends FifoScheduler {
 
     public MyFifoScheduler(RMContext rmContext) {
@@ -534,6 +636,19 @@ public class TestRMContainerAllocator {
         new String[] { NetworkTopology.DEFAULT_RACK });
   }
 
+  private ContainerFailedEvent createFailEvent(JobId jobId, int taskAttemptId,
+      String host, boolean reduce) {
+    TaskId taskId;
+    if (reduce) {
+      taskId = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
+    } else {
+      taskId = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
+    }
+    TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(taskId,
+        taskAttemptId);
+    return new ContainerFailedEvent(attemptId, host);    
+  }
+  
   private void checkAssignments(ContainerRequestEvent[] requests,
       List<TaskAttemptContainerAssignedEvent> assignments,
       boolean checkHostMatch) {
@@ -653,6 +768,10 @@ public class TestRMContainerAllocator {
       }
     }
 
+    public void sendFailure(ContainerFailedEvent f) {
+      super.handle(f);
+    }
+    
     // API to be used by tests
     public List<TaskAttemptContainerAssignedEvent> schedule() {
       // run the scheduler
@@ -672,6 +791,7 @@ public class TestRMContainerAllocator {
     protected void startAllocatorThread() {
       // override to NOT start thread
     }
+        
   }
 
   public static void main(String[] args) throws Exception {
@@ -681,5 +801,7 @@ public class TestRMContainerAllocator {
     t.testMapReduceScheduling();
     t.testReportedAppProgress();
     t.testReportedAppProgressWithOnlyMaps();
+    t.testBlackListedNodes();
   }
+
 }

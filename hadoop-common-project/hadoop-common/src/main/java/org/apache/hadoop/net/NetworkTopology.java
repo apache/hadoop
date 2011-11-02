@@ -45,8 +45,8 @@ public class NetworkTopology {
   public static final Log LOG = 
     LogFactory.getLog(NetworkTopology.class);
     
-  /* Inner Node represent a switch/router of a data center or rack.
-   * Different from a leave node, it has non-null children.
+  /** InnerNode represents a switch/router of a data center or rack.
+   * Different from a leaf node, it has non-null children.
    */
   private class InnerNode extends NodeBase {
     private ArrayList<Node> children=new ArrayList<Node>();
@@ -68,16 +68,16 @@ public class NetworkTopology {
       super(name, location, parent, level);
     }
         
-    /** Get its children */
+    /** @return its children */
     Collection<Node> getChildren() {return children;}
         
-    /** Return the number of children this node has */
+    /** @return the number of children this node has */
     int getNumOfChildren() {
       return children.size();
     }
         
     /** Judge if this node represents a rack 
-     * Return true if it has no child or its children are not InnerNodes
+     * @return true if it has no child or its children are not InnerNodes
      */ 
     boolean isRack() {
       if (children.isEmpty()) {
@@ -225,7 +225,11 @@ public class NetworkTopology {
       }
     } // end of remove
         
-    /** Given a node's string representation, return a reference to the node */ 
+    /** Given a node's string representation, return a reference to the node
+     * @param loc string location of the form /rack/node
+     * @return null if the node is not found or the childnode is there but
+     * not an instance of {@link InnerNode}
+     */
     private Node getLoc(String loc) {
       if (loc == null || loc.length() == 0) return this;
             
@@ -246,7 +250,12 @@ public class NetworkTopology {
     }
         
     /** get <i>leafIndex</i> leaf of this subtree 
-     * if it is not in the <i>excludedNode</i>*/
+     * if it is not in the <i>excludedNode</i>
+     *
+     * @param leafIndex an indexed leaf of the node
+     * @param excludedNode an excluded node (can be null)
+     * @return
+     */
     private Node getLeaf(int leafIndex, Node excludedNode) {
       int count=0;
       // check if the excluded node a leaf
@@ -297,9 +306,14 @@ public class NetworkTopology {
       return numOfLeaves;
     }
   } // end of InnerNode
-    
-  InnerNode clusterMap = new InnerNode(InnerNode.ROOT); // the root
-  private int numOfRacks = 0;  // rack counter
+
+  /**
+   * the root cluster map
+   */
+  InnerNode clusterMap = new InnerNode(InnerNode.ROOT);
+  /** rack counter */
+  private int numOfRacks = 0;
+  /** the lock used to manage access */
   private ReadWriteLock netlock;
     
   public NetworkTopology() {
@@ -308,8 +322,7 @@ public class NetworkTopology {
     
   /** Add a leaf node
    * Update node counter & rack counter if necessary
-   * @param node
-   *          node to be added
+   * @param node node to be added; can be null
    * @exception IllegalArgumentException if add a node to a leave 
                                          or node to be added is not a leaf
    */
@@ -342,9 +355,8 @@ public class NetworkTopology {
   }
     
   /** Remove a node
-   * Update node counter & rack counter if necessary
-   * @param node
-   *          node to be removed
+   * Update node counter and rack counter if necessary
+   * @param node node to be removed; can be null
    */ 
   public void remove(Node node) {
     if (node==null) return;
@@ -371,8 +383,7 @@ public class NetworkTopology {
        
   /** Check if the tree contains node <i>node</i>
    * 
-   * @param node
-   *          a node
+   * @param node a node
    * @return true if <i>node</i> is already in the tree; false otherwise
    */
   public boolean contains(Node node) {
@@ -380,10 +391,11 @@ public class NetworkTopology {
     netlock.readLock().lock();
     try {
       Node parent = node.getParent();
-      for(int level=node.getLevel(); parent!=null&&level>0;
-          parent=parent.getParent(), level--) {
-        if (parent == clusterMap)
+      for (int level = node.getLevel(); parent != null && level > 0;
+           parent = parent.getParent(), level--) {
+        if (parent == clusterMap) {
           return true;
+        }
       }
     } finally {
       netlock.readLock().unlock();
@@ -409,7 +421,7 @@ public class NetworkTopology {
     }
   }
     
-  /** Return the total number of racks */
+  /** @return the total number of racks */
   public int getNumOfRacks() {
     netlock.readLock().lock();
     try {
@@ -419,7 +431,7 @@ public class NetworkTopology {
     }
   }
     
-  /** Return the total number of nodes */
+  /** @return the total number of leaf nodes */
   public int getNumOfLeaves() {
     netlock.readLock().lock();
     try {
@@ -432,11 +444,11 @@ public class NetworkTopology {
   /** Return the distance between two nodes
    * It is assumed that the distance from one node to its parent is 1
    * The distance between two nodes is calculated by summing up their distances
-   * to their closest common  ancestor.
+   * to their closest common ancestor.
    * @param node1 one node
    * @param node2 another node
-   * @return the distance between node1 and node2
-   * node1 or node2 do not belong to the cluster
+   * @return the distance between node1 and node2 which is zero if they are the same
+   *  or {@link Integer#MAX_VALUE} if node1 or node2 do not belong to the cluster
    */
   public int getDistance(Node node1, Node node2) {
     if (node1 == node2) {
@@ -477,8 +489,8 @@ public class NetworkTopology {
   } 
     
   /** Check if two nodes are on the same rack
-   * @param node1 one node
-   * @param node2 another node
+   * @param node1 one node (can be null)
+   * @param node2 another node (can be null)
    * @return true if node1 and node2 are on the same rack; false otherwise
    * @exception IllegalArgumentException when either node1 or node2 is null, or
    * node1 or node2 do not belong to the cluster
@@ -622,6 +634,8 @@ public class NetworkTopology {
    * If neither local node or local rack node is found, put a random replica
    * location at position 0.
    * It leaves the rest nodes untouched.
+   * @param reader the node that wishes to read a block from one of the nodes
+   * @param nodes the list of nodes containing data for the reader
    */
   public void pseudoSortByDistance( Node reader, Node[] nodes ) {
     int tempIndex = 0;

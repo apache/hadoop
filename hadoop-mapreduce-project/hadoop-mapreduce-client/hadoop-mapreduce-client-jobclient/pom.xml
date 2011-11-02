@@ -16,17 +16,18 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${hadoop-mapreduce.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-jobclient</name>
 
   <properties>
-    <install.file>${project.artifact.file}</install.file>
     <fork.mode>always</fork.mode>
-    <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <mr.basedir>${project.parent.basedir}/../</mr.basedir>
   </properties>
 
   <dependencies>

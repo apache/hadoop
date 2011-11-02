@@ -139,7 +139,8 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(getRMContext(), getResourceScheduler(), rmAppManager) {
+    return new ClientRMService(getRMContext(), getResourceScheduler(),
+        rmAppManager, applicationACLsManager) {
       @Override
       public void start() {
         //override to not start rpc handler
@@ -202,9 +203,13 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
-  protected AdminService createAdminService() {
-    return new AdminService(getConfig(), scheduler, getRMContext(), 
-        this.nodesListManager){
+  protected AdminService createAdminService(
+      ClientRMService clientRMService, 
+      ApplicationMasterService applicationMasterService,
+      ResourceTrackerService resourceTrackerService) {
+    return new AdminService(
+        getConfig(), scheduler, getRMContext(), this.nodesListManager,
+        clientRMService, applicationMasterService, resourceTrackerService){
       @Override
       public void start() {
         //override to not start rpc handler
@@ -214,6 +219,10 @@ public class MockRM extends ResourceManager {
         // don't do anything
       }
     };
+  }
+  
+  public NodesListManager getNodesListManager() {
+    return this.nodesListManager;
   }
 
   @Override

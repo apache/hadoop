@@ -67,7 +67,6 @@ public class BlockCommand extends DatanodeCommand {
   public BlockCommand(int action, String poolId,
       List<BlockTargetPair> blocktargetlist) {
     super(action);
-
     this.poolId = poolId;
     blocks = new Block[blocktargetlist.size()]; 
     targets = new DatanodeInfo[blocks.length][];
@@ -85,12 +84,21 @@ public class BlockCommand extends DatanodeCommand {
    * @param blocks blocks related to the action
    */
   public BlockCommand(int action, String poolId, Block blocks[]) {
+    this(action, poolId, blocks, EMPTY_TARGET);
+  }
+
+  /**
+   * Create BlockCommand for the given action
+   * @param blocks blocks related to the action
+   */
+  public BlockCommand(int action, String poolId, Block[] blocks,
+      DatanodeInfo[][] targets) {
     super(action);
     this.poolId = poolId;
     this.blocks = blocks;
-    this.targets = EMPTY_TARGET;
+    this.targets = targets;
   }
-
+  
   public String getBlockPoolId() {
     return poolId;
   }

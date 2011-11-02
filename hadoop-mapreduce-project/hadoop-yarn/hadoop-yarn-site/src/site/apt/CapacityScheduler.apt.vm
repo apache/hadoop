@@ -22,7 +22,6 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 
 %{toc|section=1|fromDepth=0}
 
-
 * {Purpose} 
 
   This document describes the <<<CapacityScheduler>>>, a pluggable scheduler 
@@ -141,7 +140,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 *--------------------------------------+--------------------------------------+
 | <<<yarn.resourcemanager.scheduler.class>>> | |
 | | <<<org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.CapacityScheduler>>> |
-*--------------------------------------------+--------------------------------------------+
+*--------------------------------------+--------------------------------------+
 
   * Setting up <queues>
    

@@ -23,14 +23,17 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 
 /**
- * <p><code>QueueACL</code> enumerates the various ACLs for queues.</p>
+ * <p>
+ * <code>QueueACL</code> enumerates the various ACLs for queues.
+ * </p>
  * 
- * <p>The ACLs are one of:
- *   <ul>
- *     <li>{@link #SUBMIT_JOB} - ACL to submit jobs to the queue.</li>
- *     <li>{@link #ADMINISTER_QUEUE} - ACL to administer the queue.</li>
- *     <li>{@link #ADMINISTER_JOBS} - ACL to administer jobs in the queue.</li>
- *   </ul>
+ * <p>
+ * The ACLs are one of:
+ * <ul>
+ * <li>{@link #SUBMIT_APPLICATIONS} - ACL to submit applications to the
+ * queue.</li>
+ * <li>{@link #ADMINISTER_QUEUE} - ACL to administer the queue.</li>
+ * </ul>
  * </p>
  * 
  * @see QueueInfo
@@ -40,17 +43,12 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
 @Stable
 public enum QueueACL {
   /**
-   * ACL to submit jobs to the queue.
+   * ACL to submit applications to the queue.
    */
-  SUBMIT_JOB,
+  SUBMIT_APPLICATIONS,
   
   /**
    * ACL to administer the queue.
    */
-  ADMINISTER_QUEUE,    
-  
-  /**
-   * ACL to administer jobs in the queue.
-   */
-  ADMINISTER_JOBS;            // currently unused
+  ADMINISTER_QUEUE,
 }

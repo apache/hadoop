@@ -380,6 +380,7 @@ public class TypeConverter {
 
   public static JobStatus.State fromYarn(YarnApplicationState state) {
     switch (state) {
+    case NEW:
     case SUBMITTED:
       return State.PREP;
     case RUNNING:
@@ -425,6 +426,11 @@ public class TypeConverter {
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
     jobStatus.setStartTime(application.getStartTime());
     jobStatus.setFailureInfo(application.getDiagnostics());
+    jobStatus.setNeededMem(application.getApplicationResourceUsageReport().getNeededResources().getMemory());
+    jobStatus.setNumReservedSlots(application.getApplicationResourceUsageReport().getNumReservedContainers());
+    jobStatus.setNumUsedSlots(application.getApplicationResourceUsageReport().getNumUsedContainers());
+    jobStatus.setReservedMem(application.getApplicationResourceUsageReport().getReservedResources().getMemory());
+    jobStatus.setUsedMem(application.getApplicationResourceUsageReport().getUsedResources().getMemory());
     return jobStatus;
   }
 

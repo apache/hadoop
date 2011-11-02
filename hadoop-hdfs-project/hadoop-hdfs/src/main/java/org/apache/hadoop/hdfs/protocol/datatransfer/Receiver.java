@@ -103,7 +103,8 @@ public abstract class Receiver implements DataTransferProtocol {
         fromProto(proto.getStage()),
         proto.getPipelineSize(),
         proto.getMinBytesRcvd(), proto.getMaxBytesRcvd(),
-        proto.getLatestGenerationStamp());
+        proto.getLatestGenerationStamp(),
+        fromProto(proto.getRequestedChecksum()));
   }
 
   /** Receive {@link Op#TRANSFER_BLOCK} */

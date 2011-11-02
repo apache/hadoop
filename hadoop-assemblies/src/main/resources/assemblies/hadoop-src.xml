@@ -19,18 +19,29 @@
   xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
   <id>hadoop-src</id>
   <formats>
-    <format>dir</format>
+    <format>tar.gz</format>
   </formats>
-  <includeBaseDirectory>false</includeBaseDirectory>
+  <includeBaseDirectory>true</includeBaseDirectory>
   <fileSets>
     <fileSet>
-      <directory>${project.basedir}</directory>
-      <outputDirectory>src/</outputDirectory>
+      <directory>.</directory>
       <useDefaultExcludes>true</useDefaultExcludes>
       <excludes>
+        <exclude>.git/**</exclude>
+        <exclude>**/.gitignore</exclude>
+        <exclude>**/.svn</exclude>
+        <exclude>**/*.iws</exclude>
+        <exclude>**/*.ipr</exclude>
+        <exclude>**/*.iml</exclude>
+        <exclude>**/.classpath</exclude>
+        <exclude>**/.project</exclude>
+        <exclude>**/.settings</exclude>
+        <exclude>**/target/**</exclude>
+        <!-- until the code that does this is fixed -->
         <exclude>**/*.log</exclude>
         <exclude>**/build/**</exclude>
-        <exclude>**/target/**</exclude>
+        <exclude>**/file:/**</exclude>
+        <exclude>**/SecurityAuth.audit*</exclude>
       </excludes>
     </fileSet>
   </fileSets>

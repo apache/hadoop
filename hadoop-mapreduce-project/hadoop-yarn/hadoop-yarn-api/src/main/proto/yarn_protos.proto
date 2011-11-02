@@ -137,6 +137,14 @@ message LocalResourceProto {
   optional LocalResourceVisibilityProto visibility= 5;
 }
 
+message ApplicationResourceUsageReportProto {
+  optional int32 num_used_containers = 1;
+  optional int32 num_reserved_containers = 2;
+  optional ResourceProto used_resources = 3;
+  optional ResourceProto reserved_resources = 4;
+  optional ResourceProto needed_resources = 5;
+}
+
 message ApplicationReportProto {
   optional ApplicationIdProto applicationId = 1;
   optional string user = 2;
@@ -153,6 +161,8 @@ message ApplicationReportProto {
   optional int64 startTime = 13;
   optional int64 finishTime = 14;
   optional FinalApplicationStatusProto final_application_status = 15;
+  optional ApplicationResourceUsageReportProto app_resource_Usage = 16;
+  optional string originalTrackingUrl = 17;
 }
 
 message NodeIdProto {
@@ -208,6 +218,16 @@ message ApplicationSubmissionContextProto {
   optional ContainerLaunchContextProto am_container_spec = 6;
 }
 
+enum ApplicationAccessTypeProto {
+  APPACCESS_VIEW_APP = 1;
+  APPACCESS_MODIFY_APP = 2;
+}
+
+message ApplicationACLMapProto {
+  optional ApplicationAccessTypeProto accessType = 1;
+  optional string acl = 2 [default = " "];
+}
+
 message YarnClusterMetricsProto {
   optional int32 num_node_managers = 1;
 }
@@ -228,9 +248,8 @@ message QueueInfoProto {
 }
 
 enum QueueACLProto {
-  Q_SUBMIT_JOB = 1;
-  Q_ADMINISTER_QUEUE = 2;
-  Q_ADMINISTER_JOBS = 3;
+  QACL_SUBMIT_APPLICATIONS = 1;
+  QACL_ADMINISTER_QUEUE = 2;
 }
 
 message QueueUserACLInfoProto {
@@ -251,6 +270,7 @@ message ContainerLaunchContextProto {
   repeated StringBytesMapProto service_data = 6;
   repeated StringStringMapProto environment = 7;
   repeated string command = 8;
+  repeated ApplicationACLMapProto application_ACLs = 9;
 }
 
 message ContainerStatusProto {

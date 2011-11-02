@@ -21,8 +21,6 @@ package org.apache.hadoop.mapreduce.v2;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.Counters;
@@ -34,11 +32,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore
 public class TestUberAM extends TestMRJobs {
 
   private static final Log LOG = LogFactory.getLog(TestUberAM.class);
@@ -138,8 +135,8 @@ public class TestUberAM extends TestMRJobs {
 
     TaskCompletionEvent[] events = job.getTaskCompletionEvents(0, 2);
     Assert.assertEquals(1, events.length);
-    Assert.assertEquals(TaskCompletionEvent.Status.FAILED,
-        events[0].getStatus().FAILED);
+    Assert.assertEquals(TaskCompletionEvent.Status.TIPFAILED,
+        events[0].getStatus());
     Assert.assertEquals(JobStatus.State.FAILED, job.getJobState());
     
     //Disabling till UberAM honors MRJobConfig.MAP_MAX_ATTEMPTS

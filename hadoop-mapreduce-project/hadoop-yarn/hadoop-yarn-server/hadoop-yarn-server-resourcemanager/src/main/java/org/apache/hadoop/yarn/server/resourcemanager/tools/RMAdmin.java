@@ -19,13 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.tools;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -33,11 +33,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.admin.AdminSecurityInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 
@@ -63,6 +63,7 @@ public class RMAdmin extends Configured implements Tool {
       " [-refreshSuperUserGroupsConfiguration]" +
       " [-refreshUserToGroupsMappings]" +
       " [-refreshAdminAcls]" +
+      " [-refreshServiceAcl]" +
       " [-help [cmd]]\n";
 
     String refreshQueues =
@@ -84,6 +85,10 @@ public class RMAdmin extends Configured implements Tool {
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
     "\t\tis specified.\n";
 
+    String refreshServiceAcl = 
+        "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
+        "\t\tResoureceManager will reload the authorization policy file.\n";
+
     if ("refreshQueues".equals(cmd)) {
       System.out.println(refreshQueues);
     }  else if ("refreshNodes".equals(cmd)) {
@@ -94,11 +99,18 @@ public class RMAdmin extends Configured implements Tool {
       System.out.println(refreshSuperUserGroupsConfiguration);
     } else if ("refreshAdminAcls".equals(cmd)) {
       System.out.println(refreshAdminAcls);
+    } else if ("refreshServiceAcl".equals(cmd)) {
+      System.out.println(refreshServiceAcl);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
       System.out.println(summary);
       System.out.println(refreshQueues);
+      System.out.println(refreshNodes);
+      System.out.println(refreshUserToGroupsMappings);
+      System.out.println(refreshSuperUserGroupsConfiguration);
+      System.out.println(refreshAdminAcls);
+      System.out.println(refreshServiceAcl);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -120,6 +132,8 @@ public class RMAdmin extends Configured implements Tool {
       System.err.println("Usage: java RMAdmin" + " [-refreshSuperUserGroupsConfiguration]");
     } else if ("-refreshAdminAcls".equals(cmd)){
       System.err.println("Usage: java RMAdmin" + " [-refreshAdminAcls]");
+    } else if ("-refreshService".equals(cmd)){
+      System.err.println("Usage: java RMAdmin" + " [-refreshServiceAcl]");
     } else {
       System.err.println("Usage: java RMAdmin");
       System.err.println("           [-refreshQueues]");
@@ -127,6 +141,7 @@ public class RMAdmin extends Configured implements Tool {
       System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           [-refreshAdminAcls]");
+      System.err.println("           [-refreshServiceAcl]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -145,7 +160,11 @@ public class RMAdmin extends Configured implements Tool {
     // Create the client
     final String adminAddress =
       conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
-          YarnConfiguration.RM_ADMIN_ADDRESS);
+          YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS);
+    final InetSocketAddress addr =
+      NetUtils.createSocketAddr(adminAddress,
+        YarnConfiguration.DEFAULT_RM_ADMIN_PORT,
+        YarnConfiguration.RM_ADMIN_ADDRESS);
     final YarnRPC rpc = YarnRPC.create(conf);
     
     RMAdminProtocol adminProtocol =
@@ -153,7 +172,7 @@ public class RMAdmin extends Configured implements Tool {
         @Override
         public RMAdminProtocol run() {
           return (RMAdminProtocol) rpc.getProxy(RMAdminProtocol.class,
-              NetUtils.createSocketAddr(adminAddress), conf);
+              addr, conf);
         }
       });
 
@@ -205,6 +224,15 @@ public class RMAdmin extends Configured implements Tool {
     return 0;
   }
   
+  private int refreshServiceAcls() throws IOException {
+    // Refresh the service acls
+    RMAdminProtocol adminProtocol = createAdminProtocol();
+    RefreshServiceAclsRequest request = 
+      recordFactory.newRecordInstance(RefreshServiceAclsRequest.class);
+    adminProtocol.refreshServiceAcls(request);
+    return 0;
+  }
+  
   @Override
   public int run(String[] args) throws Exception {
     if (args.length < 1) {
@@ -219,7 +247,7 @@ public class RMAdmin extends Configured implements Tool {
     // verify that we have enough command line parameters
     //
     if ("-refreshAdminAcls".equals(cmd) || "-refreshQueues".equals(cmd) ||
-        "-refreshNodes".equals(cmd) ||
+        "-refreshNodes".equals(cmd) || "-refreshServiceAcl".equals(cmd) ||
         "-refreshUserToGroupsMappings".equals(cmd) ||
         "-refreshSuperUserGroupsConfiguration".equals(cmd)) {
       if (args.length != 1) {
@@ -240,6 +268,8 @@ public class RMAdmin extends Configured implements Tool {
         exitCode = refreshSuperUserGroupsConfiguration();
       } else if ("-refreshAdminAcls".equals(cmd)) {
         exitCode = refreshAdminAcls();
+      } else if ("-refreshServiceAcl".equals(cmd)) {
+        exitCode = refreshServiceAcls();
       } else if ("-help".equals(cmd)) {
         if (i < args.length) {
           printUsage(args[i]);

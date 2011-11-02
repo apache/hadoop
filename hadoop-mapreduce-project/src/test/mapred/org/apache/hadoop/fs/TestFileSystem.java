@@ -94,7 +94,13 @@ public class TestFileSystem extends TestCase {
     CommandFormat cf;
     cf= new CommandFormat("copyToLocal", 2,2,"crc","ignoreCrc");
     assertEquals(cf.parse(new String[] {"-get","file", "-"}, 1).get(1), "-");
-    assertEquals(cf.parse(new String[] {"-get","file","-ignoreCrc","/foo"}, 1).get(1),"/foo");
+    try {
+      cf.parse(new String[] {"-get","file","-ignoreCrc","/foo"}, 1);
+      fail("Expected parsing to fail as it should stop at first non-option");
+    }
+    catch (Exception e) {
+      // Expected
+    }  
     cf = new CommandFormat("tail", 1, 1, "f");
     assertEquals(cf.parse(new String[] {"-tail","fileName"}, 1).get(0),"fileName");
     assertEquals(cf.parse(new String[] {"-tail","-f","fileName"}, 1).get(0),"fileName");

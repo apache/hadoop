@@ -84,20 +84,23 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     //start all the components
     super.start();
     eventHandlingThread = new Thread(createThread());
+    eventHandlingThread.setName("AsyncDispatcher event handler");
     eventHandlingThread.start();
   }
 
   @Override
   public void stop() {
     stopped = true;
-    eventHandlingThread.interrupt();
-    try {
-      eventHandlingThread.join();
-    } catch (InterruptedException ie) {
-      LOG.debug("Interruped Exception while stopping", ie);
+    if (eventHandlingThread != null) {
+      eventHandlingThread.interrupt();
+      try {
+        eventHandlingThread.join();
+      } catch (InterruptedException ie) {
+        LOG.debug("Interrupted Exception while stopping", ie);
+      }
     }
 
-    //stop all the components
+    // stop all the components
     super.stop();
   }
 

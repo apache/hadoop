@@ -168,6 +168,7 @@ public class JMXJsonServlet extends HttpServlet {
           if (splitStrings.length != 2) {
             jg.writeStringField("result", "ERROR");
             jg.writeStringField("message", "query format is not as expected.");
+            jg.flush();
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
           }

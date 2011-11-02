@@ -135,6 +135,14 @@ public class TestResourceUsageEmulators {
              ? fs.getFileStatus(testPath).getModificationTime() 
              : 0;
     }
+    
+    @Override
+    public float getProgress() {
+      try {
+        return fs.exists(touchPath) ? 1.0f : 0f;
+      } catch (IOException ioe) {}
+      return 0f;
+    }
   }
   
   /**

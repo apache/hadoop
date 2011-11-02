@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -91,7 +92,8 @@ public class JobHistoryEventHandler extends AbstractService
   }
 
   /* (non-Javadoc)
-   * @see org.apache.hadoop.yarn.service.AbstractService#init(org.apache.hadoop.conf.Configuration)
+   * @see org.apache.hadoop.yarn.service.AbstractService#init(org.
+   * apache.hadoop.conf.Configuration)
    * Initializes the FileSystem and Path objects for the log and done directories.
    * Creates these directories if they do not already exist.
    */
@@ -155,14 +157,15 @@ public class JobHistoryEventHandler extends AbstractService
                 + doneDirPath
                 + "] based on conf: "
                 + MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR
-                + ". Either set to true or pre-create this directory with appropriate permissions";
+                + ". Either set to true or pre-create this directory with" +
+                " appropriate permissions";
         LOG.error(message);
         throw new YarnException(message);
       }
       }
     } catch (IOException e) {
-      LOG.error("Failed checking for the existance of history intermediate done directory: ["
-          + doneDirPath + "]");
+      LOG.error("Failed checking for the existance of history intermediate " +
+      		"done directory: [" + doneDirPath + "]");
       throw new YarnException(e);
     }
 
@@ -275,7 +278,7 @@ public class JobHistoryEventHandler extends AbstractService
    * @param jobId the jobId.
    * @throws IOException
    */
-  protected void setupEventWriter(JobId jobId, JobSubmittedEvent jse)
+  protected void setupEventWriter(JobId jobId)
       throws IOException {
     if (stagingDirPath == null) {
       LOG.error("Log Directory is null, returning");
@@ -285,9 +288,6 @@ public class JobHistoryEventHandler extends AbstractService
     MetaInfo oldFi = fileMap.get(jobId);
     Configuration conf = getConfig();
 
-    long submitTime = oldFi == null ? jse.getSubmitTime() : oldFi
-        .getJobIndexInfo().getSubmitTime();
-    
     // TODO Ideally this should be written out to the job dir
     // (.staging/jobid/files - RecoveryService will need to be patched)
     Path historyFile = JobHistoryUtils.getStagingJobHistoryFile(
@@ -301,6 +301,8 @@ public class JobHistoryEventHandler extends AbstractService
     String jobName = context.getJob(jobId).getName();
     EventWriter writer = (oldFi == null) ? null : oldFi.writer;
  
+    Path logDirConfPath =
+        JobHistoryUtils.getStagingConfFile(stagingDirPath, jobId, startCount);
     if (writer == null) {
       try {
         FSDataOutputStream out = stagingDirFS.create(historyFile, true);
@@ -312,31 +314,28 @@ public class JobHistoryEventHandler extends AbstractService
             + "[" + jobName + "]");
         throw ioe;
       }
-    }
-    
-    Path logDirConfPath = null;
-    if (conf != null) {
-      // TODO Ideally this should be written out to the job dir
-      // (.staging/jobid/files - RecoveryService will need to be patched)
-      logDirConfPath = JobHistoryUtils.getStagingConfFile(stagingDirPath, jobId,
-          startCount);
-      FSDataOutputStream jobFileOut = null;
-      try {
-        if (logDirConfPath != null) {
-          jobFileOut = stagingDirFS.create(logDirConfPath, true);
-          conf.writeXml(jobFileOut);
-          jobFileOut.close();
+      
+      //Write out conf only if the writer isn't already setup.
+      if (conf != null) {
+        // TODO Ideally this should be written out to the job dir
+        // (.staging/jobid/files - RecoveryService will need to be patched)
+        FSDataOutputStream jobFileOut = null;
+        try {
+          if (logDirConfPath != null) {
+            jobFileOut = stagingDirFS.create(logDirConfPath, true);
+            conf.writeXml(jobFileOut);
+            jobFileOut.close();
+          }
+        } catch (IOException e) {
+          LOG.info("Failed to write the job configuration file", e);
+          throw e;
         }
-      } catch (IOException e) {
-        LOG.info("Failed to write the job configuration file", e);
-        throw e;
       }
     }
-    
-    MetaInfo fi = new MetaInfo(historyFile, logDirConfPath, writer, submitTime,
+
+    MetaInfo fi = new MetaInfo(historyFile, logDirConfPath, writer,
         user, jobName, jobId);
     fi.getJobSummary().setJobId(jobId);
-    fi.getJobSummary().setJobSubmitTime(submitTime);
     fileMap.put(jobId, fi);
   }
 
@@ -368,11 +367,9 @@ public class JobHistoryEventHandler extends AbstractService
     synchronized (lock) {
 
       // If this is JobSubmitted Event, setup the writer
-      if (event.getHistoryEvent().getEventType() == EventType.JOB_SUBMITTED) {
+      if (event.getHistoryEvent().getEventType() == EventType.AM_STARTED) {
         try {
-          JobSubmittedEvent jobSubmittedEvent =
-              (JobSubmittedEvent) event.getHistoryEvent();
-          setupEventWriter(event.getJobID(), jobSubmittedEvent);
+          setupEventWriter(event.getJobID());
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
@@ -386,8 +383,11 @@ public class JobHistoryEventHandler extends AbstractService
       MetaInfo mi = fileMap.get(event.getJobID());
       try {
         HistoryEvent historyEvent = event.getHistoryEvent();
-        mi.writeEvent(historyEvent);
-        processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(), event.getJobID());
+        if (! (historyEvent instanceof NormalizedResourceEvent)) {
+          mi.writeEvent(historyEvent);
+        }
+        processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(),
+            event.getJobID());
         LOG.info("In HistoryEventHandler "
             + event.getHistoryEvent().getEventType());
       } catch (IOException e) {
@@ -396,6 +396,12 @@ public class JobHistoryEventHandler extends AbstractService
         throw new YarnException(e);
       }
 
+      if (event.getHistoryEvent().getEventType() == EventType.JOB_SUBMITTED) {
+        JobSubmittedEvent jobSubmittedEvent =
+            (JobSubmittedEvent) event.getHistoryEvent();
+        mi.getJobIndexInfo().setSubmitTime(jobSubmittedEvent.getSubmitTime());
+      }
+     
       // If this is JobFinishedEvent, close the writer and setup the job-index
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FINISHED) {
         try {
@@ -415,7 +421,8 @@ public class JobHistoryEventHandler extends AbstractService
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FAILED
           || event.getHistoryEvent().getEventType() == EventType.JOB_KILLED) {
         try {
-          JobUnsuccessfulCompletionEvent jucEvent = (JobUnsuccessfulCompletionEvent) event
+          JobUnsuccessfulCompletionEvent jucEvent = 
+              (JobUnsuccessfulCompletionEvent) event
               .getHistoryEvent();
           mi.getJobIndexInfo().setFinishTime(jucEvent.getFinishTime());
           mi.getJobIndexInfo().setNumMaps(jucEvent.getFinishedMaps());
@@ -429,14 +436,25 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  private void processEventForJobSummary(HistoryEvent event, JobSummary summary, JobId jobId) {
+  public void processEventForJobSummary(HistoryEvent event, JobSummary summary, 
+      JobId jobId) {
     // context.getJob could be used for some of this info as well.
     switch (event.getEventType()) {
     case JOB_SUBMITTED:
       JobSubmittedEvent jse = (JobSubmittedEvent) event;
       summary.setUser(jse.getUserName());
       summary.setQueue(jse.getJobQueueName());
+      summary.setJobSubmitTime(jse.getSubmitTime());
       break;
+    case NORMALIZED_RESOURCE:
+      NormalizedResourceEvent normalizedResourceEvent = 
+            (NormalizedResourceEvent) event;
+      if (normalizedResourceEvent.getTaskType() == TaskType.MAP) {
+        summary.setResourcesPerMap(normalizedResourceEvent.getMemory());
+      } else if (normalizedResourceEvent.getTaskType() == TaskType.REDUCE) {
+        summary.setResourcesPerReduce(normalizedResourceEvent.getMemory());
+      }
+      break;  
     case JOB_INITED:
       JobInitedEvent jie = (JobInitedEvent) event;
       summary.setJobLaunchTime(jie.getLaunchTime());
@@ -502,7 +520,8 @@ public class JobHistoryEventHandler extends AbstractService
 
     if (!mi.isWriterActive()) {
       throw new IOException(
-          "Inactive Writer: Likely received multiple JobFinished / JobUnsuccessful events for JobId: ["
+          "Inactive Writer: Likely received multiple JobFinished / " +
+          "JobUnsuccessful events for JobId: ["
               + jobId + "]");
     }
 
@@ -588,12 +607,13 @@ public class JobHistoryEventHandler extends AbstractService
     JobIndexInfo jobIndexInfo;
     JobSummary jobSummary;
 
-    MetaInfo(Path historyFile, Path conf, EventWriter writer, long submitTime,
+    MetaInfo(Path historyFile, Path conf, EventWriter writer, 
              String user, String jobName, JobId jobId) {
       this.historyFile = historyFile;
       this.confFile = conf;
       this.writer = writer;
-      this.jobIndexInfo = new JobIndexInfo(submitTime, -1, user, jobName, jobId, -1, -1, null);
+      this.jobIndexInfo = new JobIndexInfo(-1, -1, user, jobName, jobId, -1, -1,
+          null);
       this.jobSummary = new JobSummary();
     }
 

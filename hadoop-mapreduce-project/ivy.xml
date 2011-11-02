@@ -87,6 +87,8 @@
                rev="${yarn.version}" conf="compile->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-core" 
                rev="${yarn.version}" conf="compile->default"/>
+   <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-common" 
+               rev="${yarn.version}" conf="compile->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-yarn-common"
                rev="${yarn.version}" conf="compile->default"/>
    <dependency org="log4j" name="log4j" rev="${log4j.version}" 
@@ -148,6 +150,7 @@
    <exclude org="javax.jms"/> 
    <exclude org="javax.mail"/> 
    <exclude org="org.apache.hadoop" module="avro"/> 
+   <exclude org="org.apache.commons" module="commons-daemon"/> 
 
  </dependencies>
   

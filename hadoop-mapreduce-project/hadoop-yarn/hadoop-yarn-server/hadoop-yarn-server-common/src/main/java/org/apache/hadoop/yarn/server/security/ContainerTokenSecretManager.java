@@ -56,19 +56,19 @@ public class ContainerTokenSecretManager extends
   @Override
   public byte[] createPassword(ContainerTokenIdentifier identifier) {
     LOG.debug("Creating password for " + identifier.getContainerID()
-        + " to be run on NM " + identifier.getNmHostName() + " "
-        + this.secretkeys.get(identifier.getNmHostName()));
+        + " to be run on NM " + identifier.getNmHostAddress() + " "
+        + this.secretkeys.get(identifier.getNmHostAddress()));
     return createPassword(identifier.getBytes(),
-        this.secretkeys.get(identifier.getNmHostName()));
+        this.secretkeys.get(identifier.getNmHostAddress()));
   }
 
   @Override
   public byte[] retrievePassword(ContainerTokenIdentifier identifier)
       throws org.apache.hadoop.security.token.SecretManager.InvalidToken {
     LOG.debug("Retrieving password for " + identifier.getContainerID()
-        + " to be run on NM " + identifier.getNmHostName());
+        + " to be run on NM " + identifier.getNmHostAddress());
     return createPassword(identifier.getBytes(),
-        this.secretkeys.get(identifier.getNmHostName()));
+        this.secretkeys.get(identifier.getNmHostAddress()));
   }
 
   @Override

@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import javax.crypto.SecretKey;
@@ -102,6 +103,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class ShuffleHandler extends AbstractService 
     implements AuxServices.AuxiliaryService {
@@ -223,12 +226,21 @@ public class ShuffleHandler extends AbstractService
   public void stopApp(ApplicationId appId) {
     JobID jobId = new JobID(Long.toString(appId.getClusterTimestamp()), appId.getId());
     secretManager.removeTokenForJob(jobId.toString());
+    userRsrc.remove(jobId.toString());
   }
 
   @Override
   public synchronized void init(Configuration conf) {
+    ThreadFactory bossFactory = new ThreadFactoryBuilder()
+      .setNameFormat("ShuffleHandler Netty Boss #%d")
+      .build();
+    ThreadFactory workerFactory = new ThreadFactoryBuilder()
+      .setNameFormat("ShuffleHandler Netty Worker #%d")
+      .build();
+    
     selector = new NioServerSocketChannelFactory(
-        Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        Executors.newCachedThreadPool(bossFactory),
+        Executors.newCachedThreadPool(workerFactory));
     super.init(new Configuration(conf));
   }
 
@@ -237,9 +249,14 @@ public class ShuffleHandler extends AbstractService
   public synchronized void start() {
     Configuration conf = getConfig();
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
-    bootstrap.setPipelineFactory(new HttpPipelineFactory(conf));
+    HttpPipelineFactory pipelineFact = new HttpPipelineFactory(conf);
+    bootstrap.setPipelineFactory(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
-    accepted.add(bootstrap.bind(new InetSocketAddress(port)));
+    Channel ch = bootstrap.bind(new InetSocketAddress(port));
+    accepted.add(ch);
+    port = ((InetSocketAddress)ch.getLocalAddress()).getPort();
+    conf.set(SHUFFLE_PORT_CONFIG_KEY, Integer.toString(port));
+    pipelineFact.SHUFFLE.setPort(port);
     LOG.info(getName() + " listening on port " + port);
     super.start();
   }
@@ -292,12 +309,16 @@ public class ShuffleHandler extends AbstractService
     private final IndexCache indexCache;
     private final LocalDirAllocator lDirAlloc =
       new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS);
-    private final int port;
+    private int port;
 
     public Shuffle(Configuration conf) {
       this.conf = conf;
       indexCache = new IndexCache(new JobConf(conf));
       this.port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
+    }
+    
+    public void setPort(int port) {
+      this.port = port;
     }
 
     private List<String> splitMaps(List<String> mapq) {

@@ -241,6 +241,10 @@ public class HdfsFileStatus implements Writable {
   final public String getSymlink() {
     return DFSUtil.bytes2String(symlink);
   }
+  
+  final public byte[] getSymlinkInBytes() {
+    return symlink;
+  }
 
   //////////////////////////////////////////////////
   // Writable

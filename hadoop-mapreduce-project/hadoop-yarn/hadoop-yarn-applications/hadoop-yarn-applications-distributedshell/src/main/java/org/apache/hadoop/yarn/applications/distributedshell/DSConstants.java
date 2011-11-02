@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Constants used in both Client and Application Master
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class DSConstants {
 
   /**

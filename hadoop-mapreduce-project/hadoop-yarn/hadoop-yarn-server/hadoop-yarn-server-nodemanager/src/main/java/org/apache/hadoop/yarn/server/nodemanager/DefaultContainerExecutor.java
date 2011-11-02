@@ -18,10 +18,16 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.apache.hadoop.fs.CreateFlag.CREATE;
+import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -47,6 +53,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       .getLog(DefaultContainerExecutor.class);
 
   private final FileContext lfs;
+
+  private static final String WRAPPER_LAUNCH_SCRIPT = 
+      "default_container_executor.sh";
 
   public DefaultContainerExecutor() {
     try {
@@ -80,8 +89,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String tokenFn = String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
     lfs.util().copy(nmPrivateContainerTokensPath, tokenDst);
+    LOG.info("Copying from " + nmPrivateContainerTokensPath + " to " + tokenDst);
     lfs.setWorkingDirectory(appStorageDir);
-
+    LOG.info("CWD set to " + appStorageDir + " = " + lfs.getWorkingDirectory());
     // TODO: DO it over RPC for maintaining similarity?
     localizer.runLocalization(nmAddr);
   }
@@ -100,8 +110,9 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         ConverterUtils.toString(
             container.getContainerID().getApplicationAttemptId().
                 getApplicationId());
-    String[] sLocalDirs =
-        getConf().getStrings(YarnConfiguration.NM_LOCAL_DIRS, YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
+    String[] sLocalDirs = getConf().getStrings(
+        YarnConfiguration.NM_LOCAL_DIRS,
+        YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
     for (String sLocalDir : sLocalDirs) {
       Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
       Path userdir = new Path(usersdir, userName);
@@ -124,21 +135,47 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
     lfs.util().copy(nmPrivateTokensPath, tokenDst);
 
+    // Create new local launch wrapper script
+    Path wrapperScriptDst = new Path(containerWorkDir, WRAPPER_LAUNCH_SCRIPT);
+    DataOutputStream wrapperScriptOutStream =
+        lfs.create(wrapperScriptDst,
+            EnumSet.of(CREATE, OVERWRITE));
+
+    Path pidFile = getPidFilePath(containerId);
+    if (pidFile != null) {
+      writeLocalWrapperScript(wrapperScriptOutStream, launchDst.toUri()
+          .getPath().toString(), pidFile.toString());
+    } else {
+      LOG.info("Container " + containerIdStr
+          + " was marked as inactive. Returning terminated error");
+      return ExitCode.TERMINATED.getExitCode();
+    }
+
     // create log dir under app
     // fork script
     ShellCommandExecutor shExec = null;
     try {
       lfs.setPermission(launchDst,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
-      String[] command = 
-          new String[] { "bash", "-c", launchDst.toUri().getPath().toString() };
+      lfs.setPermission(wrapperScriptDst,
+          ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
+
+      // Setup command to run
+      String[] command = {"bash", "-c",
+          wrapperScriptDst.toUri().getPath().toString()};
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
           command,
-          new File(containerWorkDir.toUri().getPath()), 
+          new File(containerWorkDir.toUri().getPath()),
           container.getLaunchContext().getEnvironment());      // sanitized env
-      launchCommandObjs.put(containerId, shExec);
-      shExec.execute();
+      if (isContainerActive(containerId)) {
+        shExec.execute();
+      }
+      else {
+        LOG.info("Container " + containerIdStr +
+            " was marked as inactive. Returning terminated error");
+        return ExitCode.TERMINATED.getExitCode();
+      }
     } catch (IOException e) {
       if (null == shExec) {
         return -1;
@@ -151,9 +188,34 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           message));
       return exitCode;
     } finally {
-      launchCommandObjs.remove(containerId);
+      ; //
     }
     return 0;
+  }
+
+  private void writeLocalWrapperScript(DataOutputStream out,
+      String launchScriptDst, String pidFilePath) throws IOException {
+    // We need to do a move as writing to a file is not atomic
+    // Process reading a file being written to may get garbled data
+    // hence write pid to tmp file first followed by a mv
+    StringBuilder sb = new StringBuilder("#!/bin/bash\n\n");
+    sb.append("echo $$ > " + pidFilePath + ".tmp\n");
+    sb.append("/bin/mv -f " + pidFilePath + ".tmp " + pidFilePath + "\n");
+    sb.append(ContainerExecutor.isSetsidAvailable? "exec setsid" : "exec");
+    sb.append(" /bin/bash ");
+    sb.append("-c ");
+    sb.append("\"");
+    sb.append(launchScriptDst);
+    sb.append("\"\n");
+    PrintStream pout = null;
+    try {
+      pout = new PrintStream(out);
+      pout.append(sb);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
   }
 
   @Override
@@ -162,6 +224,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     final String sigpid = ContainerExecutor.isSetsidAvailable
         ? "-" + pid
         : pid;
+    LOG.debug("Sending signal " + signal.getValue() + " to pid " + sigpid
+        + " as user " + user);
     try {
       sendSignal(sigpid, Signal.NULL);
     } catch (ExitCodeException e) {
@@ -189,8 +253,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    */
   protected void sendSignal(String pid, Signal signal) throws IOException {
     ShellCommandExecutor shexec = null;
-      String[] arg = { "kill", "-" + signal.getValue(), pid };
-      shexec = new ShellCommandExecutor(arg);
+    String[] arg = { "kill", "-" + signal.getValue(), pid };
+    shexec = new ShellCommandExecutor(arg);
     shexec.execute();
   }
 
@@ -199,13 +263,18 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       throws IOException, InterruptedException {
     if (baseDirs == null || baseDirs.length == 0) {
       LOG.info("Deleting absolute path : " + subDir);
-      lfs.delete(subDir, true);
+      if (!lfs.delete(subDir, true)) {
+        //Maybe retry
+        LOG.warn("delete returned false for path: [" + subDir + "]");
+      }
       return;
     }
     for (Path baseDir : baseDirs) {
       Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
       LOG.info("Deleting path : " + del);
-      lfs.delete(del, true);
+      if (!lfs.delete(del, true)) {
+        LOG.warn("delete returned false for path: [" + del + "]");
+      }
     }
   }
 
@@ -335,12 +404,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     FsPermission appperms = new FsPermission(APPDIR_PERM);
     for (Path localDir : localDirs) {
       Path fullAppDir = getApplicationDir(localDir, user, appId);
-      if (lfs.util().exists(fullAppDir)) {
-        // this will happen on a partial execution of localizeJob. Sometimes
-        // copying job.xml to the local disk succeeds but copying job.jar might
-        // throw out an exception. We should clean up and then try again.
-        lfs.delete(fullAppDir, true);
-      }
       // create $local.dir/usercache/$user/appcache/$appId
       try {
         lfs.mkdir(fullAppDir, appperms, true);

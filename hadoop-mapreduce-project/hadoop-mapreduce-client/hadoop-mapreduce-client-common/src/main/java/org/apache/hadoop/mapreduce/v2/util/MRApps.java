@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -182,17 +183,18 @@ public class MRApps extends Apps {
       reader = new BufferedReader(new InputStreamReader(classpathFileStream));
       String cp = reader.readLine();
       if (cp != null) {
-        addToEnvironment(environment, Environment.CLASSPATH.name(), cp.trim());
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), cp.trim());
       }
       // Put the file itself on classpath for tasks.
-      addToEnvironment(
+      Apps.addToEnvironment(
           environment,
           Environment.CLASSPATH.name(),
-          thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile());
+          thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile()
+            .split("!")[0]);
 
       // Add standard Hadoop classes
       for (String c : ApplicationConstants.APPLICATION_CLASSPATH) {
-        addToEnvironment(environment, Environment.CLASSPATH.name(), c);
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c);
       }
     } finally {
       if (classpathFileStream != null) {
@@ -205,28 +207,13 @@ public class MRApps extends Apps {
     // TODO: Remove duplicates.
   }
   
-  private static final String SYSTEM_PATH_SEPARATOR = 
-      System.getProperty("path.separator");
-
-  public static void addToEnvironment(
-      Map<String, String> environment, 
-      String variable, String value) {
-    String val = environment.get(variable);
-    if (val == null) {
-      val = value;
-    } else {
-      val = val + SYSTEM_PATH_SEPARATOR + value;
-    }
-    environment.put(variable, val);
-  }
-
   public static void setClasspath(Map<String, String> environment) 
       throws IOException {
-    MRApps.addToEnvironment(
+    Apps.addToEnvironment(
         environment, 
         Environment.CLASSPATH.name(), 
         MRJobConfig.JOB_JAR);
-    MRApps.addToEnvironment(
+    Apps.addToEnvironment(
         environment, 
         Environment.CLASSPATH.name(),
         Environment.PWD.$() + Path.SEPARATOR + "*");
@@ -355,43 +342,19 @@ public class MRApps extends Apps {
     }
     return result;
   }
-
-  public static void setEnvFromInputString(Map<String, String> env,
-      String envString) {
-    if (envString != null && envString.length() > 0) {
-      String childEnvs[] = envString.split(",");
-      for (String cEnv : childEnvs) {
-        String[] parts = cEnv.split("="); // split on '='
-        String value = env.get(parts[0]);
   
-        if (value != null) {
-          // Replace $env with the child's env constructed by NM's
-          // For example: LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp
-          value = parts[1].replace("$" + parts[0], value);
-        } else {
-          // example PATH=$PATH:/tmp
-          value = System.getenv(parts[0]);
-          if (value != null) {
-            // the env key is present in the tt's env
-            value = parts[1].replace("$" + parts[0], value);
-          } else {
-            // check for simple variable substitution
-            // for e.g. ROOT=$HOME
-            String envValue = System.getenv(parts[1].substring(1)); 
-            if (envValue != null) {
-              value = envValue;
-            } else {
-              // the env key is note present anywhere .. simply set it
-              // example X=$X:/tmp or X=/tmp
-              value = parts[1].replace("$" + parts[0], "");
-            }
-          }
-        }
-        addToEnvironment(env, parts[0], value);
-      }
-    }
+  /**
+   * Add the JVM system properties necessary to configure {@link ContainerLogAppender}.
+   * @param logLevel the desired log level (eg INFO/WARN/DEBUG)
+   * @param logSize See {@link ContainerLogAppender#setTotalLogFileSize(long)}
+   * @param vargs the argument list to append to
+   */
+  public static void addLog4jSystemProperties(
+      String logLevel, long logSize, List<String> vargs) {
+    vargs.add("-Dlog4j.configuration=container-log4j.properties");
+    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "=" +
+        ApplicationConstants.LOG_DIR_EXPANSION_VAR);
+    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
+    vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
   }
-  
-
-
 }

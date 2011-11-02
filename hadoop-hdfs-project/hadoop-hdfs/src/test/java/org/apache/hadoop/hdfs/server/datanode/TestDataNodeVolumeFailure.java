@@ -324,7 +324,7 @@ public class TestDataNodeVolumeFailure {
     final String bpid = cluster.getNamesystem().getBlockPoolId();
     for(int i=0; i<dn_num; i++) {
       for(int j=0; j<=1; j++) {
-        File storageDir = MiniDFSCluster.getStorageDir(i, j);
+        File storageDir = cluster.getInstanceStorageDir(i, j);
         File dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         if(dir == null) {
           System.out.println("dir is null for dn=" + i + " and data_dir=" + j);

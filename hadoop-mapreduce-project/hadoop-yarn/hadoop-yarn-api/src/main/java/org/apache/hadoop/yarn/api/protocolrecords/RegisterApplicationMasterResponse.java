@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.yarn.api.protocolrecords;
 
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
@@ -67,4 +70,20 @@ public interface RegisterApplicationMasterResponse {
   @Private
   @Unstable
   public void setMaximumResourceCapability(Resource capability);
+
+  /**
+   * Get the <code>ApplicationACL</code>s for the application. 
+   * @return all the <code>ApplicationACL</code>s
+   */
+  @Public
+  @Stable
+  public Map<ApplicationAccessType, String> getApplicationACLs();
+
+  /**
+   * Set the <code>ApplicationACL</code>s for the application. 
+   * @param acls
+   */
+  @Private
+  @Unstable
+  public void setApplicationACLs(Map<ApplicationAccessType, String> acls);
 }

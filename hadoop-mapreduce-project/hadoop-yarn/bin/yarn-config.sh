@@ -39,6 +39,10 @@ this="$bin/$script"
 # the root of the Hadoop installation
 export YARN_HOME=`dirname "$this"`/..
 
+# Same glibc bug that discovered in Hadoop.
+# Without this you can see very large vmem settings on containers.
+export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
+
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]
 then

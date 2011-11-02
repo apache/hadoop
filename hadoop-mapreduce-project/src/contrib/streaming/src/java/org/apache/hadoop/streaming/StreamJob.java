@@ -718,7 +718,7 @@ public class StreamJob implements Tool {
     }
 
     // general MapRed job properties
-    jobConf_ = new JobConf(config_);
+    jobConf_ = new JobConf(config_, StreamJob.class);
     
     // All streaming jobs get the task timeout value
     // from the configuration settings.

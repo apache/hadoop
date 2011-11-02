@@ -1580,7 +1580,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (!finalParameters.contains(attr)) {
         properties.setProperty(attr, value);
         updatingResource.put(attr, name.toString());
-      } else {
+      } else if (!value.equals(properties.getProperty(attr))) {
         LOG.warn(name+":an attempt to override final parameter: "+attr
             +";  Ignoring.");
       }

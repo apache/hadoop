@@ -23,4 +23,6 @@ public interface NMWebParams {
   String APPLICATION_ID = "nm.appId";
   String CONTAINER_ID = "nm.containerId";
   String CONTAINER_LOG_TYPE= "nm.containerLogType";
+  String ENTITY_STRING = "nm.entityString";
+  String APP_OWNER = "nm.appOwner";
 }

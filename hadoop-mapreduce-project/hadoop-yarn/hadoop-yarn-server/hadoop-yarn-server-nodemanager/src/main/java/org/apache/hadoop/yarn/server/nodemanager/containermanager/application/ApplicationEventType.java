@@ -22,6 +22,7 @@ public enum ApplicationEventType {
 
   // Source: ContainerManager
   INIT_APPLICATION,
+  INIT_CONTAINER,
   FINISH_APPLICATION,
 
   // Source: ResourceLocalizationService
@@ -31,6 +32,6 @@ public enum ApplicationEventType {
   // Source: Container
   APPLICATION_CONTAINER_FINISHED,
 
-  // Source: LogAggregationService.
-  APPLICATION_FINISHED,
+  // Source: Log Handler
+  APPLICATION_LOG_HANDLING_FINISHED
 }

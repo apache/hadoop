@@ -72,10 +72,19 @@ public class JournalSet implements JournalManager {
     /**
      * Closes the stream, also sets it to null.
      */
-    public void close() throws IOException {
+    public void closeStream() throws IOException {
       if (stream == null) return;
       stream.close();
       stream = null;
+    }
+
+    /**
+     * Close the Journal and Stream
+     */
+    public void close() throws IOException {
+      closeStream();
+
+      journal.close();
     }
     
     /**
@@ -145,13 +154,23 @@ public class JournalSet implements JournalManager {
       @Override
       public void apply(JournalAndStream jas) throws IOException {
         if (jas.isActive()) {
-          jas.close();
+          jas.closeStream();
           jas.getManager().finalizeLogSegment(firstTxId, lastTxId);
         }
       }
     }, "finalize log segment " + firstTxId + ", " + lastTxId);
   }
-  
+   
+  @Override
+  public void close() throws IOException {
+    mapJournalsAndReportErrors(new JournalClosure() {
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        jas.close();
+      }
+    }, "close journal");
+  }
+
   
   /**
    * Find the best editlog input stream to read from txid.
@@ -332,7 +351,7 @@ public class JournalSet implements JournalManager {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
         public void apply(JournalAndStream jas) throws IOException {
-          jas.close();
+          jas.closeStream();
         }
       }, "close");
     }

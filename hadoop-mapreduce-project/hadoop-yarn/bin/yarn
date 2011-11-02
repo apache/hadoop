@@ -24,12 +24,6 @@
 #
 #   YARN_CLASSPATH Extra Java CLASSPATH entries.
 #
-#   YARN_USER_CLASSPATH_FIRST      When defined, the YARN_CLASSPATH is 
-#                                    added in the beginning of the global
-#                                    classpath. Can be defined, for example,
-#                                    by doing 
-#                                    export YARN_USER_CLASSPATH_FIRST=true
-#
 #   YARN_HEAPSIZE  The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
 #
@@ -59,7 +53,7 @@ esac
 
 # if no args specified, show usage
 if [ $# = 0 ]; then
-  echo "Usage: hadoop [--config confdir] COMMAND"
+  echo "Usage: yarn [--config confdir] COMMAND"
   echo "where COMMAND is one of:"
   echo "  resourcemanager      run the ResourceManager" 
   echo "  nodemanager          run a nodemanager on each slave" 
@@ -107,10 +101,14 @@ if [ "$YARN_HEAPSIZE" != "" ]; then
 fi
 
 # CLASSPATH initially contains $HADOOP_CONF_DIR & $YARN_CONF_DIR
-CLASSPATH="${HADOOP_CONF_DIR}:${YARN_CONF_DIR}"
-if [ "$YARN_USER_CLASSPATH_FIRST" != "" ] && [ "$YARN_CLASSPATH" != "" ] ; then
-  CLASSPATH=${CLASSPATH}:${YARN_CLASSPATH}
+if [ ! -d "$HADOOP_CONF_DIR" ]; then
+  echo No HADOOP_CONF_DIR set. 
+  echo Please specify it either in yarn-env.sh or in the environment.
+  exit 1
 fi
+
+CLASSPATH="${HADOOP_CONF_DIR}:${YARN_CONF_DIR}"
+CLASSPATH=${CLASSPATH}:${YARN_CLASSPATH}
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH
@@ -147,12 +145,21 @@ fi
 IFS=
 
 # add hadoop-common libs to CLASSPATH
+if [ ! -d "$HADOOP_COMMON_HOME" ]; then
+  echo No HADOOP_COMMON_HOME set. 
+  echo Please specify it either in yarn-env.sh or in the environment.
+  exit 1
+fi
 
 CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common'/*'
 CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common/lib'/*'
 
 # add hadoop-hdfs libs to CLASSPATH
-
+if [ ! -d "$HADOOP_HDFS_HOME" ]; then
+  echo No HADOOP_HDFS_HOME set. 
+  echo Please specify it either in yarn-env.sh or in the environment.
+  exit 1
+fi
 CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs'/*'
 CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib'/*'
 
@@ -168,6 +175,8 @@ fi
 if [ "$YARN_LOGFILE" = "" ]; then
   YARN_LOGFILE='yarn.log'
 fi
+
+YARN_JOB_HISTORYSERVER_OPTS="-Dmapred.jobsummary.logger=${YARN_JHS_LOGGER:-INFO,console}"
 
 # restore ordinary behaviour
 unset IFS
@@ -197,6 +206,9 @@ elif [ "$COMMAND" = "nodemanager" ] ; then
 elif [ "$COMMAND" = "historyserver" ] ; then
   CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
   YARN_OPTS="$YARN_OPTS $YARN_JOB_HISTORYSERVER_OPTS"
+elif [ "$COMMAND" = "proxyserver" ] ; then
+  CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
+  YARN_OPTS="$YARN_OPTS $YARN_PROXYSERVER_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS=org.apache.hadoop.util.VersionInfo
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"

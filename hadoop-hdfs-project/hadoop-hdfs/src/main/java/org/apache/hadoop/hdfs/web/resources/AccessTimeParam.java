@@ -31,7 +31,7 @@ public class AccessTimeParam extends LongParam {
    * @param value the parameter value.
    */
   public AccessTimeParam(final Long value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, -1L, null);
   }
 
   /**

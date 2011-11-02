@@ -30,7 +30,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 @InterfaceStability.Unstable
 public class DelegationTokenIdentifier 
     extends AbstractDelegationTokenIdentifier {
-  static final Text MAPREDUCE_DELEGATION_KIND = 
+  public static final Text MAPREDUCE_DELEGATION_KIND = 
     new Text("MAPREDUCE_DELEGATION_TOKEN");
 
   /**

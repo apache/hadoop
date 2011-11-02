@@ -23,4 +23,8 @@ public interface RegistrationResponse {
   public abstract ByteBuffer getSecretKey();
   
   public abstract void setSecretKey(ByteBuffer secretKey);
+  
+  public abstract NodeAction getNodeAction();
+  
+  public abstract void setNodeAction(NodeAction nodeAction);
 }

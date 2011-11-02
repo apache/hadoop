@@ -39,14 +39,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -149,34 +152,31 @@ public class DelegationTokenFetcher {
                 DataInputStream in = new DataInputStream(
                     new ByteArrayInputStream(token.getIdentifier()));
                 id.readFields(in);
-                if(LOG.isDebugEnabled()) {
-                  LOG.debug("Token (" + id + ") for " + token.getService());
+                System.out.println("Token (" + id + ") for " + 
+                                   token.getService());
+              }
+            } else if (cancel) {
+              for(Token<?> token: readTokens(tokenFile, conf)) {
+                if (token.isManaged()) {
+                  token.cancel(conf);
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("Cancelled token for " + token.getService());
+                  }
                 }
               }
-              return null;
-            }
-            
-            if (webUrl != null) {
-              if (renew) {
-                long result;
-                for (Token<?> token : readTokens(tokenFile, conf)) {
-                  result = renewDelegationToken(webUrl,
-                      (Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                	  LOG.debug("Renewed token via " + webUrl + " for "
-                          + token.getService() + " until: " + new Date(result));
+            } else if (renew) {
+              for (Token<?> token : readTokens(tokenFile, conf)) {
+                if (token.isManaged()) {
+                  long result = token.renew(conf);
+                  if (LOG.isDebugEnabled()) {
+                    LOG.debug("Renewed token for " + token.getService()
+                        + " until: " + new Date(result));
                   }
                 }
-              } else if (cancel) {
-                for (Token<?> token : readTokens(tokenFile, conf)) {
-                  cancelDelegationToken(webUrl,
-                      (Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                    LOG.debug("Cancelled token via " + webUrl + " for "
-                	    + token.getService());
-                  }
-                }
-              } else {
+              }
+            } else {
+              // otherwise we are fetching
+              if (webUrl != null) {
                 Credentials creds = getDTfromRemote(webUrl, renewer);
                 creds.writeTokenStorageFile(tokenFile, conf);
                 for (Token<?> token : creds.getAllTokens()) {
@@ -185,29 +185,8 @@ public class DelegationTokenFetcher {
                         + token.getService() + " into " + tokenFile);
                   }
                 }
-              }
-            } else {
-              FileSystem fs = FileSystem.get(conf);
-              if (cancel) {
-                for (Token<?> token : readTokens(tokenFile, conf)) {
-                  ((DistributedFileSystem) fs)
-                      .cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                    LOG.debug("Cancelled token for "
-                        + token.getService());
-                  }
-                }
-              } else if (renew) {
-                long result;
-                for (Token<?> token : readTokens(tokenFile, conf)) {
-                  result = ((DistributedFileSystem) fs)
-                      .renewDelegationToken((Token<DelegationTokenIdentifier>) token);
-                  if(LOG.isDebugEnabled()) {
-                    LOG.debug("Renewed token for " + token.getService()
-                        + " until: " + new Date(result));
-                  }
-                }
               } else {
+                FileSystem fs = FileSystem.get(conf);
                 Token<?> token = fs.getDelegationToken(renewer);
                 Credentials cred = new Credentials();
                 cred.addToken(token.getService(), token);
@@ -230,8 +209,9 @@ public class DelegationTokenFetcher {
     try {
       StringBuffer url = new StringBuffer();
       if (renewer != null) {
-        url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC).append("?").
-        append(GetDelegationTokenServlet.RENEWER).append("=").append(renewer);
+        url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC)
+           .append("?").append(GetDelegationTokenServlet.RENEWER).append("=")
+           .append(renewer);
       } else {
         url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC);
       }
@@ -248,6 +228,12 @@ public class DelegationTokenFetcher {
       Credentials ts = new Credentials();
       dis = new DataInputStream(in);
       ts.readFields(dis);
+      for(Token<?> token: ts.getAllTokens()) {
+        token.setKind(HftpFileSystem.TOKEN_KIND);
+        token.setService(new Text(SecurityUtil.buildDTServiceName
+                                   (remoteURL.toURI(), 
+                                    DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT)));
+      }
       return ts;
     } catch (Exception e) {
       throw new IOException("Unable to obtain remote token", e);
@@ -295,7 +281,8 @@ public class DelegationTokenFetcher {
 
       IOUtils.cleanup(LOG, in);
       if(e!=null) {
-        LOG.info("rethrowing exception from HTTP request: " + e.getLocalizedMessage());
+        LOG.info("rethrowing exception from HTTP request: " + 
+                 e.getLocalizedMessage());
         throw e;
       }
       throw ie;
@@ -383,7 +370,8 @@ public class DelegationTokenFetcher {
 
       IOUtils.cleanup(LOG, in);
       if(e!=null) {
-        LOG.info("rethrowing exception from HTTP request: " + e.getLocalizedMessage());
+        LOG.info("rethrowing exception from HTTP request: " + 
+                 e.getLocalizedMessage());
         throw e;
       }
       throw ie;

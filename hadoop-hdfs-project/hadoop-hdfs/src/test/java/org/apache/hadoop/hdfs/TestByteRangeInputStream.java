@@ -35,28 +35,29 @@ import org.apache.hadoop.hdfs.ByteRangeInputStream.URLOpener;
 import org.junit.Test;
 
 class MockHttpURLConnection extends HttpURLConnection {
-  private int responseCode = -1;
-  URL m;
-
   public MockHttpURLConnection(URL u) {
     super(u);
-    m = u;
   }
   
+  @Override
   public boolean usingProxy(){
     return false;
   }
   
+  @Override
   public void disconnect() {
   }
   
-  public void connect() throws IOException {
+  @Override
+  public void connect() {
   }
   
+  @Override
   public InputStream getInputStream() throws IOException {
     return new ByteArrayInputStream("asdf".getBytes());
   } 
 
+  @Override
   public URL getURL() {
     URL u = null;
     try {
@@ -67,6 +68,7 @@ class MockHttpURLConnection extends HttpURLConnection {
     return u;
   }
   
+  @Override
   public int getResponseCode() {
     if (responseCode != -1) {
       return responseCode;
@@ -82,10 +84,45 @@ class MockHttpURLConnection extends HttpURLConnection {
   public void setResponseCode(int resCode) {
     responseCode = resCode;
   }
-
 }
 
 public class TestByteRangeInputStream {
+  @Test
+  public void testRemoveOffset() throws IOException {
+    { //no offset
+      String s = "http://test/Abc?Length=99";
+      assertEquals(s, ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
+    }
+
+    { //no parameters
+      String s = "http://test/Abc";
+      assertEquals(s, ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
+    }
+
+    { //offset as first parameter
+      String s = "http://test/Abc?offset=10&Length=99";
+      assertEquals("http://test/Abc?Length=99",
+          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
+    }
+
+    { //offset as second parameter
+      String s = "http://test/Abc?op=read&OFFset=10&Length=99";
+      assertEquals("http://test/Abc?op=read&Length=99",
+          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
+    }
+
+    { //offset as last parameter
+      String s = "http://test/Abc?Length=99&offset=10";
+      assertEquals("http://test/Abc?Length=99",
+          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
+    }
+
+    { //offset as the only parameter
+      String s = "http://test/Abc?offset=10";
+      assertEquals("http://test/Abc",
+          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
+    }
+  }
   
   @Test
   public void testByteRange() throws IOException {

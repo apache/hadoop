@@ -21,6 +21,8 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
+import org.apache.hadoop.hdfs.protocolR23Compatible.JournalWireProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -33,6 +35,17 @@ import org.apache.hadoop.security.KerberosInfo;
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
 public interface JournalProtocol extends VersionedProtocol {
+  /**
+   * 
+   * This class is used by both the Namenode (client) and BackupNode (server) 
+   * to insulate from the protocol serialization.
+   * 
+   * If you are adding/changing DN's interface then you need to 
+   * change both this class and ALSO
+   * {@link JournalWireProtocol}.
+   * These changes need to be done in a compatible fashion as described in 
+   * {@link ClientNamenodeWireProtocol}
+   */
   public static final long versionID = 1L;
 
   /**

@@ -1232,49 +1232,28 @@
            </li>
          
            <li>
-           <code>mapreduce.{map|reduce}.ulimit</code>: The slaves where
-           tasks are run could be configured with a ulimit value that
-           applies a limit to every process that is launched on the slave.
-           If the task, or any child that the task launches (like in
-           streaming), requires more than the configured limit, this option
-           must be used. The value is given in kilobytes. For example, to
-           increase the ulimit to 1G, the option should be set to 1048576.
-           Note that this value is a per process limit. Since it applies 
-           to the JVM as well, the heap space given to the JVM through 
-           the <code>mapreduce.{map|reduce}.java.opts</code> should be less
-           than the value configured for the ulimit. Otherwise the JVM
-           will not start.
-           </li>
-           
-           <li>
-           <code>mapreduce.{map|reduce}.memory.mb</code>: In some 
-           environments, administrators might have configured a total limit
-           on the virtual memory used by the entire process tree for a task, 
-           including all processes launched recursively by the task or 
-           its children, like in streaming. More details about this can be
-           found in the section on 
-           <a href="ext:cluster-setup/ConfiguringMemoryParameters">
-           Monitoring Task Memory Usage</a> in the Cluster SetUp guide.
-           If a task requires more virtual memory for its entire tree, 
-           this option 
-           must be used. The value is given in MB. For example, to set 
+           <code>mapreduce.{map|reduce}.memory.mb</code>:
+           This parameter configures how many megabytes of physical memory
+           the job requires for its map and reduce tasks. It must be configured
+           to be slightly larger than the configured Java heap size above,
+           to account for the fact that the JVM uses physical memory beyond
+           just the heap. An overhead of 20% to 30% is usually sufficient.
+           <br/>
+           Note that, the smaller the amount of memory specified for tasks
+           in this configuration, the larger the number of tasks that
+           can be run in parallel.<br/>
+
+           The value is given in MB. For example, to set 
            the limit to 1G, the option should be set to 1024. Note that this 
            value does not automatically influence the per process ulimit or 
            heap space. Hence, you may need to set those parameters as well 
            (as described above) in order to give your tasks the right amount 
            of memory.
+           <br/>
+           If the amount of physical memory used by your task exceeds the
+           configured value, the NodeManager will automatically kill the task.
            </li>
           
-           <li>
-           <code>mapreduce.{map|reduce}.memory.physical.mb</code>: 
-           This parameter is similar to 
-           <code>mapreduce.{map|reduce}.memory.mb</code>, except it specifies
-           how much physical memory is required by a task for its entire
-           tree of processes. The parameter is applicable if administrators
-           have configured a total limit on the physical memory used by
-           all MapReduce tasks.
-           </li>
- 
          </ul>
          
          <p>
@@ -1297,7 +1276,7 @@
          <p>
          Note: The memory related configuration options described above 
          are used only for configuring the launched child tasks from the 
-         tasktracker. Configuring the memory options for daemons is documented 
+         NodeManager. Configuring the memory options for daemons is documented 
          under
          <a href="ext:cluster-setup/ConfiguringEnvironmentHadoopDaemons">
          Configuring the Environment of the Hadoop Daemons</a> (Cluster Setup).

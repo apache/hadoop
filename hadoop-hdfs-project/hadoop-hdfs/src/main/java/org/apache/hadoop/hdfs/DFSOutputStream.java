@@ -1033,9 +1033,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         // send the request
         new Sender(out).writeBlock(block, accessToken, dfsClient.clientName,
             nodes, null, recoveryFlag? stage.getRecoveryStage() : stage, 
-            nodes.length, block.getNumBytes(), bytesSent, newGS);
-        checksum.writeHeader(out);
-        out.flush();
+            nodes.length, block.getNumBytes(), bytesSent, newGS, checksum);
 
         // receive ack for connect
         BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(

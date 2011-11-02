@@ -18,6 +18,7 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
@@ -34,7 +35,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
 import sun.security.jgss.krb5.Krb5Util;
@@ -313,17 +316,23 @@ public class SecurityUtil {
    * @param conf configuration object
    * @return the KerberosInfo or null if it has no KerberosInfo defined
    */
-  public static KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
-    for(SecurityInfo provider: testProviders) {
-      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
-      if (result != null) {
-        return result;
+  public static KerberosInfo 
+  getKerberosInfo(Class<?> protocol, Configuration conf) {
+    synchronized (testProviders) {
+      for(SecurityInfo provider: testProviders) {
+        KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }
       }
     }
-    for(SecurityInfo provider: securityInfoProviders) {
-      KerberosInfo result = provider.getKerberosInfo(protocol, conf);
-      if (result != null) {
-        return result;
+    
+    synchronized (securityInfoProviders) {
+      for(SecurityInfo provider: securityInfoProviders) {
+        KerberosInfo result = provider.getKerberosInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }
       }
     }
     return null;
@@ -337,19 +346,43 @@ public class SecurityUtil {
    * @return the TokenInfo or null if it has no KerberosInfo defined
    */
   public static TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    for(SecurityInfo provider: testProviders) {
-      TokenInfo result = provider.getTokenInfo(protocol, conf);
-      if (result != null) {
-        return result;
-      }      
-    }
-    for(SecurityInfo provider: securityInfoProviders) {
-      TokenInfo result = provider.getTokenInfo(protocol, conf);
-      if (result != null) {
-        return result;
+    synchronized (testProviders) {
+      for(SecurityInfo provider: testProviders) {
+        TokenInfo result = provider.getTokenInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }      
       }
-    } 
+    }
+    
+    synchronized (securityInfoProviders) {
+      for(SecurityInfo provider: securityInfoProviders) {
+        TokenInfo result = provider.getTokenInfo(protocol, conf);
+        if (result != null) {
+          return result;
+        }
+      } 
+    }
+    
     return null;
   }
 
+  /**
+   * Set the given token's service to the format expected by the RPC client 
+   * @param token a delegation token
+   * @param addr the socket for the rpc connection
+   */
+  public static void setTokenService(Token<?> token, InetSocketAddress addr) {
+    token.setService(buildTokenService(addr));
+  }
+  
+  /**
+   * Construct the service key for a token
+   * @param addr InetSocketAddress of remote connection with a token
+   * @return "ip:port"
+   */
+  public static Text buildTokenService(InetSocketAddress addr) {
+    String host = addr.getAddress().getHostAddress();
+    return new Text(host + ":" + addr.getPort());
+  }
 }

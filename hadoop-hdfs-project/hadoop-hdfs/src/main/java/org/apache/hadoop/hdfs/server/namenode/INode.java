@@ -304,7 +304,6 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    * Always set the last modification time of inode.
    */
   void setModificationTimeForce(long modtime) {
-    assert !isDirectory();
     this.modificationTime = modtime;
   }
 

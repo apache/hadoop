@@ -262,16 +262,17 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     gcsRequest.setContainerId(cId);
     ContainerStatus containerStatus =
         containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(ExitCode.KILLED.getExitCode(),
+    Assert.assertEquals(ExitCode.TERMINATED.getExitCode(),
         containerStatus.getExitStatus());
     String expectedMsgPattern =
         "Container \\[pid=" + pid + ",containerID=" + cId
-            + "\\] is running beyond memory-limits. Current usage : "
-            + "[0-9]*bytes. Limit : [0-9]*"
-            + "bytes. Killing container. \nDump of the process-tree for "
-            + cId + " : \n";
+            + "\\] is running beyond virtual memory limits. Current usage: "
+            + "[0-9.]+m?b of [0-9.]+m?b physical memory used; "
+            + "[0-9.]+m?b of [0-9.]+m?b virtual memory used. "
+            + "Killing container.\nDump of the process-tree for "
+            + cId + " :\n";
     Pattern pat = Pattern.compile(expectedMsgPattern);
-    Assert.assertEquals("Expected message patterns is: " + expectedMsgPattern
+    Assert.assertEquals("Expected message pattern is: " + expectedMsgPattern
         + "\n\nObserved message is: " + containerStatus.getDiagnostics(),
         true, pat.matcher(containerStatus.getDiagnostics()).find());
 

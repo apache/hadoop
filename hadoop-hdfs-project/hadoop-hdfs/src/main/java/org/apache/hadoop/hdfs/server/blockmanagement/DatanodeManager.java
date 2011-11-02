@@ -50,8 +50,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
@@ -78,7 +79,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class DatanodeManager {
   static final Log LOG = LogFactory.getLog(DatanodeManager.class);
 
-  private final FSNamesystem namesystem;
+  private final Namesystem namesystem;
   private final BlockManager blockManager;
 
   private final HeartbeatManager heartbeatManager;
@@ -124,12 +125,12 @@ public class DatanodeManager {
   final int blockInvalidateLimit;
   
   DatanodeManager(final BlockManager blockManager,
-      final FSNamesystem namesystem, final Configuration conf
+      final Namesystem namesystem, final Configuration conf
       ) throws IOException {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
 
-    this.heartbeatManager = new HeartbeatManager(namesystem, conf);
+    this.heartbeatManager = new HeartbeatManager(namesystem, blockManager, conf);
 
     this.hostsReader = new HostsFileReader(
         conf.get(DFSConfigKeys.DFS_HOSTS, ""),
@@ -163,7 +164,8 @@ public class DatanodeManager {
   private Daemon decommissionthread = null;
 
   void activate(final Configuration conf) {
-    this.decommissionthread = new Daemon(new DecommissionManager(namesystem).new Monitor(
+    final DecommissionManager dm = new DecommissionManager(namesystem, blockManager);
+    this.decommissionthread = new Daemon(dm.new Monitor(
         conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 
                     DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_DEFAULT),
         conf.getInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_NODES_PER_INTERVAL_KEY, 
@@ -859,7 +861,7 @@ public class DatanodeManager {
         try {
           nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredNodeException e) {
-          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
+          return new DatanodeCommand[]{RegisterCommand.REGISTER};
         }
         
         // Check if this datanode should actually be shutdown instead. 
@@ -869,7 +871,7 @@ public class DatanodeManager {
         }
          
         if (nodeinfo == null || !nodeinfo.isAlive) {
-          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
+          return new DatanodeCommand[]{RegisterCommand.REGISTER};
         }
 
         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,

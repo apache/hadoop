@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.util.DataChecksum;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -86,9 +87,9 @@ public class TestDiskError {
     cluster.waitActive();
     final int dnIndex = 0;
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = MiniDFSCluster.getStorageDir(dnIndex, 0);
+    File storageDir = cluster.getInstanceStorageDir(dnIndex, 0);
     File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = MiniDFSCluster.getStorageDir(dnIndex, 1);
+    storageDir = cluster.getInstanceStorageDir(dnIndex, 1);
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     try {
       // make the data directory of the first datanode to be readonly
@@ -140,14 +141,13 @@ public class TestDiskError {
     // write the header.
     DataOutputStream out = new DataOutputStream(s.getOutputStream());
 
+    DataChecksum checksum = DataChecksum.newDataChecksum(
+        DataChecksum.CHECKSUM_CRC32, 512);
     new Sender(out).writeBlock(block.getBlock(),
         BlockTokenSecretManager.DUMMY_TOKEN, "",
         new DatanodeInfo[0], null,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L);
-
-    // write check header
-    out.writeByte( 1 );
-    out.writeInt( 512 );
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 1, 0L, 0L, 0L,
+        checksum);
     out.flush();
 
     // close the connection before sending the content of the block
@@ -155,9 +155,9 @@ public class TestDiskError {
 
     // the temporary block & meta files should be deleted
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    File storageDir = MiniDFSCluster.getStorageDir(sndNode, 0);
+    File storageDir = cluster.getInstanceStorageDir(sndNode, 0);
     File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
-    storageDir = MiniDFSCluster.getStorageDir(sndNode, 1);
+    storageDir = cluster.getInstanceStorageDir(sndNode, 1);
     File dir2 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     while (dir1.listFiles().length != 0 || dir2.listFiles().length != 0) {
       Thread.sleep(100);

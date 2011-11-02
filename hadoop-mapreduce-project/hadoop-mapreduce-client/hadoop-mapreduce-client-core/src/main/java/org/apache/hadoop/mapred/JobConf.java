@@ -1649,7 +1649,7 @@ public class JobConf extends Configuration {
    * @see #setJobEndNotificationURI(String)
    */
   public String getJobEndNotificationURI() {
-    return get(JobContext.END_NOTIFICATION_URL);
+    return get(JobContext.MR_JOB_END_NOTIFICATION_URL);
   }
 
   /**
@@ -1669,7 +1669,7 @@ public class JobConf extends Configuration {
    *       JobCompletionAndChaining">Job Completion and Chaining</a>
    */
   public void setJobEndNotificationURI(String uri) {
-    set(JobContext.END_NOTIFICATION_URL, uri);
+    set(JobContext.MR_JOB_END_NOTIFICATION_URL, uri);
   }
 
   /**

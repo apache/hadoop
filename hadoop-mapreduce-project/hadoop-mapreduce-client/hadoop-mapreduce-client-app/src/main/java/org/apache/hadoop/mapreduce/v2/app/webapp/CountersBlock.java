@@ -119,11 +119,16 @@ public class CountersBlock extends HtmlBlock {
       for (Counter counter : g.getAllCounters().values()) {
         // Ditto
         TR<TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupRow = group.
-          tr().
-            td().$title(counter.getName()).
+          tr();
+          if (mg == null && rg == null) {
+            groupRow.td().$title(counter.getName())._(counter.getDisplayName()).
+            _();
+          } else {
+            groupRow.td().$title(counter.getName()).
               a(url(urlBase,urlId,g.getName(), 
                   counter.getName()), counter.getDisplayName()).
             _();
+          }
         if (map != null) {
           Counter mc = mg == null ? null : mg.getCounter(counter.getName());
           Counter rc = rg == null ? null : rg.getCounter(counter.getName());
@@ -168,12 +173,11 @@ public class CountersBlock extends HtmlBlock {
     }
     // Get all types of counters
     Map<TaskId, Task> tasks = job.getTasks();
-    total = JobImpl.newCounters();
+    total = job.getCounters();
     map = JobImpl.newCounters();
     reduce = JobImpl.newCounters();
     for (Task t : tasks.values()) {
       Counters counters = t.getCounters();
-      JobImpl.incrAllCounters(total, counters);
       switch (t.getType()) {
         case MAP:     JobImpl.incrAllCounters(map, counters);     break;
         case REDUCE:  JobImpl.incrAllCounters(reduce, counters);  break;

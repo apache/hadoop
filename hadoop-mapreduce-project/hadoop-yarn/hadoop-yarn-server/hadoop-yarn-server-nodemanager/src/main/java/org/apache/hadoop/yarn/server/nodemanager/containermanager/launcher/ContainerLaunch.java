@@ -27,11 +27,11 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,11 +45,14 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
@@ -57,14 +60,18 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerLaunch implements Callable<Integer> {
 
   private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
 
-  public static final String CONTAINER_SCRIPT = "task.sh";
+  public static final String CONTAINER_SCRIPT = "launch_container.sh";
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
+
+  private static final String PID_FILE_NAME_FMT = "%s.pid";
 
   private final Dispatcher dispatcher;
   private final ContainerExecutor exec;
@@ -72,6 +79,14 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Container container;
   private final Configuration conf;
   private final LocalDirAllocator logDirsSelector;
+  
+  private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
+  private volatile AtomicBoolean completed = new AtomicBoolean(false);
+
+  private long sleepDelayBeforeSigKill = 250;
+  private long maxKillWaitTime = 2000;
+
+  private Path pidFilePath = null;
 
   public ContainerLaunch(Configuration configuration, Dispatcher dispatcher,
       ContainerExecutor exec, Application app, Container container) {
@@ -81,6 +96,12 @@ public class ContainerLaunch implements Callable<Integer> {
     this.container = container;
     this.dispatcher = dispatcher;
     this.logDirsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
+    this.sleepDelayBeforeSigKill =
+        conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
+            YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS);
+    this.maxKillWaitTime =
+        conf.getLong(YarnConfiguration.NM_PROCESS_KILL_WAIT_MS,
+            YarnConfiguration.DEFAULT_NM_PROCESS_KILL_WAIT_MS);
   }
 
   @Override
@@ -88,7 +109,8 @@ public class ContainerLaunch implements Callable<Integer> {
   public Integer call() {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
     final Map<Path,String> localResources = container.getLocalizedResources();
-    String containerIdStr = ConverterUtils.toString(container.getContainerID());
+    ContainerId containerID = container.getContainerID();
+    String containerIdStr = ConverterUtils.toString(containerID);
     final String user = launchContext.getUser();
     final List<String> command = launchContext.getCommands();
     int ret = -1;
@@ -97,11 +119,11 @@ public class ContainerLaunch implements Callable<Integer> {
       // /////////////////////////// Variable expansion
       // Before the container script gets written out.
       List<String> newCmds = new ArrayList<String>(command.size());
-      String appIdStr = app.toString();
+      String appIdStr = app.getAppId().toString();
       Path containerLogDir =
-          this.logDirsSelector.getLocalPathForWrite(appIdStr + Path.SEPARATOR
-              + containerIdStr, LocalDirAllocator.SIZE_UNKNOWN, this.conf, 
-              false);
+          this.logDirsSelector.getLocalPathForWrite(ContainerLaunch
+              .getRelativeContainerLogDir(appIdStr, containerIdStr),
+              LocalDirAllocator.SIZE_UNKNOWN, this.conf, false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
@@ -124,19 +146,18 @@ public class ContainerLaunch implements Callable<Integer> {
       FileContext lfs = FileContext.getLocalFSFileContext();
       LocalDirAllocator lDirAllocator =
           new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS); // TODO
+
       Path nmPrivateContainerScriptPath =
           lDirAllocator.getLocalPathForWrite(
-              ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
-                  + appIdStr + Path.SEPARATOR + containerIdStr
-                  + Path.SEPARATOR + CONTAINER_SCRIPT, this.conf);
+              getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
+                  + CONTAINER_SCRIPT, this.conf);
       Path nmPrivateTokensPath =
           lDirAllocator.getLocalPathForWrite(
-              ResourceLocalizationService.NM_PRIVATE_DIR
-                  + Path.SEPARATOR
-                  + containerIdStr
+              getContainerPrivateDir(appIdStr, containerIdStr)
                   + Path.SEPARATOR
                   + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
                       containerIdStr), this.conf);
+
       DataOutputStream containerScriptOutStream = null;
       DataOutputStream tokensOutStream = null;
 
@@ -147,6 +168,17 @@ public class ContainerLaunch implements Callable<Integer> {
               + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
               + Path.SEPARATOR + containerIdStr,
               LocalDirAllocator.SIZE_UNKNOWN, this.conf, false);
+
+      String pidFileSuffix = String.format(ContainerLaunch.PID_FILE_NAME_FMT,
+          containerIdStr);
+
+      // pid file should be in nm private dir so that it is not 
+      // accessible by users
+      pidFilePath = lDirAllocator.getLocalPathForWrite(
+          ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR 
+          + pidFileSuffix,
+          this.conf);
+
       try {
         // /////////// Write out the container-script in the nmPrivate space.
         String[] localDirs =
@@ -191,21 +223,36 @@ public class ContainerLaunch implements Callable<Integer> {
       // LaunchContainer is a blocking call. We are here almost means the
       // container is launched, so send out the event.
       dispatcher.getEventHandler().handle(new ContainerEvent(
-            container.getContainerID(),
+            containerID,
             ContainerEventType.CONTAINER_LAUNCHED));
 
-      ret =
-          exec.launchContainer(container, nmPrivateContainerScriptPath,
-              nmPrivateTokensPath, user, appIdStr, containerWorkDir);
+      // Check if the container is signalled to be killed.
+      if (!shouldLaunchContainer.compareAndSet(false, true)) {
+        LOG.info("Container " + containerIdStr + " not launched as "
+            + "cleanup already called");
+        ret = ExitCode.TERMINATED.getExitCode();
+      }
+      else {
+        exec.activateContainer(containerID, pidFilePath);
+        ret =
+            exec.launchContainer(container, nmPrivateContainerScriptPath,
+                nmPrivateTokensPath, user, appIdStr, containerWorkDir);
+      }
     } catch (Throwable e) {
       LOG.warn("Failed to launch container", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
             launchContext.getContainerId(),
             ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret));
       return ret;
+    } finally {
+      completed.set(true);
+      exec.deactivateContainer(containerID);
     }
 
-    if (ret == ExitCode.KILLED.getExitCode()) {
+    LOG.debug("Container " + containerIdStr + " completed with exit code "
+        + ret);
+    if (ret == ExitCode.FORCE_KILLED.getExitCode()
+        || ret == ExitCode.TERMINATED.getExitCode()) {
       // If the process was killed, Send container_cleanedup_after_kill and
       // just break out of this method.
       dispatcher.getEventHandler().handle(
@@ -227,6 +274,129 @@ public class ContainerLaunch implements Callable<Integer> {
         new ContainerEvent(launchContext.getContainerId(),
             ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
     return 0;
+  }
+  
+  /**
+   * Cleanup the container.
+   * Cancels the launch if launch has not started yet or signals
+   * the executor to not execute the process if not already done so.
+   * Also, sends a SIGTERM followed by a SIGKILL to the process if
+   * the process id is available.
+   * @throws IOException
+   */
+  public void cleanupContainer() throws IOException {
+    ContainerId containerId = container.getContainerID();
+    String containerIdStr = ConverterUtils.toString(containerId);
+    LOG.info("Cleaning up container " + containerIdStr);
+
+    // launch flag will be set to true if process already launched
+    boolean alreadyLaunched = !shouldLaunchContainer.compareAndSet(false, true);
+    if (!alreadyLaunched) {
+      LOG.info("Container " + containerIdStr + " not launched."
+          + " No cleanup needed to be done");
+      return;
+    }
+
+    LOG.debug("Marking container " + containerIdStr + " as inactive");
+    // this should ensure that if the container process has not launched 
+    // by this time, it will never be launched
+    exec.deactivateContainer(containerId);
+
+    LOG.debug("Getting pid for container " + containerIdStr + " to kill"
+        + " from pid file " 
+        + (pidFilePath != null ? pidFilePath.toString() : "null"));
+
+    // however the container process may have already started
+    try {
+
+      // get process id from pid file if available
+      // else if shell is still active, get it from the shell
+      String processId = null;
+      if (pidFilePath != null) {
+        processId = getContainerPid(pidFilePath);
+      }
+
+      // kill process
+      if (processId != null) {
+        String user = container.getLaunchContext().getUser();
+        LOG.debug("Sending signal to pid " + processId
+            + " as user " + user
+            + " for container " + containerIdStr);
+        if (sleepDelayBeforeSigKill > 0) {
+          boolean result = exec.signalContainer(user,
+              processId, Signal.TERM);
+          LOG.debug("Sent signal to pid " + processId
+              + " as user " + user
+              + " for container " + containerIdStr
+              + ", result=" + (result? "success" : "failed"));
+          new DelayedProcessKiller(user,
+              processId, sleepDelayBeforeSigKill, Signal.KILL, exec).start();
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Got error when trying to cleanup container " + containerIdStr
+          + ", error=" + e.getMessage());
+    } finally {
+      // cleanup pid file if present
+      if (pidFilePath != null) {
+        FileContext lfs = FileContext.getLocalFSFileContext();
+        lfs.delete(pidFilePath, false);
+      }
+    }
+  }
+
+  /**
+   * Loop through for a time-bounded interval waiting to
+   * read the process id from a file generated by a running process.
+   * @param pidFilePath File from which to read the process id
+   * @return Process ID
+   * @throws Exception
+   */
+  private String getContainerPid(Path pidFilePath) throws Exception {
+    String containerIdStr = 
+        ConverterUtils.toString(container.getContainerID());
+    String processId = null;
+    LOG.debug("Accessing pid for container " + containerIdStr
+        + " from pid file " + pidFilePath);
+    int sleepCounter = 0;
+    final int sleepInterval = 100;
+
+    // loop waiting for pid file to show up 
+    // until either the completed flag is set which means something bad 
+    // happened or our timer expires in which case we admit defeat
+    while (!completed.get()) {
+      processId = ProcessIdFileReader.getProcessId(pidFilePath);
+      if (processId != null) {
+        LOG.debug("Got pid " + processId + " for container "
+            + containerIdStr);
+        break;
+      }
+      else if ((sleepCounter*sleepInterval) > maxKillWaitTime) {
+        LOG.info("Could not get pid for " + containerIdStr
+        		+ ". Waited for " + maxKillWaitTime + " ms.");
+        break;
+      }
+      else {
+        ++sleepCounter;
+        Thread.sleep(sleepInterval);
+      }
+    }
+    return processId;
+  }
+
+  public static String getRelativeContainerLogDir(String appIdStr,
+      String containerIdStr) {
+    return appIdStr + Path.SEPARATOR + containerIdStr;
+  }
+
+  private String getContainerPrivateDir(String appIdStr, String containerIdStr) {
+    return getAppPrivateDir(appIdStr) + Path.SEPARATOR + containerIdStr
+        + Path.SEPARATOR;
+  }
+
+  private String getAppPrivateDir(String appIdStr) {
+    return ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR
+        + appIdStr;
   }
 
   private static class ShellScriptBuilder {
@@ -260,7 +430,7 @@ public class ContainerLaunch implements Callable<Integer> {
       if (dst.toUri().getPath().indexOf('/') != -1) {
         line("mkdir -p ", dst.getParent().toString());
       }
-      line("ln -sf ", src.toUri().getPath(), " ", dst.toString());
+      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
       return this;
     }
   
@@ -279,7 +449,7 @@ public class ContainerLaunch implements Callable<Integer> {
     public String toString() {
       return sb.toString();
     }
-  
+
   }
 
   private static void putEnvIfNotNull(
@@ -301,7 +471,7 @@ public class ContainerLaunch implements Callable<Integer> {
     /**
      * Non-modifiable environment variables
      */
-    
+
     putEnvIfNotNull(environment, Environment.USER.name(), container.getUser());
     
     putEnvIfNotNull(environment, 
@@ -335,14 +505,23 @@ public class ContainerLaunch implements Callable<Integer> {
      * Modifiable environment variables
      */
     
-    putEnvIfAbsent(environment, Environment.JAVA_HOME.name());
-    putEnvIfAbsent(environment, Environment.HADOOP_COMMON_HOME.name());
-    putEnvIfAbsent(environment, Environment.HADOOP_HDFS_HOME.name());
-    putEnvIfAbsent(environment, Environment.YARN_HOME.name());
+    // allow containers to override these variables
+    String[] whitelist = conf.get(YarnConfiguration.NM_ENV_WHITELIST, YarnConfiguration.DEFAULT_NM_ENV_WHITELIST).split(",");
+    
+    for(String whitelistEnvVariable : whitelist) {
+      putEnvIfAbsent(environment, whitelistEnvVariable.trim());
+    }
 
+    // variables here will be forced in, even if the container has specified them.
+    Apps.setEnvFromInputString(
+      environment,
+      conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV)
+    );
   }
-  
-  private static void writeLaunchEnv(OutputStream out,
+    
+  static void writeLaunchEnv(OutputStream out,
       Map<String,String> environment, Map<Path,String> resources,
       List<String> command)
       throws IOException {
@@ -357,9 +536,9 @@ public class ContainerLaunch implements Callable<Integer> {
         sb.symlink(link.getKey(), link.getValue());
       }
     }
+
     ArrayList<String> cmd = new ArrayList<String>(2 * command.size() + 5);
-    cmd.add(ContainerExecutor.isSetsidAvailable ? "exec setsid " : "exec ");
-    cmd.add("/bin/bash ");
+    cmd.add("exec /bin/bash ");
     cmd.add("-c ");
     cmd.add("\"");
     for (String cs : command) {

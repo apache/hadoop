@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
@@ -243,11 +244,49 @@ public abstract class FSImageTestUtil {
         // recurse
         assertParallelFilesAreIdentical(sameNameList, ignoredFileNames);
       } else {
-        assertFileContentsSame(sameNameList.toArray(new File[0]));
+        if ("VERSION".equals(sameNameList.get(0).getName())) {
+          assertPropertiesFilesSame(sameNameList.toArray(new File[0]));
+        } else {
+          assertFileContentsSame(sameNameList.toArray(new File[0]));
+        }
       }
     }  
   }
   
+  /**
+   * Assert that a set of properties files all contain the same data.
+   * We cannot simply check the md5sums here, since Properties files
+   * contain timestamps -- thus, two properties files from the same
+   * saveNamespace operation may actually differ in md5sum.
+   * @param propFiles the files to compare
+   * @throws IOException if the files cannot be opened or read
+   * @throws AssertionError if the files differ
+   */
+  public static void assertPropertiesFilesSame(File[] propFiles)
+      throws IOException {
+    Set<Map.Entry<Object, Object>> prevProps = null;
+    
+    for (File f : propFiles) {
+      Properties props;
+      FileInputStream is = new FileInputStream(f);
+      try {
+        props = new Properties();
+        props.load(is);
+      } finally {
+        IOUtils.closeStream(is);
+      }
+      if (prevProps == null) {
+        prevProps = props.entrySet();
+      } else {
+        Set<Entry<Object,Object>> diff =
+          Sets.symmetricDifference(prevProps, props.entrySet());
+        if (!diff.isEmpty()) {
+          fail("Properties file " + f + " differs from " + propFiles[0]);
+        }
+      }
+    }
+  }
+
   /**
    * Assert that all of the given paths have the exact same
    * contents 

@@ -31,7 +31,7 @@ public class LengthParam extends LongParam {
    * @param value the parameter value.
    */
   public LengthParam(final Long value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, 0L, null);
   }
 
   /**

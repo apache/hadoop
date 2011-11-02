@@ -138,7 +138,7 @@ public class TestRMAppAttemptTransitions {
         mock(ContainerAllocationExpirer.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     rmContext = new RMContextImpl(new MemStore(), rmDispatcher,
-      containerAllocationExpirer, amLivelinessMonitor);
+      containerAllocationExpirer, amLivelinessMonitor, null);
     
     scheduler = mock(YarnScheduler.class);
     masterService = mock(ApplicationMasterService.class);
@@ -178,7 +178,7 @@ public class TestRMAppAttemptTransitions {
     application = mock(RMApp.class);
     applicationAttempt = 
         new RMAppAttemptImpl(applicationAttemptId, null, rmContext, scheduler, 
-            masterService, submissionContext);
+            masterService, submissionContext, null);
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
     
@@ -328,7 +328,9 @@ public class TestRMAppAttemptTransitions {
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(host, applicationAttempt.getHost());
     assertEquals(rpcPort, applicationAttempt.getRpcPort());
-    assertEquals(trackingUrl, applicationAttempt.getTrackingUrl());
+    assertEquals(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
+    assertEquals("null/proxy/"+applicationAttempt.getAppAttemptId().
+        getApplicationId()+"/", applicationAttempt.getTrackingUrl());
     
     // TODO - need to add more checks relevant to this state
   }
@@ -343,7 +345,9 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FINISHED, 
         applicationAttempt.getAppAttemptState());
     assertEquals(diagnostics, applicationAttempt.getDiagnostics());
-    assertEquals(trackingUrl, applicationAttempt.getTrackingUrl());
+    assertEquals(trackingUrl, applicationAttempt.getOriginalTrackingUrl());
+    assertEquals("null/proxy/"+applicationAttempt.getAppAttemptId().
+        getApplicationId()+"/", applicationAttempt.getTrackingUrl());
     assertEquals(0,applicationAttempt.getJustFinishedContainers().size());
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());

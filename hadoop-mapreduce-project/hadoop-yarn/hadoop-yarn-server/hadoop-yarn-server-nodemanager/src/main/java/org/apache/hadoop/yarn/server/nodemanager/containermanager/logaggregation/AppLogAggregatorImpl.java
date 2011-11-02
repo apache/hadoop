@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
-import java.io.File;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,11 +28,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogWriter;
@@ -42,7 +48,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private static final Log LOG = LogFactory
       .getLog(AppLogAggregatorImpl.class);
   private static final int THREAD_SLEEP_TIME = 1000;
+  private static final String TMP_FILE_SUFFIX = ".tmp";
 
+  private final Dispatcher dispatcher;
+  private final ApplicationId appId;
   private final String applicationId;
   private boolean logAggregationDisabled = false;
   private final Configuration conf;
@@ -50,26 +59,34 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final UserGroupInformation userUgi;
   private final String[] rootLogDirs;
   private final Path remoteNodeLogFileForApp;
+  private final Path remoteNodeTmpLogFileForApp;
   private final ContainerLogsRetentionPolicy retentionPolicy;
 
   private final BlockingQueue<ContainerId> pendingContainers;
   private final AtomicBoolean appFinishing = new AtomicBoolean();
   private final AtomicBoolean appAggregationFinished = new AtomicBoolean();
+  private final Map<ApplicationAccessType, String> appAcls;
 
   private LogWriter writer = null;
 
-  public AppLogAggregatorImpl(DeletionService deletionService,
-      Configuration conf, ApplicationId appId, UserGroupInformation userUgi,
-      String[] localRootLogDirs, Path remoteNodeLogFileForApp,
-      ContainerLogsRetentionPolicy retentionPolicy) {
+  public AppLogAggregatorImpl(Dispatcher dispatcher,
+      DeletionService deletionService, Configuration conf, ApplicationId appId,
+      UserGroupInformation userUgi, String[] localRootLogDirs,
+      Path remoteNodeLogFileForApp,
+      ContainerLogsRetentionPolicy retentionPolicy,
+      Map<ApplicationAccessType, String> appAcls) {
+    this.dispatcher = dispatcher;
     this.conf = conf;
     this.delService = deletionService;
+    this.appId = appId;
     this.applicationId = ConverterUtils.toString(appId);
     this.userUgi = userUgi;
     this.rootLogDirs = localRootLogDirs;
     this.remoteNodeLogFileForApp = remoteNodeLogFileForApp;
+    this.remoteNodeTmpLogFileForApp = getRemoteNodeTmpLogFileForApp();
     this.retentionPolicy = retentionPolicy;
     this.pendingContainers = new LinkedBlockingQueue<ContainerId>();
+    this.appAcls = appAcls;
   }
 
   private void uploadLogsForContainer(ContainerId containerId) {
@@ -80,11 +97,15 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
     // Lazy creation of the writer
     if (this.writer == null) {
-      LOG.info("Starting aggregate log-file for app " + this.applicationId);
+      LOG.info("Starting aggregate log-file for app " + this.applicationId
+          + " at " + this.remoteNodeTmpLogFileForApp);
       try {
         this.writer =
-            new LogWriter(this.conf, this.remoteNodeLogFileForApp,
+            new LogWriter(this.conf, this.remoteNodeTmpLogFileForApp,
                 this.userUgi);
+        //Write ACLs once when and if the writer is created.
+        this.writer.writeApplicationACLs(appAcls);
+        this.writer.writeApplicationOwner(this.userUgi.getShortUserName());
       } catch (IOException e) {
         LOG.error("Cannot create writer for app " + this.applicationId
             + ". Disabling log-aggregation for this app.", e);
@@ -105,8 +126,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   }
 
   @Override
-  public void run() {
-
+  @SuppressWarnings("unchecked")
+  public void run() {    
     ContainerId containerId;
 
     while (!this.appFinishing.get()) {
@@ -141,8 +162,31 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.writer.closeWriter();
       LOG.info("Finished aggregate log-file for app " + this.applicationId);
     }
-
+    try {
+      userUgi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          FileSystem remoteFS = FileSystem.get(conf);
+          remoteFS.rename(remoteNodeTmpLogFileForApp, remoteNodeLogFileForApp);
+          return null;
+        }
+      });
+    } catch (Exception e) {
+      LOG.error("Failed to move temporary log file to final location: ["
+          + remoteNodeTmpLogFileForApp + "] to [" + remoteNodeLogFileForApp
+          + "]", e);
+    }
+    
+    this.dispatcher.getEventHandler().handle(
+        new ApplicationEvent(this.appId,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED));
+        
     this.appAggregationFinished.set(true);
+  }
+
+  private Path getRemoteNodeTmpLogFileForApp() {
+    return new Path(remoteNodeLogFileForApp.getParent(),
+        (remoteNodeLogFileForApp.getName() + TMP_FILE_SUFFIX));
   }
 
   private boolean shouldUploadLogs(ContainerId containerId,

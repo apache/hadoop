@@ -20,10 +20,10 @@ package org.apache.hadoop.tools.rumen;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
 
 /**
- * 
- *
+ * Job History related constants for Hadoop releases prior to 0.21
  */
 public class Pre21JobHistoryConstants {
   
@@ -51,18 +51,34 @@ public class Pre21JobHistoryConstants {
   }
   
   /**
-   * Pre21 regex for jobhistory filename 
+   * Regex for Pre21 V1(old) jobhistory filename
    *   i.e jt-identifier_job-id_user-name_job-name
    */
-  static final Pattern JOBHISTORY_FILENAME_REGEX =
+  static final Pattern JOBHISTORY_FILENAME_REGEX_V1 =
     Pattern.compile("[^.].+_(" + JobID.JOBID_REGEX + ")_.+");
+  /**
+   * Regex for Pre21 V2(new) jobhistory filename
+   *   i.e job-id_user-name_job-name
+   */
+  static final Pattern JOBHISTORY_FILENAME_REGEX_V2 =
+    Pattern.compile("(" + JobID.JOBID_REGEX + ")_.+");
+
+  static final String OLD_FULL_SUFFIX_REGEX_STRING =
+    "(?:\\.[0-9]+" + Pattern.quote(JobHistory.OLD_SUFFIX) + ")";
 
   /**
-   * Pre21 regex for jobhistory conf filename 
+   * Regex for Pre21 V1(old) jobhistory conf filename 
    *   i.e jt-identifier_job-id_conf.xml
    */
-  static final Pattern CONF_FILENAME_REGEX =
-    Pattern.compile("[^.].+_(" + JobID.JOBID_REGEX 
-                    + ")_conf.xml(?:\\.[0-9a-zA-Z]+)?");
+  static final Pattern CONF_FILENAME_REGEX_V1 =
+    Pattern.compile("[^.].+_(" + JobID.JOBID_REGEX + ")_conf.xml"
+                    + OLD_FULL_SUFFIX_REGEX_STRING + "?");
+  /**
+   * Regex for Pre21 V2(new) jobhistory conf filename
+   *   i.e job-id_conf.xml
+   */
+  static final Pattern CONF_FILENAME_REGEX_V2 =
+    Pattern.compile("(" + JobID.JOBID_REGEX + ")_conf.xml"
+                    + OLD_FULL_SUFFIX_REGEX_STRING + "?");
  
 }

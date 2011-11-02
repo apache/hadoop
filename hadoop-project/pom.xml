@@ -14,45 +14,17 @@
 -->
 <project>
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-main</artifactId>
+    <version>0.24.0-SNAPSHOT</version>
+  </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-project</artifactId>
   <version>0.24.0-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
-
-  <distributionManagement>
-    <repository>
-      <id>apache.releases.https</id>
-      <name>Apache Release Distribution Repository</name>
-      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
-    </repository>
-    <snapshotRepository>
-      <id>apache.snapshots.https</id>
-      <name>${distMgmtSnapshotsName}</name>
-      <url>${distMgmtSnapshotsUrl}</url>
-    </snapshotRepository>
-  </distributionManagement>
-
-  <repositories>
-    <repository>
-      <id>apache.snapshots.https</id>
-      <name>${distMgmtSnapshotsName}</name>
-      <url>${distMgmtSnapshotsUrl}</url>
-    </repository>
-  </repositories>
-
-  <licenses>
-    <license>
-      <name>The Apache Software License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-    </license>
-  </licenses>
-
-  <organization>
-    <name>Apache Software Foundation</name>
-    <url>http://www.apache.org</url>
-  </organization>
 
   <properties>
     <failIfNoTests>false</failIfNoTests>
@@ -65,15 +37,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <!-- These 2 versions are defined here becuase they are used in the *-docs -->
-    <!-- module(s) for JDIFF generation from embedded ant in the antrun plugin -->
+    <!-- These 2 versions are defined here becuase they are used -->
+    <!-- JDIFF generation from embedded ant in the antrun plugin -->
     <hadoop.annotations.version>${project.version}</hadoop.annotations.version>
     <jdiff.version>1.0.9</jdiff.version>
 
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
-
-    <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
-    <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
 
     <commons-daemon.version>1.0.3</commons-daemon.version>
     
@@ -91,7 +60,7 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-assemblies</artifactId>
-        <version>${hadoop.assemblies.version}</version>
+        <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -112,6 +81,21 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-auth</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-app</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-api</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -407,11 +391,6 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.0</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>2.3.2</version>
         </plugin>
@@ -428,7 +407,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.6</version>
+          <version>2.9</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -471,11 +450,6 @@
           <version>2.6</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.rat</groupId>
-          <artifactId>apache-rat-plugin</artifactId>
-          <version>0.7</version>
-        </plugin>
-        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>native-maven-plugin</artifactId>
           <version>1.0-alpha-7</version>
@@ -491,11 +465,6 @@
           <version>2.1.2</version>
         </plugin>
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <version>2.5</version>
-        </plugin>
-        <plugin>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro-maven-plugin</artifactId>
           <version>1.5.3</version>
@@ -508,7 +477,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>2.1.1</version>
+          <version>3.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -524,44 +493,6 @@
     </pluginManagement>
 
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <inherited>false</inherited>
-        <configuration>
-          <rules>
-            <requireMavenVersion>
-              <version>[3.0.0,)</version>
-            </requireMavenVersion>
-            <requireJavaVersion>
-              <version>1.6</version>
-            </requireJavaVersion>
-          </rules>
-        </configuration>
-        <executions>
-          <execution>
-            <id>clean</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <phase>pre-clean</phase>
-          </execution>
-          <execution>
-            <id>default</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <phase>validate</phase>
-          </execution>
-          <execution>
-            <id>site</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <phase>pre-site</phase>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>

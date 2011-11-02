@@ -86,7 +86,7 @@ public class TaskPage extends AppView {
           String containerIdStr = ConverterUtils.toString(containerId);
           nodeTd._(" ").
             a(".logslink", url("http://", nodeHttpAddr, "node", "containerlogs",
-              containerIdStr), "logs");
+              containerIdStr, app.getJob().getUserName()), "logs");
         }
         nodeTd._().
           td(".ts", Times.format(startTime)).

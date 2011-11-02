@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
@@ -279,7 +280,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     gcsRequest.setContainerId(cId);
     ContainerStatus containerStatus = 
         containerManager.getContainerStatus(gcsRequest).getStatus();
-    Assert.assertEquals(ExitCode.KILLED.getExitCode(),
+    Assert.assertEquals(ExitCode.TERMINATED.getExitCode(),
         containerStatus.getExitStatus());
 
     // Assert that the process is not alive anymore
@@ -385,7 +386,8 @@ public class TestContainerManager extends BaseContainerManagerTest {
     ContainerTokenSecretManager containerTokenSecretManager = new 
         ContainerTokenSecretManager();
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics, containerTokenSecretManager);
+        nodeStatusUpdater, metrics, containerTokenSecretManager,
+        new ApplicationACLsManager(conf));
     containerManager.init(conf);
     containerManager.start();
 

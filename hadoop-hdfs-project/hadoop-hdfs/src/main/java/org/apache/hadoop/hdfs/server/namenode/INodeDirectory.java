@@ -261,25 +261,13 @@ class INodeDirectory extends INode {
    * Add a child inode to the directory.
    * 
    * @param node INode to insert
-   * @param inheritPermission inherit permission from parent?
    * @param setModTime set modification time for the parent node
    *                   not needed when replaying the addition and 
    *                   the parent already has the proper mod time
    * @return  null if the child with this name already exists; 
    *          node, otherwise
    */
-  <T extends INode> T addChild(final T node, boolean inheritPermission,
-                                              boolean setModTime) {
-    if (inheritPermission) {
-      FsPermission p = getFsPermission();
-      //make sure the  permission has wx for the user
-      if (!p.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
-        p = new FsPermission(p.getUserAction().or(FsAction.WRITE_EXECUTE),
-            p.getGroupAction(), p.getOtherAction());
-      }
-      node.setPermission(p);
-    }
-
+  <T extends INode> T addChild(final T node, boolean setModTime) {
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
@@ -298,30 +286,21 @@ class INodeDirectory extends INode {
   }
 
   /**
-   * Equivalent to addNode(path, newNode, false).
-   * @see #addNode(String, INode, boolean)
-   */
-  <T extends INode> T addNode(String path, T newNode) 
-    throws FileNotFoundException, UnresolvedLinkException {
-    return addNode(path, newNode, false);
-  }
-  /**
    * Add new INode to the file tree.
    * Find the parent and insert 
    * 
    * @param path file path
    * @param newNode INode to be added
-   * @param inheritPermission If true, copy the parent's permission to newNode.
    * @return null if the node already exists; inserted INode, otherwise
    * @throws FileNotFoundException if parent does not exist or 
    * @throws UnresolvedLinkException if any path component is a symbolic link
    * is not a directory.
    */
-  <T extends INode> T addNode(String path, T newNode, boolean inheritPermission
+  <T extends INode> T addNode(String path, T newNode
       ) throws FileNotFoundException, UnresolvedLinkException  {
     byte[][] pathComponents = getPathComponents(path);        
     if(addToParent(pathComponents, newNode,
-                    inheritPermission, true) == null)
+                    true) == null)
       return null;
     return newNode;
   }
@@ -338,13 +317,12 @@ class INodeDirectory extends INode {
   INodeDirectory addToParent( byte[] localname,
                               INode newNode,
                               INodeDirectory parent,
-                              boolean inheritPermission,
                               boolean propagateModTime
                               ) throws FileNotFoundException, 
                                        UnresolvedLinkException {
     // insert into the parent children list
     newNode.name = localname;
-    if(parent.addChild(newNode, inheritPermission, propagateModTime) == null)
+    if(parent.addChild(newNode, propagateModTime) == null)
       return null;
     return parent;
   }
@@ -380,7 +358,6 @@ class INodeDirectory extends INode {
    */
   INodeDirectory addToParent( byte[][] pathComponents,
                               INode newNode,
-                              boolean inheritPermission,
                               boolean propagateModTime
                             ) throws FileNotFoundException, 
                                      UnresolvedLinkException {
@@ -391,7 +368,7 @@ class INodeDirectory extends INode {
     newNode.name = pathComponents[pathLen-1];
     // insert into the parent children list
     INodeDirectory parent = getParent(pathComponents);
-    if(parent.addChild(newNode, inheritPermission, propagateModTime) == null)
+    if(parent.addChild(newNode, propagateModTime) == null)
       return null;
     return parent;
   }

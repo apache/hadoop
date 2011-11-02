@@ -31,8 +31,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.Apps;
 
 public class MapReduceChildJVM {
 
@@ -78,22 +77,24 @@ public class MapReduceChildJVM {
             );
     
     // Add pwd to LD_LIBRARY_PATH, add this before adding anything else
-    MRApps.addToEnvironment(
+    Apps.addToEnvironment(
         environment, 
         Environment.LD_LIBRARY_PATH.name(), 
         Environment.PWD.$());
 
     // Add the env variables passed by the user & admin
     String mapredChildEnv = getChildEnv(conf, task.isMapTask());
-    MRApps.setEnvFromInputString(environment, mapredChildEnv);
-    MRApps.setEnvFromInputString(
+    Apps.setEnvFromInputString(environment, mapredChildEnv);
+    Apps.setEnvFromInputString(
         environment, 
         conf.get(
             MRJobConfig.MAPRED_ADMIN_USER_ENV, 
             MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV)
         );
 
-    // Set logging level
+    // Set logging level in the environment.
+    // This is so that, if the child forks another "bin/hadoop" (common in
+    // streaming) it will have the correct loglevel.
     environment.put(
         "HADOOP_ROOT_LOGGER", 
         getChildLogLevel(conf, task.isMapTask()) + ",CLA"); 
@@ -110,7 +111,7 @@ public class MapReduceChildJVM {
     // properties.
     long logSize = TaskLog.getTaskLogLength(conf);
     Vector<String> logProps = new Vector<String>(4);
-    setupLog4jProperties(logProps, logSize);
+    setupLog4jProperties(task, logProps, logSize);
     Iterator<String> it = logProps.iterator();
     StringBuffer buffer = new StringBuffer();
     while (it.hasNext()) {
@@ -128,6 +129,8 @@ public class MapReduceChildJVM {
         MRJobConfig.STDERR_LOGFILE_ENV,
         getTaskLogFile(TaskLog.LogName.STDERR)
         );
+    environment.put(MRJobConfig.APPLICATION_ATTEMPT_ID_ENV, 
+        	conf.get(MRJobConfig.APPLICATION_ATTEMPT_ID).toString());
   }
 
   private static String getChildJavaOpts(JobConf jobConf, boolean isMapTask) {
@@ -163,11 +166,11 @@ public class MapReduceChildJVM {
     return adminClasspath + " " + userClasspath;
   }
 
-  private static void setupLog4jProperties(Vector<String> vargs,
+  private static void setupLog4jProperties(Task task,
+      Vector<String> vargs,
       long logSize) {
-    vargs.add("-Dlog4j.configuration=container-log4j.properties");
-    vargs.add("-D" + MRJobConfig.TASK_LOG_DIR + "=" + ApplicationConstants.LOG_DIR_EXPANSION_VAR);
-    vargs.add("-D" + MRJobConfig.TASK_LOG_SIZE + "=" + logSize);
+    String logLevel = getChildLogLevel(task.conf, task.isMapTask()); 
+    MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
   }
 
   public static List<String> getVMCommand(
@@ -222,7 +225,7 @@ public class MapReduceChildJVM {
 
     // Setup the log4j prop
     long logSize = TaskLog.getTaskLogLength(conf);
-    setupLog4jProperties(vargs, logSize);
+    setupLog4jProperties(task, vargs, logSize);
 
     if (conf.getProfileEnabled()) {
       if (conf.getProfileTaskRange(task.isMapTask()

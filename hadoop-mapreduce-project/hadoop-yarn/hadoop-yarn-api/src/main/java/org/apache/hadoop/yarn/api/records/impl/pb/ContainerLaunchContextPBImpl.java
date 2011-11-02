@@ -25,11 +25,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerLaunchContextProtoOrBuilder;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringBytesMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringLocalResourceMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.StringStringMapProto;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 
 public class ContainerLaunchContextPBImpl 
 extends ProtoBase<ContainerLaunchContextProto> 
@@ -54,6 +57,7 @@ implements ContainerLaunchContext {
   private Map<String, ByteBuffer> serviceData = null;
   private Map<String, String> environment = null;
   private List<String> commands = null;
+  private Map<ApplicationAccessType, String> applicationACLS = null;
   
   public ContainerLaunchContextPBImpl() {
     builder = ContainerLaunchContextProto.newBuilder();
@@ -96,6 +100,9 @@ implements ContainerLaunchContext {
     }
     if (this.commands != null) {
       addCommandsToProto();
+    }
+    if (this.applicationACLS != null) {
+      addApplicationACLs();
     }
   }
   
@@ -422,6 +429,75 @@ implements ContainerLaunchContext {
       }
     };
     builder.addAllEnvironment(iterable);
+  }
+
+  @Override
+  public Map<ApplicationAccessType, String> getApplicationACLs() {
+    initApplicationACLs();
+    return this.applicationACLS;
+  }
+
+  private void initApplicationACLs() {
+    if (this.applicationACLS != null) {
+      return;
+    }
+    ContainerLaunchContextProtoOrBuilder p = viaProto ? proto : builder;
+    List<ApplicationACLMapProto> list = p.getApplicationACLsList();
+    this.applicationACLS = new HashMap<ApplicationAccessType, String>(list
+        .size());
+
+    for (ApplicationACLMapProto aclProto : list) {
+      this.applicationACLS.put(ProtoUtils.convertFromProtoFormat(aclProto
+          .getAccessType()), aclProto.getAcl());
+    }
+  }
+
+  private void addApplicationACLs() {
+    maybeInitBuilder();
+    builder.clearApplicationACLs();
+    if (applicationACLS == null) {
+      return;
+    }
+    Iterable<? extends ApplicationACLMapProto> values
+        = new Iterable<ApplicationACLMapProto>() {
+
+      @Override
+      public Iterator<ApplicationACLMapProto> iterator() {
+        return new Iterator<ApplicationACLMapProto>() {
+          Iterator<ApplicationAccessType> aclsIterator = applicationACLS
+              .keySet().iterator();
+
+          @Override
+          public boolean hasNext() {
+            return aclsIterator.hasNext();
+          }
+
+          @Override
+          public ApplicationACLMapProto next() {
+            ApplicationAccessType key = aclsIterator.next();
+            return ApplicationACLMapProto.newBuilder().setAcl(
+                applicationACLS.get(key)).setAccessType(
+                ProtoUtils.convertToProtoFormat(key)).build();
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    this.builder.addAllApplicationACLs(values);
+  }
+
+  @Override
+  public void setApplicationACLs(
+      final Map<ApplicationAccessType, String> appACLs) {
+    if (appACLs == null)
+      return;
+    initApplicationACLs();
+    this.applicationACLS.clear();
+    this.applicationACLS.putAll(appACLs);
   }
 
   private ResourcePBImpl convertFromProtoFormat(ResourceProto p) {

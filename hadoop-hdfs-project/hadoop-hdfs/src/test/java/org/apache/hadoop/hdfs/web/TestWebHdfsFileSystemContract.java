@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.web;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -26,17 +27,25 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Assert;
 
 public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   private static final Configuration conf = new Configuration();
@@ -121,6 +130,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     }    
   }
   
+  //the following are new tests (i.e. not over-riding the super class methods)
+
   public void testGetFileBlockLocations() throws IOException {
     final String f = "/test/testGetFileBlockLocations";
     createFile(path(f));
@@ -157,5 +168,142 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
     //check if the command successes.
     assertTrue(fs.getFileStatus(p).isDirectory());
+  }
+
+  public void testOpenNonExistFile() throws IOException {
+    final Path p = new Path("/test/testOpenNonExistFile");
+    //open it as a file, should get FileNotFoundException 
+    try {
+      final FSDataInputStream in = fs.open(p);
+      in.read();
+      fail();
+    } catch(FileNotFoundException fnfe) {
+      WebHdfsFileSystem.LOG.info("This is expected.", fnfe);
+    }
+  }
+
+  public void testSeek() throws IOException {
+    final Path p = new Path("/test/testSeek");
+    createFile(p);
+
+    final int one_third = data.length/3;
+    final int two_third = one_third*2;
+
+    { //test seek
+      final int offset = one_third; 
+      final int len = data.length - offset;
+      final byte[] buf = new byte[len];
+
+      final FSDataInputStream in = fs.open(p);
+      in.seek(offset);
+      
+      //read all remaining data
+      in.readFully(buf);
+      in.close();
+  
+      for (int i = 0; i < buf.length; i++) {
+        assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
+            data[i + offset], buf[i]);
+      }
+    }
+
+    { //test position read (read the data after the two_third location)
+      final int offset = two_third; 
+      final int len = data.length - offset;
+      final byte[] buf = new byte[len];
+
+      final FSDataInputStream in = fs.open(p);
+      in.readFully(offset, buf);
+      in.close();
+  
+      for (int i = 0; i < buf.length; i++) {
+        assertEquals("Position " + i + ", offset=" + offset + ", length=" + len,
+            data[i + offset], buf[i]);
+      }
+    }
+  }
+
+
+  public void testRootDir() throws IOException {
+    final Path root = new Path("/");
+
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fs;
+    final URL url = webhdfs.toUrl(GetOpParam.Op.NULL, root);
+    WebHdfsFileSystem.LOG.info("null url=" + url);
+    Assert.assertTrue(url.toString().contains("v1"));
+
+    //test root permission
+    final FileStatus status = fs.getFileStatus(root);
+    assertTrue(status != null);
+    assertEquals(0777, status.getPermission().toShort());
+
+    //delete root - disabled due to a sticky bit bug 
+    //assertFalse(fs.delete(root, true));
+
+    //create file using root path 
+    try {
+      final FSDataOutputStream out = fs.create(root);
+      out.write(1);
+      out.close();
+      fail();
+    } catch(IOException e) {
+      WebHdfsFileSystem.LOG.info("This is expected.", e);
+    }
+
+    //open file using root path 
+    try {
+      final FSDataInputStream in = fs.open(root);
+      in.read();
+      fail();
+      fail();
+    } catch(IOException e) {
+      WebHdfsFileSystem.LOG.info("This is expected.", e);
+    }
+  }
+
+  public void testResponseCode() throws IOException {
+    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fs;
+    final Path dir = new Path("/test/testUrl");
+    assertTrue(webhdfs.mkdirs(dir));
+
+    {//test set owner with empty parameters
+      final URL url = webhdfs.toUrl(PutOpParam.Op.SETOWNER, dir);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_BAD_REQUEST, conn.getResponseCode());
+      conn.disconnect();
+    }
+
+    {//test set replication on a directory
+      final HttpOpParam.Op op = PutOpParam.Op.SETREPLICATION;
+      final URL url = webhdfs.toUrl(op, dir);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      
+      assertFalse(webhdfs.setReplication(dir, (short)1));
+      conn.disconnect();
+    }
+
+    {//test get file status for a non-exist file.
+      final Path p = new Path(dir, "non-exist");
+      final URL url = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, p);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_NOT_FOUND, conn.getResponseCode());
+      conn.disconnect();
+    }
+
+    {//test set permission with empty parameters
+      final HttpOpParam.Op op = PutOpParam.Op.SETPERMISSION;
+      final URL url = webhdfs.toUrl(op, dir);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+      assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
+      conn.disconnect();
+    }
   }
 }

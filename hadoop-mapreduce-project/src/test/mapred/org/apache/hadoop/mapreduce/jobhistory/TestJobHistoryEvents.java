@@ -17,15 +17,12 @@
  */
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.util.List;
-import java.util.ArrayList;
+import junit.framework.TestCase;
 
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
-
-import junit.framework.TestCase;
 
 /**
  * Test various jobhistory events
@@ -48,7 +45,7 @@ public class TestJobHistoryEvents extends TestCase {
                                                       TaskType[] types) {
     for (TaskType t : types) {
       TaskAttemptStartedEvent tase = 
-        new TaskAttemptStartedEvent(id, t, 0L, "", 0);
+        new TaskAttemptStartedEvent(id, t, 0L, "", 0, -1);
       assertEquals(expected, tase.getEventType());
     }
   }

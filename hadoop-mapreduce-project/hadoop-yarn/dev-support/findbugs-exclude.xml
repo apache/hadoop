@@ -84,6 +84,17 @@
     <Method name="handle" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.nodemanager\.containermanager\.logaggregation\.LogAggregationService.*" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+  <Match>
+    <Class name="~org\.apache\.hadoop\.yarn\.server\.nodemanager\.containermanager\.loghandler\.NonAggregatingLogHandler.*" />
+    <Method name="handle" />
+    <Bug pattern="BC_UNCONFIRMED_CAST" />
+  </Match>
+
 
   <!-- Ignore intentional switch fallthroughs -->
   <Match>
@@ -166,6 +177,10 @@
     <Class name="org.apache.hadoop.yarn.webapp.WebApps$Builder" />
     <Bug pattern="DM_EXIT" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer$DelegationTokenCancelThread" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
   <!-- AsyncDispatcher will kill the process if there is an error dispatching -->
   <Match>
     <Class name="org.apache.hadoop.yarn.event.AsyncDispatcher" />
@@ -179,6 +194,17 @@
     <Method name="localizeFiles" />
     <Bug pattern="DE_MIGHT_IGNORE" />
   </Match>
+
+  <!-- Ignore EI_EXPOSE_REP in PolicyProviders -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.security.authorize.NMPolicyProvider" />
+    <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+
 
   <!-- Ignore EI_EXPOSE_REP2 in Log services -->
   <Match>

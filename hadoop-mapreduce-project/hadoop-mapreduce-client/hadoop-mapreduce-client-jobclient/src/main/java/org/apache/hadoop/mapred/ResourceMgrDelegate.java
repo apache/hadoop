@@ -89,7 +89,9 @@ public class ResourceMgrDelegate {
     InetSocketAddress rmAddress =
         NetUtils.createSocketAddr(this.conf.get(
             YarnConfiguration.RM_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_ADDRESS));
+            YarnConfiguration.DEFAULT_RM_ADDRESS),
+            YarnConfiguration.DEFAULT_RM_PORT,
+            YarnConfiguration.RM_ADDRESS);
     LOG.info("Connecting to ResourceManager at " + rmAddress);
     applicationsManager =
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,

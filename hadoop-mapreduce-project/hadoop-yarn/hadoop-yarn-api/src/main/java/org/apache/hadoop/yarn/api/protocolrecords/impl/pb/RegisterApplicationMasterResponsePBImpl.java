@@ -19,13 +19,21 @@
 package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
 public class RegisterApplicationMasterResponsePBImpl
@@ -38,6 +46,7 @@ implements RegisterApplicationMasterResponse {
 
   private Resource minimumResourceCapability;
   private Resource maximumResourceCapability;
+  private Map<ApplicationAccessType, String> applicationACLS = null;
 
   public RegisterApplicationMasterResponsePBImpl() {
     builder = RegisterApplicationMasterResponseProto.newBuilder();
@@ -71,6 +80,9 @@ implements RegisterApplicationMasterResponse {
     if (this.maximumResourceCapability != null) {
       builder.setMaximumCapability(
           convertToProtoFormat(this.maximumResourceCapability));
+    }
+    if (this.applicationACLS != null) {
+      addApplicationACLs();
     }
   }
 
@@ -128,6 +140,77 @@ implements RegisterApplicationMasterResponse {
       builder.clearMinimumCapability();
     }
     this.minimumResourceCapability = capability;
+  }
+
+
+  @Override
+  public Map<ApplicationAccessType, String> getApplicationACLs() {
+    initApplicationACLs();
+    return this.applicationACLS;
+  }
+
+  private void initApplicationACLs() {
+    if (this.applicationACLS != null) {
+      return;
+    }
+    RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto
+        : builder;
+    List<ApplicationACLMapProto> list = p.getApplicationACLsList();
+    this.applicationACLS = new HashMap<ApplicationAccessType, String>(list
+        .size());
+
+    for (ApplicationACLMapProto aclProto : list) {
+      this.applicationACLS.put(ProtoUtils.convertFromProtoFormat(aclProto
+          .getAccessType()), aclProto.getAcl());
+    }
+  }
+
+  private void addApplicationACLs() {
+    maybeInitBuilder();
+    builder.clearApplicationACLs();
+    if (applicationACLS == null) {
+      return;
+    }
+    Iterable<? extends ApplicationACLMapProto> values
+        = new Iterable<ApplicationACLMapProto>() {
+
+      @Override
+      public Iterator<ApplicationACLMapProto> iterator() {
+        return new Iterator<ApplicationACLMapProto>() {
+          Iterator<ApplicationAccessType> aclsIterator = applicationACLS
+              .keySet().iterator();
+
+          @Override
+          public boolean hasNext() {
+            return aclsIterator.hasNext();
+          }
+
+          @Override
+          public ApplicationACLMapProto next() {
+            ApplicationAccessType key = aclsIterator.next();
+            return ApplicationACLMapProto.newBuilder().setAcl(
+                applicationACLS.get(key)).setAccessType(
+                ProtoUtils.convertToProtoFormat(key)).build();
+          }
+
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    this.builder.addAllApplicationACLs(values);
+  }
+
+  @Override
+  public void setApplicationACLs(
+      final Map<ApplicationAccessType, String> appACLs) {
+    if (appACLs == null)
+      return;
+    initApplicationACLs();
+    this.applicationACLS.clear();
+    this.applicationACLS.putAll(appACLs);
   }
 
   private Resource convertFromProtoFormat(ResourceProto resource) {

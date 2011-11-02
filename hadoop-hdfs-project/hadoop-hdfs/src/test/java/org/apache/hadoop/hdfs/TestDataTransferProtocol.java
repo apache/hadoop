@@ -31,6 +31,7 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.digester.SetRootRule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto.Builder;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -59,6 +62,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * This tests data transfer protocol handling in the Datanode. It sends
@@ -68,6 +72,9 @@ public class TestDataTransferProtocol extends TestCase {
   
   private static final Log LOG = LogFactory.getLog(
                     "org.apache.hadoop.hdfs.TestDataTransferProtocol");
+
+  private static final DataChecksum DEFAULT_CHECKSUM =
+    DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512);
   
   DatanodeID datanode;
   InetSocketAddress dnAddr;
@@ -117,10 +124,8 @@ public class TestDataTransferProtocol extends TestCase {
         throw eof;
       }
 
-      LOG.info("Received: " +
-          StringUtils.byteToHexString(retBuf));
-      LOG.info("Expected: " +
-          StringUtils.byteToHexString(recvBuf.toByteArray()));
+      LOG.info("Received: " +new String(retBuf));
+      LOG.info("Expected: " + StringUtils.byteToHexString(recvBuf.toByteArray()));
       
       if (eofExpected) {
         throw new IOException("Did not recieve IOException when an exception " +
@@ -129,10 +134,8 @@ public class TestDataTransferProtocol extends TestCase {
       }
       
       byte[] needed = recvBuf.toByteArray();
-      for (int i=0; i<retBuf.length; i++) {
-        System.out.print(retBuf[i]);
-        assertEquals("checking byte[" + i + "]", needed[i], retBuf[i]);
-      }
+      assertEquals(StringUtils.byteToHexString(needed),
+          StringUtils.byteToHexString(retBuf));
     } finally {
       IOUtils.closeSocket(sock);
     }
@@ -153,9 +156,6 @@ public class TestDataTransferProtocol extends TestCase {
   
   private void writeZeroLengthPacket(ExtendedBlock block, String description)
   throws IOException {
-    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
-    sendOut.writeInt(512);         // checksum size
-
     PacketHeader hdr = new PacketHeader(
       8,                   // size of packet
       block.getNumBytes(), // OffsetInBlock
@@ -166,17 +166,21 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // zero checksum
 
     //ok finally write a block with 0 len
-    sendResponse(Status.SUCCESS, "", recvOut);
+    sendResponse(Status.SUCCESS, "", null, recvOut);
     new PipelineAck(100, new Status[]{Status.SUCCESS}).write(recvOut);
     sendRecvData(description, false);
   }
   
   private void sendResponse(Status status, String firstBadLink,
+      String message,
       DataOutputStream out)
   throws IOException {
     Builder builder = BlockOpResponseProto.newBuilder().setStatus(status);
     if (firstBadLink != null) {
       builder.setFirstBadLink(firstBadLink);
+    }
+    if (message != null) {
+      builder.setMessage(message);
     }
     builder.build()
       .writeDelimitedTo(out);
@@ -188,13 +192,14 @@ public class TestDataTransferProtocol extends TestCase {
     recvBuf.reset();
     sender.writeBlock(block, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], null, stage,
-        0, block.getNumBytes(), block.getNumBytes(), newGS);
+        0, block.getNumBytes(), block.getNumBytes(), newGS,
+        DEFAULT_CHECKSUM);
     if (eofExcepted) {
-      sendResponse(Status.ERROR, null, recvOut);
+      sendResponse(Status.ERROR, null, null, recvOut);
       sendRecvData(description, true);
     } else if (stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
       //ok finally write a block with 0 len
-      sendResponse(Status.SUCCESS, "", recvOut);
+      sendResponse(Status.SUCCESS, "", null, recvOut);
       sendRecvData(description, false);
     } else {
       writeZeroLengthPacket(block, description);
@@ -373,17 +378,18 @@ public class TestDataTransferProtocol extends TestCase {
     
     /* Test OP_WRITE_BLOCK */
     sendBuf.reset();
+    
+    DataChecksum badChecksum = Mockito.spy(DEFAULT_CHECKSUM);
+    Mockito.doReturn(-1).when(badChecksum).getBytesPerChecksum();
+
     sender.writeBlock(new ExtendedBlock(poolId, newBlockId),
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], null,
         BlockConstructionStage.PIPELINE_SETUP_CREATE,
-        0, 0L, 0L, 0L);
-    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
-    
-    // bad bytes per checksum
-    sendOut.writeInt(-1-random.nextInt(oneMil));
+        0, 0L, 0L, 0L,
+        badChecksum);
     recvBuf.reset();
-    sendResponse(Status.ERROR, null, recvOut);
+    sendResponse(Status.ERROR, null, null, recvOut);
     sendRecvData("wrong bytesPerChecksum while writing", true);
 
     sendBuf.reset();
@@ -391,9 +397,8 @@ public class TestDataTransferProtocol extends TestCase {
     sender.writeBlock(new ExtendedBlock(poolId, ++newBlockId),
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], null,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0L, 0L, 0L);
-    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
-    sendOut.writeInt(512);
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0L, 0L, 0L,
+        DEFAULT_CHECKSUM);
 
     PacketHeader hdr = new PacketHeader(
       4,     // size of packet
@@ -403,7 +408,7 @@ public class TestDataTransferProtocol extends TestCase {
       -1 - random.nextInt(oneMil)); // bad datalen
     hdr.write(sendOut);
 
-    sendResponse(Status.SUCCESS, "", recvOut);
+    sendResponse(Status.SUCCESS, "", null, recvOut);
     new PipelineAck(100, new Status[]{Status.ERROR}).write(recvOut);
     sendRecvData("negative DATA_CHUNK len while writing block " + newBlockId, 
                  true);
@@ -414,9 +419,8 @@ public class TestDataTransferProtocol extends TestCase {
     sender.writeBlock(new ExtendedBlock(poolId, ++newBlockId),
         BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         new DatanodeInfo[1], null,
-        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0L, 0L, 0L);
-    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
-    sendOut.writeInt(512);         // checksum size
+        BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0L, 0L, 0L,
+        DEFAULT_CHECKSUM);
 
     hdr = new PacketHeader(
       8,     // size of packet
@@ -428,7 +432,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // zero checksum
     sendOut.flush();
     //ok finally write a block with 0 len
-    sendResponse(Status.SUCCESS, "", recvOut);
+    sendResponse(Status.SUCCESS, "", null, recvOut);
     new PipelineAck(100, new Status[]{Status.SUCCESS}).write(recvOut);
     sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
@@ -462,7 +466,15 @@ public class TestDataTransferProtocol extends TestCase {
     
     // negative length is ok. Datanode assumes we want to read the whole block.
     recvBuf.reset();
-    sendResponse(Status.SUCCESS, null, recvOut);
+    
+    BlockOpResponseProto.newBuilder()
+      .setStatus(Status.SUCCESS)
+      .setReadOpChecksumInfo(ReadOpChecksumInfoProto.newBuilder()
+          .setChecksum(DataTransferProtoUtil.toProto(DEFAULT_CHECKSUM))
+          .setChunkOffset(0L))
+      .build()
+      .writeDelimitedTo(recvOut);
+    
     sendBuf.reset();
     sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         0L, -1L-random.nextInt(oneMil));
@@ -471,7 +483,11 @@ public class TestDataTransferProtocol extends TestCase {
     
     // length is more than size of block.
     recvBuf.reset();
-    sendResponse(Status.ERROR, null, recvOut);
+    sendResponse(Status.ERROR, null,
+        "opReadBlock " + firstBlock +
+        " received exception java.io.IOException:  " +
+        "Offset 0 and length 4097 don't match block " + firstBlock + " ( blockLen 4096 )",
+        recvOut);
     sendBuf.reset();
     sender.readBlock(blk, BlockTokenSecretManager.DUMMY_TOKEN, "cl",
         0L, fileLen+1);

@@ -21,7 +21,7 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
 
   \[ {{{./index.html}Go Back}} \]
 
-%{toc|section=1|fromDepth=1}
+%{toc|section=1|fromDepth=0}
 
 * Purpose 
 
@@ -323,25 +323,29 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     multi-tenancy nature, amongst other issues, it cannot make any assumptions 
     of things like pre-configured ports that it can listen on. 
   
+  * When the ApplicationMaster starts up, several parameters are made available
+    to it via the environment. These include the ContainerId for the
+    ApplicationMaster container, the application submission time and details
+    about the NodeManager host running the Application Master.
+    Ref ApplicationConstants for parameter names.
+
   * All interactions with the ResourceManager require an ApplicationAttemptId 
-    (there can be multiple attempts per application in case of failures). When 
-    the ApplicationMaster starts up, the ApplicationAttemptId associated with 
-    this particular instance will be set in the environment. There are helper 
-    apis to convert the value obtained from the environment into an 
-    ApplicationAttemptId object.
+    (there can be multiple attempts per application in case of failures). The 
+    ApplicationAttemptId can be obtained from the ApplicationMaster
+    containerId. There are helper apis to convert the value obtained from the
+    environment into objects.
     
 +---+
     Map<String, String> envs = System.getenv();
-    ApplicationAttemptId appAttemptID = 
-        Records.newRecord(ApplicationAttemptId.class);
-    if (!envs.containsKey(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV)) {
-      // app attempt id should always be set in the env by the framework 
+    String containerIdString = 
+        envs.get(ApplicationConstants.AM_CONTAINER_ID_ENV);
+    if (containerIdString == null) {
+      // container id should always be set in the env by the framework 
       throw new IllegalArgumentException(
-          "ApplicationAttemptId not set in the environment");				
-    } 
-    appAttemptID = 
-        ConverterUtils.toApplicationAttemptId(
-            envs.get(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV));
+          "ContainerId not set in the environment");
+    }
+    ContainerId containerId = ConverterUtils.toContainerId(containerIdString);
+    ApplicationAttemptId appAttemptID = containerId.getApplicationAttemptId();
 +---+     
   
   * After an ApplicationMaster has initialized itself completely, it needs to 
@@ -402,7 +406,8 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
     * Resource capability: Currently, YARN only supports memory based resource 
       requirements so the request should define how much memory is needed. The 
       value is defined in MB and has to less than the max capability of the 
-      cluster and an exact multiple of the min capability. 
+      cluster and an exact multiple of the min capability. Memory resources
+      correspond to physical memory limits imposed on the task containers.
       
     * Priority: When asking for sets of containers, an ApplicationMaster may 
       define different priorities to each set. For example, the Map-Reduce 
@@ -770,8 +775,9 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
   The two things you're interested in are physical memory and virtual memory. 
   If you have exceeded physical memory limits your app is using too much physical 
   memory. If you're running a Java app, you can use -hprof to look at what is 
-  taking up space in the heap. If you have exceeded virtual memory, things are 
-  slightly more complicated. 
+  taking up space in the heap. If you have exceeded virtual memory, you may
+  need to increase the value of the the cluster-wide configuration variable
+  <<<yarn.nodemanager.vmem-pmem-ratio>>>.
 
 * Useful Links
 

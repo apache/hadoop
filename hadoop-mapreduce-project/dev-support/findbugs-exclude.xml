@@ -160,7 +160,10 @@
      </Match>
      <Match>
        <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
+       <Or>
        <Method name="commitJob" />
+       <Method name="recoverTask" />
+       </Or>
        <Bug pattern="NM_WRONG_PACKAGE" />
      </Match>
      <Match>
@@ -169,6 +172,7 @@
        <Method name="abortJob" />
        <Method name="commitJob" />
        <Method name="cleanupJob" />
+       <Method name="recoverTask" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>

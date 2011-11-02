@@ -25,7 +25,7 @@ import java.util.Iterator;
 
 import junit.framework.Assert;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -68,8 +68,6 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -84,6 +82,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -123,20 +123,24 @@ public class TestClientRedirect {
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     conf.set(YarnConfiguration.RM_ADDRESS, RMADDRESS);
     conf.set(JHAdminConfig.MR_HISTORY_ADDRESS, HSHOSTADDRESS);
+
+    // Start the RM.
     RMService rmService = new RMService("test");
     rmService.init(conf);
     rmService.start();
 
+    // Start the AM.
     AMService amService = new AMService();
     amService.init(conf);
     amService.start(conf);
-    amRunning = true;
 
+    // Start the HS.
     HistoryService historyService = new HistoryService();
     historyService.init(conf);
     historyService.start(conf);
 
     LOG.info("services started");
+
     Cluster cluster = new Cluster(conf);
     org.apache.hadoop.mapreduce.JobID jobID =
       new org.apache.hadoop.mapred.JobID("201103121733", 1);
@@ -151,13 +155,13 @@ public class TestClientRedirect {
 
     //bring down the AM service
     amService.stop();
-    amRunning = false;
 
     LOG.info("Sleeping for 5 seconds after stop for" +
     		" the server to exit cleanly..");
     Thread.sleep(5000);
 
     amRestarting = true;
+
     // Same client
     //results are returned from fake (not started job)
     counters = cluster.getJob(jobID).getCounters();
@@ -181,14 +185,15 @@ public class TestClientRedirect {
     amService = new AMService();
     amService.init(conf);
     amService.start(conf);
-    amRunning = true;
     amContact = false; //reset
 
     counters = cluster.getJob(jobID).getCounters();
     validateCounters(counters);
     Assert.assertTrue(amContact);
 
-    amRunning = false;
+    // Stop the AM. It is not even restarting. So it should be treated as
+    // completed.
+    amService.stop();
 
     // Same client
     counters = cluster.getJob(jobID).getCounters();
@@ -347,6 +352,7 @@ public class TestClientRedirect {
     private InetSocketAddress bindAddress;
     private Server server;
     private final String hostAddress;
+
     public AMService() {
       this(AMHOSTADDRESS);
     }
@@ -376,11 +382,13 @@ public class TestClientRedirect {
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
             + ":" + server.getPort());
        super.start();
+       amRunning = true;
     }
 
     public void stop() {
-      server.close();
+      server.stop();
       super.stop();
+      amRunning = false;
     }
 
     @Override

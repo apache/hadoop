@@ -18,22 +18,28 @@
 
 package org.apache.hadoop.yarn.webapp;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+
+import javax.servlet.http.HttpServlet;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.yarn.security.AdminACLsManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
-
-import java.net.ConnectException;
-import java.net.URL;
-import org.apache.commons.lang.StringUtils;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Helpers to create an embedded webapp.
@@ -59,6 +65,12 @@ public class WebApps {
   static final Logger LOG = LoggerFactory.getLogger(WebApps.class);
 
   public static class Builder<T> {
+    static class ServletStruct {
+      public Class<? extends HttpServlet> clazz;
+      public String name;
+      public String spec;
+    }
+    
     final String name;
     final Class<T> api;
     final T application;
@@ -67,6 +79,8 @@ public class WebApps {
     boolean findPort = false;
     Configuration conf;
     boolean devMode = false;
+    private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
+    private final HashMap<String, Object> attributes = new HashMap<String, Object>();
 
     Builder(String name, Class<T> api, T application) {
       this.name = name;
@@ -93,6 +107,21 @@ public class WebApps {
       return this;
     }
 
+    public Builder<T> withAttribute(String key, Object value) {
+      attributes.put(key, value);
+      return this;
+    }
+    
+    public Builder<T> withServlet(String name, String pathSpec, 
+        Class<? extends HttpServlet> servlet) {
+      ServletStruct struct = new ServletStruct();
+      struct.clazz = servlet;
+      struct.name = name;
+      struct.spec = pathSpec;
+      servlets.add(struct);
+      return this;
+    }
+    
     public Builder<T> with(Configuration conf) {
       this.conf = conf;
       return this;
@@ -151,13 +180,21 @@ public class WebApps {
         }
         HttpServer server =
             new HttpServer(name, bindAddress, port, findPort, conf, 
-            webapp.getServePathSpecs());
+            new AdminACLsManager(conf).getAdminAcl(), null, webapp.getServePathSpecs());
+        for(ServletStruct struct: servlets) {
+          server.addServlet(struct.name, struct.spec, struct.clazz);
+        }
+        for(Map.Entry<String, Object> entry : attributes.entrySet()) {
+          server.setAttribute(entry.getKey(), entry.getValue());
+        }
         server.addGlobalFilter("guice", GuiceFilter.class.getName(), null);
         webapp.setConf(conf);
         webapp.setHttpServer(server);
         server.start();
         LOG.info("Web app /"+ name +" started at "+ server.getPort());
-      } catch (Exception e) {
+      } catch (ClassNotFoundException e) {
+        throw new WebAppException("Error starting http server", e);
+      } catch (IOException e) {
         throw new WebAppException("Error starting http server", e);
       }
       Injector injector = Guice.createInjector(webapp, new AbstractModule() {

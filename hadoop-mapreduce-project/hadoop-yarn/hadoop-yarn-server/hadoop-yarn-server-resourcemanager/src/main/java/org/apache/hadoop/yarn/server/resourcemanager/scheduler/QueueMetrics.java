@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-import com.google.common.base.Splitter;
-import java.util.Map;
+import static org.apache.hadoop.metrics2.lib.Interns.info;
+import static org.apache.hadoop.yarn.server.resourcemanager.resource.Resources.multiply;
+
 import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -28,16 +30,16 @@ import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import static org.apache.hadoop.metrics2.lib.Interns.info;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import static org.apache.hadoop.yarn.server.resourcemanager.resource.Resources.*;
-
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Splitter;
 
 @InterfaceAudience.Private
 @Metrics(context="yarn")
@@ -51,6 +53,8 @@ public class QueueMetrics {
 
   @Metric("Allocated memory in GiB") MutableGaugeInt allocatedGB;
   @Metric("# of allocated containers") MutableGaugeInt allocatedContainers;
+  @Metric("Aggregate # of allocated containers") MutableCounterLong aggregateContainersAllocated;
+  @Metric("Aggregate # of released containers") MutableCounterLong aggregateContainersReleased;
   @Metric("Available memory in GiB") MutableGaugeInt availableGB;
   @Metric("Pending memory allocation in GiB") MutableGaugeInt pendingGB;
   @Metric("# of pending containers") MutableGaugeInt pendingContainers;
@@ -234,6 +238,7 @@ public class QueueMetrics {
 
   public void allocateResources(String user, int containers, Resource res) {
     allocatedContainers.incr(containers);
+    aggregateContainersAllocated.incr(containers);
     allocatedGB.incr(res.getMemory()/GB * containers);
     _decrPendingResources(containers, multiply(res, containers));
     QueueMetrics userMetrics = getUserMetrics(user);
@@ -247,6 +252,7 @@ public class QueueMetrics {
 
   public void releaseResources(String user, int containers, Resource res) {
     allocatedContainers.decr(containers);
+    aggregateContainersReleased.incr(containers);
     allocatedGB.decr(res.getMemory()/GB * containers);
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {

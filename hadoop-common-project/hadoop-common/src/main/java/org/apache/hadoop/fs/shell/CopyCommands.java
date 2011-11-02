@@ -26,15 +26,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumFileSystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
-import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
-import org.apache.hadoop.fs.shell.PathExceptions.PathOperationException;
-import org.apache.hadoop.io.IOUtils;
 
 /** Various commands for copy files */
 @InterfaceAudience.Private
@@ -97,17 +89,9 @@ class CopyCommands {
       CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f");
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
+      // should have a -r option
+      setRecursive(true);
       getRemoteDestination(args);
-    }
-
-    @Override
-    protected void processPath(PathData src, PathData target)
-    throws IOException {
-      if (!FileUtil.copy(src.fs, src.path, target.fs, target.path, false, overwrite, getConf())) {
-        // we have no idea what the error is...  FileUtils masks it and in
-        // some cases won't even report an error
-        throw new PathIOException(src.toString());
-      }
     }
   }
   
@@ -128,15 +112,12 @@ class CopyCommands {
      * It must be at least three characters long, required by
      * {@link java.io.File#createTempFile(String, String, File)}.
      */
-    private static final String COPYTOLOCAL_PREFIX = "_copyToLocal_";
     private boolean copyCrc;
     private boolean verifyChecksum;
-    private LocalFileSystem localFs;
 
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
-      localFs = FileSystem.getLocal(getConf());
       CommandFormat cf = new CommandFormat(
           1, Integer.MAX_VALUE, "crc", "ignoreCrc");
       cf.parse(args);
@@ -148,7 +129,7 @@ class CopyCommands {
     }
 
     @Override
-    protected void processPath(PathData src, PathData target)
+    protected void copyFileToTarget(PathData src, PathData target)
     throws IOException {
       src.fs.setVerifyChecksum(verifyChecksum);
 
@@ -157,51 +138,11 @@ class CopyCommands {
         copyCrc = false;
       }      
 
-      File targetFile = localFs.pathToFile(target.path);
-      if (src.stat.isFile()) {
-        // copy the file and maybe its crc
-        copyFileToLocal(src, target.path);
-        if (copyCrc) {
-          copyCrcToLocal(src, target.path);
-        }
-      } else if (src.stat.isDirectory()) {
-        // create the remote directory structure locally
-        if (!targetFile.mkdirs()) {
-          throw new PathIOException(target.toString());
-        }
-      } else {
-        throw new PathOperationException(src.toString());
+      super.copyFileToTarget(src, target);
+      if (copyCrc) {
+        // should we delete real file if crc copy fails?
+        super.copyFileToTarget(src.getChecksumFile(), target.getChecksumFile());
       }
-    }
-
-    private void copyFileToLocal(PathData src, Path target)
-    throws IOException {
-      File targetFile = localFs.pathToFile(target);
-      File tmpFile = FileUtil.createLocalTempFile(
-          targetFile, COPYTOLOCAL_PREFIX, true);
-      // too bad we can't tell exactly why it failed...
-      if (!FileUtil.copy(src.fs, src.path, tmpFile, false, getConf())) {
-        PathIOException e = new PathIOException(src.toString());
-        e.setOperation("copy");
-        e.setTargetPath(tmpFile.toString());
-        throw e;
-      }
-
-      // too bad we can't tell exactly why it failed...
-      if (!tmpFile.renameTo(targetFile)) {
-        PathIOException e = new PathIOException(tmpFile.toString());
-        e.setOperation("rename");
-        e.setTargetPath(targetFile.toString());
-        throw e;
-      }
-    }
-
-    private void copyCrcToLocal(PathData src, Path target)
-    throws IOException {
-      ChecksumFileSystem srcFs = (ChecksumFileSystem)src.fs;
-      Path srcPath = srcFs.getChecksumFile(src.path);
-      src = new PathData(srcFs.getRawFileSystem(), srcPath);
-      copyFileToLocal(src, localFs.getChecksumFile(target));    
     }
   }
 
@@ -221,6 +162,8 @@ class CopyCommands {
       cf.parse(args);
       setOverwrite(cf.getOpt("f"));
       getRemoteDestination(args);
+      // should have a -r option
+      setRecursive(true);
     }
 
     // commands operating on local paths have no need for glob expansion
@@ -236,29 +179,10 @@ class CopyCommands {
     throws IOException {
       // NOTE: this logic should be better, mimics previous implementation
       if (args.size() == 1 && args.get(0).toString().equals("-")) {
-        if (dst.exists && !overwrite) {
-          throw new PathExistsException(dst.toString());
-        }
-        copyFromStdin();
+        copyStreamToTarget(System.in, getTargetPath(args.get(0)));
         return;
       }
       super.processArguments(args);
-    }
-
-    @Override
-    protected void processPath(PathData src, PathData target)
-    throws IOException {
-      target.fs.copyFromLocalFile(false, overwrite, src.path, target.path);
-    }
-
-    /** Copies from stdin to the destination file. */
-    protected void copyFromStdin() throws IOException {
-      FSDataOutputStream out = dst.fs.create(dst.path); 
-      try {
-        IOUtils.copyBytes(System.in, out, getConf(), false);
-      } finally {
-        out.close();
-      }
     }
   }
 

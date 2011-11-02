@@ -58,7 +58,11 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   private JobHistoryServerWrapper historyServerWrapper;
 
   public MiniMRYarnCluster(String testName) {
-    super(testName);
+    this(testName, 1);
+  }
+  
+  public MiniMRYarnCluster(String testName, int noOfNMs) {
+    super(testName, noOfNMs);
     //TODO: add the history server
     historyServerWrapper = new JobHistoryServerWrapper();
     addService(historyServerWrapper);
@@ -80,7 +84,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         Service.class);
 
     // Non-standard shuffle port
-    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 8083);
+    conf.setInt(ShuffleHandler.SHUFFLE_PORT_CONFIG_KEY, 0);
 
     conf.setClass(YarnConfiguration.NM_CONTAINER_EXECUTOR,
         DefaultContainerExecutor.class, ContainerExecutor.class);
@@ -115,6 +119,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
           LOG.info("Waiting for HistoryServer to start...");
           Thread.sleep(1500);
         }
+        //TODO Add a timeout. State.STOPPED check ?
         if (historyServer.getServiceState() != STATE.STARTED) {
           throw new IOException("HistoryServer failed to start");
         }

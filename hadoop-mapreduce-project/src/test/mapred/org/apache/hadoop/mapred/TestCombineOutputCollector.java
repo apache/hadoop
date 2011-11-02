@@ -31,17 +31,17 @@ import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Task.CombineOutputCollector;
 import org.apache.hadoop.mapred.Task.TaskReporter;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.junit.Test;
 
 public class TestCombineOutputCollector {
   private CombineOutputCollector<String, Integer> coc;
 
   Counters.Counter outCounter = new Counters.Counter() {
-    
+    private long value;
     @Override
     public void setValue(long value) {
-      // TODO Auto-generated method stub
-      
+      this.value = value;
     }
     
     @Override
@@ -52,14 +52,12 @@ public class TestCombineOutputCollector {
     
     @Override
     public void increment(long incr) {
-      // TODO Auto-generated method stub
-      
+      this.value += incr;
     }
     
     @Override
     public long getValue() {
-      // TODO Auto-generated method stub
-      return 0;
+      return value;
     }
     
     @Override
@@ -82,8 +80,7 @@ public class TestCombineOutputCollector {
     
     @Override
     public long getCounter() {
-      // TODO Auto-generated method stub
-      return 0;
+      return value;
     }
     
     @Override
@@ -108,7 +105,7 @@ public class TestCombineOutputCollector {
     Writer<String, Integer> mockWriter = mock(Writer.class);
 
     Configuration conf = new Configuration();
-    conf.set("mapred.combine.recordsBeforeProgress", "2");
+    conf.set(MRJobConfig.COMBINE_RECORDS_BEFORE_PROGRESS, "2");
     
     coc = new CombineOutputCollector<String, Integer>(outCounter, mockTaskReporter, conf);
     coc.setWriter(mockWriter);

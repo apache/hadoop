@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 
+
 public class TestFileOutputCommitter extends TestCase {
   private static Path outDir = new Path(System.getProperty("test.build.data",
       "/tmp"), "output");
@@ -187,9 +188,9 @@ public class TestFileOutputCommitter extends TestCase {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    File jobTmpDir = new File(new Path(outDir,
-        FileOutputCommitter.TEMP_DIR_NAME).toString());
-    File taskTmpDir = new File(jobTmpDir, "_" + taskID);
+    String taskBaseDirName = committer.getTaskAttemptBaseDirName(tContext);
+    File jobTmpDir = new File(outDir.toString(), committer.getJobAttemptBaseDirName(jContext));
+    File taskTmpDir = new File(outDir.toString(), taskBaseDirName);
     File expectedFile = new File(taskTmpDir, partFile);
     assertTrue(expectedFile + " does not exists", expectedFile.exists());
 

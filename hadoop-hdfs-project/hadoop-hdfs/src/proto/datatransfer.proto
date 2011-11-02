@@ -40,6 +40,17 @@ message OpReadBlockProto {
   required uint64 offset = 2;
   required uint64 len = 3;
 }
+
+
+message ChecksumProto {
+  enum ChecksumType {
+    NULL = 0;
+    CRC32 = 1;
+    CRC32C = 2;
+  }
+  required ChecksumType type = 1;
+  required uint32 bytesPerChecksum = 2;
+}
   
 message OpWriteBlockProto {
   required ClientOperationHeaderProto header = 1;
@@ -69,6 +80,11 @@ message OpWriteBlockProto {
   required uint64 minBytesRcvd = 6;
   required uint64 maxBytesRcvd = 7;
   required uint64 latestGenerationStamp = 8;
+
+  /**
+   * The requested checksum mechanism for this block write.
+   */
+  required ChecksumProto requestedChecksum = 9;
 }
   
 message OpTransferBlockProto {
@@ -114,11 +130,30 @@ message PipelineAckProto {
   repeated Status status = 2;
 }
 
+/**
+ * Sent as part of the BlockOpResponseProto
+ * for READ_BLOCK and COPY_BLOCK operations.
+ */
+message ReadOpChecksumInfoProto {
+  required ChecksumProto checksum = 1;
+
+  /**
+   * The offset into the block at which the first packet
+   * will start. This is necessary since reads will align
+   * backwards to a checksum chunk boundary.
+   */
+  required uint64 chunkOffset = 2;
+}
+
 message BlockOpResponseProto {
   required Status status = 1;
 
   optional string firstBadLink = 2;
   optional OpBlockChecksumResponseProto checksumResponse = 3;
+  optional ReadOpChecksumInfoProto readOpChecksumInfo = 4;
+
+  /** explanatory text which may be useful to log on the client side */
+  optional string message = 5;
 }
 
 /**

@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -98,17 +99,18 @@ public class JsonUtil {
   /** Convert an exception object to a Json string. */
   public static String toJsonString(final Exception e) {
     final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("className", e.getClass().getName());
+    m.put("exception", e.getClass().getSimpleName());
     m.put("message", e.getMessage());
+    m.put("javaClassName", e.getClass().getName());
     return toJsonString(RemoteException.class, m);
   }
 
   /** Convert a Json map to a RemoteException. */
   public static RemoteException toRemoteException(final Map<?, ?> json) {
     final Map<?, ?> m = (Map<?, ?>)json.get(RemoteException.class.getSimpleName());
-    final String className = (String)m.get("className");
     final String message = (String)m.get("message");
-    return new RemoteException(className, message);
+    final String javaClassName = (String)m.get("javaClassName");
+    return new RemoteException(javaClassName, message);
   }
 
   private static String toJsonString(final Class<?> clazz, final Object value) {
@@ -133,37 +135,39 @@ public class JsonUtil {
   }
 
   /** Convert a HdfsFileStatus object to a Json string. */
-  public static String toJsonString(final HdfsFileStatus status) {
+  public static String toJsonString(final HdfsFileStatus status,
+      boolean includeType) {
     if (status == null) {
       return null;
-    } else {
-      final Map<String, Object> m = new TreeMap<String, Object>();
-      m.put("localName", status.getLocalName());
-      m.put("isDir", status.isDir());
-      m.put("isSymlink", status.isSymlink());
-      if (status.isSymlink()) {
-        m.put("symlink", status.getSymlink());
-      }
-
-      m.put("len", status.getLen());
-      m.put("owner", status.getOwner());
-      m.put("group", status.getGroup());
-      m.put("permission", toString(status.getPermission()));
-      m.put("accessTime", status.getAccessTime());
-      m.put("modificationTime", status.getModificationTime());
-      m.put("blockSize", status.getBlockSize());
-      m.put("replication", status.getReplication());
-      return toJsonString(HdfsFileStatus.class, m);
     }
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("localName", status.getLocalName());
+    m.put("isDir", status.isDir());
+    m.put("isSymlink", status.isSymlink());
+    if (status.isSymlink()) {
+      m.put("symlink", status.getSymlink());
+    }
+
+    m.put("len", status.getLen());
+    m.put("owner", status.getOwner());
+    m.put("group", status.getGroup());
+    m.put("permission", toString(status.getPermission()));
+    m.put("accessTime", status.getAccessTime());
+    m.put("modificationTime", status.getModificationTime());
+    m.put("blockSize", status.getBlockSize());
+    m.put("replication", status.getReplication());
+    return includeType ? toJsonString(HdfsFileStatus.class, m) : 
+      JSON.toString(m);
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
-  public static HdfsFileStatus toFileStatus(final Map<?, ?> json) {
+  public static HdfsFileStatus toFileStatus(final Map<?, ?> json, boolean includesType) {
     if (json == null) {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName());
+    final Map<?, ?> m = includesType ? 
+        (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName()) : json;
     final String localName = (String) m.get("localName");
     final boolean isDir = (Boolean) m.get("isDir");
     final boolean isSymlink = (Boolean) m.get("isSymlink");
@@ -287,7 +291,7 @@ public class JsonUtil {
       return array;
     }
   }
-
+  
   /** Convert a LocatedBlock to a Json map. */
   private static Map<String, Object> toJsonMap(final LocatedBlock locatedblock
       ) throws IOException {
@@ -331,7 +335,7 @@ public class JsonUtil {
     } else {
       final Object[] a = new Object[array.size()];
       for(int i = 0; i < array.size(); i++) {
-        a[i] = toJsonMap(array.get(0));
+        a[i] = toJsonMap(array.get(i));
       }
       return a;
     }
@@ -433,7 +437,7 @@ public class JsonUtil {
     m.put("algorithm", checksum.getAlgorithmName());
     m.put("length", checksum.getLength());
     m.put("bytes", StringUtils.byteToHexString(checksum.getBytes()));
-    return toJsonString(MD5MD5CRC32FileChecksum.class, m);
+    return toJsonString(FileChecksum.class, m);
   }
 
   /** Convert a Json map to a MD5MD5CRC32FileChecksum. */
@@ -443,8 +447,7 @@ public class JsonUtil {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(
-        MD5MD5CRC32FileChecksum.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)json.get(FileChecksum.class.getSimpleName());
     final String algorithm = (String)m.get("algorithm");
     final int length = (int)(long)(Long)m.get("length");
     final byte[] bytes = StringUtils.hexStringToByte((String)m.get("bytes"));

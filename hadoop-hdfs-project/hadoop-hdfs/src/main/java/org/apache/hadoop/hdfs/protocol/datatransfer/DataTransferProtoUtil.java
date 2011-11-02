@@ -23,10 +23,16 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto.ChecksumType;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
+
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 
 
 /**
@@ -35,8 +41,20 @@ import org.apache.hadoop.security.token.Token;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-abstract class DataTransferProtoUtil {
+public abstract class DataTransferProtoUtil {
 
+  /**
+   * Map between the internal DataChecksum identifiers and the protobuf-
+   * generated identifiers on the wire.
+   */
+  static BiMap<Integer, ChecksumProto.ChecksumType> checksumTypeMap =
+    ImmutableBiMap.<Integer, ChecksumProto.ChecksumType>builder()
+      .put(DataChecksum.CHECKSUM_CRC32, ChecksumProto.ChecksumType.CRC32)
+      .put(DataChecksum.CHECKSUM_CRC32C, ChecksumProto.ChecksumType.CRC32C)
+      .put(DataChecksum.CHECKSUM_NULL, ChecksumProto.ChecksumType.NULL)
+      .build();
+
+  
   static BlockConstructionStage fromProto(
       OpWriteBlockProto.BlockConstructionStage stage) {
     return BlockConstructionStage.valueOf(BlockConstructionStage.class,
@@ -47,6 +65,28 @@ abstract class DataTransferProtoUtil {
       BlockConstructionStage stage) {
     return OpWriteBlockProto.BlockConstructionStage.valueOf(
         stage.name());
+  }
+
+  public static ChecksumProto toProto(DataChecksum checksum) {
+    ChecksumType type = checksumTypeMap.get(checksum.getChecksumType());
+    if (type == null) {
+      throw new IllegalArgumentException(
+          "Can't convert checksum to protobuf: " + checksum);
+    }
+
+    return ChecksumProto.newBuilder()
+      .setBytesPerChecksum(checksum.getBytesPerChecksum())
+      .setType(type)
+      .build();
+  }
+
+  public static DataChecksum fromProto(ChecksumProto proto) {
+    if (proto == null) return null;
+
+    int bytesPerChecksum = proto.getBytesPerChecksum();
+    int type = checksumTypeMap.inverse().get(proto.getType());
+    
+    return DataChecksum.newDataChecksum(type, bytesPerChecksum);
   }
 
   static ClientOperationHeaderProto buildClientHeader(ExtendedBlock blk,

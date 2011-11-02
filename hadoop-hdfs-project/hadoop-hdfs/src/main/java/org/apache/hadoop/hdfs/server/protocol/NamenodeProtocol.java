@@ -38,9 +38,21 @@ import org.apache.hadoop.security.KerberosInfo;
 @InterfaceAudience.Private
 public interface NamenodeProtocol extends VersionedProtocol {
   /**
-   * Compared to the previous version the following changes have been introduced:
-   * (Only the latest change is reflected.
-   * The log of historical changes can be retrieved from the svn).
+   * Until version 6L, this class served as both
+   * the client interface to the NN AND the RPC protocol used to 
+   * communicate with the NN.
+   * 
+   * Post version 70 (release 23 of Hadoop), the protocol is implemented in
+   * {@literal ../protocolR23Compatible/ClientNamenodeWireProtocol}
+   * 
+   * This class is used by both the DFSClient and the 
+   * NN server side to insulate from the protocol serialization.
+   * 
+   * If you are adding/changing NN's interface then you need to 
+   * change both this class and ALSO
+   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.NamenodeWireProtocol}.
+   * These changes need to be done in a compatible fashion as described in 
+   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}
    * 
    * 6: Switch to txid-based file naming for image and edits
    */
@@ -62,7 +74,7 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * @param datanode  a data node
    * @param size      requested size
    * @return          a list of blocks & their locations
-   * @throws RemoteException if size is less than or equal to 0 or
+   * @throws IOException if size is less than or equal to 0 or
                                    datanode does not exist
    */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)

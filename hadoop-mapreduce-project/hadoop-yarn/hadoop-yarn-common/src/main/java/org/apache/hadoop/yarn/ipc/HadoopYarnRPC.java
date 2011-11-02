@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +30,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * This uses Hadoop RPC. Uses a tunnel AvroSpecificRpcEngine over 
@@ -70,29 +69,7 @@ public class HadoopYarnRPC extends YarnRPC {
     } catch (IOException e) {
       throw new YarnException(e);
     }
-    Server server = new Server() {
-      @Override
-      public void close() {
-        hadoopServer.stop();
-      }
-
-      @Override
-      public int getPort() {
-        return hadoopServer.getListenerAddress().getPort();
-      }
-
-      @Override
-      public void join() throws InterruptedException {
-        hadoopServer.join();
-      }
-
-      @Override
-      public void start() {
-        hadoopServer.start();
-      }
-    };
-    return server;
-
+    return hadoopServer;
   }
 
 }

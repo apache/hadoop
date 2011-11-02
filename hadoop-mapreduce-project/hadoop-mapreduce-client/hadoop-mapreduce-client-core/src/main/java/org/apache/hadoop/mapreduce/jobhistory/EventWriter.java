@@ -25,7 +25,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.io.JsonEncoder;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.logging.Log;
@@ -72,6 +71,7 @@ class EventWriter {
   void flush() throws IOException {
     encoder.flush();
     out.flush();
+    out.hflush();
   }
 
   void close() throws IOException {

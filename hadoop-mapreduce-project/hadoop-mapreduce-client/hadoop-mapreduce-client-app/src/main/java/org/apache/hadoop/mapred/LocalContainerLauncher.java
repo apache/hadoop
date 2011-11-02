@@ -314,6 +314,8 @@ public class LocalContainerLauncher extends AbstractService implements
           ReduceTask reduce = (ReduceTask)task;
 
           // a.k.a. "mapreduce.jobtracker.address" in LocalJobRunner:
+          // set framework name to local to make task local
+          conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
           conf.set(MRConfig.MASTER_ADDRESS, "local");  // bypass shuffle
 
           reduce.run(conf, umbilical);
@@ -385,8 +387,9 @@ FIXME:  do we need to do any of this stuff?  (guessing not since not in own JVM)
 
 /* FIXME:  may not need renameMapOutputForReduce() anymore?  TEST!
 
-${local.dir}/usercache/$user/appcache/$appId/$contId/ == $cwd for tasks;
-contains task.sh script, which, when executed, creates symlinks and sets up env
+${local.dir}/usercache/$user/appcache/$appId/$contId/ == $cwd for containers;
+contains launch_container.sh script, which, when executed, creates symlinks and 
+sets up env
  "$local.dir"/usercache/$user/appcache/$appId/$contId/file.out
  "$local.dir"/usercache/$user/appcache/$appId/$contId/file.out.idx (?)
  "$local.dir"/usercache/$user/appcache/$appId/output/$taskId/ is where file.out* is moved after MapTask done

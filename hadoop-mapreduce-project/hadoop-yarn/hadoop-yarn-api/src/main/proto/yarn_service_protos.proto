@@ -36,6 +36,7 @@ message RegisterApplicationMasterRequestProto {
 message RegisterApplicationMasterResponseProto {
   optional ResourceProto minimumCapability = 1;
   optional ResourceProto maximumCapability = 2;
+  repeated ApplicationACLMapProto application_ACLs = 3;
 }
 
 message FinishApplicationMasterRequestProto {

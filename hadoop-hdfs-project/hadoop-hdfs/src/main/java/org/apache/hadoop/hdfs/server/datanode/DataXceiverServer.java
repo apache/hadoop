@@ -30,7 +30,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.balancer.Balancer;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -132,17 +131,12 @@ class DataXceiverServer implements Runnable {
   @Override
   public void run() {
     while (datanode.shouldRun) {
+      Socket s = null;
       try {
-        Socket s = ss.accept();
+        s = ss.accept();
         s.setTcpNoDelay(true);
-        final DataXceiver exciver;
-        try {
-          exciver = new DataXceiver(s, datanode, this);
-        } catch(IOException e) {
-          IOUtils.closeSocket(s);
-          throw e;
-        }
-        new Daemon(datanode.threadGroup, exciver).start();
+        new Daemon(datanode.threadGroup, new DataXceiver(s, datanode, this))
+            .start();
       } catch (SocketTimeoutException ignored) {
         // wake up to see if should continue to run
       } catch (AsynchronousCloseException ace) {
@@ -152,7 +146,19 @@ class DataXceiverServer implements Runnable {
           LOG.warn(datanode.getMachineName() + ":DataXceiverServer: ", ace);
         }
       } catch (IOException ie) {
+        IOUtils.closeSocket(s);
         LOG.warn(datanode.getMachineName() + ":DataXceiverServer: ", ie);
+      } catch (OutOfMemoryError ie) {
+        IOUtils.closeSocket(s);
+        // DataNode can run out of memory if there is too many transfers.
+        // Log the event, Sleep for 30 seconds, other transfers may complete by
+        // then.
+        LOG.warn("DataNode is out of memory. Will retry in 30 seconds.", ie);
+        try {
+          Thread.sleep(30 * 1000);
+        } catch (InterruptedException e) {
+          // ignore
+        }
       } catch (Throwable te) {
         LOG.error(datanode.getMachineName()
             + ":DataXceiverServer: Exiting due to: ", te);

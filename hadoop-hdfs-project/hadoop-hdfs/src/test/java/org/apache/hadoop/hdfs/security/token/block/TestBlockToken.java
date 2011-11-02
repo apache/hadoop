@@ -51,12 +51,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -96,9 +96,9 @@ public class TestBlockToken {
     ((Log4JLogger) SaslRpcServer.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) SaslInputStream.LOG).getLogger().setLevel(Level.ALL);
   }
-  
+
   /** Directory where we can count our open file descriptors under Linux */
-  static File FD_DIR = new File("/proc/self/fd/");  
+  static File FD_DIR = new File("/proc/self/fd/");
 
   long blockKeyUpdateInterval = 10 * 60 * 1000; // 10 mins
   long blockTokenLifetime = 2 * 60 * 1000; // 2 mins
@@ -120,7 +120,8 @@ public class TestBlockToken {
     public Long answer(InvocationOnMock invocation) throws IOException {
       Object args[] = invocation.getArguments();
       assertEquals(1, args.length);
-      ExtendedBlock block = (ExtendedBlock) args[0];
+      org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable block = 
+          (org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable) args[0];
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
       assertEquals("Only one BlockTokenIdentifier expected", 1, tokenIds.size());
@@ -129,7 +130,9 @@ public class TestBlockToken {
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
         LOG.info("Got: " + id.toString());
         assertTrue("Received BlockTokenIdentifier is wrong", ident.equals(id));
-        sm.checkAccess(id, null, block, BlockTokenSecretManager.AccessMode.WRITE);
+        sm.checkAccess(id, null, org.apache.hadoop.hdfs.protocolR23Compatible.
+            ExtendedBlockWritable.convertExtendedBlock(block),
+            BlockTokenSecretManager.AccessMode.WRITE);
         result = id.getBlockId();
       }
       return result;
@@ -137,7 +140,8 @@ public class TestBlockToken {
   }
 
   private BlockTokenIdentifier generateTokenId(BlockTokenSecretManager sm,
-      ExtendedBlock block, EnumSet<BlockTokenSecretManager.AccessMode> accessModes)
+      ExtendedBlock block,
+      EnumSet<BlockTokenSecretManager.AccessMode> accessModes)
       throws IOException {
     Token<BlockTokenIdentifier> token = sm.generateToken(block, accessModes);
     BlockTokenIdentifier id = sm.createIdentifier();
@@ -151,12 +155,12 @@ public class TestBlockToken {
     TestWritable.testWritable(new BlockTokenIdentifier());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(true,
         blockKeyUpdateInterval, blockTokenLifetime);
-    TestWritable.testWritable(generateTokenId(sm, block1, EnumSet
-        .allOf(BlockTokenSecretManager.AccessMode.class)));
-    TestWritable.testWritable(generateTokenId(sm, block2, EnumSet
-        .of(BlockTokenSecretManager.AccessMode.WRITE)));
-    TestWritable.testWritable(generateTokenId(sm, block3, EnumSet
-        .noneOf(BlockTokenSecretManager.AccessMode.class)));
+    TestWritable.testWritable(generateTokenId(sm, block1,
+        EnumSet.allOf(BlockTokenSecretManager.AccessMode.class)));
+    TestWritable.testWritable(generateTokenId(sm, block2,
+        EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE)));
+    TestWritable.testWritable(generateTokenId(sm, block3,
+        EnumSet.noneOf(BlockTokenSecretManager.AccessMode.class)));
   }
 
   private void tokenGenerationAndVerification(BlockTokenSecretManager master,
@@ -176,8 +180,8 @@ public class TestBlockToken {
       slave.checkAccess(token2, null, block2, mode);
     }
     // multi-mode tokens
-    Token<BlockTokenIdentifier> mtoken = master.generateToken(block3, EnumSet
-        .allOf(BlockTokenSecretManager.AccessMode.class));
+    Token<BlockTokenIdentifier> mtoken = master.generateToken(block3,
+        EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
     for (BlockTokenSecretManager.AccessMode mode : BlockTokenSecretManager.AccessMode
         .values()) {
       master.checkAccess(mtoken, null, block3, mode);
@@ -202,25 +206,28 @@ public class TestBlockToken {
     slaveHandler.setKeys(keys);
     tokenGenerationAndVerification(masterHandler, slaveHandler);
   }
-  
+
   private Server createMockDatanode(BlockTokenSecretManager sm,
       Token<BlockTokenIdentifier> token) throws IOException {
-    ClientDatanodeProtocol mockDN = mock(ClientDatanodeProtocol.class);
+    org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol mockDN =
+        mock(org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class);
     when(mockDN.getProtocolVersion(anyString(), anyLong())).thenReturn(
-        ClientDatanodeProtocol.versionID);
-    doReturn(ProtocolSignature.getProtocolSignature(
-        mockDN, ClientDatanodeProtocol.class.getName(),
-        ClientDatanodeProtocol.versionID, 0))
-      .when(mockDN).getProtocolSignature(anyString(), anyLong(), anyInt());
+        org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.versionID);
+    doReturn(
+        ProtocolSignature.getProtocolSignature(mockDN,
+            org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class.getName(),
+            org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.versionID, 0)).when(mockDN)
+        .getProtocolSignature(anyString(), anyLong(), anyInt());
 
     BlockTokenIdentifier id = sm.createIdentifier();
     id.readFields(new DataInputStream(new ByteArrayInputStream(token
         .getIdentifier())));
     doAnswer(new getLengthAnswer(sm, id)).when(mockDN).getReplicaVisibleLength(
-        any(ExtendedBlock.class));
+        any(org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable.class));
 
-    return RPC.getServer(ClientDatanodeProtocol.class, mockDN,
-        ADDRESS, 0, 5, true, conf, sm);
+    return RPC.getServer(org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class, 
+        mockDN, ADDRESS, 0, 5,
+        true, conf, sm);
   }
 
   @Test
@@ -241,9 +248,8 @@ public class TestBlockToken {
 
     ClientDatanodeProtocol proxy = null;
     try {
-      proxy = RPC.getProxy(
-          ClientDatanodeProtocol.class, ClientDatanodeProtocol.versionID, addr,
-          ticket, conf, NetUtils.getDefaultSocketFactory(conf));
+      proxy = DFSUtil.createClientDatanodeProtocolProxy(addr, ticket, conf,
+          NetUtils.getDefaultSocketFactory(conf));
       assertEquals(block3.getBlockId(), proxy.getReplicaVisibleLength(block3));
     } finally {
       server.stop();
@@ -255,8 +261,8 @@ public class TestBlockToken {
 
   /**
    * Test that fast repeated invocations of createClientDatanodeProtocolProxy
-   * will not end up using up thousands of sockets. This is a regression test for
-   * HDFS-1965.
+   * will not end up using up thousands of sockets. This is a regression test
+   * for HDFS-1965.
    */
   @Test
   public void testBlockTokenRpcLeak() throws Exception {
@@ -270,9 +276,9 @@ public class TestBlockToken {
     server.start();
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
-    DatanodeID fakeDnId = new DatanodeID(
-        "localhost:" + addr.getPort(), "fake-storage", 0, addr.getPort());
-    
+    DatanodeID fakeDnId = new DatanodeID("localhost:" + addr.getPort(),
+        "fake-storage", 0, addr.getPort());
+
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
     LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);
     fakeBlock.setBlockToken(token);
@@ -282,19 +288,19 @@ public class TestBlockToken {
     // RPC "Client" object to stay above 0 such that RPC.stopProxy doesn't
     // actually close the TCP connections to the real target DN.
     ClientDatanodeProtocol proxyToNoWhere = RPC.getProxy(
-        ClientDatanodeProtocol.class, ClientDatanodeProtocol.versionID, 
+        ClientDatanodeProtocol.class, ClientDatanodeProtocol.versionID,
         new InetSocketAddress("1.1.1.1", 1),
-        UserGroupInformation.createRemoteUser("junk"),
-        conf, NetUtils.getDefaultSocketFactory(conf));
-    
+        UserGroupInformation.createRemoteUser("junk"), conf,
+        NetUtils.getDefaultSocketFactory(conf));
+
     ClientDatanodeProtocol proxy = null;
 
     int fdsAtStart = countOpenFileDescriptors();
     try {
       long endTime = System.currentTimeMillis() + 3000;
       while (System.currentTimeMillis() < endTime) {
-        proxy = DFSUtil.createClientDatanodeProtocolProxy(
-            fakeDnId, conf, 1000, fakeBlock);
+        proxy = DFSUtil.createClientDatanodeProtocolProxy(fakeDnId, conf, 1000,
+            fakeBlock);
         assertEquals(block3.getBlockId(), proxy.getReplicaVisibleLength(block3));
         if (proxy != null) {
           RPC.stopProxy(proxy);
@@ -303,32 +309,31 @@ public class TestBlockToken {
       }
 
       int fdsAtEnd = countOpenFileDescriptors();
-      
+
       if (fdsAtEnd - fdsAtStart > 50) {
         fail("Leaked " + (fdsAtEnd - fdsAtStart) + " fds!");
       }
     } finally {
       server.stop();
     }
-    
+
     RPC.stopProxy(proxyToNoWhere);
   }
 
   /**
-   * @return the current number of file descriptors open by this
-   * process.
+   * @return the current number of file descriptors open by this process.
    */
   private static int countOpenFileDescriptors() throws IOException {
     return FD_DIR.list().length;
   }
 
-  /** 
+  /**
    * Test {@link BlockPoolTokenSecretManager}
    */
   @Test
   public void testBlockPoolTokenSecretManager() throws Exception {
     BlockPoolTokenSecretManager bpMgr = new BlockPoolTokenSecretManager();
-    
+
     // Test BlockPoolSecretManager with upto 10 block pools
     for (int i = 0; i < 10; i++) {
       String bpid = Integer.toString(i);
@@ -337,12 +342,11 @@ public class TestBlockToken {
       BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(false,
           blockKeyUpdateInterval, blockTokenLifetime);
       bpMgr.addBlockPool(bpid, slaveHandler);
-      
-      
+
       ExportedBlockKeys keys = masterHandler.exportKeys();
       bpMgr.setKeys(bpid, keys);
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
-      
+
       // Test key updating
       masterHandler.updateKeys();
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
@@ -351,11 +355,12 @@ public class TestBlockToken {
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
     }
   }
-  
+
   /**
-   * This test writes a file and gets the block locations without closing
-   * the file, and tests the block token in the last block. Block token is
-   * verified by ensuring it is of correct kind.
+   * This test writes a file and gets the block locations without closing the
+   * file, and tests the block token in the last block. Block token is verified
+   * by ensuring it is of correct kind.
+   * 
    * @throws IOException
    * @throws InterruptedException
    */
@@ -389,5 +394,5 @@ public class TestBlockToken {
     } finally {
       cluster.shutdown();
     }
-  } 
+  }
 }

@@ -30,6 +30,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
@@ -113,6 +114,7 @@ public class TestMRCLI extends TestHDFSCLI {
   }
 
   @Test
+  @Ignore
   @Override
   public void testAll () {
     super.testAll();

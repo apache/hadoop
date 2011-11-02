@@ -27,8 +27,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.FailingMapper;
@@ -70,6 +68,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -103,7 +102,7 @@ public class TestMRJobs {
     }
 
     if (mrCluster == null) {
-      mrCluster = new MiniMRYarnCluster(TestMRJobs.class.getName());
+      mrCluster = new MiniMRYarnCluster(TestMRJobs.class.getName(), 3);
       Configuration conf = new Configuration();
       mrCluster.init(conf);
       mrCluster.start();
@@ -135,7 +134,7 @@ public class TestMRJobs {
     }
 
     Configuration sleepConf = new Configuration(mrCluster.getConfig());
-    // set master address to local to test that local mode applied iff framework == classic and master_address == local
+    // set master address to local to test that local mode applied iff framework == local
     sleepConf.set(MRConfig.MASTER_ADDRESS, "local");	
     
     SleepJob sleepJob = new SleepJob();
@@ -300,7 +299,6 @@ public class TestMRJobs {
   throws IOException, InterruptedException, ClassNotFoundException {
     Configuration myConf = new Configuration(mrCluster.getConfig());
     myConf.setInt(MRJobConfig.NUM_MAPS, 1);
-    myConf.setInt("mapreduce.task.timeout", 10*1000);//reduce the timeout
     myConf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, 2); //reduce the number of attempts
 
     Job job = new Job(myConf);
@@ -324,7 +322,7 @@ public class TestMRJobs {
     return job;
   }
 
-//@Test
+  //@Test
   public void testSleepJobWithSecurityOn() throws IOException,
       InterruptedException, ClassNotFoundException {
 

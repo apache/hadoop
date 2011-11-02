@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 
 import org.junit.Test;
@@ -82,7 +83,7 @@ public class TestResourceRetention {
     for (int i = 0; i < nRsrcs; ++i) {
       final LocalResourceRequest req = new LocalResourceRequest(
           new Path("file:///" + user + "/rsrc" + i), timestamp + i * tsstep,
-          LocalResourceType.FILE);
+          LocalResourceType.FILE, LocalResourceVisibility.PUBLIC);
       final long ts = timestamp + i * tsstep;
       final Path p = new Path("file:///local/" + user + "/rsrc" + i);
       LocalizedResource rsrc = new LocalizedResource(req, null) {

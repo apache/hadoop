@@ -56,11 +56,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    * List of commands that the setuid script will execute.
    */
   enum Commands {
-    INITIALIZE_JOB(0),
+    INITIALIZE_CONTAINER(0),
     LAUNCH_CONTAINER(1),
     SIGNAL_CONTAINER(2),
-    DELETE_AS_USER(3),
-    DELETE_LOG_AS_USER(4);
+    DELETE_AS_USER(3);
 
     private int value;
     Commands(int value) {
@@ -78,8 +77,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   enum ResultCode {
     OK(0),
     INVALID_USER_NAME(2),
-    INVALID_TASK_PID(9),
-    INVALID_TASKCONTROLLER_PERMISSIONS(22),
+    UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
+    INVALID_CONTAINER_PID(9),
+    INVALID_CONTAINER_EXEC_PERMISSIONS(22),
     INVALID_CONFIG_FILE(24);
 
     private final int value;
@@ -107,7 +107,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     List<String> command = new ArrayList<String>(
       Arrays.asList(containerExecutorExe, 
                     user, 
-                    Integer.toString(Commands.INITIALIZE_JOB.getValue()),
+                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
                     appId,
                     nmPrivateContainerTokensPath.toUri().getPath().toString()));
     File jvm =                                  // use same jvm as parent
@@ -115,6 +115,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     command.add(jvm.toString());
     command.add("-classpath");
     command.add(System.getProperty("java.class.path"));
+    String javaLibPath = System.getProperty("java.library.path");
+    if (javaLibPath != null) {
+      command.add("-Djava.library.path=" + javaLibPath);
+    }
     command.add(ContainerLocalizer.class.getName());
     command.add(user);
     command.add(appId);
@@ -151,41 +155,49 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     ContainerId containerId = container.getContainerID();
     String containerIdStr = ConverterUtils.toString(containerId);
-    List<String> command = new ArrayList<String>(
-      Arrays.asList(containerExecutorExe, 
-                    user, 
-                    Integer.toString(Commands.LAUNCH_CONTAINER.getValue()),
-                    appId,
-                    containerIdStr,
-                    containerWorkDir.toString(),
-                    nmPrivateCotainerScriptPath.toUri().getPath().toString(),
-                    nmPrivateTokensPath.toUri().getPath().toString()));
-    String[] commandArray = command.toArray(new String[command.size()]);
-    ShellCommandExecutor shExec = 
-        new ShellCommandExecutor(
-            commandArray,
-            null,                                              // NM's cwd
-            container.getLaunchContext().getEnvironment());    // sanitized env
-    launchCommandObjs.put(containerId, shExec);
-    // DEBUG
-    LOG.info("launchContainer: " + Arrays.toString(commandArray));
-    String output = shExec.getOutput();
+
+    ShellCommandExecutor shExec = null;
+
     try {
-      shExec.execute();
-      if (LOG.isDebugEnabled()) {
-        logOutput(output);
+      Path pidFilePath = getPidFilePath(containerId);
+      if (pidFilePath != null) {
+        List<String> command = new ArrayList<String>(Arrays.asList(
+            containerExecutorExe, user, Integer
+                .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
+            containerIdStr, containerWorkDir.toString(),
+            nmPrivateCotainerScriptPath.toUri().getPath().toString(),
+            nmPrivateTokensPath.toUri().getPath().toString(), pidFilePath
+                .toString()));
+        String[] commandArray = command.toArray(new String[command.size()]);
+        shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
+            container.getLaunchContext().getEnvironment()); // sanitized env
+        // DEBUG
+        LOG.info("launchContainer: " + Arrays.toString(commandArray));
+        shExec.execute();
+        if (LOG.isDebugEnabled()) {
+          logOutput(shExec.getOutput());
+        }
+      } else {
+        LOG.info("Container was marked as inactive. Returning terminated error");
+        return ExitCode.TERMINATED.getExitCode();
       }
     } catch (ExitCodeException e) {
+
+      if (null == shExec) {
+        return -1;
+      }
+
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from container is : " + exitCode);
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
       // terminated/killed forcefully. In all other cases, log the
       // container-executor's output
-      if (exitCode != 143 && exitCode != 137) {
+      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
+          && exitCode != ExitCode.TERMINATED.getExitCode()) {
         LOG.warn("Exception from container-launch : ", e);
-        logOutput(output);
+        logOutput(shExec.getOutput());
         String diagnostics = "Exception from container-launch: \n"
-            + StringUtils.stringifyException(e) + "\n" + output;
+            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
       } else {
@@ -194,11 +206,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
       return exitCode;
     } finally {
-      launchCommandObjs.remove(containerId);
+      ; //
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Output from LinuxContainerExecutor's launchContainer follows:");
-      logOutput(output);
+      logOutput(shExec.getOutput());
     }
     return 0;
   }
@@ -221,7 +233,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       shExec.execute();
     } catch (ExitCodeException e) {
       int ret_code = shExec.getExitCode();
-      if (ret_code == ResultCode.INVALID_TASK_PID.getValue()) {
+      if (ret_code == ResultCode.INVALID_CONTAINER_PID.getValue()) {
         return false;
       }
       logOutput(shExec.getOutput());

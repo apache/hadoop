@@ -22,10 +22,11 @@ import java.io.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.DatanodeWireProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -45,7 +46,14 @@ import org.apache.avro.reflect.Nullable;
 @InterfaceAudience.Private
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 28: Add Balancer Bandwidth Command protocol.
+   * This class is used by both the Namenode (client) and BackupNode (server) 
+   * to insulate from the protocol serialization.
+   * 
+   * If you are adding/changing DN's interface then you need to 
+   * change both this class and ALSO
+   * {@link DatanodeWireProtocol}.
+   * These changes need to be done in a compatible fashion as described in 
+   * {@link ClientNamenodeWireProtocol}
    */
   public static final long versionID = 28L;
   

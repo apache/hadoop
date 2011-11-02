@@ -23,6 +23,12 @@ option java_generate_equals_and_hash = true;
 
 import "yarn_protos.proto";
 
+enum NodeActionProto {
+  NORMAL = 0;
+  REBOOT = 1;
+  SHUTDOWN = 2;
+}
+
 message NodeStatusProto {
   optional NodeIdProto node_id = 1;
   optional int32 response_id = 2;
@@ -32,11 +38,12 @@ message NodeStatusProto {
 
 message RegistrationResponseProto {
   optional bytes secret_key = 1;
+  optional NodeActionProto nodeAction = 2;
 }
 
 message HeartbeatResponseProto {
   optional int32 response_id = 1;
-  optional bool reboot = 2;
+  optional NodeActionProto nodeAction = 2;
   repeated ContainerIdProto containers_to_cleanup = 3;
   repeated ApplicationIdProto applications_to_cleanup = 4;
 }

@@ -24,6 +24,7 @@ import com.google.common.collect.Maps;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +34,7 @@ import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -51,12 +53,14 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MockJobs extends MockApps {
@@ -85,6 +89,10 @@ public class MockJobs extends MockApps {
   static final Iterator<String> DIAGS = Iterators.cycle(
       "Error: java.lang.OutOfMemoryError: Java heap space",
       "Lost task tracker: tasktracker.domain/127.0.0.1:40879");
+  
+  public static final String NM_HOST = "localhost";
+  public static final int NM_PORT = 1234;
+  public static final int NM_HTTP_PORT = 9999;
 
   static final int DT = 1000000; // ms
 
@@ -271,6 +279,11 @@ public class MockJobs extends MockApps {
       public long getSortFinishTime() {
         return 0;
       }
+
+	@Override
+	public String getNodeRackName() {
+		return "/default-rack";
+	}
     };
   }
 
@@ -488,6 +501,23 @@ public class MockJobs extends MockApps {
       public Map<JobACL, AccessControlList> getJobACLs() {
         return Collections.<JobACL, AccessControlList>emptyMap();
       }
+
+      @Override
+      public List<AMInfo> getAMInfos() {
+        List<AMInfo> amInfoList = new LinkedList<AMInfo>();
+        amInfoList.add(createAMInfo(1));
+        amInfoList.add(createAMInfo(2));
+        return amInfoList;
+      }
     };
+  }
+  
+  private static AMInfo createAMInfo(int attempt) {
+    ApplicationAttemptId appAttemptId =
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(100, 1), attempt);
+    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
+    return MRBuilderUtils.newAMInfo(appAttemptId, System.currentTimeMillis(),
+        containerId, NM_HOST, NM_PORT, NM_HTTP_PORT);
   }
 }

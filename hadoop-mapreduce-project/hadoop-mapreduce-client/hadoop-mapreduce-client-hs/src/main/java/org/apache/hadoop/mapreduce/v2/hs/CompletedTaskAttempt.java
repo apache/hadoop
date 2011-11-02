@@ -29,8 +29,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
@@ -81,39 +79,35 @@ public class CompletedTaskAttempt implements TaskAttempt {
 //    report.setPhase(attemptInfo.get); //TODO
     report.setStateString(attemptInfo.getState());
     report.setCounters(getCounters());
+    report.setContainerId(attemptInfo.getContainerId());
+    String []hostSplits = attemptInfo.getHostname().split(":");
+    if (hostSplits.length != 2) {
+      report.setNodeManagerHost("UNKNOWN");
+    } else {
+      report.setNodeManagerHost(hostSplits[0]);
+      report.setNodeManagerPort(Integer.parseInt(hostSplits[1]));
+    }
+    report.setNodeManagerHttpPort(attemptInfo.getHttpPort());
   }
 
   @Override
   public ContainerId getAssignedContainerID() {
-    //TODO ContainerId needs to be part of some historyEvent to be able to 
-    //render the log directory.
-    ContainerId containerId = 
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            ContainerId.class);
-    containerId.setId(-1);
-    ApplicationAttemptId applicationAttemptId =
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            ApplicationAttemptId.class);
-    applicationAttemptId.setAttemptId(-1);
-    ApplicationId applicationId =
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            ApplicationId.class);
-    applicationId.setClusterTimestamp(-1);
-    applicationId.setId(-1);
-    applicationAttemptId.setApplicationId(applicationId);
-    containerId.setApplicationAttemptId(applicationAttemptId);
-    return containerId;
+    return attemptInfo.getContainerId();
   }
 
   @Override
   public String getAssignedContainerMgrAddress() {
-    // TODO Verify this is correct.
-    return attemptInfo.getTrackerName();
+    return attemptInfo.getHostname();
   }
 
   @Override
   public String getNodeHttpAddress() {
-    return attemptInfo.getHostname() + ":" + attemptInfo.getHttpPort();
+    return attemptInfo.getTrackerName() + ":" + attemptInfo.getHttpPort();
+  }
+  
+  @Override
+  public String getNodeRackName() {
+    return attemptInfo.getRackname();
   }
 
   @Override

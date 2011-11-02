@@ -43,7 +43,7 @@ public class TestNodesPage {
     final int numberOfNodesPerRack = 2;
     // Number of Actual Table Headers for NodesPage.NodesBlock might change in
     // future. In that case this value should be adjusted to the new value.
-    final int numberOfThInMetricsTable = 9;
+    final int numberOfThInMetricsTable = 10;
     final int numberOfActualTableHeaders = 10;
 
     Injector injector = WebAppTests.createMockInjector(RMContext.class,

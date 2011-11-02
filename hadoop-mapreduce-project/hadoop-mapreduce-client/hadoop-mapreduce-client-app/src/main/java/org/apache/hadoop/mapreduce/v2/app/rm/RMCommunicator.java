@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,7 +36,6 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -54,7 +55,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
@@ -73,6 +73,7 @@ public abstract class RMCommunicator extends AbstractService  {
   protected int lastResponseID;
   private Resource minContainerCapability;
   private Resource maxContainerCapability;
+  protected Map<ApplicationAccessType, String> applicationACLs;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -160,6 +161,7 @@ public abstract class RMCommunicator extends AbstractService  {
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();
       maxContainerCapability = response.getMaximumResourceCapability();
+      this.applicationACLs = response.getApplicationACLs();
       LOG.info("minContainerCapability: " + minContainerCapability.getMemory());
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
     } catch (Exception are) {
@@ -231,6 +233,9 @@ public abstract class RMCommunicator extends AbstractService  {
             Thread.sleep(rmPollInterval);
             try {
               heartbeat();
+            } catch (YarnException e) {
+              LOG.error("Error communicating with RM: " + e.getMessage() , e);
+              return;
             } catch (Exception e) {
               LOG.error("ERROR IN CONTACTING RM. ", e);
               // TODO: for other exceptions
@@ -242,6 +247,7 @@ public abstract class RMCommunicator extends AbstractService  {
         }
       }
     });
+    allocatorThread.setName("RMCommunicator Allocator");
     allocatorThread.start();
   }
 

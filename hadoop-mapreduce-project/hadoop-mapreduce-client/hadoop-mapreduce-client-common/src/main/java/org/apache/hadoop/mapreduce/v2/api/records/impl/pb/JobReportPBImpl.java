@@ -19,9 +19,14 @@
 package org.apache.hadoop.mapreduce.v2.api.records.impl.pb;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.proto.MRProtos.AMInfoProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.JobIdProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.JobReportProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRProtos.JobReportProtoOrBuilder;
@@ -31,12 +36,14 @@ import org.apache.hadoop.yarn.api.records.ProtoBase;
 
 
     
-public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobReport {
+public class JobReportPBImpl extends ProtoBase<JobReportProto> implements
+    JobReport {
   JobReportProto proto = JobReportProto.getDefaultInstance();
   JobReportProto.Builder builder = null;
   boolean viaProto = false;
   
   private JobId jobId = null;
+  private List<AMInfo> amInfos = null;
   
   
   public JobReportPBImpl() {
@@ -48,20 +55,23 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     viaProto = true;
   }
   
-  public JobReportProto getProto() {
+  public synchronized JobReportProto getProto() {
       mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
+  private synchronized void mergeLocalToBuilder() {
     if (this.jobId != null) {
       builder.setJobId(convertToProtoFormat(this.jobId));
     }
+    if (this.amInfos != null) {
+      addAMInfosToProto();
+    }
   }
 
-  private void mergeLocalToProto() {
+  private synchronized void mergeLocalToProto() {
     if (viaProto) 
       maybeInitBuilder();
     mergeLocalToBuilder();
@@ -69,7 +79,7 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     viaProto = true;
   }
 
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = JobReportProto.newBuilder(proto);
     }
@@ -78,7 +88,7 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     
   
   @Override
-  public JobId getJobId() {
+  public synchronized JobId getJobId() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     if (this.jobId != null) {
       return this.jobId;
@@ -91,14 +101,14 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
   }
 
   @Override
-  public void setJobId(JobId jobId) {
+  public synchronized void setJobId(JobId jobId) {
     maybeInitBuilder();
     if (jobId == null) 
       builder.clearJobId();
     this.jobId = jobId;
   }
   @Override
-  public JobState getJobState() {
+  public synchronized JobState getJobState() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasJobState()) {
       return null;
@@ -107,7 +117,7 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
   }
 
   @Override
-  public void setJobState(JobState jobState) {
+  public synchronized void setJobState(JobState jobState) {
     maybeInitBuilder();
     if (jobState == null) {
       builder.clearJobState();
@@ -116,132 +126,197 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
     builder.setJobState(convertToProtoFormat(jobState));
   }
   @Override
-  public float getMapProgress() {
+  public synchronized float getMapProgress() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getMapProgress());
   }
 
   @Override
-  public void setMapProgress(float mapProgress) {
+  public synchronized void setMapProgress(float mapProgress) {
     maybeInitBuilder();
     builder.setMapProgress((mapProgress));
   }
   @Override
-  public float getReduceProgress() {
+  public synchronized float getReduceProgress() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getReduceProgress());
   }
 
   @Override
-  public void setReduceProgress(float reduceProgress) {
+  public synchronized void setReduceProgress(float reduceProgress) {
     maybeInitBuilder();
     builder.setReduceProgress((reduceProgress));
   }
   @Override
-  public float getCleanupProgress() {
+  public synchronized float getCleanupProgress() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getCleanupProgress());
   }
 
   @Override
-  public void setCleanupProgress(float cleanupProgress) {
+  public synchronized void setCleanupProgress(float cleanupProgress) {
     maybeInitBuilder();
     builder.setCleanupProgress((cleanupProgress));
   }
   @Override
-  public float getSetupProgress() {
+  public synchronized float getSetupProgress() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getSetupProgress());
   }
 
   @Override
-  public void setSetupProgress(float setupProgress) {
+  public synchronized void setSetupProgress(float setupProgress) {
     maybeInitBuilder();
     builder.setSetupProgress((setupProgress));
   }
+
   @Override
-  public long getStartTime() {
+  public synchronized long getSubmitTime() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getSubmitTime());
+  }
+
+  @Override
+  public synchronized void setSubmitTime(long submitTime) {
+    maybeInitBuilder();
+    builder.setSubmitTime((submitTime));
+  }
+
+  @Override
+  public synchronized long getStartTime() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getStartTime());
   }
 
   @Override
-  public void setStartTime(long startTime) {
+  public synchronized void setStartTime(long startTime) {
     maybeInitBuilder();
     builder.setStartTime((startTime));
   }
   @Override
-  public long getFinishTime() {
+  public synchronized long getFinishTime() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getFinishTime());
   }
 
   @Override
-  public void setFinishTime(long finishTime) {
+  public synchronized void setFinishTime(long finishTime) {
     maybeInitBuilder();
     builder.setFinishTime((finishTime));
   }
 
   @Override
-  public String getUser() {
+  public synchronized String getUser() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getUser());
   }
 
   @Override
-  public void setUser(String user) {
+  public synchronized void setUser(String user) {
     maybeInitBuilder();
     builder.setUser((user));
   }
 
   @Override
-  public String getJobName() {
+  public synchronized String getJobName() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getJobName());
   }
 
   @Override
-  public void setJobName(String jobName) {
+  public synchronized void setJobName(String jobName) {
     maybeInitBuilder();
     builder.setJobName((jobName));
   }
 
   @Override
-  public String getTrackingUrl() {
+  public synchronized String getTrackingUrl() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getTrackingUrl());
   }
 
   @Override
-  public void setTrackingUrl(String trackingUrl) {
+  public synchronized void setTrackingUrl(String trackingUrl) {
     maybeInitBuilder();
     builder.setTrackingUrl(trackingUrl);
   }
 
   @Override
-  public String getDiagnostics() {
+  public synchronized String getDiagnostics() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return p.getDiagnostics();
   }
 
   @Override
-  public void setDiagnostics(String diagnostics) {
+  public synchronized void setDiagnostics(String diagnostics) {
     maybeInitBuilder();
     builder.setDiagnostics(diagnostics);
   }
   
   @Override
-  public String getJobFile() {
+  public synchronized String getJobFile() {
     JobReportProtoOrBuilder p = viaProto ? proto : builder;
     return p.getJobFile();
   }
 
   @Override
-  public void setJobFile(String jobFile) {
+  public synchronized void setJobFile(String jobFile) {
     maybeInitBuilder();
     builder.setJobFile(jobFile);
   }
   
+  @Override
+  public synchronized List<AMInfo> getAMInfos() {
+    initAMInfos();
+    return this.amInfos;
+  }
+  
+  @Override
+  public synchronized void setAMInfos(List<AMInfo> amInfos) {
+    maybeInitBuilder();
+    if (amInfos == null) {
+      this.builder.clearAmInfos();
+      this.amInfos = null;
+      return;
+    }
+    initAMInfos();
+    this.amInfos.clear();
+    this.amInfos.addAll(amInfos);
+  }
+  
+  
+  private synchronized void initAMInfos() {
+    if (this.amInfos != null) {
+      return;
+    }
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    List<AMInfoProto> list = p.getAmInfosList();
+    
+    this.amInfos = new ArrayList<AMInfo>();
+
+    for (AMInfoProto amInfoProto : list) {
+      this.amInfos.add(convertFromProtoFormat(amInfoProto));
+    }
+  }
+
+  private synchronized void addAMInfosToProto() {
+    maybeInitBuilder();
+    builder.clearAmInfos();
+    if (this.amInfos == null)
+      return;
+    for (AMInfo amInfo : this.amInfos) {
+      builder.addAmInfos(convertToProtoFormat(amInfo));
+    }
+  }
+
+  private AMInfoPBImpl convertFromProtoFormat(AMInfoProto p) {
+    return new AMInfoPBImpl(p);
+  }
+
+  private AMInfoProto convertToProtoFormat(AMInfo t) {
+    return ((AMInfoPBImpl)t).getProto();
+  }
+
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
     return new JobIdPBImpl(p);
   }
@@ -257,7 +332,4 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements JobRep
   private JobState convertFromProtoFormat(JobStateProto e) {
     return MRProtoUtils.convertFromProtoFormat(e);
   }
-
-
-
 }  

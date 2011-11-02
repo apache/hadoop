@@ -1323,13 +1323,11 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       int distance = Integer.MAX_VALUE;
 
       if (hostName != null) {
-        attempt.setHostName(hostName);
 
-        ParsedHost host = null;
-
-        host = getAndRecordParsedHost(hostName);
+        ParsedHost host = getAndRecordParsedHost(hostName);
 
         if (host != null) {
+          attempt.setHostName(host.getNodeName(), host.getRackName());
           attempt.setLocation(host.makeLoggedLocation());
         }
 
@@ -1492,8 +1490,10 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
           failedReduceAttemptTimes.enter(runtime);
         }
       }
-      if (hostName != null) {
-        attempt.setHostName(hostName);
+
+      ParsedHost host = getAndRecordParsedHost(hostName);
+      if (host != null) {
+        attempt.setHostName(host.getNodeName(), host.getRackName());
       }
 
       if (attemptID != null) {

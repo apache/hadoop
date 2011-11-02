@@ -62,13 +62,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.WebApps.Builder;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -77,7 +84,6 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 public class ResourceManager extends CompositeService implements Recoverable {
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   public static final long clusterTimeStamp = System.currentTimeMillis();
-  private YarnConfiguration conf;
 
   protected ClientToAMSecretManager clientToAMSecretManager =
       new ClientToAMSecretManager();
@@ -100,12 +106,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected NodesListManager nodesListManager;
   private EventHandler<SchedulerEvent> schedulerDispatcher;
   protected RMAppManager rmAppManager;
+  protected ApplicationACLsManager applicationACLsManager;
 
   private WebApp webApp;
   private RMContext rmContext;
   private final Store store;
   protected ResourceTrackerService resourceTracker;
-  
+
+  private Configuration conf;
+
   public ResourceManager(Store store) {
     super("ResourceManager");
     this.store = store;
@@ -119,6 +128,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Override
   public synchronized void init(Configuration conf) {
 
+    this.conf = conf;
+
     this.rmDispatcher = createDispatcher();
     addIfService(this.rmDispatcher);
 
@@ -129,13 +140,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
     AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
 
+    DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
+    addService(tokenRenewer);
+    
     this.rmContext = new RMContextImpl(this.store, this.rmDispatcher,
-        this.containerAllocationExpirer, amLivelinessMonitor);
+        this.containerAllocationExpirer, amLivelinessMonitor, tokenRenewer);
 
     addService(nodesListManager);
 
-    // Initialize the config
-    this.conf = new YarnConfiguration(conf);
     // Initialize the scheduler
     this.scheduler = createScheduler();
     this.schedulerDispatcher = createSchedulerEventDispatcher();
@@ -166,7 +178,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(resourceTracker);
   
     try {
-      this.scheduler.reinitialize(this.conf,
+      this.scheduler.reinitialize(conf,
           this.containerTokenSecretManager, this.rmContext);
     } catch (IOException ioe) {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
@@ -174,6 +186,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     masterService = createApplicationMasterService();
     addService(masterService) ;
+
+    this.applicationACLsManager = new ApplicationACLsManager(conf);
 
     this.rmAppManager = createRMAppManager();
     // Register event handler for RMAppManagerEvents
@@ -183,7 +197,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     clientRM = createClientRMService();
     addService(clientRM);
     
-    adminService = createAdminService();
+    adminService = createAdminService(clientRM, masterService, resourceTracker);
     addService(adminService);
 
     this.applicationMasterLauncher = createAMLauncher();
@@ -210,11 +224,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ResourceScheduler createScheduler() {
-    return 
-    ReflectionUtils.newInstance(
-        conf.getClass(YarnConfiguration.RM_SCHEDULER, 
-            FifoScheduler.class, ResourceScheduler.class), 
-        this.conf);
+    return ReflectionUtils.newInstance(this.conf.getClass(
+        YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
+        ResourceScheduler.class), this.conf);
   }
 
   protected ApplicationMasterLauncher createAMLauncher() {
@@ -231,10 +243,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected AMLivelinessMonitor createAMLivelinessMonitor() {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
+  
+  protected DelegationTokenRenewer createDelegationTokenRenewer() {
+    return new DelegationTokenRenewer();
+  }
 
   protected RMAppManager createRMAppManager() {
     return new RMAppManager(this.rmContext, this.clientToAMSecretManager,
-        this.scheduler, this.masterService, this.conf);
+        this.scheduler, this.masterService, this.applicationACLsManager,
+        this.conf);
   }
 
   @Private
@@ -250,6 +267,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       super(SchedulerEventDispatcher.class.getName());
       this.scheduler = scheduler;
       this.eventProcessor = new Thread(new EventProcessor());
+      this.eventProcessor.setName("ResourceManager Event Processor");
     }
 
     @Override
@@ -393,11 +411,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected void startWepApp() {
-    webApp = WebApps.$for("cluster", masterService).at(
-        conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)).
-      start(new RMWebApp(this));
-
+    Builder<ApplicationMasterService> builder = 
+      WebApps.$for("cluster", masterService).at(
+          this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
+    if(YarnConfiguration.getRMWebAppHostAndPort(conf).
+        equals(YarnConfiguration.getProxyHostAndPort(conf))) {
+      AppReportFetcher fetcher = new AppReportFetcher(conf, getClientRMService());
+      builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
+          ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
+      builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
+    }
+    webApp = builder.start(new RMWebApp(this));
   }
 
   @Override
@@ -425,7 +450,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   protected void doSecureLogin() throws IOException {
-    SecurityUtil.login(conf, YarnConfiguration.RM_KEYTAB,
+    SecurityUtil.login(this.conf, YarnConfiguration.RM_KEYTAB,
         YarnConfiguration.RM_PRINCIPAL);
   }
 
@@ -451,7 +476,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected ClientRMService createClientRMService() {
-    return new ClientRMService(this.rmContext, scheduler, this.rmAppManager);
+    return new ClientRMService(this.rmContext, scheduler, this.rmAppManager,
+        this.applicationACLsManager);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
@@ -460,8 +486,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
 
-  protected AdminService createAdminService() {
-    return new AdminService(conf, scheduler, rmContext, this.nodesListManager);
+  protected AdminService createAdminService(
+      ClientRMService clientRMService, 
+      ApplicationMasterService applicationMasterService,
+      ResourceTrackerService resourceTrackerService) {
+    return new AdminService(this.conf, scheduler, rmContext,
+        this.nodesListManager, clientRMService, applicationMasterService,
+        resourceTrackerService);
   }
 
   @Private
@@ -490,6 +521,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Private
   public ApplicationMasterService getApplicationMasterService() {
     return this.masterService;
+  }
+
+  @Private
+  public ApplicationACLsManager getApplicationACLsManager() {
+    return this.applicationACLsManager;
   }
 
   @Override

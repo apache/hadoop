@@ -23,10 +23,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 import org.apache.hadoop.yarn.util.ProtoUtils;
 
@@ -61,6 +63,24 @@ implements ApplicationReport {
     return this.applicationId;
   }
 
+  public void setApplicationResourceUsageReport(ApplicationResourceUsageReport appInfo) {
+    maybeInitBuilder();
+    if (appInfo == null) {
+      builder.clearAppResourceUsage();
+      return;
+    }
+    builder.setAppResourceUsage(convertToProtoFormat(appInfo));
+  }
+
+  @Override
+  public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasAppResourceUsage()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getAppResourceUsage());
+  }
+
   @Override
   public String getTrackingUrl() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -70,6 +90,15 @@ implements ApplicationReport {
     return p.getTrackingUrl();
   }
 
+  @Override
+  public String getOriginalTrackingUrl() {
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasOriginalTrackingUrl()) {
+      return null;
+    }
+    return p.getOriginalTrackingUrl();
+  }
+  
   @Override
   public String getName() {
     ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -177,6 +206,16 @@ implements ApplicationReport {
       return;
     }
     builder.setTrackingUrl(url);
+  }
+  
+  @Override
+  public void setOriginalTrackingUrl(String url) {
+    maybeInitBuilder();
+    if (url == null) {
+      builder.clearOriginalTrackingUrl();
+      return;
+    }
+    builder.setOriginalTrackingUrl(url);
   }
 
   @Override
@@ -310,6 +349,14 @@ implements ApplicationReport {
 
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl) t).getProto();
+  }
+
+  private ApplicationResourceUsageReport convertFromProtoFormat(ApplicationResourceUsageReportProto s) {
+    return ProtoUtils.convertFromProtoFormat(s);
+  }
+
+  private ApplicationResourceUsageReportProto convertToProtoFormat(ApplicationResourceUsageReport s) {
+    return ProtoUtils.convertToProtoFormat(s);
   }
 
   private ApplicationIdPBImpl convertFromProtoFormat(

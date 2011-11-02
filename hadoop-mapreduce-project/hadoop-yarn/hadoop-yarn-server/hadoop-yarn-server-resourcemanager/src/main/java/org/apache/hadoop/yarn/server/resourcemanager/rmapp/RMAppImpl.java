@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -83,6 +84,7 @@ public class RMAppImpl implements RMApp {
   private final WriteLock writeLock;
   private final Map<ApplicationAttemptId, RMAppAttempt> attempts
       = new LinkedHashMap<ApplicationAttemptId, RMAppAttempt>();
+  private final long submitTime;
 
   // Mutable fields
   private long startTime;
@@ -150,8 +152,10 @@ public class RMAppImpl implements RMApp {
     .addTransition(
         RMAppState.KILLED,
         RMAppState.KILLED,
-        EnumSet.of(RMAppEventType.KILL, RMAppEventType.ATTEMPT_FINISHED,
-            RMAppEventType.ATTEMPT_FAILED, RMAppEventType.ATTEMPT_KILLED))
+        EnumSet.of(RMAppEventType.APP_ACCEPTED,
+            RMAppEventType.APP_REJECTED, RMAppEventType.KILL,
+            RMAppEventType.ATTEMPT_FINISHED, RMAppEventType.ATTEMPT_FAILED,
+            RMAppEventType.ATTEMPT_KILLED))
 
      .installTopology();
 
@@ -162,7 +166,8 @@ public class RMAppImpl implements RMApp {
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
       ApplicationStore appStore,
-      YarnScheduler scheduler, ApplicationMasterService masterService) {
+      YarnScheduler scheduler, ApplicationMasterService masterService, 
+      long submitTime) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -177,6 +182,7 @@ public class RMAppImpl implements RMApp {
     this.appStore = appStore;
     this.scheduler = scheduler;
     this.masterService = masterService;
+    this.submitTime = submitTime;
     this.startTime = System.currentTimeMillis();
 
     this.maxRetries = conf.getInt(YarnConfiguration.RM_AM_MAX_RETRIES,
@@ -206,7 +212,8 @@ public class RMAppImpl implements RMApp {
           && currentAttempt.getFinalApplicationStatus() != null) {
         return currentAttempt.getFinalApplicationStatus();   
       }
-      return createFinalApplicationStatus(this.stateMachine.getCurrentState());
+      return 
+          createFinalApplicationStatus(this.stateMachine.getCurrentState());
     } finally {
       this.readLock.unlock();
     }
@@ -324,19 +331,24 @@ public class RMAppImpl implements RMApp {
       String clientToken = "N/A";
       String trackingUrl = "N/A";
       String host = "N/A";
+      String origTrackingUrl = "N/A";
       int rpcPort = -1;
+      ApplicationResourceUsageReport appUsageReport = null;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
       if (this.currentAttempt != null) {
         trackingUrl = this.currentAttempt.getTrackingUrl();
+        origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
         clientToken = this.currentAttempt.getClientToken();
         host = this.currentAttempt.getHost();
         rpcPort = this.currentAttempt.getRpcPort();
+        appUsageReport = currentAttempt.getApplicationResourceUsageReport();
       }
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
           this.diagnostics.toString(), trackingUrl,
-          this.startTime, this.finishTime, finishState);
+          this.startTime, this.finishTime, finishState, appUsageReport,
+          origTrackingUrl);
     } finally {
       this.readLock.unlock();
     }
@@ -365,9 +377,14 @@ public class RMAppImpl implements RMApp {
   }
 
   @Override
+  public long getSubmitTime() {
+    return this.submitTime;
+  }
+
+  @Override
   public String getTrackingUrl() {
     this.readLock.lock();
-
+    
     try {
       if (this.currentAttempt != null) {
         return this.currentAttempt.getTrackingUrl();
@@ -425,7 +442,7 @@ public class RMAppImpl implements RMApp {
 
     RMAppAttempt attempt = new RMAppAttemptImpl(appAttemptId,
         clientTokenStr, rmContext, scheduler, masterService,
-        submissionContext);
+        submissionContext, YarnConfiguration.getProxyHostAndPort(conf));
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     handler.handle(

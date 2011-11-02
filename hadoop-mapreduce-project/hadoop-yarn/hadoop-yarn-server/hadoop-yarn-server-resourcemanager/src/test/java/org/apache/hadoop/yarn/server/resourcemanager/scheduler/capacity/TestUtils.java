@@ -75,7 +75,7 @@ public class TestUtils {
         new ContainerAllocationExpirer(nullDispatcher);
     
     RMContext rmContext = 
-        new RMContextImpl(null, nullDispatcher, cae, null);
+        new RMContextImpl(null, nullDispatcher, cae, null, null);
     
     return rmContext;
   }

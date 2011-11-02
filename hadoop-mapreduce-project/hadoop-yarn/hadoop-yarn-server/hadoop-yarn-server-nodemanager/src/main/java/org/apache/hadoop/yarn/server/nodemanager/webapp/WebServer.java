@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -36,13 +37,14 @@ public class WebServer extends AbstractService {
   private static final Log LOG = LogFactory.getLog(WebServer.class);
 
   private final Context nmContext;
-  private final ResourceView resourceView;
+  private final NMWebApp nmWebApp;
   private WebApp webApp;
 
-  public WebServer(Context nmContext, ResourceView resourceView) {
+  public WebServer(Context nmContext, ResourceView resourceView,
+      ApplicationACLsManager aclsManager) {
     super(WebServer.class.getName());
     this.nmContext = nmContext;
-    this.resourceView = resourceView;
+    this.nmWebApp = new NMWebApp(resourceView, aclsManager);
   }
 
   @Override
@@ -56,10 +58,8 @@ public class WebServer extends AbstractService {
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
-      this.webApp =
-          WebApps.$for("node", Context.class, this.nmContext)
-              .at(bindAddress).with(getConfig())
-              .start(new NMWebApp(this.resourceView));
+      this.webApp = WebApps.$for("node", Context.class, this.nmContext).at(
+          bindAddress).with(getConfig()).start(this.nmWebApp);
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);
@@ -79,14 +79,18 @@ public class WebServer extends AbstractService {
   public static class NMWebApp extends WebApp implements NMWebParams {
 
     private final ResourceView resourceView;
+    private final ApplicationACLsManager aclsManager;
 
-    public NMWebApp(ResourceView resourceView) {
+    public NMWebApp(ResourceView resourceView,
+        ApplicationACLsManager aclsManager) {
       this.resourceView = resourceView;
+      this.aclsManager = aclsManager;
     }
 
     @Override
     public void setup() {
       bind(ResourceView.class).toInstance(this.resourceView);
+      bind(ApplicationACLsManager.class).toInstance(this.aclsManager);
       route("/", NMController.class, "info");
       route("/node", NMController.class, "node");
       route("/allApplications", NMController.class, "allApplications");
@@ -95,7 +99,8 @@ public class WebServer extends AbstractService {
           "application");
       route(pajoin("/container", CONTAINER_ID), NMController.class,
           "container");
-      route(pajoin("/containerlogs", CONTAINER_ID, CONTAINER_LOG_TYPE),
+      route(
+          pajoin("/containerlogs", CONTAINER_ID, APP_OWNER, CONTAINER_LOG_TYPE),
           NMController.class, "logs");
     }
 

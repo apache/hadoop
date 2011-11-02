@@ -29,13 +29,15 @@ import java.net.URI;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
+import org.apache.hadoop.fs.FileContextTestHelper.fileType;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileContextTestHelper.fileType;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.viewfs.ViewFs.MountPoint;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
@@ -43,6 +45,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 
 /**
@@ -408,6 +411,27 @@ public class ViewFsBaseTest {
     }
   }
   
+  @Test
+  public void testGetFileChecksum() throws AccessControlException
+    , UnresolvedLinkException, IOException {
+    AbstractFileSystem mockAFS = Mockito.mock(AbstractFileSystem.class);
+    InodeTree.ResolveResult<AbstractFileSystem> res =
+      new InodeTree.ResolveResult<AbstractFileSystem>(null, mockAFS , null,
+        new Path("someFile"));
+    @SuppressWarnings("unchecked")
+    InodeTree<AbstractFileSystem> fsState = Mockito.mock(InodeTree.class);
+    Mockito.when(fsState.resolve(Mockito.anyString()
+      , Mockito.anyBoolean())).thenReturn(res);
+    ViewFs vfs = Mockito.mock(ViewFs.class);
+    vfs.fsState = fsState;
+
+    Mockito.when(vfs.getFileChecksum(new Path("/tmp/someFile")))
+      .thenCallRealMethod();
+    vfs.getFileChecksum(new Path("/tmp/someFile"));
+
+    Mockito.verify(mockAFS).getFileChecksum(new Path("someFile"));
+  }
+
   @Test(expected=FileNotFoundException.class) 
   public void testgetFSonDanglingLink() throws IOException {
     fcView.getFileStatus(new Path("/danglingLink"));

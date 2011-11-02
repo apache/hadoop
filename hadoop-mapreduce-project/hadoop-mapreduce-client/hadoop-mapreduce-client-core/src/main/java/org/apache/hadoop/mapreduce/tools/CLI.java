@@ -42,9 +42,11 @@ import org.apache.hadoop.mapreduce.TaskReport;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryViewer;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogDumper;
 
 /**
  * Interprets the map reduce cli options 
@@ -53,6 +55,7 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceStability.Stable
 public class CLI extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CLI.class);
+  private Cluster cluster;
 
   public CLI() {
   }
@@ -94,6 +97,7 @@ public class CLI extends Configured implements Tool {
     boolean killTask = false;
     boolean failTask = false;
     boolean setJobPriority = false;
+    boolean logs = false;
 
     if ("-submit".equals(cmd)) {
       if (argv.length != 2) {
@@ -204,13 +208,26 @@ public class CLI extends Configured implements Tool {
       taskType = argv[2];
       taskState = argv[3];
       displayTasks = true;
+    } else if ("-logs".equals(cmd)) {
+      if (argv.length == 2 || argv.length ==3) {
+        logs = true;
+        jobid = argv[1];
+        if (argv.length == 3) {
+          taskid = argv[2];
+        }  else {
+          taskid = null;
+        }
+      } else {
+        displayUsage(cmd);
+        return exitCode;
+      }
     } else {
       displayUsage(cmd);
       return exitCode;
     }
 
     // initialize cluster
-    Cluster cluster = new Cluster(getConf());
+    cluster = new Cluster(getConf());
         
     // Submit the request
     try {
@@ -312,6 +329,22 @@ public class CLI extends Configured implements Tool {
           System.out.println("Could not fail task " + taskid);
           exitCode = -1;
         }
+      } else if (logs) {
+        try {
+        JobID jobID = JobID.forName(jobid);
+        TaskAttemptID taskAttemptID = TaskAttemptID.forName(taskid);
+        LogParams logParams = cluster.getLogParams(jobID, taskAttemptID);
+        LogDumper logDumper = new LogDumper();
+        logDumper.setConf(getConf());
+        logDumper.dumpAContainersLogs(logParams.getApplicationId(),
+            logParams.getContainerId(), logParams.getNodeId(),
+            logParams.getOwner());
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            throw e;
+          } 
+          System.out.println(e.getMessage());
+        }
       }
     } catch (RemoteException re) {
       IOException unwrappedException = re.unwrapRemoteException();
@@ -379,6 +412,10 @@ public class CLI extends Configured implements Tool {
           " <job-id> <task-type> <task-state>]. " +
           "Valid values for <task-type> are " + taskTypes + ". " +
           "Valid values for <task-state> are " + taskStates);
+    } else if ("-logs".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd +
+          " <job-id> <task-attempt-id>]. " +
+          " <task-attempt-id> is optional to get task attempt logs.");      
     } else {
       System.err.printf(prefix + "<command> <args>\n");
       System.err.printf("\t[-submit <job-file>]\n");
@@ -397,7 +434,8 @@ public class CLI extends Configured implements Tool {
         "Valid values for <task-type> are " + taskTypes + ". " +
         "Valid values for <task-state> are " + taskStates);
       System.err.printf("\t[-kill-task <task-attempt-id>]\n");
-      System.err.printf("\t[-fail-task <task-attempt-id>]\n\n");
+      System.err.printf("\t[-fail-task <task-attempt-id>]\n");
+      System.err.printf("\t[-logs <job-id> <task-attempt-id>]\n\n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }
@@ -527,12 +565,26 @@ public class CLI extends Configured implements Tool {
       throws IOException, InterruptedException {
     System.out.println("Total jobs:" + jobs.length);
     System.out.println("JobId\tState\tStartTime\t" +
-        "UserName\tQueue\tPriority\tSchedulingInfo");
+        "UserName\tQueue\tPriority\tMaps\tReduces\tUsedContainers\t" +
+        "RsvdContainers\tUsedMem\tRsvdMem\tNeededMem\tAM info");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%s\t%d\t%s\t%s\t%s\t%s\n", job.getJobID().toString(),
-          job.getState(), job.getStartTime(),
+      TaskReport[] mapReports =
+                 cluster.getJob(job.getJobID()).getTaskReports(TaskType.MAP);
+      TaskReport[] reduceReports =
+                 cluster.getJob(job.getJobID()).getTaskReports(TaskType.REDUCE);
+
+      System.out.printf("%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%dM\t%dM\t%dM\t%s\n",
+          job.getJobID().toString(), job.getState(), job.getStartTime(),
           job.getUsername(), job.getQueue(), 
-          job.getPriority().name(), job.getSchedulingInfo());
+          job.getPriority().name(),
+          mapReports.length,
+          reduceReports.length,
+          job.getNumUsedSlots(),
+          job.getNumReservedSlots(),
+          job.getUsedMem(),
+          job.getReservedMem(),
+          job.getNeededMem(),
+          job.getSchedulingInfo());
     }
   }
   

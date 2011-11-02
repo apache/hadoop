@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +40,7 @@ import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -62,7 +65,11 @@ public class Cluster {
   private Path sysDir = null;
   private Path stagingAreaDir = null;
   private Path jobHistoryDir = null;
+  private static final Log LOG = LogFactory.getLog(Cluster.class);
 
+  private static ServiceLoader<ClientProtocolProvider> frameworkLoader =
+      ServiceLoader.load(ClientProtocolProvider.class);
+  
   static {
     ConfigUtil.loadResources();
   }
@@ -81,19 +88,34 @@ public class Cluster {
   private void initialize(InetSocketAddress jobTrackAddr, Configuration conf)
       throws IOException {
 
-    for (ClientProtocolProvider provider : ServiceLoader
-        .load(ClientProtocolProvider.class)) {
-      ClientProtocol clientProtocol = null;
-      if (jobTrackAddr == null) {
-        clientProtocol = provider.create(conf);
-      } else {
-        clientProtocol = provider.create(jobTrackAddr, conf);
-      }
+    synchronized (frameworkLoader) {
+      for (ClientProtocolProvider provider : frameworkLoader) {
+        LOG.debug("Trying ClientProtocolProvider : "
+            + provider.getClass().getName());
+        ClientProtocol clientProtocol = null; 
+        try {
+          if (jobTrackAddr == null) {
+            clientProtocol = provider.create(conf);
+          } else {
+            clientProtocol = provider.create(jobTrackAddr, conf);
+          }
 
-      if (clientProtocol != null) {
-        clientProtocolProvider = provider;
-        client = clientProtocol;
-        break;
+          if (clientProtocol != null) {
+            clientProtocolProvider = provider;
+            client = clientProtocol;
+            LOG.debug("Picked " + provider.getClass().getName()
+                + " as the ClientProtocolProvider");
+            break;
+          }
+          else {
+            LOG.info("Cannot pick " + provider.getClass().getName()
+                + " as the ClientProtocolProvider - returned null protocol");
+          }
+        } 
+        catch (Exception e) {
+          LOG.info("Failed to use " + provider.getClass().getName()
+              + " due to error: " + e.getMessage());
+        }
       }
     }
 
@@ -191,7 +213,20 @@ public class Cluster {
       throws IOException, InterruptedException {
     return client.getQueue(name);
   }
-  
+
+  /**
+   * Get log parameters for the specified jobID or taskAttemptID
+   * @param jobID the job id.
+   * @param taskAttemptID the task attempt id. Optional.
+   * @return the LogParams
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public LogParams getLogParams(JobID jobID, TaskAttemptID taskAttemptID)
+      throws IOException, InterruptedException {
+    return client.getLogFileParams(jobID, taskAttemptID);
+  }
+
   /**
    * Get current cluster status.
    * 
@@ -371,6 +406,7 @@ public class Cluster {
    * @return the new expiration time
    * @throws InvalidToken
    * @throws IOException
+   * @deprecated Use {@link Token#renew} instead
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                    ) throws InvalidToken, IOException,
@@ -387,6 +423,7 @@ public class Cluster {
    * Cancel a delegation token from the JobTracker
    * @param token the token to cancel
    * @throws IOException
+   * @deprecated Use {@link Token#cancel} instead
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
                                     ) throws IOException,

@@ -113,7 +113,7 @@ class Ls extends FsCommand {
         stat.getGroup(),
         formatSize(stat.getLen()),
         dateFormat.format(new Date(stat.getModificationTime())),
-        item.path.toUri().getPath()
+        item
     );
     out.println(line);
   }

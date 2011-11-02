@@ -219,7 +219,7 @@ public class TestFail {
         }
 
         @Override
-        protected ContainerManager getCMProxy(ContainerId containerID,
+        protected ContainerManager getCMProxy(ContainerId contianerID,
             String containerManagerBindAddr, ContainerToken containerToken)
             throws IOException {
           try {

@@ -1,4 +1,27 @@
 <?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<!-- Do not modify this file directly.  Instead, copy entries that you -->
+<!-- wish to modify from this file into yarn-site.xml and change them -->
+<!-- there.  If yarn-site.xml does not already exist, create it.      -->
+
 <configuration>
   
   <!-- IPC Configs -->
@@ -83,14 +106,14 @@
   </property>
 
   <property>
-    <description>Are RM acls enabled.</description>
-    <name>yarn.resourcemanager.acl.enable</name>
-    <value>false</value>
+    <description>Are acls enabled.</description>
+    <name>yarn.acl.enable</name>
+    <value>true</value>
   </property>
 
   <property>
-    <description>ACL of who can be admin of RM.</description>
-    <name>yarn.resourcemanager.admin.acl</name>
+    <description>ACL of who can be admin of the YARN cluster.</description>
+    <name>yarn.admin.acl</name>
     <value>*</value>
   </property>
 
@@ -191,7 +214,19 @@
   <property>
     <description>address of node manager IPC.</description>
     <name>yarn.nodemanager.address</name>
-    <value>0.0.0.0:45454</value>
+    <value>0.0.0.0:0</value>
+  </property>
+
+  <property>
+    <description>Environment variables that should be forwarded from the NodeManager's environment to the container's.</description>
+    <name>yarn.nodemanager.admin-env</name>
+    <value>MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX</value>
+  </property>
+
+  <property>
+    <description>Environment variables that containers may override rather than use NodeManager's default.</description>
+    <name>yarn.nodemanager.env-whitelist</name>
+    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,YARN_HOME</value>
   </property>
 
   <property>
@@ -268,15 +303,48 @@
   </property>
 
   <property>
+    <description>Whether to enable log aggregation</description>
+    <name>yarn.nodemanager.log-aggregation-enable</name>
+    <value>false</value>
+  </property>
+  
+  <property>
+    <description>Time in seconds to retain user logs. Only applicable if
+    log aggregation is disabled
+    </description>
+    <name>yarn.nodemanager.log.retain-seconds</name>
+    <value>10800</value>
+  </property>
+
+  <property>
     <description>Where to aggregate logs to.</description>
     <name>yarn.nodemanager.remote-app-log-dir</name>
     <value>/tmp/logs</value>
   </property>
+  <property>
+    <description>The remote log dir will be created at 
+      {yarn.nodemanager.remote-app-log-dir}/${user}/{thisParam}
+    </description>
+    <name>yarn.nodemanager.remote-app-log-dir-suffix</name>
+    <value>logs</value>
+  </property>
+
 
   <property>
-    <description>Amount of memory in GB that can be allocated for containers.</description>
-    <name>yarn.nodemanager.resource.memory-gb</name>
-    <value>8</value>
+    <description>Amount of physical memory, in MB, that can be allocated 
+    for containers.</description>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>8192</value>
+  </property>
+
+  <property>
+    <description>Ratio between virtual memory to physical memory when
+    setting memory limits for containers. Container allocations are
+    expressed in terms of physical memory, and virtual memory usage
+    is allowed to exceed this allocation by this ratio.
+    </description>
+    <name>yarn.nodemanager.vmem-pmem-ratio</name>
+    <value>2.1</value>
   </property>
 
   <property>
@@ -294,12 +362,6 @@
   <property>
     <description>Class that calculates containers current resource utilization.</description>
     <name>yarn.nodemanager.container-monitor.resource-calculator.class</name>
-  </property>
-
-  <property>
-    <description>Amount of physical ram to reserve for other applications, -1 disables.</description>
-    <name>yarn.nodemanager.reserved.memory-mb</name>
-    <value>-1</value>
   </property>
 
   <property>
@@ -349,6 +411,18 @@
     <!-- <value>mapreduce.shuffle</value> -->
   </property>
 
+  <property>
+    <description>No. of ms to wait between sending a SIGTERM and SIGKILL to a container</description>
+    <name>yarn.nodemanager.sleep-delay-before-sigkill.ms</name>
+    <value>250</value>
+  </property>
+
+  <property>
+    <description>Max time to wait for a process to come up when trying to cleanup a container</description>
+    <name>yarn.nodemanager.process-kill-wait.ms</name>
+    <value>2000</value>
+  </property>
+
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
@@ -363,5 +437,28 @@
   <property>
     <name>mapreduce.job.hdfs-servers</name>
     <value>${fs.default.name}</value>
+  </property>
+
+  <!-- WebAppProxy Configuration-->
+  
+  <property>
+    <description>The kerberos principal for the proxy, if the proxy is not
+    running as part of the RM.</description>
+    <name>yarn.web-proxy.principal</name>
+    <value/>
+  </property>
+  
+  <property>
+    <description>Keytab for WebAppProxy, if the proxy is not running as part of 
+    the RM.</description>
+    <name>yarn.web-proxy.keytab</name>
+  </property>
+  
+  <property>
+    <description>The address for the web proxy as HOST:PORT, if this is not
+     given or if it matches yarn.resourcemanager.address then the proxy will
+     run as part of the RM</description>
+     <name>yarn.web-proxy.address</name>
+     <value/>
   </property>
 </configuration>

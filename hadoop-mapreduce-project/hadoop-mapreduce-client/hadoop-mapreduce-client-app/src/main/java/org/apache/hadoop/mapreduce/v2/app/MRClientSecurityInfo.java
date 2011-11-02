@@ -27,7 +27,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.yarn.proto.MRClientProtocol;
-import org.apache.hadoop.yarn.security.ApplicationTokenSelector;
+import org.apache.hadoop.yarn.security.client.ClientTokenSelector;
 
 public class MRClientSecurityInfo extends SecurityInfo {
 
@@ -51,7 +51,7 @@ public class MRClientSecurityInfo extends SecurityInfo {
       @Override
       public Class<? extends TokenSelector<? extends TokenIdentifier>>
           value() {
-        return ApplicationTokenSelector.class;
+        return ClientTokenSelector.class;
       }
     };
   }

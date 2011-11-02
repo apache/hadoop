@@ -44,6 +44,10 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_CRC32   = 1;
   public static final int CHECKSUM_CRC32C  = 2;
   
+  private static String[] NAMES = new String[] {
+    "NULL", "CRC32", "CRC32C"
+  };
+  
   private static final int CHECKSUM_NULL_SIZE  = 0;
   private static final int CHECKSUM_CRC32_SIZE = 4;
   private static final int CHECKSUM_CRC32C_SIZE = 4;
@@ -395,7 +399,33 @@ public class DataChecksum implements Checksum {
     }
   }
 
-
+  @Override
+  public boolean equals(Object other) {
+    if (!(other instanceof DataChecksum)) {
+      return false;
+    }
+    DataChecksum o = (DataChecksum)other;
+    return o.bytesPerChecksum == this.bytesPerChecksum &&
+      o.type == this.type;
+  }
+  
+  @Override
+  public int hashCode() {
+    return (this.type + 31) * this.bytesPerChecksum;
+  }
+  
+  @Override
+  public String toString() {
+    String strType;
+    if (type < NAMES.length && type > 0) {
+      strType = NAMES[type];
+    } else {
+      strType = String.valueOf(type);
+    }
+    return "DataChecksum(type=" + strType +
+      ", chunkSize=" + bytesPerChecksum + ")";
+  }
+  
   /**
    * This just provides a dummy implimentation for Checksum class
    * This is used when there is no checksum available or required for 

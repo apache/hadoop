@@ -408,6 +408,7 @@ public class Hdfs extends AbstractFileSystem {
    * @return the new expiration time
    * @throws InvalidToken
    * @throws IOException
+   * @deprecated Use Token.renew instead.
    */
   @SuppressWarnings("unchecked")
   public long renewDelegationToken(
@@ -422,6 +423,7 @@ public class Hdfs extends AbstractFileSystem {
    * @param token delegation token
    * @throws InvalidToken
    * @throws IOException
+   * @deprecated Use Token.cancel instead.
    */
   @SuppressWarnings("unchecked")
   public void cancelDelegationToken(

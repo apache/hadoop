@@ -64,10 +64,10 @@ public class TestDeleteBlockPool {
       String bpid1 = cluster.getNamesystem(0).getBlockPoolId();
       String bpid2 = cluster.getNamesystem(1).getBlockPoolId();
 
-      File dn1StorageDir1 = MiniDFSCluster.getStorageDir(0, 0);
-      File dn1StorageDir2 = MiniDFSCluster.getStorageDir(0, 1);
-      File dn2StorageDir1 = MiniDFSCluster.getStorageDir(1, 0);
-      File dn2StorageDir2 = MiniDFSCluster.getStorageDir(1, 1);
+      File dn1StorageDir1 = cluster.getInstanceStorageDir(0, 0);
+      File dn1StorageDir2 = cluster.getInstanceStorageDir(0, 1);
+      File dn2StorageDir1 = cluster.getInstanceStorageDir(1, 0);
+      File dn2StorageDir2 = cluster.getInstanceStorageDir(1, 1);
 
       // Although namenode is shutdown, the bp offerservice is still running
       try {
@@ -171,8 +171,8 @@ public class TestDeleteBlockPool {
       String bpid1 = cluster.getNamesystem(0).getBlockPoolId();
       String bpid2 = cluster.getNamesystem(1).getBlockPoolId();
       
-      File dn1StorageDir1 = MiniDFSCluster.getStorageDir(0, 0);
-      File dn1StorageDir2 = MiniDFSCluster.getStorageDir(0, 1);
+      File dn1StorageDir1 = cluster.getInstanceStorageDir(0, 0);
+      File dn1StorageDir2 = cluster.getInstanceStorageDir(0, 1);
       
       Configuration nn1Conf = cluster.getConfiguration(0);
       nn1Conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");

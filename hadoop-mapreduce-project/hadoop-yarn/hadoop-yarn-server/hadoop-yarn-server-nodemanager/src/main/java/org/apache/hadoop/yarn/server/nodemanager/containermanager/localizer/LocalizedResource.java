@@ -205,6 +205,11 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
     // typedef
   }
 
+  /**
+   * Transition from INIT to DOWNLOADING.
+   * Sends a {@link LocalizerResourceRequestEvent} to the
+   * {@link ResourceLocalizationService}.
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   private static class FetchResourceTransition extends ResourceTransition {
     @Override

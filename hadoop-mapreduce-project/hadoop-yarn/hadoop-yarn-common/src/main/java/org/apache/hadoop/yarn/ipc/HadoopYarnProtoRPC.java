@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.ipc;
 
 import java.net.InetSocketAddress;
 
-import org.apache.avro.ipc.Server;
+import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,33 +58,8 @@ public class HadoopYarnProtoRPC extends YarnRPC {
     LOG.info("Creating a HadoopYarnProtoRpc server for protocol " + protocol + 
         " with " + numHandlers + " handlers");
     
-    final RPC.Server hadoopServer;
-    hadoopServer = 
-      RpcFactoryProvider.getServerFactory(conf).getServer(protocol, instance, 
+    return RpcFactoryProvider.getServerFactory(conf).getServer(protocol, instance, 
           addr, conf, secretManager, numHandlers);
-
-    Server server = new Server() {
-      @Override
-      public void close() {
-        hadoopServer.stop();
-      }
-
-      @Override
-      public int getPort() {
-        return hadoopServer.getListenerAddress().getPort();
-      }
-
-      @Override
-      public void join() throws InterruptedException {
-        hadoopServer.join();
-      }
-
-      @Override
-      public void start() {
-        hadoopServer.start();
-      }
-    };
-    return server;
 
   }
 

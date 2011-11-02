@@ -33,7 +33,6 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.avro.Schema;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.DecoderFactory;
-import org.apache.avro.io.JsonDecoder;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
 
@@ -146,8 +145,10 @@ public class EventReader implements Closeable {
       result = new TaskAttemptUnsuccessfulCompletionEvent(); break;
     case CLEANUP_ATTEMPT_KILLED:
       result = new TaskAttemptUnsuccessfulCompletionEvent(); break;
+    case AM_STARTED:
+      result = new AMStartedEvent(); break;
     default:
-      throw new RuntimeException("unexpected event type!");
+      throw new RuntimeException("unexpected event type: " + wrapper.type);
     }
     result.setDatum(wrapper.event);
     return result;

@@ -29,11 +29,11 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 
 public class FileNameIndexUtils {
 
-  static final String UNDERSCORE_ESCAPE = "%5F";
   static final int JOB_NAME_TRIM_LENGTH = 50;
   
-  //This has to be underscore currently. Untill escape uses DELIMITER.
-  static final String DELIMITER = "_";
+  // Sanitize job history file for predictable parsing
+  static final String DELIMITER = "-";
+  static final String DELIMITER_ESCAPE = "%2D";
   
   private static final int JOB_ID_INDEX = 0;
   private static final int SUBMIT_TIME_INDEX = 1;
@@ -54,7 +54,7 @@ public class FileNameIndexUtils {
   public static String getDoneFileName(JobIndexInfo indexInfo) throws IOException {
     StringBuilder sb = new StringBuilder();
     //JobId
-    sb.append(escapeUnderscores(TypeConverter.fromYarn(indexInfo.getJobId()).toString()));
+    sb.append(escapeDelimiters(TypeConverter.fromYarn(indexInfo.getJobId()).toString()));
     sb.append(DELIMITER);
     
     //StartTime
@@ -62,11 +62,11 @@ public class FileNameIndexUtils {
     sb.append(DELIMITER);
     
     //UserName
-    sb.append(escapeUnderscores(getUserName(indexInfo)));
+    sb.append(escapeDelimiters(getUserName(indexInfo)));
     sb.append(DELIMITER);
     
     //JobName
-    sb.append(escapeUnderscores(trimJobName(getJobName(indexInfo))));
+    sb.append(escapeDelimiters(trimJobName(getJobName(indexInfo))));
     sb.append(DELIMITER);
     
     //FinishTime
@@ -136,13 +136,13 @@ public class FileNameIndexUtils {
    */
   public static String encodeJobHistoryFileName(String logFileName)
   throws IOException {
-    String replacementUnderscoreEscape = null;
+    String replacementDelimiterEscape = null;
 
-    if (logFileName.contains(UNDERSCORE_ESCAPE)) {
-      replacementUnderscoreEscape = nonOccursString(logFileName);
+    // Temporarily protect the escape delimiters from encoding
+    if (logFileName.contains(DELIMITER_ESCAPE)) {
+      replacementDelimiterEscape = nonOccursString(logFileName);
 
-      logFileName = replaceStringInstances
-        (logFileName, UNDERSCORE_ESCAPE, replacementUnderscoreEscape);
+      logFileName = logFileName.replaceAll(DELIMITER_ESCAPE, replacementDelimiterEscape);
     }
 
     String encodedFileName = null;
@@ -154,10 +154,10 @@ public class FileNameIndexUtils {
       ioe.setStackTrace(uee.getStackTrace());
       throw ioe;
     }
-    
-    if (replacementUnderscoreEscape != null) {
-      encodedFileName = replaceStringInstances
-        (encodedFileName, replacementUnderscoreEscape, UNDERSCORE_ESCAPE);
+
+    // Restore protected escape delimiters after encoding
+    if (replacementDelimiterEscape != null) {
+      encodedFileName = encodedFileName.replaceAll(replacementDelimiterEscape, DELIMITER_ESCAPE);
     }
 
     return encodedFileName;
@@ -214,29 +214,10 @@ public class FileNameIndexUtils {
     return in;
   }
   
-  private static String escapeUnderscores(String escapee) {
-    return replaceStringInstances(escapee, "_", UNDERSCORE_ESCAPE);
+  private static String escapeDelimiters(String escapee) {
+    return escapee.replaceAll(DELIMITER, DELIMITER_ESCAPE);
   }
-  
-  // I tolerate this code because I expect a low number of
-  // occurrences in a relatively short string
-  private static String replaceStringInstances
-      (String logFileName, String old, String replacement) {
-    int index = logFileName.indexOf(old);
 
-    while (index > 0) {
-      logFileName = (logFileName.substring(0, index)
-                     + replacement
-                     + replaceStringInstances
-                         (logFileName.substring(index + old.length()),
-                          old, replacement));
-
-      index = logFileName.indexOf(old);
-    }
-
-    return logFileName;
-  }
-  
   /**
    * Trims the job-name if required
    */

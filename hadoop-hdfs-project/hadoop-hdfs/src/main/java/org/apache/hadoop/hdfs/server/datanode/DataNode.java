@@ -104,6 +104,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -123,6 +124,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DNTransferAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeProtocolServerSideTranslatorR23;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -150,12 +152,16 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolServerSideTranslatorR23;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolTranslatorR23;
+import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeWireProtocol;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
@@ -413,6 +419,11 @@ public class DataNode extends Configured
   int socketTimeout;
   int socketWriteTimeout = 0;  
   boolean transferToAllowed = true;
+  private boolean dropCacheBehindWrites = false;
+  private boolean syncBehindWrites = false;
+  private boolean dropCacheBehindReads = false;
+  private long readaheadLength = 0;
+
   int writePacketSize = 0;
   boolean isBlockTokenEnabled;
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
@@ -496,6 +507,20 @@ public class DataNode extends Configured
         DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT);
     this.writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
                                        DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
+
+    this.readaheadLength = conf.getLong(
+        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY,
+        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
+    this.dropCacheBehindWrites = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY,
+        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_DEFAULT);
+    this.syncBehindWrites = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_KEY,
+        DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_DEFAULT);
+    this.dropCacheBehindReads = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY,
+        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_DEFAULT);
+
     this.blockReportInterval = conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
         DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
     this.initialBlockReportDelay = conf.getLong(
@@ -554,7 +579,7 @@ public class DataNode extends Configured
     if (conf.getBoolean(DFS_WEBHDFS_ENABLED_KEY, DFS_WEBHDFS_ENABLED_DEFAULT)) {
       infoServer.addJerseyResourcePackage(DatanodeWebHdfsMethods.class
           .getPackage().getName() + ";" + Param.class.getPackage().getName(),
-          "/" + WebHdfsFileSystem.PATH_PREFIX + "/*");
+          WebHdfsFileSystem.PATH_PREFIX + "/*");
     }
     this.infoServer.start();
   }
@@ -576,13 +601,22 @@ public class DataNode extends Configured
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
         conf.get("dfs.datanode.ipc.address"));
     
-    // Add all the RPC protocols that the Datanode implements
-    ipcServer = RPC.getServer(ClientDatanodeProtocol.class, this, ipcAddr.getHostName(),
+    // Add all the RPC protocols that the Datanode implements    
+    ClientDatanodeProtocolServerSideTranslatorR23 
+        clientDatanodeProtocolServerTranslator = 
+          new ClientDatanodeProtocolServerSideTranslatorR23(this);
+    ipcServer = RPC.getServer(
+      org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class,
+      clientDatanodeProtocolServerTranslator, ipcAddr.getHostName(),
                               ipcAddr.getPort(), 
                               conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
                                           DFS_DATANODE_HANDLER_COUNT_DEFAULT), 
                               false, conf, blockPoolTokenSecretManager);
-    ipcServer.addProtocol(InterDatanodeProtocol.class, this);
+    InterDatanodeProtocolServerSideTranslatorR23 
+        interDatanodeProtocolServerTranslator = 
+          new InterDatanodeProtocolServerSideTranslatorR23(this);
+    ipcServer.addProtocol(InterDatanodeWireProtocol.class, 
+        interDatanodeProtocolServerTranslator);
     
     // set service-level authorization security policy
     if (conf.getBoolean(
@@ -1137,8 +1171,15 @@ public class DataNode extends Configured
             if (!heartbeatsDisabledForTests) {
               DatanodeCommand[] cmds = sendHeartBeat();
               metrics.addHeartbeat(now() - startTime);
+
+              long startProcessCommands = now();
               if (!processCommand(cmds))
                 continue;
+              long endProcessCommands = now();
+              if (endProcessCommands - startProcessCommands > 2000) {
+                LOG.info("Took " + (endProcessCommands - startProcessCommands) +
+                    "ms to process " + cmds.length + " commands from NN");
+              }
             }
           }
           if (pendingReceivedRequests > 0
@@ -1412,7 +1453,7 @@ public class DataNode extends Configured
         }
         break;
       case DatanodeProtocol.DNA_FINALIZE:
-        storage.finalizeUpgrade(((DatanodeCommand.Finalize) cmd)
+        storage.finalizeUpgrade(((FinalizeCommand) cmd)
             .getBlockPoolId());
         break;
       case UpgradeCommand.UC_ACTION_START_UPGRADE:
@@ -1634,15 +1675,13 @@ public class DataNode extends Configured
     if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
       InterDatanodeProtocol.LOG.debug("InterDatanodeProtocol addr=" + addr);
     }
-    UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
+    final UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     try {
       return loginUgi
           .doAs(new PrivilegedExceptionAction<InterDatanodeProtocol>() {
             public InterDatanodeProtocol run() throws IOException {
-              return (InterDatanodeProtocol) RPC.getProxy(
-                  InterDatanodeProtocol.class, InterDatanodeProtocol.versionID,
-                  addr, UserGroupInformation.getCurrentUser(), conf,
-                  NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+              return new InterDatanodeProtocolTranslatorR23(addr, loginUgi,
+                  conf, NetUtils.getDefaultSocketFactory(conf), socketTimeout);
             }
           });
     } catch (InterruptedException ie) {
@@ -1878,7 +1917,7 @@ public class DataNode extends Configured
       nn.reportBadBlocks(new LocatedBlock[]{
           new LocatedBlock(block, new DatanodeInfo[] {
               new DatanodeInfo(bpReg)})});
-      LOG.info("Can't replicate block " + block
+      LOG.warn("Can't replicate block " + block
           + " because on-disk length " + onDiskLength 
           + " is shorter than NameNode recorded length " + block.getNumBytes());
       return;
@@ -2058,7 +2097,7 @@ public class DataNode extends Configured
         out = new DataOutputStream(new BufferedOutputStream(baseStream,
             HdfsConstants.SMALL_BUFFER_SIZE));
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
-            false, false, false, DataNode.this, null);
+            false, false, DataNode.this, null);
         DatanodeInfo srcNode = new DatanodeInfo(bpReg);
 
         //
@@ -2071,7 +2110,7 @@ public class DataNode extends Configured
         }
 
         new Sender(out).writeBlock(b, accessToken, clientname, targets, srcNode,
-            stage, 0, 0, 0, 0);
+            stage, 0, 0, 0, 0, blockSender.getChecksum());
 
         // send data & checksum
         blockSender.sendBlock(out, baseStream, null);
@@ -2883,5 +2922,21 @@ public class DataNode extends Configured
     DataXceiverServer dxcs =
                        (DataXceiverServer) this.dataXceiverServer.getRunnable();
     return dxcs.balanceThrottler.getBandwidth();
+  }
+
+  long getReadaheadLength() {
+    return readaheadLength;
+  }
+
+  boolean shouldDropCacheBehindWrites() {
+    return dropCacheBehindWrites;
+  }
+
+  boolean shouldDropCacheBehindReads() {
+    return dropCacheBehindReads;
+  }
+  
+  boolean shouldSyncBehindWrites() {
+    return syncBehindWrites;
   }
 }

@@ -11,18 +11,12 @@
  See the License for the specific language governing permissions and
  limitations under the License. See accompanying LICENSE file.
 -->
-<project name="Hadoop MapReduce Next Gen">
-
-  <version position="right"/>
-
-  <bannerLeft>
-    <name>&nbsp;</name>
-  </bannerLeft>
+<project name="Apache Hadoop 0.23">
 
   <skin>
     <groupId>org.apache.maven.skins</groupId>
     <artifactId>maven-stylus-skin</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
   </skin>
 
   <body>

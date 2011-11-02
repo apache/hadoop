@@ -263,6 +263,7 @@
             <configuration>
               <target>
                 <delete dir="${test.build.data}"/>
+                <mkdir dir="${test.build.data}"/>
                 <mkdir dir="${hadoop.log.dir}"/>
 
                 <copy todir="${project.build.directory}/test-classes/webapps">
@@ -271,6 +272,18 @@
                   </fileset>
                 </copy>
               </target>
+            </configuration>
+          </execution>
+          <execution>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <copy file="src/main/resources/hdfs-default.xml" todir="src/site/resources"/>
+                <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
+              </tasks>
             </configuration>
           </execution>
         </executions>
@@ -315,7 +328,7 @@
               <goal>run</goal>
             </goals>
             <configuration>
-              <target>
+              <target unless="windows.build">
                 <condition property="commons.daemon.os.name" value="darwin">
                     <os name="Mac OS X"/>
                 </condition>
@@ -334,16 +347,15 @@
                 </condition>
                 <property name="commons.daemon.tar.name"
                           value="commons-daemon-${commons-daemon.version}-bin-${commons.daemon.os.name}-${commons.daemon.os.arch}.tar.gz"/>
-               
-                <property name="commons.daemon.download.dir"
-                          value="${project.build.directory}/downloads/commons-daemon"/>
-                <delete dir="${commons.daemon.download.dir}"/>
-                <mkdir dir="${commons.daemon.download.dir}"/>
+                
+                <mkdir dir="downloads"/>
                 <get src="http://archive.apache.org/dist/commons/daemon/binaries/${commons-daemon.version}/${commons.daemon.os.name}/${commons.daemon.tar.name}"
-                    dest="${commons.daemon.download.dir}/${commons.daemon.tar.name}" verbose="true" skipexisting="true"/>
-                <untar compression="gzip" src="${commons.daemon.download.dir}/${commons.daemon.tar.name}"
-                       dest="${commons.daemon.download.dir}"/>
-                <copy file="${commons.daemon.download.dir}/jsvc"
+                    dest="downloads/${commons.daemon.tar.name}" verbose="true" skipexisting="true"/>
+                <delete dir="${project.build.directory}/commons-daemon.staging"/>
+                <mkdir dir="${project.build.directory}/commons-daemon.staging"/>
+                <untar compression="gzip" src="${basedir}/downloads/${commons.daemon.tar.name}"
+                       dest="${project.build.directory}/commons-daemon.staging"/>
+                <copy file="${project.build.directory}/commons-daemon.staging/jsvc"
                       todir="${project.build.directory}/${project.artifactId}-${project.version}/libexec"
                       verbose="true"/>
                 <chmod perm="ugo+x" type="file">
@@ -358,6 +370,18 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>windows</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <windows.build>true</windows.build>
+      </properties>
+    </profile>
     <profile>
       <id>native</id>
       <activation>

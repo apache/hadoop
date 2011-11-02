@@ -34,7 +34,9 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 
+import java.io.IOException;
 import java.io.PrintWriter;
+
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
@@ -168,5 +170,17 @@ public class WebAppTests {
   // convenience
   public static <T> Injector testBlock(Class<? extends SubView> block) {
     return testBlock(block, null, null);
+  }
+  
+  /**
+   * Convenience method to get the spy writer. 
+   * @param injector the injector used for the test.
+   * @return The Spy writer.
+   * @throws IOException
+   */
+  public static PrintWriter getPrintWriter(Injector injector)
+      throws IOException {
+    HttpServletResponse res = injector.getInstance(HttpServletResponse.class);
+    return res.getWriter();
   }
 }

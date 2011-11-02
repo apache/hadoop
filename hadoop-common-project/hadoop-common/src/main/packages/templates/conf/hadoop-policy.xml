@@ -85,6 +85,7 @@
     A special value of "*" means all users are allowed.</description>
   </property>
 
+ 
   <property>
     <name>security.job.submission.protocol.acl</name>
     <value>*</value>
@@ -124,7 +125,7 @@
     users are allowed.</description>
   </property>
 
-<property>
+  <property>
     <name>security.refresh.policy.protocol.acl</name>
     <value>${HADOOP_HDFS_USER}</value>
     <description>ACL for RefreshAuthorizationPolicyProtocol, used by the
@@ -135,5 +136,85 @@
   </property>
 
 
+  <!-- YARN Protocols -->
+
+  <property>
+    <name>security.resourcetracker.protocol.acl</name>
+    <value>${HADOOP_YARN_USER}</value>
+    <description>ACL for ResourceTracker protocol, used by the
+    ResourceManager and NodeManager to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.admin.protocol.acl</name>
+    <value>${HADOOP_YARN_USER}</value>
+    <description>ACL for RMAdminProtocol, for admin commands. 
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.client.resourcemanager.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for ClientRMProtocol, used by the ResourceManager 
+    and applications submission clients to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.applicationmaster.resourcemanager.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for AMRMProtocol, used by the ResourceManager 
+    and ApplicationMasters to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.containermanager.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for ContainerManager protocol, used by the NodeManager 
+    and ApplicationMasters to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.resourcelocalizer.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for ResourceLocalizer protocol, used by the NodeManager 
+    and ResourceLocalizer to communicate with each other.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.job.task.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for TaskUmbilicalProtocol, used by the map and reduce
+    tasks to communicate with the parent tasktracker.
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
+
+  <property>
+    <name>security.job.client.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for MRClientProtocol, used by job clients to
+    communciate with the MR ApplicationMaster to query job status etc. 
+    The ACL is a comma-separated list of user and group names. The user and
+    group list is separated by a blank. For e.g. "alice,bob users,wheel".
+    A special value of "*" means all users are allowed.</description>
+  </property>
 
 </configuration>

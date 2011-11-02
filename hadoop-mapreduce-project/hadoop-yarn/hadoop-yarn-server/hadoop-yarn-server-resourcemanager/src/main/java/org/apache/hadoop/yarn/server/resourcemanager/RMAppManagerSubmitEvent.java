@@ -23,13 +23,21 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 public class RMAppManagerSubmitEvent extends RMAppManagerEvent {
 
   private final ApplicationSubmissionContext submissionContext;
+  private final long submitTime;
 
-  public RMAppManagerSubmitEvent(ApplicationSubmissionContext submissionContext) {
-    super(submissionContext.getApplicationId(), RMAppManagerEventType.APP_SUBMIT);
+  public RMAppManagerSubmitEvent(
+      ApplicationSubmissionContext submissionContext, long submitTime) {
+    super(submissionContext.getApplicationId(),
+        RMAppManagerEventType.APP_SUBMIT);
     this.submissionContext = submissionContext;
+    this.submitTime = submitTime;
   }
 
   public ApplicationSubmissionContext getSubmissionContext() {
     return this.submissionContext;
+  }
+  
+  public long getSubmitTime() {
+    return this.submitTime;
   }
 }

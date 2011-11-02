@@ -24,6 +24,7 @@ import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.PureJavaCrc32;
@@ -57,10 +59,13 @@ import org.apache.hadoop.util.PureJavaCrc32;
 class BlockReceiver implements Closeable {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
+
+  private static final long CACHE_DROP_LAG_BYTES = 8 * 1024 * 1024;
   
   private DataInputStream in = null; // from where data are read
   private DataChecksum checksum; // from where chunks of a block can be read
   private OutputStream out = null; // to block file at local disk
+  private FileDescriptor outFd;
   private OutputStream cout = null; // output stream for cehcksum file
   private DataOutputStream checksumOut = null; // to crc file at local disk
   private int bytesPerChecksum;
@@ -80,6 +85,11 @@ class BlockReceiver implements Closeable {
   private final DataNode datanode;
   volatile private boolean mirrorError;
 
+  // Cache management state
+  private boolean dropCacheBehindWrites;
+  private boolean syncBehindWrites;
+  private long lastCacheDropOffset = 0;
+
   /** The client name.  It is empty if a datanode is the client */
   private final String clientname;
   private final boolean isClient; 
@@ -98,7 +108,8 @@ class BlockReceiver implements Closeable {
       final BlockConstructionStage stage, 
       final long newGs, final long minBytesRcvd, final long maxBytesRcvd, 
       final String clientname, final DatanodeInfo srcDataNode,
-      final DataNode datanode) throws IOException {
+      final DataNode datanode, DataChecksum requestedChecksum)
+      throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -167,9 +178,11 @@ class BlockReceiver implements Closeable {
         }
       }
       // read checksum meta information
-      this.checksum = DataChecksum.newDataChecksum(in);
+      this.checksum = requestedChecksum;
       this.bytesPerChecksum = checksum.getBytesPerChecksum();
       this.checksumSize = checksum.getChecksumSize();
+      this.dropCacheBehindWrites = datanode.shouldDropCacheBehindWrites();
+      this.syncBehindWrites = datanode.shouldSyncBehindWrites();
       
       final boolean isCreate = isDatanode || isTransfer 
           || stage == BlockConstructionStage.PIPELINE_SETUP_CREATE;
@@ -177,6 +190,12 @@ class BlockReceiver implements Closeable {
           this.bytesPerChecksum, this.checksumSize);
       if (streams != null) {
         this.out = streams.dataOut;
+        if (out instanceof FileOutputStream) {
+          this.outFd = ((FileOutputStream)out).getFD();
+        } else {
+          LOG.warn("Could not get file descriptor for outputstream of class " +
+              out.getClass());
+        }
         this.cout = streams.checksumOut;
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
             streams.checksumOut, HdfsConstants.SMALL_BUFFER_SIZE));
@@ -631,6 +650,8 @@ class BlockReceiver implements Closeable {
           );
           
           datanode.metrics.incrBytesWritten(len);
+
+          dropOsCacheBehindWriter(offsetInBlock);
         }
       } catch (IOException iex) {
         datanode.checkDiskError(iex);
@@ -645,10 +666,27 @@ class BlockReceiver implements Closeable {
     return lastPacketInBlock?-1:len;
   }
 
-  void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
-    checksum.writeHeader(mirrorOut);
+  private void dropOsCacheBehindWriter(long offsetInBlock) throws IOException {
+    try {
+      if (outFd != null &&
+          offsetInBlock > lastCacheDropOffset + CACHE_DROP_LAG_BYTES) {
+        long twoWindowsAgo = lastCacheDropOffset - CACHE_DROP_LAG_BYTES;
+        if (twoWindowsAgo > 0 && dropCacheBehindWrites) {
+          NativeIO.posixFadviseIfPossible(outFd, 0, lastCacheDropOffset,
+              NativeIO.POSIX_FADV_DONTNEED);
+        }
+        
+        if (syncBehindWrites) {
+          NativeIO.syncFileRangeIfPossible(outFd, lastCacheDropOffset, CACHE_DROP_LAG_BYTES,
+              NativeIO.SYNC_FILE_RANGE_WRITE);
+        }
+        
+        lastCacheDropOffset += CACHE_DROP_LAG_BYTES;
+      }
+    } catch (Throwable t) {
+      LOG.warn("Couldn't drop os cache behind writer for " + block, t);
+    }
   }
- 
 
   void receiveBlock(
       DataOutputStream mirrOut, // output to next datanode

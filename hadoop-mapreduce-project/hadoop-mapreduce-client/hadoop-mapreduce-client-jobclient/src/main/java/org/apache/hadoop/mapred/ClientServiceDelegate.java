@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 
@@ -37,6 +38,7 @@ import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -47,30 +49,32 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompletionEventsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompletionEventsResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillJobRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.SchedulerSecurityInfo;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
@@ -84,7 +88,6 @@ public class ClientServiceDelegate {
   private final ApplicationId appId;
   private final ResourceMgrDelegate rm;
   private final MRClientProtocol historyServerProxy;
-  private boolean forceRefresh;
   private MRClientProtocol realProxy = null;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static String UNKNOWN_USER = "Unknown User";
@@ -125,10 +128,10 @@ public class ClientServiceDelegate {
   }
 
   private MRClientProtocol getProxy() throws YarnRemoteException {
-    if (!forceRefresh && realProxy != null) {
+    if (realProxy != null) {
       return realProxy;
     }
-      //TODO RM NPEs for unknown jobs. History may still be aware.
+    
     // Possibly allow nulls through the PB tunnel, otherwise deal with an exception
     // and redirect to the history server.
     ApplicationReport application = rm.getApplicationReport(appId);
@@ -136,7 +139,9 @@ public class ClientServiceDelegate {
       trackingUrl = application.getTrackingUrl();
     }
     String serviceAddr = null;
-    while (application == null || YarnApplicationState.RUNNING.equals(application.getYarnApplicationState())) {
+    while (application == null
+        || YarnApplicationState.RUNNING == application
+            .getYarnApplicationState()) {
       if (application == null) {
         LOG.info("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
@@ -166,7 +171,7 @@ public class ClientServiceDelegate {
         }
         LOG.info("Tracking Url of JOB is " + application.getTrackingUrl());
         LOG.info("Connecting to " + serviceAddr);
-        instantiateAMProxy(serviceAddr);
+        realProxy = instantiateAMProxy(serviceAddr);
         return realProxy;
       } catch (IOException e) {
         //possibly the AM has crashed
@@ -196,7 +201,6 @@ public class ClientServiceDelegate {
      * block on it. This is to be able to return job status
      * on an allocating Application.
      */
-
     String user = application.getUser();
     if (user == null) {
       throw RPCUtil.getRemoteException("User is not set in the application report");
@@ -237,10 +241,12 @@ public class ClientServiceDelegate {
     return historyServerProxy;
   }
 
-  private void instantiateAMProxy(final String serviceAddr) throws IOException {
+  MRClientProtocol instantiateAMProxy(final String serviceAddr)
+      throws IOException {
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
     LOG.trace("Connecting to ApplicationMaster at: " + serviceAddr);
-    realProxy = currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
+    MRClientProtocol proxy = currentUser
+        .doAs(new PrivilegedAction<MRClientProtocol>() {
       @Override
       public MRClientProtocol run() {
         YarnRPC rpc = YarnRPC.create(conf);
@@ -249,6 +255,7 @@ public class ClientServiceDelegate {
       }
     });
     LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);
+    return proxy;
   }
 
   private synchronized Object invoke(String method, Class argClass,
@@ -269,18 +276,23 @@ public class ClientServiceDelegate {
         throw yre;
       } catch (InvocationTargetException e) {
         if (e.getTargetException() instanceof YarnRemoteException) {
-          LOG.warn("Exception thrown by remote end.", e
-              .getTargetException());
+          LOG.warn("Error from remote end: " + e
+              .getTargetException().getLocalizedMessage());
+          LOG.debug("Tracing remote error ", e.getTargetException());
           throw (YarnRemoteException) e.getTargetException();
         }
-        LOG.info("Failed to contact AM/History for job " + jobId
-            + "  Will retry..", e.getTargetException());
-        forceRefresh = true;
+        LOG.info("Failed to contact AM/History for job " + jobId + 
+            " retrying..");
+        LOG.debug("Failed exception on AM/History contact", 
+            e.getTargetException());
+        // Force reconnection by setting the proxy to null.
+        realProxy = null;
       } catch (Exception e) {
         LOG.info("Failed to contact AM/History for job " + jobId
-            + "  Will retry..", e);
+            + "  Will retry..");
         LOG.debug("Failing to contact application master", e);
-        forceRefresh = true;
+        // Force reconnection by setting the proxy to null.
+        realProxy = null;
       }
     }
   }
@@ -393,5 +405,52 @@ public class ClientServiceDelegate {
     return true;
   }
 
+  public LogParams getLogFilePath(JobID oldJobID, TaskAttemptID oldTaskAttemptID)
+      throws YarnRemoteException, IOException {
+    org.apache.hadoop.mapreduce.v2.api.records.JobId jobId =
+        TypeConverter.toYarn(oldJobID);
+    GetJobReportRequest request =
+        recordFactory.newRecordInstance(GetJobReportRequest.class);
+    request.setJobId(jobId);
 
+    JobReport report =
+        ((GetJobReportResponse) invoke("getJobReport",
+            GetJobReportRequest.class, request)).getJobReport();
+    if (EnumSet.of(JobState.SUCCEEDED, JobState.FAILED, JobState.KILLED,
+        JobState.ERROR).contains(report.getJobState())) {
+      if (oldTaskAttemptID != null) {
+        GetTaskAttemptReportRequest taRequest =
+            recordFactory.newRecordInstance(GetTaskAttemptReportRequest.class);
+        taRequest.setTaskAttemptId(TypeConverter.toYarn(oldTaskAttemptID));
+        TaskAttemptReport taReport =
+            ((GetTaskAttemptReportResponse) invoke("getTaskAttemptReport",
+                GetTaskAttemptReportRequest.class, taRequest))
+                .getTaskAttemptReport();
+        if (taReport.getContainerId() == null
+            || taReport.getNodeManagerHost() == null) {
+          throw new IOException("Unable to get log information for task: "
+              + oldTaskAttemptID);
+        }
+        return new LogParams(
+            taReport.getContainerId().toString(),
+            taReport.getContainerId().getApplicationAttemptId()
+                .getApplicationId().toString(),
+            BuilderUtils.newNodeId(taReport.getNodeManagerHost(),
+                taReport.getNodeManagerPort()).toString(), report.getUser());
+      } else {
+        if (report.getAMInfos() == null || report.getAMInfos().size() == 0) {
+          throw new IOException("Unable to get log information for job: "
+              + oldJobID);
+        }
+        AMInfo amInfo = report.getAMInfos().get(report.getAMInfos().size() - 1);
+        return new LogParams(
+            amInfo.getContainerId().toString(),
+            amInfo.getAppAttemptId().getApplicationId().toString(),
+            BuilderUtils.newNodeId(amInfo.getNodeManagerHost(),
+                amInfo.getNodeManagerPort()).toString(), report.getUser());
+      }
+    } else {
+      throw new IOException("Cannot get log path for a in-progress job");
+    }
+  }
 }

@@ -20,18 +20,49 @@ package org.apache.hadoop.mapreduce;
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.QueueInfoPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.api.records.QueueState;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.junit.Test;
 
 public class TestTypeConverter {
+  @Test
+  public void testEnums() throws Exception {
+    for (YarnApplicationState applicationState : YarnApplicationState.values()) {
+      TypeConverter.fromYarn(applicationState);
+    }
+    
+    for (TaskType taskType : TaskType.values()) {
+      TypeConverter.fromYarn(taskType);
+    }
+    
+    for (JobState jobState : JobState.values()) {
+      TypeConverter.fromYarn(jobState);
+    }
+    
+    for (QueueState queueState : QueueState.values()) {
+      TypeConverter.fromYarn(queueState);
+    }
+    
+    for (TaskState taskState : TaskState.values()) {
+      TypeConverter.fromYarn(taskState);
+    }
+    
+    
+  }
+  
   @Test
   public void testFromYarn() throws Exception {
     int appStartTime = 612354;
@@ -42,6 +73,15 @@ public class TestTypeConverter {
     applicationReport.setYarnApplicationState(state);
     applicationReport.setStartTime(appStartTime);
     applicationReport.setUser("TestTypeConverter-user");
+    ApplicationResourceUsageReportPBImpl appUsageRpt = new ApplicationResourceUsageReportPBImpl();
+    ResourcePBImpl r = new ResourcePBImpl();
+    r.setMemory(2048);
+    appUsageRpt.setNeededResources(r);
+    appUsageRpt.setNumReservedContainers(1);
+    appUsageRpt.setNumUsedContainers(3);
+    appUsageRpt.setReservedResources(r);
+    appUsageRpt.setUsedResources(r);
+    applicationReport.setApplicationResourceUsageReport(appUsageRpt);
     JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
     Assert.assertEquals(appStartTime, jobStatus.getStartTime());
     Assert.assertEquals(state.toString(), jobStatus.getState().toString());
@@ -60,6 +100,15 @@ public class TestTypeConverter {
     when(mockReport.getUser()).thenReturn("dummy-user");
     when(mockReport.getQueue()).thenReturn("dummy-queue");
     String jobFile = "dummy-path/job.xml";
+    ApplicationResourceUsageReportPBImpl appUsageRpt = new ApplicationResourceUsageReportPBImpl();
+    ResourcePBImpl r = new ResourcePBImpl();
+    r.setMemory(2048);
+    appUsageRpt.setNeededResources(r);
+    appUsageRpt.setNumReservedContainers(1);
+    appUsageRpt.setNumUsedContainers(3);
+    appUsageRpt.setReservedResources(r);
+    appUsageRpt.setUsedResources(r);
+    when(mockReport.getApplicationResourceUsageReport()).thenReturn(appUsageRpt);
     JobStatus status = TypeConverter.fromYarn(mockReport, jobFile);
     Assert.assertNotNull("fromYarn returned null status", status);
     Assert.assertEquals("jobFile set incorrectly", "dummy-path/job.xml", status.getJobFile());
@@ -69,6 +118,11 @@ public class TestTypeConverter {
     Assert.assertEquals("schedulingInfo set incorrectly", "dummy-tracking-url", status.getSchedulingInfo());
     Assert.assertEquals("jobId set incorrectly", 6789, status.getJobID().getId());
     Assert.assertEquals("state set incorrectly", JobStatus.State.KILLED, status.getState());
+    Assert.assertEquals("needed mem info set incorrectly", 2048, status.getNeededMem());
+    Assert.assertEquals("num rsvd slots info set incorrectly", 1, status.getNumReservedSlots());
+    Assert.assertEquals("num used slots info set incorrectly", 3, status.getNumUsedSlots());
+    Assert.assertEquals("rsvd mem info set incorrectly", 2048, status.getReservedMem());
+    Assert.assertEquals("used mem info set incorrectly", 2048, status.getUsedMem());
   }
 
   @Test

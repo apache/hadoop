@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.web.resources;
 
 import org.apache.hadoop.security.UserGroupInformation;
 
-/** Delegation token parameter. */
+/** Represents delegation token used for authentication. */
 public class DelegationParam extends StringParam {
   /** Parameter name. */
   public static final String NAME = "delegation";

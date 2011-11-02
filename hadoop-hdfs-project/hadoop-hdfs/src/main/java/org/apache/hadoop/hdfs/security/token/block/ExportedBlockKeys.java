@@ -43,7 +43,7 @@ public class ExportedBlockKeys implements Writable {
     this(false, 0, 0, new BlockKey(), new BlockKey[0]);
   }
 
-  ExportedBlockKeys(boolean isBlockTokenEnabled, long keyUpdateInterval,
+  public ExportedBlockKeys(boolean isBlockTokenEnabled, long keyUpdateInterval,
       long tokenLifetime, BlockKey currentKey, BlockKey[] allKeys) {
     this.isBlockTokenEnabled = isBlockTokenEnabled;
     this.keyUpdateInterval = keyUpdateInterval;

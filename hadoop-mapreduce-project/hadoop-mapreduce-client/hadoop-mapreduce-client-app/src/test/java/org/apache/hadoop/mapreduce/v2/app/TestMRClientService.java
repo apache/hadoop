@@ -32,13 +32,15 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptCompleti
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskAttemptReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetTaskReportsRequest;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.client.MRClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -49,10 +51,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.junit.Test;
 
@@ -83,7 +83,6 @@ public class TestMRClientService {
     TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
     taskAttemptStatus.id = attempt.getID();
     taskAttemptStatus.progress = 0.5f;
-    taskAttemptStatus.diagnosticInfo = diagnostic2;
     taskAttemptStatus.stateString = "RUNNING";
     taskAttemptStatus.taskState = TaskAttemptState.RUNNING;
     taskAttemptStatus.phase = Phase.MAP;
@@ -107,8 +106,9 @@ public class TestMRClientService {
     GetJobReportRequest gjrRequest =
         recordFactory.newRecordInstance(GetJobReportRequest.class);
     gjrRequest.setJobId(job.getID());
-    Assert.assertNotNull("JobReport is null",
-        proxy.getJobReport(gjrRequest).getJobReport());
+    JobReport jr = proxy.getJobReport(gjrRequest).getJobReport();
+    verifyJobReport(jr);
+    
 
     GetTaskAttemptCompletionEventsRequest gtaceRequest =
         recordFactory.newRecordInstance(GetTaskAttemptCompletionEventsRequest.class);
@@ -127,8 +127,10 @@ public class TestMRClientService {
     GetTaskAttemptReportRequest gtarRequest =
         recordFactory.newRecordInstance(GetTaskAttemptReportRequest.class);
     gtarRequest.setTaskAttemptId(attempt.getID());
-    Assert.assertNotNull("TaskAttemptReport is null", 
-        proxy.getTaskAttemptReport(gtarRequest).getTaskAttemptReport());
+    TaskAttemptReport tar =
+        proxy.getTaskAttemptReport(gtarRequest).getTaskAttemptReport();
+    verifyTaskAttemptReport(tar);
+    
 
     GetTaskReportRequest gtrRequest =
         recordFactory.newRecordInstance(GetTaskReportRequest.class);
@@ -151,14 +153,12 @@ public class TestMRClientService {
         proxy.getTaskReports(gtreportsRequest).getTaskReportList());
 
     List<String> diag = proxy.getDiagnostics(gdRequest).getDiagnosticsList();
-    Assert.assertEquals("Num diagnostics not correct", 2 , diag.size());
+    Assert.assertEquals("Num diagnostics not correct", 1 , diag.size());
     Assert.assertEquals("Diag 1 not correct",
         diagnostic1, diag.get(0).toString());
-    Assert.assertEquals("Diag 2 not correct",
-        diagnostic2, diag.get(1).toString());
 
     TaskReport taskReport = proxy.getTaskReport(gtrRequest).getTaskReport();
-    Assert.assertEquals("Num diagnostics not correct", 2,
+    Assert.assertEquals("Num diagnostics not correct", 1,
         taskReport.getDiagnosticsCount());
 
     //send the done signal to the task
@@ -170,6 +170,31 @@ public class TestMRClientService {
     app.waitForState(job, JobState.SUCCEEDED);
   }
 
+  private void verifyJobReport(JobReport jr) {
+    Assert.assertNotNull("JobReport is null", jr);
+    List<AMInfo> amInfos = jr.getAMInfos();
+    Assert.assertEquals(1, amInfos.size());
+    Assert.assertEquals(JobState.RUNNING, jr.getJobState());
+    AMInfo amInfo = amInfos.get(0);
+    Assert.assertEquals(MRApp.NM_HOST, amInfo.getNodeManagerHost());
+    Assert.assertEquals(MRApp.NM_PORT, amInfo.getNodeManagerPort());
+    Assert.assertEquals(MRApp.NM_HTTP_PORT, amInfo.getNodeManagerHttpPort());
+    Assert.assertEquals(1, amInfo.getAppAttemptId().getAttemptId());
+    Assert.assertEquals(1, amInfo.getContainerId().getApplicationAttemptId()
+        .getAttemptId());
+    Assert.assertTrue(amInfo.getStartTime() > 0);
+  }
+  
+  private void verifyTaskAttemptReport(TaskAttemptReport tar) {
+    Assert.assertEquals(TaskAttemptState.RUNNING, tar.getTaskAttemptState());
+    Assert.assertNotNull("TaskAttemptReport is null", tar);
+    Assert.assertEquals(MRApp.NM_HOST, tar.getNodeManagerHost());
+    Assert.assertEquals(MRApp.NM_PORT, tar.getNodeManagerPort());
+    Assert.assertEquals(MRApp.NM_HTTP_PORT, tar.getNodeManagerHttpPort());
+    Assert.assertEquals(1, tar.getContainerId().getApplicationAttemptId()
+        .getAttemptId());
+  }
+  
   class MRAppWithClientService extends MRApp {
     MRClientService clientService = null;
     MRAppWithClientService(int maps, int reduces, boolean autoComplete) {

@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.StringUtils;
@@ -55,7 +56,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalResourceRequest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationCleanupEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.event.LogAggregatorContainerFinishedEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStartMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainerStopMonitoringEvent;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -77,6 +78,9 @@ public class ContainerImpl implements Container {
   private int exitCode = YarnConfiguration.INVALID_CONTAINER_EXIT_STATUS;
   private final StringBuilder diagnostics;
 
+  /** The NM-wide configuration - not specific to this container */
+  private final Configuration daemonConf;
+
   private static final Log LOG = LogFactory.getLog(Container.class);
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private final Map<LocalResourceRequest,String> pendingResources =
@@ -90,9 +94,11 @@ public class ContainerImpl implements Container {
   private final List<LocalResourceRequest> appRsrcs =
     new ArrayList<LocalResourceRequest>();
 
-  public ContainerImpl(Dispatcher dispatcher,
+  public ContainerImpl(Configuration conf,
+      Dispatcher dispatcher,
       ContainerLaunchContext launchContext, Credentials creds,
       NodeManagerMetrics metrics) {
+    this.daemonConf = conf;
     this.dispatcher = dispatcher;
     this.launchContext = launchContext;
     this.diagnostics = new StringBuilder();
@@ -152,6 +158,19 @@ public class ContainerImpl implements Container {
         ContainerState.LOCALIZATION_FAILED,
         ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
         UPDATE_DIAGNOSTICS_TRANSITION)
+    // container not launched so kill is a no-op
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.KILL_CONTAINER)
+    // container cleanup triggers a release of all resources
+    // regardless of whether they were localized or not
+    // LocalizedResource handles release event in all states
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.RESOURCE_LOCALIZED)
+    .addTransition(ContainerState.LOCALIZATION_FAILED,
+        ContainerState.LOCALIZATION_FAILED,
+        ContainerEventType.RESOURCE_FAILED)
 
     // From LOCALIZED State
     .addTransition(ContainerState.LOCALIZED, ContainerState.RUNNING,
@@ -162,8 +181,6 @@ public class ContainerImpl implements Container {
     .addTransition(ContainerState.LOCALIZED, ContainerState.LOCALIZED,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
-       // TODO race: Can lead to a CONTAINER_LAUNCHED event at state KILLING, 
-       // and a container which will never be killed by the NM.
     .addTransition(ContainerState.LOCALIZED, ContainerState.KILLING,
         ContainerEventType.KILL_CONTAINER, new KillTransition())
 
@@ -218,6 +235,9 @@ public class ContainerImpl implements Container {
         ContainerState.KILLING,
         ContainerEventType.RESOURCE_LOCALIZED,
         new LocalizedResourceDuringKillTransition())
+    .addTransition(ContainerState.KILLING, 
+        ContainerState.KILLING, 
+        ContainerEventType.RESOURCE_FAILED)
     .addTransition(ContainerState.KILLING, ContainerState.KILLING,
        ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
        UPDATE_DIAGNOSTICS_TRANSITION)
@@ -233,6 +253,12 @@ public class ContainerImpl implements Container {
             ContainerState.DONE,
             ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP,
             CONTAINER_DONE_TRANSITION)
+    // Handle a launched container during killing stage is a no-op
+    // as cleanup container is always handled after launch container event
+    // in the container launcher
+    .addTransition(ContainerState.KILLING,
+        ContainerState.KILLING,
+        ContainerEventType.CONTAINER_LAUNCHED)
 
     // From CONTAINER_CLEANEDUP_AFTER_KILL State.
     .addTransition(ContainerState.CONTAINER_CLEANEDUP_AFTER_KILL,
@@ -399,7 +425,7 @@ public class ContainerImpl implements Container {
     // Remove the container from the resource-monitor
     eventHandler.handle(new ContainerStopMonitoringEvent(containerID));
     // Tell the logService too
-    eventHandler.handle(new LogAggregatorContainerFinishedEvent(
+    eventHandler.handle(new LogHandlerContainerFinishedEvent(
         containerID, exitCode));
   }
 
@@ -431,6 +457,20 @@ public class ContainerImpl implements Container {
 
   }
 
+  /**
+   * State transition when a NEW container receives the INIT_CONTAINER
+   * message.
+   * 
+   * If there are resources to localize, sends a
+   * ContainerLocalizationRequest (INIT_CONTAINER_RESOURCES) 
+   * to the ResourceLocalizationManager and enters LOCALIZING state.
+   * 
+   * If there are no resources to localize, sends LAUNCH_CONTAINER event
+   * and enters LOCALIZED state directly.
+   * 
+   * If there are any invalid resources specified, enters LOCALIZATION_FAILED
+   * directly.
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class RequestResourcesTransition implements
       MultipleArcTransition<ContainerImpl,ContainerEvent,ContainerState> {
@@ -513,6 +553,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition when one of the requested resources for this container
+   * has been successfully localized.
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class LocalizedTransition implements
       MultipleArcTransition<ContainerImpl,ContainerEvent,ContainerState> {
@@ -540,22 +584,34 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from LOCALIZED state to RUNNING state upon receiving
+   * a CONTAINER_LAUNCHED event
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class LaunchTransition extends ContainerTransition {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       // Inform the ContainersMonitor to start monitoring the container's
       // resource usage.
-      // TODO: Fix pmem limits below
-      long vmemBytes =
+      long pmemBytes =
           container.getLaunchContext().getResource().getMemory() * 1024 * 1024L;
+      float pmemRatio = container.daemonConf.getFloat(
+          YarnConfiguration.NM_VMEM_PMEM_RATIO,
+          YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
+      long vmemBytes = (long) (pmemRatio * pmemBytes);
+      
       container.dispatcher.getEventHandler().handle(
           new ContainerStartMonitoringEvent(container.getContainerID(),
-              vmemBytes, -1));
+              vmemBytes, pmemBytes));
       container.metrics.runningContainer();
     }
   }
 
+  /**
+   * Transition from RUNNING or KILLING state to EXITED_WITH_SUCCESS state
+   * upon EXITED_WITH_SUCCESS message.
+   */
   @SuppressWarnings("unchecked")  // dispatcher not typed
   static class ExitedWithSuccessTransition extends ContainerTransition {
 
@@ -582,6 +638,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition to EXITED_WITH_FAILURE state upon
+   * CONTAINER_EXITED_WITH_FAILURE state.
+   **/
   @SuppressWarnings("unchecked")  // dispatcher not typed
   static class ExitedWithFailureTransition extends ContainerTransition {
 
@@ -609,6 +669,9 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition to EXITED_WITH_FAILURE upon receiving KILLED_ON_REQUEST
+   */
   static class KilledExternallyTransition extends ExitedWithFailureTransition {
     KilledExternallyTransition() {
       super(true);
@@ -621,6 +684,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from LOCALIZING to LOCALIZATION_FAILED upon receiving
+   * RESOURCE_FAILED event.
+   */
   static class ResourceFailedTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -638,7 +705,11 @@ public class ContainerImpl implements Container {
       container.metrics.endInitingContainer();
     }
   }
-  
+
+  /**
+   * Transition from LOCALIZING to KILLING upon receiving
+   * KILL_CONTAINER event.
+   */
   static class KillDuringLocalizationTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -652,6 +723,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Remain in KILLING state when receiving a RESOURCE_LOCALIZED request
+   * while in the process of killing.
+   */
   static class LocalizedResourceDuringKillTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -669,6 +744,11 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transitions upon receiving KILL_CONTAINER:
+   * - LOCALIZED -> KILLING
+   * - RUNNING -> KILLING
+   */
   @SuppressWarnings("unchecked") // dispatcher not typed
   static class KillTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
@@ -683,6 +763,10 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Transition from KILLING to CONTAINER_CLEANEDUP_AFTER_KILL
+   * upon receiving CONTAINER_KILLED_ON_REQUEST.
+   */
   static class ContainerKilledTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -696,6 +780,13 @@ public class ContainerImpl implements Container {
     }
   }
 
+  /**
+   * Handle the following transitions:
+   * - NEW -> DONE upon KILL_CONTAINER
+   * - {LOCALIZATION_FAILED, EXITED_WITH_SUCCESS, EXITED_WITH_FAILURE,
+   *    KILLING, CONTAINER_CLEANEDUP_AFTER_KILL}
+   *   -> DONE upon CONTAINER_RESOURCES_CLEANEDUP
+   */
   static class ContainerDoneTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override
@@ -703,7 +794,10 @@ public class ContainerImpl implements Container {
       container.finished();
     }
   }
-  
+
+  /**
+   * Update diagnostics, staying in the same state.
+   */
   static class ContainerDiagnosticsUpdateTransition implements
       SingleArcTransition<ContainerImpl, ContainerEvent> {
     @Override

@@ -16,22 +16,27 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${hadoop-mapreduce.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-core</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-core</name>
 
   <properties>
-    <install.file>${project.artifact.file}</install.file>
-    <mr.basedir>${project.parent.parent.basedir}</mr.basedir>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
+    <mr.basedir>${project.parent.basedir}/..</mr.basedir>
   </properties>
-  
+
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId> 
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-nodemanager</artifactId> 
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -42,6 +47,15 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+	<configuration>
+          <systemPropertyVariables>
+            <log4j.configuration>file:///${project.parent.basedir}/../src/test/log4j.properties</log4j.configuration>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>
         <version>1.5.3</version>
@@ -51,6 +65,24 @@
             <goals>
               <goal>protocol</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>pre-site</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <copy file="src/main/resources/mapred-default.xml" todir="src/site/resources"/>
+                <copy file="../../../hadoop-common-project/hadoop-common/src/main/xsl/configuration.xsl" todir="src/site/resources"/>
+              </tasks>
+            </configuration>
           </execution>
         </executions>
       </plugin>

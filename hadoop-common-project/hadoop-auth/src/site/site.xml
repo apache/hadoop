@@ -13,16 +13,10 @@
 -->
 <project name="Hadoop Auth">
 
-  <version position="right"/>
-
-  <bannerLeft>
-    <name>&nbsp;</name>
-  </bannerLeft>
-
   <skin>
     <groupId>org.apache.maven.skins</groupId>
     <artifactId>maven-stylus-skin</artifactId>
-    <version>1.1</version>
+    <version>1.2</version>
   </skin>
 
   <body>

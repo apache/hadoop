@@ -62,7 +62,9 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
     AddressRpcProxyPair current = proxies.get(currentProxyIndex);
     if (current.namenode == null) {
       try {
-        current.namenode = DFSUtil.createRPCNamenode(current.address, conf, ugi);
+        // TODO(HA): This will create a NN proxy with an underlying retry
+        // proxy. We don't want this.
+        current.namenode = DFSUtil.createNamenode(current.address, conf, ugi);
       } catch (IOException e) {
         LOG.error("Failed to create RPC proxy to NameNode", e);
         throw new RuntimeException(e);

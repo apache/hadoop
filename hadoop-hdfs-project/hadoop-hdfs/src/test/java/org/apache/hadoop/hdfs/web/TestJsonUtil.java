@@ -46,9 +46,9 @@ public class TestJsonUtil {
     final FileStatus fstatus = toFileStatus(status, parent);
     System.out.println("status  = " + status);
     System.out.println("fstatus = " + fstatus);
-    final String json = JsonUtil.toJsonString(status);
+    final String json = JsonUtil.toJsonString(status, true);
     System.out.println("json    = " + json.replace(",", ",\n  "));
-    final HdfsFileStatus s2 = JsonUtil.toFileStatus((Map<?, ?>)JSON.parse(json));
+    final HdfsFileStatus s2 = JsonUtil.toFileStatus((Map<?, ?>)JSON.parse(json), true);
     final FileStatus fs2 = toFileStatus(s2, parent);
     System.out.println("s2      = " + s2);
     System.out.println("fs2     = " + fs2);

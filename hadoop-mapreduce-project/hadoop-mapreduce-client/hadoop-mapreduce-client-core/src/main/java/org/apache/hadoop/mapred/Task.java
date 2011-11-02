@@ -1119,7 +1119,7 @@ abstract public class Task implements Writable, Configurable {
     // delete the staging area for the job
     JobConf conf = new JobConf(jobContext.getConfiguration());
     if (!keepTaskFiles(conf)) {
-      String jobTempDir = conf.get("mapreduce.job.dir");
+      String jobTempDir = conf.get(MRJobConfig.MAPREDUCE_JOB_DIR);
       Path jobTempDirPath = new Path(jobTempDir);
       FileSystem fs = jobTempDirPath.getFileSystem(conf);
       fs.delete(jobTempDirPath, true);

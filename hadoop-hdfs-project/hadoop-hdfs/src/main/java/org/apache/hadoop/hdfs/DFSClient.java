@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -94,9 +95,11 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -117,6 +120,7 @@ public class DFSClient implements java.io.Closeable {
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
+  private final InetSocketAddress nnAddress;
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
@@ -218,27 +222,27 @@ public class DFSClient implements java.io.Closeable {
   }
 
   /**
-   * Same as this(nameNodeAddr, conf, null);
+   * Same as this(nameNodeUri, conf, null);
    * @see #DFSClient(InetSocketAddress, Configuration, org.apache.hadoop.fs.FileSystem.Statistics)
    */
-  public DFSClient(URI nameNodeAddr, Configuration conf
+  public DFSClient(URI nameNodeUri, Configuration conf
       ) throws IOException {
-    this(nameNodeAddr, conf, null);
+    this(nameNodeUri, conf, null);
   }
 
   /**
-   * Same as this(nameNodeAddr, null, conf, stats);
+   * Same as this(nameNodeUri, null, conf, stats);
    * @see #DFSClient(InetSocketAddress, ClientProtocol, Configuration, org.apache.hadoop.fs.FileSystem.Statistics) 
    */
-  public DFSClient(URI nameNodeAddr, Configuration conf,
+  public DFSClient(URI nameNodeUri, Configuration conf,
                    FileSystem.Statistics stats)
     throws IOException {
-    this(nameNodeAddr, null, conf, stats);
+    this(nameNodeUri, null, conf, stats);
   }
   
   /** 
-   * Create a new DFSClient connected to the given nameNodeAddr or rpcNamenode.
-   * Exactly one of nameNodeAddr or rpcNamenode must be null.
+   * Create a new DFSClient connected to the given nameNodeUri or rpcNamenode.
+   * Exactly one of nameNodeUri or rpcNamenode must be null.
    */
   DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
@@ -267,15 +271,24 @@ public class DFSClient implements java.io.Closeable {
           ReflectionUtils.newInstance(failoverProxyProviderClass, conf);
       this.namenode = (ClientProtocol)RetryProxy.create(ClientProtocol.class,
           failoverProxyProvider, RetryPolicies.failoverOnNetworkException(1));
+      nnAddress = null;
     } else if (nameNodeUri != null && rpcNamenode == null) {
       this.namenode = DFSUtil.createNamenode(NameNode.getAddress(nameNodeUri), conf);
+
+      // TODO(HA): This doesn't really apply in the case of HA. Need to get smart
+      // about tokens in an HA setup, generally.
+      nnAddress = NameNode.getAddress(nameNodeUri);
     } else if (nameNodeUri == null && rpcNamenode != null) {
       //This case is used for testing.
       this.namenode = rpcNamenode;
+
+      // TODO(HA): This doesn't really apply in the case of HA. Need to get smart
+      // about tokens in an HA setup, generally.
+      nnAddress = null; 
     } else {
       throw new IllegalArgumentException(
-          "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
-          + "nameNodeAddr=" + nameNodeUri + ", rpcNamenode=" + rpcNamenode);
+          "Expecting exactly one of nameNodeUri and rpcNamenode being null: "
+          + "nameNodeUri=" + nameNodeUri + ", rpcNamenode=" + rpcNamenode);
     }
   }
   
@@ -365,12 +378,31 @@ public class DFSClient implements java.io.Closeable {
       namenode.renewLease(clientName);
     }
   }
-
+  
+  /**
+   * Close connections the Namenode.
+   * The namenode variable is either a rpcProxy passed by a test or 
+   * created using the protocolTranslator which is closeable.
+   * If closeable then call close, else close using RPC.stopProxy().
+   */
+  void closeConnectionToNamenode() {
+    if (namenode instanceof Closeable) {
+      try {
+        ((Closeable) namenode).close();
+        return;
+      } catch (IOException e) {
+        // fall through - lets try the stopProxy
+        LOG.warn("Exception closing namenode, stopping the proxy");
+      }     
+    }
+    RPC.stopProxy(namenode);
+  }
+  
   /** Abort and release resources held.  Ignore all errors. */
   void abort() {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
-    RPC.stopProxy(namenode); // close connections to the namenode
+    closeConnectionToNamenode();
   }
 
   /** Close/abort all files being written. */
@@ -410,7 +442,7 @@ public class DFSClient implements java.io.Closeable {
       clientRunning = false;
       leaserenewer.closeClient(this);
       // close connections to the namenode
-      RPC.stopProxy(namenode);
+      closeConnectionToNamenode();
     }
   }
 
@@ -454,18 +486,26 @@ public class DFSClient implements java.io.Closeable {
       throws IOException {
     Token<DelegationTokenIdentifier> result =
       namenode.getDelegationToken(renewer);
+    SecurityUtil.setTokenService(result, nnAddress);
     LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(result));
     return result;
   }
 
   /**
-   * @see ClientProtocol#renewDelegationToken(Token)
+   * Renew a delegation token
+   * @param token the token to renew
+   * @return the new expiration time
+   * @throws InvalidToken
+   * @throws IOException
+   * @deprecated Use Token.renew instead.
    */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     LOG.info("Renewing " + DelegationTokenIdentifier.stringifyToken(token));
     try {
-      return namenode.renewDelegationToken(token);
+      return token.renew(conf);
+    } catch (InterruptedException ie) {                                       
+      throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
                                      AccessControlException.class);
@@ -473,19 +513,77 @@ public class DFSClient implements java.io.Closeable {
   }
 
   /**
-   * @see ClientProtocol#cancelDelegationToken(Token)
+   * Cancel a delegation token
+   * @param token the token to cancel
+   * @throws InvalidToken
+   * @throws IOException
+   * @deprecated Use Token.cancel instead.
    */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     LOG.info("Cancelling " + DelegationTokenIdentifier.stringifyToken(token));
     try {
-      namenode.cancelDelegationToken(token);
+      token.cancel(conf);
+     } catch (InterruptedException ie) {                                       
+      throw new RuntimeException("caught interrupted", ie);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
                                      AccessControlException.class);
     }
   }
   
+  @InterfaceAudience.Private
+  public static class Renewer extends TokenRenewer {
+    
+    @Override
+    public boolean handleKind(Text kind) {
+      return DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public long renew(Token<?> token, Configuration conf) throws IOException {
+      Token<DelegationTokenIdentifier> delToken = 
+          (Token<DelegationTokenIdentifier>) token;
+      LOG.info("Renewing " + 
+               DelegationTokenIdentifier.stringifyToken(delToken));
+      ClientProtocol nn = 
+        DFSUtil.createNamenode
+           (NameNode.getAddress(token.getService().toString()),
+            conf, UserGroupInformation.getCurrentUser());
+      try {
+        return nn.renewDelegationToken(delToken);
+      } catch (RemoteException re) {
+        throw re.unwrapRemoteException(InvalidToken.class, 
+                                       AccessControlException.class);
+      }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cancel(Token<?> token, Configuration conf) throws IOException {
+      Token<DelegationTokenIdentifier> delToken = 
+          (Token<DelegationTokenIdentifier>) token;
+      LOG.info("Cancelling " + 
+               DelegationTokenIdentifier.stringifyToken(delToken));
+      ClientProtocol nn = DFSUtil.createNamenode(
+          NameNode.getAddress(token.getService().toString()), conf,
+          UserGroupInformation.getCurrentUser());
+      try {
+        nn.cancelDelegationToken(delToken);
+      } catch (RemoteException re) {
+        throw re.unwrapRemoteException(InvalidToken.class,
+            AccessControlException.class);
+      }
+    }
+
+    @Override
+    public boolean isManaged(Token<?> token) throws IOException {
+      return true;
+    }
+    
+  }
+
   /**
    * Report corrupt blocks that were discovered by the client.
    * @see ClientProtocol#reportBadBlocks(LocatedBlock[])
@@ -1048,8 +1146,11 @@ public class DFSClient implements java.io.Closeable {
       ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout
       ) throws IOException {
     //get all block locations
-    List<LocatedBlock> locatedblocks
-        = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE).getLocatedBlocks();
+    LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
+    if (null == blockLocations) {
+      throw new FileNotFoundException("File does not exist: " + src);
+    }
+    List<LocatedBlock> locatedblocks = blockLocations.getLocatedBlocks();
     final DataOutputBuffer md5out = new DataOutputBuffer();
     int bytesPerCRC = 0;
     long crcPerBlock = 0;
@@ -1059,8 +1160,11 @@ public class DFSClient implements java.io.Closeable {
     //get block checksum for each block
     for(int i = 0; i < locatedblocks.size(); i++) {
       if (refetchBlocks) {  // refetch to get fresh tokens
-        locatedblocks = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE)
-            .getLocatedBlocks();
+        blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
+        if (null == blockLocations) {
+          throw new FileNotFoundException("File does not exist: " + src);
+        }
+        locatedblocks = blockLocations.getLocatedBlocks();
         refetchBlocks = false;
       }
       LocatedBlock lb = locatedblocks.get(i);

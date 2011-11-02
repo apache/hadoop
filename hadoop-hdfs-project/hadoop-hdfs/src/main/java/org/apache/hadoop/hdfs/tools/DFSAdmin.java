@@ -1146,10 +1146,9 @@ public class DFSAdmin extends FsShell {
         conf.get(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, ""));
 
     // Create the client
-    ClientDatanodeProtocol dnProtocol = RPC.getProxy(
-        ClientDatanodeProtocol.class, ClientDatanodeProtocol.versionID,
-        datanodeAddr, getUGI(), conf, NetUtils.getSocketFactory(conf,
-            ClientDatanodeProtocol.class));
+    ClientDatanodeProtocol dnProtocol =     
+        DFSUtil.createClientDatanodeProtocolProxy(datanodeAddr, getUGI(), conf,
+            NetUtils.getSocketFactory(conf, ClientDatanodeProtocol.class));
     return dnProtocol;
   }
   

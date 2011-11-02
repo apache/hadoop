@@ -19,8 +19,24 @@ package org.apache.hadoop.hdfs.web.resources;
 
 /** Integer parameter. */
 abstract class IntegerParam extends Param<Integer, IntegerParam.Domain> {
-  IntegerParam(final Domain domain, final Integer value) {
+  IntegerParam(final Domain domain, final Integer value,
+      final Integer min, final Integer max) {
     super(domain, value);
+    checkRange(min, max);
+  }
+
+  private void checkRange(final Integer min, final Integer max) {
+    if (value == null) {
+      return;
+    }
+    if (min != null && value < min) {
+      throw new IllegalArgumentException("Invalid parameter range: " + getName()
+          + " = " + domain.toString(value) + " < " + domain.toString(min));
+    }
+    if (max != null && value > max) {
+      throw new IllegalArgumentException("Invalid parameter range: " + getName()
+          + " = " + domain.toString(value) + " > " + domain.toString(max));
+    }
   }
   
   @Override
@@ -49,7 +65,12 @@ abstract class IntegerParam extends Param<Integer, IntegerParam.Domain> {
 
     @Override
     Integer parse(final String str) {
-      return NULL.equals(str)? null: Integer.parseInt(str, radix);
+      try{
+        return NULL.equals(str)? null: Integer.parseInt(str, radix);
+      } catch(NumberFormatException e) {
+        throw new IllegalArgumentException("Failed to parse \"" + str
+            + "\" as a radix-" + radix + " integer.", e);
+      }
     }
 
     /** Convert an Integer to a String. */ 

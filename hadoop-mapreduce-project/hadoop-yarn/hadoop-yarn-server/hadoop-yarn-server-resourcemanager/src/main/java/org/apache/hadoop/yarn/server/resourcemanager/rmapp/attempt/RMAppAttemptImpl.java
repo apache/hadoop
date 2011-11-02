@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -31,6 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -47,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
@@ -58,10 +63,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -109,11 +117,15 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private float progress = 0;
   private String host = "N/A";
   private int rpcPort;
-  private String trackingUrl = "N/A";
+  private String origTrackingUrl = "N/A";
+  private String proxiedTrackingUrl = "N/A";
+  
   // Set to null initially. Will eventually get set 
   // if an RMAppAttemptUnregistrationEvent occurs
   private FinalApplicationStatus finalStatus = null;
   private final StringBuilder diagnostics = new StringBuilder();
+
+  private final String proxy;
 
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
@@ -227,7 +239,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       .addTransition(
           RMAppAttemptState.KILLED,
           RMAppAttemptState.KILLED,
-          EnumSet.of(RMAppAttemptEventType.EXPIRE,
+          EnumSet.of(RMAppAttemptEventType.APP_ACCEPTED,
+              RMAppAttemptEventType.APP_REJECTED,
+              RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.LAUNCH_FAILED,
               RMAppAttemptEventType.EXPIRE,
@@ -243,8 +257,10 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   public RMAppAttemptImpl(ApplicationAttemptId appAttemptId,
       String clientToken, RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
-      ApplicationSubmissionContext submissionContext) {
+      ApplicationSubmissionContext submissionContext,
+      String proxy) {
 
+    this.proxy = proxy;
     this.applicationAttemptId = appAttemptId;
     this.rmContext = rmContext;
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
@@ -315,9 +331,46 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   @Override
   public String getTrackingUrl() {
     this.readLock.lock();
-
     try {
-      return this.trackingUrl;
+      return this.proxiedTrackingUrl;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+  
+  @Override
+  public String getOriginalTrackingUrl() {
+    this.readLock.lock();
+    try {
+      return this.origTrackingUrl;
+    } finally {
+      this.readLock.unlock();
+    }    
+  }
+  
+  @Override
+  public String getWebProxyBase() {
+    this.readLock.lock();
+    try {
+      return ProxyUriUtils.getPath(applicationAttemptId.getApplicationId());
+    } finally {
+      this.readLock.unlock();
+    }    
+  }
+  
+  private String generateProxyUriWithoutScheme(
+      final String trackingUriWithoutScheme) {
+    this.readLock.lock();
+    try {
+      URI trackingUri = ProxyUriUtils.getUriFromAMUrl(trackingUriWithoutScheme);
+      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
+      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri, 
+          applicationAttemptId.getApplicationId());
+      //We need to strip off the scheme to have it match what was there before
+      return result.toASCIIString().substring(7);
+    } catch (URISyntaxException e) {
+      LOG.warn("Could not proxify "+trackingUriWithoutScheme,e);
+      return trackingUriWithoutScheme;
     } finally {
       this.readLock.unlock();
     }
@@ -425,6 +478,52 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       }
     } finally {
       this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
+    this.readLock.lock();
+    
+    try {
+      int numUsedContainers = 0;
+      int numReservedContainers = 0;
+      int reservedResources = 0;
+      int currentConsumption = 0;
+      SchedulerAppReport schedApp = 
+          scheduler.getSchedulerAppInfo(this.getAppAttemptId());
+      Collection<RMContainer> liveContainers;
+      Collection<RMContainer> reservedContainers;
+      if (schedApp != null) {
+        liveContainers = schedApp.getLiveContainers();
+        reservedContainers = schedApp.getReservedContainers();
+        if (liveContainers != null) {
+          numUsedContainers = liveContainers.size();
+          for (RMContainer lc : liveContainers) {
+            currentConsumption += lc.getContainer().getResource().getMemory();
+          }
+        }
+        if (reservedContainers != null) {
+          numReservedContainers = reservedContainers.size();
+          for (RMContainer rc : reservedContainers) {
+            reservedResources += rc.getContainer().getResource().getMemory();
+          }
+        }
+      }
+      
+      ApplicationResourceUsageReport appResources = 
+          recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
+      appResources.setNumUsedContainers(numUsedContainers);
+      appResources.setNumReservedContainers(numReservedContainers);
+      appResources.setUsedResources(
+          Resources.createResource(currentConsumption));
+      appResources.setReservedResources(
+          Resources.createResource(reservedResources));
+      appResources.setNeededResources(
+          Resources.createResource(currentConsumption + reservedResources));
+      return appResources;
+    } finally {
+      this.readLock.unlock();
     }
   }
 
@@ -638,7 +737,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           = (RMAppAttemptRegistrationEvent) event;
       appAttempt.host = registrationEvent.getHost();
       appAttempt.rpcPort = registrationEvent.getRpcport();
-      appAttempt.trackingUrl = registrationEvent.getTrackingurl();
+      appAttempt.origTrackingUrl = registrationEvent.getTrackingurl();
+      appAttempt.proxiedTrackingUrl = 
+        appAttempt.generateProxyUriWithoutScheme(appAttempt.origTrackingUrl);
 
       // Let the app know
       appAttempt.eventHandler.handle(new RMAppEvent(appAttempt
@@ -734,7 +835,9 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       RMAppAttemptUnregistrationEvent unregisterEvent
         = (RMAppAttemptUnregistrationEvent) event;
       appAttempt.diagnostics.append(unregisterEvent.getDiagnostics());
-      appAttempt.trackingUrl = unregisterEvent.getTrackingUrl();
+      appAttempt.origTrackingUrl = unregisterEvent.getTrackingUrl();
+      appAttempt.proxiedTrackingUrl = 
+        appAttempt.generateProxyUriWithoutScheme(appAttempt.origTrackingUrl);
       appAttempt.finalStatus = unregisterEvent.getFinalApplicationStatus();
 
       // Tell the app and the scheduler
@@ -776,6 +879,16 @@ public class RMAppAttemptImpl implements RMAppAttempt {
             " exitCode: " + containerStatus.getExitStatus() +
             " due to: " +  containerStatus.getDiagnostics() + "." +
             "Failing this attempt.");
+
+        /*
+         * In the case when the AM dies, the trackingUrl is left pointing to the AM's
+         * URL, which shows up in the scheduler UI as a broken link. Setting it here
+         * to empty string will prevent any link from being displayed.
+         * NOTE: don't set trackingUrl to 'null'. That will cause null-pointer exceptions
+         * in the generated proto code.
+         */
+        appAttempt.origTrackingUrl = "";
+        appAttempt.proxiedTrackingUrl = "";
 
         new FinalTransition(RMAppAttemptState.FAILED).transition(
             appAttempt, containerFinishedEvent);

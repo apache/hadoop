@@ -73,8 +73,6 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
  * raid.blockfix.filespertask       - number of corrupt files to fix in a single
  *                                    map reduce task (i.e., at one mapper node)
  *
- * raid.blockfix.fairscheduler.pool - the pool to use for block fixer jobs
- *
  * raid.blockfix.maxpendingfiles    - maximum number of files to fix 
  *                                    simultaneously
  */
@@ -91,12 +89,6 @@ public class DistBlockFixer extends BlockFixer {
     "raid.blockfix.filespertask";
   private static final String BLOCKFIX_MAX_PENDING_FILES =
     "raid.blockfix.maxpendingfiles";
-  private static final String BLOCKFIX_POOL = 
-    "raid.blockfix.fairscheduler.pool";
-  // mapred.fairscheduler.pool is only used in the local configuration
-  // passed to a block fixing job
-  private static final String MAPRED_POOL = 
-    "mapred.fairscheduler.pool";
 
   // default number of files to fix in a task
   private static final long DEFAULT_BLOCKFIX_FILES_PER_TASK = 10L;
@@ -114,9 +106,6 @@ public class DistBlockFixer extends BlockFixer {
 
   // number of files being fixed right now
   private long pendingFiles;
-
-  // pool name to use (may be null, in which case no special pool is used)
-  private String poolName;
 
   private long lastCheckTime;
 
@@ -137,7 +126,6 @@ public class DistBlockFixer extends BlockFixer {
     filesPerTask = DistBlockFixer.filesPerTask(getConf());
     maxPendingFiles = DistBlockFixer.maxPendingFiles(getConf());
     pendingFiles = 0L;
-    poolName = conf.get(BLOCKFIX_POOL);
 
     // start off due for the first iteration
     lastCheckTime = System.currentTimeMillis() - blockFixInterval;
@@ -365,9 +353,6 @@ public class DistBlockFixer extends BlockFixer {
     List<Path> filesInJob = createInputFile(jobName, inDir, corruptFiles);
 
     Configuration jobConf = new Configuration(getConf());
-    if (poolName != null) {
-      jobConf.set(MAPRED_POOL, poolName);
-    }
     Job job = new Job(jobConf, jobName);
     job.setJarByClass(getClass());
     job.setMapperClass(DistBlockFixerMapper.class);

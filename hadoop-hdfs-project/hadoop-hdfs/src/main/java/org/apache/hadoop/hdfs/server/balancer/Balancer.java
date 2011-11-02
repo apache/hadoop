@@ -358,7 +358,8 @@ public class Balancer {
       if (response.getStatus() != Status.SUCCESS) {
         if (response.getStatus() == Status.ERROR_ACCESS_TOKEN)
           throw new IOException("block move failed due to access token error");
-        throw new IOException("block move is failed");
+        throw new IOException("block move is failed: " +
+            response.getMessage());
       }
     }
 
@@ -823,7 +824,7 @@ public class Balancer {
       cluster.add(datanode);
       BalancerDatanode datanodeS;
       final double avg = policy.getAvgUtilization();
-      if (policy.getUtilization(datanode) > avg) {
+      if (policy.getUtilization(datanode) >= avg) {
         datanodeS = new Source(datanode, policy, threshold);
         if (isAboveAvgUtilized(datanodeS)) {
           this.aboveAvgUtilizedDatanodes.add((Source)datanodeS);
@@ -1261,12 +1262,12 @@ public class Balancer {
     return datanode.utilization > (policy.getAvgUtilization()+threshold);
   }
   
-  /* Return true if the given datanode is above average utilized
+  /* Return true if the given datanode is above or equal to average utilized
    * but not overUtilized */
   private boolean isAboveAvgUtilized(BalancerDatanode datanode) {
     final double avg = policy.getAvgUtilization();
     return (datanode.utilization <= (avg+threshold))
-        && (datanode.utilization > avg);
+        && (datanode.utilization >= avg);
   }
   
   /* Return true if the given datanode is underUtilized */

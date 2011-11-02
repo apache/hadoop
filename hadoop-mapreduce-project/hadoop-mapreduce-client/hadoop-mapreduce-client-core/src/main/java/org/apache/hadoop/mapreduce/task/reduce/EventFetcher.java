@@ -60,7 +60,7 @@ class EventFetcher<K,V> extends Thread {
     LOG.info(reduce + " Thread started: " + getName());
     
     try {
-      while (true) {
+      while (true && !Thread.currentThread().isInterrupted()) {
         try {
           int numNewMaps = getMapCompletionEvents();
           failures = 0;
@@ -68,7 +68,9 @@ class EventFetcher<K,V> extends Thread {
             LOG.info(reduce + ": " + "Got " + numNewMaps + " new map-outputs");
           }
           LOG.debug("GetMapEventsThread about to sleep for " + SLEEP_TIME);
-          Thread.sleep(SLEEP_TIME);
+          if (!Thread.currentThread().isInterrupted()) {
+            Thread.sleep(SLEEP_TIME);
+          }
         } catch (IOException ie) {
           LOG.info("Exception in getting events", ie);
           // check to see whether to abort
@@ -76,7 +78,9 @@ class EventFetcher<K,V> extends Thread {
             throw new IOException("too many failures downloading events", ie);
           }
           // sleep for a bit
-          Thread.sleep(RETRY_PERIOD);
+          if (!Thread.currentThread().isInterrupted()) {
+            Thread.sleep(RETRY_PERIOD);
+          }
         }
       }
     } catch (InterruptedException e) {

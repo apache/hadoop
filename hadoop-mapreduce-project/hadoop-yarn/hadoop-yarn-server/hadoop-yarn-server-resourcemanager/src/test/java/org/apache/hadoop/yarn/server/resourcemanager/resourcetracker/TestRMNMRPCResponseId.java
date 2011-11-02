@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -65,8 +66,8 @@ public class TestRMNMRPCResponseId {
         ; // ignore
       }
     });
-    RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
-        null);
+    RMContext context = 
+        new RMContextImpl(new MemStore(), dispatcher, null, null, null);
     dispatcher.register(RMNodeEventType.class,
         new ResourceManager.NodeEventDispatcher(context));
     NodesListManager nodesListManager = new NodesListManager();
@@ -130,6 +131,6 @@ public class TestRMNMRPCResponseId {
     nodeStatus.setResponseId(0);
     response = resourceTrackerService.nodeHeartbeat(nodeHeartBeatRequest)
         .getHeartbeatResponse();
-    Assert.assertTrue(response.getReboot() == true);
+    Assert.assertTrue(NodeAction.REBOOT.equals(response.getNodeAction()));
   }
 }

@@ -17,17 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
+import org.apache.avro.reflect.Union;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.avro.reflect.Union;
 
 /**
  * Base class for data-node command.
@@ -36,55 +28,13 @@ import org.apache.avro.reflect.Union;
 
 // Declare subclasses for Avro's denormalized representation
 @Union({Void.class,
-      DatanodeCommand.Register.class, DatanodeCommand.Finalize.class,
+      RegisterCommand.class, FinalizeCommand.class,
       BlockCommand.class, UpgradeCommand.class,
       BlockRecoveryCommand.class, KeyUpdateCommand.class})
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class DatanodeCommand extends ServerCommand {
-  static class Register extends DatanodeCommand {
-    private Register() {super(DatanodeProtocol.DNA_REGISTER);}
-    public void readFields(DataInput in) {}
-    public void write(DataOutput out) {}
-  }
-
-  public static class Finalize extends DatanodeCommand {
-    String blockPoolId;
-    private Finalize() {
-      super(DatanodeProtocol.DNA_FINALIZE);
-    }
-    
-    public Finalize(String bpid) {
-      super(DatanodeProtocol.DNA_FINALIZE);
-      blockPoolId = bpid;
-    }
-    
-    public String getBlockPoolId() {
-      return blockPoolId;
-    }
-    
-    public void readFields(DataInput in) throws IOException {
-      blockPoolId = WritableUtils.readString(in);
-    }
-    public void write(DataOutput out) throws IOException {
-      WritableUtils.writeString(out, blockPoolId);
-    }
-  }
-
-  static {                                      // register a ctor
-    WritableFactories.setFactory(Register.class,
-        new WritableFactory() {
-          public Writable newInstance() {return new Register();}
-        });
-    WritableFactories.setFactory(Finalize.class,
-        new WritableFactory() {
-          public Writable newInstance() {return new Finalize();}
-        });
-  }
-
-  public static final DatanodeCommand REGISTER = new Register();
-  
   public DatanodeCommand() {
     super();
   }

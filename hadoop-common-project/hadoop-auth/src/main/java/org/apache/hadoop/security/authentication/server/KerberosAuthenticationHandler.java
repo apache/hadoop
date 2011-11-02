@@ -151,15 +151,13 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
         throw new ServletException("Keytab does not exist: " + keytab);
       }
 
-      String nameRules = config.getProperty(NAME_RULES, "DEFAULT");
-      KerberosName.setRules(nameRules);
-
       Set<Principal> principals = new HashSet<Principal>();
       principals.add(new KerberosPrincipal(principal));
       Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
 
       KerberosConfiguration kerberosConfiguration = new KerberosConfiguration(keytab, principal);
 
+      LOG.info("Login using keytab "+keytab+", for principal "+principal);
       loginContext = new LoginContext("", subject, null, kerberosConfiguration);
       loginContext.login();
 

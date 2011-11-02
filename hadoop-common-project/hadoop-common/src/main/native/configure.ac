@@ -40,6 +40,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 AC_SYS_LARGEFILE
+AC_GNU_SOURCE
 
 AM_INIT_AUTOMAKE(hadoop,1.0.0)
 
@@ -57,10 +58,8 @@ if test $JAVA_HOME != ""
 then
   JNI_LDFLAGS="-L$JAVA_HOME/jre/lib/$OS_ARCH/server"
 fi
-ldflags_bak=$LDFLAGS
 LDFLAGS="$LDFLAGS $JNI_LDFLAGS"
 AC_CHECK_LIB([jvm], [JNI_GetCreatedJavaVMs])
-LDFLAGS=$ldflags_bak
 AC_SUBST([JNI_LDFLAGS])
 
 # Checks for header files.
@@ -93,6 +92,12 @@ AC_CHECK_HEADERS([snappy-c.h], AC_COMPUTE_NEEDED_DSO(snappy,HADOOP_SNAPPY_LIBRAR
 
 dnl Check for headers needed by the native Group resolution implementation
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h unistd.h], [], AC_MSG_ERROR(Some system headers not found... please ensure their presence on your platform.))
+
+dnl check for posix_fadvise
+AC_CHECK_HEADERS(fcntl.h, [AC_CHECK_FUNCS(posix_fadvise)])
+
+dnl check for sync_file_range
+AC_CHECK_HEADERS(fcntl.h, [AC_CHECK_FUNCS(sync_file_range)])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

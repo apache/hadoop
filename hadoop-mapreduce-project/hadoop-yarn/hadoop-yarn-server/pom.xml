@@ -16,11 +16,12 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${yarn.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-server</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-yarn-server</name>
   <packaging>pom</packaging>
 
@@ -36,6 +37,7 @@
   <modules>
     <module>hadoop-yarn-server-common</module>
     <module>hadoop-yarn-server-nodemanager</module>
+    <module>hadoop-yarn-server-web-proxy</module>
     <module>hadoop-yarn-server-resourcemanager</module>
     <module>hadoop-yarn-server-tests</module>
   </modules>

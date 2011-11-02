@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.ToJSON;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
@@ -62,18 +61,21 @@ class AppsList implements ToJSON {
       }
       String appID = app.getApplicationId().toString();
       String trackingUrl = app.getTrackingUrl();
-      String ui = trackingUrl == null || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
-    	  "UNASSIGNED" : (app.getFinishTime() == 0 ? "ApplicationMaster" : "JobHistory");
+      boolean trackingUrlIsNotReady = trackingUrl == null
+          || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
+      String ui = trackingUrlIsNotReady ? "UNASSIGNED"
+          : (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
       out.append("[\"");
       appendSortable(out, app.getApplicationId().getId());
       appendLink(out, appID, rc.prefix(), "app", appID).append(_SEP).
           append(escapeHtml(app.getUser().toString())).append(_SEP).
           append(escapeHtml(app.getName().toString())).append(_SEP).
           append(escapeHtml(app.getQueue())).append(_SEP).
-          append(app.getState().toString()).append(_SEP);
+          append(app.getState().toString()).append(_SEP).
+          append(app.getFinalApplicationStatus().toString()).append(_SEP);
       appendProgressBar(out, app.getProgress()).append(_SEP);
       appendLink(out, ui, rc.prefix(),
-          trackingUrl == null  || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl) ?
+          trackingUrlIsNotReady ?
             "#" : "http://", trackingUrl).
           append(_SEP).append(escapeJavaScript(escapeHtml(
                               app.getDiagnostics().toString()))).

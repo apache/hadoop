@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -41,11 +44,11 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Before;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 public class TestNMWebServer {
 
@@ -58,7 +61,7 @@ public class TestNMWebServer {
   }
 
   @Test
-  public void testNMWebApp() throws InterruptedException, IOException {
+  public void testNMWebApp() throws IOException {
     Context nmContext = new NodeManager.NMContext();
     ResourceView resourceView = new ResourceView() {
       @Override
@@ -70,8 +73,9 @@ public class TestNMWebServer {
         return 0;
       }
     };
-    WebServer server = new WebServer(nmContext, resourceView);
     Configuration conf = new Configuration();
+    WebServer server = new WebServer(nmContext, resourceView,
+        new ApplicationACLsManager(conf));
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
     server.init(conf);
     server.start();
@@ -88,9 +92,8 @@ public class TestNMWebServer {
     when(app.getUser()).thenReturn(user);
     when(app.getAppId()).thenReturn(appId);
     nmContext.getApplications().put(appId, app);
-    ApplicationAttemptId appAttemptId = recordFactory.newRecordInstance(ApplicationAttemptId.class);
-    appAttemptId.setApplicationId(appId);
-    appAttemptId.setAttemptId(1);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+        appId, 1);
     ContainerId container1 =
         BuilderUtils.newContainerId(recordFactory, appId, appAttemptId, 0);
     ContainerId container2 =
@@ -104,7 +107,7 @@ public class TestNMWebServer {
       launchContext.setContainerId(containerId);
       launchContext.setUser(user);
       Container container =
-          new ContainerImpl(dispatcher, launchContext, null, metrics) {
+          new ContainerImpl(conf, dispatcher, launchContext, null, metrics) {
         @Override
         public ContainerState getContainerState() {
           return ContainerState.RUNNING;

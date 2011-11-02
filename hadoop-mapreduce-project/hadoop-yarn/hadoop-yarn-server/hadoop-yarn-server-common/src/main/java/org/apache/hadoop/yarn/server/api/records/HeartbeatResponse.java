@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 
 public interface HeartbeatResponse {
   int getResponseId();
-  boolean getReboot();
+  NodeAction getNodeAction();
   
   List<ContainerId> getContainersToCleanupList();
   ContainerId getContainerToCleanup(int index);
@@ -35,7 +35,7 @@ public interface HeartbeatResponse {
   int getApplicationsToCleanupCount();
   
   void setResponseId(int responseId);
-  void setReboot(boolean reboot);
+  void setNodeAction(NodeAction action);
   
   void addAllContainersToCleanup(List<ContainerId> containers);
   void addContainerToCleanup(ContainerId container);

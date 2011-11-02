@@ -322,6 +322,9 @@ class JobSubmitter {
   JobStatus submitJobInternal(Job job, Cluster cluster) 
   throws ClassNotFoundException, InterruptedException, IOException {
 
+    //validate the jobs output specs 
+    checkSpecs(job);
+    
     Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, 
                                                      job.getConfiguration());
     //configure the command line options correctly on the submitting dfs
@@ -338,7 +341,9 @@ class JobSubmitter {
     Path submitJobDir = new Path(jobStagingArea, jobId.toString());
     JobStatus status = null;
     try {
-      conf.set("mapreduce.job.dir", submitJobDir.toString());
+      conf.set("hadoop.http.filter.initializers", 
+          "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer");
+      conf.set(MRJobConfig.MAPREDUCE_JOB_DIR, submitJobDir.toString());
       LOG.debug("Configuring job " + jobId + " with " + submitJobDir 
           + " as the submit dir");
       // get delegation token for the dir
@@ -349,8 +354,6 @@ class JobSubmitter {
 
       copyAndConfigureFiles(job, submitJobDir);
       Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
-
-      checkSpecs(job);
       
       // Create the splits for the job
       LOG.debug("Creating splits at " + jtFs.makeQualified(submitJobDir));

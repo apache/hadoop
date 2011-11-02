@@ -16,15 +16,16 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>${yarn.version}</version>
+    <version>0.24.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-api</artifactId>
+  <version>0.24.0-SNAPSHOT</version>
   <name>hadoop-yarn-api</name>
 
   <properties>
-    <install.file>${project.artifact.file}</install.file>
+    <!-- Needed for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.basedir}</yarn.basedir>
   </properties>
 

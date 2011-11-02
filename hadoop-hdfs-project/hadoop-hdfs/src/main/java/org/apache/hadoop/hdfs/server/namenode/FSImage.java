@@ -998,18 +998,12 @@ public class FSImage implements Closeable {
   /**
    * End checkpoint.
    * <p>
-   * Rename uploaded checkpoint to the new image;
-   * purge old edits file;
-   * rename edits.new to edits;
-   * redirect edit log streams to the new edits;
-   * update checkpoint time if the remote node is a checkpoint only node.
+   * Validate the current storage info with the given signature.
    * 
-   * @param sig
-   * @param remoteNNRole
-   * @throws IOException
+   * @param sig to validate the current storage info against
+   * @throws IOException if the checkpoint fields are inconsistent
    */
-  void endCheckpoint(CheckpointSignature sig,
-                     NamenodeRole remoteNNRole) throws IOException {
+  void endCheckpoint(CheckpointSignature sig) throws IOException {
     sig.validateStorageInfo(this);
   }
 

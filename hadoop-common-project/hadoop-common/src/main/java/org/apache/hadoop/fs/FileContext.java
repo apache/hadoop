@@ -44,6 +44,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.permission.FsPermission;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RpcClientException;
 import org.apache.hadoop.ipc.RpcServerException;
@@ -443,7 +445,9 @@ public final class FileContext {
    */
   public static FileContext getFileContext(final Configuration aConf)
       throws UnsupportedFileSystemException {
-    return getFileContext(URI.create(FsConfig.getDefaultFsURI(aConf)), aConf);
+    return getFileContext(
+      URI.create(aConf.get(FS_DEFAULT_NAME_KEY, FS_DEFAULT_NAME_DEFAULT)), 
+      aConf);
   }
 
   /**

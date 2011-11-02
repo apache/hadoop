@@ -65,10 +65,28 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 public interface ClientProtocol extends VersionedProtocol {
 
   /**
-   * Compared to the previous version the following changes have been introduced:
-   * (Only the latest change is reflected.
+   * Until version 69, this class ClientProtocol served as both
+   * the client interface to the NN AND the RPC protocol used to 
+   * communicate with the NN.
+   * 
+   * Post version 70 (release 23 of Hadoop), the protocol is implemented in
+   * {@literal ../protocolR23Compatible/ClientNamenodeWireProtocol}
+   * 
+   * This class is used by both the DFSClient and the 
+   * NN server side to insulate from the protocol serialization.
+   * 
+   * If you are adding/changing NN's interface then you need to 
+   * change both this class and ALSO
+   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}.
+   * These changes need to be done in a compatible fashion as described in 
+   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}
+   * 
    * The log of historical changes can be retrieved from the svn).
    * 69: Eliminate overloaded method names.
+   * 
+   * 69L is the last version id when this class was used for protocols
+   *  serialization. DO not update this version any further. 
+   *  Changes are recorded in R23 classes.
    */
   public static final long versionID = 69L;
   
@@ -373,11 +391,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return true if successful, or false if the old name does not exist
    * or if the new name already belongs to the namespace.
    * 
-   * @throws IOException an I/O error occurred
-   * 
-   * @deprecated Use {@link #rename(String, String, Options.Rename...)} instead.
+   * @throws IOException an I/O error occurred 
    */
-  @Deprecated
   public boolean rename(String src, String dst) 
       throws UnresolvedLinkException, IOException;
 

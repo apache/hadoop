@@ -52,16 +52,19 @@ implements NodeRegistration {
                               String httpAddress,
                               StorageInfo storageInfo,
                               NamenodeRole role) {
-    super();
+    super(storageInfo);
     this.rpcAddress = address;
     this.httpAddress = httpAddress;
-    this.setStorageInfo(storageInfo);
     this.role = role;
   }
 
   @Override // NodeRegistration
   public String getAddress() {
     return rpcAddress;
+  }
+  
+  public String getHttpAddress() {
+    return httpAddress;
   }
   
   @Override // NodeRegistration

@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.util.Map;
+import java.io.IOException;
 import java.util.Properties;
 
+import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
@@ -41,30 +46,36 @@ public class AuthFilter extends AuthenticationFilter {
    * The prefix is removed from the returned property names.
    *
    * @param prefix parameter not used.
-   * @param config parameter not used.
+   * @param config parameter contains the initialization values.
    * @return Hadoop-Auth configuration properties.
+   * @throws ServletException 
    */
   @Override
-  protected Properties getConfiguration(String prefix, FilterConfig config) {
-    final Configuration conf = new Configuration();
-    final Properties p = new Properties();
-
-    //set authentication type
+  protected Properties getConfiguration(String prefix, FilterConfig config)
+      throws ServletException {
+    final Properties p = super.getConfiguration(CONF_PREFIX, config);
+    // set authentication type
     p.setProperty(AUTH_TYPE, UserGroupInformation.isSecurityEnabled()?
         KerberosAuthenticationHandler.TYPE: PseudoAuthenticationHandler.TYPE);
     //For Pseudo Authentication, allow anonymous.
     p.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
     //set cookie path
     p.setProperty(COOKIE_PATH, "/");
-
-    //set other configurations with CONF_PREFIX
-    for (Map.Entry<String, String> entry : conf) {
-      final String key = entry.getKey();
-      if (key.startsWith(CONF_PREFIX)) {
-        //remove prefix from the key and set property
-        p.setProperty(key.substring(CONF_PREFIX.length()), conf.get(key));
-      }
-    }
     return p;
+  }
+
+  @Override
+  public void doFilter(ServletRequest request, ServletResponse response,
+      FilterChain filterChain) throws IOException, ServletException {
+    HttpServletRequest httpRequest = (HttpServletRequest) request;
+    String tokenString = httpRequest
+        .getParameter(DelegationParam.NAME);
+    if (tokenString != null) {
+      //Token is present in the url, therefore token will be used for
+      //authentication, bypass kerberos authentication.
+      filterChain.doFilter(httpRequest, response);
+      return;
+    }
+    super.doFilter(request, response, filterChain);
   }
 }

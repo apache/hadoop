@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
 /**
@@ -263,10 +264,14 @@ public class TestDFSRollback extends TestCase {
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
       for (File f : baseDirs) { 
-        UpgradeUtilities.corruptFile(new File(f,"VERSION")); 
+        UpgradeUtilities.corruptFile(
+            new File(f,"VERSION"),
+            "layoutVersion".getBytes(Charsets.UTF_8),
+            "xxxxxxxxxxxxx".getBytes(Charsets.UTF_8));
       }
       startNameNodeShouldFail(StartupOption.ROLLBACK,
           "file VERSION has layoutVersion missing");
+
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode rollback with old layout version in previous", numDirs);

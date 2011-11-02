@@ -63,8 +63,12 @@ public abstract class AbstractService implements Service {
 
   @Override
   public synchronized void stop() {
-    if (state == STATE.STOPPED) {
-      return;//already stopped
+    if (state == STATE.STOPPED ||
+        state == STATE.INITED ||
+        state == STATE.NOTINITED) {
+      // already stopped, or else it was never
+      // started (eg another service failing canceled startup)
+      return;
     }
     ensureCurrentState(STATE.STARTED);
     changeState(STATE.STOPPED);

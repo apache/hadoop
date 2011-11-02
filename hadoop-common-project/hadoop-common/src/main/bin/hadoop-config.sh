@@ -217,7 +217,6 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.home.dir=$HADOOP_PREFIX"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
-HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,console}"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HADOOP_OPTS="$HADOOP_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
 fi  
@@ -248,24 +247,8 @@ if $cygwin; then
   HADOOP_HDFS_HOME=`cygpath -w "$HADOOP_HDFS_HOME"`
 fi
 
-# set mapred home if mapred is present
-if [ "$HADOOP_MAPRED_HOME" = "" ]; then
-  if [ -d "${HADOOP_PREFIX}/share/hadoop/mapreduce" ]; then
-    HADOOP_MAPRED_HOME=$HADOOP_PREFIX
-  fi
-fi
-
-if [ -d "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/webapps
-fi
-
-if [ -d "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib'/*'
-fi
-
 # cygwin path translation
 if $cygwin; then
-  HADOOP_MAPRED_HOME=`cygpath -w "$HADOOP_MAPRED_HOME"`
   TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
 fi
 

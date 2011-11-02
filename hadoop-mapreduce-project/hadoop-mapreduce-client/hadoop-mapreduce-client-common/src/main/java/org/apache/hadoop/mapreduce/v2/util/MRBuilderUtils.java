@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
+import java.util.List;
+
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MRBuilderUtils {
@@ -53,14 +58,15 @@ public class MRBuilderUtils {
   }
 
   public static JobReport newJobReport(JobId jobId, String jobName,
-      String userName, JobState state, long startTime, long finishTime,
+      String userName, JobState state, long submitTime, long startTime, long finishTime,
       float setupProgress, float mapProgress, float reduceProgress,
-      float cleanupProgress, String jobFile) {
+      float cleanupProgress, String jobFile, List<AMInfo> amInfos) {
     JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(jobId);
     report.setJobName(jobName);
     report.setUser(userName);
     report.setJobState(state);
+    report.setSubmitTime(submitTime);
     report.setStartTime(startTime);
     report.setFinishTime(finishTime);
     report.setSetupProgress(setupProgress);
@@ -68,6 +74,20 @@ public class MRBuilderUtils {
     report.setMapProgress(mapProgress);
     report.setReduceProgress(reduceProgress);
     report.setJobFile(jobFile);
+    report.setAMInfos(amInfos);
     return report;
+  }
+
+  public static AMInfo newAMInfo(ApplicationAttemptId appAttemptId,
+      long startTime, ContainerId containerId, String nmHost, int nmPort,
+      int nmHttpPort) {
+    AMInfo amInfo = Records.newRecord(AMInfo.class);
+    amInfo.setAppAttemptId(appAttemptId);
+    amInfo.setStartTime(startTime);
+    amInfo.setContainerId(containerId);
+    amInfo.setNodeManagerHost(nmHost);
+    amInfo.setNodeManagerPort(nmPort);
+    amInfo.setNodeManagerHttpPort(nmHttpPort);
+    return amInfo;
   }
 }

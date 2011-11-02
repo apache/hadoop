@@ -29,9 +29,3 @@ bin=`cd "$bin"; pwd`
 if [ -f "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh ]; then
   "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh --config $HADOOP_CONF_DIR
 fi
-
-# stop mapred daemons if mapred is present
-if [ -f "${HADOOP_MAPRED_HOME}"/bin/stop-mapred.sh ]; then
-  "${HADOOP_MAPRED_HOME}"/bin/stop-mapred.sh --config $HADOOP_CONF_DIR
-fi
-

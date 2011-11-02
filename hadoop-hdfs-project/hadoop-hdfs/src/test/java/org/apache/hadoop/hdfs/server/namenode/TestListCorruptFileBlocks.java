@@ -80,7 +80,7 @@ public class TestListCorruptFileBlocks {
 
       // Now deliberately corrupt one block
       String bpid = cluster.getNamesystem().getBlockPoolId();
-      File storageDir = MiniDFSCluster.getStorageDir(0, 1);
+      File storageDir = cluster.getInstanceStorageDir(0, 1);
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();
@@ -163,7 +163,7 @@ public class TestListCorruptFileBlocks {
           + " corrupt files. Expecting None.", badFiles.size() == 0);
 
       // Now deliberately corrupt one block
-      File storageDir = MiniDFSCluster.getStorageDir(0, 0);
+      File storageDir = cluster.getInstanceStorageDir(0, 0);
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, 
           cluster.getNamesystem().getBlockPoolId());
       assertTrue("data directory does not exist", data_dir.exists());
@@ -284,7 +284,7 @@ public class TestListCorruptFileBlocks {
       String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i = 0; i < 4; i++) {
         for (int j = 0; j <= 1; j++) {
-          File storageDir = MiniDFSCluster.getStorageDir(i, j);
+          File storageDir = cluster.getInstanceStorageDir(i, j);
           File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
           File[] blocks = data_dir.listFiles();
           if (blocks == null)
@@ -391,7 +391,7 @@ public class TestListCorruptFileBlocks {
       String bpid = cluster.getNamesystem().getBlockPoolId();
       // For loop through number of datadirectories per datanode (2)
       for (int i = 0; i < 2; i++) {
-        File storageDir = MiniDFSCluster.getStorageDir(0, i);
+        File storageDir = cluster.getInstanceStorageDir(0, i);
         File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         File[] blocks = data_dir.listFiles();
         if (blocks == null)
@@ -466,7 +466,7 @@ public class TestListCorruptFileBlocks {
       final String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i=0; i<4; i++) {
         for (int j=0; j<=1; j++) {
-          File storageDir = MiniDFSCluster.getStorageDir(i, j);
+          File storageDir = cluster.getInstanceStorageDir(i, j);
           File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
           LOG.info("Removing files from " + data_dir);
           File[] blocks = data_dir.listFiles();

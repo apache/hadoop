@@ -22,43 +22,35 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
-// TODO: Make it avro-ish. TokenIdentifier really isn't serialized
-// as writable but simply uses readFields method in SaslRpcServer
-// for deserializatoin.
 public class ApplicationTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_APPLICATION_TOKEN");
 
-  private Text appId;
-
-  // TODO: Add more information in the tokenID such that it is not
-  // transferrable, more secure etc.
-
-  public ApplicationTokenIdentifier(ApplicationId id) {
-    this.appId = new Text(Integer.toString(id.getId()));
-  }
+  private String applicationAttemptId;
 
   public ApplicationTokenIdentifier() {
-    this.appId = new Text();
   }
 
-  public Text getApplicationID() {
-    return appId;
+  public ApplicationTokenIdentifier(ApplicationAttemptId appAttemptId) {
+    this();
+    this.applicationAttemptId = appAttemptId.toString();
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    appId.write(out);
+    Text.writeString(out, this.applicationAttemptId);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    appId.readFields(in);
+    this.applicationAttemptId = Text.readString(in);
   }
 
   @Override
@@ -68,10 +60,19 @@ public class ApplicationTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    if (appId == null || "".equals(appId.toString())) {
+    if (this.applicationAttemptId == null
+        || "".equals(this.applicationAttemptId.toString())) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(appId.toString());
+    return UserGroupInformation.createRemoteUser(this.applicationAttemptId
+        .toString());
   }
 
+  @InterfaceAudience.Private
+  public static class Renewer extends Token.TrivialRenewer {
+    @Override
+    protected Text getKind() {
+      return KIND_NAME;
+    }
+  }
 }

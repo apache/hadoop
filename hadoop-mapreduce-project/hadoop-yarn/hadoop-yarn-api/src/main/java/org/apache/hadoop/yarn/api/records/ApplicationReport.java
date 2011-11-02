@@ -174,6 +174,19 @@ public interface ApplicationReport {
   @Private
   @Unstable
   void setTrackingUrl(String url);
+  
+  /**
+   * Get the original not-proxied <em>tracking url</em> for the application.
+   * This is intended to only be used by the proxy itself.
+   * @return the original not-proxied <em>tracking url</em> for the application
+   */
+  @Private
+  @Unstable
+  String getOriginalTrackingUrl();
+
+  @Private
+  @Unstable
+  void setOriginalTrackingUrl(String url);
 
   /**
    * Get the <em>start time</em> of the application.
@@ -211,4 +224,19 @@ public interface ApplicationReport {
   @Unstable
   void setFinalApplicationStatus(FinalApplicationStatus finishState);
 
+  /**
+   * Retrieve the structure containing the job resources for this application
+   * @return the job resources structure for this application
+   */
+  @Public
+  @Stable
+  ApplicationResourceUsageReport getApplicationResourceUsageReport();
+
+  /**
+   * Store the structure containing the job resources for this application
+   * @param appResources structure for this application
+   */
+  @Private
+  @Unstable
+  void setApplicationResourceUsageReport(ApplicationResourceUsageReport appResources);
 }

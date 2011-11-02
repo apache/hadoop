@@ -18,8 +18,11 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
+
+import java.io.IOException;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,12 +35,14 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportResponse;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 
@@ -102,6 +107,8 @@ public class TestClientServiceDelegate {
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     Assert.assertNotNull(jobStatus);
+    verify(historyServerProxy, times(4)).getJobReport(
+        any(GetJobReportRequest.class));
   }
 
   @Test
@@ -115,7 +122,7 @@ public class TestClientServiceDelegate {
 
     //RM has app report and job History Server is not configured
     ResourceMgrDelegate rm = mock(ResourceMgrDelegate.class);
-    ApplicationReport applicationReport = getApplicationReport();
+    ApplicationReport applicationReport = getFinishedApplicationReport();
     when(rm.getApplicationReport(jobId.getAppId())).thenReturn(
         applicationReport);
 
@@ -124,7 +131,6 @@ public class TestClientServiceDelegate {
     Assert.assertEquals(applicationReport.getUser(), jobStatus.getUsername());
     Assert.assertEquals(JobStatus.State.SUCCEEDED, jobStatus.getState());
   }
-
   
   @Test
   public void testJobReportFromHistoryServer() throws Exception {                                 
@@ -145,6 +151,66 @@ public class TestClientServiceDelegate {
     Assert.assertEquals(1.0f, jobStatus.getReduceProgress());                                     
   }
 
+  @Test
+  public void testReconnectOnAMRestart() throws IOException {
+
+    MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);
+
+    // RM returns AM1 url, null, null and AM2 url on invocations.
+    // Nulls simulate the time when AM2 is in the process of restarting.
+    ResourceMgrDelegate rmDelegate = mock(ResourceMgrDelegate.class);
+    when(rmDelegate.getApplicationReport(jobId.getAppId())).thenReturn(
+        getRunningApplicationReport("am1", 78)).thenReturn(
+        getRunningApplicationReport(null, 0)).thenReturn(
+        getRunningApplicationReport(null, 0)).thenReturn(
+        getRunningApplicationReport("am2", 90));
+
+    GetJobReportResponse jobReportResponse1 = mock(GetJobReportResponse.class);
+    when(jobReportResponse1.getJobReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "jobName-firstGen", "user",
+            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null));
+
+    // First AM returns a report with jobName firstGen and simulates AM shutdown
+    // on second invocation.
+    MRClientProtocol firstGenAMProxy = mock(MRClientProtocol.class);
+    when(firstGenAMProxy.getJobReport(any(GetJobReportRequest.class)))
+        .thenReturn(jobReportResponse1).thenThrow(
+            new RuntimeException("AM is down!"));
+
+    GetJobReportResponse jobReportResponse2 = mock(GetJobReportResponse.class);
+    when(jobReportResponse2.getJobReport()).thenReturn(
+        MRBuilderUtils.newJobReport(jobId, "jobName-secondGen", "user",
+            JobState.RUNNING, 0, 0, 0, 0, 0, 0, 0, "anything", null));
+
+    // Second AM generation returns a report with jobName secondGen
+    MRClientProtocol secondGenAMProxy = mock(MRClientProtocol.class);
+    when(secondGenAMProxy.getJobReport(any(GetJobReportRequest.class)))
+        .thenReturn(jobReportResponse2);
+
+    ClientServiceDelegate clientServiceDelegate = spy(getClientServiceDelegate(
+        historyServerProxy, rmDelegate));
+    // First time, connection should be to AM1, then to AM2. Further requests
+    // should use the same proxy to AM2 and so instantiateProxy shouldn't be
+    // called.
+    doReturn(firstGenAMProxy).doReturn(secondGenAMProxy).when(
+        clientServiceDelegate).instantiateAMProxy(any(String.class));
+
+    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("jobName-firstGen", jobStatus.getJobName());
+
+    jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("jobName-secondGen", jobStatus.getJobName());
+
+    jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("jobName-secondGen", jobStatus.getJobName());
+
+    verify(clientServiceDelegate, times(2)).instantiateAMProxy(
+        any(String.class));
+  }
+
   private GetJobReportRequest getJobReportRequest() {
     GetJobReportRequest request = Records.newRecord(GetJobReportRequest.class);
     request.setJobId(jobId);
@@ -161,20 +227,18 @@ public class TestClientServiceDelegate {
     return jobReportResponse;
   }
 
-  private ApplicationReport getApplicationReport() {
-    ApplicationReport applicationReport = Records
-        .newRecord(ApplicationReport.class);
-    applicationReport.setYarnApplicationState(YarnApplicationState.FINISHED);
-    applicationReport.setUser("root");
-    applicationReport.setHost("N/A");
-    applicationReport.setName("N/A");
-    applicationReport.setQueue("N/A");
-    applicationReport.setStartTime(0);
-    applicationReport.setFinishTime(0);
-    applicationReport.setTrackingUrl("N/A");
-    applicationReport.setDiagnostics("N/A");
-    applicationReport.setFinalApplicationStatus(FinalApplicationStatus.SUCCEEDED);
-    return applicationReport;
+  private ApplicationReport getFinishedApplicationReport() {
+    return BuilderUtils.newApplicationReport(BuilderUtils.newApplicationId(
+        1234, 5), "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A");
+  }
+
+  private ApplicationReport getRunningApplicationReport(String host, int port) {
+    return BuilderUtils.newApplicationReport(BuilderUtils.newApplicationId(
+        1234, 5), "user", "queue", "appname", host, port, null,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.UNDEFINED, null, "N/A");
   }
 
   private ResourceMgrDelegate getRMDelegate() throws YarnRemoteException {
@@ -186,7 +250,7 @@ public class TestClientServiceDelegate {
   private ClientServiceDelegate getClientServiceDelegate(
       MRClientProtocol historyServerProxy, ResourceMgrDelegate rm) {
     Configuration conf = new YarnConfiguration();
-    conf.set(MRConfig.FRAMEWORK_NAME, "yarn");
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     ClientServiceDelegate clientServiceDelegate = new ClientServiceDelegate(
         conf, rm, oldJobId, historyServerProxy);
     return clientServiceDelegate;

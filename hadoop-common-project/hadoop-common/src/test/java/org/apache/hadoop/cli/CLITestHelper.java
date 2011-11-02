@@ -180,7 +180,7 @@ public class CLITestHelper {
           LOG.info("         Comparision result:   [" + 
                    (resultBoolean ? "pass" : "fail") + "]");
           LOG.info("            Expected output:   [" + 
-                   cd.getExpectedOutput() + "]");
+                   expandCommand(cd.getExpectedOutput()) + "]");
           LOG.info("              Actual output:   [" + 
                    cd.getActualOutput() + "]");
         }
@@ -290,7 +290,7 @@ public class CLITestHelper {
           comparatorType);
         ComparatorBase comp = (ComparatorBase) comparatorClass.newInstance();
         compareOutput = comp.compare(cmdResult.getCommandOutput(), 
-          compdata.getExpectedOutput());
+          expandCommand(compdata.getExpectedOutput()));
       } catch (Exception e) {
         LOG.info("Error in instantiating the comparator" + e);
       }

@@ -11,14 +11,12 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Hadoop MapReduce Next Generation  ${project.version}
+  Apache Hadoop NextGen MapReduce
   ---
   ---
   ${maven.build.timestamp}
-
-Hadoop MapReduce Next Generation
-
-* Architecture
+  
+MapReduce NextGen aka YARN aka MRv2
 
   The new architecture introduced in hadoop-0.23, divides the two major 
   functions of the JobTracker: resource management and job life-cycle management 
@@ -32,18 +30,21 @@ Hadoop MapReduce Next Generation
   or a DAG of such jobs. 
   
   The ResourceManager and per-machine NodeManager daemon, which manages the 
-  user processes on that machine, form the computation fabric. The 
-  per-application ApplicationMaster is, in effect, a framework specific library 
-  and is tasked with negotiating resources from the ResourceManager and working 
-  with the NodeManager(s) to execute and monitor the tasks.
+  user processes on that machine, form the computation fabric. 
+  
+  The per-application ApplicationMaster is, in effect, a framework specific 
+  library and is tasked with negotiating resources from the ResourceManager and 
+  working with the NodeManager(s) to execute and monitor the tasks.
 
-* User Documentation
+  More details are available in the {{{./YARN.html}YARN}}
+  document.
 
-  * {{{./SingleCluster.html}Setting up a Single Node Cluster}}
+* Documentation
 
-  * {{{./apidocs/index.html}JavaDocs}}
-
+  * {{{./YARN.html}NextGen MapReduce}}
+  
   * {{{./WritingYarnApplications.html}Writing Yarn Applications}}
 
   * {{{./CapacityScheduler.html}Capacity Scheduler}}
+
 

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -107,9 +108,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                  = new StateMachineFactory<RMNodeImpl,
                                            RMNodeState,
                                            RMNodeEventType,
-                                           RMNodeEvent>(RMNodeState.RUNNING)
+                                           RMNodeEvent>(RMNodeState.NEW)
   
      //Transitions from RUNNING state
+     .addTransition(RMNodeState.NEW, RMNodeState.RUNNING, 
+         RMNodeEventType.STARTED, new AddNodeTransition())
      .addTransition(RMNodeState.RUNNING, 
          EnumSet.of(RMNodeState.RUNNING, RMNodeState.UNHEALTHY),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenHealthyTransition())
@@ -158,8 +161,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     this.stateMachine = stateMachineFactory.make(this);
     
-    context.getDispatcher().getEventHandler().handle(
-        new NodeAddedSchedulerEvent(this));
   }
 
   @Override
@@ -311,6 +312,21 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
   
+  public static class AddNodeTransition implements
+      SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      // Inform the scheduler
+
+      rmNode.context.getDispatcher().getEventHandler().handle(
+          new NodeAddedSchedulerEvent(rmNode));
+
+      ClusterMetrics.getMetrics().addNode();
+    }
+  }
+  
   public static class CleanUpAppTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
@@ -335,6 +351,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   public static class RemoveNodeTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
+    @SuppressWarnings("unchecked")
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
       // Inform the scheduler
@@ -345,11 +362,14 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getRMNodes().remove(rmNode.nodeId);
       LOG.info("Removed Node " + rmNode.nodeId);
       
+      //Update the metrics 
+      ClusterMetrics.getMetrics().removeNode(event.getType());
     }
   }
 
   public static class StatusUpdateWhenHealthyTransition implements
       MultipleArcTransition<RMNodeImpl, RMNodeEvent, RMNodeState> {
+    @SuppressWarnings("unchecked")
     @Override
     public RMNodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
 
@@ -365,6 +385,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         // Inform the scheduler
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeRemovedSchedulerEvent(rmNode));
+        ClusterMetrics.getMetrics().incrNumUnhealthyNMs();
         return RMNodeState.UNHEALTHY;
       }
 
@@ -402,6 +423,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
  implements
       MultipleArcTransition<RMNodeImpl, RMNodeEvent, RMNodeState> {
 
+    @SuppressWarnings("unchecked")
     @Override
     public RMNodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
@@ -413,6 +435,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));
+        ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
         return RMNodeState.RUNNING;
       }
 

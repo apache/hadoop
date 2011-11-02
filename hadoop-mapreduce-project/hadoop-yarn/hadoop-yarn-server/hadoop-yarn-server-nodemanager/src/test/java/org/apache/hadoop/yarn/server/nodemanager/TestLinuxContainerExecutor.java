@@ -18,151 +18,231 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import junit.framework.Assert;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+/**
+ * This is intended to test the LinuxContainerExecutor code, but because of
+ * some security restrictions this can only be done with some special setup
+ * first.
+ * <br><ol>
+ * <li>Compile the code with container-executor.conf.dir set to the location you
+ * want for testing.
+ * <br><pre><code>
+ * > mvn clean install -Pnative -Dcontainer-executor.conf.dir=/etc/hadoop
+ *                          -DskipTests
+ * </code></pre>
+ * 
+ * <li>Set up <code>${container-executor.conf.dir}/container-executor.cfg</code>
+ * container-executor.cfg needs to be owned by root and have in it the proper
+ * config values.
+ * <br><pre><code>
+ * > cat /etc/hadoop/container-executor.cfg
+ * yarn.nodemanager.local-dirs=/tmp/hadoop/nm-local/
+ * yarn.nodemanager.log-dirs=/tmp/hadoop/nm-log
+ * yarn.nodemanager.linux-container-executor.group=mapred
+ * #depending on the user id of the application.submitter option
+ * min.user.id=1
+ * > sudo chown root:root /etc/hadoop/container-executor.cfg
+ * > sudo chmod 444 /etc/hadoop/container-executor.cfg
+ * </code></pre>
+ * 
+ * <li>iMove the binary and set proper permissions on it. It needs to be owned 
+ * by root, the group needs to be the group configured in container-executor.cfg, 
+ * and it needs the setuid bit set. (The build will also overwrite it so you
+ * need to move it to a place that you can support it. 
+ * <br><pre><code>
+ * > cp ./hadoop-mapreduce-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor/container-executor /tmp/
+ * > sudo chown root:mapred /tmp/container-executor
+ * > sudo chmod 4550 /tmp/container-executor
+ * </code></pre>
+ * 
+ * <li>Run the tests with the execution enabled (The user you run the tests as
+ * needs to be part of the group from the config.
+ * <br><pre><code>
+ * mvn test -Dtest=TestLinuxContainerExecutor -Dapplication.submitter=nobody -Dcontainer-executor.path=/tmp/container-executor
+ * </code></pre>
+ * </ol>
+ */
 public class TestLinuxContainerExecutor {
-//
-//  private static final Log LOG = LogFactory
-//      .getLog(TestLinuxContainerExecutor.class);
-//
-//  // TODO: FIXME
-//  private static File workSpace = new File("target",
-//      TestLinuxContainerExecutor.class.getName() + "-workSpace");
-//
-//  @Before
-//  public void setup() throws IOException {
-//    FileContext.getLocalFSFileContext().mkdir(
-//        new Path(workSpace.getAbsolutePath()), null, true);
-//    workSpace.setReadable(true, false);
-//    workSpace.setExecutable(true, false);
-//    workSpace.setWritable(true, false);
-//  }
-//
-//  @After
-//  public void tearDown() throws AccessControlException, FileNotFoundException,
-//      UnsupportedFileSystemException, IOException {
-//    FileContext.getLocalFSFileContext().delete(
-//        new Path(workSpace.getAbsolutePath()), true);
-//  }
-//
-  @Test
-  public void testCommandFilePreparation() throws IOException {
-//    LinuxContainerExecutor executor = new LinuxContainerExecutor(new String[] {
-//        "/bin/echo", "hello" }, null, null, "nobody"); // TODO: fix user name
-//    executor.prepareCommandFile(workSpace.getAbsolutePath());
-//
-//    // Now verify the contents of the commandFile
-//    File commandFile = new File(workSpace, LinuxContainerExecutor.COMMAND_FILE);
-//    BufferedReader reader = new BufferedReader(new FileReader(commandFile));
-//    Assert.assertEquals("/bin/echo hello", reader.readLine());
-//    Assert.assertEquals(null, reader.readLine());
-//    Assert.assertTrue(commandFile.canExecute());
+  private static final Log LOG = LogFactory
+      .getLog(TestLinuxContainerExecutor.class);
+  
+  private static File workSpace = new File("target",
+      TestLinuxContainerExecutor.class.getName() + "-workSpace");
+  
+  private LinuxContainerExecutor exec = null;
+  private String appSubmitter = null;
+
+  @Before
+  public void setup() throws Exception {
+    FileContext.getLocalFSFileContext().mkdir(
+        new Path(workSpace.getAbsolutePath()), null, true);
+    workSpace.setReadable(true, false);
+    workSpace.setExecutable(true, false);
+    workSpace.setWritable(true, false);
+    String exec_path = System.getProperty("container-executor.path");
+    if(exec_path != null && !exec_path.isEmpty()) {
+      Configuration conf = new Configuration(false);
+      LOG.info("Setting "+YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH
+          +"="+exec_path);
+      conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, exec_path);
+      exec = new LinuxContainerExecutor();
+      exec.setConf(conf);
+    }
+    appSubmitter = System.getProperty("application.submitter");
+    if(appSubmitter == null || appSubmitter.isEmpty()) {
+      appSubmitter = "nobody";
+    }
   }
-//
-//  @Test
-//  public void testContainerLaunch() throws IOException {
-//    String containerExecutorPath = System
-//        .getProperty("container-executor-path");
-//    if (containerExecutorPath == null || containerExecutorPath.equals("")) {
-//      LOG.info("Not Running test for lack of container-executor-path");
-//      return;
-//    }
-//
-//    String applicationSubmitter = "nobody";
-//
-//    File touchFile = new File(workSpace, "touch-file");
-//    LinuxContainerExecutor executor = new LinuxContainerExecutor(new String[] {
-//        "touch", touchFile.getAbsolutePath() }, workSpace, null,
-//        applicationSubmitter);
-//    executor.setCommandExecutorPath(containerExecutorPath);
-//    executor.execute();
-//
-//    FileStatus fileStatus = FileContext.getLocalFSFileContext().getFileStatus(
-//        new Path(touchFile.getAbsolutePath()));
-//    Assert.assertEquals(applicationSubmitter, fileStatus.getOwner());
-//  }
-//
-//  @Test
-//  public void testContainerKill() throws IOException, InterruptedException,
-//      IllegalArgumentException, SecurityException, IllegalAccessException,
-//      NoSuchFieldException {
-//    String containerExecutorPath = System
-//        .getProperty("container-executor-path");
-//    if (containerExecutorPath == null || containerExecutorPath.equals("")) {
-//      LOG.info("Not Running test for lack of container-executor-path");
-//      return;
-//    }
-//
-//    String applicationSubmitter = "nobody";
-//    final LinuxContainerExecutor executor = new LinuxContainerExecutor(
-//        new String[] { "sleep", "100" }, workSpace, null, applicationSubmitter);
-//    executor.setCommandExecutorPath(containerExecutorPath);
-//    new Thread() {
-//      public void run() {
-//        try {
-//          executor.execute();
-//        } catch (IOException e) {
-//          // TODO Auto-generated catch block
-//          e.printStackTrace();
-//        }
-//      };
-//    }.start();
-//
-//    String pid;
-//    while ((pid = executor.getPid()) == null) {
-//      LOG.info("Sleeping for 5 seconds before checking if "
-//          + "the process is alive.");
-//      Thread.sleep(5000);
-//    }
-//    LOG.info("Going to check the liveliness of the process with pid " + pid);
-//
-//    LinuxContainerExecutor checkLiveliness = new LinuxContainerExecutor(
-//        new String[] { "kill", "-0", "-" + pid }, workSpace, null,
-//        applicationSubmitter);
-//    checkLiveliness.setCommandExecutorPath(containerExecutorPath);
-//    checkLiveliness.execute();
-//
-//    LOG.info("Process is alive. "
-//        + "Sleeping for 5 seconds before killing the process.");
-//    Thread.sleep(5000);
-//    LOG.info("Going to killing the process.");
-//
-//    executor.kill();
-//
-//    LOG.info("Sleeping for 5 seconds before checking if "
-//        + "the process is alive.");
-//    Thread.sleep(5000);
-//    LOG.info("Going to check the liveliness of the process.");
-//
-//    // TODO: fix
-//    checkLiveliness = new LinuxContainerExecutor(new String[] { "kill", "-0",
-//        "-" + pid }, workSpace, null, applicationSubmitter);
-//    checkLiveliness.setCommandExecutorPath(containerExecutorPath);
-//    boolean success = false;
-//    try {
-//      checkLiveliness.execute();
-//      success = true;
-//    } catch (IOException e) {
-//      success = false;
-//    }
-//
-//    Assert.assertFalse(success);
-//  }
+
+  @After
+  public void tearDown() throws Exception {
+    FileContext.getLocalFSFileContext().delete(
+        new Path(workSpace.getAbsolutePath()), true);
+  }
+
+  private boolean shouldRun() {
+    if(exec == null) {
+      LOG.warn("Not running test because container-executor.path is not set");
+      return false;
+    }
+    return true;
+  }
+  
+  private String writeScriptFile(String ... cmd) throws IOException {
+    File f = File.createTempFile("TestLinuxContainerExecutor", ".sh");
+    f.deleteOnExit();
+    PrintWriter p = new PrintWriter(new FileOutputStream(f));
+    p.println("#!/bin/sh");
+    p.print("exec");
+    for(String part: cmd) {
+      p.print(" '");
+      p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
+      p.print("'");
+    }
+    p.println();
+    p.close();
+    return f.getAbsolutePath();
+  }
+  
+  private int id = 0;
+  private synchronized int getNextId() {
+    id += 1;
+    return id;
+  }
+  
+  private ContainerId getNextContainerId() {
+    ContainerId cId = mock(ContainerId.class);
+    String id = "CONTAINER_"+getNextId();
+    when(cId.toString()).thenReturn(id);
+    return cId;
+  }
+  
+
+  private int runAndBlock(String ... cmd) throws IOException {
+    return runAndBlock(getNextContainerId(), cmd);
+  }
+  
+  private int runAndBlock(ContainerId cId, String ... cmd) throws IOException {
+    String appId = "APP_"+getNextId();
+    Container container = mock(Container.class);
+    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+    HashMap<String, String> env = new HashMap<String,String>();
+
+    when(container.getContainerID()).thenReturn(cId);
+    when(container.getLaunchContext()).thenReturn(context);
+
+    when(context.getEnvironment()).thenReturn(env);
+    
+    String script = writeScriptFile(cmd);
+
+    Path scriptPath = new Path(script);
+    Path tokensPath = new Path("/dev/null");
+    Path workDir = new Path(workSpace.getAbsolutePath());
+    Path pidFile = new Path(workDir, "pid.txt");
+
+    exec.activateContainer(cId, pidFile);
+    return exec.launchContainer(container, scriptPath, tokensPath,
+        appSubmitter, appId, workDir);
+  }
+  
+  
+  @Test
+  public void testContainerLaunch() throws IOException {
+    if (!shouldRun()) {
+      return;
+    }
+
+    File touchFile = new File(workSpace, "touch-file");
+    int ret = runAndBlock("touch", touchFile.getAbsolutePath());
+    
+    assertEquals(0, ret);
+    FileStatus fileStatus = FileContext.getLocalFSFileContext().getFileStatus(
+          new Path(touchFile.getAbsolutePath()));
+    assertEquals(appSubmitter, fileStatus.getOwner());
+  }
+
+  @Test
+  public void testContainerKill() throws Exception {
+    if (!shouldRun()) {
+      return;
+    }
+    
+    final ContainerId sleepId = getNextContainerId();   
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          runAndBlock(sleepId, "sleep", "100");
+        } catch (IOException e) {
+          LOG.warn("Caught exception while running sleep",e);
+        }
+      };
+    };
+    t.setDaemon(true); //If it does not exit we shouldn't block the test.
+    t.start();
+
+    assertTrue(t.isAlive());
+   
+    String pid = null;
+    int count = 10;
+    while ((pid = exec.getProcessId(sleepId)) == null && count > 0) {
+      LOG.info("Sleeping for 200 ms before checking for pid ");
+      Thread.sleep(200);
+      count--;
+    }
+    assertNotNull(pid);
+
+    LOG.info("Going to killing the process.");
+    exec.signalContainer(appSubmitter, pid, Signal.TERM);
+    LOG.info("sleeping for 100ms to let the sleep be killed");
+    Thread.sleep(100);
+    
+    assertFalse(t.isAlive());
+  }
 }

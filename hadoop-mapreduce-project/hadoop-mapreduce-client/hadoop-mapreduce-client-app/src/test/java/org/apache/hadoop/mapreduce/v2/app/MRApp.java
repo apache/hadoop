@@ -31,8 +31,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.WrappedJvmID;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.NormalizedResourceEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -77,6 +81,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -91,6 +96,10 @@ public class MRApp extends MRAppMaster {
 
   private File testWorkDir;
   private Path testAbsPath;
+  
+  public static String NM_HOST = "localhost";
+  public static int NM_PORT = 1234;
+  public static int NM_HTTP_PORT = 9999;
 
   private static final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -118,10 +127,21 @@ public class MRApp extends MRAppMaster {
     applicationAttemptId.setAttemptId(startCount);
     return applicationAttemptId;
   }
+  
+  private static ContainerId getContainerId(ApplicationId applicationId,
+      int startCount) {
+    ApplicationAttemptId appAttemptId =
+        getApplicationAttemptId(applicationId, startCount);
+    ContainerId containerId =
+        BuilderUtils.newContainerId(appAttemptId, startCount);
+    return containerId;
+  }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName, 
       boolean cleanOnStart, int startCount) {
-    super(getApplicationAttemptId(applicationId, startCount));
+    super(getApplicationAttemptId(applicationId, startCount), getContainerId(
+        applicationId, startCount), NM_HOST, NM_PORT, NM_HTTP_PORT, System
+        .currentTimeMillis());
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
     LOG.info("PathUsed: " + testAbsPath);
@@ -253,9 +273,11 @@ public class MRApp extends MRAppMaster {
     } catch (IOException e) {
       throw new YarnException(e);
     }
-    Job newJob = new TestJob(conf, getAppID(), getDispatcher().getEventHandler(),
-                             getTaskAttemptListener(), getContext().getClock(),
-                             currentUser.getUserName());
+    Job newJob = new TestJob(getJobId(), getAttemptID(), conf, 
+    		getDispatcher().getEventHandler(),
+            getTaskAttemptListener(), getContext().getClock(),
+            getCommitter(), isNewApiCommitter(),
+            currentUser.getUserName());
     ((AppContext) getContext()).getAllJobs().put(newJob.getID(), newJob);
 
     getDispatcher().register(JobFinishEvent.Type.class,
@@ -277,10 +299,13 @@ public class MRApp extends MRAppMaster {
         return null;
       }
       @Override
-      public void register(TaskAttemptId attemptID, 
+      public void registerLaunchedTask(TaskAttemptId attemptID, 
           org.apache.hadoop.mapred.Task task, WrappedJvmID jvmID) {}
       @Override
       public void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID) {
+      }
+      @Override
+      public void registerPendingTask(WrappedJvmID jvmID) {
       }
     };
   }
@@ -301,15 +326,18 @@ public class MRApp extends MRAppMaster {
   }
 
   class MockContainerLauncher implements ContainerLauncher {
+
+    //We are running locally so set the shuffle port to -1 
+    int shufflePort = -1;
+
+    @SuppressWarnings("unchecked")
     @Override
     public void handle(ContainerLauncherEvent event) {
       switch (event.getType()) {
       case CONTAINER_REMOTE_LAUNCH:
-        //We are running locally so set the shuffle port to -1 
         getContext().getEventHandler().handle(
             new TaskAttemptContainerLaunchedEvent(event.getTaskAttemptID(),
-                -1)
-            );
+                shufflePort));
         
         attemptLaunched(event.getTaskAttemptID());
         break;
@@ -341,16 +369,22 @@ public class MRApp extends MRAppMaster {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
         cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
         cId.setId(containerCount++);
-        Container container = recordFactory.newRecordInstance(Container.class);
-        container.setId(cId);
-        container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
-        container.getNodeId().setHost("dummy");
-        container.getNodeId().setPort(1234);
-        container.setContainerToken(null);
-        container.setNodeHttpAddress("localhost:9999");
+        NodeId nodeId = BuilderUtils.newNodeId(NM_HOST, NM_PORT);
+        Container container = BuilderUtils.newContainer(cId, nodeId,
+            NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
+        JobID id = TypeConverter.fromYarn(applicationId);
+        JobId jobId = TypeConverter.toYarn(id);
+        getContext().getEventHandler().handle(new JobHistoryEvent(jobId, 
+            new NormalizedResourceEvent(
+                org.apache.hadoop.mapreduce.TaskType.REDUCE,
+            100)));
+        getContext().getEventHandler().handle(new JobHistoryEvent(jobId, 
+            new NormalizedResourceEvent(
+                org.apache.hadoop.mapreduce.TaskType.MAP,
+            100)));
         getContext().getEventHandler().handle(
             new TaskAttemptContainerAssignedEvent(event.getAttemptID(),
-                container));
+                container, null));
       }
     };
   }
@@ -402,13 +436,15 @@ public class MRApp extends MRAppMaster {
       return localStateMachine;
     }
 
-    public TestJob(Configuration conf, ApplicationId applicationId,
-        EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
-        Clock clock, String user) {
-      super(getApplicationAttemptId(applicationId, getStartCount()), 
+    public TestJob(JobId jobId, ApplicationAttemptId applicationAttemptId,
+        Configuration conf, EventHandler eventHandler,
+        TaskAttemptListener taskAttemptListener, Clock clock,
+        OutputCommitter committer, boolean newApiCommitter, String user) {
+      super(jobId, getApplicationAttemptId(applicationId, getStartCount()),
           conf, eventHandler, taskAttemptListener,
-          new JobTokenSecretManager(), new Credentials(), clock, 
-          getCompletedTaskFromPreviousRun(), metrics, user);
+          new JobTokenSecretManager(), new Credentials(), clock,
+          getCompletedTaskFromPreviousRun(), metrics, committer,
+          newApiCommitter, user, System.currentTimeMillis(), getAllAMInfos());
 
       // This "this leak" is okay because the retained pointer is in an
       //  instance variable.

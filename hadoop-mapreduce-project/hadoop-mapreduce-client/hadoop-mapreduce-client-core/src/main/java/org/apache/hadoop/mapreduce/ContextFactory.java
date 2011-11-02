@@ -123,7 +123,7 @@ public class ContextFactory {
         WRAPPED_CONTEXT_FIELD = null;
       }
       MAP_CONTEXT_CONSTRUCTOR.setAccessible(true);
-      REPORTER_FIELD = taskIOContextCls.getDeclaredField("reporter");
+      REPORTER_FIELD = taskContextCls.getDeclaredField("reporter");
       REPORTER_FIELD.setAccessible(true);
       READER_FIELD = mapContextCls.getDeclaredField("reader");
       READER_FIELD.setAccessible(true);
@@ -141,7 +141,8 @@ public class ContextFactory {
   }
 
   /**
-   * Clone a job or task attempt context with a new configuration.
+   * Clone a {@link JobContext} or {@link TaskAttemptContext} with a 
+   * new configuration.
    * @param original the original context
    * @param conf the new configuration
    * @return a new context object
@@ -176,7 +177,8 @@ public class ContextFactory {
   }
   
   /**
-   * Copy a mapper context, optionally replacing the input and output.
+   * Copy a custom WrappedMapper.Context, optionally replacing 
+   * the input and output.
    * @param <K1> input key type
    * @param <V1> input value type
    * @param <K2> output key type

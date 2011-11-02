@@ -40,6 +40,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -109,6 +111,8 @@ import org.apache.hadoop.yarn.util.Records;
  * <p> After the job has been completed, the <code>ApplicationMaster</code> has to send a {@link FinishApplicationMasterRequest} 
  * to the <code>ResourceManager</code> to inform it that the <code>ApplicationMaster</code> has been completed. 
  */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
 public class ApplicationMaster {
 
   private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
@@ -287,7 +291,7 @@ public class ApplicationMaster {
     Map<String, String> envs = System.getenv();
 
     appAttemptID = Records.newRecord(ApplicationAttemptId.class);
-    if (!envs.containsKey(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV)) {
+    if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
       if (cliParser.hasOption("app_attempt_id")) {
         String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
         appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
@@ -296,7 +300,8 @@ public class ApplicationMaster {
         throw new IllegalArgumentException("Application Attempt Id not set in the environment");				
       }	
     } else {
-      appAttemptID = ConverterUtils.toApplicationAttemptId(envs.get(ApplicationConstants.APPLICATION_ATTEMPT_ID_ENV));
+      ContainerId containerId = ConverterUtils.toContainerId(envs.get(ApplicationConstants.AM_CONTAINER_ID_ENV));
+      appAttemptID = containerId.getApplicationAttemptId();
     }
 
     LOG.info("Application master for app"

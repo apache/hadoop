@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import org.apache.hadoop.util.PlatformName;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -89,12 +90,6 @@ public interface MRJobConfig {
   public static final String GROUP_COMPARATOR_CLASS = "mapreduce.job.output.group.comparator.class";
 
   public static final String WORKING_DIR = "mapreduce.job.working.dir";
-
-  public static final String END_NOTIFICATION_URL = "mapreduce.job.end-notification.url";
-
-  public static final String END_NOTIFICATION_RETRIES = "mapreduce.job.end-notification.retry.attempts";
-
-  public static final String END_NOTIFICATION_RETRIE_INTERVAL = "mapreduce.job.end-notification.retry.interval";
 
   public static final String CLASSPATH_ARCHIVES = "mapreduce.job.classpath.archives";
 
@@ -237,6 +232,8 @@ public interface MRJobConfig {
   public static final String REDUCE_JAVA_OPTS = "mapreduce.reduce.java.opts";
 
   public static final String REDUCE_ULIMIT = "mapreduce.reduce.ulimit";
+  
+  public static final String MAPREDUCE_JOB_DIR = "mapreduce.job.dir";
 
   public static final String REDUCE_MAX_ATTEMPTS = "mapreduce.reduce.maxattempts";
 
@@ -272,7 +269,12 @@ public interface MRJobConfig {
 
   public static final String JOB_ACL_VIEW_JOB = "mapreduce.job.acl-view-job";
 
+  public static final String DEFAULT_JOB_ACL_VIEW_JOB = " ";
+
   public static final String JOB_ACL_MODIFY_JOB = "mapreduce.job.acl-modify-job";
+
+  public static final String DEFAULT_JOB_ACL_MODIFY_JOB = " ";
+
   public static final String JOB_SUBMITHOST =
     "mapreduce.job.submithostname";
   public static final String JOB_SUBMITHOSTADDR =
@@ -323,9 +325,9 @@ public interface MRJobConfig {
   public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1536m";
 
   /** Root Logging level passed to the MR app master.*/
-  public static final String MR_AM_LOG_OPTS = 
-    MR_AM_PREFIX+"log-opts";
-  public static final String DEFAULT_MR_AM_LOG_OPTS = "INFO";
+  public static final String MR_AM_LOG_LEVEL = 
+    MR_AM_PREFIX+"log.level";
+  public static final String DEFAULT_MR_AM_LOG_LEVEL = "INFO";
 
   /**The number of splits when reporting progress in MR*/
   public static final String MR_AM_NUM_PROGRESS_SPLITS = 
@@ -384,11 +386,11 @@ public interface MRJobConfig {
     MR_AM_PREFIX
     + "job.task.estimator.exponential.smooth.lambda-ms";
 
-  public static final long DEFAULT_MR_AM_TASK_ESTIMATOR_SMNOOTH_LAMBDA_MS = 
+  public static final long DEFAULT_MR_AM_TASK_ESTIMATOR_SMOOTH_LAMBDA_MS = 
   1000L * 60;
 
   /** true if the smoothing rate should be exponential.*/
-  public static final String MR_AM_TASK_EXTIMATOR_EXPONENTIAL_RATE_ENABLE =
+  public static final String MR_AM_TASK_ESTIMATOR_EXPONENTIAL_RATE_ENABLE =
     MR_AM_PREFIX + "job.task.estimator.exponential.smooth.rate";
 
   /** The number of threads used to handle task RPC calls.*/
@@ -400,6 +402,15 @@ public interface MRJobConfig {
   public static final String MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS =
     MR_AM_PREFIX + "scheduler.heartbeat.interval-ms";
   public static final int DEFAULT_MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS = 2000;
+
+  /**
+   * If contact with RM is lost, the AM will wait MR_AM_TO_RM_WAIT_INTERVAL_MS
+   * milliseconds before aborting. During this interval, AM will still try
+   * to contact the RM.
+   */
+  public static final String MR_AM_TO_RM_WAIT_INTERVAL_MS =
+    MR_AM_PREFIX + "scheduler.connection.wait.interval-ms";
+  public static final int DEFAULT_MR_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
 
   /**
    * Boolean. Create the base dirs in the JobHistoryEventHandler
@@ -428,7 +439,7 @@ public interface MRJobConfig {
       "mapreduce.admin.user.env";
 
   public static final String DEFAULT_MAPRED_ADMIN_USER_ENV =
-      "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib";
+      "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native/" + PlatformName.getPlatformName();
 
   public static final String WORKDIR = "work";
 
@@ -436,9 +447,12 @@ public interface MRJobConfig {
 
   public static final String HADOOP_WORK_DIR = "HADOOP_WORK_DIR";
 
+  // Environment variables used by Pipes. (TODO: these
+  // do not appear to be used by current pipes source code!)
   public static final String STDOUT_LOGFILE_ENV = "STDOUT_LOGFILE_ENV";
-
   public static final String STDERR_LOGFILE_ENV = "STDERR_LOGFILE_ENV";
+
+  public static final String APPLICATION_ATTEMPT_ID_ENV = "APPLICATION_ATTEMPT_ID_ENV";
 
   // This should be the directory where splits file gets localized on the node
   // running ApplicationMaster.
@@ -475,4 +489,33 @@ public interface MRJobConfig {
 
   public static final String APPLICATION_ATTEMPT_ID =
       "mapreduce.job.application.attempt.id";
+
+  /**
+   * Job end notification.
+   */
+  public static final String MR_JOB_END_NOTIFICATION_URL =
+    "mapreduce.job.end-notification.url";
+
+  public static final String MR_JOB_END_RETRY_ATTEMPTS =
+    "mapreduce.job.end-notification.retry.attempts";
+
+  public static final String MR_JOB_END_RETRY_INTERVAL =
+    "mapreduce.job.end-notification.retry.interval";
+
+  public static final String MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS =
+    "mapreduce.job.end-notification.max.attempts";
+
+  public static final String MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL =
+    "mapreduce.job.end-notification.max.retry.interval";
+
+  /*
+   * MR AM Service Authorization
+   */
+  public static final String   
+  MR_AM_SECURITY_SERVICE_AUTHORIZATION_TASK_UMBILICAL =
+      "security.job.task.protocol.acl";
+  public static final String   
+  MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT =
+      "security.job.client.protocol.acl";
+
 }

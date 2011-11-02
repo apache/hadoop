@@ -31,7 +31,7 @@ public class OffsetParam extends LongParam {
    * @param value the parameter value.
    */
   public OffsetParam(final Long value) {
-    super(DOMAIN, value);
+    super(DOMAIN, value, 0L, null);
   }
 
   /**

@@ -46,3 +46,9 @@ message RefreshAdminAclsRequestProto {
 }
 message RefreshAdminAclsResponseProto {
 }
+
+message RefreshServiceAclsRequestProto {
+}
+message RefreshServiceAclsResponseProto {
+}
+

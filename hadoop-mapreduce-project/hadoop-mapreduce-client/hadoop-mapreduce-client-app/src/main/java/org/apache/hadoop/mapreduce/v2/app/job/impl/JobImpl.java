@@ -39,15 +39,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
-import org.apache.hadoop.mapreduce.OutputFormat;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -63,7 +60,7 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
-import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
@@ -97,14 +94,11 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -125,21 +119,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   // Maximum no. of fetch-failure notifications after which map task is failed
   private static final int MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
-
-  private final RecordFactory recordFactory =
-      RecordFactoryProvider.getRecordFactory(null);
   
   //final fields
   private final ApplicationAttemptId applicationAttemptId;
   private final Clock clock;
   private final JobACLsManager aclsManager;
   private final String username;
+  private final OutputCommitter committer;
   private final Map<JobACL, AccessControlList> jobACLs;
   private final Set<TaskId> completedTasksFromPreviousRun;
+  private final List<AMInfo> amInfos;
   private final Lock readLock;
   private final Lock writeLock;
   private final JobId jobId;
   private final String jobName;
+  private final boolean newApiCommitter;
   private final org.apache.hadoop.mapreduce.JobID oldJobId;
   private final TaskAttemptListener taskAttemptListener;
   private final Object tasksSyncHandle = new Object();
@@ -148,6 +142,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
   private final String userName;
+  private final long appSubmitTime;
 
   private boolean lazyTasksCopyNeeded = false;
   private volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
@@ -164,7 +159,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Path remoteJobSubmitDir;
   public Path remoteJobConfFile;
   private JobContext jobContext;
-  private OutputCommitter committer;
   private int allowedMapFailuresPercent = 0;
   private int allowedReduceFailuresPercent = 0;
   private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
@@ -339,7 +333,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_DIAGNOSTIC_UPDATE,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
                   JobEventType.INTERNAL_ERROR))
-
           // create the topology tables
           .installTopology();
  
@@ -355,7 +348,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private int failedReduceTaskCount = 0;
   private int killedMapTaskCount = 0;
   private int killedReduceTaskCount = 0;
-  private long submitTime;
   private long startTime;
   private long finishTime;
   private float setupProgress;
@@ -366,29 +358,27 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
 
-  public JobImpl(ApplicationAttemptId applicationAttemptId, Configuration conf,
-      EventHandler eventHandler, TaskAttemptListener taskAttemptListener,
+  public JobImpl(JobId jobId, ApplicationAttemptId applicationAttemptId,
+      Configuration conf, EventHandler eventHandler,
+      TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
-      Credentials fsTokenCredentials, Clock clock, 
+      Credentials fsTokenCredentials, Clock clock,
       Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
-      String userName) {
+      OutputCommitter committer, boolean newApiCommitter, String userName,
+      long appSubmitTime, List<AMInfo> amInfos) {
     this.applicationAttemptId = applicationAttemptId;
-    this.jobId = recordFactory.newRecordInstance(JobId.class);
+    this.jobId = jobId;
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
     this.conf = conf;
     this.metrics = metrics;
     this.clock = clock;
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
+    this.amInfos = amInfos;
     this.userName = userName;
-    ApplicationId applicationId = applicationAttemptId.getApplicationId();
-    jobId.setAppId(applicationId);
-    jobId.setId(applicationId.getId());
-    oldJobId = TypeConverter.fromYarn(jobId);
-    LOG.info("Job created" +
-    		" appId=" + applicationId + 
-    		" jobId=" + jobId + 
-    		" oldJobId=" + oldJobId);
-    
+    this.appSubmitTime = appSubmitTime;
+    this.oldJobId = TypeConverter.fromYarn(jobId);
+    this.newApiCommitter = newApiCommitter;
+
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -397,6 +387,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
     this.fsTokens = fsTokenCredentials;
     this.jobTokenSecretManager = jobTokenSecretManager;
+    this.committer = committer;
 
     this.aclsManager = new JobACLsManager(conf);
     this.username = System.getProperty("user.name");
@@ -589,13 +580,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
       if (getState() == JobState.NEW) {
         return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-            startTime, finishTime, setupProgress, 0.0f,
-            0.0f, cleanupProgress, remoteJobConfFile.toString());
+            appSubmitTime, startTime, finishTime, setupProgress, 0.0f, 0.0f,
+            cleanupProgress, remoteJobConfFile.toString(), amInfos);
       }
 
       return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-          startTime, finishTime, setupProgress, computeProgress(mapTasks),
-          computeProgress(reduceTasks), cleanupProgress, remoteJobConfFile.toString());
+          appSubmitTime, startTime, finishTime, setupProgress,
+          computeProgress(mapTasks), computeProgress(reduceTasks),
+          cleanupProgress, remoteJobConfFile.toString(), amInfos);
     } finally {
       readLock.unlock();
     }
@@ -724,6 +716,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.getEventHandler().handle(new JobHistoryEvent(this.jobId, jfe));    
   }
   
+  /**
+   * Create the default file System for this job.
+   * @param conf the conf object
+   * @return the default filesystem for this job
+   * @throws IOException
+   */
+  protected FileSystem getFileSystem(Configuration conf) throws IOException {
+    return FileSystem.get(conf);
+  }
+  
   static JobState checkJobCompleteSuccess(JobImpl job) {
     // check for Job success
     if (job.completedTaskCount == job.getTasks().size()) {
@@ -733,7 +735,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       } catch (IOException e) {
         LOG.warn("Could not do commit for Job", e);
       }
-      
       job.logJobHistoryFinishedEvent();
       return job.finished(JobState.SUCCEEDED);
     }
@@ -798,6 +799,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   public Map<JobACL, AccessControlList> getJobACLs() {
     return Collections.unmodifiableMap(jobACLs);
   }
+  
+  @Override
+  public List<AMInfo> getAMInfos() {
+    return amInfos;
+  }
 
   public static class InitTransition 
       implements MultipleArcTransition<JobImpl, JobEvent, JobState> {
@@ -811,18 +817,17 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
      */
     @Override
     public JobState transition(JobImpl job, JobEvent event) {
-      job.submitTime = job.clock.getTime();
       job.metrics.submittedJob(job);
       job.metrics.preparingJob(job);
       try {
         setup(job);
-        job.fs = FileSystem.get(job.conf);
+        job.fs = job.getFileSystem(job.conf);
 
         //log to job history
         JobSubmittedEvent jse = new JobSubmittedEvent(job.oldJobId,
               job.conf.get(MRJobConfig.JOB_NAME, "test"), 
             job.conf.get(MRJobConfig.USER_NAME, "mapred"),
-            job.submitTime,
+            job.appSubmitTime,
             job.remoteJobConfFile.toString(),
             job.jobACLs, job.conf.get(MRJobConfig.QUEUE_NAME, "default"));
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
@@ -838,60 +843,30 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
         checkTaskLimits();
 
-        
-        boolean newApiCommitter = false;
-        if ((job.numReduceTasks > 0 && 
-            job.conf.getBoolean("mapred.reducer.new-api", false)) ||
-              (job.numReduceTasks == 0 && 
-               job.conf.getBoolean("mapred.mapper.new-api", false)))  {
-          newApiCommitter = true;
-          LOG.info("Using mapred newApiCommitter.");
-        }
-        
-        LOG.info("OutputCommitter set in config " + job.conf.get("mapred.output.committer.class"));
-        
-        if (newApiCommitter) {
+        if (job.newApiCommitter) {
           job.jobContext = new JobContextImpl(job.conf,
               job.oldJobId);
-          org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID = RecordFactoryProvider
-              .getRecordFactory(null)
-              .newRecordInstance(
-                  org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId.class);
-          attemptID.setTaskId(RecordFactoryProvider.getRecordFactory(null)
-              .newRecordInstance(TaskId.class));
-          attemptID.getTaskId().setJobId(job.jobId);
-          attemptID.getTaskId().setTaskType(TaskType.MAP);
-          TaskAttemptContext taskContext = new TaskAttemptContextImpl(job.conf,
-              TypeConverter.fromYarn(attemptID));
-          try {
-            OutputFormat outputFormat = ReflectionUtils.newInstance(
-                taskContext.getOutputFormatClass(), job.conf);
-            job.committer = outputFormat.getOutputCommitter(taskContext);
-          } catch(Exception e) {
-            throw new IOException("Failed to assign outputcommitter", e);
-          }
         } else {
           job.jobContext = new org.apache.hadoop.mapred.JobContextImpl(
               new JobConf(job.conf), job.oldJobId);
-          job.committer = ReflectionUtils.newInstance(
-              job.conf.getClass("mapred.output.committer.class", FileOutputCommitter.class,
-              org.apache.hadoop.mapred.OutputCommitter.class), job.conf);
         }
-        LOG.info("OutputCommitter is " + job.committer.getClass().getName());
         
         long inputLength = 0;
         for (int i = 0; i < job.numMapTasks; ++i) {
           inputLength += taskSplitMetaInfo[i].getInputDataLength();
         }
 
-//FIXME:  need new memory criterion for uber-decision (oops, too late here; until AM-resizing supported, must depend on job client to pass fat-slot needs)
+        //FIXME:  need new memory criterion for uber-decision (oops, too late here; 
+        // until AM-resizing supported, must depend on job client to pass fat-slot needs)
         // these are no longer "system" settings, necessarily; user may override
         int sysMaxMaps = job.conf.getInt(MRJobConfig.JOB_UBERTASK_MAXMAPS, 9);
         int sysMaxReduces =
             job.conf.getInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 1);
         long sysMaxBytes = job.conf.getLong(MRJobConfig.JOB_UBERTASK_MAXBYTES,
-            job.conf.getLong("dfs.block.size", 64*1024*1024));  //FIXME: this is wrong; get FS from [File?]InputFormat and default block size from that
-        //long sysMemSizeForUberSlot = JobTracker.getMemSizeForReduceSlot(); // FIXME [could use default AM-container memory size...]
+            job.conf.getLong("dfs.block.size", 64*1024*1024));  //FIXME: this is 
+        // wrong; get FS from [File?]InputFormat and default block size from that
+        //long sysMemSizeForUberSlot = JobTracker.getMemSizeForReduceSlot(); 
+        // FIXME [could use default AM-container memory size...]
 
         boolean uberEnabled =
             job.conf.getBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
@@ -900,8 +875,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         boolean smallInput = (inputLength <= sysMaxBytes);
         boolean smallMemory = true;  //FIXME (see above)
             // ignoring overhead due to UberTask and statics as negligible here:
-//  FIXME   && (Math.max(memoryPerMap, memoryPerReduce) <= sysMemSizeForUberSlot
-//              || sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT)
+        //  FIXME   && (Math.max(memoryPerMap, memoryPerReduce) <= sysMemSizeForUberSlot
+        //              || sysMemSizeForUberSlot == JobConf.DISABLED_MEMORY_LIMIT)
         boolean notChainJob = !isChainJob(job.conf);
 
         // User has overall veto power over uberization, or user can modify
@@ -935,7 +910,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           job.conf.setInt(MRJobConfig.REDUCE_MAX_ATTEMPTS, 1);
 
           // disable speculation:  makes no sense to speculate an entire job
-//        canSpeculateMaps = canSpeculateReduces = false; // [TODO: in old version, ultimately was from conf.getMapSpeculativeExecution(), conf.getReduceSpeculativeExecution()]
+          //canSpeculateMaps = canSpeculateReduces = false; // [TODO: in old 
+          //version, ultimately was from conf.getMapSpeculativeExecution(), 
+          //conf.getReduceSpeculativeExecution()]
         } else {
           StringBuilder msg = new StringBuilder();
           msg.append("Not uberizing ").append(job.jobId).append(" because:");
@@ -1022,13 +999,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (UserGroupInformation.isSecurityEnabled()) {
         tokenStorage.addAll(job.fsTokens);
       }
-
-      Path remoteJobTokenFile =
-          new Path(job.remoteJobSubmitDir,
-              MRJobConfig.APPLICATION_TOKENS_FILE);
-      tokenStorage.writeTokenStorageFile(remoteJobTokenFile, job.conf);
-      LOG.info("Writing back the job-token file on the remote file system:"
-          + remoteJobTokenFile.toString());
     }
 
     /**
@@ -1138,7 +1108,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
              job.isUber()); //Will transition to state running. Currently in INITED
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jie));
       JobInfoChangeEvent jice = new JobInfoChangeEvent(job.oldJobId,
-          job.submitTime, job.startTime);
+          job.appSubmitTime, job.startTime);
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jice));
       job.metrics.runningJob(job);
 

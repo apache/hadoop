@@ -43,7 +43,7 @@ public class TestClientProtocolProviderImpls extends TestCase {
     }
 
     try {
-      conf.set(MRConfig.FRAMEWORK_NAME, "local");
+      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
       conf.set(JTConfig.JT_IPC_ADDRESS, "127.0.0.1:0");
 
       new Cluster(conf);
@@ -96,4 +96,25 @@ public class TestClientProtocolProviderImpls extends TestCase {
     }
   }
 
+  @Test
+  public void testClusterException() {
+
+    Configuration conf = new Configuration();
+    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
+    conf.set(JTConfig.JT_IPC_ADDRESS, "local");
+
+    // initializing a cluster with this conf should throw an error.
+    // However the exception thrown should not be specific to either
+    // the job tracker client provider or the local provider
+    boolean errorThrown = false;
+    try {
+      Cluster cluster = new Cluster(conf);
+      cluster.close();
+      fail("Not expected - cluster init should have failed");
+    } catch (IOException e) {
+      errorThrown = true;
+      assert(e.getMessage().contains("Cannot initialize Cluster. Please check"));
+    }
+    assert(errorThrown);
+  }
 }

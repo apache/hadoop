@@ -18,11 +18,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -31,8 +34,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
-import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -42,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -57,15 +61,18 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
   private final ClientToAMSecretManager clientToAMSecretManager;
   private final ApplicationMasterService masterService;
   private final YarnScheduler scheduler;
+  private final ApplicationACLsManager applicationACLsManager;
   private Configuration conf;
 
-  public RMAppManager(RMContext context, ClientToAMSecretManager 
-      clientToAMSecretManager, YarnScheduler scheduler, 
-      ApplicationMasterService masterService, Configuration conf) {
+  public RMAppManager(RMContext context,
+      ClientToAMSecretManager clientToAMSecretManager,
+      YarnScheduler scheduler, ApplicationMasterService masterService,
+      ApplicationACLsManager applicationACLsManager, Configuration conf) {
     this.rmContext = context;
     this.scheduler = scheduler;
     this.clientToAMSecretManager = clientToAMSecretManager;
     this.masterService = masterService;
+    this.applicationACLsManager = applicationACLsManager;
     this.conf = conf;
     setCompletedAppsMax(conf.getInt(
         YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
@@ -160,12 +167,17 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     return this.completedApps.size(); 
   }
 
-  protected synchronized void addCompletedApp(ApplicationId appId) {
-    if (appId == null) {
+  protected synchronized void finishApplication(ApplicationId applicationId) {
+    if (applicationId == null) {
       LOG.error("RMAppManager received completed appId of null, skipping");
     } else {
-      completedApps.add(appId);  
-      writeAuditLog(appId);
+      // Inform the DelegationTokenRenewer
+      if (UserGroupInformation.isSecurityEnabled()) {
+        rmContext.getDelegationTokenRenewer().removeApplication(applicationId);
+      }
+      
+      completedApps.add(applicationId);  
+      writeAuditLog(applicationId);
     }
   }
 
@@ -208,21 +220,22 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       LOG.info("Application should be expired, max # apps"
           + " met. Removing app: " + removeId); 
       rmContext.getRMApps().remove(removeId);
+      this.applicationACLsManager.removeApplication(removeId);
     }
   }
 
   @SuppressWarnings("unchecked")
   protected synchronized void submitApplication(
-      ApplicationSubmissionContext submissionContext) {
+      ApplicationSubmissionContext submissionContext, long submitTime) {
     ApplicationId applicationId = submissionContext.getApplicationId();
     RMApp application = null;
     try {
       String clientTokenStr = null;
       String user = UserGroupInformation.getCurrentUser().getShortUserName();
       if (UserGroupInformation.isSecurityEnabled()) {
-        Token<ApplicationTokenIdentifier> clientToken = new 
-            Token<ApplicationTokenIdentifier>(
-            new ApplicationTokenIdentifier(applicationId),
+        Token<ClientTokenIdentifier> clientToken = new 
+            Token<ClientTokenIdentifier>(
+            new ClientTokenIdentifier(applicationId),
             this.clientToAMSecretManager);
         clientTokenStr = clientToken.encodeToUrlString();
         LOG.debug("Sending client token as " + clientTokenStr);
@@ -241,51 +254,82 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       ApplicationStore appStore = rmContext.getApplicationsStore()
           .createApplicationStore(submissionContext.getApplicationId(),
           submissionContext);
-      
+
       // Create RMApp
       application = new RMAppImpl(applicationId, rmContext,
           this.conf, submissionContext.getApplicationName(), user,
           submissionContext.getQueue(), submissionContext, clientTokenStr,
           appStore, this.scheduler,
-          this.masterService);
+          this.masterService, submitTime);
 
+      // Sanity check - duplicate?
       if (rmContext.getRMApps().putIfAbsent(applicationId, application) != 
           null) {
         String message = "Application with id " + applicationId
             + " is already present! Cannot add a duplicate!";
         LOG.info(message);
         throw RPCUtil.getRemoteException(message);
-      } else {
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppEvent(applicationId, RMAppEventType.START));
-      }
+      } 
+
+      // Inform the ACLs Manager
+      this.applicationACLsManager.addApplication(applicationId,
+          submissionContext.getAMContainerSpec().getApplicationACLs());
+
+      // Setup tokens for renewal
+      if (UserGroupInformation.isSecurityEnabled()) {
+        this.rmContext.getDelegationTokenRenewer().addApplication(
+            applicationId,parseCredentials(submissionContext)
+            );
+      }      
+      
+      // All done, start the RMApp
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppEvent(applicationId, RMAppEventType.START));
     } catch (IOException ie) {
         LOG.info("RMAppManager submit application exception", ie);
         if (application != null) {
+          // Sending APP_REJECTED is fine, since we assume that the 
+          // RMApp is in NEW state and thus we havne't yet informed the 
+          // Scheduler about the existence of the application
           this.rmContext.getDispatcher().getEventHandler().handle(
               new RMAppRejectedEvent(applicationId, ie.getMessage()));
         }
     }
   }
+  
+  private Credentials parseCredentials(ApplicationSubmissionContext application) 
+      throws IOException {
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    ByteBuffer tokens = application.getAMContainerSpec().getContainerTokens();
+    if (tokens != null) {
+      dibb.reset(tokens);
+      credentials.readTokenStorageStream(dibb);
+      tokens.rewind();
+    }
+    return credentials;
+  }
 
   @Override
   public void handle(RMAppManagerEvent event) {
-    ApplicationId appID = event.getApplicationId();
+    ApplicationId applicationId = event.getApplicationId();
     LOG.debug("RMAppManager processing event for " 
-        + appID + " of type " + event.getType());
+        + applicationId + " of type " + event.getType());
     switch(event.getType()) {
       case APP_COMPLETED: 
       {
-        addCompletedApp(appID);
-        ApplicationSummary.logAppSummary(rmContext.getRMApps().get(appID));
+        finishApplication(applicationId);
+        ApplicationSummary.logAppSummary(
+            rmContext.getRMApps().get(applicationId));
         checkAppNumCompletedLimit(); 
       } 
       break;
       case APP_SUBMIT:
       {
         ApplicationSubmissionContext submissionContext = 
-            ((RMAppManagerSubmitEvent)event).getSubmissionContext();        
-        submitApplication(submissionContext);
+            ((RMAppManagerSubmitEvent)event).getSubmissionContext();
+        long submitTime = ((RMAppManagerSubmitEvent)event).getSubmitTime();
+        submitApplication(submissionContext, submitTime);
       }
       break;
       default:

@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -68,5 +69,10 @@ public interface Job {
   TaskAttemptCompletionEvent[]
       getTaskAttemptCompletionEvents(int fromEventId, int maxEvents);
 
+  /**
+   * @return information for MR AppMasters (previously failed and current)
+   */
+  List<AMInfo> getAMInfos();
+  
   boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation);
 }
