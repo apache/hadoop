@@ -34,6 +34,6 @@ public class SlivePartitioner implements Partitioner<Text, Text> {
   @Override // Partitioner
   public int getPartition(Text key, Text value, int numPartitions) {
     OperationOutput oo = new OperationOutput(key, value);
-    return oo.getOperationType().hashCode() % numPartitions;
+    return (oo.getOperationType().hashCode() & Integer.MAX_VALUE) % numPartitions;
   }
 }
