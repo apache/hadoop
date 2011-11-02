@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -57,6 +58,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -136,6 +138,8 @@ public class TestHLogSplit {
       assertTrue("Deleting " + dir.getPath(),
           fs.delete(dir.getPath(), true));
     }
+    // create the HLog directory because recursive log creates are not allowed
+    fs.mkdirs(hlogDir);
     seq = 0;
     regions = new ArrayList<String>();
     Collections.addAll(regions, "bbb", "ccc");
@@ -820,7 +824,72 @@ public class TestHLogSplit {
     assertEquals(regions.size(), outputCounts.size());
   }
 
+  // HBASE-2312: tests the case where a RegionServer enters a GC pause,
+  // comes back online after the master declared it dead and started to split.
+  // Want log rolling after a master split to fail
+  @Test
+  @Ignore("Need HADOOP-6886, HADOOP-6840, & HDFS-617 for this. HDFS 0.20.205.1+ should have this")
+  public void testLogRollAfterSplitStart() throws IOException {
+    // set flush interval to a large number so it doesn't interrupt us
+    final String F_INTERVAL = "hbase.regionserver.optionallogflushinterval";
+    long oldFlushInterval = conf.getLong(F_INTERVAL, 1000);
+    conf.setLong(F_INTERVAL, 1000*1000*100);
+    HLog log = null;
+    Path thisTestsDir = new Path(hbaseDir, "testLogRollAfterSplitStart");
 
+    try {
+      // put some entries in an HLog
+      byte [] tableName = Bytes.toBytes(this.getClass().getName());
+      HRegionInfo regioninfo = new HRegionInfo(tableName,
+          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      log = new HLog(fs, thisTestsDir, oldLogDir, conf);
+      final int total = 20;
+      for (int i = 0; i < total; i++) {
+        WALEdit kvs = new WALEdit();
+        kvs.add(new KeyValue(Bytes.toBytes(i), tableName, tableName));
+        HTableDescriptor htd = new HTableDescriptor(tableName);
+        htd.addFamily(new HColumnDescriptor("column"));
+        log.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd);
+      }
+      // Send the data to HDFS datanodes and close the HDFS writer
+      log.sync();
+      log.cleanupCurrentWriter(log.getFilenum());
+
+      /* code taken from ProcessServerShutdown.process()
+       * handles RS shutdowns (as observed by the Master)
+       */
+      // rename the directory so a rogue RS doesn't create more HLogs
+      Path rsSplitDir = new Path(thisTestsDir.getParent(),
+                                 thisTestsDir.getName() + "-splitting");
+      fs.rename(thisTestsDir, rsSplitDir);
+      LOG.debug("Renamed region directory: " + rsSplitDir);
+
+      // Process the old log files
+      HLogSplitter splitter = HLogSplitter.createLogSplitter(conf,
+        hbaseDir, rsSplitDir, oldLogDir, fs);
+      splitter.splitLog();
+
+      // Now, try to roll the HLog and verify failure
+      try {
+        log.rollWriter();
+        Assert.fail("rollWriter() did not throw any exception.");
+      } catch (IOException ioe) {
+        if (ioe.getCause().getMessage().contains("FileNotFound")) {
+          LOG.info("Got the expected exception: ", ioe.getCause());
+        } else {
+          Assert.fail("Unexpected exception: " + ioe);
+        }
+      }
+    } finally {
+      conf.setLong(F_INTERVAL, oldFlushInterval);
+      if (log != null) {
+        log.close();
+      }
+      if (fs.exists(thisTestsDir)) {
+        fs.delete(thisTestsDir, true);
+      }
+    }
+  }
 
   /**
    * This thread will keep writing to the file after the split process has started
@@ -1056,6 +1125,7 @@ public class TestHLogSplit {
 
   private void generateHLogs(int writers, int entries, int leaveOpen) throws IOException {
     makeRegionDirs(fs, regions);
+    fs.mkdirs(hlogDir);
     for (int i = 0; i < writers; i++) {
       writer[i] = HLog.createWriter(fs, new Path(hlogDir, HLOG_FILE_PREFIX + i), conf);
       for (int j = 0; j < entries; j++) {

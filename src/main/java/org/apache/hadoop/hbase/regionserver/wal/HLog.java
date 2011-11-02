@@ -114,6 +114,10 @@ public class HLog implements Syncable {
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
 
+  /** File Extension used while splitting an HLog into regions (HBASE-2312) */
+  public static final String SPLITTING_EXT = "-splitting";
+  public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
+
   /*
    * Name of directory that holds recovered edits written by the wal log
    * splitting code, one per region
@@ -778,13 +782,13 @@ public class HLog implements Syncable {
    * @return Path to current writer or null if none.
    * @throws IOException
    */
-  private Path cleanupCurrentWriter(final long currentfilenum)
-  throws IOException {
+  Path cleanupCurrentWriter(final long currentfilenum) throws IOException {
     Path oldFile = null;
     if (this.writer != null) {
       // Close the current writer, get a new one.
       try {
         this.writer.close();
+        this.writer = null;
         closeErrorCount.set(0);
       } catch (IOException e) {
         LOG.error("Failed close of HLog writer", e);
@@ -893,7 +897,9 @@ public class HLog implements Syncable {
         if (LOG.isDebugEnabled()) {
           LOG.debug("closing hlog writer in " + this.dir.toString());
         }
-        this.writer.close();
+        if (this.writer != null) {
+          this.writer.close();
+        }
       }
     } finally {
       cacheFlushLock.unlock();

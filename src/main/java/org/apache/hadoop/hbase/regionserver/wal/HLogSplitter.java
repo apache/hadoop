@@ -367,7 +367,8 @@ public class HLogSplitter {
 
     boolean progress_failed = false;
 
-    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", true);
+    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors",
+        HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     int interval = conf.getInt("hbase.splitlog.report.interval.loglines", 1024);
     // How often to send a progress report (default 1/2 master timeout)
     int period = conf.getInt("hbase.splitlog.report.period",

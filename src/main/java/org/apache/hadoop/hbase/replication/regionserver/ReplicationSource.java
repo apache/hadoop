@@ -482,15 +482,20 @@ public class ReplicationSource extends Thread
 
             Path deadRsDirectory =
                 new Path(manager.getLogDir().getParent(), this.deadRegionServers[i]);
-            Path possibleLogLocation =
-                new Path(deadRsDirectory, currentPath.getName());
-            LOG.info("Possible location " + possibleLogLocation.toUri().toString());
-            if (this.manager.getFs().exists(possibleLogLocation)) {
-              // We found the right new location
-              LOG.info("Log " + this.currentPath + " still exists at " +
-                  possibleLogLocation);
-              // Breaking here will make us sleep since reader is null
-              return true;
+            Path[] locs = new Path[] {
+                new Path(deadRsDirectory, currentPath.getName()),
+                new Path(deadRsDirectory.suffix(HLog.SPLITTING_EXT),
+                                          currentPath.getName()),
+            };
+            for (Path possibleLogLocation : locs) {
+              LOG.info("Possible location " + possibleLogLocation.toUri().toString());
+              if (this.manager.getFs().exists(possibleLogLocation)) {
+                // We found the right new location
+                LOG.info("Log " + this.currentPath + " still exists at " +
+                    possibleLogLocation);
+                // Breaking here will make us sleep since reader is null
+                return true;
+              }
             }
           }
           // TODO What happens if the log was missing from every single location?

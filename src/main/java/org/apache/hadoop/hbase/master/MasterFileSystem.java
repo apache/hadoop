@@ -183,55 +183,87 @@ public class MasterFileSystem {
    * {@link ServerName}
    */
   void splitLogAfterStartup(final Set<ServerName> onlineServers) {
+    boolean retrySplitting = !conf.getBoolean("hbase.hlog.split.skip.errors",
+        HLog.SPLIT_SKIP_ERRORS_DEFAULT);
     Path logsDirPath = new Path(this.rootdir, HConstants.HREGION_LOGDIR_NAME);
-    try {
-      if (!this.fs.exists(logsDirPath)) {
-        return;
+    do {
+      List<ServerName> serverNames = new ArrayList<ServerName>();
+      try {
+        if (!this.fs.exists(logsDirPath)) return;
+        FileStatus[] logFolders = this.fs.listStatus(logsDirPath);
+
+        if (logFolders == null || logFolders.length == 0) {
+          LOG.debug("No log files to split, proceeding...");
+          return;
+        }
+        for (FileStatus status : logFolders) {
+          String sn = status.getPath().getName();
+          // truncate splitting suffix if present (for ServerName parsing)
+          if (sn.endsWith(HLog.SPLITTING_EXT)) {
+            sn = sn.substring(0, sn.length() - HLog.SPLITTING_EXT.length());
+          }
+          ServerName serverName = ServerName.parseServerName(sn);
+          if (!onlineServers.contains(serverName)) {
+            LOG.info("Log folder " + status.getPath() + " doesn't belong "
+                + "to a known region server, splitting");
+            serverNames.add(serverName);
+          } else {
+            LOG.info("Log folder " + status.getPath()
+                + " belongs to an existing region server");
+          }
+        }
+        splitLog(serverNames);
+        retrySplitting = false;
+      } catch (IOException ioe) {
+        LOG.warn("Failed splitting of " + serverNames, ioe);
+        if (!checkFileSystem()) {
+          LOG.warn("Bad Filesystem, exiting");
+          Runtime.getRuntime().halt(1);
+        }
+        try {
+          if (retrySplitting) {
+            Thread.sleep(conf.getInt(
+              "hbase.hlog.split.failure.retry.interval", 30 * 1000));
+          }
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted, returning w/o splitting at startup");
+          Thread.currentThread().interrupt();
+          retrySplitting = false;
+        }
       }
-    } catch (IOException e) {
-      throw new RuntimeException("Failed exists test on " + logsDirPath, e);
-    }
-    FileStatus[] logFolders;
-    try {
-      logFolders = this.fs.listStatus(logsDirPath);
-    } catch (IOException e) {
-      throw new RuntimeException("Failed listing " + logsDirPath.toString(), e);
-    }
-    if (logFolders == null || logFolders.length == 0) {
-      LOG.debug("No log files to split, proceeding...");
-      return;
-    }
-    List<ServerName> serverNames = new ArrayList<ServerName>();
-    for (FileStatus status : logFolders) {
-      String sn = status.getPath().getName();
-      // Is this old or new style servername?  If old style, it will be
-      // hostname, colon, and port.  If new style, it will be formatted as
-      // ServerName.toString.
-      ServerName serverName = ServerName.parseServerName(sn);
-      if (!onlineServers.contains(serverName)) {
-        LOG.info("Log folder " + status.getPath() + " doesn't belong " +
-          "to a known region server, splitting");
-        serverNames.add(serverName);
-      } else {
-        LOG.info("Log folder " + status.getPath() +
-          " belongs to an existing region server");
-      }
-    }  
-    splitLog(serverNames);
+    } while (retrySplitting);
   }
   
-  public void splitLog(final ServerName serverName){
+  public void splitLog(final ServerName serverName) throws IOException {
     List<ServerName> serverNames = new ArrayList<ServerName>();
     serverNames.add(serverName);
     splitLog(serverNames);
   }
   
-  public void splitLog(final List<ServerName> serverNames) {
+  public void splitLog(final List<ServerName> serverNames) throws IOException {
     long splitTime = 0, splitLogSize = 0;
     List<Path> logDirs = new ArrayList<Path>();
     for(ServerName serverName: serverNames){
-      Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName.toString()));
-      logDirs.add(logDir);
+      Path logDir = new Path(this.rootdir,
+        HLog.getHLogDirectoryName(serverName.toString()));
+      Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
+      // rename the directory so a rogue RS doesn't create more HLogs
+      if (fs.exists(logDir)) {
+        if (!this.fs.rename(logDir, splitDir)) {
+          throw new IOException("Failed fs.rename for log split: " + logDir);
+        }
+        logDir = splitDir;
+        LOG.debug("Renamed region directory: " + splitDir);
+      } else if (!fs.exists(splitDir)) {
+        LOG.info("Log dir for server " + serverName + " does not exist");
+        continue;
+      }
+      logDirs.add(splitDir);
+    }
+
+    if (logDirs.isEmpty()) {
+      LOG.info("No logs to split");
+      return;
     }
       
     if (distributedLogSplitting) {
@@ -240,15 +272,10 @@ public class MasterFileSystem {
       }
       splitTime = EnvironmentEdgeManager.currentTimeMillis();
       try {
-        try {
-          splitLogSize = splitLogManager.splitLogDistributed(logDirs);
-        } catch (OrphanHLogAfterSplitException e) {
-          LOG.warn("Retrying distributed splitting for " +
-            serverNames + "because of:", e);
-            splitLogManager.splitLogDistributed(logDirs);
-        }
-      } catch (IOException e) {
-        LOG.error("Failed distributed splitting " + serverNames, e);
+        splitLogSize = splitLogManager.splitLogDistributed(logDirs);
+      } catch (OrphanHLogAfterSplitException e) {
+        LOG.warn("Retrying distributed splitting for " + serverNames, e);
+        splitLogManager.splitLogDistributed(logDirs);
       }
       splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
     } else {
@@ -272,8 +299,6 @@ public class MasterFileSystem {
           }
           splitTime = splitter.getTime();
           splitLogSize = splitter.getSize();
-        } catch (IOException e) {
-          LOG.error("Failed splitting " + logDir.toString(), e);
         } finally {
           this.splitLogLock.unlock();
         }

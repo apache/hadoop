@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import org.apache.commons.logging.Log;
@@ -32,7 +33,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
+import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
@@ -78,17 +81,50 @@ public class SequenceFileLogWriter implements HLog.Writer {
     }
 
     // Create a SF.Writer instance.
-    this.writer = SequenceFile.createWriter(fs, conf, path,
-      keyClass, WALEdit.class,
-      fs.getConf().getInt("io.file.buffer.size", 4096),
-      (short) conf.getInt("hbase.regionserver.hlog.replication",
-      fs.getDefaultReplication()),
-      conf.getLong("hbase.regionserver.hlog.blocksize",
-      fs.getDefaultBlockSize()),
-      SequenceFile.CompressionType.NONE,
-      new DefaultCodec(),
-      null,
-      new Metadata());
+    try {
+      // reflection for a version of SequenceFile.createWriter that doesn't
+      // automatically create the parent directory (see HBASE-2312)
+      this.writer = (SequenceFile.Writer) SequenceFile.class
+        .getMethod("createWriter", new Class[] {FileSystem.class,
+            Configuration.class, Path.class, Class.class, Class.class,
+            Integer.TYPE, Short.TYPE, Long.TYPE, Boolean.TYPE,
+            CompressionType.class, CompressionCodec.class, Metadata.class})
+        .invoke(null, new Object[] {fs, conf, path, HLog.getKeyClass(conf),
+            WALEdit.class,
+            new Integer(fs.getConf().getInt("io.file.buffer.size", 4096)),
+            new Short((short)
+              conf.getInt("hbase.regionserver.hlog.replication",
+              fs.getDefaultReplication())),
+            new Long(conf.getLong("hbase.regionserver.hlog.blocksize",
+                fs.getDefaultBlockSize())),
+            new Boolean(false) /*createParent*/,
+            SequenceFile.CompressionType.NONE, new DefaultCodec(),
+            new Metadata()
+            });
+    } catch (InvocationTargetException ite) {
+      // function was properly called, but threw it's own exception
+      throw new IOException(ite.getCause());
+    } catch (Exception e) {
+      // ignore all other exceptions. related to reflection failure
+    }
+
+    // if reflection failed, use the old createWriter
+    if (this.writer == null) {
+      LOG.debug("new createWriter -- HADOOP-6840 -- not available");
+      this.writer = SequenceFile.createWriter(fs, conf, path,
+        HLog.getKeyClass(conf), WALEdit.class,
+        fs.getConf().getInt("io.file.buffer.size", 4096),
+        (short) conf.getInt("hbase.regionserver.hlog.replication",
+          fs.getDefaultReplication()),
+        conf.getLong("hbase.regionserver.hlog.blocksize",
+          fs.getDefaultBlockSize()),
+        SequenceFile.CompressionType.NONE,
+        new DefaultCodec(),
+        null,
+        new Metadata());
+    } else {
+      LOG.debug("using new createWriter -- HADOOP-6840");
+    }
     
     this.writer_out = getSequenceFilePrivateFSDataOutputStreamAccessible();
     this.syncFs = getSyncFs();

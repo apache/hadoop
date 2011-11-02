@@ -171,9 +171,14 @@ public class ServerShutdownHandler extends EventHandler {
 
     try {
 
-      if ( this.shouldSplitHlog ) {
+      try {
         LOG.info("Splitting logs for " + serverName);
         this.services.getMasterFileSystem().splitLog(serverName);
+      } catch (IOException ioe) {
+        this.services.getExecutorService().submit(this);
+        this.deadServers.add(serverName);
+        throw new IOException("failed log splitting for " +
+          serverName + ", will retry", ioe);
       }
 
       // Assign root and meta if we were carrying them.
