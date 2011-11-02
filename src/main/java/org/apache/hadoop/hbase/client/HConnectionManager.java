@@ -1489,7 +1489,7 @@ public class HConnectionManager {
               }
             }
           } catch (ExecutionException e) {
-            LOG.debug("Failed all from " + loc, e);
+            LOG.warn("Failed all from " + loc, e);
           }
         }
 
