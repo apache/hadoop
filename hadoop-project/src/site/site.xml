@@ -80,7 +80,7 @@
     <menu name="Configuration" inherit="top">
       <item name="core-default.xml" href="hadoop-project-dist/hadoop-common/core-default.xml"/>
       <item name="hdfs-default.xml" href="hadoop-project-dist/hadoop-hdfs/hdfs-default.xml"/>
-      <item name="yarn-default.xml" href="hadoop-yarn/yarn-default.xml"/>
+      <item name="yarn-default.xml" href="hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-common/yarn-default.xml"/>
       <item name="mapred-default.xml" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml"/>
       <item name="Deprecated Properties" href="hadoop-project-dist/hadoop-common/DeprecatedProperties.html"/>
     </menu>
