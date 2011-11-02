@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -60,13 +62,17 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectable;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
+import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.io.MultipleIOException;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Joiner;
@@ -142,7 +148,7 @@ public class HBaseFsck {
    * @throws KeeperException
    * @throws InterruptedException
    */
-  int doWork() throws IOException, KeeperException, InterruptedException {
+  public int doWork() throws IOException, KeeperException, InterruptedException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
 
@@ -248,6 +254,252 @@ public class HBaseFsck {
   }
 
   /**
+   * Populate a specific hbi from regioninfo on file system.
+   */
+  private void loadMetaEntry(HbckInfo hbi) throws IOException {
+    Path regionDir = hbi.foundRegionDir.getPath();
+    Path regioninfo = new Path(regionDir, HRegion.REGIONINFO_FILE);
+    FileSystem fs = FileSystem.get(conf);
+    FSDataInputStream in = fs.open(regioninfo);
+    byte[] tableName = Bytes.toBytes(hbi.hdfsTableName);
+    HRegionInfo hri = new HRegionInfo(tableName);
+    hri.readFields(in);
+    in.close();
+    LOG.debug("HRegionInfo read: " + hri.toString());
+    hbi.metaEntry = new MetaEntry(hri, null,
+        hbi.foundRegionDir.getModificationTime());
+  }
+
+  public static class RegionInfoLoadException extends IOException {
+    private static final long serialVersionUID = 1L;
+    final IOException ioe;
+    public RegionInfoLoadException(String s, IOException ioe) {
+      super(s);
+      this.ioe = ioe;
+    }
+  }
+
+  /**
+   * Populate hbi's from regionInfos loaded from file system. 
+   */
+  private void loadTableInfo() throws IOException {
+    List<IOException> ioes = new ArrayList<IOException>();
+    // generate region split structure
+    for (HbckInfo hbi : regionInfo.values()) {
+      // only load entries that haven't been loaded yet.
+      if (hbi.metaEntry == null) {
+        try {
+          loadMetaEntry(hbi);
+        } catch (IOException ioe) {
+          String msg = "Unable to load region info for table " + hbi.hdfsTableName
+            + "!  It may be an invalid format or version file.  You may want to "
+            + "remove " + hbi.foundRegionDir.getPath()
+            + " region from hdfs and retry.";
+          errors.report(msg);
+          LOG.error(msg, ioe);
+          ioes.add(new RegionInfoLoadException(msg, ioe));
+          continue;
+        }
+      }
+
+      // get table name from hdfs, populate various HBaseFsck tables.
+      String tableName = hbi.hdfsTableName;
+      TInfo modTInfo = tablesInfo.get(tableName);
+      if (modTInfo == null) {
+        modTInfo = new TInfo(tableName);
+      }
+      modTInfo.addRegionInfo(hbi);
+      tablesInfo.put(tableName, modTInfo);
+    }
+
+    if (ioes.size() != 0) {
+      throw MultipleIOException.createIOException(ioes);
+    }
+  }
+
+  /**
+   * This borrows code from MasterFileSystem.bootstrap()
+   * 
+   * @return an open .META. HRegion
+   */
+  private HRegion createNewRootAndMeta() throws IOException {
+    Path rootdir = new Path(conf.get(HConstants.HBASE_DIR));
+    Configuration c = conf;
+    HRegionInfo rootHRI = new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
+    MasterFileSystem.setInfoFamilyCachingForRoot(false);
+    HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
+    MasterFileSystem.setInfoFamilyCachingForMeta(false);
+    HRegion root = HRegion.createHRegion(rootHRI, rootdir, c,
+        HTableDescriptor.ROOT_TABLEDESC);
+    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c,
+        HTableDescriptor.META_TABLEDESC);
+    MasterFileSystem.setInfoFamilyCachingForRoot(true);
+    MasterFileSystem.setInfoFamilyCachingForMeta(true);
+
+    // Add first region from the META table to the ROOT region.
+    HRegion.addRegionToMETA(root, meta);
+    root.close();
+    root.getLog().closeAndDelete();
+    return meta;
+  }
+
+  /**
+   * Generate set of puts to add to new meta.  This expects the tables to be 
+   * clean with no overlaps or holes.  If there are any problems it returns null.
+   * 
+   * @return An array list of puts to do in bulk, null if tables have problems
+   */
+  private ArrayList<Put> generatePuts() throws IOException {
+    ArrayList<Put> puts = new ArrayList<Put>();
+    boolean hasProblems = false;
+    for (Entry<String, TInfo> e : tablesInfo.entrySet()) {
+      String name = e.getKey();
+
+      // skip "-ROOT-" and ".META."
+      if (Bytes.compareTo(Bytes.toBytes(name), HConstants.ROOT_TABLE_NAME) == 0
+          || Bytes.compareTo(Bytes.toBytes(name), HConstants.META_TABLE_NAME) == 0) {
+        continue;
+      }
+
+      TInfo ti = e.getValue();
+      for (Entry<byte[], Collection<HbckInfo>> spl : ti.sc.getStarts().asMap()
+          .entrySet()) {
+        Collection<HbckInfo> his = spl.getValue();
+        int sz = his.size();
+        if (sz != 1) {
+          // problem
+          LOG.error("Split starting at " + Bytes.toStringBinary(spl.getKey())
+              + " had " +  sz + " regions instead of exactly 1." );
+          hasProblems = true;
+          continue;
+        }
+
+        // add the row directly to meta.
+        HbckInfo hi = his.iterator().next();
+        HRegionInfo hri = hi.metaEntry;
+        Put p = new Put(hri.getRegionName());
+        p.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+            Writables.getBytes(hri));
+        puts.add(p);
+      }
+    }
+    return hasProblems ? null : puts;
+  }
+
+  /**
+   * Suggest fixes for each table
+   */
+  private void suggestFixes(TreeMap<String, TInfo> tablesInfo) {
+    for (TInfo tInfo : tablesInfo.values()) {
+      tInfo.checkRegionChain();
+    }
+  }
+
+
+  /**
+   * Rebuilds meta from information in hdfs/fs.  Depends on configuration
+   * settings passed into hbck constructor to point to a particular fs/dir.
+   * 
+   * @return true if successful, false if attempt failed.
+   */
+  public boolean rebuildMeta() throws IOException, InterruptedException {
+    // TODO check to make sure hbase is offline. (or at least the table
+    // currently being worked on is off line)
+
+    // Determine what's on HDFS
+    LOG.info("Loading HBase regioninfo from HDFS...");
+    checkHdfs(); // populating regioninfo table.
+    loadTableInfo(); // update tableInfos based on region info in fs.
+
+    LOG.info("Checking HBase region split map from HDFS data...");
+    int errs = errors.getErrorList().size();
+    for (TInfo tInfo : tablesInfo.values()) {
+      if (!tInfo.checkRegionChain()) {
+        // should dump info as well.
+        errors.report("Found inconsistency in table " + tInfo.getName());
+      }
+    }
+
+    // make sure ok.
+    if (errors.getErrorList().size() != errs) {
+      suggestFixes(tablesInfo);
+
+      // Not ok, bail out.
+      return false;
+    }
+
+    // we can rebuild, move old root and meta out of the way and start
+    LOG.info("HDFS regioninfo's seems good.  Sidelining old .META.");
+    sidelineOldRootAndMeta();
+    
+    LOG.info("Creating new .META.");
+    HRegion meta = createNewRootAndMeta();
+
+    // populate meta
+    List<Put> puts = generatePuts();
+    if (puts == null) {
+      LOG.fatal("Problem encountered when creating new .META. entries.  " +
+        "You may need to restore the previously sidlined -ROOT- and .META.");
+      return false;
+    }
+    meta.put(puts.toArray(new Put[0]));
+    meta.close();
+    meta.getLog().closeAndDelete();
+    LOG.info("Success! .META. table rebuilt.");
+    return true;
+  }
+
+  void sidelineTable(FileSystem fs, byte[] table, Path hbaseDir, 
+      Path backupHbaseDir) throws IOException {
+    String tableName = Bytes.toString(table);
+    Path tableDir = new Path(hbaseDir, tableName);
+    if (fs.exists(tableDir)) {
+      Path backupTableDir= new Path(backupHbaseDir, tableName);
+      boolean success = fs.rename(tableDir, backupTableDir); 
+      if (!success) {
+        throw new IOException("Failed to move  " + tableName + " from " 
+            +  tableDir.getName() + " to " + backupTableDir.getName());
+      }
+    } else {
+      LOG.info("No previous " + tableName +  " exists.  Continuing.");
+    }
+  }
+  
+  /**
+   * @return Path to backup of original directory
+   * @throws IOException
+   */
+  Path sidelineOldRootAndMeta() throws IOException {
+    // put current -ROOT- and .META. aside.
+    Path hbaseDir = new Path(conf.get(HConstants.HBASE_DIR));
+    FileSystem fs = hbaseDir.getFileSystem(conf);
+    long now = System.currentTimeMillis();
+    Path backupDir = new Path(hbaseDir.getParent(), hbaseDir.getName() + "-"
+        + now);
+    fs.mkdirs(backupDir);
+
+    sidelineTable(fs, HConstants.ROOT_TABLE_NAME, hbaseDir, backupDir);
+    try {
+      sidelineTable(fs, HConstants.META_TABLE_NAME, hbaseDir, backupDir);
+    } catch (IOException e) {
+      LOG.error("Attempt to sideline meta failed, attempt to revert...", e);
+      try {
+        // move it back.
+        sidelineTable(fs, HConstants.ROOT_TABLE_NAME, backupDir, hbaseDir);
+        LOG.warn("... revert succeed.  -ROOT- and .META. still in "
+            + "original state.");
+      } catch (IOException ioe) {
+        LOG.fatal("... failed to sideline root and meta and failed to restore "
+            + "prevoius state.  Currently in inconsistent state.  To restore "
+            + "try to rename -ROOT- in " + backupDir.getName() + " to " 
+            + hbaseDir.getName() + ".", ioe);
+      }
+      throw e; // throw original exception
+    }
+    return backupDir;
+  }
+
+  /**
    * Load the list of disabled tables in ZK into local set.
    * @throws ZooKeeperConnectionException
    * @throws IOException
@@ -284,7 +536,7 @@ public class HBaseFsck {
    * Scan HDFS for all regions, recording their information into
    * regionInfo
    */
-  void checkHdfs() throws IOException, InterruptedException {
+  public void checkHdfs() throws IOException, InterruptedException {
     Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
     FileSystem fs = rootDir.getFileSystem(conf);
 
@@ -647,8 +899,8 @@ public class HBaseFsck {
             // TODO offline fix region hole.
 
             errors.reportError(ERROR_CODE.FIRST_REGION_STARTKEY_NOT_EMPTY,
-                "First region should start with an empty key. When HBase is "
-                + "online, create a new regio to plug the hole using hbck -fix",
+                "First region should start with an empty key.  You need to "
+                + " create a new region and regioninfo in HDFS to plug the hole.",
                 this, rng);
           }
         }
@@ -714,23 +966,27 @@ public class HBaseFsck {
           if (holeStopKey != null) {
             // hole
             errors.reportError(ERROR_CODE.HOLE_IN_REGION_CHAIN,
-                "There is a hole in the region chain between " 
+                "There is a hole in the region chain between "
                 + Bytes.toStringBinary(key) + " and "
                 + Bytes.toStringBinary(holeStopKey)
-                + ".  When HBase is online, create a new regioninfo and region " 
-                + "dir to plug the hole.");
+                + ".  You need to create a new regioninfo and region "
+                + "dir in hdfs to plug the hole.");
           }
-        } 
+        }
         prevKey = key;
       }
 
       if (details) {
         // do full region split map dump
+        System.out.println("---- Table '"  +  this.tableName 
+            + "': region split map");
         dump(splits, regions);
+        System.out.println("---- Table '"  +  this.tableName 
+            + "': overlap groups");
         dumpOverlapProblems(overlapGroups);
         System.out.println("There are " + overlapGroups.keySet().size()
-            + " problem groups with " + overlapGroups.size()
-            + " problem regions");
+            + " overlap groups with " + overlapGroups.size()
+            + " overlapping regions");
       }
       return errors.getErrorList().size() == originalErrorsCount;
     }
@@ -744,10 +1000,10 @@ public class HBaseFsck {
     void dump(SortedSet<byte[]> splits, Multimap<byte[], HbckInfo> regions) {
       // we display this way because the last end key should be displayed as well.
       for (byte[] k : splits) {
-        System.out.print(Bytes.toString(k) + ":\t");
+        System.out.print(Bytes.toStringBinary(k) + ":\t");
         for (HbckInfo r : regions.get(k)) {
-          System.out.print("[ "+ r.toString() + ", " 
-              + Bytes.toString(r.getEndKey())+ "]\t");
+          System.out.print("[ "+ r.toString() + ", "
+              + Bytes.toStringBinary(r.getEndKey())+ "]\t");
         }
         System.out.println();
       }
@@ -947,6 +1203,7 @@ public class HBaseFsck {
    * Stores the entries scanned from META
    */
   static class MetaEntry extends HRegionInfo {
+    private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
     ServerName regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
 
@@ -965,6 +1222,7 @@ public class HBaseFsck {
     MetaEntry metaEntry = null;
     FileStatus foundRegionDir = null;
     List<ServerName> deployedOn = Lists.newArrayList();
+    String hdfsTableName = null; // This is set in the workitem loader.
 
     HbckInfo(MetaEntry metaEntry) {
       this.metaEntry = metaEntry;
@@ -1052,7 +1310,7 @@ public class HBaseFsck {
     }
   }
 
-  interface ErrorReporter {
+  public interface ErrorReporter {
     public static enum ERROR_CODE {
       UNKNOWN, NO_META_REGION, NULL_ROOT_REGION, NO_VERSION_FILE, NOT_IN_META_HDFS, NOT_IN_META,
       NOT_IN_META_OR_DEPLOYED, NOT_IN_HDFS_OR_DEPLOYED, NOT_IN_HDFS, SERVER_DOES_NOT_MATCH_META, NOT_DEPLOYED,
@@ -1291,6 +1549,7 @@ public class HBaseFsck {
           if (!encodedName.toLowerCase().matches("[0-9a-f]+")) continue;
   
           HbckInfo hbi = hbck.getOrCreateInfo(encodedName);
+          hbi.hdfsTableName = tableName;
           synchronized (hbi) {
             if (hbi.foundRegionDir != null) {
               errors.print("Directory " + encodedName + " duplicate??" +
@@ -1323,10 +1582,10 @@ public class HBaseFsck {
   }
 
   /**
-   * Display the full report from fsck.
-   * This displays all live and dead region servers, and all known regions.
+   * Display the full report from fsck. This displays all live and dead region
+   * servers, and all known regions.
    */
-  void displayFullReport() {
+  public void displayFullReport() {
     details = true;
   }
 
@@ -1364,7 +1623,7 @@ public class HBaseFsck {
    * Fix inconsistencies found by fsck. This should try to fix errors (if any)
    * found by fsck utility.
    */
-  void setFixErrors(boolean shouldFix) {
+  public void setFixErrors(boolean shouldFix) {
     fix = shouldFix;
   }
 
@@ -1377,7 +1636,7 @@ public class HBaseFsck {
    * META during the last few seconds specified by hbase.admin.fsck.timelag
    * @param seconds - the time in seconds
    */
-  void setTimeLag(long seconds) {
+  public void setTimeLag(long seconds) {
     timelag = seconds * 1000; // convert to milliseconds
   }
 

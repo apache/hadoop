@@ -501,6 +501,9 @@ implements WritableComparable<HRegionInfo> {
    * @return byte array of table name
    */
   public byte[] getTableName() {
+    if (tableName == null || tableName.length == 0) {
+      tableName = getTableName(getRegionName());
+    }
     return tableName;
   }
 

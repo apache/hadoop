@@ -372,7 +372,10 @@ public class MasterFileSystem {
     }
   }
 
-  private static void setInfoFamilyCachingForRoot(final boolean b) {
+  /**
+   * Enable in-memory caching for -ROOT-
+   */
+  public static void setInfoFamilyCachingForRoot(final boolean b) {
     for (HColumnDescriptor hcd:
         HTableDescriptor.ROOT_TABLEDESC.getColumnFamilies()) {
        if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
@@ -382,7 +385,10 @@ public class MasterFileSystem {
     }
   }
 
-  private static void setInfoFamilyCachingForMeta(final boolean b) {
+  /**
+   * Enable in memory caching for .META.
+   */
+  public static void setInfoFamilyCachingForMeta(final boolean b) {
     for (HColumnDescriptor hcd:
         HTableDescriptor.META_TABLEDESC.getColumnFamilies()) {
       if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {

@@ -667,7 +667,8 @@ Release 0.92.0 - Unreleased
                hbase.master.ServerManager#waitForRegionServers (nkeywal)
    HBASE-4703  Improvements in tests (nkeywal)
    HBASE-4611  Add support for Phabricator/Differential as an alternative code review tool
-
+   HBASE-4377  [hbck] Offline rebuild .META. from fs data only
+               (Jonathan Hsieh) (detail)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
