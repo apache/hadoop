@@ -148,7 +148,7 @@ public class TestDelegationToken {
   @Test
   public void testDelegationTokenDFSApi() throws Exception {
     DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
-    final Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
+    Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
@@ -156,15 +156,6 @@ public class TestDelegationToken {
     LOG.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     dtSecretManager.renewToken(token, "JobTracker");
-    UserGroupInformation.createRemoteUser("JobTracker").doAs(
-        new PrivilegedExceptionAction<Object>() {
-          @Override
-          public Object run() throws Exception {
-            token.renew(config);
-            token.cancel(config);
-            return null;
-          }
-        });
   }
   
   @SuppressWarnings("deprecation")
@@ -184,23 +175,13 @@ public class TestDelegationToken {
       }
     });
 
-    final Token<DelegationTokenIdentifier> token = webhdfs
-        .getDelegationToken("JobTracker");
+    final Token<DelegationTokenIdentifier> token = webhdfs.getDelegationToken("JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
-    identifier
-        .readFields(new DataInputStream(new ByteArrayInputStream(tokenId)));
+    identifier.readFields(new DataInputStream(new ByteArrayInputStream(tokenId)));
     LOG.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     dtSecretManager.renewToken(token, "JobTracker");
-    ugi.doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws Exception {
-        token.renew(config);
-        token.cancel(config);
-        return null;
-      }
-    });
   }
 
   @Test

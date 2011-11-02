@@ -50,7 +50,7 @@ public class UserProvider
     final Configuration conf = (Configuration) servletcontext
         .getAttribute(JspHelper.CURRENT_CONF);
     try {
-      return JspHelper.getUGI(servletcontext, request, conf,
+      return JspHelper.getUGI(null, request, conf,
           AuthenticationMethod.KERBEROS, false);
     } catch (IOException e) {
       throw new RuntimeException(e);

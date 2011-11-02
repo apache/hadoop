@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
-import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -291,42 +290,24 @@ public class WebHdfsFileSystem extends FileSystem
     final String query = op.toQueryString()
         + '&' + new UserParam(ugi)
         + Param.toSortedString("&", parameters);
-    final URL url;
-    if (op.equals(PutOpParam.Op.RENEWDELEGATIONTOKEN)
-        || op.equals(GetOpParam.Op.GETDELEGATIONTOKEN)) {
-      // Skip adding delegation token for getting or renewing delegation token,
-      // because these operations require kerberos authentication.
-      url = getNamenodeURL(path, query);
-    } else {
-      url = getNamenodeURL(path, addDt2Query(query));
-    }
+    final URL url = getNamenodeURL(path, addDt2Query(query));
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
     }
     return url;
   }
 
-  private HttpURLConnection getHttpUrlConnection(URL url)
-      throws IOException {
-    final HttpURLConnection conn;
-    try {
-      if (ugi.hasKerberosCredentials()) { 
-        conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
-      } else {
-        conn = (HttpURLConnection)url.openConnection();
-      }
-    } catch (AuthenticationException e) {
-      throw new IOException("Authentication failed, url=" + url, e);
-    }
-    return conn;
-  }
-  
   private HttpURLConnection httpConnect(final HttpOpParam.Op op, final Path fspath,
       final Param<?,?>... parameters) throws IOException {
     final URL url = toUrl(op, fspath, parameters);
 
     //connect and get response
-    final HttpURLConnection conn = getHttpUrlConnection(url);
+    final HttpURLConnection conn;
+    try {
+      conn = new AuthenticatedURL(AUTH).openConnection(url, authToken);
+    } catch(AuthenticationException e) {
+      throw new IOException("Authentication failed, url=" + url, e);
+    }
     try {
       conn.setRequestMethod(op.getType().toString());
       conn.setDoOutput(op.getDoOutput());
@@ -336,7 +317,7 @@ public class WebHdfsFileSystem extends FileSystem
       }
       conn.connect();
       return conn;
-    } catch (IOException e) {
+    } catch(IOException e) {
       conn.disconnect();
       throw e;
     }
@@ -532,24 +513,7 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementReadOps(1);
     final HttpOpParam.Op op = GetOpParam.Op.OPEN;
     final URL url = toUrl(op, f, new BufferSizeParam(buffersize));
-    ByteRangeInputStream str = getByteRangeInputStream(url);
-    return new FSDataInputStream(str);
-  }
-
-  private class URLOpener extends ByteRangeInputStream.URLOpener {
-
-    public URLOpener(URL u) {
-      super(u);
-    }
-
-    @Override
-    public HttpURLConnection openConnection() throws IOException {
-      return getHttpUrlConnection(offsetUrl);
-    }
-  }
-  
-  private ByteRangeInputStream getByteRangeInputStream(URL url) {
-    return new ByteRangeInputStream(new URLOpener(url), new URLOpener(null));
+    return new FSDataInputStream(new ByteRangeInputStream(url));
   }
 
   @Override
@@ -612,19 +576,17 @@ public class WebHdfsFileSystem extends FileSystem
 
   private synchronized long renewDelegationToken(final Token<?> token
       ) throws IOException {
+    delegationToken = token;
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
-    TokenArgumentParam dtargParam = new TokenArgumentParam(
-        token.encodeToUrlString());
-    final Map<?, ?> m = run(op, null, dtargParam);
+    final Map<?, ?> m = run(op, null);
     return (Long) m.get("long");
   }
 
   private synchronized void cancelDelegationToken(final Token<?> token
       ) throws IOException {
+    delegationToken = token;
     final HttpOpParam.Op op = PutOpParam.Op.CANCELDELEGATIONTOKEN;
-    TokenArgumentParam dtargParam = new TokenArgumentParam(
-        token.encodeToUrlString());
-    run(op, null, dtargParam);
+    run(op, null);
   }
   
   @Override

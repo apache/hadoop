@@ -17,17 +17,11 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.io.IOException;
 import java.util.Properties;
 
-import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
@@ -61,21 +55,6 @@ public class AuthFilter extends AuthenticationFilter {
     p.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
     //set cookie path
     p.setProperty(COOKIE_PATH, "/");
-    return p;
-  }
-
-  @Override
-  public void doFilter(ServletRequest request, ServletResponse response,
-      FilterChain filterChain) throws IOException, ServletException {
-    HttpServletRequest httpRequest = (HttpServletRequest) request;
-    String tokenString = httpRequest
-        .getParameter(DelegationParam.NAME);
-    if (tokenString != null) {
-      //Token is present in the url, therefore token will be used for
-      //authentication, bypass kerberos authentication.
-      filterChain.doFilter(httpRequest, response);
-      return;
-    }
-    super.doFilter(request, response, filterChain);
+   return p;
   }
 }

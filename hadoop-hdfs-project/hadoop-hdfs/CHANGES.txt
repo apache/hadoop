@@ -1,7 +1,5 @@
 Hadoop HDFS Change Log
 
-    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
-
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
