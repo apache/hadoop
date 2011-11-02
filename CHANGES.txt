@@ -401,6 +401,7 @@ Release 0.92.0 - Unreleased
                (gaojinchao)
    HBASE-4708  Revert safemode related pieces of hbase-4510 (Harsh J)
    HBASE-3515  [replication] ReplicationSource can miss a log after RS comes out of GC
+   HBASE-4716  Improve locking for single column family bulk load
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

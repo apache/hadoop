@@ -2605,6 +2605,34 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return lid;
   }
+  
+  enum COLUMN_FAMILY_TYPES {
+    NONE,       // there is no column family
+    SINGLE,
+    MULTIPLE     // there are more than one column family
+  }
+  
+  /**
+   * Determines the type of column family based on list of family/hfilePath pairs
+   *
+   * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   */
+  public static COLUMN_FAMILY_TYPES getColumnFamilyType(
+      List<Pair<byte[], String>> familyPaths) {
+    if (familyPaths == null) return COLUMN_FAMILY_TYPES.NONE;
+    COLUMN_FAMILY_TYPES familyType = COLUMN_FAMILY_TYPES.SINGLE;
+    byte[] family = null;
+    for (Pair<byte[], String> pair : familyPaths) {
+      byte[] fam = pair.getFirst();
+      if (family == null) {
+        family = fam;
+      } else if (!Bytes.equals(family, fam)) {
+        familyType = COLUMN_FAMILY_TYPES.MULTIPLE;
+        break;
+      }
+    }
+    return familyType;
+  }
 
   /**
    * Attempts to atomically load a group of hfiles.  This is critical for loading
@@ -2614,7 +2642,8 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
   throws IOException {
-    startBulkRegionOperation();
+    // we need writeLock for multi-family bulk load
+    startBulkRegionOperation(getColumnFamilyType(familyPaths) == COLUMN_FAMILY_TYPES.MULTIPLE);
     this.writeRequestsCount.increment();
     List<IOException> ioes = new ArrayList<IOException>();
     List<Pair<byte[], String>> failures = new ArrayList<Pair<byte[], String>>();
@@ -4126,14 +4155,17 @@ public class HRegion implements HeapSize { // , Writable{
    * Acquires a writelock and checks if the region is closing or closed.
    * @throws NotServingRegionException when the region is closing or closed
    */
-  private void startBulkRegionOperation() throws NotServingRegionException {
+  private void startBulkRegionOperation(boolean writeLockNeeded)
+  throws NotServingRegionException {
     if (this.closing.get()) {
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closing");
     }
-    lock.writeLock().lock();
+    if (writeLockNeeded) lock.writeLock().lock();
+    else lock.readLock().lock();
     if (this.closed.get()) {
-      lock.writeLock().unlock();
+      if (writeLockNeeded) lock.writeLock().unlock();
+      else lock.readLock().unlock();
       throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
           " is closed");
     }
@@ -4144,7 +4176,8 @@ public class HRegion implements HeapSize { // , Writable{
    * to the try block of #startRegionOperation
    */
   private void closeBulkRegionOperation(){
-    lock.writeLock().unlock();
+    if (lock.writeLock().isHeldByCurrentThread()) lock.writeLock().unlock();
+    else lock.readLock().unlock();
   }
 
   /**
