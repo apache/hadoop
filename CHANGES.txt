@@ -51,6 +51,9 @@ Release 0.20.206.0 - unreleased
     spinning Jetty selector threads, and shuts down the daemon when one is
     detected. (todd)
 
+    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
+    (todd)
+
 Release 0.20.205.1 - unreleased
 
   IMPROVEMENTS

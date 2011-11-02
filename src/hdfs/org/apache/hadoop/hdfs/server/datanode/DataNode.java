@@ -241,7 +241,16 @@ public class DataNode extends Configured
   public final static String DATA_DIR_PERMISSION_KEY = 
     "dfs.datanode.data.dir.perm";
   private static final String DEFAULT_DATA_DIR_PERMISSION = "755";
-  
+
+  // Thresholds for when we start to log when a block report is
+  // taking a long time to generate. Under heavy disk load and
+  // memory pressure, it's normal for block reports to take
+  // several minutes, since they cause many disk seeks.
+  private static final long LATE_BLOCK_REPORT_WARN_THRESHOLD =
+      10 * 60 * 1000; // 10m
+  private static final long LATE_BLOCK_REPORT_INFO_THRESHOLD =
+      3 * 60 * 1000; // 3m
+
   // For InterDataNodeProtocol
   public Server ipcServer;
 
@@ -705,6 +714,8 @@ public class DataNode extends Configured
       namenode.blocksBeingWrittenReport(dnRegistration, blocksBeingWritten);
     }
     // random short delay - helps scatter the BR from all DNs
+    // - but we can start generating the block report immediately
+    data.requestAsyncBlockReport();
     scheduleBlockReport(initialBlockReportDelay);
   }
 
@@ -929,42 +940,60 @@ public class DataNode extends Configured
 
         // Send latest blockinfo report if timer has expired.
         if (startTime - lastBlockReport > blockReportInterval) {
-          
-          // Create block report
-          long brCreateStartTime = now();
-          Block[] bReport = data.getBlockReport();
-          
-          // Send block report
-          long brSendStartTime = now();
-          DatanodeCommand cmd = namenode.blockReport(dnRegistration,
-                  BlockListAsLongs.convertToArrayLongs(bReport));
-          
-          // Log the block report processing stats from Datanode perspective
-          long brSendCost = now() - brSendStartTime;
-          long brCreateCost = brSendStartTime - brCreateStartTime;
-          myMetrics.addBlockReport(brSendCost);
-          LOG.info("BlockReport of " + bReport.length
-              + " blocks took " + brCreateCost + " msec to generate and "
-              + brSendCost + " msecs for RPC and NN processing");
+          if (data.isAsyncBlockReportReady()) {
+            // Create block report
+            long brCreateStartTime = now();
+            Block[] bReport = data.retrieveAsyncBlockReport();
+            
+            // Send block report
+            long brSendStartTime = now();
+            DatanodeCommand cmd = namenode.blockReport(dnRegistration,
+                    BlockListAsLongs.convertToArrayLongs(bReport));
+            
+            // Log the block report processing stats from Datanode perspective
+            long brSendCost = now() - brSendStartTime;
+            long brCreateCost = brSendStartTime - brCreateStartTime;
+            myMetrics.addBlockReport(brSendCost);
+            LOG.info("BlockReport of " + bReport.length
+                + " blocks took " + brCreateCost + " msec to generate and "
+                + brSendCost + " msecs for RPC and NN processing");
 
-          //
-          // If we have sent the first block report, then wait a random
-          // time before we start the periodic block reports.
-          //
-          if (resetBlockReportTime) {
-            lastBlockReport = startTime - R.nextInt((int)(blockReportInterval));
-            resetBlockReportTime = false;
+            //
+            // If we have sent the first block report, then wait a random
+            // time before we start the periodic block reports.
+            //
+            if (resetBlockReportTime) {
+              lastBlockReport = startTime -
+                  R.nextInt((int)(blockReportInterval));
+              resetBlockReportTime = false;
+            } else {
+              /* say the last block report was at 8:20:14. The current report 
+               * should have started around 9:20:14 (default 1 hour interval). 
+               * If current time is :
+               *   1) normal like 9:20:18, next report should be at 10:20:14
+               *   2) unexpected like 11:35:43, next report should be at
+               *      12:20:14
+               */
+              lastBlockReport += (now() - lastBlockReport) / 
+                                 blockReportInterval * blockReportInterval;
+            }
+            processCommand(cmd);
           } else {
-            /* say the last block report was at 8:20:14. The current report 
-             * should have started around 9:20:14 (default 1 hour interval). 
-             * If current time is :
-             *   1) normal like 9:20:18, next report should be at 10:20:14
-             *   2) unexpected like 11:35:43, next report should be at 12:20:14
-             */
-            lastBlockReport += (now() - lastBlockReport) / 
-                               blockReportInterval * blockReportInterval;
+            data.requestAsyncBlockReport();
+            if (lastBlockReport > 0) { // this isn't the first report
+              long waitingFor =
+                  startTime - lastBlockReport - blockReportInterval;
+              String msg = "Block report is due, and been waiting for it for " +
+                  (waitingFor/1000) + " seconds...";
+              if (waitingFor > LATE_BLOCK_REPORT_WARN_THRESHOLD) {
+                LOG.warn(msg);
+              } else if (waitingFor > LATE_BLOCK_REPORT_INFO_THRESHOLD) {
+                LOG.info(msg);
+              } else if (LOG.isDebugEnabled()) {
+                LOG.debug(msg);
+              }
+            }
           }
-          processCommand(cmd);
         }
 
         // start block scanner

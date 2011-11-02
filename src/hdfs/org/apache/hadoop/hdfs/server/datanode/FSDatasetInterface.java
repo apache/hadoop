@@ -236,6 +236,29 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public Block[] getBlockReport();
   
   /**
+   * Request that a block report be prepared.
+   */
+  public void requestAsyncBlockReport();
+
+  /**
+   * @return true if an asynchronous block report is ready
+   */
+  public boolean isAsyncBlockReportReady();
+
+  /**
+   * Retrieve an asynchronously prepared block report. Callers should first
+   * call {@link #requestAsyncBlockReport()}, and then poll
+   * {@link #isAsyncBlockReportReady()} until it returns true.
+   *
+   * Retrieving the asynchronous block report also resets it; a new
+   * one must be prepared before this method may be called again.
+   *
+   * @throws IllegalStateException if an async report is not ready
+   */
+  public Block[] retrieveAsyncBlockReport();
+
+  
+  /**
    * Returns the blocks being written report 
    * @return - the blocks being written report
    */
@@ -309,4 +332,5 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public boolean hasEnoughResource();
 
   public BlockRecoveryInfo startBlockRecovery(long blockId) throws IOException;
+
 }
