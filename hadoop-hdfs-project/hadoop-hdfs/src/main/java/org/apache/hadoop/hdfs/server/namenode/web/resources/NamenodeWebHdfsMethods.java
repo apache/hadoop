@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
+import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -104,7 +105,7 @@ public class NamenodeWebHdfsMethods {
   public static final Log LOG = LogFactory.getLog(NamenodeWebHdfsMethods.class);
 
   private static final UriFsPathParam ROOT = new UriFsPathParam("");
-
+  
   private static final ThreadLocal<String> REMOTE_ADDRESS = new ThreadLocal<String>(); 
 
   /** @return the remote client address. */
@@ -224,11 +225,13 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(AccessTimeParam.NAME) @DefaultValue(AccessTimeParam.DEFAULT)
           final AccessTimeParam accessTime,
       @QueryParam(RenameOptionSetParam.NAME) @DefaultValue(RenameOptionSetParam.DEFAULT)
-          final RenameOptionSetParam renameOptions
+          final RenameOptionSetParam renameOptions,
+      @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT) 
+          final TokenArgumentParam delegationTokenArgument
       ) throws IOException, InterruptedException {
     return put(ugi, delegation, ROOT, op, destination, owner, group,
         permission, overwrite, bufferSize, replication, blockSize,
-        modificationTime, accessTime, renameOptions);
+        modificationTime, accessTime, renameOptions, delegationTokenArgument);
   }
 
   /** Handle HTTP PUT request. */
@@ -264,7 +267,9 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(AccessTimeParam.NAME) @DefaultValue(AccessTimeParam.DEFAULT)
           final AccessTimeParam accessTime,
       @QueryParam(RenameOptionSetParam.NAME) @DefaultValue(RenameOptionSetParam.DEFAULT)
-          final RenameOptionSetParam renameOptions
+          final RenameOptionSetParam renameOptions,
+      @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT) 
+          final TokenArgumentParam delegationTokenArgument
       ) throws IOException, InterruptedException {
 
     if (LOG.isTraceEnabled()) {
@@ -344,7 +349,7 @@ public class NamenodeWebHdfsMethods {
     case RENEWDELEGATIONTOKEN:
     {
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
-      token.decodeFromUrlString(delegation.getValue());
+      token.decodeFromUrlString(delegationTokenArgument.getValue());
       final long expiryTime = np.renewDelegationToken(token);
       final String js = JsonUtil.toJsonString("long", expiryTime);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
@@ -352,7 +357,7 @@ public class NamenodeWebHdfsMethods {
     case CANCELDELEGATIONTOKEN:
     {
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
-      token.decodeFromUrlString(delegation.getValue());
+      token.decodeFromUrlString(delegationTokenArgument.getValue());
       np.cancelDelegationToken(token);
       return Response.ok().type(MediaType.APPLICATION_JSON).build();
     }

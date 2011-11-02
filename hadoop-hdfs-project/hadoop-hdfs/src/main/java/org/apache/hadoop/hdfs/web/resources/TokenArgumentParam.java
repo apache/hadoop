@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
-import org.apache.hadoop.security.UserGroupInformation;
-
-/** Represents delegation token used for authentication. */
-public class DelegationParam extends StringParam {
+/**
+ * Represents delegation token parameter as method arguments. This is
+ * different from {@link DelegationParam}.
+ */
+public class TokenArgumentParam extends StringParam {
   /** Parameter name. */
-  public static final String NAME = "delegation";
+  public static final String NAME = "token";
   /** Default parameter value. */
   public static final String DEFAULT = "";
 
@@ -30,11 +31,10 @@ public class DelegationParam extends StringParam {
 
   /**
    * Constructor.
-   * @param str a string representation of the parameter value.
+   * @param str A string representation of the parameter value.
    */
-  public DelegationParam(final String str) {
-    super(DOMAIN, UserGroupInformation.isSecurityEnabled()
-        && str != null && !str.equals(DEFAULT)? str: null);
+  public TokenArgumentParam(final String str) {
+    super(DOMAIN, str != null && !str.equals(DEFAULT) ? str : null);
   }
 
   @Override

@@ -1176,6 +1176,8 @@ Release 0.23.0 - 2011-11-01
 
     HDFS-2522. Disable TestDfsOverAvroRpc test. (suresh)
 
+    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.

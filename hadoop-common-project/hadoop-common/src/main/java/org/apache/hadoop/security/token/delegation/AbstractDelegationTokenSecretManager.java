@@ -210,6 +210,21 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   /**
+   * Verifies that the given identifier and password are valid and match.
+   * @param identifier Token identifier.
+   * @param password Password in the token.
+   * @throws InvalidToken
+   */
+  public synchronized void verifyToken(TokenIdent identifier, byte[] password)
+      throws InvalidToken {
+    byte[] storedPassword = retrievePassword(identifier);
+    if (!Arrays.equals(password, storedPassword)) {
+      throw new InvalidToken("token (" + identifier
+          + ") is invalid, password doesn't match");
+    }
+  }
+  
+  /**
    * Renew a delegation token.
    * @param token the token to renew
    * @param renewer the full principal name of the user doing the renewal
