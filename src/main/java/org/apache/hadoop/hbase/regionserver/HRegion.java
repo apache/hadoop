@@ -2605,33 +2605,27 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return lid;
   }
-  
-  enum COLUMN_FAMILY_TYPES {
-    NONE,       // there is no column family
-    SINGLE,
-    MULTIPLE     // there are more than one column family
-  }
-  
+    
   /**
-   * Determines the type of column family based on list of family/hfilePath pairs
+   * Determines whether multiple column families are present
+   * Precondition: familyPaths is not null
    *
    * @param familyPaths List of Pair<byte[] column family, String hfilePath>
    */
-  public static COLUMN_FAMILY_TYPES getColumnFamilyType(
+  private static boolean hasMultipleColumnFamilies(
       List<Pair<byte[], String>> familyPaths) {
-    if (familyPaths == null) return COLUMN_FAMILY_TYPES.NONE;
-    COLUMN_FAMILY_TYPES familyType = COLUMN_FAMILY_TYPES.SINGLE;
+    boolean multipleFamilies = false;
     byte[] family = null;
     for (Pair<byte[], String> pair : familyPaths) {
       byte[] fam = pair.getFirst();
       if (family == null) {
         family = fam;
       } else if (!Bytes.equals(family, fam)) {
-        familyType = COLUMN_FAMILY_TYPES.MULTIPLE;
+        multipleFamilies = true;
         break;
       }
     }
-    return familyType;
+    return multipleFamilies;
   }
 
   /**
@@ -2642,8 +2636,9 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
   throws IOException {
+    Preconditions.checkNotNull(familyPaths);
     // we need writeLock for multi-family bulk load
-    startBulkRegionOperation(getColumnFamilyType(familyPaths) == COLUMN_FAMILY_TYPES.MULTIPLE);
+    startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
     this.writeRequestsCount.increment();
     List<IOException> ioes = new ArrayList<IOException>();
     List<Pair<byte[], String>> failures = new ArrayList<Pair<byte[], String>>();
