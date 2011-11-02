@@ -8,6 +8,8 @@ Release 0.20.206.0 - unreleased
                     branch-0.20-security (Ravi Gummadi via amarrk)
   BUG FIXES
 
+    HADOOP-7784. Fixed jsvc packaging. (Eric Yang)
+
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
 
     HADOOP-7634. Docs specify wrong owner for task-controller.cfg (eli)
