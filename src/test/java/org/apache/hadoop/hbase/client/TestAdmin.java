@@ -627,7 +627,6 @@ public class TestAdmin {
         for (int i = 0; i < rowCounts[index]; i++) {
           byte[] k = Bytes.toBytes(i);
           Put put = new Put(k);
-          put.setWriteToWAL(false);
           put.add(familyNames[index], new byte[0], k);
           table.put(put);
         }
@@ -1261,7 +1260,6 @@ public class TestAdmin {
         .toBytes(tableName));
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
-      put.setWriteToWAL(false);
       put.add(HConstants.CATALOG_FAMILY, null, value);
       table.put(put);
       if (i % 32 == 0) {
