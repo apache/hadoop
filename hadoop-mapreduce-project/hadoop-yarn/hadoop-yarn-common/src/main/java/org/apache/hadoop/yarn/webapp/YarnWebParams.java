@@ -16,13 +16,13 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.webapp;
+package org.apache.hadoop.yarn.webapp;
 
-public interface NMWebParams {
+public interface YarnWebParams {
   String NM_NODENAME = "nm.id";
-  String APPLICATION_ID = "nm.appId";
-  String CONTAINER_ID = "nm.containerId";
-  String CONTAINER_LOG_TYPE= "nm.containerLogType";
-  String ENTITY_STRING = "nm.entityString";
-  String APP_OWNER = "nm.appOwner";
+  String APPLICATION_ID = "app.id";
+  String CONTAINER_ID = "container.id";
+  String CONTAINER_LOG_TYPE= "log.type";
+  String ENTITY_STRING = "entity.string";
+  String APP_OWNER = "app.owner";
 }

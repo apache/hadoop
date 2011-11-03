@@ -28,10 +28,11 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.Controller;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 import com.google.inject.Inject;
 
-public class NMController extends Controller implements NMWebParams {
+public class NMController extends Controller implements YarnWebParams {
 
   private Context nmContext;
   private Configuration nmConf;

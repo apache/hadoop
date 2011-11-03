@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-public class NavBlock extends HtmlBlock implements NMWebParams {
+public class NavBlock extends HtmlBlock implements YarnWebParams {
 
   @Override
   protected void render(Block html) {

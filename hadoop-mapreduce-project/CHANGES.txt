@@ -50,6 +50,22 @@ Trunk (unreleased changes)
     MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
     by default. (tucu)
 
+Release 0.23.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES                                                                    
+
+  IMPROVEMENTS
+
+    MAPREDUCE-3297. Moved log related components into yarn-common so that
+    HistoryServer and clients can use them without depending on the
+    yarn-server-nodemanager module. (Siddharth Seth via vinodkv)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
