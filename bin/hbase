@@ -213,7 +213,13 @@ if [ ! -z $HADOOP_HOME ]; then
   else
     HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" "${HADOOP_CONF_DIR}")
   fi
-  HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-core*.jar`)
+  if [ "`echo ${HADOOP_HOME}/hadoop-core*.jar`" != "${HADOOP_HOME}/hadoop-core*.jar" ] ; then
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-core*.jar | head -1`)
+  else
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-common*.jar | head -1`)
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-hdfs*.jar | head -1`)
+    HADOOPCPPATH=$(append_path "${HADOOPCPPATH}" `ls ${HADOOP_HOME}/hadoop-mapred*.jar | head -1`)
+  fi
   for i in "${HADOOP_HOME}/lib/"*.jar; do
     HADOOPCPPATH="${HADOOPCPPATH}:$i"
   done

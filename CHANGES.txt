@@ -671,6 +671,8 @@ Release 0.92.0 - Unreleased
    HBASE-4611  Add support for Phabricator/Differential as an alternative code review tool
    HBASE-4713  Raise debug level to warn on ExecutionException in
                HConnectionManager$HConnectionImplementation (Lucian George Iordache)
+   HBASE-4719  HBase script assumes pre-Hadoop 0.21 layout of jar files
+               (Roman Shposhnik)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
