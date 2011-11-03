@@ -69,6 +69,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3221. Reneabled the previously ignored test in TestSubmitJob
     and fixed bugs in it. (Devaraj K via vinodkv)
 
+    MAPREDUCE-3215. Reneabled and fixed bugs in the failing test
+    TestNoJobSetupCleanup. (Hitesh Shah via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
