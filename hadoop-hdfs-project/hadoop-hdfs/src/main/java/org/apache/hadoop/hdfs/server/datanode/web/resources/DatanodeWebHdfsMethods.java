@@ -350,9 +350,7 @@ public class DatanodeWebHdfsMethods {
         }
       };
 
-      final int status = offset.getValue() == 0?
-          HttpServletResponse.SC_OK: HttpServletResponse.SC_PARTIAL_CONTENT;
-      return Response.status(status).entity(streaming).type(
+      return Response.ok(streaming).type(
           MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case GETFILECHECKSUM:

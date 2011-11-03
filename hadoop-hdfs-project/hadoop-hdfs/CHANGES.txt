@@ -20,6 +20,15 @@ Release 0.23.1 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+
+    HDFS-2527. WebHdfs: remove the use of "Range" header in Open; use ugi
+    username if renewer parameter is null in GetDelegationToken; response OK
+    when setting replication for non-files; rename GETFILEBLOCKLOCATIONS to
+    GET_BLOCK_LOCATIONS and state that it is a private unstable API; replace
+    isDirectory and isSymlink with enum {FILE, DIRECTORY, SYMLINK} in
+    HdfsFileStatus JSON object.  (szetszwo)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
@@ -1195,8 +1204,6 @@ Release 0.23.0 - 2011-11-01
     Maheswara Rao G via szetszwo)
 
     HDFS-2522. Disable TestDfsOverAvroRpc test. (suresh)
-
-    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
