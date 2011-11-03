@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
@@ -158,14 +159,22 @@ public interface FSDatasetInterface extends FSDatasetMBean {
      static class BlockWriteStreams {
       OutputStream dataOut;
       OutputStream checksumOut;
-      BlockWriteStreams(OutputStream dOut, OutputStream cOut) {
+      DataChecksum checksum;
+      
+      BlockWriteStreams(OutputStream dOut, OutputStream cOut,
+          DataChecksum checksum) {
         dataOut = dOut;
         checksumOut = cOut;
+        this.checksum = checksum;
       }
       
       void close() throws IOException {
         IOUtils.closeStream(dataOut);
         IOUtils.closeStream(checksumOut);
+      }
+      
+      DataChecksum getChecksum() {
+        return checksum;
       }
     }
 

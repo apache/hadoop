@@ -875,6 +875,8 @@ Release 0.23.0 - 2011-11-01
 
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind. (todd)
 
+    HDFS-2130. Switch default checksum to CRC32C. (todd)
+
   BUG FIXES
 
     HDFS-2347. Fix checkpointTxnCount's comment about editlog size. 

@@ -18,12 +18,15 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -86,6 +89,18 @@ class BlockMetadataHeader {
     } finally {
       IOUtils.closeStream(in);
     }
+  }
+  
+  /**
+   * Read the header at the beginning of the given block meta file.
+   * The current file position will be altered by this method.
+   * If an error occurs, the file is <em>not</em> closed.
+   */
+  static BlockMetadataHeader readHeader(RandomAccessFile raf) throws IOException {
+    byte[] buf = new byte[getHeaderSize()];
+    raf.seek(0);
+    raf.readFully(buf, 0, buf.length);
+    return readHeader(new DataInputStream(new ByteArrayInputStream(buf)));
   }
   
   // Version is already read.

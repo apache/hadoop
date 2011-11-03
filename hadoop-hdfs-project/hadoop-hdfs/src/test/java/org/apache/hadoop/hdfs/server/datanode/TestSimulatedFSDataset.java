@@ -64,7 +64,8 @@ public class TestSimulatedFSDataset extends TestCase {
       // we pass expected len as zero, - fsdataset should use the sizeof actual
       // data written
       ReplicaInPipelineInterface bInfo = fsdataset.createRbw(b);
-      BlockWriteStreams out = bInfo.createStreams(true, 512, 4);
+      BlockWriteStreams out = bInfo.createStreams(true,
+          DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512));
       try {
         OutputStream dataOut  = out.dataOut;
         assertEquals(0, fsdataset.getLength(b));

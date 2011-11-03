@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -169,7 +170,7 @@ class ReplicaInPipeline extends ReplicaInfo
   
   @Override // ReplicaInPipelineInterface
   public BlockWriteStreams createStreams(boolean isCreate, 
-      int bytesPerChunk, int checksumSize) throws IOException {
+      DataChecksum requestedChecksum) throws IOException {
     File blockFile = getBlockFile();
     File metaFile = getMetaFile();
     if (DataNode.LOG.isDebugEnabled()) {
@@ -180,30 +181,64 @@ class ReplicaInPipeline extends ReplicaInfo
     }
     long blockDiskSize = 0L;
     long crcDiskSize = 0L;
-    if (!isCreate) { // check on disk file
-      blockDiskSize = bytesOnDisk;
-      crcDiskSize = BlockMetadataHeader.getHeaderSize() +
-      (blockDiskSize+bytesPerChunk-1)/bytesPerChunk*checksumSize;
-      if (blockDiskSize>0 && 
-          (blockDiskSize>blockFile.length() || crcDiskSize>metaFile.length())) {
-        throw new IOException("Corrupted block: " + this);
+    
+    // the checksum that should actually be used -- this
+    // may differ from requestedChecksum for appends.
+    DataChecksum checksum;
+    
+    RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
+    
+    if (!isCreate) {
+      // For append or recovery, we must enforce the existing checksum.
+      // Also, verify that the file has correct lengths, etc.
+      boolean checkedMeta = false;
+      try {
+        BlockMetadataHeader header = BlockMetadataHeader.readHeader(metaRAF);
+        checksum = header.getChecksum();
+        
+        if (checksum.getBytesPerChecksum() !=
+            requestedChecksum.getBytesPerChecksum()) {
+          throw new IOException("Client requested checksum " +
+              requestedChecksum + " when appending to an existing block " +
+              "with different chunk size: " + checksum);
+        }
+        
+        int bytesPerChunk = checksum.getBytesPerChecksum();
+        int checksumSize = checksum.getChecksumSize();
+        
+        blockDiskSize = bytesOnDisk;
+        crcDiskSize = BlockMetadataHeader.getHeaderSize() +
+          (blockDiskSize+bytesPerChunk-1)/bytesPerChunk*checksumSize;
+        if (blockDiskSize>0 && 
+            (blockDiskSize>blockFile.length() || crcDiskSize>metaFile.length())) {
+          throw new IOException("Corrupted block: " + this);
+        }
+        checkedMeta = true;
+      } finally {
+        if (!checkedMeta) {
+          // clean up in case of exceptions.
+          IOUtils.closeStream(metaRAF);
+        }
       }
+    } else {
+      // for create, we can use the requested checksum
+      checksum = requestedChecksum;
     }
+    
     FileOutputStream blockOut = null;
     FileOutputStream crcOut = null;
     try {
       blockOut = new FileOutputStream(
           new RandomAccessFile( blockFile, "rw" ).getFD() );
-      crcOut = new FileOutputStream(
-          new RandomAccessFile( metaFile, "rw" ).getFD() );
+      crcOut = new FileOutputStream(metaRAF.getFD() );
       if (!isCreate) {
         blockOut.getChannel().position(blockDiskSize);
         crcOut.getChannel().position(crcDiskSize);
       }
-      return new BlockWriteStreams(blockOut, crcOut);
+      return new BlockWriteStreams(blockOut, crcOut, checksum);
     } catch (IOException e) {
       IOUtils.closeStream(blockOut);
-      IOUtils.closeStream(crcOut);
+      IOUtils.closeStream(metaRAF);
       throw e;
     }
   }
