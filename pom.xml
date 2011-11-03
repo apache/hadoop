@@ -23,7 +23,7 @@
 
   <distributionManagement>
     <repository>
-      <id>apache.releases.https</id>
+      <id>apache.staging.https</id>
       <name>Apache Release Distribution Repository</name>
       <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
     </repository>

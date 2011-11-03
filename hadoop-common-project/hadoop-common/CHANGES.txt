@@ -728,6 +728,9 @@ Release 0.23.0 - 2011-11-01
     HADOOP-7798. Add support gpg signatures for maven release artifacts.
     (cutting via acmurthy) 
 
+    HADOOP-7797. Fix top-level pom.xml to refer to correct staging maven
+    repository. (omalley via acmurthy) 
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
