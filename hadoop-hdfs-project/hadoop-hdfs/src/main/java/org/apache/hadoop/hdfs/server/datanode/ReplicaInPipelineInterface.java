@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
+import org.apache.hadoop.util.DataChecksum;
 
 /** 
  * This defines the interface of a replica in Pipeline that's being written to
@@ -61,11 +62,10 @@ interface ReplicaInPipelineInterface extends Replica {
    * one for block file and one for CRC file
    * 
    * @param isCreate if it is for creation
-   * @param bytePerChunk number of bytes per CRC chunk
-   * @param checksumSize number of bytes per checksum
+   * @param requestedChecksum the checksum the writer would prefer to use
    * @return output streams for writing
    * @throws IOException if any error occurs
    */
   public BlockWriteStreams createStreams(boolean isCreate,
-      int bytesPerChunk, int checksumSize) throws IOException;
+      DataChecksum requestedChecksum) throws IOException;
 }

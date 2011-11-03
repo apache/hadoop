@@ -63,7 +63,15 @@ class BlockReceiver implements Closeable {
   private static final long CACHE_DROP_LAG_BYTES = 8 * 1024 * 1024;
   
   private DataInputStream in = null; // from where data are read
-  private DataChecksum checksum; // from where chunks of a block can be read
+  private DataChecksum clientChecksum; // checksum used by client
+  private DataChecksum diskChecksum; // checksum we write to disk
+  
+  /**
+   * In the case that the client is writing with a different
+   * checksum polynomial than the block is stored with on disk,
+   * the DataNode needs to recalculate checksums before writing.
+   */
+  private boolean needsChecksumTranslation;
   private OutputStream out = null; // to block file at local disk
   private FileDescriptor outFd;
   private OutputStream cout = null; // output stream for cehcksum file
@@ -177,33 +185,35 @@ class BlockReceiver implements Closeable {
               " while receiving block " + block + " from " + inAddr);
         }
       }
-      // read checksum meta information
-      this.checksum = requestedChecksum;
-      this.bytesPerChecksum = checksum.getBytesPerChecksum();
-      this.checksumSize = checksum.getChecksumSize();
       this.dropCacheBehindWrites = datanode.shouldDropCacheBehindWrites();
       this.syncBehindWrites = datanode.shouldSyncBehindWrites();
       
       final boolean isCreate = isDatanode || isTransfer 
           || stage == BlockConstructionStage.PIPELINE_SETUP_CREATE;
-      streams = replicaInfo.createStreams(isCreate,
-          this.bytesPerChecksum, this.checksumSize);
-      if (streams != null) {
-        this.out = streams.dataOut;
-        if (out instanceof FileOutputStream) {
-          this.outFd = ((FileOutputStream)out).getFD();
-        } else {
-          LOG.warn("Could not get file descriptor for outputstream of class " +
-              out.getClass());
-        }
-        this.cout = streams.checksumOut;
-        this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-            streams.checksumOut, HdfsConstants.SMALL_BUFFER_SIZE));
-        // write data chunk header if creating a new replica
-        if (isCreate) {
-          BlockMetadataHeader.writeHeader(checksumOut, checksum);
-        } 
+      streams = replicaInfo.createStreams(isCreate, requestedChecksum);
+      assert streams != null : "null streams!";
+
+      // read checksum meta information
+      this.clientChecksum = requestedChecksum;
+      this.diskChecksum = streams.getChecksum();
+      this.needsChecksumTranslation = !clientChecksum.equals(diskChecksum);
+      this.bytesPerChecksum = diskChecksum.getBytesPerChecksum();
+      this.checksumSize = diskChecksum.getChecksumSize();
+
+      this.out = streams.dataOut;
+      if (out instanceof FileOutputStream) {
+        this.outFd = ((FileOutputStream)out).getFD();
+      } else {
+        LOG.warn("Could not get file descriptor for outputstream of class " +
+            out.getClass());
       }
+      this.cout = streams.checksumOut;
+      this.checksumOut = new DataOutputStream(new BufferedOutputStream(
+          streams.checksumOut, HdfsConstants.SMALL_BUFFER_SIZE));
+      // write data chunk header if creating a new replica
+      if (isCreate) {
+        BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
+      } 
     } catch (ReplicaAlreadyExistsException bae) {
       throw bae;
     } catch (ReplicaNotFoundException bne) {
@@ -315,9 +325,9 @@ class BlockReceiver implements Closeable {
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       
-      checksum.update(dataBuf, dataOff, chunkLen);
+      clientChecksum.update(dataBuf, dataOff, chunkLen);
 
-      if (!checksum.compare(checksumBuf, checksumOff)) {
+      if (!clientChecksum.compare(checksumBuf, checksumOff)) {
         if (srcDataNode != null) {
           try {
             LOG.info("report corrupt block " + block + " from datanode " +
@@ -334,11 +344,31 @@ class BlockReceiver implements Closeable {
                               "while writing " + block + " from " + inAddr);
       }
 
-      checksum.reset();
+      clientChecksum.reset();
       dataOff += chunkLen;
       checksumOff += checksumSize;
       len -= chunkLen;
     }
+  }
+  
+    
+  /**
+   * Translate CRC chunks from the client's checksum implementation
+   * to the disk checksum implementation.
+   * 
+   * This does not verify the original checksums, under the assumption
+   * that they have already been validated.
+   */
+  private void translateChunks( byte[] dataBuf, int dataOff, int len, 
+                             byte[] checksumBuf, int checksumOff ) 
+                             throws IOException {
+    if (len == 0) return;
+    
+    int numChunks = (len - 1)/bytesPerChecksum + 1;
+    
+    diskChecksum.calculateChunkedSums(
+        ByteBuffer.wrap(dataBuf, dataOff, len),
+        ByteBuffer.wrap(checksumBuf, checksumOff, numChunks * checksumSize));
   }
 
   /**
@@ -583,9 +613,16 @@ class BlockReceiver implements Closeable {
        * protocol includes acks and only the last datanode needs to verify 
        * checksum.
        */
-      if (mirrorOut == null || isDatanode) {
+      if (mirrorOut == null || isDatanode || needsChecksumTranslation) {
         verifyChunks(pktBuf, dataOff, len, pktBuf, checksumOff);
+        if (needsChecksumTranslation) {
+          // overwrite the checksums in the packet buffer with the
+          // appropriate polynomial for the disk storage.
+          translateChunks(pktBuf, dataOff, len, pktBuf, checksumOff);
+        }
       }
+      
+      // by this point, the data in the buffer uses the disk checksum
 
       byte[] lastChunkChecksum;
       
@@ -807,7 +844,7 @@ class BlockReceiver implements Closeable {
     // find offset of the beginning of partial chunk.
     //
     int sizePartialChunk = (int) (blkoff % bytesPerChecksum);
-    int checksumSize = checksum.getChecksumSize();
+    int checksumSize = diskChecksum.getChecksumSize();
     blkoff = blkoff - sizePartialChunk;
     LOG.info("computePartialChunkCrc sizePartialChunk " + 
               sizePartialChunk +
@@ -832,7 +869,8 @@ class BlockReceiver implements Closeable {
     }
 
     // compute crc of partial chunk from data read in the block file.
-    partialCrc = new PureJavaCrc32();
+    partialCrc = DataChecksum.newDataChecksum(
+        diskChecksum.getChecksumType(), diskChecksum.getBytesPerChecksum());
     partialCrc.update(buf, 0, sizePartialChunk);
     LOG.info("Read in partial CRC chunk from disk for block " + block);
 

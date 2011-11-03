@@ -97,6 +97,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
 /********************************************************
@@ -139,6 +140,7 @@ public class DFSClient implements java.io.Closeable {
     final int maxBlockAcquireFailures;
     final int confTime;
     final int ioBufferSize;
+    final int checksumType;
     final int bytesPerChecksum;
     final int writePacketSize;
     final int socketTimeout;
@@ -163,6 +165,7 @@ public class DFSClient implements java.io.Closeable {
       ioBufferSize = conf.getInt(
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
+      checksumType = getChecksumType(conf);
       bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
           DFS_BYTES_PER_CHECKSUM_DEFAULT);
       socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
@@ -189,6 +192,26 @@ public class DFSClient implements java.io.Closeable {
           .getInt(DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
               DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
       uMask = FsPermission.getUMask(conf);
+    }
+
+    private int getChecksumType(Configuration conf) {
+      String checksum = conf.get(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
+          DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
+      if ("CRC32".equals(checksum)) {
+        return DataChecksum.CHECKSUM_CRC32;
+      } else if ("CRC32C".equals(checksum)) {
+        return DataChecksum.CHECKSUM_CRC32C;
+      } else if ("NULL".equals(checksum)) {
+        return DataChecksum.CHECKSUM_NULL;
+      } else {
+        LOG.warn("Bad checksum type: " + checksum + ". Using default.");
+        return DataChecksum.CHECKSUM_CRC32C;
+      }
+    }
+
+    private DataChecksum createChecksum() {
+      return DataChecksum.newDataChecksum(
+          checksumType, bytesPerChecksum);
     }
   }
  
@@ -755,7 +778,7 @@ public class DFSClient implements java.io.Closeable {
     }
     final DFSOutputStream result = new DFSOutputStream(this, src, masked, flag,
         createParent, replication, blockSize, progress, buffersize,
-        dfsClientConf.bytesPerChecksum);
+        dfsClientConf.createChecksum());
     leaserenewer.put(src, result, this);
     return result;
   }
@@ -799,9 +822,12 @@ public class DFSClient implements java.io.Closeable {
     CreateFlag.validate(flag);
     DFSOutputStream result = primitiveAppend(src, flag, buffersize, progress);
     if (result == null) {
+      DataChecksum checksum = DataChecksum.newDataChecksum(
+          dfsClientConf.checksumType,
+          bytesPerChecksum);
       result = new DFSOutputStream(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
-          bytesPerChecksum);
+          checksum);
     }
     leaserenewer.put(src, result, this);
     return result;
@@ -859,7 +885,7 @@ public class DFSClient implements java.io.Closeable {
                                      UnresolvedPathException.class);
     }
     return new DFSOutputStream(this, src, buffersize, progress,
-        lastBlock, stat, dfsClientConf.bytesPerChecksum);
+        lastBlock, stat, dfsClientConf.createChecksum());
   }
   
   /**
