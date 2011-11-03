@@ -93,6 +93,23 @@ Trunk (unreleased changes)
 
     HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
 
+Release 0.23.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+    HDFS-2130. Switch default checksum to CRC32C. (todd)
+
+    HDFS-2533. Remove needless synchronization on some FSDataSet methods.
+    (todd)
+
+  BUG FIXES
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
@@ -874,11 +891,6 @@ Release 0.23.0 - 2011-11-01
     processing deletes. (todd)
 
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind. (todd)
-
-    HDFS-2130. Switch default checksum to CRC32C. (todd)
-
-    HDFS-2533. Remove needless synchronization on some FSDataSet methods.
-    (todd)
 
   BUG FIXES
 
