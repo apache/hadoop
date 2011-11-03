@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * This class tests the presence of seek bug as described
@@ -67,12 +68,12 @@ public class TestSeekBug extends TestCase {
     stm.read(actual, 0, actual.length);
     // Now read a byte array that is bigger than the internal buffer
     actual = new byte[100000];
-    stm.read(actual, 0, actual.length);
+    IOUtils.readFully(stm, actual, 0, actual.length);
     checkAndEraseData(actual, 128, expected, "First Read Test");
     // now do a small seek, within the range that is already read
     stm.seek(96036); // 4 byte seek
     actual = new byte[128];
-    stm.read(actual, 0, actual.length);
+    IOUtils.readFully(stm, actual, 0, actual.length);
     checkAndEraseData(actual, 96036, expected, "Seek Bug");
     // all done
     stm.close();

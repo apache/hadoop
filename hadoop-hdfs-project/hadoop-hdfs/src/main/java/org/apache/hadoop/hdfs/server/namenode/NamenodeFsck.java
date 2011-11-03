@@ -509,8 +509,9 @@ public class NamenodeFsck {
         
         String file = BlockReaderFactory.getFileName(targetAddr, block.getBlockPoolId(),
             block.getBlockId());
-        blockReader = BlockReaderFactory.newBlockReader(s, file, block, lblock
-            .getBlockToken(), 0, -1, conf.getInt("io.file.buffer.size", 4096));
+        blockReader = BlockReaderFactory.newBlockReader(
+            conf, s, file, block, lblock
+            .getBlockToken(), 0, -1);
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue

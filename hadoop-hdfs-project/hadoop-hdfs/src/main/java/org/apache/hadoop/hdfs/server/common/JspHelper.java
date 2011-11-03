@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -117,7 +118,8 @@ public class JspHelper {
       return 0;
     }
   }
-  public static DatanodeInfo bestNode(LocatedBlocks blks) throws IOException {
+  public static DatanodeInfo bestNode(LocatedBlocks blks, Configuration conf)
+      throws IOException {
     HashMap<DatanodeInfo, NodeRecord> map =
       new HashMap<DatanodeInfo, NodeRecord>();
     for (LocatedBlock block : blks.getLocatedBlocks()) {
@@ -133,16 +135,17 @@ public class JspHelper {
     }
     NodeRecord[] nodes = map.values().toArray(new NodeRecord[map.size()]);
     Arrays.sort(nodes, new NodeRecordComparator());
-    return bestNode(nodes, false);
+    return bestNode(nodes, false, conf);
   }
 
-  public static DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
+  public static DatanodeInfo bestNode(LocatedBlock blk, Configuration conf)
+      throws IOException {
     DatanodeInfo[] nodes = blk.getLocations();
-    return bestNode(nodes, true);
+    return bestNode(nodes, true, conf);
   }
 
-  public static DatanodeInfo bestNode(DatanodeInfo[] nodes, boolean doRandom)
-    throws IOException {
+  public static DatanodeInfo bestNode(DatanodeInfo[] nodes, boolean doRandom,
+      Configuration conf) throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     DatanodeInfo chosenNode = null;
     int failures = 0;
@@ -169,7 +172,7 @@ public class JspHelper {
           chosenNode.getHost() + ":" + chosenNode.getInfoPort());
         
       try {
-        s = new Socket();
+        s = NetUtils.getDefaultSocketFactory(conf).createSocket();
         s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
         s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       } catch (IOException e) {
@@ -191,27 +194,26 @@ public class JspHelper {
       long blockSize, long offsetIntoBlock, long chunkSizeToView,
       JspWriter out, Configuration conf) throws IOException {
     if (chunkSizeToView == 0) return;
-    Socket s = new Socket();
+    Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
     s.connect(addr, HdfsServerConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       
-    long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
+    int amtToRead = (int)Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
       
       // Use the block name for file name. 
-    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
-        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
     String file = BlockReaderFactory.getFileName(addr, poolId, blockId);
-    BlockReader blockReader = BlockReaderFactory.newBlockReader(s, file,
+    BlockReader blockReader = BlockReaderFactory.newBlockReader(
+        conf, s, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
-        offsetIntoBlock, amtToRead, bufferSize);
+        offsetIntoBlock, amtToRead);
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
     int retries = 2;
     while ( amtToRead > 0 ) {
-      int numRead;
+      int numRead = amtToRead;
       try {
-        numRead = blockReader.readAll(buf, readOffset, (int)amtToRead);
+        blockReader.readFully(buf, readOffset, amtToRead);
       }
       catch (IOException e) {
         retries--;

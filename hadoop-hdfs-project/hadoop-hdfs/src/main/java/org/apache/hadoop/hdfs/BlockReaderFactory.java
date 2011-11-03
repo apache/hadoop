@@ -22,6 +22,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient.Conf;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
@@ -32,17 +34,26 @@ import org.apache.hadoop.security.token.Token;
  */
 @InterfaceAudience.Private
 public class BlockReaderFactory {
-  public static BlockReader newBlockReader(Socket sock, String file,
+  /**
+   * @see #newBlockReader(Conf, Socket, String, ExtendedBlock, Token, long, long, int, boolean, String)
+   */
+  public static BlockReader newBlockReader(
+      Configuration conf,
+      Socket sock, String file,
       ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
-      long startOffset, long len, int bufferSize) throws IOException {
-    return newBlockReader(sock, file, block, blockToken, startOffset,
+      long startOffset, long len) throws IOException {
+    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
+        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    return newBlockReader(new Conf(conf),
+        sock, file, block, blockToken, startOffset,
         len, bufferSize, true, "");
   }
 
   /**
    * Create a new BlockReader specifically to satisfy a read.
    * This method also sends the OP_READ_BLOCK request.
-   *
+   * 
+   * @param conf the DFSClient configuration
    * @param sock  An established Socket to the DN. The BlockReader will not close it normally
    * @param file  File location
    * @param block  The block object
@@ -54,7 +65,9 @@ public class BlockReaderFactory {
    * @param clientName  Client name
    * @return New BlockReader instance, or null on error.
    */
+  @SuppressWarnings("deprecation")
   public static BlockReader newBlockReader(
+                                     Conf conf,
                                      Socket sock, String file,
                                      ExtendedBlock block, 
                                      Token<BlockTokenIdentifier> blockToken,
@@ -62,8 +75,13 @@ public class BlockReaderFactory {
                                      int bufferSize, boolean verifyChecksum,
                                      String clientName)
                                      throws IOException {
-    return RemoteBlockReader.newBlockReader(
-        sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);
+    if (conf.useLegacyBlockReader) {
+      return RemoteBlockReader.newBlockReader(
+          sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);
+    } else {
+      return RemoteBlockReader2.newBlockReader(
+          sock, file, block, blockToken, startOffset, len, bufferSize, verifyChecksum, clientName);      
+    }
   }
   
   /**

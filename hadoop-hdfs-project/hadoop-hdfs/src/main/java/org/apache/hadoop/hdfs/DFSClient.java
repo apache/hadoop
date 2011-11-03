@@ -155,6 +155,7 @@ public class DFSClient implements java.io.Closeable {
     final short defaultReplication;
     final String taskId;
     final FsPermission uMask;
+    final boolean useLegacyBlockReader;
 
     Conf(Configuration conf) {
       maxBlockAcquireFailures = conf.getInt(
@@ -192,6 +193,9 @@ public class DFSClient implements java.io.Closeable {
           .getInt(DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY,
               DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT);
       uMask = FsPermission.getUMask(conf);
+      useLegacyBlockReader = conf.getBoolean(
+          DFS_CLIENT_USE_LEGACY_BLOCKREADER,
+          DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
     }
 
     private int getChecksumType(Configuration conf) {

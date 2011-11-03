@@ -137,15 +137,15 @@ public class TestBlockTokenWithDFS {
     try {
       DatanodeInfo[] nodes = lblock.getLocations();
       targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
-      s = new Socket();
+      s = NetUtils.getDefaultSocketFactory(conf).createSocket();
       s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
       s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
       String file = BlockReaderFactory.getFileName(targetAddr, 
           "test-blockpoolid", block.getBlockId());
-      blockReader = BlockReaderFactory.newBlockReader(s, file, block, 
-          lblock.getBlockToken(), 0, -1, 
-          conf.getInt("io.file.buffer.size", 4096));
+      blockReader = BlockReaderFactory.newBlockReader(
+          conf, s, file, block, 
+          lblock.getBlockToken(), 0, -1);
 
     } catch (IOException ex) {
       if (ex instanceof InvalidBlockTokenException) {
