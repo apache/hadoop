@@ -36,7 +36,7 @@ public class TestDistributedShell {
   protected static MiniYARNCluster yarnCluster = null;
   protected static Configuration conf = new Configuration();
 
-  protected static String APPMASTER_JAR = "../hadoop-yarn-applications-distributedshell/target/hadoop-yarn-applications-distributedshell-0.23.0-SNAPSHOT.jar";
+  protected static String APPMASTER_JAR = "../hadoop-yarn-applications-distributedshell/target/hadoop-yarn-applications-distributedshell-0.23.0.jar";
 
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {
