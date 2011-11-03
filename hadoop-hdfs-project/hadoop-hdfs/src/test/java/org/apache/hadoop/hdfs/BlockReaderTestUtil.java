@@ -139,15 +139,17 @@ public class BlockReaderTestUtil {
     ExtendedBlock block = testBlock.getBlock();
     DatanodeInfo[] nodes = testBlock.getLocations();
     targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
-    sock = new Socket();
+    sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
     sock.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
     sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
     return BlockReaderFactory.newBlockReader(
+      new DFSClient.Conf(conf),
       sock, targetAddr.toString()+ ":" + block.getBlockId(), block,
       testBlock.getBlockToken(), 
       offset, lenToRead,
-      conf.getInt("io.file.buffer.size", 4096));
+      conf.getInt("io.file.buffer.size", 4096),
+      true, "");
   }
 
   /**

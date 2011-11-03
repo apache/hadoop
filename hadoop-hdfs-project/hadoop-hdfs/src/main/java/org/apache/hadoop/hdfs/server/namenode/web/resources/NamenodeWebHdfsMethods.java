@@ -118,8 +118,8 @@ public class NamenodeWebHdfsMethods {
   private @Context HttpServletResponse response;
 
   private static DatanodeInfo chooseDatanode(final NameNode namenode,
-      final String path, final HttpOpParam.Op op, final long openOffset
-      ) throws IOException {
+      final String path, final HttpOpParam.Op op, final long openOffset,
+      Configuration conf) throws IOException {
     if (op == GetOpParam.Op.OPEN
         || op == GetOpParam.Op.GETFILECHECKSUM
         || op == PostOpParam.Op.APPEND) {
@@ -139,7 +139,7 @@ public class NamenodeWebHdfsMethods {
         final LocatedBlocks locations = np.getBlockLocations(path, offset, 1);
         final int count = locations.locatedBlockCount();
         if (count > 0) {
-          return JspHelper.bestNode(locations.get(0));
+          return JspHelper.bestNode(locations.get(0), conf);
         }
       }
     } 
@@ -165,7 +165,8 @@ public class NamenodeWebHdfsMethods {
       final UserGroupInformation ugi, final DelegationParam delegation,
       final String path, final HttpOpParam.Op op, final long openOffset,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
-    final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset);
+    final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
+    final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset, conf);
 
     final String delegationQuery;
     if (!UserGroupInformation.isSecurityEnabled()) {

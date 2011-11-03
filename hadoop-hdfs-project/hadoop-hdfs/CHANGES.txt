@@ -108,6 +108,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2533. Remove needless synchronization on some FSDataSet methods.
     (todd)
 
+    HDFS-2129. Simplify BlockReader to not inherit from FSInputChecker.
+    (todd)
+
   BUG FIXES
 
 Release 0.23.0 - 2011-11-01 

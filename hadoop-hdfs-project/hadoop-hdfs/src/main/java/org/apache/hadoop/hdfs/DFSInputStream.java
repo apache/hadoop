@@ -780,7 +780,8 @@ public class DFSInputStream extends FSInputStream {
       try {
         // The OP_READ_BLOCK request is sent as we make the BlockReader
         BlockReader reader =
-            BlockReaderFactory.newBlockReader(sock, file, block,
+            BlockReaderFactory.newBlockReader(dfsClient.getConf(),
+                                       sock, file, block,
                                        blockToken,
                                        startOffset, len,
                                        bufferSize, verifyChecksum,

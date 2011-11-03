@@ -56,6 +56,7 @@ import static org.junit.Assert.*;
 public class TestDataNodeVolumeFailure {
   final private int block_size = 512;
   MiniDFSCluster cluster = null;
+  private Configuration conf;
   int dn_num = 2;
   int blocks_num = 30;
   short repl=2;
@@ -74,7 +75,7 @@ public class TestDataNodeVolumeFailure {
   @Before
   public void setUp() throws Exception {
     // bring up a cluster of 2
-    Configuration conf = new HdfsConfiguration();
+    conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, block_size);
     // Allow a single volume failure (there are two volumes)
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
@@ -264,7 +265,7 @@ public class TestDataNodeVolumeFailure {
    
     targetAddr = NetUtils.createSocketAddr(datanode.getName());
       
-    s = new Socket();
+    s = NetUtils.getDefaultSocketFactory(conf).createSocket();
     s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
@@ -272,8 +273,8 @@ public class TestDataNodeVolumeFailure {
         "test-blockpoolid",
         block.getBlockId());
     BlockReader blockReader = 
-      BlockReaderFactory.newBlockReader(s, file, block, lblock
-        .getBlockToken(), 0, -1, 4096);
+      BlockReaderFactory.newBlockReader(conf, s, file, block, lblock
+        .getBlockToken(), 0, -1);
 
     // nothing - if it fails - it will throw and exception
   }

@@ -20,14 +20,11 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.net.Socket;
 
-import org.apache.hadoop.fs.PositionedReadable;
-import org.apache.hadoop.fs.Seekable;
-
 /**
  * A BlockReader is responsible for reading a single block
  * from a single datanode.
  */
-public interface BlockReader extends Seekable, PositionedReadable {
+public interface BlockReader {
 
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()
@@ -43,16 +40,21 @@ public interface BlockReader extends Seekable, PositionedReadable {
    */
   long skip(long n) throws IOException;
 
-  /**
-   * Read a single byte, returning -1 at enf of stream.
-   */
-  int read() throws IOException;
-
   void close() throws IOException;
 
   /**
-   * kind of like readFully(). Only reads as much as possible.
-   * And allows use of protected readFully().
+   * Read exactly the given amount of data, throwing an exception
+   * if EOF is reached before that amount
+   */
+  void readFully(byte[] buf, int readOffset, int amtToRead) throws IOException;
+
+  /**
+   * Similar to {@link #readFully(byte[], int, int)} except that it will
+   * not throw an exception on EOF. However, it differs from the simple
+   * {@link #read(byte[], int, int)} call in that it is guaranteed to
+   * read the data if it is available. In other words, if this call
+   * does not throw an exception, then either the buffer has been
+   * filled or the next call will return EOF.
    */
   int readAll(byte[] buf, int offset, int len) throws IOException;
 
