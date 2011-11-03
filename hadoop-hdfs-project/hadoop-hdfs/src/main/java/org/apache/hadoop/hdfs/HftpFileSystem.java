@@ -372,13 +372,66 @@ public class HftpFileSystem extends FileSystem
     return query;
   }
 
+  static class RangeHeaderUrlOpener extends ByteRangeInputStream.URLOpener {
+    RangeHeaderUrlOpener(final URL url) {
+      super(url);
+    }
+
+    @Override
+    protected HttpURLConnection openConnection() throws IOException {
+      return (HttpURLConnection)url.openConnection();
+    }
+
+    /** Use HTTP Range header for specifying offset. */
+    @Override
+    protected HttpURLConnection openConnection(final long offset) throws IOException {
+      final HttpURLConnection conn = openConnection();
+      conn.setRequestMethod("GET");
+      if (offset != 0L) {
+        conn.setRequestProperty("Range", "bytes=" + offset + "-");
+      }
+      return conn;
+    }  
+  }
+
+  static class RangeHeaderInputStream extends ByteRangeInputStream {
+    RangeHeaderInputStream(RangeHeaderUrlOpener o, RangeHeaderUrlOpener r) {
+      super(o, r);
+    }
+
+    RangeHeaderInputStream(final URL url) {
+      this(new RangeHeaderUrlOpener(url), new RangeHeaderUrlOpener(null));
+    }
+
+    /** Expects HTTP_OK and HTTP_PARTIAL response codes. */
+    @Override
+    protected void checkResponseCode(final HttpURLConnection connection
+        ) throws IOException {
+      final int code = connection.getResponseCode();
+      if (startPos != 0 && code != HttpURLConnection.HTTP_PARTIAL) {
+        // We asked for a byte range but did not receive a partial content
+        // response...
+        throw new IOException("HTTP_PARTIAL expected, received " + code);
+      } else if (startPos == 0 && code != HttpURLConnection.HTTP_OK) {
+        // We asked for all bytes from the beginning but didn't receive a 200
+        // response (none of the other 2xx codes are valid here)
+        throw new IOException("HTTP_OK expected, received " + code);
+      }
+    }
+
+    @Override
+    protected URL getResolvedUrl(final HttpURLConnection connection) {
+      return connection.getURL();
+    }
+  }
+
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
     f = f.makeQualified(getUri(), getWorkingDirectory());
     String path = "/data" + ServletUtil.encodePath(f.toUri().getPath());
     String query = addDelegationTokenParam("ugi=" + getEncodedUgiParameter());
     URL u = getNamenodeURL(path, query);    
-    return new FSDataInputStream(new ByteRangeInputStream(u));
+    return new FSDataInputStream(new RangeHeaderInputStream(u));
   }
 
   /** Class to parse and store a listing reply from the server. */

@@ -91,8 +91,6 @@ Trunk (unreleased changes)
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
                reference to rpcProxyWithoutRetry (atm)
 
-    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
-
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -112,6 +110,15 @@ Release 0.23.1 - UNRELEASED
     (todd)
 
   BUG FIXES
+
+    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+
+    HDFS-2527. WebHdfs: remove the use of "Range" header in Open; use ugi
+    username if renewer parameter is null in GetDelegationToken; response OK
+    when setting replication for non-files; rename GETFILEBLOCKLOCATIONS to
+    GET_BLOCK_LOCATIONS and state that it is a private unstable API; replace
+    isDirectory and isSymlink with enum {FILE, DIRECTORY, SYMLINK} in
+    HdfsFileStatus JSON object.  (szetszwo)
 
 Release 0.23.0 - 2011-11-01 
 

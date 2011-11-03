@@ -134,6 +134,14 @@ public class JsonUtil {
     return new FsPermission(Short.parseShort(s, 8));
   }
 
+  static enum PathType {
+    FILE, DIRECTORY, SYMLINK;
+    
+    static PathType valueOf(HdfsFileStatus status) {
+      return status.isDir()? DIRECTORY: status.isSymlink()? SYMLINK: FILE;
+    }
+  }
+
   /** Convert a HdfsFileStatus object to a Json string. */
   public static String toJsonString(final HdfsFileStatus status,
       boolean includeType) {
@@ -142,13 +150,12 @@ public class JsonUtil {
     }
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("localName", status.getLocalName());
-    m.put("isDir", status.isDir());
-    m.put("isSymlink", status.isSymlink());
+    m.put("type", PathType.valueOf(status));
     if (status.isSymlink()) {
       m.put("symlink", status.getSymlink());
     }
 
-    m.put("len", status.getLen());
+    m.put("length", status.getLen());
     m.put("owner", status.getOwner());
     m.put("group", status.getGroup());
     m.put("permission", toString(status.getPermission()));
@@ -169,12 +176,11 @@ public class JsonUtil {
     final Map<?, ?> m = includesType ? 
         (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName()) : json;
     final String localName = (String) m.get("localName");
-    final boolean isDir = (Boolean) m.get("isDir");
-    final boolean isSymlink = (Boolean) m.get("isSymlink");
-    final byte[] symlink = isSymlink?
-        DFSUtil.string2Bytes((String)m.get("symlink")): null;
+    final PathType type = PathType.valueOf((String) m.get("type"));
+    final byte[] symlink = type != PathType.SYMLINK? null
+        : DFSUtil.string2Bytes((String)m.get("symlink"));
 
-    final long len = (Long) m.get("len");
+    final long len = (Long) m.get("length");
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
     final FsPermission permission = toFsPermission((String) m.get("permission"));
@@ -182,8 +188,8 @@ public class JsonUtil {
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
     final short replication = (short) (long) (Long) m.get("replication");
-    return new HdfsFileStatus(len, isDir, replication, blockSize, mTime, aTime,
-        permission, owner, group,
+    return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
+        blockSize, mTime, aTime, permission, owner, group,
         symlink, DFSUtil.string2Bytes(localName));
   }
 

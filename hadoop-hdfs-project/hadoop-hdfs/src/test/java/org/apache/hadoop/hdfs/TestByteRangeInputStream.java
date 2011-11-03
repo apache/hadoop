@@ -31,10 +31,10 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import org.apache.hadoop.hdfs.ByteRangeInputStream.URLOpener;
 import org.junit.Test;
 
-class MockHttpURLConnection extends HttpURLConnection {
+public class TestByteRangeInputStream {
+public static class MockHttpURLConnection extends HttpURLConnection {
   public MockHttpURLConnection(URL u) {
     super(u);
   }
@@ -85,54 +85,18 @@ class MockHttpURLConnection extends HttpURLConnection {
     responseCode = resCode;
   }
 }
-
-public class TestByteRangeInputStream {
-  @Test
-  public void testRemoveOffset() throws IOException {
-    { //no offset
-      String s = "http://test/Abc?Length=99";
-      assertEquals(s, ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
-    }
-
-    { //no parameters
-      String s = "http://test/Abc";
-      assertEquals(s, ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
-    }
-
-    { //offset as first parameter
-      String s = "http://test/Abc?offset=10&Length=99";
-      assertEquals("http://test/Abc?Length=99",
-          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
-    }
-
-    { //offset as second parameter
-      String s = "http://test/Abc?op=read&OFFset=10&Length=99";
-      assertEquals("http://test/Abc?op=read&Length=99",
-          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
-    }
-
-    { //offset as last parameter
-      String s = "http://test/Abc?Length=99&offset=10";
-      assertEquals("http://test/Abc?Length=99",
-          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
-    }
-
-    { //offset as the only parameter
-      String s = "http://test/Abc?offset=10";
-      assertEquals("http://test/Abc",
-          ByteRangeInputStream.removeOffsetParam(new URL(s)).toString());
-    }
-  }
   
   @Test
   public void testByteRange() throws IOException {
-    URLOpener ospy = spy(new URLOpener(new URL("http://test/")));
+    HftpFileSystem.RangeHeaderUrlOpener ospy = spy(
+        new HftpFileSystem.RangeHeaderUrlOpener(new URL("http://test/")));
     doReturn(new MockHttpURLConnection(ospy.getURL())).when(ospy)
         .openConnection();
-    URLOpener rspy = spy(new URLOpener((URL) null));
+    HftpFileSystem.RangeHeaderUrlOpener rspy = spy(
+        new HftpFileSystem.RangeHeaderUrlOpener((URL) null));
     doReturn(new MockHttpURLConnection(rspy.getURL())).when(rspy)
         .openConnection();
-    ByteRangeInputStream is = new ByteRangeInputStream(ospy, rspy);
+    ByteRangeInputStream is = new HftpFileSystem.RangeHeaderInputStream(ospy, rspy);
 
     assertEquals("getPos wrong", 0, is.getPos());
 
