@@ -16,11 +16,11 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.webapp;
+package org.apache.hadoop.yarn.webapp.log;
 
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-public class AggregatedLogsNavBlock extends HtmlBlock implements NMWebParams {
+public class AggregatedLogsNavBlock extends HtmlBlock {
 
   @Override
   protected void render(Block html) {

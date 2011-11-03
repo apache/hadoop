@@ -46,7 +46,7 @@ import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.LogDumper;
+import org.apache.hadoop.yarn.logaggregation.LogDumper;
 
 /**
  * Interprets the map reduce cli options 

@@ -43,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
@@ -138,83 +140,7 @@ public class LogAggregationService extends AbstractService implements
     super.stop();
   }
   
-  /**
-   * Constructs the full filename for an application's log file per node.
-   * @param remoteRootLogDir
-   * @param appId
-   * @param user
-   * @param nodeId
-   * @param suffix
-   * @return the remote log file.
-   */
-  public static Path getRemoteNodeLogFileForApp(Path remoteRootLogDir,
-      ApplicationId appId, String user, NodeId nodeId, String suffix) {
-    return new Path(getRemoteAppLogDir(remoteRootLogDir, appId, user, suffix),
-        getNodeString(nodeId));
-  }
-
-  /**
-   * Gets the remote app log dir.
-   * @param remoteRootLogDir
-   * @param appId
-   * @param user
-   * @param suffix
-   * @return the remote application specific log dir.
-   */
-  public static Path getRemoteAppLogDir(Path remoteRootLogDir,
-      ApplicationId appId, String user, String suffix) {
-    return new Path(getRemoteLogSuffixedDir(remoteRootLogDir, user, suffix),
-        appId.toString());
-  }
-
-  /**
-   * Gets the remote suffixed log dir for the user.
-   * @param remoteRootLogDir
-   * @param user
-   * @param suffix
-   * @return the remote suffixed log dir.
-   */
-  private static Path getRemoteLogSuffixedDir(Path remoteRootLogDir,
-      String user, String suffix) {
-    if (suffix == null || suffix.isEmpty()) {
-      return getRemoteLogUserDir(remoteRootLogDir, user);
-    }
-    // TODO Maybe support suffix to be more than a single file.
-    return new Path(getRemoteLogUserDir(remoteRootLogDir, user), suffix);
-  }
-
-  // TODO Add a utility method to list available log files. Ignore the
-  // temporary ones.
   
-  /**
-   * Gets the remote log user dir.
-   * @param remoteRootLogDir
-   * @param user
-   * @return the remote per user log dir.
-   */
-  private static Path getRemoteLogUserDir(Path remoteRootLogDir, String user) {
-    return new Path(remoteRootLogDir, user);
-  }
-
-  /**
-   * Returns the suffix component of the log dir.
-   * @param conf
-   * @return the suffix which will be appended to the user log dir.
-   */
-  public static String getRemoteNodeLogDirSuffix(Configuration conf) {
-    return conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
-  }
-
-  
-  /**
-   * Converts a nodeId to a form used in the app log file name.
-   * @param nodeId
-   * @return the node string to be used to construct the file name.
-   */
-  private static String getNodeString(NodeId nodeId) {
-    return nodeId.toString().replace(":", "_");
-  }
 
   
 
@@ -268,7 +194,7 @@ public class LogAggregationService extends AbstractService implements
   }
 
   Path getRemoteNodeLogFileForApp(ApplicationId appId, String user) {
-    return LogAggregationService.getRemoteNodeLogFileForApp(
+    return LogAggregationUtils.getRemoteNodeLogFileForApp(
         this.remoteRootLogDir, appId, user, this.nodeId,
         this.remoteRootLogDirSuffix);
   }
@@ -299,7 +225,7 @@ public class LogAggregationService extends AbstractService implements
           }
           try {
             userDir =
-                getRemoteLogUserDir(
+                LogAggregationUtils.getRemoteLogUserDir(
                     LogAggregationService.this.remoteRootLogDir, user);
             userDir =
                 userDir.makeQualified(remoteFS.getUri(),
@@ -312,7 +238,7 @@ public class LogAggregationService extends AbstractService implements
           }
           try {
             suffixDir =
-                getRemoteLogSuffixedDir(
+                LogAggregationUtils.getRemoteLogSuffixedDir(
                     LogAggregationService.this.remoteRootLogDir, user,
                     LogAggregationService.this.remoteRootLogDirSuffix);
             suffixDir =
@@ -326,8 +252,8 @@ public class LogAggregationService extends AbstractService implements
           }
           try {
             appDir =
-                getRemoteAppLogDir(LogAggregationService.this.remoteRootLogDir,
-                    appId, user,
+                LogAggregationUtils.getRemoteAppLogDir(
+                    LogAggregationService.this.remoteRootLogDir, appId, user,
                     LogAggregationService.this.remoteRootLogDirSuffix);
             appDir =
                 appDir.makeQualified(remoteFS.getUri(),

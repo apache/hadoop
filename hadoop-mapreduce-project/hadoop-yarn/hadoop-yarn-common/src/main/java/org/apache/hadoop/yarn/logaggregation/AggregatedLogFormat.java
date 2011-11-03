@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
+package org.apache.hadoop.yarn.logaggregation;
 
 import java.io.DataInput;
 import java.io.DataInputStream;

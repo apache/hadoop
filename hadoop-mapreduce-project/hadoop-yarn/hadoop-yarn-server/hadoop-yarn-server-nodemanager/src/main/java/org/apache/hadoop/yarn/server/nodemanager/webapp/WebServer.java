@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
@@ -76,7 +77,7 @@ public class WebServer extends AbstractService {
     super.stop();
   }
 
-  public static class NMWebApp extends WebApp implements NMWebParams {
+  public static class NMWebApp extends WebApp implements YarnWebParams {
 
     private final ResourceView resourceView;
     private final ApplicationACLsManager aclsManager;
