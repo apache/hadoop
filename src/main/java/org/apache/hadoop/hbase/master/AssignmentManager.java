@@ -1606,41 +1606,58 @@ public class AssignmentManager extends ZooKeeperListener {
   RegionPlan getRegionPlan(final RegionState state,
       final ServerName serverToExclude, final boolean forceNewPlan) {
     // Pickup existing plan or make a new one
-    String encodedName = state.getRegion().getEncodedName();
-    List<ServerName> servers = this.serverManager.getOnlineServersList();
-    // The remove below hinges on the fact that the call to
-    // serverManager.getOnlineServersList() returns a copy
+    final String encodedName = state.getRegion().getEncodedName();
+    final List<ServerName> servers = this.serverManager.getOnlineServersList();
+    final List<ServerName> drainingServers = this.serverManager.getDrainingServersList();
+
     if (serverToExclude != null) servers.remove(serverToExclude);
+
+    // Loop through the draining server list and remove them from the server
+    // list.
+    if (!drainingServers.isEmpty()) {
+      for (final ServerName server: drainingServers) {
+        LOG.debug("Removing draining server: " + server +
+            " from eligible server pool.");
+        servers.remove(server);
+      }
+    }
+
     if (servers.isEmpty()) return null;
+
     RegionPlan randomPlan = new RegionPlan(state.getRegion(), null,
       balancer.randomAssignment(servers));
     boolean newPlan = false;
     RegionPlan existingPlan = null;
+
     synchronized (this.regionPlans) {
       existingPlan = this.regionPlans.get(encodedName);
+
       if (existingPlan != null && existingPlan.getDestination() != null) {
         LOG.debug("Found an existing plan for " +
             state.getRegion().getRegionNameAsString() +
        " destination server is + " + existingPlan.getDestination().toString());
       }
-      if (forceNewPlan || existingPlan == null 
-              || existingPlan.getDestination() == null 
-              || existingPlan.getDestination().equals(serverToExclude)) {
+
+      if (forceNewPlan
+          || existingPlan == null
+          || existingPlan.getDestination() == null
+          || drainingServers.contains(existingPlan.getDestination())) {
         newPlan = true;
         this.regionPlans.put(encodedName, randomPlan);
       }
     }
+
     if (newPlan) {
       debugLog(state.getRegion(), "No previous transition plan was found (or we are ignoring " +
         "an existing plan) for " + state.getRegion().getRegionNameAsString() +
         " so generated a random one; " + randomPlan + "; " +
         serverManager.countOfRegionServers() +
-        " (online=" + serverManager.getOnlineServers().size() +
-        ", exclude=" + serverToExclude + ") available servers");
+               " (online=" + serverManager.getOnlineServers().size() +
+               ", exclude=" + drainingServers.size() + ") available servers");
         return randomPlan;
       }
       debugLog(state.getRegion(), "Using pre-existing plan for region " +
-        state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
+               state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
       return existingPlan;
   }
 

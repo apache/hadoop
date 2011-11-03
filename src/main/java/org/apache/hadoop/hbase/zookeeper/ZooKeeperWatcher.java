@@ -73,6 +73,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   public String rootServerZNode;
   // znode containing ephemeral nodes of the regionservers
   public String rsZNode;
+  // znode containing ephemeral nodes of the draining regionservers
+  public String drainingZNode;
   // znode of currently active master
   public String masterAddressZNode;
   // znode containing the current cluster state
@@ -90,13 +92,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
 
   private final Exception constructorCaller;
 
-  
+
   /**
    * Instantiate a ZooKeeper connection and watcher.
    * @param descriptor Descriptive string that is added to zookeeper sessionid
    * and used as identifier for this instance.
-   * @throws IOException 
-   * @throws ZooKeeperConnectionException 
+   * @throws IOException
+   * @throws ZooKeeperConnectionException
    */
   public ZooKeeperWatcher(Configuration conf, String descriptor,
       Abortable abortable) throws ZooKeeperConnectionException, IOException {
@@ -138,6 +140,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
       ZKUtil.createAndFailSilent(this, baseZNode);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
+      ZKUtil.createAndFailSilent(this, drainingZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);
       ZKUtil.createAndFailSilent(this, splitLogZNode);
     } catch (KeeperException e) {
@@ -175,6 +178,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         conf.get("zookeeper.znode.rootserver", "root-region-server"));
     rsZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.rs", "rs"));
+    drainingZNode = ZKUtil.joinZNode(baseZNode,
+        conf.get("zookeeper.znode.draining.rs", "draining"));
     masterAddressZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.master", "master"));
     clusterStateZNode = ZKUtil.joinZNode(baseZNode,

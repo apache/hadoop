@@ -827,6 +827,7 @@ Release 0.90.5 - Unreleased
                (Jonathan Hsieh)
    HBASE-4509  [hbck] Improve region map output
                (Jonathan Hsieh)
+   HBASE-4298  Support to drain RS nodes through ZK (Aravind Gottipati)
 
 Release 0.90.4 - August 10, 2011
 

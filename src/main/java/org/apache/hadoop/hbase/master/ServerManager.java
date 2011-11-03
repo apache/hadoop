@@ -80,6 +80,13 @@ public class ServerManager {
   private final Map<ServerName, HRegionInterface> serverConnections =
     new HashMap<ServerName, HRegionInterface>();
 
+  /**
+   * List of region servers <ServerName> that should not get any more new
+   * regions.
+   */
+  private final ArrayList<ServerName> drainingServers =
+    new ArrayList<ServerName>();
+
   private final Server master;
   private final MasterServices services;
   private final HConnection connection;
@@ -367,6 +374,43 @@ public class ServerManager {
         carryingRoot + ", meta=" + carryingMeta);
   }
 
+  /*
+   * Remove the server from the drain list.
+   */
+  public boolean removeServerFromDrainList(final ServerName sn) {
+    // Warn if the server (sn) is not online.  ServerName is of the form:
+    // <hostname> , <port> , <startcode>
+
+    if (!this.isServerOnline(sn)) {
+      LOG.warn("Server " + sn + " is not currently online. " +
+               "Removing from draining list anyway, as requested.");
+    }
+    // Remove the server from the draining servers lists.
+    return this.drainingServers.remove(sn);
+  }
+
+  /*
+   * Add the server to the drain list.
+   */
+  public boolean addServerToDrainList(final ServerName sn) {
+    // Warn if the server (sn) is not online.  ServerName is of the form:
+    // <hostname> , <port> , <startcode>
+
+    if (!this.isServerOnline(sn)) {
+      LOG.warn("Server " + sn + " is not currently online. " +
+               "Ignoring request to add it to draining list.");
+      return false;
+    }
+    // Add the server to the draining servers lists, if it's not already in
+    // it.
+    if (this.drainingServers.contains(sn)) {
+      LOG.warn("Server " + sn + " is already in the draining server list." +
+               "Ignoring request to add it again.");
+      return false;
+    }
+    return this.drainingServers.add(sn);
+  }
+
   // RPC methods to region servers
 
   /**
@@ -487,6 +531,13 @@ public class ServerManager {
     // TODO: optimize the load balancer call so we don't need to make a new list
     // TODO: FIX. THIS IS POPULAR CALL.
     return new ArrayList<ServerName>(this.onlineServers.keySet());
+  }
+
+  /**
+   * @return A copy of the internal list of draining servers.
+   */
+  public List<ServerName> getDrainingServersList() {
+    return new ArrayList<ServerName>(this.drainingServers);
   }
 
   public boolean isServerOnline(ServerName serverName) {
