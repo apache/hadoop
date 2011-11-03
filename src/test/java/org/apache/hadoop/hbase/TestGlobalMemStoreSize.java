@@ -77,7 +77,7 @@ public class TestGlobalMemStoreSize {
         regionNum);
     assertEquals(regionNum,numRegions);
     waitForAllRegionsAssigned();
-    
+        
     for (HRegionServer server : getOnlineRegionServers()) {
       long globalMemStoreSize = 0;
       for(HRegionInfo regionInfo : server.getOnlineRegions()) {
@@ -90,11 +90,14 @@ public class TestGlobalMemStoreSize {
     }
     
     // check the global memstore size after flush
+    int i = 0;
     for (HRegionServer server : getOnlineRegionServers()) {
+      LOG.info("Starting flushes on " + server.getServerName() + ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());
       for(HRegionInfo regionInfo : server.getOnlineRegions()) {
         HRegion region= 
           server.getFromOnlineRegions(regionInfo.getEncodedName());
-        region.flushcache();
+        LOG.info("Flush " + region.toString() + " on " + server.getServerName() + ", " +
+          region.flushcache() + ", size=" + server.getRegionServerAccounting().getGlobalMemstoreSize());;
       }
       assertEquals(server.getRegionServerAccounting().getGlobalMemstoreSize(),
           0);

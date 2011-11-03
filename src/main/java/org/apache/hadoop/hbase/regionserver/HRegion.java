@@ -1166,7 +1166,7 @@ public class HRegion implements HeapSize { // , Writable{
     status.setStatus("Obtaining lock to block concurrent updates");
     this.updatesLock.writeLock().lock();
     status.setStatus("Preparing to flush by snapshotting stores");
-    final long currentMemStoreSize = this.memstoreSize.get();
+    long currentMemStoreSize = 0;
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
       sequenceId = (wal == null)? myseqid :
@@ -1212,7 +1212,8 @@ public class HRegion implements HeapSize { // , Writable{
       storeFlushers.clear();
 
       // Set down the memstore size by amount of flush.
-      this.addAndGetGlobalMemstoreSize(-currentMemStoreSize);
+      currentMemStoreSize =
+        this.addAndGetGlobalMemstoreSize(-this.memstoreSize.get());
     } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memstore.
