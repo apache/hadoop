@@ -1876,6 +1876,8 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-3332. contrib/raid compile breaks due to changes in hdfs/protocol/datatransfer/
     Sender#writeBlock related to checksum handling (Hitesh Shah via mahadev)
 
+    MAPREDUCE-3337. Added missing license headers. (acmurthy) 
+    
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
