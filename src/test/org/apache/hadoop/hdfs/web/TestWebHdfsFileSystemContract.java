@@ -300,7 +300,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod(op.getType().toString());
       conn.connect();
-      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
       
       assertFalse(webhdfs.setReplication(dir, (short)1));
       conn.disconnect();
