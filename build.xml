@@ -1424,7 +1424,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc"
+  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="Build distribution">
     <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
@@ -1523,6 +1523,14 @@
 
     <copy todir="${dist.dir}/" file="build.xml"/>
 
+    <subant target="task-controller">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+
+    <subant target="jsvc">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/sbin"/>
@@ -1564,7 +1572,7 @@
     </macro_tar>
   </target>
 
-  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc" 
+  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
 		description="assembles artifacts for binary target">
     <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
@@ -1666,6 +1674,14 @@
         <include name="**/lib/*"/>
       </fileset>
     </copy>
+
+    <subant target="task-controller">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+
+    <subant target="jsvc">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
 
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
