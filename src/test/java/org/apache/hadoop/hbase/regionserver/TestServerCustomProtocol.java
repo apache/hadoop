@@ -27,6 +27,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -51,7 +54,7 @@ public class TestServerCustomProtocol {
   private static final Log LOG = LogFactory.getLog(TestServerCustomProtocol.class);
 
   /* Test protocol */
-  private static interface PingProtocol extends CoprocessorProtocol {
+  public static interface PingProtocol extends CoprocessorProtocol {
     public String ping();
     public int getPingCount();
     public int incrementCount(int diff);
@@ -59,7 +62,7 @@ public class TestServerCustomProtocol {
   }
 
   /* Test protocol implementation */
-  private static class PingHandler implements PingProtocol, VersionedProtocol {
+  public static class PingHandler implements Coprocessor, PingProtocol, VersionedProtocol {
     static int VERSION = 1;
 
     private int counter = 0;
@@ -94,6 +97,14 @@ public class TestServerCustomProtocol {
     public long getProtocolVersion(String s, long l) throws IOException {
       return VERSION;
     }
+
+    @Override
+    public void start(CoprocessorEnvironment env) throws IOException {
+    }
+
+    @Override
+    public void stop(CoprocessorEnvironment env) throws IOException {
+    }
   }
 
   private static final byte[] TEST_TABLE = Bytes.toBytes("test");
@@ -111,23 +122,16 @@ public class TestServerCustomProtocol {
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    util.startMiniCluster(2);
+    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        PingHandler.class.getName());
+    util.startMiniCluster(1);
     cluster = util.getMiniHBaseCluster();
+
     HTable table = util.createTable(TEST_TABLE, TEST_FAMILY);
     util.createMultiRegions(util.getConfiguration(), table, TEST_FAMILY,
         new byte[][]{ HConstants.EMPTY_BYTE_ARRAY,
             ROW_B, ROW_C});
 
-    // TODO: use a test coprocessor for registration (once merged with CP code)
-    // sleep here is an ugly hack to allow region transitions to finish
-    Thread.sleep(5000);
-    for (JVMClusterUtil.RegionServerThread t :
-      cluster.getRegionServerThreads()) {
-      for (HRegionInfo r : t.getRegionServer().getOnlineRegions()) {
-        t.getRegionServer().getOnlineRegion(r.getRegionName())
-            .registerProtocol(PingProtocol.class, new PingHandler());
-      }
-    }
     Put puta = new Put( ROW_A );
     puta.add(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(puta);

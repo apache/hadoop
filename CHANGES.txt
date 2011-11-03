@@ -413,6 +413,7 @@ Release 0.92.0 - Unreleased
    HBASE-4651  ConcurrentModificationException might be thrown in
                TestHCM.testConnectionUniqueness (Jinchao)
    HBASE-4690  Intermittent TestRegionServerCoprocessorExceptionWithAbort failure
+   HBASE-4518  TestServerCustomProtocol fails intermittently
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
