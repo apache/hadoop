@@ -134,6 +134,14 @@ public class JsonUtil {
     return new FsPermission(Short.parseShort(s, 8));
   }
 
+  static enum PathType {
+    FILE, DIRECTORY;
+    
+    static PathType valueOf(HdfsFileStatus status) {
+      return status.isDir()? DIRECTORY: FILE;
+    }
+  }
+
   /** Convert a HdfsFileStatus object to a Json string. */
   public static String toJsonString(final HdfsFileStatus status,
       boolean includeType) {
@@ -142,8 +150,8 @@ public class JsonUtil {
     }
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("localName", status.getLocalName());
-    m.put("isDir", status.isDir());
-    m.put("len", status.getLen());
+    m.put("type", PathType.valueOf(status));
+    m.put("length", status.getLen());
     m.put("owner", status.getOwner());
     m.put("group", status.getGroup());
     m.put("permission", toString(status.getPermission()));
@@ -164,8 +172,9 @@ public class JsonUtil {
     final Map<?, ?> m = includesType ? 
         (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName()) : json;
     final String localName = (String) m.get("localName");
-    final boolean isDir = (Boolean) m.get("isDir");
-    final long len = (Long) m.get("len");
+    final PathType type = PathType.valueOf((String) m.get("type"));
+
+    final long len = (Long) m.get("length");
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
     final FsPermission permission = toFsPermission((String) m.get("permission"));
@@ -173,8 +182,9 @@ public class JsonUtil {
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
     final short replication = (short) (long) (Long) m.get("replication");
-    return new HdfsFileStatus(len, isDir, replication, blockSize, mTime, aTime,
-        permission, owner, group, DFSUtil.string2Bytes(localName));
+    return new HdfsFileStatus(len, type == PathType.DIRECTORY, replication,
+        blockSize, mTime, aTime, permission, owner, group,
+        DFSUtil.string2Bytes(localName));
   }
 
   /** Convert a Block to a Json map. */
