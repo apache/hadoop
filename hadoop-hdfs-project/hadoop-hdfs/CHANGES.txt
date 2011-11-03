@@ -877,6 +877,9 @@ Release 0.23.0 - 2011-11-01
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
 
+    HDFS-2533. Remove needless synchronization on some FSDataSet methods.
+    (todd)
+
   BUG FIXES
 
     HDFS-2347. Fix checkpointTxnCount's comment about editlog size. 
