@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Test;
@@ -68,11 +69,11 @@ public class TestHRegionInfo {
 
     // Delete the temporary table directory that might still be there from the
     // previous test run.
-    FSUtils.deleteTableDescriptorIfExists(tablename,
+    FSTableDescriptors.deleteTableDescriptorIfExists(tablename,
         HTU.getConfiguration());
 
     HTableDescriptor htd = new HTableDescriptor(tablename);
-    FSUtils.createTableDescriptor(htd, HTU.getConfiguration());
+    FSTableDescriptors.createTableDescriptor(htd, HTU.getConfiguration());
     HRegionInfo hri = new HRegionInfo(Bytes.toBytes("testGetSetOfHTD"),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
     HTableDescriptor htd2 = hri.getTableDesc();

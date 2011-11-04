@@ -152,7 +152,7 @@ class HMerge {
           fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR))),
           Bytes.toString(tableName)
       );
-      this.htd = FSUtils.getTableDescriptor(this.fs, this.tabledir);
+      this.htd = FSTableDescriptors.getTableDescriptor(this.fs, this.tabledir);
       Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
           HConstants.HREGION_LOGDIR_NAME);
       Path oldLogDir = new Path(tabledir, HConstants.HREGION_OLDLOGDIR_NAME);

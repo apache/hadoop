@@ -237,7 +237,7 @@ public class Merge extends Configured implements Tool {
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta2);
     }
-    HTableDescriptor htd = FSUtils.getTableDescriptor(FileSystem.get(getConf()),
+    HTableDescriptor htd = FSTableDescriptors.getTableDescriptor(FileSystem.get(getConf()),
       this.rootdir, this.tableName);
     HRegion merged = merge(htd, info1, metaRegion1, info2, metaRegion2);
 

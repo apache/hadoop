@@ -182,9 +182,6 @@ public final class HConstants {
   /** Used to construct the name of the compaction directory during compaction */
   public static final String HREGION_COMPACTIONDIR_NAME = "compaction.dir";
 
-  /** The file name used to store HTD in HDFS  */
-  public static final String TABLEINFO_NAME = ".tableinfo";
-
   /** Default maximum file size */
   public static final long DEFAULT_MAX_FILE_SIZE = 256 * 1024 * 1024;
 

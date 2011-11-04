@@ -29,21 +29,21 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.zookeeper.KeeperException;
-import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Handler to create a table.
@@ -137,7 +137,7 @@ public class CreateTableHandler extends EventHandler {
     // tableDir is created.  Should we change below method to be createTable
     // where we create table in tmp dir with its table descriptor file and then
     // do rename to move it into place?
-    FSUtils.createTableDescriptor(this.hTableDescriptor, this.conf);
+    FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
 
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
     final int batchSize =

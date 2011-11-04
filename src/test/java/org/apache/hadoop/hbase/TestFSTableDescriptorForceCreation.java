@@ -27,7 +27,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.*;
 
 public class TestFSTableDescriptorForceCreation {
@@ -42,7 +41,7 @@ public class TestFSTableDescriptorForceCreation {
     HTableDescriptor htd = new HTableDescriptor(name);
 
     assertTrue("Should create new table descriptor",
-      FSUtils.createTableDescriptor(fs, rootdir, htd, false));
+      FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, false));
   }
 
   @Test
@@ -55,8 +54,8 @@ public class TestFSTableDescriptorForceCreation {
     TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(name);
     htds.add(htd);
-    assertFalse("Should not create new table descriptor", FSUtils
-      .createTableDescriptor(fs, rootdir, htd, false));
+    assertFalse("Should not create new table descriptor",
+      FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, false));
   }
 
   @Test
@@ -66,8 +65,8 @@ public class TestFSTableDescriptorForceCreation {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
     HTableDescriptor htd = new HTableDescriptor(name);
-    FSUtils.createTableDescriptor(fs, rootdir, htd, false);
-    assertTrue("Should create new table descriptor", FSUtils
-      .createTableDescriptor(fs, rootdir, htd, true));
+    FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, false);
+    assertTrue("Should create new table descriptor",
+      FSTableDescriptors.createTableDescriptor(fs, rootdir, htd, true));
   }
 }

@@ -96,7 +96,7 @@ public class TestMergeTable {
 
     // Create regions and populate them at same time.  Create the tabledir
     // for them first.
-    FSUtils.createTableDescriptor(fs, rootdir, desc);
+    FSTableDescriptors.createTableDescriptor(fs, rootdir, desc);
     HRegion [] regions = {
       createRegion(desc, null, row_70001, 1, 70000, rootdir),
       createRegion(desc, row_70001, row_80001, 70001, 10000, rootdir),

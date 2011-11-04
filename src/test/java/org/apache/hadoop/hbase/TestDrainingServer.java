@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -63,7 +64,8 @@ public class TestDrainingServer {
         HBaseTestingUtility.KEYS);
     // Make a mark for the table in the filesystem.
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
-    FSUtils.createTableDescriptor(fs, FSUtils.getRootDir(TEST_UTIL.getConfiguration()), htd);
+    FSTableDescriptors.
+      createTableDescriptor(fs, FSUtils.getRootDir(TEST_UTIL.getConfiguration()), htd);
     // Assign out the regions we just created.
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.disableTable(TABLENAME);

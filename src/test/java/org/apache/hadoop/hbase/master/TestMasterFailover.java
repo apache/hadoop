@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -357,7 +357,7 @@ public class TestMasterFailover {
     Path rootdir = filesystem.makeQualified(
         new Path(conf.get(HConstants.HBASE_DIR)));
     // Write the .tableinfo
-    FSUtils.createTableDescriptor(filesystem, rootdir, htdEnabled);
+    FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdEnabled);
 
     HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(), null, null);
     HRegion.createHRegion(hriEnabled, rootdir, conf, htdEnabled);
@@ -369,7 +369,7 @@ public class TestMasterFailover {
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
     // Write the .tableinfo
-    FSUtils.createTableDescriptor(filesystem, rootdir, htdDisabled);
+    FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdDisabled);
     HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
     HRegion.createHRegion(hriDisabled, rootdir, conf, htdDisabled);
     List<HRegionInfo> disabledRegions = TEST_UTIL.createMultiRegionsInMeta(
@@ -681,7 +681,7 @@ public class TestMasterFailover {
     Path rootdir = filesystem.makeQualified(
            new Path(conf.get(HConstants.HBASE_DIR)));
     // Write the .tableinfo
-    FSUtils.createTableDescriptor(filesystem, rootdir, htdEnabled);
+    FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdEnabled);
     HRegionInfo hriEnabled = new HRegionInfo(htdEnabled.getName(),
         null, null);
     HRegion.createHRegion(hriEnabled, rootdir, conf, htdEnabled);
@@ -693,7 +693,7 @@ public class TestMasterFailover {
     HTableDescriptor htdDisabled = new HTableDescriptor(disabledTable);
     htdDisabled.addFamily(new HColumnDescriptor(FAMILY));
     // Write the .tableinfo
-    FSUtils.createTableDescriptor(filesystem, rootdir, htdDisabled);
+    FSTableDescriptors.createTableDescriptor(filesystem, rootdir, htdDisabled);
     HRegionInfo hriDisabled = new HRegionInfo(htdDisabled.getName(), null, null);
     HRegion.createHRegion(hriDisabled, rootdir, conf, htdDisabled);
 

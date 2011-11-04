@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -360,9 +361,9 @@ public class MasterFileSystem {
 
   private void createRootTableInfo(Path rd) throws IOException {
     // Create ROOT tableInfo if required.
-    if (!FSUtils.tableInfoExists(fs, rd,
+    if (!FSTableDescriptors.isTableInfoExists(fs, rd,
         Bytes.toString(HRegionInfo.ROOT_REGIONINFO.getTableName()))) {
-      FSUtils.createTableDescriptor(HTableDescriptor.ROOT_TABLEDESC, this.conf);
+      FSTableDescriptors.createTableDescriptor(HTableDescriptor.ROOT_TABLEDESC, this.conf);
     }
   }
 
@@ -451,7 +452,7 @@ public class MasterFileSystem {
    */
   public void createTableDescriptor(HTableDescriptor htableDescriptor)
       throws IOException {
-    FSUtils.createTableDescriptor(htableDescriptor, conf);
+    FSTableDescriptors.createTableDescriptor(htableDescriptor, conf);
   }
 
   /**

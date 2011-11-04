@@ -21,9 +21,11 @@ import static org.junit.Assert.*;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -41,6 +43,87 @@ import org.junit.Test;
 public class TestFSTableDescriptors {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestFSTableDescriptors.class);
+
+  @Test (expected=IllegalArgumentException.class)
+  public void testRegexAgainstOldStyleTableInfo() {
+    Path p = new Path("/tmp", FSTableDescriptors.TABLEINFO_NAME);
+    int i = FSTableDescriptors.getTableInfoSequenceid(p);
+    assertEquals(0, i);
+    // Assert it won't eat garbage -- that it fails
+    p = new Path("/tmp", "abc");
+    FSTableDescriptors.getTableInfoSequenceid(p);
+  }
+
+  @Test
+  public void testCreateAndUpdate() throws IOException {
+    Path testdir = UTIL.getDataTestDir();
+    HTableDescriptor htd = new HTableDescriptor("testCreate");
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    assertTrue(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
+    assertFalse(FSTableDescriptors.createTableDescriptor(fs, testdir, htd));
+    FileStatus [] statuses = fs.listStatus(testdir);
+    assertTrue(statuses.length == 1);
+    for (int i = 0; i < 10; i++) {
+      FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    }
+    statuses = fs.listStatus(testdir);
+    assertTrue(statuses.length == 1);
+    Path tmpTableDir = new Path(FSUtils.getTablePath(testdir, htd.getName()), ".tmp");
+    statuses = fs.listStatus(tmpTableDir);
+    assertTrue(statuses.length == 0);
+  }
+
+  @Test
+  public void testSequenceidAdvancesOnTableInfo() throws IOException {
+    Path testdir = UTIL.getDataTestDir("testSequenceidAdvancesOnTableInfo");
+    HTableDescriptor htd = new HTableDescriptor("testSequenceidAdvancesOnTableInfo");
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    Path p0 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    int i0 = FSTableDescriptors.getTableInfoSequenceid(p0);
+    Path p1 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    // Assert we cleaned up the old file.
+    assertTrue(!fs.exists(p0));
+    int i1 = FSTableDescriptors.getTableInfoSequenceid(p1);
+    assertTrue(i1 == i0 + 1);
+    Path p2 = FSTableDescriptors.updateHTableDescriptor(fs, testdir, htd);
+    // Assert we cleaned up the old file.
+    assertTrue(!fs.exists(p1));
+    int i2 = FSTableDescriptors.getTableInfoSequenceid(p2);
+    assertTrue(i2 == i1 + 1);
+  }
+
+  @Test
+  public void testFormatTableInfoSequenceId() {
+    Path p0 = assertWriteAndReadSequenceid(0);
+    // Assert p0 has format we expect.
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < FSTableDescriptors.WIDTH_OF_SEQUENCE_ID; i++) {
+      sb.append("0");
+    }
+    assertEquals(FSTableDescriptors.TABLEINFO_NAME + "." + sb.toString(),
+      p0.getName());
+    // Check a few more.
+    Path p2 = assertWriteAndReadSequenceid(2);
+    Path p10000 = assertWriteAndReadSequenceid(10000);
+    // Get a .tablinfo that has no sequenceid suffix.
+    Path p = new Path(p0.getParent(), FSTableDescriptors.TABLEINFO_NAME);
+    FileStatus fs = new FileStatus(0, false, 0, 0, 0, p);
+    FileStatus fs0 = new FileStatus(0, false, 0, 0, 0, p0);
+    FileStatus fs2 = new FileStatus(0, false, 0, 0, 0, p2);
+    FileStatus fs10000 = new FileStatus(0, false, 0, 0, 0, p10000);
+    FSTableDescriptors.FileStatusFileNameComparator comparator =
+      new FSTableDescriptors.FileStatusFileNameComparator();
+    assertTrue(comparator.compare(fs, fs0) > 0);
+    assertTrue(comparator.compare(fs0, fs2) > 0);
+    assertTrue(comparator.compare(fs2, fs10000) > 0);
+  }
+
+  private Path assertWriteAndReadSequenceid(final int i) {
+    Path p = FSTableDescriptors.getTableInfoFileName(new Path("/tmp"), i);
+    int ii = FSTableDescriptors.getTableInfoSequenceid(p);
+    assertEquals(i, ii);
+    return p;
+  }
 
   @Test
   public void testRemoves() throws IOException {
@@ -62,14 +145,14 @@ public class TestFSTableDescriptors {
     Path rootdir = UTIL.getDataTestDir(name);
     createHTDInFS(fs, rootdir, htd);
     HTableDescriptor htd2 =
-      FSUtils.getTableDescriptor(fs, rootdir, htd.getNameAsString());
+      FSTableDescriptors.getTableDescriptor(fs, rootdir, htd.getNameAsString());
     assertTrue(htd.equals(htd2));
   }
 
   private void createHTDInFS(final FileSystem fs, Path rootdir,
       final HTableDescriptor htd)
   throws IOException {
-    FSUtils.createTableDescriptor(fs, rootdir, htd);
+    FSTableDescriptors.createTableDescriptor(fs, rootdir, htd);
   }
 
   @Test public void testHTableDescriptors()
@@ -102,7 +185,7 @@ public class TestFSTableDescriptors {
     for (int i = 0; i < count; i++) {
       HTableDescriptor htd = new HTableDescriptor(name + i);
       htd.addFamily(new HColumnDescriptor("" + i));
-      FSUtils.updateHTableDescriptor(fs, rootdir, htd);
+      FSTableDescriptors.updateHTableDescriptor(fs, rootdir, htd);
     }
     // Wait a while so mod time we write is for sure different.
     Thread.sleep(100);
@@ -121,7 +204,7 @@ public class TestFSTableDescriptors {
       htds.cachehits >= ((count * 2) + 1));
   }
 
-  @Test (expected=java.io.FileNotFoundException.class)
+  @Test (expected=org.apache.hadoop.hbase.TableExistsException.class)
   public void testNoSuchTable() throws IOException {
     final String name = "testNoSuchTable";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
@@ -142,5 +225,31 @@ public class TestFSTableDescriptors {
     htds.add(htd);
     htds.add(htd);
     htds.add(htd);
+  }
+
+  @Test
+  public void testTableInfoFileStatusComparator() {
+    FileStatus bare =
+      new FileStatus(0, false, 0, 0, -1, new Path("/tmp", FSTableDescriptors.TABLEINFO_NAME));
+    FileStatus future =
+      new FileStatus(0, false, 0, 0, -1,
+        new Path("/tmp/tablinfo." + System.currentTimeMillis()));
+    FileStatus farFuture =
+      new FileStatus(0, false, 0, 0, -1,
+        new Path("/tmp/tablinfo." + System.currentTimeMillis() + 1000));
+    FileStatus [] alist = {bare, future, farFuture};
+    FileStatus [] blist = {bare, farFuture, future};
+    FileStatus [] clist = {farFuture, bare, future};
+    FSTableDescriptors.FileStatusFileNameComparator c =
+      new FSTableDescriptors.FileStatusFileNameComparator();
+    Arrays.sort(alist, c);
+    Arrays.sort(blist, c);
+    Arrays.sort(clist, c);
+    // Now assert all sorted same in way we want.
+    for (int i = 0; i < alist.length; i++) {
+      assertTrue(alist[i].equals(blist[i]));
+      assertTrue(blist[i].equals(clist[i]));
+      assertTrue(clist[i].equals(i == 0? farFuture: i == 1? future: bare));
+    }
   }
 }
