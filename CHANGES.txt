@@ -404,6 +404,7 @@ Release 0.92.0 - Unreleased
    HBASE-4716  Improve locking for single column family bulk load
    HBASE-2312  Possible data loss when RS goes into GC pause while rolling HLog (requires HDFS 0.20.205.1+)
    HBASE-4553  The update of .tableinfo is not atomic; we remove then rename
+   HBASE-4725  NPE in AM#updateTimers
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

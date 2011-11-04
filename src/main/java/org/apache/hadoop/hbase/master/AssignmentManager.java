@@ -1056,6 +1056,7 @@ public class AssignmentManager extends ZooKeeperListener {
       copy.putAll(this.regionPlans);
     }
     for (Map.Entry<String, RegionPlan> e: copy.entrySet()) {
+      if (e.getValue() == null || e.getValue().getDestination() == null) continue;
       if (!e.getValue().getDestination().equals(sn)) continue;
       RegionState rs = null;
       synchronized (this.regionsInTransition) {
