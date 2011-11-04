@@ -29,7 +29,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -48,26 +47,27 @@ public class TestDelegationToken {
     cluster = new MiniMRCluster(0,0,1,"file:///",1);
   }
   
+  @SuppressWarnings("deprecation")
   @Test
-  @Ignore
   public void testDelegationToken() throws Exception {
     
-    JobClient client;
+    final JobClient client;
     client = user1.doAs(new PrivilegedExceptionAction<JobClient>(){
-
       @Override
       public JobClient run() throws Exception {
         return new JobClient(cluster.createJobConf());
-      }});
-    JobClient bobClient;
-    bobClient = user2.doAs(new PrivilegedExceptionAction<JobClient>(){
-
-      @Override
-      public JobClient run() throws Exception {
-        return new JobClient(cluster.createJobConf());
-      }});
+      }
+    });
     
-    Token<DelegationTokenIdentifier> token = 
+    final JobClient bobClient;
+    bobClient = user2.doAs(new PrivilegedExceptionAction<JobClient>(){
+      @Override
+      public JobClient run() throws Exception {
+        return new JobClient(cluster.createJobConf());
+      }
+    });
+    
+    final Token<DelegationTokenIdentifier> token = 
       client.getDelegationToken(new Text(user1.getUserName()));
     
     DataInputBuffer inBuf = new DataInputBuffer();
@@ -85,26 +85,58 @@ public class TestDelegationToken {
     System.out.println("max time: " + maxTime);
     assertTrue("createTime < current", createTime < currentTime);
     assertTrue("current < maxTime", currentTime < maxTime);
-    client.renewDelegationToken(token);
-    client.renewDelegationToken(token);
-    try {
-      bobClient.renewDelegationToken(token);
-      Assert.fail("bob renew");
-    } catch (AccessControlException ace) {
-      // PASS
-    }
-    try {
-      bobClient.cancelDelegationToken(token);
-      Assert.fail("bob renew");
-    } catch (AccessControlException ace) {
-      // PASS
-    }
-    client.cancelDelegationToken(token);
-    try {
-      client.cancelDelegationToken(token);
-      Assert.fail("second alice cancel");
-    } catch (InvalidToken it) {
-      // PASS
-    }
+
+    // renew should work as user alice
+    user1.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        client.renewDelegationToken(token);
+        client.renewDelegationToken(token);
+        return null;
+      }   
+    });
+    
+    // bob should fail to renew
+    user2.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        try {
+          bobClient.renewDelegationToken(token);
+          Assert.fail("bob renew");
+        } catch (AccessControlException ace) {
+          // PASS
+        }
+        return null;
+      }
+    });
+        
+    // bob should fail to cancel
+    user2.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        try {
+          bobClient.cancelDelegationToken(token);
+          Assert.fail("bob cancel");
+        } catch (AccessControlException ace) {
+          // PASS
+        }
+        return null;
+      }
+    });
+    
+    // alice should be able to cancel but only cancel once
+    user1.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        client.cancelDelegationToken(token);
+        try {
+          client.cancelDelegationToken(token);
+          Assert.fail("second alice cancel");
+        } catch (InvalidToken it) {
+          // PASS
+        }
+        return null;
+      }   
+    });
   }
 }
