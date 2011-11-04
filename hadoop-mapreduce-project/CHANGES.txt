@@ -75,6 +75,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3219. Reenabled and fixed bugs in the failing test
     TestDelegationToken. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3217. Reenabled and fixed bugs in the failing ant test
+    TestAuditLogger. (Devaraj K via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
