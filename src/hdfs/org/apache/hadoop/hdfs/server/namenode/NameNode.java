@@ -597,11 +597,23 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return clientMachine;
   }
 
+  @Deprecated
+  public void create(String src, 
+                     FsPermission masked,
+                             String clientName, 
+                             boolean overwrite,
+                             short replication,
+                             long blockSize
+                             ) throws IOException {
+    create(src,masked,clientName,overwrite,true,replication,blockSize);
+  }
+
   /** {@inheritDoc} */
   public void create(String src, 
                      FsPermission masked,
                              String clientName, 
                              boolean overwrite,
+                             boolean createParent,
                              short replication,
                              long blockSize
                              ) throws IOException {
@@ -617,7 +629,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.startFile(src,
         new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             null, masked),
-        clientName, clientMachine, overwrite, replication, blockSize);
+        clientName, clientMachine, overwrite, createParent, replication, blockSize);
     myMetrics.incrNumFilesCreated();
     myMetrics.incrNumCreateFileOps();
   }

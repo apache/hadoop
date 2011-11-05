@@ -103,6 +103,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param clientName name of the current client.
    * @param overwrite indicates whether the file should be 
    * overwritten if it already exists.
+   * @param createParent create missing parent directory if true
    * @param replication block replication factor.
    * @param blockSize maximum block size.
    * 
@@ -117,10 +118,22 @@ public interface ClientProtocol extends VersionedProtocol {
                      FsPermission masked,
                              String clientName, 
                              boolean overwrite, 
+                             boolean createParent,
                              short replication,
                              long blockSize
                              ) throws IOException;
 
+  /**
+   * Create a new file entry in the namespace.
+   * 
+   */
+  public void create(String src, 
+                     FsPermission masked,
+                             String clientName, 
+                             boolean overwrite, 
+                             short replication,
+                             long blockSize
+                             ) throws IOException;
   /**
    * Append to the end of the file. 
    * @param src path of the file being created.

@@ -24,6 +24,7 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.*;
@@ -564,6 +565,23 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         overwrite, replication, blockSize, progress, buffersize);
   }
   /**
+   * Call
+   * {@link #create(String,FsPermission,boolean,boolean,short,long,Progressable,int)}
+   * with createParent set to true.
+   */
+  public OutputStream create(String src, 
+      FsPermission permission,
+      boolean overwrite,
+      short replication,
+      long blockSize,
+      Progressable progress,
+      int buffersize
+      ) throws IOException {
+    return create(src, permission, overwrite, true,
+        replication, blockSize, progress, buffersize);
+  }
+
+  /**
    * Create a new dfs file with the specified block replication 
    * with write-progress reporting and return an output stream for writing
    * into the file.  
@@ -572,6 +590,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
    * @param overwrite do not check for file existence if true
+   * @param createParent create missing parent directory if true
    * @param replication block replication
    * @return output stream
    * @throws IOException
@@ -580,6 +599,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public OutputStream create(String src, 
                              FsPermission permission,
                              boolean overwrite, 
+                             boolean createParent,
                              short replication,
                              long blockSize,
                              Progressable progress,
@@ -592,7 +612,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
     OutputStream result = new DFSOutputStream(src, masked,
-        overwrite, replication, blockSize, progress, buffersize,
+        overwrite, createParent, replication, blockSize, progress, buffersize,
         conf.getInt("io.bytes.per.checksum", 512));
     leasechecker.put(src, result);
     return result;
@@ -3060,7 +3080,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
      */
     DFSOutputStream(String src, FsPermission masked, boolean overwrite,
-        short replication, long blockSize, Progressable progress,
+        boolean createParent, short replication, long blockSize, Progressable progress,
         int buffersize, int bytesPerChecksum) throws IOException {
       this(src, blockSize, progress, bytesPerChecksum, replication);
 
@@ -3068,9 +3088,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
       try {
         namenode.create(
-            src, masked, clientName, overwrite, replication, blockSize);
+            src, masked, clientName, overwrite, createParent, replication, blockSize);
       } catch(RemoteException re) {
         throw re.unwrapRemoteException(AccessControlException.class,
+                                       FileAlreadyExistsException.class,
+                                       FileNotFoundException.class,
                                        NSQuotaExceededException.class,
                                        DSQuotaExceededException.class);
       }
