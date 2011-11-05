@@ -677,6 +677,10 @@ Release 0.92.0 - Unreleased
                HConnectionManager$HConnectionImplementation (Lucian George Iordache)
    HBASE-4719  HBase script assumes pre-Hadoop 0.21 layout of jar files
                (Roman Shposhnik)
+   HBASE-4553  The update of .tableinfo is not atomic; we remove then rename
+   HBASE-4725  NPE in AM#updateTimers
+   HBASE-4749  TestMasterFailover#testMasterFailoverWithMockedRITOnDeadRS
+               occasionally fails
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

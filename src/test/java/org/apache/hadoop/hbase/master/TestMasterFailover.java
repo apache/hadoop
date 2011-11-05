@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -706,10 +707,13 @@ public class TestMasterFailover {
     assertEquals(2, cluster.countServedRegions());
 
     // The first RS will stay online
-    HRegionServer hrs = cluster.getRegionServer(0);
+    List<RegionServerThread> regionservers =
+      cluster.getRegionServerThreads();
+    HRegionServer hrs = regionservers.get(0).getRegionServer();
 
     // The second RS is going to be hard-killed
-    HRegionServer hrsDead = cluster.getRegionServer(1);
+    RegionServerThread hrsDeadThread = regionservers.get(1);
+    HRegionServer hrsDead = hrsDeadThread.getRegionServer();
     ServerName deadServerName = hrsDead.getServerName();
 
     // we'll need some regions to already be assigned out properly on live RS
@@ -916,7 +920,11 @@ public class TestMasterFailover {
     hrsDead.abort("Killing for unit test");
     log("RS " + deadServerName + " killed");
 
-    // Start up a new master
+    // Start up a new master.  Wait until regionserver is completely down
+    // before starting new master because of hbase-4511.
+    while (hrsDeadThread.isAlive()) {
+      Threads.sleep(10);
+    }
     log("Starting up a new master");
     master = cluster.startMaster().getMaster();
     log("Waiting for master to be ready");

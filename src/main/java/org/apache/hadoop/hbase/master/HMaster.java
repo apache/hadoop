@@ -1294,8 +1294,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     LOG.info(why);
     this.stopped = true;
     // If we are a backup master, we need to interrupt wait
-    synchronized (this.activeMasterManager.clusterHasActiveMaster) {
-      this.activeMasterManager.clusterHasActiveMaster.notifyAll();
+    if (this.activeMasterManager != null) {
+      synchronized (this.activeMasterManager.clusterHasActiveMaster) {
+        this.activeMasterManager.clusterHasActiveMaster.notifyAll();
+      }
     }
   }
 
