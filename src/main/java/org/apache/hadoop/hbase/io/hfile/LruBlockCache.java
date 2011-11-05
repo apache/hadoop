@@ -126,6 +126,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder()
         .setNameFormat("LRU Statistics #%d")
+        .setDaemon(true)
         .build());
 
   /** Current size of cache */
