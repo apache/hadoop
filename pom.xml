@@ -278,7 +278,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.9</version>
+          <version>2.10</version>
           <configuration>
             <includes>
               <include>${integrationtest.include}</include>
@@ -343,7 +343,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-surefire-report-plugin</artifactId>
-          <version>2.9</version>
+          <version>2.10</version>
         </plugin>
         <plugin>
           <groupId>org.apache.avro</groupId>
@@ -533,7 +533,10 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <forkMode>always</forkMode>
+            <forkMode>${myForkMode}</forkMode>
+            <parallel>${myParallel}</parallel>
+            <perCoreThreadCount>false</perCoreThreadCount>
+            <threadCount>${myThreadCount}</threadCount>
           <includes>
             <include>${unittest.include}</include>
           </includes>
@@ -796,6 +799,10 @@
     <unittest.include>**/Test*.java</unittest.include>
     <integrationtest.include>**/IntegrationTest*.java</integrationtest.include>
     
+    <!-- for surefire -->
+    <myForkMode>always</myForkMode>
+    <myParallelMode>none</myParallelMode>
+    <myThreadCount>1</myThreadCount>      
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
@@ -1286,6 +1293,47 @@
         </dependency>
       </dependencies>
     </profile>
+    
+    
+    <!-- profile for running test without parallelisation.
+         The same values are set in the properties of the project.  -->
+    <profile>
+      <id>nonParallelTests</id>
+      <activation>
+          <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <myForkMode>always</myForkMode>
+        <myParallelMode>none</myParallelMode>
+        <myThreadCount>1</myThreadCount>          
+      </properties>
+    </profile>
+    
+    <!-- profile for running test with parallelisation.  -->  
+    <profile>
+      <id>parallelTests</id>
+        <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <myForkMode>once</myForkMode>
+        <myParallelMode>classes</myParallelMode>
+        <myThreadCount>3</myThreadCount>          
+      </properties>
+    </profile>
+    
+    <!-- profile for running test with a single JVM  -->  
+    <profile>
+      <id>singleJVMTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <myForkMode>once</myForkMode>
+        <myParallelMode>none</myParallelMode>
+        <myThreadCount>1</myThreadCount>          
+      </properties>
+    </profile>     
 
     <!--
       profile for building against Hadoop 0.22.0. Activate using:
