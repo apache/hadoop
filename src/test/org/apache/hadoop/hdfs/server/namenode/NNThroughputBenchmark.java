@@ -546,7 +546,7 @@ public class NNThroughputBenchmark {
       long start = System.currentTimeMillis();
       // dummyActionNoSynch(fileIdx);
       nameNode.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
-                      clientName, true, replication, BLOCK_SIZE);
+                      clientName, true, true, replication, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       for(boolean written = !closeUponCreate; !written; 
         written = nameNode.complete(fileNames[daemonId][inputIdx], clientName));
@@ -917,7 +917,7 @@ public class NNThroughputBenchmark {
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName("ThroughputBench");
         nameNode.create(fileName, FsPermission.getDefault(),
-                        clientName, true, replication, BLOCK_SIZE);
+                        clientName, true, true, replication, BLOCK_SIZE);
         addBlocks(fileName, clientName);
         nameNode.complete(fileName, clientName);
       }

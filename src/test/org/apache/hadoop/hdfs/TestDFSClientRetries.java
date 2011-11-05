@@ -227,7 +227,10 @@ public class TestDFSClientRetries extends TestCase {
     // The following methods are stub methods that are not needed by this mock class
     public LocatedBlocks  getBlockLocations(String src, long offset, long length) throws IOException { return null; }
 
+    @Deprecated
     public void create(String src, FsPermission masked, String clientName, boolean overwrite, short replication, long blockSize) throws IOException {}
+
+    public void create(String src, FsPermission masked, String clientName, boolean overwrite, boolean createparent, short replication, long blockSize) throws IOException {}
 
     public LocatedBlock append(String src, String clientName) throws IOException { return null; }
 
