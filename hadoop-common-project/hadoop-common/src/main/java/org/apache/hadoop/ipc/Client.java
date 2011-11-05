@@ -48,6 +48,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RpcPayloadHeader.*;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -152,16 +153,20 @@ public class Client {
     return refCount==0;
   }
 
-  /** A call waiting for a value. */
+  /** 
+   * Class that represents an RPC call
+   */
   private class Call {
-    int id;                                       // call id
-    Writable param;                               // parameter
-    Writable value;                               // value, null if error
-    IOException error;                            // exception, null if value
-    boolean done;                                 // true when call is done
+    final int id;               // call id
+    final Writable rpcRequest;  // the serialized rpc request - RpcPayload
+    Writable rpcResponse;       // null if rpc has error
+    IOException error;          // exception, null if success
+    final RpcKind rpcKind;      // Rpc EngineKind
+    boolean done;               // true when call is done
 
-    protected Call(Writable param) {
-      this.param = param;
+    protected Call(RpcKind rpcKind, Writable param) {
+      this.rpcKind = rpcKind;
+      this.rpcRequest = param;
       synchronized (Client.this) {
         this.id = counter++;
       }
@@ -187,15 +192,15 @@ public class Client {
     /** Set the return value when there is no error. 
      * Notify the caller the call is done.
      * 
-     * @param value return value of the call.
+     * @param rpcResponse return value of the rpc call.
      */
-    public synchronized void setValue(Writable value) {
-      this.value = value;
+    public synchronized void setRpcResponse(Writable rpcResponse) {
+      this.rpcResponse = rpcResponse;
       callComplete();
     }
     
-    public synchronized Writable getValue() {
-      return value;
+    public synchronized Writable getRpcResult() {
+      return rpcResponse;
     }
   }
 
@@ -727,6 +732,7 @@ public class Client {
       }
     }
 
+    @SuppressWarnings("unused")
     public InetSocketAddress getRemoteAddress() {
       return server;
     }
@@ -787,8 +793,10 @@ public class Client {
           //for serializing the
           //data to be written
           d = new DataOutputBuffer();
-          d.writeInt(call.id);
-          call.param.write(d);
+          RpcPayloadHeader header = new RpcPayloadHeader(
+              call.rpcKind, RpcPayloadOperation.RPC_FINAL_PAYLOAD, call.id);
+          header.write(d);
+          call.rpcRequest.write(d);
           byte[] data = d.getData();
           int dataLength = d.getLength();
           out.writeInt(dataLength);      //first put the data length
@@ -825,7 +833,7 @@ public class Client {
         if (state == Status.SUCCESS.state) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
-          call.setValue(value);
+          call.setRpcResponse(value);
           calls.remove(id);
         } else if (state == Status.ERROR.state) {
           call.setException(new RemoteException(WritableUtils.readString(in),
@@ -909,7 +917,7 @@ public class Client {
     private int index;
     
     public ParallelCall(Writable param, ParallelResults results, int index) {
-      super(param);
+      super(RpcKind.RPC_WRITABLE, param);
       this.results = results;
       this.index = index;
     }
@@ -933,7 +941,7 @@ public class Client {
 
     /** Collect a result. */
     public synchronized void callComplete(ParallelCall call) {
-      values[call.index] = call.getValue();       // store the value
+      values[call.index] = call.getRpcResult();       // store the value
       count++;                                    // count it
       if (count == size)                          // if all values are in
         notify();                                 // then notify waiting caller
@@ -993,15 +1001,23 @@ public class Client {
     }
   }
 
+  /**
+   * Same as {@link #call(RpcKind, Writable, ConnectionId)} for Writable
+   */
+  public Writable call(Writable param, InetSocketAddress address)
+  throws InterruptedException, IOException {
+    return call(RpcKind.RPC_WRITABLE, param, address);
+    
+  }
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception.
-   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
+   * @deprecated Use {@link #call(RpcKind, Writable, ConnectionId)} instead 
    */
   @Deprecated
-  public Writable call(Writable param, InetSocketAddress address)
+  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress address)
   throws InterruptedException, IOException {
-      return call(param, address, null);
+      return call(rpcKind, param, address, null);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server running at
@@ -1009,15 +1025,15 @@ public class Client {
    * the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception.
-   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
+   * @deprecated Use {@link #call(RpcKind, Writable, ConnectionId)} instead 
    */
   @Deprecated
-  public Writable call(Writable param, InetSocketAddress addr, 
+  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
       UserGroupInformation ticket)  
       throws InterruptedException, IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, null, ticket, 0,
         conf);
-    return call(param, remoteId);
+    return call(rpcKind, param, remoteId);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server running at
@@ -1026,18 +1042,33 @@ public class Client {
    * timeout, returning the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception. 
-   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
+   * @deprecated Use {@link #call(RpcKind, Writable, ConnectionId)} instead 
    */
   @Deprecated
-  public Writable call(Writable param, InetSocketAddress addr, 
+  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket,
                        int rpcTimeout)  
                        throws InterruptedException, IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
-    return call(param, remoteId);
+    return call(rpcKind, param, remoteId);
   }
 
+  
+  /**
+   * Same as {@link #call(RpcKind, Writable, InetSocketAddress, 
+   * Class, UserGroupInformation, int, Configuration)}
+   * except that rpcKind is writable.
+   */
+  public Writable call(Writable param, InetSocketAddress addr, 
+      Class<?> protocol, UserGroupInformation ticket,
+      int rpcTimeout, Configuration conf)  
+      throws InterruptedException, IOException {
+        ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
+        ticket, rpcTimeout, conf);
+        return call(RpcKind.RPC_WRITABLE, param, remoteId);
+  }
+  
   /**
    * Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
@@ -1046,22 +1077,31 @@ public class Client {
    * value. Throws exceptions if there are network problems or if the remote
    * code threw an exception.
    */
-  public Writable call(Writable param, InetSocketAddress addr, 
+  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket,
                        int rpcTimeout, Configuration conf)  
                        throws InterruptedException, IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
-    return call(param, remoteId);
+    return call(rpcKind, param, remoteId);
+  }
+  
+  /**
+   * Same as {link {@link #call(RpcKind, Writable, ConnectionId)}
+   * except the rpcKind is RPC_WRITABLE
+   */
+  public Writable call(Writable param, ConnectionId remoteId)  
+      throws InterruptedException, IOException {
+     return call(RpcKind.RPC_WRITABLE, param, remoteId);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server defined by
    * <code>remoteId</code>, returning the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception. */
-  public Writable call(Writable param, ConnectionId remoteId)  
+  public Writable call(RpcKind rpcKind, Writable param, ConnectionId remoteId)  
       throws InterruptedException, IOException {
-    Call call = new Call(param);
+    Call call = new Call(rpcKind, param);
     Connection connection = getConnection(remoteId, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
@@ -1093,7 +1133,7 @@ public class Client {
                   call.error);
         }
       } else {
-        return call.value;
+        return call.rpcResponse;
       }
     }
   }

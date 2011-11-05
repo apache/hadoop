@@ -55,6 +55,8 @@ Trunk (unreleased changes)
     HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
     (jitendra)
 
+		HADOOP-7776 Make the Ipc-Header in a RPC-Payload an explicit header (sanjay)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
