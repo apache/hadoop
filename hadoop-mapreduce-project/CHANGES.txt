@@ -28,6 +28,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3217. Reenabled and fixed bugs in the failing ant test
     TestAuditLogger. (Devaraj K via vinodkv)
 
+    MAPREDUCE-3291. App fail to launch due to delegation token not 
+    found in cache (Robert Evans via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

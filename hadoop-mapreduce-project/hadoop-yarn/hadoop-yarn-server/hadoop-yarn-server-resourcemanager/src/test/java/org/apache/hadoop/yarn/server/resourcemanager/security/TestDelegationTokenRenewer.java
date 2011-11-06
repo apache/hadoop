@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
@@ -243,16 +244,16 @@ public class TestDelegationTokenRenewer {
   /**
    * Basic idea of the test:
    * 1. create tokens.
-   * 2. Mark one of them to be renewed in 2 seconds (istead of
-   * 24 hourse)
+   * 2. Mark one of them to be renewed in 2 seconds (instead of
+   * 24 hours)
    * 3. register them for renewal
    * 4. sleep for 3 seconds
    * 5. count number of renewals (should 3 initial ones + one extra)
    * 6. register another token for 2 seconds 
    * 7. cancel it immediately
    * 8. Sleep and check that the 2 seconds renew didn't happen 
-   * (totally 5 reneals)
-   * 9. check cancelation
+   * (totally 5 renewals)
+   * 9. check cancellation
    * @throws IOException
    * @throws URISyntaxException
    */
@@ -287,7 +288,7 @@ public class TestDelegationTokenRenewer {
     // register the tokens for renewal
     ApplicationId applicationId_0 = 
         BuilderUtils.newApplicationId(0, 0);
-    delegationTokenRenewer.addApplication(applicationId_0, ts);
+    delegationTokenRenewer.addApplication(applicationId_0, ts, true);
     
     // first 3 initial renewals + 1 real
     int numberOfExpectedRenewals = 3+1; 
@@ -326,7 +327,7 @@ public class TestDelegationTokenRenewer {
     
 
     ApplicationId applicationId_1 = BuilderUtils.newApplicationId(0, 1);
-    delegationTokenRenewer.addApplication(applicationId_1, ts);
+    delegationTokenRenewer.addApplication(applicationId_1, ts, true);
     delegationTokenRenewer.removeApplication(applicationId_1);
     
     numberOfExpectedRenewals = Renewer.counter; // number of renewals so far
@@ -346,5 +347,50 @@ public class TestDelegationTokenRenewer {
     } catch (InvalidToken ite) {
       //expected
     }
+  }
+  
+  /**
+   * Basic idea of the test:
+   * 1. register a token for 2 seconds with no cancel at the end
+   * 2. cancel it immediately
+   * 3. Sleep and check that the 2 seconds renew didn't happen 
+   * (totally 5 renewals)
+   * 4. check cancellation
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testDTRenewalWithNoCancel () throws Exception {
+    MyFS dfs = (MyFS)FileSystem.get(conf);
+    LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+conf.hashCode());
+
+    Credentials ts = new Credentials();
+    MyToken token1 = dfs.getDelegationToken(new Text("user1"));
+    
+    //to cause this one to be set for renew in 2 secs
+    Renewer.tokenToRenewIn2Sec = token1; 
+    LOG.info("token="+token1+" should be renewed for 2 secs");
+    
+    String nn1 = DelegationTokenRenewer.SCHEME + "://host1:0";
+    ts.addToken(new Text(nn1), token1);
+    
+
+    ApplicationId applicationId_1 = BuilderUtils.newApplicationId(0, 1);
+    delegationTokenRenewer.addApplication(applicationId_1, ts, false);
+    delegationTokenRenewer.removeApplication(applicationId_1);
+    
+    int numberOfExpectedRenewals = Renewer.counter; // number of renewals so far
+    try {
+      Thread.sleep(6*1000); // sleep 6 seconds, so it has time to renew
+    } catch (InterruptedException e) {}
+    LOG.info("Counter = " + Renewer.counter + ";t="+ Renewer.lastRenewed);
+    
+    // counter and the token should still be the old ones
+    assertEquals("renew wasn't called as many times as expected",
+        numberOfExpectedRenewals, Renewer.counter);
+    
+    // also renewing of the canceled token should not fail, because it has not
+    // been canceled
+    token1.renew(conf);
   }
 }
