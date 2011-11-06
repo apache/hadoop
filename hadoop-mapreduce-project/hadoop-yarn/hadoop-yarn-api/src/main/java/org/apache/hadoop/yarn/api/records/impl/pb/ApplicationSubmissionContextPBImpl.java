@@ -206,6 +206,19 @@ implements ApplicationSubmissionContext {
     }
     this.amContainer = amContainer;
   }
+  
+  @Override
+  public boolean getCancelTokensWhenComplete() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    //There is a default so cancelTokens should never be null
+    return p.getCancelTokensWhenComplete();
+  }
+
+  @Override
+  public void setCancelTokensWhenComplete(boolean cancel) {
+    maybeInitBuilder();
+    builder.setCancelTokensWhenComplete(cancel);
+  }
 
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
     return new PriorityPBImpl(p);

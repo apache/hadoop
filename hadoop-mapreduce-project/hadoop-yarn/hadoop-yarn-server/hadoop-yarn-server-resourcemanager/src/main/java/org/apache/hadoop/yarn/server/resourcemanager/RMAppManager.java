@@ -278,7 +278,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
       // Setup tokens for renewal
       if (UserGroupInformation.isSecurityEnabled()) {
         this.rmContext.getDelegationTokenRenewer().addApplication(
-            applicationId,parseCredentials(submissionContext)
+            applicationId,parseCredentials(submissionContext),
+            submissionContext.getCancelTokensWhenComplete()
             );
       }      
       
