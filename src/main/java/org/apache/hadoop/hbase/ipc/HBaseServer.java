@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -65,6 +66,7 @@ import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -88,7 +90,7 @@ public abstract class HBaseServer implements RpcServer {
    * The first four bytes of Hadoop RPC connections
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
-  public static final byte CURRENT_VERSION = 3;
+  public static final byte CURRENT_VERSION = 4;
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -273,8 +275,8 @@ public abstract class HBaseServer implements RpcServer {
       return param.toString() + " from " + connection.toString();
     }
 
-    private synchronized void setResponse(Object value, String errorClass,
-        String error) {
+    private synchronized void setResponse(Object value, Status status,
+        String errorClass, String error) {
       // Avoid overwriting an error value in the response.  This can happen if
       // endDelayThrowing is called by another thread before the actual call
       // returning.
@@ -323,6 +325,7 @@ public abstract class HBaseServer implements RpcServer {
         // Place holder for length set later below after we
         // fill the buffer with data.
         out.writeInt(0xdeadbeef);
+        out.writeInt(status.state);
       } catch (IOException e) {
         errorClass = e.getClass().getName();
         error = StringUtils.stringifyException(e);
@@ -358,7 +361,7 @@ public abstract class HBaseServer implements RpcServer {
       this.delayResponse = false;
       delayedCalls.decrementAndGet();
       if (this.delayReturnValue)
-        this.setResponse(result, null, null);
+        this.setResponse(result, Status.SUCCESS, null, null);
       this.responder.doRespond(this);
     }
 
@@ -381,7 +384,7 @@ public abstract class HBaseServer implements RpcServer {
 
     @Override
     public synchronized void endDelayThrowing(Throwable t) throws IOException {
-      this.setResponse(null, t.getClass().toString(),
+      this.setResponse(null, Status.ERROR, t.getClass().toString(),
           StringUtils.stringifyException(t));
       this.delayResponse = false;
       this.sendResponseIfReady();
@@ -443,8 +446,7 @@ public abstract class HBaseServer implements RpcServer {
         new ThreadFactoryBuilder().setNameFormat(
           "IPC Reader %d on port " + port).setDaemon(true).build());
       for (int i = 0; i < readThreads; ++i) {
-        Selector readSelector = Selector.open();
-        Reader reader = new Reader(readSelector);
+        Reader reader = new Reader();
         readers[i] = reader;
         readPool.execute(reader);
       }
@@ -458,40 +460,51 @@ public abstract class HBaseServer implements RpcServer {
 
     private class Reader implements Runnable {
       private volatile boolean adding = false;
-      private Selector readSelector = null;
+      private final Selector readSelector;
 
-      Reader(Selector readSelector) {
-        this.readSelector = readSelector;
+      Reader() throws IOException {
+        this.readSelector = Selector.open();
       }
       public void run() {
-        synchronized(this) {
-          while (running) {
-            SelectionKey key = null;
-            try {
-              readSelector.select();
-              while (adding) {
-                this.wait(1000);
-              }
+        LOG.info("Starting " + getName());
+        try {
+          doRunLoop();
+        } finally {
+          try {
+            readSelector.close();
+          } catch (IOException ioe) {
+            LOG.error("Error closing read selector in " + getName(), ioe);
+          }
+        }
+      }
 
-              Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
-              while (iter.hasNext()) {
-                key = iter.next();
-                iter.remove();
-                if (key.isValid()) {
-                  if (key.isReadable()) {
-                    doRead(key);
-                  }
-                }
-                key = null;
-              }
-            } catch (InterruptedException e) {
-              if (running) {                     // unexpected -- log it
-                LOG.info(getName() + "caught: " +
-                    StringUtils.stringifyException(e));
-              }
-            } catch (IOException ex) {
-               LOG.error("Error in Reader", ex);
+      private synchronized void doRunLoop() {
+        while (running) {
+          SelectionKey key = null;
+          try {
+            readSelector.select();
+            while (adding) {
+              this.wait(1000);
             }
+
+            Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
+            while (iter.hasNext()) {
+              key = iter.next();
+              iter.remove();
+              if (key.isValid()) {
+                if (key.isReadable()) {
+                  doRead(key);
+                }
+              }
+              key = null;
+            }
+          } catch (InterruptedException e) {
+            if (running) {                      // unexpected -- log it
+              LOG.info(getName() + " unexpectedly interrupted: " +
+                  StringUtils.stringifyException(e));
+            }
+          } catch (IOException ex) {
+            LOG.error("Error in Reader", ex);
           }
         }
       }
@@ -730,7 +743,7 @@ public abstract class HBaseServer implements RpcServer {
 
   // Sends responses of RPC back to clients.
   private class Responder extends Thread {
-    private Selector writeSelector;
+    private final Selector writeSelector;
     private int pending;         // connections waiting to register
 
     final static int PURGE_INTERVAL = 900000; // 15mins
@@ -746,6 +759,19 @@ public abstract class HBaseServer implements RpcServer {
     public void run() {
       LOG.info(getName() + ": starting");
       SERVER.set(HBaseServer.this);
+      try {
+        doRunLoop();
+      } finally {
+        LOG.info("Stopping " + this.getName());
+        try {
+          writeSelector.close();
+        } catch (IOException ioe) {
+          LOG.error("Couldn't close write selector in " + this.getName(), ioe);
+        }
+      }
+    }
+
+    private void doRunLoop() {
       long lastPurgeTime = 0;   // last check for old calls.
 
       while (running) {
@@ -1106,6 +1132,7 @@ public abstract class HBaseServer implements RpcServer {
                      hostAddress + ":" + remotePort +
                      " got version " + version +
                      " expected version " + CURRENT_VERSION);
+            setupBadVersionResponse(version);
             return -1;
           }
           dataLengthBuffer.clear();
@@ -1144,6 +1171,30 @@ public abstract class HBaseServer implements RpcServer {
       }
     }
 
+    /**
+     * Try to set up the response to indicate that the client version
+     * is incompatible with the server. This can contain special-case
+     * code to speak enough of past IPC protocols to pass back
+     * an exception to the caller.
+     * @param clientVersion the version the caller is using
+     * @throws IOException
+     */
+    private void setupBadVersionResponse(int clientVersion) throws IOException {
+      String errMsg = "Server IPC version " + CURRENT_VERSION +
+      " cannot communicate with client version " + clientVersion;
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+      if (clientVersion >= 3) {
+        Call fakeCall =  new Call(-1, null, this, responder);
+        // Versions 3 and greater can interpret this exception
+        // response in the same manner
+        setupResponse(buffer, fakeCall, Status.FATAL,
+            null, VersionMismatch.class.getName(), errMsg);
+
+        responder.doRespond(fakeCall);
+      }
+    }
+
     /// Reads the connection header following version
     private void processHeader() throws IOException {
       DataInputStream in =
@@ -1170,9 +1221,22 @@ public abstract class HBaseServer implements RpcServer {
       if (LOG.isDebugEnabled())
         LOG.debug(" got call #" + id + ", " + array.length + " bytes");
 
-      Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
-      param.readFields(dis);
+      Writable param;
+      try {
+        param = ReflectionUtils.newInstance(paramClass, conf);//read param
+        param.readFields(dis);
+      } catch (Throwable t) {
+        LOG.warn("Unable to read call parameters for client " +
+                 getHostAddress(), t);
+        final Call readParamsFailedCall = new Call(id, null, this, responder);
+        ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
 
+        setupResponse(responseBuffer, readParamsFailedCall, Status.FATAL, null,
+            t.getClass().getName(),
+            "IPC server unable to read call parameters: " + t.getMessage());
+        responder.doRespond(readParamsFailedCall);
+        return;
+      }
       Call call = new Call(id, param, this, responder);
 
       if (priorityCallQueue != null && getQosLevel(param) > highPriorityLevel) {
@@ -1251,7 +1315,9 @@ public abstract class HBaseServer implements RpcServer {
           // Set the response for undelayed calls and delayed calls with
           // undelayed responses.
           if (!call.isDelayed() || !call.isReturnValueDelayed()) {
-            call.setResponse(value, errorClass, error);
+            call.setResponse(value,
+              errorClass == null? Status.SUCCESS: Status.ERROR,
+                errorClass, error);
           }
           call.sendResponseIfReady();
         } catch (InterruptedException e) {
@@ -1354,6 +1420,41 @@ public abstract class HBaseServer implements RpcServer {
 
     // Create the responder here
     responder = new Responder();
+  }
+
+  /**
+   * Setup response for the IPC Call.
+   *
+   * @param response buffer to serialize the response into
+   * @param call {@link Call} to which we are setting up the response
+   * @param status {@link Status} of the IPC call
+   * @param rv return value for the IPC Call, if the call was successful
+   * @param errorClass error class, if the the call failed
+   * @param error error message, if the call failed
+   * @throws IOException
+   */
+  private void setupResponse(ByteArrayOutputStream response,
+                             Call call, Status status,
+                             Writable rv, String errorClass, String error)
+  throws IOException {
+    response.reset();
+    DataOutputStream out = new DataOutputStream(response);
+
+    if (status == Status.SUCCESS) {
+      try {
+        rv.write(out);
+        call.setResponse(rv, status, null, null);
+      } catch (Throwable t) {
+        LOG.warn("Error serializing call response for call " + call, t);
+        // Call back to same function - this is OK since the
+        // buffer is reset at the top, and since status is changed
+        // to ERROR it won't infinite loop.
+        call.setResponse(null, status.ERROR, t.getClass().getName(),
+            StringUtils.stringifyException(t));
+      }
+    } else {
+      call.setResponse(rv, status, errorClass, error);
+    }
   }
 
   protected void closeConnection(Connection connection) {

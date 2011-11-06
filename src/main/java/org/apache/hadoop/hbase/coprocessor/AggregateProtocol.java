@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * input parameters.
  */
 public interface AggregateProtocol extends CoprocessorProtocol {
+  public static final long VERSION = 1L;
 
   /**
    * Gives the maximum for a given combination of column qualifier and column

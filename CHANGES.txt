@@ -681,6 +681,7 @@ Release 0.92.0 - Unreleased
    HBASE-4725  NPE in AM#updateTimers
    HBASE-4749  TestMasterFailover#testMasterFailoverWithMockedRITOnDeadRS
                occasionally fails
+   HBASE-3939  Some crossports of Hadoop IPC fixes
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

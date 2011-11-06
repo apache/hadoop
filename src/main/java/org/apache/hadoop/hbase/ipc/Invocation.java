@@ -22,20 +22,25 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.VersionedWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /** A method invocation, including the method name and its parameters.*/
-public class Invocation implements Writable, Configurable {
+public class Invocation extends VersionedWritable implements Configurable {
   protected String methodName;
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   protected Class[] parameterClasses;
   protected Object[] parameters;
   protected Configuration conf;
+  private long clientVersion;
+  private int clientMethodsHash;
+
+  private static byte RPC_VERSION = 1;
 
   public Invocation() {}
 
@@ -43,20 +48,56 @@ public class Invocation implements Writable, Configurable {
     this.methodName = method.getName();
     this.parameterClasses = method.getParameterTypes();
     this.parameters = parameters;
+    if (method.getDeclaringClass().equals(VersionedProtocol.class)) {
+      //VersionedProtocol is exempted from version check.
+      clientVersion = 0;
+      clientMethodsHash = 0;
+    } else {
+      try {
+        Field versionField = method.getDeclaringClass().getField("VERSION");
+        versionField.setAccessible(true);
+        this.clientVersion = versionField.getLong(method.getDeclaringClass());
+      } catch (NoSuchFieldException ex) {
+        throw new RuntimeException("The " + method.getDeclaringClass(), ex);
+      } catch (IllegalAccessException ex) {
+        throw new RuntimeException(ex);
+      }
+      this.clientMethodsHash = ProtocolSignature.getFingerprint(method
+          .getDeclaringClass().getMethods());
+    }
   }
 
   /** @return The name of the method invoked. */
   public String getMethodName() { return methodName; }
 
   /** @return The parameter classes. */
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "rawtypes" })
   public Class[] getParameterClasses() { return parameterClasses; }
 
   /** @return The parameter instances. */
   public Object[] getParameters() { return parameters; }
 
+  long getProtocolVersion() {
+    return clientVersion;
+  }
+
+  protected int getClientMethodsHash() {
+    return clientMethodsHash;
+  }
+
+  /**
+   * Returns the rpc version used by the client.
+   * @return rpcVersion
+   */
+  public long getRpcVersion() {
+    return RPC_VERSION;
+  }
+
   public void readFields(DataInput in) throws IOException {
+    super.readFields(in);
     methodName = in.readUTF();
+    clientVersion = in.readLong();
+    clientMethodsHash = in.readInt();
     parameters = new Object[in.readInt()];
     parameterClasses = new Class[parameters.length];
     HbaseObjectWritable objectWritable = new HbaseObjectWritable();
@@ -68,7 +109,10 @@ public class Invocation implements Writable, Configurable {
   }
 
   public void write(DataOutput out) throws IOException {
+    super.write(out);
     out.writeUTF(this.methodName);
+    out.writeLong(clientVersion);
+    out.writeInt(clientMethodsHash);
     out.writeInt(parameterClasses.length);
     for (int i = 0; i < parameterClasses.length; i++) {
       HbaseObjectWritable.writeObject(out, parameters[i], parameterClasses[i],
@@ -87,6 +131,9 @@ public class Invocation implements Writable, Configurable {
       buffer.append(parameters[i]);
     }
     buffer.append(")");
+    buffer.append(", rpc version="+RPC_VERSION);
+    buffer.append(", client version="+clientVersion);
+    buffer.append(", methodsFingerPrint="+clientMethodsHash);
     return buffer.toString();
   }
 
@@ -98,4 +145,8 @@ public class Invocation implements Writable, Configurable {
     return this.conf;
   }
 
+  @Override
+  public byte getVersion() {
+    return RPC_VERSION;
+  }
 }

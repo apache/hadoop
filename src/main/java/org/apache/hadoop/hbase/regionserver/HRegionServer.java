@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.Invocation;
+import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
@@ -2771,6 +2772,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (!fsOk) {
       throw new RegionServerStoppedException("File system not available");
     }
+  }
+
+  @Override
+  @QosPriority(priority=HIGH_QOS)
+  public ProtocolSignature getProtocolSignature(
+      String protocol, long version, int clientMethodsHashCode)
+  throws IOException {
+    if (protocol.equals(HRegionInterface.class.getName())) {
+      return new ProtocolSignature(HRegionInterface.VERSION, null);
+    }
+    throw new IOException("Unknown protocol: " + protocol);
   }
 
   @Override

@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
@@ -63,8 +66,7 @@ public class TestServerCustomProtocol {
 
   /* Test protocol implementation */
   public static class PingHandler implements Coprocessor, PingProtocol, VersionedProtocol {
-    static int VERSION = 1;
-
+    static long VERSION = 1;
     private int counter = 0;
     @Override
     public String ping() {
@@ -91,6 +93,13 @@ public class TestServerCustomProtocol {
         return null;
       }
       return "Hello, "+name;
+    }
+
+    @Override
+    public ProtocolSignature getProtocolSignature(
+        String protocol, long version, int clientMethodsHashCode)
+    throws IOException {
+      return new ProtocolSignature(VERSION, null);
     }
 
     @Override

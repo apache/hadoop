@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
@@ -559,6 +560,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META and ROOT assigned.");
     return assigned;
+  }
+
+  @Override
+  public ProtocolSignature getProtocolSignature(
+      String protocol, long version, int clientMethodsHashCode)
+  throws IOException {
+    if (HMasterInterface.class.getName().equals(protocol)) {
+      return new ProtocolSignature(HMasterInterface.VERSION, null);
+    } else if (HMasterRegionInterface.class.getName().equals(protocol)) {
+      return new ProtocolSignature(HMasterRegionInterface.VERSION, null);
+    }
+    throw new IOException("Unknown protocol: " + protocol);
   }
 
   public long getProtocolVersion(String protocol, long clientVersion) {

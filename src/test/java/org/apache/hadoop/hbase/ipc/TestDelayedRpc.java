@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,8 +86,8 @@ public class TestDelayedRpc {
     th2.join();
     th3.join();
 
-    assertEquals(results.get(0).intValue(), UNDELAYED);
-    assertEquals(results.get(1).intValue(), UNDELAYED);
+    assertEquals(UNDELAYED, results.get(0).intValue());
+    assertEquals(UNDELAYED, results.get(1).intValue());
     assertEquals(results.get(2).intValue(), delayReturnValue ? DELAYED :
         0xDEADBEEF);
   }
@@ -157,6 +158,7 @@ public class TestDelayedRpc {
   }
 
   public interface TestRpc extends VersionedProtocol {
+    public static final long VERSION = 1L;
     int test(boolean delay);
   }
 
@@ -201,6 +203,17 @@ public class TestDelayedRpc {
     @Override
     public long getProtocolVersion(String arg0, long arg1) throws IOException {
       return 0;
+    }
+
+    @Override
+    public ProtocolSignature getProtocolSignature(String protocol,
+        long clientVersion, int clientMethodsHash) throws IOException {
+      Method [] methods = this.getClass().getMethods();
+      int [] hashes = new int [methods.length];
+      for (int i = 0; i < methods.length; i++) {
+        hashes[i] = methods[i].hashCode();
+      }
+      return new ProtocolSignature(clientVersion, hashes);
     }
   }
 
@@ -282,6 +295,12 @@ public class TestDelayedRpc {
     @Override
     public long getProtocolVersion(String arg0, long arg1) throws IOException {
       return 0;
+    }
+
+    @Override
+    public ProtocolSignature getProtocolSignature(String protocol,
+        long clientVersion, int clientMethodsHash) throws IOException {
+      return new ProtocolSignature(clientVersion, new int [] {});
     }
   }
 }

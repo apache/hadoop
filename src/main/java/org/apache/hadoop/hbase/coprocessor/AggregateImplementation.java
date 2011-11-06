@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -38,6 +39,16 @@ import org.apache.hadoop.hbase.util.Pair;
 public class AggregateImplementation extends BaseEndpointCoprocessor implements
     AggregateProtocol {
   protected static Log log = LogFactory.getLog(AggregateImplementation.class);
+
+  @Override
+  public ProtocolSignature getProtocolSignature(
+      String protocol, long version, int clientMethodsHashCode)
+  throws IOException {
+    if (AggregateProtocol.class.getName().equals(protocol)) {
+      return new ProtocolSignature(AggregateProtocol.VERSION, null);
+    }
+    throw new IOException("Unknown protocol: " + protocol);
+  }
 
   @Override
   public <T, S> T getMax(ColumnInterpreter<T, S> ci, Scan scan)

@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-
 /**
  * All custom RPC protocols to be exported by Coprocessors must extend this interface.
  *
@@ -37,4 +35,5 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
  * </p>
  */
 public interface CoprocessorProtocol extends VersionedProtocol {
+  public static final long VERSION = 1L;
 }

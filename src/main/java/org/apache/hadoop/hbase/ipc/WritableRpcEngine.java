@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Objects;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -335,6 +336,21 @@ class WritableRpcEngine implements RpcEngine {
                                    call.getParameterClasses());
         method.setAccessible(true);
 
+        //Verify protocol version.
+        //Bypass the version check for VersionedProtocol
+        if (!method.getDeclaringClass().equals(VersionedProtocol.class)) {
+          long clientVersion = call.getProtocolVersion();
+          ProtocolSignature serverInfo = ((VersionedProtocol) instance)
+              .getProtocolSignature(protocol.getCanonicalName(), call
+                  .getProtocolVersion(), call.getClientMethodsHash());
+          long serverVersion = serverInfo.getVersion();
+          if (serverVersion != clientVersion) {
+            LOG.warn("Version mismatch: client version=" + clientVersion
+                + ", server version=" + serverVersion);
+            throw new RPC.VersionMismatch(protocol.getName(), clientVersion,
+                serverVersion);
+          }
+        }
         Object impl = null;
         if (protocol.isAssignableFrom(this.implementation)) {
           impl = this.instance;

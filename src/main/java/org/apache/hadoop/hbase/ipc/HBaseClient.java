@@ -566,6 +566,7 @@ public class HBaseClient {
           // Currently length if present is unused.
           in.readInt();
         }
+        int state = in.readInt(); // Read the state.  Currently unused.
         if (isError) {
           //noinspection ThrowableInstanceNeverThrown
           call.setException(new RemoteException( WritableUtils.readString(in),

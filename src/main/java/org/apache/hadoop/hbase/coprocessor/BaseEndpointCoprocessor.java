@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
 /**
@@ -60,6 +61,13 @@ public abstract class BaseEndpointCoprocessor implements Coprocessor,
 
   @Override
   public void stop(CoprocessorEnvironment env) { }
+
+  @Override
+  public ProtocolSignature getProtocolSignature(
+      String protocol, long version, int clientMethodsHashCode)
+  throws IOException {
+    return new ProtocolSignature(VERSION, null);
+  }
 
   @Override
   public long getProtocolVersion(String protocol, long clientVersion)
