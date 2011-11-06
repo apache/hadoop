@@ -1,5 +1,8 @@
 Hadoop MapReduce Change Log
 
+    MAPREDUCE-3291. App fail to launch due to delegation token not 
+    found in cache (Robert Evans via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
