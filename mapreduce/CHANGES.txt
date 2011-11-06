@@ -631,6 +631,11 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-3139. SlivePartitioner generates negative partitions. (jghoman)
 
+    MAPREDUCE-1118. Enhance the JobTracker web-ui to ensure tabular columns
+    are sortable, also added a /scheduler servlet to CapacityScheduler for
+    enhanced UI for queue information.
+    (Krishna Ramachandran and Milind Bhandarkar via shv) 
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

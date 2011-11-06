@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapred.AbstractQueue.AbstractQueueComparator;
 import org.apache.hadoop.mapred.JobTracker.IllegalStateException;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -145,7 +146,7 @@ class CapacityTaskScheduler extends TaskScheduler {
    * There may be slight variations later, in which case we can make this
    * an abstract base class and have derived classes for Map and Reduce.
    */
-  private static abstract class TaskSchedulingMgr {
+  static abstract class TaskSchedulingMgr {
 
     /** our TaskScheduler object */
     protected CapacityTaskScheduler scheduler;
@@ -758,6 +759,13 @@ class CapacityTaskScheduler extends TaskScheduler {
   public synchronized void start() throws IOException {
     if (started) return;
     super.start();
+    if (taskTrackerManager instanceof JobTracker) {
+      JobTracker jobTracker = (JobTracker) taskTrackerManager;
+      HttpServer infoServer = jobTracker.infoServer;
+      infoServer.setAttribute("scheduler", this);
+      infoServer.addServlet("scheduler", "/scheduler",
+          CapacitySchedulerServlet.class);
+    }
 
     // Initialize MemoryMatcher
     MemoryMatcher.initializeMemoryRelatedConf(conf);
@@ -1047,6 +1055,20 @@ class CapacityTaskScheduler extends TaskScheduler {
     return jobCollection;
   }
   
+  /**
+   * @return the queueInfoMap
+   */
+  Map<String, QueueSchedulingContext> getQueueInfoMap() {
+    return queueInfoMap;
+  }
+
+  /**
+   * @return the jobQueuesManager
+   */
+  JobQueuesManager getJobQueuesManager() {
+    return jobQueuesManager;
+  }
+
   synchronized JobInitializationPoller getInitializationPoller() {
     return initializationPoller;
   }
@@ -1078,6 +1100,19 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
   }
 
+  /**
+   * @return the mapScheduler
+   */
+  TaskSchedulingMgr getMapScheduler() {
+    return mapScheduler;
+  }
+
+  /**
+   * @return the reduceScheduler
+   */
+  TaskSchedulingMgr getReduceScheduler() {
+    return reduceScheduler;
+  }
 
   /**
    * Use for testing purposes.
