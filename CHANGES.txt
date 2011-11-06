@@ -406,6 +406,8 @@ Release 0.92.0 - Unreleased
    HBASE-4553  The update of .tableinfo is not atomic; we remove then rename
    HBASE-4725  NPE in AM#updateTimers
    HBASE-4745  LRU statistics thread should be daemon
+   HBASE-4753  org.apache.hadoop.hbase.regionserver.TestHRegionInfo#testGetSetOfHTD
+               throws NPE on trunk (nkeywal)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
