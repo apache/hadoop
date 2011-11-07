@@ -125,6 +125,9 @@ Release 0.20.205.1 - unreleased
     isDirectory and isSymlink with enum {FILE, DIRECTORY, SYMLINK} in
     HdfsFileStatus JSON object.  (szetszwo)
 
+    HDFS-2528. Webhdfs: set delegation kind to WEBHDFS and add a HDFS token
+    when http requests are redirected to datanode.  (szetszwo)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
