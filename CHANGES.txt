@@ -408,6 +408,7 @@ Release 0.92.0 - Unreleased
    HBASE-4745  LRU statistics thread should be daemon
    HBASE-4753  org.apache.hadoop.hbase.regionserver.TestHRegionInfo#testGetSetOfHTD
                throws NPE on trunk (nkeywal)
+   HBASE-4754  FSTableDescriptors.getTableInfoPath() should handle FileNotFoundException
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

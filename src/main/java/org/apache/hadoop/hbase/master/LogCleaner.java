@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 
@@ -118,7 +119,7 @@ public class LogCleaner extends Chore {
   @Override
   protected void chore() {
     try {
-      FileStatus [] files = this.fs.listStatus(this.oldLogDir);
+      FileStatus [] files = FSUtils.listStatus(this.fs, this.oldLogDir, null);
       if (files == null) return;
       FILE: for (FileStatus file : files) {
         Path filePath = file.getPath();

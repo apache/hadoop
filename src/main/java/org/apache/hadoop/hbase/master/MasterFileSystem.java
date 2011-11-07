@@ -191,7 +191,7 @@ public class MasterFileSystem {
       List<ServerName> serverNames = new ArrayList<ServerName>();
       try {
         if (!this.fs.exists(logsDirPath)) return;
-        FileStatus[] logFolders = this.fs.listStatus(logsDirPath);
+        FileStatus[] logFolders = FSUtils.listStatus(this.fs, logsDirPath, null);
 
         if (logFolders == null || logFolders.length == 0) {
           LOG.debug("No log files to split, proceeding...");

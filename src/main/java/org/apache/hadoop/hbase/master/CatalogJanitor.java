@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 
@@ -324,7 +325,7 @@ class CatalogJanitor extends Chore {
         family.getName());
       if (!fs.exists(p)) continue;
       // Look for reference files.  Call listStatus with anonymous instance of PathFilter.
-      FileStatus [] ps = fs.listStatus(p,
+      FileStatus [] ps = FSUtils.listStatus(fs, p,
           new PathFilter () {
             public boolean accept(Path path) {
               return StoreFile.isReference(path);

@@ -215,7 +215,7 @@ public class StoreFile {
     }
 
     // cache the modification time stamp of this store file
-    FileStatus[] stats = fs.listStatus(p);
+    FileStatus[] stats = FSUtils.listStatus(fs, p, null);
     if (stats != null && stats.length == 1) {
       this.modificationTimeStamp = stats[0].getModificationTime();
     } else {

@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -253,7 +254,7 @@ public class Store implements HeapSize {
   private List<StoreFile> loadStoreFiles()
   throws IOException {
     ArrayList<StoreFile> results = new ArrayList<StoreFile>();
-    FileStatus files[] = this.fs.listStatus(this.homedir);
+    FileStatus files[] = FSUtils.listStatus(this.fs, this.homedir, null);
     for (int i = 0; files != null && i < files.length; i++) {
       // Skip directories.
       if (files[i].isDir()) {

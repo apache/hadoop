@@ -254,7 +254,7 @@ public class FSTableDescriptors implements TableDescriptors {
   private static FileStatus getTableInfoPath(final FileSystem fs,
       final Path tabledir)
   throws IOException {
-    FileStatus [] status = fs.listStatus(tabledir, new PathFilter() {
+    FileStatus [] status = FSUtils.listStatus(fs, tabledir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
         // Accept any file that starts with TABLEINFO_NAME

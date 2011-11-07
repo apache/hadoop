@@ -3457,7 +3457,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private static void listPaths(FileSystem fs, Path dir) throws IOException {
     if (LOG.isDebugEnabled()) {
-      FileStatus[] stats = fs.listStatus(dir);
+      FileStatus[] stats = FSUtils.listStatus(fs, dir, null);
       if (stats == null || stats.length == 0) {
         return;
       }

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -905,5 +906,26 @@ public abstract class FSUtils {
     }
       return map;
   }
-
+  
+  /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This would accommodate difference in various hadoop versions
+   * 
+   * @param fs file system
+   * @param dir directory
+   * @param filter path filter
+   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   */
+  public static FileStatus [] listStatus(final FileSystem fs,
+      final Path dir, final PathFilter filter) throws IOException {
+    FileStatus [] status = null;
+    try {
+      status = filter == null ? fs.listStatus(dir) : fs.listStatus(dir, filter);
+    } catch (FileNotFoundException fnfe) {
+      // if directory doesn't exist, return null
+      LOG.info(dir + " doesn't exist");
+    }
+    if (status == null || status.length < 1) return null;
+    return status;
+  }
 }

@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.OrphanHLogAfterSplitException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -183,7 +184,8 @@ public class SplitLogManager extends ZooKeeperListener {
         LOG.warn(hLogDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      FileStatus[] logfiles = fs.listStatus(hLogDir); // TODO filter filenames?
+      // TODO filter filenames?
+      FileStatus[] logfiles = FSUtils.listStatus(fs, hLogDir, null);
       if (logfiles == null || logfiles.length == 0) {
         LOG.info(hLogDir + " is empty dir, no logs to split");
       } else {
@@ -989,7 +991,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     LOG.debug("re-listing " + logdir);
     tot_mgr_relist_logdir.incrementAndGet();
-    FileStatus[] newfiles = fs.listStatus(logdir);
+    FileStatus[] newfiles = FSUtils.listStatus(fs, logdir, null);
     if (newfiles == null) {
       return false;
     }
