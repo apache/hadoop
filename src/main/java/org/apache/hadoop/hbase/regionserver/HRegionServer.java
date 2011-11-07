@@ -2344,13 +2344,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /**
    * Atomically bulk load several HFiles into an open region
+   * @return true if successful, false is failed but recoverably (no action)
+   * @throws IOException if failed unrecoverably
    */
   @Override
-  public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths,
       byte[] regionName) throws IOException {
     checkOpen();
     HRegion region = getRegion(regionName);
-    region.bulkLoadHFiles(familyPaths);
+    return region.bulkLoadHFiles(familyPaths);
   }
 
   Map<String, Integer> rowlocks = new ConcurrentHashMap<String, Integer>();

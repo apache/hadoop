@@ -315,8 +315,10 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    * 
    * @param familyPaths List of (family, hfile path) pairs
    * @param regionName name of region to load hfiles into
+   * @return true if successful, false if failed recoverably
+   * @throws IOException if fails unrecoverably
    */
-  public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths, byte[] regionName)
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths, byte[] regionName)
   throws IOException;
 
   // Master methods

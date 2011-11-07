@@ -409,6 +409,8 @@ Release 0.92.0 - Unreleased
    HBASE-4753  org.apache.hadoop.hbase.regionserver.TestHRegionInfo#testGetSetOfHTD
                throws NPE on trunk (nkeywal)
    HBASE-4754  FSTableDescriptors.getTableInfoPath() should handle FileNotFoundException
+   HBASE-4740  [bulk load] the HBASE-4552 API can't tell if errors on region server are recoverable
+               (Jonathan Hsieh)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

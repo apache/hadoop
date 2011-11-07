@@ -132,10 +132,10 @@
   </property> 
   <property>
     <name>hbase.bulkload.retries.number</name>
-    <value>10</value>
+    <value>0</value>
     <description>Maximum retries.  This is maximum number of iterations
     to atomic bulk loads are attempted in the face of splitting operations
-    Default: 10.
+    0 means never give up.  Default: 0.
     </description>
   </property>
   <property>

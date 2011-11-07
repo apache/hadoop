@@ -1,6 +1,4 @@
 /**
- * Copyright 2010 The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,8 +27,10 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.List;
 import java.util.NavigableMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -120,6 +120,63 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     }
   }
 
+  private Path buildBulkFiles(String table, int value) throws Exception {
+    Path dir = util.getDataTestDir(table);
+    Path bulk1 = new Path(dir, table+value);
+    FileSystem fs = util.getTestFileSystem();
+    buildHFiles(fs, bulk1, value);
+    return bulk1;
+  }
+
+  /**
+   * Populate table with known values.
+   */
+  private void populateTable(String table, int value) throws Exception {
+    // create HFiles for different column families
+    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+        util.getConfiguration());
+    Path bulk1 = buildBulkFiles(table, value);
+    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    lih.doBulkLoad(bulk1, t);
+  }
+
+  /**
+   * Split the known table in half.  (this is hard coded for this test suite)
+   */
+  private void forceSplit(String table) {
+    try {
+      // need to call regions server to by synchronous but isn't visible.
+      HRegionServer hrs = util.getRSForFirstRegionInTable(Bytes
+          .toBytes(table));
+
+      for (HRegionInfo hri : hrs.getOnlineRegions()) {
+        if (Bytes.equals(hri.getTableName(), Bytes.toBytes(table))) {
+          // splitRegion doesn't work if startkey/endkey are null
+          hrs.splitRegion(hri, rowkey(ROWCOUNT / 2)); // hard code split
+        }
+      }
+
+      // verify that split completed.
+      int regions;
+      do {
+        regions = 0;
+        for (HRegionInfo hri : hrs.getOnlineRegions()) {
+          if (Bytes.equals(hri.getTableName(), Bytes.toBytes(table))) {
+            regions++;
+          }
+        }
+        if (regions != 2) {
+          LOG.info("Taking some time to complete split...");
+          Thread.sleep(250);
+        }
+      } while (regions != 2);
+    } catch (IOException e) {
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+
   @BeforeClass
   public static void setupCluster() throws Exception {
     util = new HBaseTestingUtility();
@@ -131,6 +188,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     util.shutdownMiniCluster();
   }
 
+  /**
+   * Checks that all columns have the expected value and that there is the
+   * expected number of rows.
+   */
   void assertExpectedTable(String table, int count, int value) {
     try {
       assertEquals(util.getHBaseAdmin().listTables(table).length, 1);
@@ -146,18 +207,20 @@ public class TestLoadIncrementalHFilesSplitRecovery {
             assertTrue(Bytes.equals(val, value(value)));
           }
         }
-
       }
       assertEquals(count, i);
-
     } catch (IOException e) {
       fail("Failed due to exception");
     }
   }
 
-  @Test
-  public void testBulkLoadPhaseRecovery() throws Exception {
-    String table = "bulkPhaseRetry";
+  /**
+   * Test that shows that exception thrown from the RS side will result in an
+   * exception on the LIHFile client.
+   */
+  @Test(expected=IOException.class)
+  public void testBulkLoadPhaseFailure() throws Exception {
+    String table = "bulkLoadPhaseFailure";
     setupTable(table, 10);
 
     final AtomicInteger attmptedCalls = new AtomicInteger();
@@ -166,7 +229,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         util.getConfiguration()) {
 
       protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-          byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) {
+          byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
         int i = attmptedCalls.incrementAndGet();
         if (i == 1) {
           HConnection errConn = mock(HConnection.class);
@@ -186,16 +249,11 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     };
 
     // create HFiles for different column families
-    FileSystem fs = util.getTestFileSystem();
-    Path dir = util.getDataTestDir(table);
-    buildHFiles(fs, dir, 1);
+    Path dir = buildBulkFiles(table, 1);
     HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
     lih.doBulkLoad(dir, t);
 
-    // check that data was loaded
-    assertEquals(attmptedCalls.get(), 2);
-    assertEquals(failedCalls.get(), 1);
-    assertExpectedTable(table, ROWCOUNT, 1);
+    fail("doBulkLoad should have thrown an exception");
   }
 
   /**
@@ -206,119 +264,109 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test
   public void testSplitWhileBulkLoadPhase() throws Exception {
-    final String table = "bulkPhaseSplit";
+    final String table = "splitWhileBulkloadPhase";
     setupTable(table, 10);
-    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-        util.getConfiguration());
-
-
-    // create HFiles for different column families
-    Path dir = util.getDataTestDir(table);
-    Path bulk1 = new Path(dir, "normalBulkload");
-    FileSystem fs = util.getTestFileSystem();
-    buildHFiles(fs, bulk1, 1);
-    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
-    lih.doBulkLoad(bulk1, t);
+    populateTable(table,1);
     assertExpectedTable(table, ROWCOUNT, 1);
 
-    // Now let's cause trouble
-    final AtomicInteger attmptedCalls = new AtomicInteger();
+    // Now let's cause trouble.  This will occur after checks and cause bulk
+    // files to fail when attempt to atomically import.  This is recoverable.
+    final AtomicInteger attemptedCalls = new AtomicInteger();
     LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(
         util.getConfiguration()) {
 
-      protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-          byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) {
-        int i = attmptedCalls.incrementAndGet();
+      protected void bulkLoadPhase(final HTable htable, final HConnection conn,
+          ExecutorService pool, Deque<LoadQueueItem> queue,
+          final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
+        int i = attemptedCalls.incrementAndGet();
         if (i == 1) {
           // On first attempt force a split.
-          try {
-            // need to call regions server to by synchronous but isn't visible.
-
-            HRegionServer hrs = util.getRSForFirstRegionInTable(Bytes
-                .toBytes(table));
-
-            HRegionInfo region = null;
-            for (HRegionInfo hri : hrs.getOnlineRegions()) {
-              if (Bytes.equals(hri.getTableName(), Bytes.toBytes(table))) {
-                // splitRegion doesn't work if startkey/endkey are null
-                hrs.splitRegion(hri, rowkey(ROWCOUNT / 2)); // hard code split
-              }
-            }
-
-            int regions;
-            do {
-              regions = 0;
-              for (HRegionInfo hri : hrs.getOnlineRegions()) {
-                if (Bytes.equals(hri.getTableName(), Bytes.toBytes(table))) {
-                  regions++;
-                }
-              }
-              if (regions != 2) {
-                LOG.info("Taking some time to complete split...");
-                Thread.sleep(250);
-              }
-            } while (regions != 2);
-          } catch (IOException e) {
-            e.printStackTrace();
-          } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-          }
+          forceSplit(table);
         }
 
-        return super.tryAtomicRegionLoad(conn, tableName, first, lqis);
+        super.bulkLoadPhase(htable, conn, pool, queue, regionGroups);
       }
     };
 
     // create HFiles for different column families
-    Path bulk2 = new Path(dir, "bulkload2");
-    buildHFiles(fs, bulk2, 2); // all values are '2'
-    lih2.doBulkLoad(bulk2, t);
+    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    Path bulk = buildBulkFiles(table, 2);
+    lih2.doBulkLoad(bulk, t);
 
     // check that data was loaded
-
     // The three expected attempts are 1) failure because need to split, 2)
     // load of split top 3) load of split bottom
-    assertEquals(attmptedCalls.get(), 3);
+    assertEquals(attemptedCalls.get(), 3);
     assertExpectedTable(table, ROWCOUNT, 2);
   }
 
+  /**
+   * This test splits a table and attempts to bulk load.  The bulk import files
+   * should be split before atomically importing.
+   */
+  @Test
+  public void testGroupOrSplitPresplit() throws Exception {
+    final String table = "groupOrSplitPresplit";
+    setupTable(table, 10);
+    populateTable(table, 1);
+    assertExpectedTable(table, ROWCOUNT, 1);
+    forceSplit(table);
+
+    final AtomicInteger countedLqis= new AtomicInteger();
+    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+        util.getConfiguration()) {
+      protected List<LoadQueueItem> groupOrSplit(
+          Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+          final LoadQueueItem item, final HTable htable,
+          final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+        List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+        if (lqis != null) {
+          countedLqis.addAndGet(lqis.size());
+        }
+        return lqis;
+      }
+    };
+
+    // create HFiles for different column families
+    Path bulk = buildBulkFiles(table, 2);
+    HTable ht = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    lih.doBulkLoad(bulk, ht);
+
+    assertExpectedTable(table, ROWCOUNT, 2);
+    assertEquals(20, countedLqis.get());
+  }
+
+  /**
+   * This simulates an remote exception which should cause LIHF to exit with an
+   * exception.
+   */
   @Test(expected = IOException.class)
   public void testGroupOrSplitFailure() throws Exception {
-    String table = "groupOrSplitStoreFail";
+    String table = "groupOrSplitFailure";
     setupTable(table, 10);
 
-    try {
-      LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
-          util.getConfiguration()) {
-        int i = 0;
+    LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
+        util.getConfiguration()) {
+      int i = 0;
 
-        protected List<LoadQueueItem> groupOrSplit(
-            Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-            final LoadQueueItem item, final HTable table,
-            final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-          i++;
+      protected List<LoadQueueItem> groupOrSplit(
+          Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+          final LoadQueueItem item, final HTable table,
+          final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+        i++;
 
-          if (i == 5) {
-            throw new IOException("failure");
-          }
-          return super.groupOrSplit(regionGroups, item, table, startEndKeys);
+        if (i == 5) {
+          throw new IOException("failure");
         }
-      };
+        return super.groupOrSplit(regionGroups, item, table, startEndKeys);
+      }
+    };
 
-      Path dir = util.getDataTestDir(table);
+    // create HFiles for different column families
+    Path dir = buildBulkFiles(table,1);
+    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    lih.doBulkLoad(dir, t);
 
-      // create HFiles for different column families
-      FileSystem fs = util.getTestFileSystem();
-      buildHFiles(fs, dir, 1);
-      HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
-      lih.doBulkLoad(dir, t);
-
-      // check that data was loaded
-      assertExpectedTable(table, ROWCOUNT, 1);
-
-    } finally {
-      util.shutdownMiniCluster();
-    }
+    fail("doBulkLoad should have thrown an exception");
   }
 }

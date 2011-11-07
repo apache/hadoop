@@ -165,7 +165,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   /**
    * Perform a bulk load of the given directory into the given
-   * pre-existing table.
+   * pre-existing table.  This method is not threadsafe.
+   * 
    * @param hfofDir the directory that was provided as the output path
    * of a job using HFileOutputFormat
    * @param table the table to load into
@@ -200,17 +201,24 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       discoverLoadQueue(queue, hfofDir);
       int count = 0;
 
+      if (queue.isEmpty()) {
+        LOG.warn("Bulk load operation did not find any files to load in " +
+            "directory " + hfofDir.toUri() + ".  Does it contain files in " +
+            "subdirectories that correspond to column family names?");
+        return;
+      }
+
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
         // need to reload split keys each iteration.
         final Pair<byte[][], byte[][]> startEndKeys = table.getStartEndKeys();
         if (count != 0) {
           LOG.info("Split occured while grouping HFiles, retry attempt " +
-              + count + " with " + queue.size() + " files remaining to load");
+              + count + " with " + queue.size() + " files remaining to group or split");
         }
-        
-        int maxRetries = cfg.getInt("hbase.bulkload.retries.number", 10);
-        if (count >= maxRetries) {
+
+        int maxRetries = cfg.getInt("hbase.bulkload.retries.number", 0);
+        if (maxRetries != 0 && count >= maxRetries) {
           LOG.error("Retry attempted " + count +  " times without completing, bailing out");
           return;
         }
@@ -247,7 +255,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * them.  Any failures are re-queued for another pass with the
    * groupOrSplitPhase.
    */
-  private void bulkLoadPhase(final HTable table, final HConnection conn,
+  protected void bulkLoadPhase(final HTable table, final HConnection conn,
       ExecutorService pool, Deque<LoadQueueItem> queue,
       final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
     // atomically bulk load the groups.
@@ -269,16 +277,16 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     for (Future<List<LoadQueueItem>> future : loadingFutures) {
       try {
         List<LoadQueueItem> toRetry = future.get();
-        if (toRetry != null && toRetry.size() != 0) {
-          // LQIs that are requeued to be regrouped.
-          queue.addAll(toRetry);
-        }
+
+        // LQIs that are requeued to be regrouped.
+        queue.addAll(toRetry);
 
       } catch (ExecutionException e1) {
         Throwable t = e1.getCause();
         if (t instanceof IOException) {
-          LOG.error("IOException during bulk load", e1);
-          throw (IOException)t; // would have been thrown if not parallelized,
+          // At this point something unrecoverable has happened.
+          // TODO Implement bulk load recovery
+          throw new IOException("BulkLoad encountered an unrecoverable problem", t);
         }
         LOG.error("Unexpected execution exception during bulk load", e1);
         throw new IllegalStateException(t);
@@ -444,9 +452,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * succeed atomically and fails atomically.
    * 
    * Protected for testing.
+   * 
+   * @return empty list if success, list of items to retry on recoverable
+   * failure
    */
   protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-      byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) {
+      byte[] tableName, final byte[] first, Collection<LoadQueueItem> lqis) throws IOException {
 
     final List<Pair<byte[], String>> famPaths =
       new ArrayList<Pair<byte[], String>>(lqis.size());
@@ -454,29 +465,33 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       famPaths.add(Pair.newPair(lqi.family, lqi.hfilePath.toString()));
     }
 
-    final ServerCallable<Void> svrCallable = new ServerCallable<Void>(conn,
+    final ServerCallable<Boolean> svrCallable = new ServerCallable<Boolean>(conn,
         tableName, first) {
       @Override
-      public Void call() throws Exception {
+      public Boolean call() throws Exception {
         LOG.debug("Going to connect to server " + location + " for row "
             + Bytes.toStringBinary(row));
         byte[] regionName = location.getRegionInfo().getRegionName();
-        server.bulkLoadHFiles(famPaths, regionName);
-        return null;
+        return server.bulkLoadHFiles(famPaths, regionName);
       }
     };
 
-    List<LoadQueueItem> toRetry = new ArrayList<LoadQueueItem>();
     try {
-      conn.getRegionServerWithRetries(svrCallable);
+      List<LoadQueueItem> toRetry = new ArrayList<LoadQueueItem>();
+      boolean success = conn.getRegionServerWithRetries(svrCallable);
+      if (!success) {
+        LOG.warn("Attempt to bulk load region containing "
+            + Bytes.toStringBinary(first) + " into table "
+            + Bytes.toStringBinary(tableName)  + " with files " + lqis
+            + " failed.  This is recoverable and they will be retried.");
+        toRetry.addAll(lqis); // return lqi's to retry
+      }
+      // success
+      return toRetry;
     } catch (IOException e) {
-      LOG.warn("Attempt to bulk load region containing "
-          + Bytes.toStringBinary(first) + " into table "
-          + Bytes.toStringBinary(tableName)  + " with files " + lqis
-          + " failed");
-      toRetry.addAll(lqis);
+      LOG.error("Encountered unrecoverable error from region server", e);
+      throw e;
     }
-    return toRetry;
   }
 
   /**

@@ -2634,20 +2634,22 @@ public class HRegion implements HeapSize { // , Writable{
    * rows with multiple column families atomically.
    *
    * @param familyPaths List of Pair<byte[] column family, String hfilePath>
+   * @return true if successful, false if failed recoverably
+   * @throws IOException if failed unrecoverably.
    */
-  public void bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
+  public boolean bulkLoadHFiles(List<Pair<byte[], String>> familyPaths)
   throws IOException {
     Preconditions.checkNotNull(familyPaths);
     // we need writeLock for multi-family bulk load
     startBulkRegionOperation(hasMultipleColumnFamilies(familyPaths));
-    this.writeRequestsCount.increment();
-    List<IOException> ioes = new ArrayList<IOException>();
-    List<Pair<byte[], String>> failures = new ArrayList<Pair<byte[], String>>();
-    boolean rangesOk = true;
     try {
+      this.writeRequestsCount.increment();
+
       // There possibly was a split that happend between when the split keys
       // were gathered and before the HReiogn's write lock was taken.  We need
       // to validate the HFile region before attempting to bulk load all of them
+      List<IOException> ioes = new ArrayList<IOException>();
+      List<Pair<byte[], String>> failures = new ArrayList<Pair<byte[], String>>();
       for (Pair<byte[], String> p : familyPaths) {
         byte[] familyName = p.getFirst();
         String path = p.getSecond();
@@ -2662,16 +2664,34 @@ public class HRegion implements HeapSize { // , Writable{
 
         try {
           store.assertBulkLoadHFileOk(new Path(path));
-        } catch (IOException ioe) {
-          rangesOk = false;
-          ioes.add(ioe);
+        } catch (WrongRegionException wre) {
+          // recoverable (file doesn't fit in region)
           failures.add(p);
+        } catch (IOException ioe) {
+          // unrecoverable (hdfs problem)
+          ioes.add(ioe);
         }
       }
 
+
+      // validation failed, bail out before doing anything permanent.
+      if (failures.size() != 0) {
+        StringBuilder list = new StringBuilder();
+        for (Pair<byte[], String> p : failures) {
+          list.append("\n").append(Bytes.toString(p.getFirst())).append(" : ")
+            .append(p.getSecond());
+        }
+        // problem when validating
+        LOG.warn("There was a recoverable bulk load failure likely due to a" +
+            " split.  These (family, HFile) pairs were not loaded: " + list);
+        return false;
+      }
+
+      // validation failed because of some sort of IO problem.
       if (ioes.size() != 0) {
-        // validation failed, bail out before doing anything permanent.
-        return;
+        LOG.error("There were IO errors when checking if bulk load is ok.  " +
+            "throwing exception!");
+        throw MultipleIOException.createIOException(ioes);
       }
 
       for (Pair<byte[], String> p : familyPaths) {
@@ -2683,35 +2703,16 @@ public class HRegion implements HeapSize { // , Writable{
         } catch (IOException ioe) {
           // a failure here causes an atomicity violation that we currently 
           // cannot recover from since it is likely a failed hdfs operation.
-          ioes.add(ioe);
-          failures.add(p);
-          break;
+
+          // TODO Need a better story for reverting partial failures due to HDFS.
+          LOG.error("There was a partial failure due to IO when attempting to" +
+              " load " + Bytes.toString(p.getFirst()) + " : "+ p.getSecond());
+          throw ioe;
         }
       }
+      return true;
     } finally {
       closeBulkRegionOperation();
-      if (ioes.size() != 0) {
-        StringBuilder list = new StringBuilder();
-        for (Pair<byte[], String> p : failures) {
-          list.append("\n").append(Bytes.toString(p.getFirst())).append(" : ")
-            .append(p.getSecond());
-        }
-
-        if (rangesOk) {
-          // TODO Need a better story for reverting partial failures due to HDFS.
-          LOG.error("There was a partial failure due to IO.   These " +
-              "(family,hfile) pairs were not loaded: " + list);
-        } else {
-          // problem when validating
-          LOG.info("There was a recoverable bulk load failure likely due to a" +
-              " split.  These (family, HFile) pairs were not loaded: " + list);
-        }
-
-        if (ioes.size() == 1) {
-          throw ioes.get(0);
-        }
-        throw MultipleIOException.createIOException(ioes);
-      }
     }
   }
 
