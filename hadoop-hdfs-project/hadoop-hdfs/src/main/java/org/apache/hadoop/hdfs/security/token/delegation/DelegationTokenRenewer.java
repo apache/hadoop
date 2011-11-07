@@ -134,7 +134,7 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
 
   private DelayQueue<RenewAction<T>> queue = new DelayQueue<RenewAction<T>>();
 
-  public DelegationTokenRenewer(final Class<?> clazz) {
+  public DelegationTokenRenewer(final Class<T> clazz) {
     super(clazz.getSimpleName() + "-" + DelegationTokenRenewer.class.getSimpleName());
     setDaemon(true);
   }
