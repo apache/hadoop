@@ -685,6 +685,7 @@ Release 0.92.0 - Unreleased
    HBASE-4749  TestMasterFailover#testMasterFailoverWithMockedRITOnDeadRS
                occasionally fails
    HBASE-3939  Some crossports of Hadoop IPC fixes
+   HBASE-4746  Fix TestRegionServerCoprocessorExceptionWithXXX (Mikhail Bautin)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

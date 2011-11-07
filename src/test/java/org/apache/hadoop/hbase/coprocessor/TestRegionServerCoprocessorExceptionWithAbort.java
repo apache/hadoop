@@ -21,9 +21,6 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
@@ -31,10 +28,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -75,7 +69,8 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
     byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
     HTable table = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    TEST_UTIL.createMultiRegions(table, TEST_FAMILY);
+    TEST_UTIL.waitUntilAllRegionsAssigned(
+        TEST_UTIL.createMultiRegions(table, TEST_FAMILY));
 
     // Note which regionServer will abort (after put is attempted).
     HRegionServer regionServer =
