@@ -75,7 +75,7 @@ public class TestWebHdfsUrl {
             + "&token=" + tokenString, renewTokenUrl.getQuery());
     Token<DelegationTokenIdentifier> delegationToken = new Token<DelegationTokenIdentifier>(
         token);
-    delegationToken.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
+    delegationToken.setKind(WebHdfsFileSystem.TOKEN_KIND);
     Assert.assertEquals(
         generateUrlQueryPrefix(PutOpParam.Op.CANCELDELEGATIONTOKEN,
             ugi.getUserName())

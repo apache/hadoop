@@ -73,6 +73,19 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
       return this.renewalTime < that.renewalTime? -1
           : this.renewalTime == that.renewalTime? 0: 1;
     }
+
+    @Override
+    public int hashCode() {
+      return (int)renewalTime ^ (int)(renewalTime >>> 32);
+    }
+
+    @Override
+    public boolean equals(final Object that) {
+      if (that == null || !(that instanceof RenewAction)) {
+        return false;
+      }
+      return compareTo((Delayed)that) == 0;
+    }
     
     /**
      * Set a new time for the renewal.
@@ -121,7 +134,7 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
 
   private DelayQueue<RenewAction<T>> queue = new DelayQueue<RenewAction<T>>();
 
-  public DelegationTokenRenewer(final Class<?> clazz) {
+  public DelegationTokenRenewer(final Class<T> clazz) {
     super(clazz.getSimpleName() + "-" + DelegationTokenRenewer.class.getSimpleName());
     setDaemon(true);
   }

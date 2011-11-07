@@ -146,7 +146,7 @@ public class NamenodeWebHdfsMethods {
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
     t.setKind(WebHdfsFileSystem.TOKEN_KIND);
-    SecurityUtil.setTokenService(t, namenode.getNameNodeAddress());
+    SecurityUtil.setTokenService(t, namenode.getHttpAddress());
     return t;
   }
 

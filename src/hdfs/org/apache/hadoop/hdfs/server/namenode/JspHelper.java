@@ -474,7 +474,8 @@ public class JspHelper {
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
         SecurityUtil.setTokenService(token, NameNode.getAddress(conf));
-        LOG.info("Setting service in token: " + token.getService());
+        token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
+
         ByteArrayInputStream buf = 
           new ByteArrayInputStream(token.getIdentifier());
         DataInputStream in = new DataInputStream(buf);
