@@ -47,6 +47,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -555,8 +556,8 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintStream out = new PrintStream(outstream);
-        out.println("{\"" + HdfsFileStatus.class.getSimpleName() + "es\":{\""
-            + HdfsFileStatus.class.getSimpleName() + "\":[");
+        out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
+            + FileStatus.class.getSimpleName() + "\":[");
 
         final HdfsFileStatus[] partial = first.getPartialListing();
         if (partial.length > 0) {

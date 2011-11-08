@@ -325,20 +325,48 @@ public class WebHdfsFileSystem extends FileSystem
     final URL url = toUrl(op, fspath, parameters);
 
     //connect and get response
-    final HttpURLConnection conn = getHttpUrlConnection(url);
+    HttpURLConnection conn = getHttpUrlConnection(url);
     try {
       conn.setRequestMethod(op.getType().toString());
-      conn.setDoOutput(op.getDoOutput());
       if (op.getDoOutput()) {
-        conn.setRequestProperty("Expect", "100-Continue");
-        conn.setInstanceFollowRedirects(true);
+        conn = twoStepWrite(conn, op);
       }
+      conn.setDoOutput(op.getDoOutput());
       conn.connect();
       return conn;
     } catch (IOException e) {
       conn.disconnect();
       throw e;
     }
+  }
+  
+  /**
+   * Two-step Create/Append:
+   * Step 1) Submit a Http request with neither auto-redirect nor data. 
+   * Step 2) Submit Http PUT with the URL from the Location header with data.
+   * 
+   * The reason of having two-step create/append is for preventing clients to
+   * send out the data before the redirect. This issue is addressed by the
+   * "Expect: 100-continue" header in HTTP/1.1; see RFC 2616, Section 8.2.3.
+   * Unfortunately, there are software library bugs (e.g. Jetty 6 http server
+   * and Java 6 http client), which do not correctly implement "Expect:
+   * 100-continue". The two-step create/append is a temporary workaround for
+   * the software library bugs.
+   */
+  private static HttpURLConnection twoStepWrite(HttpURLConnection conn,
+      final HttpOpParam.Op op) throws IOException {
+    //Step 1) Submit a Http request with neither auto-redirect nor data. 
+    conn.setInstanceFollowRedirects(false);
+    conn.setDoOutput(false);
+    conn.connect();
+    validateResponse(HttpOpParam.TemporaryRedirectOp.valueOf(op), conn);
+    final String redirect = conn.getHeaderField("Location");
+    conn.disconnect();
+
+    //Step 2) Submit Http PUT with the URL from the Location header with data.
+    conn = (HttpURLConnection)new URL(redirect).openConnection();
+    conn.setRequestMethod(op.getType().toString());
+    return conn;
   }
 
   /**
@@ -605,8 +633,8 @@ public class WebHdfsFileSystem extends FileSystem
 
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
     final Map<?, ?> json  = run(op, f);
-    final Map<?, ?> rootmap = (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName() + "es");
-    final Object[] array = (Object[])rootmap.get(HdfsFileStatus.class.getSimpleName());
+    final Map<?, ?> rootmap = (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
+    final Object[] array = (Object[])rootmap.get(FileStatus.class.getSimpleName());
 
     //convert FileStatus
     final FileStatus[] statuses = new FileStatus[array.length];
