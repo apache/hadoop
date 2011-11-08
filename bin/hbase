@@ -256,7 +256,7 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
-  CLASS="org.jruby.Main ${HBASE_HOME}/bin/hirb.rb"
+  CLASS="org.jruby.Main -X+O ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
 elif [ "$COMMAND" = "hlog" ] ; then
