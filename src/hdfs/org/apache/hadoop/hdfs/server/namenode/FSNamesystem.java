@@ -2837,12 +2837,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @return total number of block for deletion
    */
   int computeInvalidateWork(int nodesToProcess) {
-    int numOfNodes = recentInvalidateSets.size();
+    int numOfNodes = 0;
+    ArrayList<String> keyArray;
+    synchronized (this) {
+      numOfNodes = recentInvalidateSets.size();
+      // get an array of the keys
+      keyArray = new ArrayList<String>(recentInvalidateSets.keySet());
+    }
     nodesToProcess = Math.min(numOfNodes, nodesToProcess);
-    
-    // get an array of the keys
-    ArrayList<String> keyArray =
-      new ArrayList<String>(recentInvalidateSets.keySet());
 
     // randomly pick up <i>nodesToProcess</i> nodes 
     // and put them at [0, nodesToProcess)
@@ -3164,8 +3166,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       return 0;
     }
     Collection<Block> invalidateSet = recentInvalidateSets.get(nodeId);
-    if (invalidateSet == null)
+    if (invalidateSet == null) {
       return 0;
+    }
 
     ArrayList<Block> blocksToInvalidate = 
       new ArrayList<Block>(blockInvalidateLimit);
