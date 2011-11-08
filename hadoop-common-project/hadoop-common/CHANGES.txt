@@ -100,6 +100,20 @@ Trunk (unreleased changes)
     HADOOP-7773. Add support for protocol buffer based RPC engine.
     (suresh)
 
+Release 0.23.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES                                                                    
+
+  IMPROVEMENTS
+
+    HADOOP-7801. HADOOP_PREFIX cannot be overriden. (Bruno Mahé via tomwhite)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

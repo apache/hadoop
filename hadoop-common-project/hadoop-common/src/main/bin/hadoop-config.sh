@@ -27,7 +27,9 @@ this="$common_bin/$script"
 
 # the root of the Hadoop installation
 # See HADOOP-6255 for directory structure layout
-export HADOOP_PREFIX=`dirname "$this"`/..
+HADOOP_DEFAULT_PREFIX=`dirname "$this"`/..
+HADOOP_PREFIX=${HADOOP_PREFIX:-$HADOOP_DEFAULT_PREFIX}
+export HADOOP_PREFIX
 
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]
