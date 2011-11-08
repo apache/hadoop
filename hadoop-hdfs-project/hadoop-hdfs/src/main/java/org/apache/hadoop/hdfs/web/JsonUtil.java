@@ -28,6 +28,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -149,7 +150,7 @@ public class JsonUtil {
       return null;
     }
     final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("localName", status.getLocalName());
+    m.put("pathSuffix", status.getLocalName());
     m.put("type", PathType.valueOf(status));
     if (status.isSymlink()) {
       m.put("symlink", status.getSymlink());
@@ -163,8 +164,7 @@ public class JsonUtil {
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());
     m.put("replication", status.getReplication());
-    return includeType ? toJsonString(HdfsFileStatus.class, m) : 
-      JSON.toString(m);
+    return includeType ? toJsonString(FileStatus.class, m): JSON.toString(m);
   }
 
   /** Convert a Json map to a HdfsFileStatus object. */
@@ -174,8 +174,8 @@ public class JsonUtil {
     }
 
     final Map<?, ?> m = includesType ? 
-        (Map<?, ?>)json.get(HdfsFileStatus.class.getSimpleName()) : json;
-    final String localName = (String) m.get("localName");
+        (Map<?, ?>)json.get(FileStatus.class.getSimpleName()) : json;
+    final String localName = (String) m.get("pathSuffix");
     final PathType type = PathType.valueOf((String) m.get("type"));
     final byte[] symlink = type != PathType.SYMLINK? null
         : DFSUtil.string2Bytes((String)m.get("symlink"));
