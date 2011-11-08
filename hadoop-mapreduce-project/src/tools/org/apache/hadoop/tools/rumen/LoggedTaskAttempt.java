@@ -328,11 +328,27 @@ public class LoggedTaskAttempt implements DeepCompare {
     return hostName;
   }
 
-
+  void setHostName(String hostName) {
+    this.hostName = hostName;
+  }
+  
   // hostName is saved in the format rackName/NodeName
   void setHostName(String hostName, String rackName) {
-    this.hostName = hostName == null || rackName == null ? null
-        : rackName.intern() + "/" + hostName.intern();
+    if (hostName == null || hostName.length() == 0) {
+      throw new RuntimeException("Invalid entry! Missing hostname");
+    } else if (rackName == null || rackName.length() == 0) {
+      setHostName(hostName);
+    } else {
+      // make sure that the rackname is prefixed with a '/'
+      if (!rackName.startsWith("/")) {
+        rackName = "/" + rackName;
+      }
+      // make sure that the hostname is prefixed with a '/'
+      if (!hostName.startsWith("/")) {
+        hostName = "/" + hostName;
+      }
+      setHostName(rackName.intern() + hostName.intern());
+    }
   }
 
   public long getHdfsBytesRead() {

@@ -29,6 +29,8 @@ Trunk (unreleased changes)
     uri with no authority. (John George via jitendra)
 
   BUG FIXES
+    MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
+                    (amarrk)
 
     MAPREDUCE-2950. [Gridmix] TestUserResolve fails in trunk. 
                     (Ravi Gummadi via amarrk)
