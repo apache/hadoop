@@ -189,6 +189,7 @@ public class DistributedFileSystem extends FileSystem {
    * Same as create(), except fails if parent directory doesn't already exist.
    * @see #create(Path, FsPermission, boolean, int, short, long, Progressable)
    */
+  @Override
   public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
       boolean overwrite,
       int bufferSize, short replication, long blockSize, 

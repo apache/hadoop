@@ -18,6 +18,9 @@ Release 0.20.205.1 - unreleased
     HDFS-617. Support for non-recursive create() in HDFS.
     (Kan Zhang via jitendra)
 
+    HADOOP-6840. Support non-recursive create() in FileSystem & 
+    SequenceFile.Writer. (Nicolas Spiegelberg via jitendra)
+
   BUG FIXES
 
     HADOOP-7784. Fixed jsvc packaging. (Eric Yang)
