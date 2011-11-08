@@ -39,6 +39,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3342. Fixed JobHistoryServer to also show the job's queue
     name. (Jonathan Eagles via vinodkv)
 
+    MAPREDUCE-3345. Fixed a race condition in ResourceManager that was causing
+    TestContainerManagerSecurity to fail sometimes. (Hitesh Shah via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
