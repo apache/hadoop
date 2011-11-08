@@ -284,6 +284,11 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
+  public String getQueueName() {
+    return jobInfo.getJobQueueName();
+  }
+
+  @Override
   public int getTotalMaps() {
     return (int) jobInfo.getTotalMaps();
   }

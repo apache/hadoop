@@ -65,6 +65,11 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   }
 
   @Override
+  public String getQueueName() {
+    return jobIndexInfo.getQueueName();
+  }
+
+  @Override
   public JobState getState() {
     JobState js = null;
     try {

@@ -104,6 +104,7 @@ public class HsJobBlock extends HtmlBlock {
     ResponseInfo infoBlock = info("Job Overview").
         _("Job Name:", job.getName()).
         _("User Name:", job.getUserName()).
+        _("Queue:", job.getQueueName()).
         _("State:", job.getState()).
         _("Uberized:", job.isUber()).
         _("Started:", new Date(startTime)).

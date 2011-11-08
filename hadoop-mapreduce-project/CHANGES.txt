@@ -86,6 +86,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3344. o.a.h.mapreduce.Reducer since 0.21 blindly casts to
     ReduceContext.ValueIterator. (Brock Noland via tomwhite)
 
+    MAPREDUCE-3342. Fixed JobHistoryServer to also show the job's queue
+    name. (Jonathan Eagles via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
