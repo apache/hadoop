@@ -1188,6 +1188,10 @@ Release 0.23.0 - 2011-11-01
     HDFS-2528. Webhdfs: set delegation kind to WEBHDFS and add a HDFS token
     when http requests are redirected to datanode.  (szetszwo)
 
+    HDFS-2540. Webhdfs: change "Expect: 100-continue" to two-step write; change 
+    "HdfsFileStatus" and "localName" respectively to "FileStatus" and
+    "pathSuffix" in JSON response.  (szetszwo)
+
   BREAKDOWN OF HDFS-1073 SUBTASKS
 
     HDFS-1521. Persist transaction ID on disk between NN restarts.
