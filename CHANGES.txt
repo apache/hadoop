@@ -135,6 +135,10 @@ Release 0.20.205.1 - unreleased
     HDFS-2528. Webhdfs: set delegation kind to WEBHDFS and add a HDFS token
     when http requests are redirected to datanode.  (szetszwo)
 
+    HDFS-2540. Webhdfs: change "Expect: 100-continue" to two-step write; change 
+    "HdfsFileStatus" and "localName" respectively to "FileStatus" and
+    "pathSuffix" in JSON response.  (szetszwo)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
