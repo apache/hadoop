@@ -689,6 +689,7 @@ Release 0.92.0 - Unreleased
    HBASE-3939  Some crossports of Hadoop IPC fixes
    HBASE-4746  Fix TestRegionServerCoprocessorExceptionWithXXX (Mikhail Bautin)
    HBASE-4756  Enable tab-completion in HBase shell (Ryan Thiessen)
+   HBASE-4759  Migrate from JUnit 4.8.2 to JUnit 4.10 (nkeywal)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
