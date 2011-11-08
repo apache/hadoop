@@ -324,7 +324,6 @@
           Hadoop's default algorithms from JobInProgress.
           </td>
           </tr>
-          <!--
           <tr>
           <td>
             mapred.fairscheduler.eventlog.enabled
@@ -333,6 +332,7 @@
             Enable a detailed log of fair scheduler events, useful for
             debugging.
             This log is stored in <em>HADOOP_LOG_DIR/fairscheduler</em>.
+	    <strong>NOTICE: This setting is for experts only.</strong>
             Boolean value, default: false.
           </td>
           </tr>
@@ -343,10 +343,10 @@
           <td>
             If using the event log, this is the interval at which to dump
             complete scheduler state (list of pools and jobs) to the log.
+	    <strong>NOTICE: This setting is for experts only.</strong>
             Integer value in milliseconds, default: 10000.
           </td>
           </tr>
-          -->
         </table>
       </section>  
       <section>
