@@ -361,9 +361,22 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
+    return create(f, permission, overwrite, true, bufferSize, 
+        replication, blockSize, progress);
+  }
+
+  private FSDataOutputStream create(Path f, FsPermission permission,
+      boolean overwrite, boolean createParent, int bufferSize, 
+      short replication, long blockSize,
+      Progressable progress) throws IOException {
     Path parent = f.getParent();
-    if (parent != null && !mkdirs(parent)) {
-      throw new IOException("Mkdirs failed to create " + parent);
+    if (parent != null) {
+      if (!createParent && !exists(parent)) {
+        throw new FileNotFoundException("Parent directory doesn't exist: "
+            + parent);
+      } else if (!mkdirs(parent)) {
+        throw new IOException("Mkdirs failed to create " + parent);
+      }
     }
     final FSDataOutputStream out = new FSDataOutputStream(
         new ChecksumFSOutputSummer(this, f, overwrite, bufferSize, replication,
@@ -372,6 +385,15 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       setPermission(f, permission);
     }
     return out;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    return create(f, permission, overwrite, false, bufferSize, replication, 
+        blockSize, progress);
   }
 
   /**

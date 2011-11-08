@@ -623,7 +623,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       boolean overwrite,
       int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
-    throw new IOException("createNonRecursive unsupported for this filesystem");
+    throw new IOException("createNonRecursive unsupported for this filesystem "
+        + this.getClass());
   }
 
   /**
