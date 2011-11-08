@@ -71,7 +71,7 @@ format() {
 }
 
 export PATH="${PATH:+$PATH:}/usr/sbin:/usr/bin"
-export HADOOP_PREFIX="/usr"
+export HADOOP_PREFIX=${HADOOP_PREFIX:-/usr}
 
 case "$1" in
   start)
