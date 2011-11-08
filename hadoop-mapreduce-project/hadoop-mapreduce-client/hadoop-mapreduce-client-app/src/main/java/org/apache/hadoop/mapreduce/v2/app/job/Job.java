@@ -55,6 +55,7 @@ public interface Job {
   int getCompletedReduces();
   boolean isUber();
   String getUserName();
+  String getQueueName();
   
   /**
    * @return a path to where the config file for this job is located.

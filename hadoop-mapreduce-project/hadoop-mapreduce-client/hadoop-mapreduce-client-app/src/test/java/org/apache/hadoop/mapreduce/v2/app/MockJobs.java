@@ -493,6 +493,11 @@ public class MockJobs extends MockApps {
       }
 
       @Override
+      public String getQueueName() {
+        return "mockqueue";
+      }
+
+      @Override
       public Path getConfFile() {
         throw new UnsupportedOperationException("Not supported yet.");
       }

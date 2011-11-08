@@ -142,6 +142,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
   private final String userName;
+  private final String queueName;
   private final long appSubmitTime;
 
   private boolean lazyTasksCopyNeeded = false;
@@ -375,6 +376,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
     this.amInfos = amInfos;
     this.userName = userName;
+    this.queueName = conf.get(MRJobConfig.QUEUE_NAME, "default");
     this.appSubmitTime = appSubmitTime;
     this.oldJobId = TypeConverter.fromYarn(jobId);
     this.newApiCommitter = newApiCommitter;
@@ -766,6 +768,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return userName;
   }
   
+  @Override
+  public String getQueueName() {
+    return queueName;
+  }
+  
   /*
    * (non-Javadoc)
    * @see org.apache.hadoop.mapreduce.v2.app.job.Job#getConfFile()
@@ -829,7 +836,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             job.conf.get(MRJobConfig.USER_NAME, "mapred"),
             job.appSubmitTime,
             job.remoteJobConfFile.toString(),
-            job.jobACLs, job.conf.get(MRJobConfig.QUEUE_NAME, "default"));
+            job.jobACLs, job.queueName);
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
         //TODO JH Verify jobACLs, UserName via UGI?
 

@@ -28,6 +28,7 @@ public class JobIndexInfo {
   private long submitTime;
   private long finishTime;
   private String user;
+  private String queueName;
   private String jobName;
   private JobId jobId;
   private int numMaps;
@@ -66,6 +67,12 @@ public class JobIndexInfo {
   }
   public void setUser(String user) {
     this.user = user;
+  }
+  public String getQueueName() {
+    return queueName;
+  }
+  public void setQueueName(String queueName) {
+    this.queueName = queueName;
   }
   public String getJobName() {
     return jobName;
