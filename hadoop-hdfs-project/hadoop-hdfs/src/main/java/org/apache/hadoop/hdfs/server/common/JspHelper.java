@@ -61,9 +61,9 @@ import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -544,9 +544,8 @@ public class JspHelper {
         token.decodeFromUrlString(tokenString);
         String serviceAddress = getNNServiceAddress(context, request);
         if (serviceAddress != null) {
-          LOG.info("Setting service in token: "
-              + new Text(serviceAddress));
           token.setService(new Text(serviceAddress));
+          token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
         }
         ByteArrayInputStream buf = new ByteArrayInputStream(token
             .getIdentifier());
