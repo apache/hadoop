@@ -441,6 +441,9 @@ Release 0.23.0 - 2011-11-01
 
     HADOOP-7789. Improvements to site navigation. (acmurthy) 
 
+    HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
+    (jitendra)
+
   OPTIMIZATIONS
   
     HADOOP-7333. Performance improvement in PureJavaCrc32. (Eric Caspole

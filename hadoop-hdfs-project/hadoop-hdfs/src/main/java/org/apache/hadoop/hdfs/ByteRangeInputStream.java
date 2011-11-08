@@ -40,13 +40,13 @@ import org.apache.hadoop.hdfs.web.resources.OffsetParam;
 public class ByteRangeInputStream extends FSInputStream {
   
   /**
-   * This class wraps a URL to allow easy mocking when testing. The URL class
-   * cannot be easily mocked because it is public.
+   * This class wraps a URL and provides method to open connection.
+   * It can be overridden to change how a connection is opened.
    */
-  static class URLOpener {
+  public static class URLOpener {
     protected URL url;
     /** The url with offset parameter */
-    private URL offsetUrl;
+    protected URL offsetUrl;
   
     public URLOpener(URL u) {
       url = u;
@@ -60,7 +60,7 @@ public class ByteRangeInputStream extends FSInputStream {
       return url;
     }
 
-    HttpURLConnection openConnection() throws IOException {
+    protected HttpURLConnection openConnection() throws IOException {
       return (HttpURLConnection)offsetUrl.openConnection();
     }
 
@@ -125,7 +125,13 @@ public class ByteRangeInputStream extends FSInputStream {
     this(new URLOpener(url), new URLOpener(null));
   }
   
-  ByteRangeInputStream(URLOpener o, URLOpener r) {
+  /**
+   * Create with the specified URLOpeners. Original url is used to open the 
+   * stream for the first time. Resolved url is used in subsequent requests.
+   * @param o Original url
+   * @param r Resolved url
+   */
+  public ByteRangeInputStream(URLOpener o, URLOpener r) {
     this.originalURL = o;
     this.resolvedURL = r;
   }

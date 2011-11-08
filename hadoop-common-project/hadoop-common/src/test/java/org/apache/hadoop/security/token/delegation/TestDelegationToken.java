@@ -360,6 +360,8 @@ public class TestDelegationToken {
         byte[] storedPassword = dtSecretManager.retrievePassword(id);
         byte[] password = dtSecretManager.createPassword(id, key);
         Assert.assertTrue(Arrays.equals(password, storedPassword));
+        //verify by secret manager api
+        dtSecretManager.verifyToken(id, password);
       }
     } finally {
       dtSecretManager.stopThreads();
