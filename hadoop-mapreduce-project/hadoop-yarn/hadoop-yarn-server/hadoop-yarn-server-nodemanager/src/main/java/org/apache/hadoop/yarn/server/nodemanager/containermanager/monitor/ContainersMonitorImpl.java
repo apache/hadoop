@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
-import com.google.inject.internal.Preconditions;
+import com.google.common.base.Preconditions;
 
 public class ContainersMonitorImpl extends AbstractService implements
     ContainersMonitor {
