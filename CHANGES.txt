@@ -149,6 +149,9 @@ Release 0.20.205.1 - unreleased
     HDFS-1257. Race condition on FSNamesystem#recentInvalidateSets introduced 
     by HADOOP-5124. (Eric Payne via jitendra)
 
+    HDFS-611. Heartbeats times from Datanodes increase when there are plenty of
+    blocks to delete. (Zheng Shao via jitendra)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
