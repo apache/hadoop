@@ -1215,7 +1215,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
               if (storeResource) {
                 updatingResource.put(attr, name.toString());
               }
-            } else {
+            } else if (!value.equals(properties.getProperty(attr))) {
               LOG.warn(name+":a attempt to override final parameter: "+attr
                      +";  Ignoring.");
             }
