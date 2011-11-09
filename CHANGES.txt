@@ -27,6 +27,10 @@ Release 0.20.205.1 - unreleased
     HADOOP-5124. A few optimizations to FsNamesystem#RecentInvalidateSets.
     (Hairong Kuang via jitendra)
 
+    HADOOP-7664. Remove warmings when overriding final parameter configuration
+    if the override value is same as the final parameter value.
+    (Ravi Prakash via szetszwo)
+
   BUG FIXES
 
     HADOOP-7784. Fixed jsvc packaging. (Eric Yang)
