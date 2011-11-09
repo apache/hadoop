@@ -98,6 +98,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3345. Fixed a race condition in ResourceManager that was causing
     TestContainerManagerSecurity to fail sometimes. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3333. Fixed bugs in ContainerLauncher of MR AppMaster due to
+    which per-container connections to NodeManager were lingering long enough
+    to hit the ulimits on number of processes. (vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
