@@ -20,15 +20,21 @@ package org.apache.hadoop.yarn.factories.impl.pb;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.factories.RpcClientFactory;
 
 public class RpcClientFactoryPBImpl implements RpcClientFactory {
+
+  private static final Log LOG = LogFactory
+      .getLog(RpcClientFactoryPBImpl.class);
 
   private static final String PB_IMPL_PACKAGE_SUFFIX = "impl.pb.client";
   private static final String PB_IMPL_CLASS_SUFFIX = "PBClientImpl";
@@ -74,9 +80,21 @@ public class RpcClientFactoryPBImpl implements RpcClientFactory {
       throw new YarnException(e);
     }
   }
-  
-  
-  
+
+  @Override
+  public void stopClient(Object proxy) {
+    try {
+      Method closeMethod = proxy.getClass().getMethod("close");
+      closeMethod.invoke(proxy);
+    } catch (InvocationTargetException e) {
+      throw new YarnException(e);
+    } catch (Exception e) {
+      LOG.error("Cannot call close method due to Exception. "
+          + "Ignoring.", e);
+      throw new YarnException(e);
+    }
+  }
+
   private String getPBImplClassName(Class<?> clazz) {
     String srcPackagePart = getPackageName(clazz);
     String srcClassName = getClassName(clazz);

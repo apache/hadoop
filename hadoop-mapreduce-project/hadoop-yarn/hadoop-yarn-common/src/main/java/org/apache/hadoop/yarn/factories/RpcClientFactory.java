@@ -25,6 +25,9 @@ import org.apache.hadoop.yarn.YarnException;
 
 public interface RpcClientFactory {
   
-  public Object getClient(Class<?> protocol, long clientVersion, InetSocketAddress addr, Configuration conf) throws YarnException;
+  public Object getClient(Class<?> protocol, long clientVersion,
+      InetSocketAddress addr, Configuration conf) throws YarnException;
+
+  public void stopClient(Object proxy);
 
 }
