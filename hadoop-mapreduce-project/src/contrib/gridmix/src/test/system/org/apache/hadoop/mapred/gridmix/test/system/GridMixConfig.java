@@ -23,6 +23,7 @@ import org.apache.hadoop.mapred.gridmix.SleepJob;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.*;
 
 /**
  * Gridmix system tests configurations. 
@@ -218,4 +219,33 @@ public class GridMixConfig {
    */
   public static final String CLUSTER_MAX_REDUCE_MEMORY = 
       JTConfig.JT_MAX_REDUCEMEMORY_MB;
+
+ /**
+  * Gridmix cpu emulation.
+  */
+ public static final String GRIDMIX_CPU_EMULATON =
+     ResourceUsageMatcher.RESOURCE_USAGE_EMULATION_PLUGINS;
+
+ /**
+  *  Gridmix cpu usage emulation plugin.
+  */
+ public  static final String GRIDMIX_CPU_USAGE_PLUGIN =
+     CumulativeCpuUsageEmulatorPlugin.class.getName();
+
+ /**
+  * Gridmix cpu emulation custom interval.
+  */
+ public static final String GRIDMIX_CPU_CUSTOM_INTERVAL =
+     CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_PROGRESS_INTERVAL;
+
+ /**
+  * Gridmix cpu emulation lower limit.
+  */
+ public static int GRIDMIX_CPU_EMULATION_LOWER_LIMIT = 55;
+
+ /**
+  * Gridmix cpu emulation upper limit.
+  */
+ public static int GRIDMIX_CPU_EMULATION_UPPER_LIMIT = 130;
+
 }

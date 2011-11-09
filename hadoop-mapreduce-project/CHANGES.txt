@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+    MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
+                    (Vinay Thota via amarrk)
+
     MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running 
                     tasks in Gridmix. (amarrk)
 
