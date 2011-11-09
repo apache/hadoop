@@ -67,6 +67,9 @@ Release 0.23.1 - Unreleased
     HistoryServer and clients can use them without depending on the
     yarn-server-nodemanager module. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3336. Replaced guice internal.Preconditions api usage with the
+    public Preconditions API. (Thomas Graves via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
