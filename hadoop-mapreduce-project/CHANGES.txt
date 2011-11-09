@@ -8,6 +8,9 @@ Release 0.23.1 - Unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
+                    (Vinay Thota via amarrk)
+
     MAPREDUCE-3297. Moved log related components into yarn-common so that
     HistoryServer and clients can use them without depending on the
     yarn-server-nodemanager module. (Siddharth Seth via vinodkv)
