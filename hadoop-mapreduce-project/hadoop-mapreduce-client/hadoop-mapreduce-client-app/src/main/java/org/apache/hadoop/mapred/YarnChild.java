@@ -130,8 +130,8 @@ class YarnChild {
 
       // Initiate Java VM metrics
       JvmMetrics.initSingleton(jvmId.toString(), job.getSessionId());
-      LOG.debug("Remote user: " + job.get("user.name"));
-      childUGI = UserGroupInformation.createRemoteUser(job.get("user.name"));
+      childUGI = UserGroupInformation.createRemoteUser(System
+          .getenv(ApplicationConstants.Environment.USER.toString()));
       // Add tokens to new user so that it may execute its task correctly.
       for(Token<?> token : UserGroupInformation.getCurrentUser().getTokens()) {
         childUGI.addToken(token);
