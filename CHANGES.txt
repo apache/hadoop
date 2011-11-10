@@ -33,6 +33,10 @@ Release 0.20.205.1 - unreleased
 
   BUG FIXES
 
+    MAPREDUCE-3374. src/c++/task-controller/configure is not set executable in 
+    the tarball and that prevents task-controller from rebuilding. 
+    (Roman Shaposhnik via Matt Foley)
+
     HDFS-1943. Fail to start datanode while start-dfs.sh is executed by root
     user. (Wei Yongjun's patch updated by Matt Foley)
 
