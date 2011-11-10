@@ -105,6 +105,9 @@ Release 0.23.1 - Unreleased
     which per-container connections to NodeManager were lingering long enough
     to hit the ulimits on number of processes. (vinodkv)
 
+    MAPREDUCE-3392. Fixed Cluster's getDelegationToken's API to return null
+    when there isn't a supported token. (John George via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

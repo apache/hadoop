@@ -390,6 +390,11 @@ public class Cluster {
       getDelegationToken(Text renewer) throws IOException, InterruptedException{
     Token<DelegationTokenIdentifier> result =
       client.getDelegationToken(renewer);
+
+    if (result == null) {
+      return result;
+    }
+
     InetSocketAddress addr = Master.getMasterAddress(conf);
     StringBuilder service = new StringBuilder();
     service.append(NetUtils.normalizeHostName(addr.getAddress().

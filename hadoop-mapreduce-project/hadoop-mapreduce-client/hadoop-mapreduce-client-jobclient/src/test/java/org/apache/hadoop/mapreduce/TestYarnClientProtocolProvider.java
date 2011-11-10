@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.io.Text;
 import org.junit.Test;
 
 public class TestYarnClientProtocolProvider extends TestCase {
@@ -56,4 +57,23 @@ public class TestYarnClientProtocolProvider extends TestCase {
       }
     }
   }
+
+ 
+  @Test
+  public void testClusterGetDelegationToken() throws Exception {
+
+    Configuration conf = new Configuration(false);
+    Cluster cluster = null;
+    try {
+      conf = new Configuration();
+      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+      cluster = new Cluster(conf);
+      cluster.getDelegationToken(new Text(" "));
+    } finally {
+      if (cluster != null) {
+        cluster.close();
+      }
+    }
+  }
+
 }
