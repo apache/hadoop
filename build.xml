@@ -2629,8 +2629,9 @@
       <arg value="-i"/>
     </exec>
     <mkdir dir="${build.c++.task-controller}" />
-    <exec executable="${c++.task-controller.src}/configure"
+    <exec executable="/bin/sh"
           dir="${build.c++.task-controller}">
+      <arg value="${c++.task-controller.src}/configure"/>
       <arg value="--prefix=${task-controller.prefix.dir}"/>
       <env key="CFLAGS" 
            value="-DHADOOP_CONF_DIR=${hadoop.conf.dir}"/>
