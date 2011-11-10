@@ -33,6 +33,9 @@ Release 0.20.205.1 - unreleased
 
   BUG FIXES
 
+    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon 
+    execution order of test methods. (Laxman and Uma Maheswara Rao via Matt Foley)
+
     MAPREDUCE-3374. src/c++/task-controller/configure is not set executable in 
     the tarball and that prevents task-controller from rebuilding. 
     (Roman Shaposhnik via Matt Foley)
