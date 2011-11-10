@@ -70,6 +70,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3336. Replaced guice internal.Preconditions api usage with the
     public Preconditions API. (Thomas Graves via vinodkv)
 
+    MAPREDUCE-3280. Removed the unnecessary job user-name configuration in
+    mapred-site.xml. (vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
