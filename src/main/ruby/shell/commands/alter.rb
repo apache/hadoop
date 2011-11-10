@@ -48,6 +48,26 @@ For example, to change the max size of a family to 128MB, do:
 
   hbase> alter 't1', METHOD => 'table_att', MAX_FILESIZE => '134217728'
 
+You can add one table coprocessor by setting a table coprocessor attribute:
+
+  hbase> alter 't1', METHOD => 'table_att',
+    'coprocessor'=>'hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2'
+
+Since you can have multiple coprocessors configured for a table, a
+sequence number will be automatically appended to the attribute name
+to uniquely identify it.
+
+The coprocessor attribute must match the pattern below in order for
+the framework to understand how to load the coprocessor classes:
+
+  [coprocessor jar file location] | class name | [priority] | [arguments]
+
+You can also remove a table-scope attribute:
+
+  hbase> alter 't1', METHOD => 'table_att_unset', NAME => 'MAX_FILESIZE'
+
+  hbase> alter 't1', METHOD => 'table_att_unset', NAME => 'coprocessor$1'
+
 There could be more than one alteration in one command:
 
   hbase> alter 't1', {NAME => 'f1'}, {NAME => 'f2', METHOD => 'delete'}

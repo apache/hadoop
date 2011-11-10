@@ -690,6 +690,8 @@ Release 0.92.0 - Unreleased
    HBASE-4746  Fix TestRegionServerCoprocessorExceptionWithXXX (Mikhail Bautin)
    HBASE-4756  Enable tab-completion in HBase shell (Ryan Thiessen)
    HBASE-4759  Migrate from JUnit 4.8.2 to JUnit 4.10 (nkeywal)
+   HBASE-4554  Allow set/unset coprocessor table attributes from shell
+               (Mingjie Lai)
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel

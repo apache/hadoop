@@ -364,10 +364,60 @@ module Hbase
           htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
           htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+
+          # set a coprocessor attribute
+          if arg.kind_of?(Hash)
+            arg.each do |key, value|
+              k = String.new(key) # prepare to strip
+              k.strip!
+
+              if (k =~ /coprocessor/i)
+                # validate coprocessor specs
+                v = String.new(value)
+                v.strip!
+                if !(v =~ /^([^\|]*)\|([^\|]+)\|[\s]*([\d]*)[\s]*(\|.*)?$/)
+                  raise ArgumentError, "Coprocessor value doesn't match spec: #{v}"
+                end
+
+                # generate a coprocessor ordinal by checking max id of existing cps
+                maxId = 0
+                htd.getValues().each do |k1, v1|
+                  attrName = org.apache.hadoop.hbase.util.Bytes.toString(k1.get())
+                  # a cp key is coprocessor$(\d)
+                  if (attrName =~ /coprocessor\$(\d+)/i)
+                    ids = attrName.scan(/coprocessor\$(\d+)/i)
+                    maxId = ids[0][0].to_i if ids[0][0].to_i > maxId
+                  end
+                end
+                maxId += 1
+                htd.setValue(k + "\$" + maxId.to_s, value)
+              end
+            end
+          end
+
           @admin.modifyTable(table_name.to_java_bytes, htd)
           if wait == true
             puts "Updating all regions with the new schema..."
             alter_status(table_name)
+          end
+          next
+        end
+
+        # Unset table attributes
+        if method == "table_att_unset"
+          if arg.kind_of?(Hash)
+            if (!arg[NAME])
+              next
+            end
+            if (htd.getValue(arg[NAME]) == nil)
+              raise ArgumentError, "Can not find attribute: #{arg[NAME]}"
+            end
+            htd.remove(arg[NAME].to_java_bytes)
+            @admin.modifyTable(table_name.to_java_bytes, htd)
+            if wait == true
+              puts "Updating all regions with the new schema..."
+              alter_status(table_name)
+            end
           end
           next
         end

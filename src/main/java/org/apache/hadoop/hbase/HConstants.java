@@ -506,9 +506,9 @@ public final class HConstants {
           Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME }));
 
   public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
-      ("coprocessor\\$([0-9]+)", Pattern.CASE_INSENSITIVE);
+      ("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
   public static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
-      Pattern.compile("([^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?");
+      Pattern.compile("(^[^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?$");
 
   public static final String CP_HTD_ATTR_VALUE_PARAM_KEY_PATTERN = "[^=,]+";
   public static final String CP_HTD_ATTR_VALUE_PARAM_VALUE_PATTERN = "[^,]+";
