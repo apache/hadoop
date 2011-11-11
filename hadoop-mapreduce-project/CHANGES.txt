@@ -3,6 +3,9 @@ Hadoop MapReduce Change Log
     MAPREDUCE-3291. App fail to launch due to delegation token not 
     found in cache (Robert Evans via mahadev)
 
+    MAPREDUCE-3392. Fixed Cluster's getDelegationToken's API to return null
+    when there isn't a supported token. (John George via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
