@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Release 0.20.205.1 - unreleased
 
+  NEW FEATURES
+
+    HDFS-2539. Support doAs and GETHOMEDIRECTORY in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-2427. Change the default permission in webhdfs to 755 and add range

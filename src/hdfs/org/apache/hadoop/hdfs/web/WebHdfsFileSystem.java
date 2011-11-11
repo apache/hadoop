@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hdfs.ByteRangeInputStream;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -86,6 +86,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
@@ -195,9 +197,14 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
+  /** @return the home directory. */
+  public static String getHomeDirectoryString(final UserGroupInformation ugi) {
+    return "/user/" + ugi.getShortUserName();
+  }
+
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path("/user/" + ugi.getShortUserName()));
+    return makeQualified(new Path(getHomeDirectoryString(ugi)));
   }
 
   @Override
@@ -219,7 +226,7 @@ public class WebHdfsFileSystem extends FileSystem
     return f.isAbsolute()? f: new Path(workingDir, f);
   }
 
-  private static Map<?, ?> jsonParse(final InputStream in) throws IOException {
+  static Map<?, ?> jsonParse(final InputStream in) throws IOException {
     if (in == null) {
       throw new IOException("The input stream is null.");
     }
@@ -245,9 +252,13 @@ public class WebHdfsFileSystem extends FileSystem
 
       final RemoteException re = JsonUtil.toRemoteException(m);
       throw re.unwrapRemoteException(AccessControlException.class,
-          DSQuotaExceededException.class,
+          InvalidToken.class,
+          AuthenticationException.class,
+          AuthorizationException.class,
+          FileAlreadyExistsException.class,
           FileNotFoundException.class,
           SafeModeException.class,
+          DSQuotaExceededException.class,
           NSQuotaExceededException.class);
     }
     return null;
@@ -343,7 +354,7 @@ public class WebHdfsFileSystem extends FileSystem
   /**
    * Two-step Create/Append:
    * Step 1) Submit a Http request with neither auto-redirect nor data. 
-   * Step 2) Submit Http PUT with the URL from the Location header with data.
+   * Step 2) Submit another Http request with the URL from the Location header with data.
    * 
    * The reason of having two-step create/append is for preventing clients to
    * send out the data before the redirect. This issue is addressed by the
@@ -353,7 +364,7 @@ public class WebHdfsFileSystem extends FileSystem
    * 100-continue". The two-step create/append is a temporary workaround for
    * the software library bugs.
    */
-  private static HttpURLConnection twoStepWrite(HttpURLConnection conn,
+  static HttpURLConnection twoStepWrite(HttpURLConnection conn,
       final HttpOpParam.Op op) throws IOException {
     //Step 1) Submit a Http request with neither auto-redirect nor data. 
     conn.setInstanceFollowRedirects(false);
@@ -363,7 +374,7 @@ public class WebHdfsFileSystem extends FileSystem
     final String redirect = conn.getHeaderField("Location");
     conn.disconnect();
 
-    //Step 2) Submit Http PUT with the URL from the Location header with data.
+    //Step 2) Submit another Http request with the URL from the Location header with data.
     conn = (HttpURLConnection)new URL(redirect).openConnection();
     conn.setRequestMethod(op.getType().toString());
     return conn;
@@ -415,8 +426,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   private FileStatus makeQualified(HdfsFileStatus f, Path parent) {
     return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
-        f.getBlockSize(), f.getModificationTime(),
-        f.getAccessTime(),
+        f.getBlockSize(), f.getModificationTime(), f.getAccessTime(),
         f.getPermission(), f.getOwner(), f.getGroup(),
         f.getFullPath(parent).makeQualified(this)); // fully-qualify path
   }
@@ -478,7 +488,8 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public long getDefaultBlockSize() {
-    return getConf().getLong("dfs.block.size", FSConstants.DEFAULT_BLOCK_SIZE);
+    return getConf().getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+        DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
   }
 
   @Override
@@ -487,7 +498,7 @@ public class WebHdfsFileSystem extends FileSystem
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
   }
 
-  private FSDataOutputStream write(final HttpOpParam.Op op,
+  FSDataOutputStream write(final HttpOpParam.Op op,
       final HttpURLConnection conn, final int bufferSize) throws IOException {
     return new FSDataOutputStream(new BufferedOutputStream(
         conn.getOutputStream(), bufferSize), statistics) {
@@ -496,7 +507,11 @@ public class WebHdfsFileSystem extends FileSystem
         try {
           super.close();
         } finally {
-          validateResponse(op, conn);
+          try {
+            validateResponse(op, conn);
+          } finally {
+            conn.disconnect();
+          }
         }
       }
     };
@@ -661,9 +676,11 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public synchronized <T extends TokenIdentifier> void setDelegationToken(
+  public <T extends TokenIdentifier> void setDelegationToken(
       final Token<T> token) {
-    delegationToken = token;
+    synchronized(this) {
+      delegationToken = token;
+    }
   }
 
   private synchronized long renewDelegationToken(final Token<?> token
