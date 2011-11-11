@@ -73,6 +73,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3280. Removed the unnecessary job user-name configuration in
     mapred-site.xml. (vinodkv)
 
+    MAPREDUCE-3370. Fixed MiniMRYarnCluster and related tests to not use
+    a hard-coded path for the mr-app jar. (Ahmed Radwan via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

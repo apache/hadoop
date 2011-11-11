@@ -24,6 +24,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -49,9 +51,8 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   public static final String YARN_MAPREDUCE_APP_JAR_PATH =
   "$YARN_HOME/modules/" + HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;
 
-  public static final String APPJAR =
-    "../hadoop-mapreduce-client-app/target/"
-        + HADOOP_MAPREDUCE_CLIENT_APP_JAR_NAME;
+  public static final String APPJAR = System.getProperty("yarn.mr.jar", JobConf
+      .findContainingJar(LocalContainerLauncher.class));
 
   private static final Log LOG = LogFactory.getLog(MiniMRYarnCluster.class);
   private JobHistoryServer historyServer;
