@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.TestHLogUtils;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -95,6 +96,96 @@ public class TestAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+  }
+
+  @Test
+  public void testDeleteEditUnknownColumnFamilyAndOrTable() throws IOException {
+    // Test we get exception if we try to 
+    final String nonexistent = "nonexistent";
+    HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistent);
+    Exception exception = null;
+    try {
+      this.admin.addColumn(nonexistent, nonexistentHcd);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.deleteTable(nonexistent);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.deleteColumn(nonexistent, nonexistent);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.disableTable(nonexistent);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.enableTable(nonexistent);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      this.admin.modifyColumn(nonexistent, nonexistentHcd);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    exception = null;
+    try {
+      HTableDescriptor htd = new HTableDescriptor(nonexistent);
+      this.admin.modifyTable(htd.getName(), htd);
+    } catch (IOException e) {
+      exception = e;
+    }
+    assertTrue(exception instanceof TableNotFoundException);
+
+    // Now make it so at least the table exists and then do tests against a
+    // nonexistent column family -- see if we get right exceptions.
+    final String tableName = "t";
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor("cf"));
+    this.admin.createTable(htd);
+    try {
+      exception = null;
+      try {
+        this.admin.deleteColumn(htd.getName(), nonexistentHcd.getName());
+      } catch (IOException e) {
+        exception = e;
+      }
+      assertTrue(exception instanceof InvalidFamilyOperationException);
+
+      exception = null;
+      try {
+        this.admin.modifyColumn(htd.getName(), nonexistentHcd);
+      } catch (IOException e) {
+        exception = e;
+      }
+      assertTrue(exception instanceof InvalidFamilyOperationException);
+    } finally {
+      this.admin.disableTable(tableName);
+      this.admin.deleteTable(tableName);
+    }
   }
 
   @Test
@@ -229,7 +320,6 @@ public class TestAdmin {
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
     final byte [] tableName = Bytes.toBytes("changeTableSchemaOnline");
     HTableDescriptor [] tables = admin.listTables();
-    MasterServices masterServices = TEST_UTIL.getMiniHBaseCluster().getMaster();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     tables = this.admin.listTables();
@@ -254,7 +344,6 @@ public class TestAdmin {
     }
     assertFalse(expectedException);
     HTableDescriptor modifiedHtd = this.admin.getTableDescriptor(tableName);
-    // Assert returned modifiedhcd is same as the copy.
     assertFalse(htd.equals(modifiedHtd));
     assertTrue(copy.equals(modifiedHtd));
     assertEquals(newFlushSize, modifiedHtd.getMemStoreFlushSize());
@@ -740,7 +829,7 @@ public class TestAdmin {
 
   @Test (expected=IllegalArgumentException.class)
   public void testInvalidHColumnDescriptor() throws IOException {
-     HColumnDescriptor hcd = new HColumnDescriptor("/cfamily/name");
+     new HColumnDescriptor("/cfamily/name");
   }
 
   @Test
@@ -757,11 +846,10 @@ public class TestAdmin {
     this.admin.enableTable(tableName);
     try {
       this.admin.deleteColumn(tableName, Bytes.toBytes("col2"));
-    } catch(TableNotDisabledException e) {
-      // Expected
+    } catch (TableNotDisabledException e) {
+      LOG.info(e);
     }
     this.admin.disableTable(tableName);
-    this.admin.deleteColumn(tableName, Bytes.toBytes("col2"));
     this.admin.deleteTable(tableName);
   }
 

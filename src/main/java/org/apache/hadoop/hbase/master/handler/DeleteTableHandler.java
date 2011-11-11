@@ -40,6 +40,8 @@ public class DeleteTableHandler extends TableEventHandler {
       final MasterServices masterServices)
   throws IOException {
     super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
+    // The next call fails if no such table.
+    getTableDescriptor();
   }
 
   @Override

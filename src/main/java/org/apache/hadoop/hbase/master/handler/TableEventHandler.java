@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -29,8 +30,11 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HTable;
@@ -148,6 +152,33 @@ public abstract class TableEventHandler extends EventHandler {
     }
     return done;
   }
+
+  /**
+   * @return Table descriptor for this table
+   * @throws TableExistsException
+   * @throws FileNotFoundException
+   * @throws IOException
+   */
+  HTableDescriptor getTableDescriptor()
+  throws TableExistsException, FileNotFoundException, IOException {
+    final String name = Bytes.toString(tableName);
+    HTableDescriptor htd =
+      this.masterServices.getTableDescriptors().get(name);
+    if (htd == null) {
+      throw new IOException("HTableDescriptor missing for " + name);
+    }
+    return htd;
+  }
+
+  byte [] hasColumnFamily(final HTableDescriptor htd, final byte [] cf)
+  throws InvalidFamilyOperationException {
+    if (!htd.hasFamily(cf)) {
+      throw new InvalidFamilyOperationException("Column family '" +
+        Bytes.toString(cf) + "' does not exist");
+    }
+    return cf;
+  }
+
   protected abstract void handleTableOperation(List<HRegionInfo> regions)
   throws IOException, KeeperException;
 }

@@ -129,7 +129,7 @@ public class HBaseAdmin implements Abortable, Closeable {
    * to cleanup the returned catalog tracker.
    * @throws ZooKeeperConnectionException
    * @throws IOException
-   * @see #cleanupCatalogTracker(CatalogTracker);
+   * @see #cleanupCatalogTracker(CatalogTracker)
    */
   private synchronized CatalogTracker getCatalogTracker()
   throws ZooKeeperConnectionException, IOException {

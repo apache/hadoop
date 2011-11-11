@@ -24,14 +24,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.coprocessor.ObserverContext;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-
-
 
 /**
  * Clients interact with the HMasterInterface to gain access to meta-level

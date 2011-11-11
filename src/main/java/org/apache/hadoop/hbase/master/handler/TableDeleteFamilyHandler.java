@@ -24,9 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -40,26 +38,15 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
       Server server, final MasterServices masterServices) throws IOException {
     super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
-    this.familyName = familyName;
+    HTableDescriptor htd = getTableDescriptor();
+    this.familyName = hasColumnFamily(htd, familyName);
   }
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
-    AssignmentManager am = this.masterServices.getAssignmentManager();
-    HTableDescriptor htd = this.masterServices.getTableDescriptors().get(Bytes.toString(tableName));
-    if (htd == null) {
-      throw new IOException("Add Family operation could not be completed as " +
-          "HTableDescritor is missing for table = "
-          + Bytes.toString(tableName));
-    }
-    if(!htd.hasFamily(familyName)) {
-      throw new InvalidFamilyOperationException(
-          "Family '" + Bytes.toString(familyName) + "' does not exist so " +
-          "cannot be deleted");
-    }
     // Update table descriptor in HDFS
-    htd = this.masterServices.getMasterFileSystem()
-        .deleteColumn(tableName, familyName);
+    HTableDescriptor htd =
+      this.masterServices.getMasterFileSystem().deleteColumn(tableName, familyName);
     // Update in-memory descriptor cache
     this.masterServices.getTableDescriptors().add(htd);
   }

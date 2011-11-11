@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -35,35 +34,26 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Handles adding a new family to an existing table.
  */
 public class TableModifyFamilyHandler extends TableEventHandler {
-
   private final HColumnDescriptor familyDesc;
 
   public TableModifyFamilyHandler(byte[] tableName,
       HColumnDescriptor familyDesc, Server server,
       final MasterServices masterServices) throws IOException {
     super(EventType.C_M_MODIFY_FAMILY, tableName, server, masterServices);
+    HTableDescriptor htd = getTableDescriptor();
+    hasColumnFamily(htd, familyDesc.getName());
     this.familyDesc = familyDesc;
   }
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions) throws IOException {
-    AssignmentManager am = this.masterServices.getAssignmentManager();
-    HTableDescriptor htd = this.masterServices.getTableDescriptors().get(Bytes.toString(tableName));
-    byte [] familyName = familyDesc.getName();
-    if (htd == null) {
-      throw new IOException("Modify Family operation could not be completed as " +
-          "HTableDescritor is missing for table = "
-          + Bytes.toString(tableName));
-    }
-    if(!htd.hasFamily(familyName)) {
-      throw new InvalidFamilyOperationException("Family '" +
-        Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
-    }
     // Update table descriptor in HDFS
-    htd = this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
+    HTableDescriptor htd =
+      this.masterServices.getMasterFileSystem().modifyColumn(tableName, familyDesc);
     // Update in-memory descriptor cache
     this.masterServices.getTableDescriptors().add(htd);
   }
+
   @Override
   public String toString() {
     String name = "UnknownServerName";

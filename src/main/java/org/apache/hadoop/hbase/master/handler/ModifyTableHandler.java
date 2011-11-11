@@ -26,20 +26,19 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.util.Bytes;
 
 public class ModifyTableHandler extends TableEventHandler {
   private final HTableDescriptor htd;
 
   public ModifyTableHandler(final byte [] tableName,
       final HTableDescriptor htd, final Server server,
-      final MasterServices masterServices) throws IOException {
+      final MasterServices masterServices)
+  throws IOException {
     super(EventType.C_M_MODIFY_TABLE, tableName, server, masterServices);
+    // Check table exists.
+    getTableDescriptor();
+    // This is the new schema we are going to write out as this modification.
     this.htd = htd;
-    if (!Bytes.equals(tableName, htd.getName())) {
-      throw new IOException("TableDescriptor name & tableName must match: " 
-          + htd.getNameAsString() + " vs " + Bytes.toString(tableName));
-    }
   }
 
   @Override
@@ -55,6 +54,7 @@ public class ModifyTableHandler extends TableEventHandler {
     if(server != null && server.getServerName() != null) {
       name = server.getServerName().toString();
     }
-    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" + tableNameStr;
+    return getClass().getSimpleName() + "-" + name + "-" + getSeqid() + "-" +
+      tableNameStr;
   }
 }

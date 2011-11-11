@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Handles adding a new family to an existing table.
@@ -40,27 +39,19 @@ public class TableAddFamilyHandler extends TableEventHandler {
   public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
       Server server, final MasterServices masterServices) throws IOException {
     super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
+    HTableDescriptor htd = getTableDescriptor();
+    if (htd.hasFamily(familyDesc.getName())) {
+      throw new InvalidFamilyOperationException("Family '" +
+        familyDesc.getNameAsString() + "' already exists so cannot be added");
+    }
     this.familyDesc = familyDesc;
   }
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris)
   throws IOException {
-    HTableDescriptor htd = this.masterServices.getTableDescriptors().
-                                      get(Bytes.toString(tableName));
-    byte [] familyName = familyDesc.getName();
-    if (htd == null) {
-      throw new IOException("Add Family operation could not be completed as " +
-          "HTableDescritor is missing for table = "
-          + Bytes.toString(tableName));
-    }
-    if(htd.hasFamily(familyName)) {
-      throw new InvalidFamilyOperationException(
-          "Family '" + Bytes.toString(familyName) + "' already exists so " +
-          "cannot be added");
-    }
     // Update table descriptor in HDFS
-    htd = this.masterServices.getMasterFileSystem()
+    HTableDescriptor htd = this.masterServices.getMasterFileSystem()
         .addColumn(tableName, familyDesc);
     // Update in-memory descriptor cache
     this.masterServices.getTableDescriptors().add(htd);
