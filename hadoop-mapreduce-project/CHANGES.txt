@@ -108,6 +108,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3392. Fixed Cluster's getDelegationToken's API to return null
     when there isn't a supported token. (John George via vinodkv)
 
+    MAPREDUCE-3379. Fixed LocalResourceTracker in NodeManager to remove deleted
+    cache entries correctly. (Siddharth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

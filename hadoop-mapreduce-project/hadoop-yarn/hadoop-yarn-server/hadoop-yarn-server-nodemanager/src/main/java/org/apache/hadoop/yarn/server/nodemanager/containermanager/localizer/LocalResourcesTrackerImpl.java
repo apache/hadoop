@@ -101,13 +101,14 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
       // internal error
       LOG.error("Attempt to remove resource: " + rsrc
           + " with non-zero refcount");
-      assert false;
       return false;
+    } else { // ResourceState is LOCALIZED or INIT
+      localrsrc.remove(rem.getRequest());
+      if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
+        delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
+      }
+      return true;
     }
-    if (ResourceState.LOCALIZED.equals(rsrc.getState())) {
-      delService.delete(getUser(), getPathToDelete(rsrc.getLocalPath()));
-    }
-    return true;
   }
 
 
