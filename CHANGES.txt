@@ -38,6 +38,9 @@ Release 0.20.205.1 - unreleased
 
   BUG FIXES
 
+    HADOOP-7815. Fixed configuring map memory mb in hadoop-setup-conf.sh. 
+    (Ramya Sunil)
+ 
     HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon 
     execution order of test methods. (Laxman and Uma Maheswara Rao via Matt Foley)
 
