@@ -416,6 +416,7 @@ Release 0.92.0 - Unreleased
    HBASE-4734  [bulk load] Warn if bulk load directory contained no files
    HBASE-4723  Loads of NotAllMetaRegionsOnlineException traces when starting
                the master
+   HBASE-4511  There is data loss when master failovers
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

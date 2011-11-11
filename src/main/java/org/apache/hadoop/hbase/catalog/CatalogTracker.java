@@ -268,6 +268,21 @@ public class CatalogTracker {
   }
 
   /**
+   * Method used by master on startup trying to figure state of cluster.
+   * Returns the current meta location unless its null.  In this latter case,
+   * it has not yet been set so go check whats up in <code>-ROOT-</code> and
+   * return that.
+   * @return{@link ServerName} for server hosting <code>.META.</code> or if null,
+   * we'll read the location that is up in <code>-ROOT-</code> table (which
+   * could be null or just plain stale).
+   * @throws IOException
+   */
+  public ServerName getMetaLocationOrReadLocationFromRoot() throws IOException {
+    ServerName sn = getMetaLocation();
+    return sn != null? sn: MetaReader.getMetaRegionLocation(this);
+  }
+
+  /**
    * Waits indefinitely for availability of <code>-ROOT-</code>.  Used during
    * cluster startup.
    * @throws InterruptedException if interrupted while waiting
@@ -336,7 +351,7 @@ public class CatalogTracker {
    * @return connection to server hosting root
    * @throws NotAllMetaRegionsOnlineException if timed out waiting
    * @throws IOException
-   * @deprecated Use {@link #getRootServerConnection(long)}
+   * @deprecated Use #getRootServerConnection(long)
    */
   public HRegionInterface waitForRootServerConnectionDefault()
   throws NotAllMetaRegionsOnlineException, IOException {
@@ -381,8 +396,7 @@ public class CatalogTracker {
       // Now read the current .META. content from -ROOT-.  Note: This goes via
       // an HConnection.  It has its own way of figuring root and meta locations
       // which we have to wait on.
-      ServerName newLocation =
-        MetaReader.readRegionLocation(this, META_REGION_NAME);
+      ServerName newLocation = MetaReader.getMetaRegionLocation(this);
       if (newLocation == null) return null;
 
       HRegionInterface newConnection = getCachedConnection(newLocation);

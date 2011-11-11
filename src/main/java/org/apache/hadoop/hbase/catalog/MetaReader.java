@@ -193,6 +193,8 @@ public class MetaReader {
   throws IOException {
     // Passing the CatalogTracker's connection configuration ensures this
     // HTable instance uses the CatalogTracker's connection.
+    org.apache.hadoop.hbase.client.HConnection c = catalogTracker.getConnection();
+    if (c == null) throw new NullPointerException("No connection");
     return new HTable(catalogTracker.getConnection().getConfiguration(), tableName);
   }
 
@@ -251,12 +253,25 @@ public class MetaReader {
    * @param metaServer connection to server hosting ROOT
    * @return location of META in ROOT where location, or null if not available
    * @throws IOException
-   * @deprecated Does not retry; use {@link #readRegionLocation(CatalogTracker, byte[])}
+   * @deprecated Does not retry; use #getMetaRegionLocation(CatalogTracker)
    */
   public static ServerName readMetaLocation(HRegionInterface metaServer)
   throws IOException {
     return readLocation(metaServer, CatalogTracker.ROOT_REGION_NAME,
         CatalogTracker.META_REGION_NAME);
+  }
+
+  /**
+   * Gets the location of <code>.META.</code> region by reading content of
+   * <code>-ROOT-</code>.
+   * @param ct
+   * @return location of <code>.META.</code> region as a {@link ServerName} or
+   * null if not found
+   * @throws IOException
+   */
+  static ServerName getMetaRegionLocation(final CatalogTracker ct)
+  throws IOException {
+    return MetaReader.readRegionLocation(ct, CatalogTracker.META_REGION_NAME);
   }
 
   /**
@@ -266,7 +281,7 @@ public class MetaReader {
    * @return location of region as a {@link ServerName} or null if not found
    * @throws IOException
    */
-  public static ServerName readRegionLocation(CatalogTracker catalogTracker,
+  static ServerName readRegionLocation(CatalogTracker catalogTracker,
       byte [] regionName)
   throws IOException {
     Pair<HRegionInfo, ServerName> pair = getRegion(catalogTracker, regionName);

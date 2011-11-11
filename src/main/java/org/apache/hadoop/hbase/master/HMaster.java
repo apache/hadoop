@@ -462,7 +462,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
       if (!this.serverManager.isServerOnline(sn)) {
         // Not registered; add it.
-        LOG.info("Registering server found up in zk: " + sn);
+        LOG.info("Registering server found up in zk but who has not yet " +
+          "reported in: " + sn);
         this.serverManager.recordNewServer(sn, HServerLoad.EMPTY_HSERVERLOAD);
       }
     }
@@ -526,14 +527,23 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     status.setStatus("Assigning ROOT region");
     boolean rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.ROOT_REGIONINFO);
+    ServerName expiredServer = null;
     if (!catalogTracker.verifyRootRegionLocation(timeout)) {
-      this.assignmentManager.assignRoot();
+      ServerName currentRootServer = this.catalogTracker.getRootLocation();
+      if (expireIfOnline(currentRootServer)) {
+        // We are expiring this server. The processing of expiration will assign
+        // root so don't do it here.
+        expiredServer = currentRootServer;
+      } else {
+        // Root was not on an online server when we failed verification
+        this.assignmentManager.assignRoot();
+      }
       this.catalogTracker.waitForRoot();
       //This guarantees that the transition has completed
       this.assignmentManager.waitForAssignment(HRegionInfo.ROOT_REGIONINFO);
       assigned++;
     } else {
-      // Region already assigned.  We didnt' assign it.  Add to in-memory state.
+      // Region already assigned.  We didn't assign it.  Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.ROOT_REGIONINFO,
         this.catalogTracker.getRootLocation());
     }
@@ -545,7 +555,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
     if (!this.catalogTracker.verifyMetaRegionLocation(timeout)) {
-      this.assignmentManager.assignMeta();
+      ServerName currentMetaServer =
+        this.catalogTracker.getMetaLocationOrReadLocationFromRoot();
+      if (currentMetaServer != null && currentMetaServer.equals(expiredServer)) {
+        // We are expiring the server that is carrying meta already.
+        // The expiration processing will take care of reassigning meta.
+        expireIfOnline(currentMetaServer);
+      } else {
+        this.assignmentManager.assignMeta();
+      }
       this.catalogTracker.waitForMeta();
       // Above check waits for general meta availability but this does not
       // guarantee that the transition has completed
@@ -560,6 +578,19 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       ", location=" + catalogTracker.getMetaLocation());
     status.setStatus("META and ROOT assigned.");
     return assigned;
+  }
+
+  /**
+   * Expire a server if we find it is one of the online servers set.
+   * @param sn ServerName to check.
+   * @return True if server was online and so we expired it as unreachable.
+   */
+  private boolean expireIfOnline(final ServerName sn) {
+    if (sn == null) return false;
+    if (!this.serverManager.isServerOnline(sn)) return false;
+    LOG.info("Forcing expiration of " + sn);
+    this.serverManager.expireServer(sn);
+    return true;
   }
 
   @Override
