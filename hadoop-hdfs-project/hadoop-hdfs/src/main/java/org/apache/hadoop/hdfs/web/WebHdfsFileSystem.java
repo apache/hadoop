@@ -92,6 +92,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
@@ -201,9 +203,14 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
+  /** @return the home directory. */
+  public static String getHomeDirectoryString(final UserGroupInformation ugi) {
+    return "/user/" + ugi.getShortUserName();
+  }
+
   @Override
   public Path getHomeDirectory() {
-    return makeQualified(new Path("/user/" + ugi.getShortUserName()));
+    return makeQualified(new Path(getHomeDirectoryString(ugi)));
   }
 
   @Override
@@ -225,7 +232,7 @@ public class WebHdfsFileSystem extends FileSystem
     return f.isAbsolute()? f: new Path(workingDir, f);
   }
 
-  private static Map<?, ?> jsonParse(final InputStream in) throws IOException {
+  static Map<?, ?> jsonParse(final InputStream in) throws IOException {
     if (in == null) {
       throw new IOException("The input stream is null.");
     }
@@ -251,13 +258,16 @@ public class WebHdfsFileSystem extends FileSystem
 
       final RemoteException re = JsonUtil.toRemoteException(m);
       throw re.unwrapRemoteException(AccessControlException.class,
-          DSQuotaExceededException.class,
+          InvalidToken.class,
+          AuthenticationException.class,
+          AuthorizationException.class,
           FileAlreadyExistsException.class,
           FileNotFoundException.class,
           ParentNotDirectoryException.class,
+          UnresolvedPathException.class,
           SafeModeException.class,
-          NSQuotaExceededException.class,
-          UnresolvedPathException.class);
+          DSQuotaExceededException.class,
+          NSQuotaExceededException.class);
     }
     return null;
   }
@@ -352,7 +362,7 @@ public class WebHdfsFileSystem extends FileSystem
   /**
    * Two-step Create/Append:
    * Step 1) Submit a Http request with neither auto-redirect nor data. 
-   * Step 2) Submit Http PUT with the URL from the Location header with data.
+   * Step 2) Submit another Http request with the URL from the Location header with data.
    * 
    * The reason of having two-step create/append is for preventing clients to
    * send out the data before the redirect. This issue is addressed by the
@@ -362,7 +372,7 @@ public class WebHdfsFileSystem extends FileSystem
    * 100-continue". The two-step create/append is a temporary workaround for
    * the software library bugs.
    */
-  private static HttpURLConnection twoStepWrite(HttpURLConnection conn,
+  static HttpURLConnection twoStepWrite(HttpURLConnection conn,
       final HttpOpParam.Op op) throws IOException {
     //Step 1) Submit a Http request with neither auto-redirect nor data. 
     conn.setInstanceFollowRedirects(false);
@@ -372,7 +382,7 @@ public class WebHdfsFileSystem extends FileSystem
     final String redirect = conn.getHeaderField("Location");
     conn.disconnect();
 
-    //Step 2) Submit Http PUT with the URL from the Location header with data.
+    //Step 2) Submit another Http request with the URL from the Location header with data.
     conn = (HttpURLConnection)new URL(redirect).openConnection();
     conn.setRequestMethod(op.getType().toString());
     return conn;
@@ -507,7 +517,7 @@ public class WebHdfsFileSystem extends FileSystem
         DFSConfigKeys.DFS_REPLICATION_DEFAULT);
   }
 
-  private FSDataOutputStream write(final HttpOpParam.Op op,
+  FSDataOutputStream write(final HttpOpParam.Op op,
       final HttpURLConnection conn, final int bufferSize) throws IOException {
     return new FSDataOutputStream(new BufferedOutputStream(
         conn.getOutputStream(), bufferSize), statistics) {
@@ -516,7 +526,11 @@ public class WebHdfsFileSystem extends FileSystem
         try {
           super.close();
         } finally {
-          validateResponse(op, conn);
+          try {
+            validateResponse(op, conn);
+          } finally {
+            conn.disconnect();
+          }
         }
       }
     };
@@ -630,7 +644,7 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   static class OffsetUrlInputStream extends ByteRangeInputStream {
-    OffsetUrlInputStream(URLOpener o, URLOpener r) {
+    OffsetUrlInputStream(OffsetUrlOpener o, OffsetUrlOpener r) {
       super(o, r);
     }
     
@@ -673,7 +687,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
     final Map<?, ?> m = run(op, null, new RenewerParam(renewer));
     final Token<DelegationTokenIdentifier> token = JsonUtil.toDelegationToken(m); 
-    token.setService(new Text(getCanonicalServiceName()));
+    SecurityUtil.setTokenService(token, nnAddr);
     return token;
   }
 
