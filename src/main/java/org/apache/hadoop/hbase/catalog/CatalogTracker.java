@@ -411,7 +411,10 @@ public class CatalogTracker {
       try {
         if (waitForMeta(100) != null) break;
       } catch (NotAllMetaRegionsOnlineException e) {
-        if (LOG.isTraceEnabled()) LOG.trace("Retrying", e);
+        if (LOG.isTraceEnabled()) {
+          LOG.info(".META. still not available, sleeping and retrying." +
+          " Reason: " + e.getMessage());
+        }
       } catch (IOException e) {
         LOG.info("Retrying", e);
       }
