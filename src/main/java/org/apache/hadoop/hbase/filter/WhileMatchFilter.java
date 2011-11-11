@@ -75,6 +75,11 @@ public class WhileMatchFilter extends FilterBase {
     return c;
   }
 
+  @Override
+  public KeyValue transform(KeyValue v) {
+    return filter.transform(v);
+  }
+
   public boolean filterRow() {
     boolean filterRow = this.filter.filterRow();
     changeFAR(filterRow);

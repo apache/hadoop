@@ -87,7 +87,22 @@ public interface Filter extends Writable {
    * @return code as described below
    * @see Filter.ReturnCode
    */
-  public ReturnCode filterKeyValue(KeyValue v);
+  public ReturnCode filterKeyValue(final KeyValue v);
+
+  /**
+   * Give the filter a chance to transform the passed KeyValue.
+   * If the KeyValue is changed a new KeyValue object must be returned.
+   * @see org.apache.hadoop.hbase.KeyValue#shallowCopy()
+   *
+   * The transformed KeyValue is what is eventually returned to the
+   * client. Most filters will return the passed KeyValue unchanged.
+   * @see org.apache.hadoop.hbase.filter.KeyOnlyFilter#transform(KeyValue)
+   * for an example of a transformation.
+   *
+   * @param v the KeyValue in question
+   * @return the changed KeyValue
+   */
+  public KeyValue transform(final KeyValue v);
 
   /**
    * Return codes for filterValue().
@@ -147,5 +162,5 @@ public interface Filter extends Writable {
    * @return KeyValue which must be next seeked. return null if the filter is
    * not sure which key to seek to next.
    */
-  public KeyValue getNextKeyHint(KeyValue currentKV);
+  public KeyValue getNextKeyHint(final KeyValue currentKV);
 }

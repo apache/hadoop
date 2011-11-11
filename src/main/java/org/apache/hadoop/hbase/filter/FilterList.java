@@ -181,6 +181,15 @@ public class FilterList implements Filter {
   }
 
   @Override
+  public KeyValue transform(KeyValue v) {
+    KeyValue current = v;
+    for (Filter filter : filters) {
+      current = filter.transform(current);
+    }
+    return current;
+  }
+
+  @Override
   public ReturnCode filterKeyValue(KeyValue v) {
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;

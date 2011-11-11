@@ -1230,15 +1230,11 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
-   * Converts this KeyValue to only contain the key portion (the value is
-   * changed to be null).  This method does a full copy of the backing byte
-   * array and does not modify the original byte array of this KeyValue.
-   * <p>
-   * This method is used by <code>KeyOnlyFilter</code> and is an advanced feature of
-   * KeyValue, proceed with caution.
+   * Creates a new KeyValue that only contains the key portion (the value is
+   * set to be null).
    * @param lenAsVal replace value with the actual value length (false=empty)
    */
-  public void convertToKeyOnly(boolean lenAsVal) {
+  public KeyValue createKeyOnly(boolean lenAsVal) {
     // KV format:  <keylen:4><valuelen:4><key:keylen><value:valuelen>
     // Rebuild as: <keylen:4><0:4><key:keylen>
     int dataLen = lenAsVal? Bytes.SIZEOF_INT : 0;
@@ -1249,9 +1245,7 @@ public class KeyValue implements Writable, HeapSize {
     if (lenAsVal) {
       Bytes.putInt(newBuffer, newBuffer.length - dataLen, this.getValueLength());
     }
-    this.bytes = newBuffer;
-    this.offset = 0;
-    this.length = newBuffer.length;
+    return new KeyValue(newBuffer);
   }
 
   /**

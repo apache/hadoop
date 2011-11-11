@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.Filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -263,23 +264,22 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
         store != null ? store.getComparator() : null;
 
     LOOP: while((kv = this.heap.peek()) != null) {
-      // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
-      KeyValue copyKv = kv.shallowCopy();
       // Check that the heap gives us KVs in an increasing order.
       if (prevKV != null && comparator != null
           && comparator.compare(prevKV, kv) > 0) {
         throw new IOException("Key " + prevKV + " followed by a " +
             "smaller key " + kv + " in cf " + store);
       }
-      prevKV = copyKv;
-      ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
+      prevKV = kv;
+      ScanQueryMatcher.MatchCode qcode = matcher.match(kv);
 
       switch(qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:
         case INCLUDE_AND_SEEK_NEXT_COL:
 
-          results.add(copyKv);
+          Filter f = matcher.getFilter();
+          results.add(f == null ? kv : f.transform(kv));
 
           if (qcode == ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW) {
             if (!matcher.moreRowsMayExistAfter(kv)) {

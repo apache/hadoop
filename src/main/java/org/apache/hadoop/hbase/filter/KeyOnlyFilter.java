@@ -43,9 +43,8 @@ public class KeyOnlyFilter extends FilterBase {
   public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
 
   @Override
-  public ReturnCode filterKeyValue(KeyValue kv) {
-    kv.convertToKeyOnly(this.lenAsVal);
-    return ReturnCode.INCLUDE;
+  public KeyValue transform(KeyValue kv) {
+    return kv.createKeyOnly(this.lenAsVal);
   }
 
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {

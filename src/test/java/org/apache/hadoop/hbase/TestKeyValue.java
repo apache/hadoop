@@ -351,7 +351,7 @@ public class TestKeyValue extends TestCase {
     assertKVLess(c, firstOnRowA, lastOnRowA);
   }
 
-  public void testConvertToKeyOnly() throws Exception {
+  public void testCreateKeyOnly() throws Exception {
     long ts = 1;
     byte [] value = Bytes.toBytes("a real value");
     byte [] evalue = new byte[0]; // empty value
@@ -359,9 +359,7 @@ public class TestKeyValue extends TestCase {
     for (byte[] val : new byte[][]{value, evalue}) {
       for (boolean useLen : new boolean[]{false,true}) {
         KeyValue kv1 = new KeyValue(rowA, family, qualA, ts, val);
-        KeyValue kv1ko = kv1.clone();
-        assertTrue(kv1.equals(kv1ko));
-        kv1ko.convertToKeyOnly(useLen);
+        KeyValue kv1ko = kv1.createKeyOnly(useLen);
         // keys are still the same
         assertTrue(kv1.equals(kv1ko));
         // but values are not

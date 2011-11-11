@@ -76,6 +76,11 @@ public class SkipFilter extends FilterBase {
     return c;
   }
 
+  @Override
+  public KeyValue transform(KeyValue v) {
+    return filter.transform(v);
+  }
+
   public boolean filterRow() {
     return filterRow;
   }

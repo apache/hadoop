@@ -78,6 +78,16 @@ public abstract class FilterBase implements Filter {
   }
 
   /**
+   * By default no transformation takes place
+   *
+   * @inheritDoc
+   */
+  @Override
+  public KeyValue transform(KeyValue v) {
+    return v;
+  }
+
+  /**
    * Filters that never filter by modifying the returned List of KeyValues can
    * inherit this implementation that does nothing.
    *
@@ -128,5 +138,5 @@ public abstract class FilterBase implements Filter {
    */
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     throw new IllegalArgumentException("This method has not been implemented");
-}
+  }
 }
