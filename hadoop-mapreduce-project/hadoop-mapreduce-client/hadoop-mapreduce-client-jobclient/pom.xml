@@ -101,6 +101,9 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <systemPropertyVariables>
+            <yarn.mr.jar>${project.build.directory}/${project.artifactId}-${project.version}.jar</yarn.mr.jar>
+          </systemPropertyVariables>
           <additionalClasspathElements>
             <!-- workaround for JobConf#setJarByClass -->
             <additionalClasspathElement>${project.build.directory}/${project.artifactId}-${project.version}-tests.jar</additionalClasspathElement>
