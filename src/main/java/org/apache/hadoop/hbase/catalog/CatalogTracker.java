@@ -306,7 +306,7 @@ public class CatalogTracker {
    * @throws InterruptedException
    * @throws NotAllMetaRegionsOnlineException if timed out waiting
    * @throws IOException
-   * @deprecated Use {@link #getRootServerConnection(long)}
+   * @deprecated Use #getRootServerConnection(long)
    */
   public HRegionInterface waitForRootServerConnection(long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException, IOException {
@@ -383,18 +383,17 @@ public class CatalogTracker {
       // which we have to wait on.
       ServerName newLocation =
         MetaReader.readRegionLocation(this, META_REGION_NAME);
-      if (newLocation == null) {
-        LOG.debug(".META. server unavailable.");
-        return null;
-      }
+      if (newLocation == null) return null;
 
       HRegionInterface newConnection = getCachedConnection(newLocation);
       if (verifyRegionLocation(newConnection, newLocation, META_REGION_NAME)) {
         setMetaLocation(newLocation);
         return newConnection;
       } else {
-        LOG.debug("new .META. server: " + newLocation + " isn't valid." +
-          " Cached .META. server: " + this.metaLocation);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("New .META. server: " + newLocation + " isn't valid." +
+            " Cached .META. server: " + this.metaLocation);
+        }
       }
       return null;
     }
@@ -412,7 +411,7 @@ public class CatalogTracker {
       try {
         if (waitForMeta(100) != null) break;
       } catch (NotAllMetaRegionsOnlineException e) {
-        LOG.info("Retrying", e);
+        if (LOG.isTraceEnabled()) LOG.trace("Retrying", e);
       } catch (IOException e) {
         LOG.info("Retrying", e);
       }
@@ -436,7 +435,7 @@ public class CatalogTracker {
   public ServerName waitForMeta(long timeout)
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
     long stop = System.currentTimeMillis() + timeout;
-    long waitTime = Math.min(500, timeout);
+    long waitTime = Math.min(50, timeout);
     synchronized (metaAvailable) {
       while(!stopped && (timeout == 0 || System.currentTimeMillis() < stop)) {
         if (getMetaServerConnection() != null) {
@@ -499,15 +498,16 @@ public class CatalogTracker {
   }
 
   /**
-   * Caller must be synchronized on this.metaAvailable
    * @param metaLocation
    */
-  private void setMetaLocation(final ServerName metaLocation) {
-    LOG.debug("set new cached META location: " + metaLocation);
-    metaAvailable.set(true);
-    this.metaLocation = metaLocation;
-    // no synchronization because these are private and already under lock
-    this.metaAvailable.notifyAll();
+  void setMetaLocation(final ServerName metaLocation) {
+    LOG.debug("Set new cached META location: " + metaLocation);
+    synchronized (this.metaAvailable) {
+      this.metaLocation = metaLocation;
+      this.metaAvailable.set(true);
+      // no synchronization because these are private and already under lock
+      this.metaAvailable.notifyAll();
+    }
   }
 
   /**
