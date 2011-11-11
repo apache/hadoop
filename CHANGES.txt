@@ -54,7 +54,7 @@ Release 0.20.206.0 - unreleased
     HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
     (todd)
 
-    MAPREDUCE-3287. Fix a busy loop in ReduceTask that would cause 100%
+    MAPREDUCE-3278. Fix a busy loop in ReduceTask that would cause 100%
     cpu utilization during the fetch phase. (todd)
 
     MAPREDUCE-3365. Expose the event-logging debug feature of FairScheduler. (Sho Shimauchi via harsh)
