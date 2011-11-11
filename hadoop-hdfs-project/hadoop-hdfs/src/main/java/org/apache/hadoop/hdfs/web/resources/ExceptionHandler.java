@@ -30,13 +30,24 @@ import javax.ws.rs.ext.Provider;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.authorize.AuthorizationException;
 
 import com.sun.jersey.api.ParamException;
+import com.sun.jersey.api.container.ContainerException;
 
 /** Handle exceptions. */
 @Provider
 public class ExceptionHandler implements ExceptionMapper<Exception> {
   public static final Log LOG = LogFactory.getLog(ExceptionHandler.class);
+
+  private static Exception toCause(Exception e) {
+    final Throwable t = e.getCause();
+    if (t != null && t instanceof Exception) {
+      e = (Exception)e.getCause();
+    }
+    return e;
+  }
 
   private @Context HttpServletResponse response;
 
@@ -55,11 +66,19 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
       e = new IllegalArgumentException("Invalid value for webhdfs parameter \""
           + paramexception.getParameterName() + "\": "
           + e.getCause().getMessage(), e);
-    } 
+    }
+    if (e instanceof ContainerException) {
+      e = toCause(e);
+    }
+    if (e instanceof RemoteException) {
+      e = ((RemoteException)e).unwrapRemoteException();
+    }
 
     //Map response status
     final Response.Status s;
     if (e instanceof SecurityException) {
+      s = Response.Status.UNAUTHORIZED;
+    } else if (e instanceof AuthorizationException) {
       s = Response.Status.UNAUTHORIZED;
     } else if (e instanceof FileNotFoundException) {
       s = Response.Status.NOT_FOUND;
