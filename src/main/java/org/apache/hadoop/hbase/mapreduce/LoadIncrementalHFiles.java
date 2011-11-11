@@ -208,6 +208,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         return;
       }
 
+      if (queue.isEmpty()) {
+        LOG.warn("Bulk load operation did not find any files to load in " +
+        "directory " + hfofDir.toUri() + ".  Does it contain files in " +
+        "subdirectories that correspond to column family names?");
+      }
+
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
         // need to reload split keys each iteration.

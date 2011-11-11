@@ -412,6 +412,7 @@ Release 0.92.0 - Unreleased
    HBASE-4740  [bulk load] the HBASE-4552 API can't tell if errors on region server are recoverable
                (Jonathan Hsieh)
    HBASE-4741  Online schema change doesn't return errors
+   HBASE-4734  [bulk load] Warn if bulk load directory contained no files
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
