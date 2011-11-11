@@ -231,7 +231,7 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    */
   protected void finishClose(FixedFileTrailer trailer) throws IOException {
     trailer.setMetaIndexCount(metaNames.size());
-    trailer.setTotalUncompressedBytes(totalUncompressedBytes);
+    trailer.setTotalUncompressedBytes(totalUncompressedBytes+ trailer.getTrailerSize());
     trailer.setEntryCount(entryCount);
     trailer.setCompressionCodec(compressAlgo);
 

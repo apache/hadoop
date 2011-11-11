@@ -237,6 +237,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         fsBlockWriter.writeHeaderAndData(outputStream);
         ibw.blockWritten(offset, fsBlockWriter.getOnDiskSizeWithHeader(),
             fsBlockWriter.getUncompressedSizeWithoutHeader());
+        totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
         if (cacheThisBlock) {
           // Cache this block on write.
@@ -388,6 +389,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
         metaData.get(i).write(dos);
 
         fsBlockWriter.writeHeaderAndData(outputStream);
+        totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
         // Add the new meta block to the meta index.
         metaBlockIndexWriter.addEntry(metaNames.get(i), offset,
@@ -411,15 +413,19 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     metaBlockIndexWriter.writeSingleLevelIndex(fsBlockWriter.startWriting(
         BlockType.ROOT_INDEX, false), "meta");
     fsBlockWriter.writeHeaderAndData(outputStream);
+    totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
     // File info
     writeFileInfo(trailer, fsBlockWriter.startWriting(BlockType.FILE_INFO,
         false));
     fsBlockWriter.writeHeaderAndData(outputStream);
+    totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
 
     // Load-on-open data supplied by higher levels, e.g. Bloom filters.
-    for (BlockWritable w : additionalLoadOnOpenData)
+    for (BlockWritable w : additionalLoadOnOpenData){
       fsBlockWriter.writeBlock(w, outputStream);
+      totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
+    }
 
     // Now finish off the trailer.
     trailer.setNumDataIndexLevels(dataBlockIndexWriter.getNumLevels());

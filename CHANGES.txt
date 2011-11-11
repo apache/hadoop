@@ -417,6 +417,8 @@ Release 0.92.0 - Unreleased
    HBASE-4723  Loads of NotAllMetaRegionsOnlineException traces when starting
                the master
    HBASE-4511  There is data loss when master failovers
+   HBASE-4577  Region server reports storefileSizeMB bigger than
+               storefileUncompressedSizeMB (gaojinchao)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
