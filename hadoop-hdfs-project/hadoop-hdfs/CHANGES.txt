@@ -326,6 +326,9 @@ Release 0.23.0 - 2011-11-01
     HDFS-2385. Support renew and cancel delegation tokens in webhdfs.
     (szetszwo)
 
+    HDFS-2539. Support doAs and GETHOMEDIRECTORY in webhdfs.
+    (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1875. MiniDFSCluster hard-codes dfs.datanode.address to localhost

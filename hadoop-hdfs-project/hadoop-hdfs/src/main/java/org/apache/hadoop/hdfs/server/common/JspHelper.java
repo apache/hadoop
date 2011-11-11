@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
+import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
@@ -64,6 +65,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -534,9 +537,10 @@ public class JspHelper {
       final boolean tryUgiParameter) throws IOException {
     final UserGroupInformation ugi;
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
+    final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
 
     if(UserGroupInformation.isSecurityEnabled()) {
-      final String user = request.getRemoteUser();
+      final String remoteUser = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
         Token<DelegationTokenIdentifier> token = 
@@ -560,30 +564,58 @@ public class JspHelper {
           }
         }
         ugi = id.getUser();
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
-        checkUsername(ugi.getShortUserName(), user);
+        if (ugi.getRealUser() == null) {
+          //non-proxy case
+          checkUsername(ugi.getShortUserName(), usernameFromQuery);
+          checkUsername(null, doAsUserFromQuery);
+        } else {
+          //proxy case
+          checkUsername(ugi.getRealUser().getShortUserName(), usernameFromQuery);
+          checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
+          ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+        }
         ugi.addToken(token);
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
-        if(user == null) {
+        if(remoteUser == null) {
           throw new IOException("Security enabled but user not " +
                                 "authenticated by filter");
         }
-        ugi = UserGroupInformation.createRemoteUser(user);
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
+        final UserGroupInformation realUgi = UserGroupInformation.createRemoteUser(remoteUser);
+        checkUsername(realUgi.getShortUserName(), usernameFromQuery);
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
-        ugi.setAuthenticationMethod(secureAuthMethod);
+        realUgi.setAuthenticationMethod(secureAuthMethod);
+        ugi = initUGI(realUgi, doAsUserFromQuery, request, true, conf);
       }
     } else { // Security's not on, pull from url
-      ugi = usernameFromQuery == null?
+      final UserGroupInformation realUgi = usernameFromQuery == null?
           getDefaultWebUser(conf) // not specified in request
           : UserGroupInformation.createRemoteUser(usernameFromQuery);
-      ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+      realUgi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+      ugi = initUGI(realUgi, doAsUserFromQuery, request, false, conf);
     }
     
     if(LOG.isDebugEnabled())
       LOG.debug("getUGI is returning: " + ugi.getShortUserName());
+    return ugi;
+  }
+
+  private static UserGroupInformation initUGI(final UserGroupInformation realUgi,
+      final String doAsUserFromQuery, final HttpServletRequest request,
+      final boolean isSecurityEnabled, final Configuration conf
+      ) throws AuthorizationException {
+    final UserGroupInformation ugi;
+    if (doAsUserFromQuery == null) {
+      //non-proxy case
+      ugi = realUgi;
+    } else {
+      //proxy case
+      ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, realUgi);
+      ugi.setAuthenticationMethod(
+          isSecurityEnabled? AuthenticationMethod.PROXY: AuthenticationMethod.SIMPLE);
+      ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+    }
     return ugi;
   }
 
@@ -592,7 +624,11 @@ public class JspHelper {
    */
   private static void checkUsername(final String expected, final String name
       ) throws IOException {
-    if (name == null) {
+    if (expected == null && name != null) {
+      throw new IOException("Usernames not matched: expecting null but name="
+          + name);
+    }
+    if (name == null) { //name is optional, null is okay
       return;
     }
     KerberosName u = new KerberosName(name);

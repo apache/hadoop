@@ -58,7 +58,7 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     public static TemporaryRedirectOp valueOf(final Op op) {
       if (op == CREATE.op) {
         return CREATE;
-      } if (op == APPEND.op) {
+      } else if (op == APPEND.op) {
         return APPEND;
       }
       throw new IllegalArgumentException(op + " not found.");

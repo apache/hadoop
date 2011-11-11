@@ -59,7 +59,7 @@ public class ParamFilter implements ResourceFilter {
   }
 
   /** Do the strings contain upper case letters? */
-  private static boolean containsUpperCase(final Iterable<String> strings) {
+  static boolean containsUpperCase(final Iterable<String> strings) {
     for(String s : strings) {
       for(int i = 0; i < s.length(); i++) {
         if (Character.isUpperCase(s.charAt(i))) {

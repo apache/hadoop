@@ -30,6 +30,7 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETCONTENTSUMMARY(HttpURLConnection.HTTP_OK),
     GETFILECHECKSUM(HttpURLConnection.HTTP_OK),
 
+    GETHOMEDIRECTORY(HttpURLConnection.HTTP_OK),
     GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK),
 
     /** GET_BLOCK_LOCATIONS is a private unstable op. */
