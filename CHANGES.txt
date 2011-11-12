@@ -59,6 +59,8 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-3365. Expose the event-logging debug feature of FairScheduler. (Sho Shimauchi via harsh)
 
+    MAPREDUCE-3395. Add mapred.disk.healthChecker.interval to mapred-default.xml. (eli via harsh)
+
 Release 0.20.205.1 - unreleased
 
   NEW FEATURES
