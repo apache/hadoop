@@ -90,7 +90,7 @@ public abstract class HBaseServer implements RpcServer {
    * The first four bytes of Hadoop RPC connections
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
-  public static final byte CURRENT_VERSION = 4;
+  public static final byte CURRENT_VERSION = 3;
 
   /**
    * How many calls/handler are allowed in the queue.
@@ -1185,7 +1185,12 @@ public abstract class HBaseServer implements RpcServer {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
       if (clientVersion >= 3) {
-        Call fakeCall =  new Call(-1, null, this, responder);
+        // We used to return an id of -1 which caused server to close the
+        // connection without telling the client what the problem was.  Now
+        // we return 0 which will keep the socket up -- bad clients, unless
+        // they switch to suit the running server -- will fail later doing
+        // getProtocolVersion.
+        Call fakeCall =  new Call(0, null, this, responder);
         // Versions 3 and greater can interpret this exception
         // response in the same manner
         setupResponse(buffer, fakeCall, Status.FATAL,

@@ -421,6 +421,7 @@ Release 0.92.0 - Unreleased
                storefileUncompressedSizeMB (gaojinchao)
    HBASE-4478  Improve AssignmentManager.handleRegion so that it can process certain ZK state
                in the case of RS offline
+   HBASE-4777  Write back to client 'incompatible' if we show up with wrong version
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
