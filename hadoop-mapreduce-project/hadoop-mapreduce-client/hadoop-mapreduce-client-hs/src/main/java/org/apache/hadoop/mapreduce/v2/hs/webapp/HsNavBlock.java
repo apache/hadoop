@@ -68,6 +68,7 @@ public class HsNavBlock extends HtmlBlock {
       h3("Tools").
         ul().
           li().a("/conf", "Configuration")._().
+          li().a("/logs", "Local logs")._().
           li().a("/stacks", "Server stacks")._().
           li().a("/metrics", "Server metrics")._()._()._().
     div("#themeswitcher")._();
