@@ -189,7 +189,7 @@ public class HLog implements Syncable {
   private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
 
-  private volatile boolean closed = false;
+  private boolean closed = false;
 
   private final AtomicLong logSeqNum = new AtomicLong(0);
 
@@ -548,10 +548,6 @@ public class HLog implements Syncable {
     this.cacheFlushLock.lock();
     this.logRollRunning = true;
     try {
-      if (closed) {
-        LOG.debug("HLog closed.  Skipping rolling of writer");
-        return regionsToFlush;
-      }
       // Do all the preparation outside of the updateLock to block
       // as less as possible the incoming writes
       long currentFilenum = this.filenum;
@@ -573,6 +569,11 @@ public class HLog implements Syncable {
       }
 
       synchronized (updateLock) {
+        if (closed) {
+          LOG.debug("HLog closed.  Skipping rolling of writer");
+          nextWriter.close(); // creates empty log file
+          return regionsToFlush;
+        }
         // Clean up current writer.
         Path oldFile = cleanupCurrentWriter(currentFilenum);
         this.writer = nextWriter;
@@ -929,10 +930,10 @@ public class HLog implements Syncable {
   public void append(HRegionInfo regionInfo, HLogKey logKey, WALEdit logEdit,
                      HTableDescriptor htd)
   throws IOException {
-    if (this.closed) {
-      throw new IOException("Cannot append; log is closed");
-    }
     synchronized (updateLock) {
+      if (this.closed) {
+        throw new IOException("Cannot append; log is closed");
+      }
       long seqNum = obtainSeqNum();
       logKey.setLogSeqNum(seqNum);
       // The 'lastSeqWritten' map holds the sequence number of the oldest
@@ -1002,10 +1003,10 @@ public class HLog implements Syncable {
       final long now, HTableDescriptor htd)
     throws IOException {
       if (edits.isEmpty()) return;
-      if (this.closed) {
-        throw new IOException("Cannot append; log is closed");
-      }
       synchronized (this.updateLock) {
+        if (this.closed) {
+         throw new IOException("Cannot append; log is closed");
+        }
         long seqNum = obtainSeqNum();
         // The 'lastSeqWritten' map holds the sequence number of the oldest
         // write for each region (i.e. the first edit added to the particular
@@ -1336,10 +1337,10 @@ public class HLog implements Syncable {
       final byte [] tableName, final long logSeqId, final boolean isMetaRegion)
   throws IOException {
     try {
-      if (this.closed) {
-        return;
-      }
       synchronized (updateLock) {
+        if (this.closed) {
+          return;
+        }
         long now = System.currentTimeMillis();
         WALEdit edit = completeCacheFlushLogEdit();
         HLogKey key = makeKey(encodedRegionName, tableName, logSeqId,

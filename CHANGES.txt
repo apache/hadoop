@@ -423,6 +423,7 @@ Release 0.92.0 - Unreleased
                in the case of RS offline
    HBASE-4777  Write back to client 'incompatible' if we show up with wrong version
    HBASE-4775  Remove -ea from all but tests; enable it if you need it testing
+   HBASE-4776  HLog.closed should be checked inside of updateLock
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
