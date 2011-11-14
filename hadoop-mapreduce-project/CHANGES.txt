@@ -27,6 +27,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3325. Improvements to CapacityScheduler doc. (Thomas Graves 
     via mahadev)
 
+    MAPREDUCE-3341. Enhance logging of initalized queue limit values.
+    (Anupam Seth via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
