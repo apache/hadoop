@@ -41,6 +41,8 @@ public class TaskTrackerMetricsSource extends TaskTrackerInstrumentation
       registry.newGauge("mapTaskSlots", "", 0);
   final MetricMutableGaugeInt redSlots =
       registry.newGauge("reduceTaskSlots", "", 0);
+  final MetricMutableGaugeInt failedDirs =
+      registry.newGauge("failedDirs", "", 0);
   final MetricMutableCounterInt completedTasks =
       registry.newCounter("tasks_completed", "", 0);
   final MetricMutableCounterInt timedoutTasks =
@@ -61,6 +63,7 @@ public class TaskTrackerMetricsSource extends TaskTrackerInstrumentation
     redsRunning.set(tt.reduceTotal);
     mapSlots.set(tt.getMaxCurrentMapTasks());
     redSlots.set(tt.getMaxCurrentReduceTasks());
+    failedDirs.set(tt.getNumDirFailures());
     registry.snapshot(builder.addRecord(registry.name()), all);
   }
 

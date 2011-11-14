@@ -91,7 +91,7 @@ public class TestParallelInitialization extends TestCase {
       JobConf conf = new JobConf();
       queueManager = new QueueManager(conf);
       trackers.put("tt1", new TaskTrackerStatus("tt1", "tt1.host", 1,
-                   new ArrayList<TaskStatus>(), 0,
+                   new ArrayList<TaskStatus>(), 0, 0,
                    maxMapTasksPerTracker, maxReduceTasksPerTracker));
     }
     

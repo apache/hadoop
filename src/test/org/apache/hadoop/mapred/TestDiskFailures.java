@@ -26,6 +26,9 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -76,7 +79,11 @@ public class TestDiskFailures extends ClusterMapReduceTestCase {
     startCluster(true, props, numMapredLocalDirs);
 
     MiniMRCluster cluster = getMRCluster();
+    TaskTracker tt = cluster.getTaskTrackerRunner(0).getTaskTracker();
+    MetricsRecordBuilder rb = getMetrics(new TaskTrackerMetricsSource(tt));
     String[] localDirs = cluster.getTaskTrackerLocalDirs(0);
+
+    assertGauge("failedDirs", 0, rb);
 
     // Make 1 disk fail and verify if TaskTracker gets re-inited or not and
     // the good mapred local dirs list gets updated properly in TaskTracker.
@@ -84,20 +91,26 @@ public class TestDiskFailures extends ClusterMapReduceTestCase {
     String expectedMapredLocalDirs = localDirs[0] + "," + localDirs[1] + ","
                                      + localDirs[3];
     verifyReinitTaskTrackerAfterDiskFailure(expectedMapredLocalDirs, cluster);
-    
+    rb = getMetrics(new TaskTrackerMetricsSource(tt));
+    assertGauge("failedDirs", 1, rb);
+
     // Make 2 more disks fail and verify if TaskTracker gets re-inited or not
     // and the good mapred local dirs list gets updated properly in TaskTracker.
     prepareDirToFail(localDirs[0]);
     prepareDirToFail(localDirs[3]);
     expectedMapredLocalDirs = localDirs[1];
     verifyReinitTaskTrackerAfterDiskFailure(expectedMapredLocalDirs, cluster);
-    
+    rb = getMetrics(new TaskTrackerMetricsSource(tt));
+    assertGauge("failedDirs", 3, rb);
+
     // Fail the remaining single disk(i.e. the remaining good mapred-local-dir).
     prepareDirToFail(localDirs[1]);
     waitForDiskHealthCheck();
     assertTrue(
         "Tasktracker is not dead even though all mapred local dirs became bad.",
         cluster.getTaskTrackerRunner(0).isDead);
+    rb = getMetrics(new TaskTrackerMetricsSource(tt));
+    assertGauge("failedDirs", 4, rb);
   }
 
   /**

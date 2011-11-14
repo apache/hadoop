@@ -325,7 +325,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private Localizer localizer;
   private int maxMapSlots;
   private int maxReduceSlots;
-  private int failures;
+  private int taskFailures;
   final long mapRetainSize;
   final long reduceRetainSize;
 
@@ -1772,7 +1772,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                                        httpPort, 
                                        cloneAndResetRunningTaskStatuses(
                                          sendCounters), 
-                                       failures, 
+                                       taskFailures,
+                                       localStorage.numFailures(),
                                        maxMapSlots,
                                        maxReduceSlots); 
       }
@@ -2868,7 +2869,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
         if (!done) {
           if (!wasKilled) {
-            failures += 1;
+            taskFailures++;
             setTaskFailState(true);
             // call the script here for the failed tasks.
             if (debugCommand != null) {
@@ -3108,7 +3109,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           isCleaningup()) {
         wasKilled = true;
         if (wasFailure) {
-          failures += 1;
+          taskFailures++;
         }
         // runner could be null if task-cleanup attempt is not localized yet
         if (runner != null) {
@@ -3117,7 +3118,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         setTaskFailState(wasFailure);
       } else if (taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
         if (wasFailure) {
-          failures += 1;
+          taskFailures++;
           taskStatus.setRunState(TaskStatus.State.FAILED);
         } else {
           taskStatus.setRunState(TaskStatus.State.KILLED);
@@ -4053,6 +4054,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   
   int getMaxCurrentReduceTasks() {
     return maxReduceSlots;
+  }
+
+  int getNumDirFailures() {
+    return localStorage.numFailures();
   }
 
   //called from unit test

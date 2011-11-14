@@ -47,7 +47,8 @@ public class TaskTrackerStatus implements Writable {
   String trackerName;
   String host;
   int httpPort;
-  int failures;
+  int taskFailures;
+  int dirFailures;
   List<TaskStatus> taskReports;
     
   volatile long lastSeen;
@@ -357,14 +358,15 @@ public class TaskTrackerStatus implements Writable {
    */
   public TaskTrackerStatus(String trackerName, String host, 
                            int httpPort, List<TaskStatus> taskReports, 
-                           int failures, int maxMapTasks,
-                           int maxReduceTasks) {
+                           int taskFailures, int dirFailures,
+                           int maxMapTasks, int maxReduceTasks) {
     this.trackerName = trackerName;
     this.host = host;
     this.httpPort = httpPort;
 
     this.taskReports = new ArrayList<TaskStatus>(taskReports);
-    this.failures = failures;
+    this.taskFailures = taskFailures;
+    this.dirFailures = dirFailures;
     this.maxMapTasks = maxMapTasks;
     this.maxReduceTasks = maxReduceTasks;
     this.resStatus = new ResourceStatus();
@@ -394,8 +396,16 @@ public class TaskTrackerStatus implements Writable {
    * Get the number of tasks that have failed on this tracker.
    * @return The number of failed tasks
    */
-  public int getFailures() {
-    return failures;
+  public int getTaskFailures() {
+    return taskFailures;
+  }
+
+  /**
+   * Get the number of local directories that have failed on this tracker.
+   * @return The number of failed local directories
+   */
+  public int getDirFailures() {
+    return dirFailures;
   }
     
   /**
@@ -652,7 +662,8 @@ public class TaskTrackerStatus implements Writable {
     Text.writeString(out, trackerName);
     Text.writeString(out, host);
     out.writeInt(httpPort);
-    out.writeInt(failures);
+    out.writeInt(taskFailures);
+    out.writeInt(dirFailures);
     out.writeInt(maxMapTasks);
     out.writeInt(maxReduceTasks);
     resStatus.write(out);
@@ -668,7 +679,8 @@ public class TaskTrackerStatus implements Writable {
     this.trackerName = Text.readString(in);
     this.host = Text.readString(in);
     this.httpPort = in.readInt();
-    this.failures = in.readInt();
+    this.taskFailures = in.readInt();
+    this.dirFailures = in.readInt();
     this.maxMapTasks = in.readInt();
     this.maxReduceTasks = in.readInt();
     resStatus.readFields(in);

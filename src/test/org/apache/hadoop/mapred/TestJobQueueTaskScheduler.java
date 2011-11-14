@@ -130,13 +130,13 @@ public class TestJobQueueTaskScheduler extends TestCase {
       
       TaskTracker tt1 = new TaskTracker("tt1");
       tt1.setStatus(new TaskTrackerStatus("tt1", "tt1.host", 1,
-                    new ArrayList<TaskStatus>(), 0,
+                    new ArrayList<TaskStatus>(), 0, 0,
                     maxMapTasksPerTracker, maxReduceTasksPerTracker));
       trackers.put("tt1", tt1);
       
       TaskTracker tt2 = new TaskTracker("tt2");
       tt2.setStatus(new TaskTrackerStatus("tt2", "tt2.host", 2,
-                    new ArrayList<TaskStatus>(), 0,
+                    new ArrayList<TaskStatus>(), 0, 0,
                     maxMapTasksPerTracker, maxReduceTasksPerTracker));
       trackers.put("tt2", tt2);
     }

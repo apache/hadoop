@@ -49,7 +49,8 @@
                 "<td><b># running tasks</b></td>" +
                 "<td><b>Max Map Tasks</b></td>" +
                 "<td><b>Max Reduce Tasks</b></td>" +
-                "<td><b>Failures</b></td>" +
+                "<td><b>Task Failures</b></td>" +
+                "<td><b>Directory Failures</b></td>" +
                 "<td><b>Node Health Status</b></td>" +
                 "<td><b>Seconds Since Node Last Healthy</b></td>");
       if (type.equals("blacklisted")) {
@@ -88,18 +89,20 @@
           it2.next();
           numCurTasks++;
         }
-        int numFailures = tt.getFailures();
-        if (numFailures > maxFailures) {
-          maxFailures = numFailures;
+        int numTaskFailures = tt.getTaskFailures();
+        if (numTaskFailures > maxFailures) {
+          maxFailures = numTaskFailures;
           failureKing = tt.getTrackerName();
         }
+        int numDirFailures = tt.getDirFailures();
         out.print("<tr><td><a href=\"http://");
         out.print(tt.getHost() + ":" + tt.getHttpPort() + "/\">");
         out.print(tt.getTrackerName() + "</a></td><td>");
         out.print(tt.getHost() + "</td><td>" + numCurTasks +
                   "</td><td>" + tt.getMaxMapSlots() +
                   "</td><td>" + tt.getMaxReduceSlots() + 
-                  "</td><td>" + numFailures +
+                  "</td><td>" + numTaskFailures +
+                  "</td><td>" + numDirFailures +
                   "</td><td>" + healthString +
                   "</td><td>" + sinceHealthCheck); 
         if (type.equals("blacklisted")) {

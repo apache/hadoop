@@ -61,6 +61,8 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-3395. Add mapred.disk.healthChecker.interval to mapred-default.xml. (eli via harsh)
 
+    MAPREDUCE-3015. Add local dir failure info to metrics and the web UI. (eli)
+
 Release 0.20.205.1 - unreleased
 
   NEW FEATURES

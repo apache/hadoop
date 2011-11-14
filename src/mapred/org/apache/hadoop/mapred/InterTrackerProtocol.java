@@ -71,8 +71,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 28: Adding user name to the serialized Task for use by TT.
    * Version 29: Adding available memory and CPU usage information on TT to
    *             TaskTrackerStatus for MAPREDUCE-1218
+   * Version 30: Adding disk failure to TaskTrackerStatus for MAPREDUCE-3015
    */
-  public static final long versionID = 29L;
+  public static final long versionID = 30L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
