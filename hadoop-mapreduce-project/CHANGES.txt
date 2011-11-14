@@ -66,6 +66,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3379. Fixed LocalResourceTracker in NodeManager to remove deleted
     cache entries correctly. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3324. Not All HttpServer tools links (stacks,logs,config,metrics) are 
+    accessible through all UI servers (Jonathan Eagles via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
