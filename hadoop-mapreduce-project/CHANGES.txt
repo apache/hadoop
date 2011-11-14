@@ -30,6 +30,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3341. Enhance logging of initalized queue limit values.
     (Anupam Seth via mahadev)
 
+    MAPREDUCE-3243. Invalid tracking URL for streaming jobs (Jonathan Eagles 
+    via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
