@@ -435,6 +435,7 @@ Release 0.92.0 - Unreleased
                TestHCM.testConnectionUniqueness (Jinchao)
    HBASE-4690  Intermittent TestRegionServerCoprocessorExceptionWithAbort failure
    HBASE-4518  TestServerCustomProtocol fails intermittently
+   HBASE-4778  Don't ignore corrupt StoreFiles when opening a region
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
