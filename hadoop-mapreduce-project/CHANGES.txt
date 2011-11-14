@@ -24,6 +24,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3370. Fixed MiniMRYarnCluster and related tests to not use
     a hard-coded path for the mr-app jar. (Ahmed Radwan via vinodkv)
 
+    MAPREDUCE-3325. Improvements to CapacityScheduler doc. (Thomas Graves 
+    via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
