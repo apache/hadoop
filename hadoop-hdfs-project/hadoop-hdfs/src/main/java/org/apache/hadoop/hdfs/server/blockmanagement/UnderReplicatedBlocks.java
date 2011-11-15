@@ -24,6 +24,7 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /**
@@ -80,13 +81,13 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   /** The queue for corrupt blocks: {@value} */
   static final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
   /** the queues themselves */
-  private final List<NavigableSet<Block>> priorityQueues
-      = new ArrayList<NavigableSet<Block>>(LEVEL);
+  private List<LightWeightLinkedSet<Block>> priorityQueues
+      = new ArrayList<LightWeightLinkedSet<Block>>();
 
   /** Create an object. */
   UnderReplicatedBlocks() {
     for (int i = 0; i < LEVEL; i++) {
-      priorityQueues.add(new TreeSet<Block>());
+      priorityQueues.add(new LightWeightLinkedSet<Block>());
     }
   }
 
@@ -123,10 +124,10 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   synchronized int getCorruptBlockSize() {
     return priorityQueues.get(QUEUE_WITH_CORRUPT_BLOCKS).size();
   }
-  
+
   /** Check if a block is in the neededReplication queue */
   synchronized boolean contains(Block block) {
-    for (NavigableSet<Block> set : priorityQueues) {
+    for(LightWeightLinkedSet<Block> set : priorityQueues) {
       if (set.contains(block)) {
         return true;
       }
