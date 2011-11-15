@@ -302,10 +302,12 @@ public class ContainerLaunch implements Callable<Integer> {
     // by this time, it will never be launched
     exec.deactivateContainer(containerId);
 
-    LOG.debug("Getting pid for container " + containerIdStr + " to kill"
-        + " from pid file " 
-        + (pidFilePath != null ? pidFilePath.toString() : "null"));
-
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Getting pid for container " + containerIdStr + " to kill"
+          + " from pid file " 
+          + (pidFilePath != null ? pidFilePath.toString() : "null"));
+    }
+    
     // however the container process may have already started
     try {
 
