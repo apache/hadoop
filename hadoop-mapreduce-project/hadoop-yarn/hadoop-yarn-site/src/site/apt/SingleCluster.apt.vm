@@ -41,7 +41,7 @@ $ mvn clean install assembly:assembly -Pnative
 * Setting up the environment.
 
   Assuming you have installed hadoop-common/hadoop-hdfs and exported
-  <<$HADOOP_COMMON_HOME>>/<<$HADOOP_COMMON_HOME>>, untar hadoop mapreduce 
+  <<$HADOOP_COMMON_HOME>>/<<$HADOOP_HDFS_HOME>>, untar hadoop mapreduce 
   tarball and set environment variable <<$HADOOP_MAPRED_HOME>> to the 
   untarred directory. Set <<$YARN_HOME>> the same as <<$HADOOP_MAPRED_HOME>>. 
  
@@ -79,15 +79,15 @@ $ mvn clean install assembly:assembly -Pnative
 Add the following configs to your <<<yarn-site.xml>>>
 
 +---+
- <property>
+  <property>
     <name>yarn.resourcemanager.resource-tracker.address</name>
     <value>host:port</value>
     <description>host is the hostname of the resource manager and 
     port is the port on which the NodeManagers contact the Resource Manager.
     </description>
- </property>
+  </property>
 
- <property>
+  <property>
     <name>yarn.resourcemanager.scheduler.address</name>
     <value>host:port</value>
     <description>host is the hostname of the resourcemanager and port is the port
@@ -142,6 +142,32 @@ Add the following configs to your <<<yarn-site.xml>>>
     <name>yarn.nodemanager.aux-services</name>
     <value>mapreduce.shuffle</value>
     <description>shuffle service that needs to be set for Map Reduce to run </description>
+  </property>
++---+
+
+** Setting up <<<capacity-scheduler.xml>>>
+
+   Make sure you populate the root queues in <<<capacity-scheduler.xml>>>.
+
++---+
+  <property>
+    <name>yarn.scheduler.capacity.root.queues</name>
+    <value>unfunded,default</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.capacity</name>
+    <value>100</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.unfunded.capacity</name>
+    <value>50</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.default.capacity</name>
+    <value>50</value>
   </property>
 +---+
 
