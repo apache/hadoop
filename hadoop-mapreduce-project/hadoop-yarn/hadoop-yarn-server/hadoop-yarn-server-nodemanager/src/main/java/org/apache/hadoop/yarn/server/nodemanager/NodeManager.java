@@ -110,6 +110,11 @@ public class NodeManager extends CompositeService implements
     ContainerExecutor exec = ReflectionUtils.newInstance(
         conf.getClass(YarnConfiguration.NM_CONTAINER_EXECUTOR,
           DefaultContainerExecutor.class, ContainerExecutor.class), conf);
+    try {
+      exec.init();
+    } catch (IOException e) {
+      throw new YarnException("Failed to initialize container executor", e);
+    }    
     DeletionService del = new DeletionService(exec);
     addService(del);
 

@@ -38,6 +38,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3331. Improvement to single node cluster setup documentation for 
     0.23 (Anupam Seth via mahadev)
 
+    MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
+    has wrong configuration or permissions. (Hitesh Shah via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

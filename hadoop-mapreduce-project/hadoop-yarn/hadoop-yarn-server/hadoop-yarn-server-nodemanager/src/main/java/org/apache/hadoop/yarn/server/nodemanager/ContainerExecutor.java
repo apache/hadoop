@@ -63,6 +63,13 @@ public abstract class ContainerExecutor implements Configurable {
   }
 
   /**
+   * Run the executor initialization steps. 
+   * Verify that the necessary configs, permissions are in place.
+   * @throws IOException
+   */
+  public abstract void init() throws IOException;
+  
+  /**
    * Prepare the environment for containers in this application to execute.
    * For $x in local.dirs
    *   create $x/$user/$appId
