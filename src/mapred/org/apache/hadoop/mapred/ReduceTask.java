@@ -2178,8 +2178,10 @@ class ReduceTask extends Task {
           } catch (InterruptedException e) { } // IGNORE
           
           while (numInFlight > 0 && mergeThrowable == null) {
-            LOG.debug(reduceTask.getTaskID() + " numInFlight = " + 
-                      numInFlight);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(reduceTask.getTaskID() + " numInFlight = " + 
+                        numInFlight);
+            }
             //the call to getCopyResult will either 
             //1) return immediately with a null or a valid CopyResult object,
             //                 or
