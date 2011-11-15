@@ -36,6 +36,9 @@ Release 0.20.205.1 - unreleased
     if the override value is same as the final parameter value.
     (Ravi Prakash via szetszwo)
 
+    HADOOP-7816. Allow HADOOP_HOME deprecated warning suppression based 
+    on config specified in hadoop-env.sh (Dave Thompson via suresh)
+
   BUG FIXES
 
     HADOOP-7815. Fixed configuring map memory mb in hadoop-setup-conf.sh. 

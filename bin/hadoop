@@ -50,15 +50,15 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
-  echo "Warning: \$HADOOP_HOME is deprecated." 1>&2
-  echo 1>&2
-fi
-
 if [ -e "$bin"/../libexec/hadoop-config.sh ]; then
   . "$bin"/../libexec/hadoop-config.sh
 else
   . "$bin"/hadoop-config.sh
+fi
+
+if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
+  echo "Warning: \$HADOOP_HOME is deprecated." 1>&2
+  echo 1>&2
 fi
 
 cygwin=false
