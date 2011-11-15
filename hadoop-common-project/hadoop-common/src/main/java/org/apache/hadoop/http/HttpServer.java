@@ -707,6 +707,14 @@ public class HttpServer implements FilterContainer {
           listener.setPort((oriPort += 1));
         }
       }
+      // Make sure there is no handler failures.
+      Handler[] handlers = webServer.getHandlers();
+      for (int i = 0; i < handlers.length; i++) {
+        if (handlers[i].isFailed()) {
+          throw new IOException(
+              "Problem in starting http server. Server handlers failed");
+        }
+      }
     } catch (IOException e) {
       throw e;
     } catch (InterruptedException e) {

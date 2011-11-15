@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
+package org.apache.hadoop.yarn.logaggregation;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogKey;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation.AggregatedLogFormat.LogReader;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class LogDumper extends Configured implements Tool {
@@ -117,7 +117,7 @@ public class LogDumper extends Configured implements Tool {
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
       AggregatedLogFormat.LogReader reader =
           new AggregatedLogFormat.LogReader(getConf(),
-              LogAggregationService.getRemoteNodeLogFileForApp(
+              LogAggregationUtils.getRemoteNodeLogFileForApp(
                   remoteRootLogDir,
                   appId,
                   appOwner,
@@ -135,10 +135,10 @@ public class LogDumper extends Configured implements Tool {
     Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    String suffix = LogAggregationService.getRemoteNodeLogDirSuffix(getConf());
+    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
     AggregatedLogFormat.LogReader reader =
         new AggregatedLogFormat.LogReader(getConf(),
-            LogAggregationService.getRemoteNodeLogFileForApp(remoteRootLogDir,
+            LogAggregationUtils.getRemoteNodeLogFileForApp(remoteRootLogDir,
                 ConverterUtils.toApplicationId(appId), jobOwner,
                 ConverterUtils.toNodeId(nodeId), suffix));
     DataOutputStream out = new DataOutputStream(System.out);
@@ -185,7 +185,7 @@ public class LogDumper extends Configured implements Tool {
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
     //TODO Change this to get a list of files from the LAS.
     Path remoteAppLogDir =
-        LogAggregationService.getRemoteAppLogDir(remoteRootLogDir, appId, user,
+        LogAggregationUtils.getRemoteAppLogDir(remoteRootLogDir, appId, user,
             logDirSuffix);
     RemoteIterator<FileStatus> nodeFiles =
         FileContext.getFileContext().listStatus(remoteAppLogDir);

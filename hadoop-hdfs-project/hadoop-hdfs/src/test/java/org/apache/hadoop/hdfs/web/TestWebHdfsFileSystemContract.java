@@ -23,9 +23,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
-import java.security.PrivilegedExceptionAction;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -34,12 +33,12 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
@@ -51,6 +50,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
   private static final Configuration conf = new Configuration();
   private static final MiniDFSCluster cluster;
   private String defaultWorkingDirectory;
+  
+  private UserGroupInformation ugi;
 
   static {
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
@@ -68,20 +69,11 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
   @Override
   protected void setUp() throws Exception {
-    final String uri = WebHdfsFileSystem.SCHEME  + "://"
-        + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-
     //get file system as a non-superuser
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
-    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+    ugi = UserGroupInformation.createUserForTesting(
         current.getShortUserName() + "x", new String[]{"user"});
-    fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI(uri), conf);
-      }
-    });
-
+    fs = WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf);
     defaultWorkingDirectory = fs.getWorkingDirectory().toUri().getPath();
   }
 
@@ -263,8 +255,28 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
   public void testResponseCode() throws IOException {
     final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)fs;
+    final Path root = new Path("/");
     final Path dir = new Path("/test/testUrl");
     assertTrue(webhdfs.mkdirs(dir));
+
+    {//test GETHOMEDIRECTORY
+      final URL url = webhdfs.toUrl(GetOpParam.Op.GETHOMEDIRECTORY, root);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      final Map<?, ?> m = WebHdfsTestUtil.connectAndGetJson(
+          conn, HttpServletResponse.SC_OK);
+      assertEquals(WebHdfsFileSystem.getHomeDirectoryString(ugi),
+          m.get(Path.class.getSimpleName()));
+      conn.disconnect();
+    }
+
+    {//test GETHOMEDIRECTORY with unauthorized doAs
+      final URL url = webhdfs.toUrl(GetOpParam.Op.GETHOMEDIRECTORY, root,
+          new DoAsParam(ugi.getShortUserName() + "proxy"));
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_UNAUTHORIZED, conn.getResponseCode());
+      conn.disconnect();
+    }
 
     {//test set owner with empty parameters
       final URL url = webhdfs.toUrl(PutOpParam.Op.SETOWNER, dir);
@@ -280,7 +292,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod(op.getType().toString());
       conn.connect();
-      assertEquals(HttpServletResponse.SC_FORBIDDEN, conn.getResponseCode());
+      assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
       
       assertFalse(webhdfs.setReplication(dir, (short)1));
       conn.disconnect();

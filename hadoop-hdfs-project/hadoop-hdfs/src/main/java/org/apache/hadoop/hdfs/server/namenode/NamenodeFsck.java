@@ -114,11 +114,11 @@ public class NamenodeFsck {
   // We return back N files that are corrupt; the list of files returned is
   // ordered by block id; to allow continuation support, pass in the last block
   // # from previous call
-  private String startBlockAfter = null;
-  
+  private String[] currentCookie = new String[] { null };
+
   private final Configuration conf;
   private final PrintWriter out;
-  
+
   /**
    * Filesystem checker.
    * @param conf configuration (namenode config)
@@ -156,11 +156,11 @@ public class NamenodeFsck {
         this.showCorruptFileBlocks = true;
       }
       else if (key.equals("startblockafter")) {
-        this.startBlockAfter = pmap.get("startblockafter")[0]; 
+        this.currentCookie[0] = pmap.get("startblockafter")[0];
       }
     }
   }
-  
+
   /**
    * Check files on DFS, starting from the indicated path.
    */
@@ -216,19 +216,20 @@ public class NamenodeFsck {
       out.close();
     }
   }
- 
+
   private void listCorruptFileBlocks() throws IOException {
     Collection<FSNamesystem.CorruptFileBlockInfo> corruptFiles = namenode.
-      getNamesystem().listCorruptFileBlocks(path, startBlockAfter);
+      getNamesystem().listCorruptFileBlocks(path, currentCookie);
     int numCorruptFiles = corruptFiles.size();
     String filler;
     if (numCorruptFiles > 0) {
       filler = Integer.toString(numCorruptFiles);
-    } else if (startBlockAfter == null) {
+    } else if (currentCookie[0].equals("0")) {
       filler = "no";
     } else {
       filler = "no more";
     }
+    out.println("Cookie:\t" + currentCookie[0]);
     for (FSNamesystem.CorruptFileBlockInfo c : corruptFiles) {
       out.println(c.toString());
     }
@@ -509,8 +510,9 @@ public class NamenodeFsck {
         
         String file = BlockReaderFactory.getFileName(targetAddr, block.getBlockPoolId(),
             block.getBlockId());
-        blockReader = BlockReaderFactory.newBlockReader(s, file, block, lblock
-            .getBlockToken(), 0, -1, conf.getInt("io.file.buffer.size", 4096));
+        blockReader = BlockReaderFactory.newBlockReader(
+            conf, s, file, block, lblock
+            .getBlockToken(), 0, -1);
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue

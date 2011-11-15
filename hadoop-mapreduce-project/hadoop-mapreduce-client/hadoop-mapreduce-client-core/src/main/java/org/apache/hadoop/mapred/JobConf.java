@@ -1833,7 +1833,7 @@ public class JobConf extends Configuration {
    * @return a jar file that contains the class, or null.
    * @throws IOException
    */
-  static String findContainingJar(Class my_class) {
+  public static String findContainingJar(Class my_class) {
     ClassLoader loader = my_class.getClassLoader();
     String class_file = my_class.getName().replaceAll("\\.", "/") + ".class";
     try {

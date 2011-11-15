@@ -136,7 +136,7 @@ public class PacketHeader {
    */
   public boolean sanityCheck(long lastSeqNo) {
     // We should only have a non-positive data length for the last packet
-    if (proto.getDataLen() <= 0 && proto.getLastPacketInBlock()) return false;
+    if (proto.getDataLen() <= 0 && !proto.getLastPacketInBlock()) return false;
     // The last packet should not contain data
     if (proto.getLastPacketInBlock() && proto.getDataLen() != 0) return false;
     // Seqnos should always increase by 1 with each packet received

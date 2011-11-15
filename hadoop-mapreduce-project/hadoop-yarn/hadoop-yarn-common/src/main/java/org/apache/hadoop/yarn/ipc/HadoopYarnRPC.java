@@ -21,12 +21,12 @@ package org.apache.hadoop.yarn.ipc;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.AvroSpecificRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
@@ -52,6 +52,11 @@ public class HadoopYarnRPC extends YarnRPC {
     } catch (IOException e) {
       throw new YarnException(e);
     }
+  }
+
+  @Override
+  public void stopProxy(Object proxy, Configuration conf) {
+    RPC.stopProxy(proxy);
   }
 
   @Override

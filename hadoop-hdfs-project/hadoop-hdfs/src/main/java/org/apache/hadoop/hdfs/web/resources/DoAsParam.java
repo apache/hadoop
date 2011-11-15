@@ -15,9 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.web.resources;
 
-package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
+/** DoAs parameter for proxy user. */
+public class DoAsParam extends StringParam {
+  /** Parameter name. */
+  public static final String NAME = "doas";
+  /** Default parameter value. */
+  public static final String DEFAULT = "";
 
-public enum ContainerLogsRetentionPolicy {
-  APPLICATION_MASTER_ONLY, AM_AND_FAILED_CONTAINERS_ONLY, ALL_CONTAINERS 
+  private static final Domain DOMAIN = new Domain(NAME, null);
+
+  /**
+   * Constructor.
+   * @param str a string representation of the parameter value.
+   */
+  public DoAsParam(final String str) {
+    super(DOMAIN, str == null || str.equals(DEFAULT)? null: str);
+  }
+
+  @Override
+  public String getName() {
+    return NAME;
+  }
 }

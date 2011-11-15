@@ -52,6 +52,18 @@ Trunk (unreleased changes)
 
     HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
 
+
+  OPTIMIZATIONS
+    HDFS-2477. Optimize computing the diff between a block report and the
+               namenode state. (Tomasz Nykiel via hairong)
+
+    HDFS-2495. Increase granularity of write operations in ReplicationMonitor
+    thus reducing contention for write lock. (Tomasz Nykiel via hairong)
+
+    HDFS-2476. More CPU efficient data structure for under-replicated,
+               over-replicated, and invalidated blocks.
+               (Tomasz Nykiel via todd)
+
   BUG FIXES
     HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
 
@@ -88,7 +100,25 @@ Trunk (unreleased changes)
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
                reference to rpcProxyWithoutRetry (atm)
 
-    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+Release 0.23.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+    HDFS-2130. Switch default checksum to CRC32C. (todd)
+
+    HDFS-2533. Remove needless synchronization on some FSDataSet methods.
+    (todd)
+
+    HDFS-2129. Simplify BlockReader to not inherit from FSInputChecker.
+    (todd)
+
+  BUG FIXES
 
 Release 0.23.0 - 2011-11-01 
 
@@ -414,6 +444,9 @@ Release 0.23.0 - 2011-11-01
     (szetszwo)
 
     HDFS-2385. Support renew and cancel delegation tokens in webhdfs.
+    (szetszwo)
+
+    HDFS-2539. Support doAs and GETHOMEDIRECTORY in webhdfs.
     (szetszwo)
 
   IMPROVEMENTS
@@ -1245,6 +1278,22 @@ Release 0.23.0 - 2011-11-01
 
     HDFS-2065. Add null checks in DFSClient.getFileChecksum(..).  (Uma
     Maheswara Rao G via szetszwo)
+
+    HDFS-2416. distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+
+    HDFS-2527. WebHdfs: remove the use of "Range" header in Open; use ugi
+    username if renewer parameter is null in GetDelegationToken; response OK
+    when setting replication for non-files; rename GETFILEBLOCKLOCATIONS to
+    GET_BLOCK_LOCATIONS and state that it is a private unstable API; replace
+    isDirectory and isSymlink with enum {FILE, DIRECTORY, SYMLINK} in
+    HdfsFileStatus JSON object.  (szetszwo)
+
+    HDFS-2528. Webhdfs: set delegation kind to WEBHDFS and add a HDFS token
+    when http requests are redirected to datanode.  (szetszwo)
+
+    HDFS-2540. Webhdfs: change "Expect: 100-continue" to two-step write; change 
+    "HdfsFileStatus" and "localName" respectively to "FileStatus" and
+    "pathSuffix" in JSON response.  (szetszwo)
 
   BREAKDOWN OF HDFS-1073 SUBTASKS
 

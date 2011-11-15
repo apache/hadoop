@@ -108,15 +108,17 @@ public class DelegationTokenRenewer extends AbstractService {
     public final Configuration conf;
     public long expirationDate;
     public TimerTask timerTask;
+    public final boolean shouldCancelAtEnd;
     
     public DelegationTokenToRenew(
         ApplicationId jId, Token<?> token, 
-        Configuration conf, long expirationDate) {
+        Configuration conf, long expirationDate, boolean shouldCancelAtEnd) {
       this.token = token;
       this.applicationId = jId;
       this.conf = conf;
       this.expirationDate = expirationDate;
       this.timerTask = null;
+      this.shouldCancelAtEnd = shouldCancelAtEnd;
       if (this.token==null || this.applicationId==null || this.conf==null) {
         throw new IllegalArgumentException("Invalid params to renew token" +
             ";token=" + this.token +
@@ -218,10 +220,12 @@ public class DelegationTokenRenewer extends AbstractService {
    * Add application tokens for renewal.
    * @param applicationId added application
    * @param ts tokens
+   * @param shouldCancelAtEnd true if tokens should be canceled when the app is
+   * done else false. 
    * @throws IOException
    */
   public synchronized void addApplication(
-      ApplicationId applicationId, Credentials ts) 
+      ApplicationId applicationId, Credentials ts, boolean shouldCancelAtEnd) 
   throws IOException {
     if (ts == null) {
       return; //nothing to add
@@ -239,7 +243,8 @@ public class DelegationTokenRenewer extends AbstractService {
       // first renew happens immediately
       if (token.isManaged()) {
         DelegationTokenToRenew dtr = 
-          new DelegationTokenToRenew(applicationId, token, getConfig(), now); 
+          new DelegationTokenToRenew(applicationId, token, getConfig(), now, 
+              shouldCancelAtEnd); 
 
         addTokenToList(dtr);
       
@@ -317,7 +322,11 @@ public class DelegationTokenRenewer extends AbstractService {
 
   // cancel a token
   private void cancelToken(DelegationTokenToRenew t) {
-    dtCancelThread.cancelToken(t.token, t.conf);
+    if(t.shouldCancelAtEnd) {
+      dtCancelThread.cancelToken(t.token, t.conf);
+    } else {
+      LOG.info("Did not cancel "+t);
+    }
   }
   
   /**

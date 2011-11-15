@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.TestRPC.TestImpl;
@@ -123,6 +124,7 @@ public class TestAuditLogger extends TestCase {
    * A special extension of {@link TestImpl} RPC server with
    * {@link TestImpl#ping()} testing the audit logs.
    */
+  @ProtocolInfo(protocolName = "org.apache.hadoop.ipc.TestRPC$TestProtocol")
   private class MyTestRPCServer extends TestImpl {
     @Override
     public void ping() {
@@ -135,10 +137,8 @@ public class TestAuditLogger extends TestCase {
   /**
    * Test {@link AuditLogger} with IP set.
    */
+  @SuppressWarnings("deprecation")
   public void testAuditLoggerWithIP() throws Exception {
-    /*
-    // TODO
-    // Disable test to address build failures.
     Configuration conf = new Configuration();
     // start the IPC server
     Server server = RPC.getServer(new MyTestRPCServer(), "0.0.0.0", 0, conf);
@@ -153,6 +153,5 @@ public class TestAuditLogger extends TestCase {
     proxy.ping();
 
     server.stop();
-    */
   }
 }

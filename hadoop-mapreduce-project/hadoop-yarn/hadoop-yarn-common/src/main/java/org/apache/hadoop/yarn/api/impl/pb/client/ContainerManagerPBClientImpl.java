@@ -56,6 +56,12 @@ public class ContainerManagerPBClientImpl implements ContainerManager {
         ContainerManagerService.BlockingInterface.class, clientVersion, addr, conf);
   }
 
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
+  }
+
   @Override
   public GetContainerStatusResponse getContainerStatus(
       GetContainerStatusRequest request) throws YarnRemoteException {

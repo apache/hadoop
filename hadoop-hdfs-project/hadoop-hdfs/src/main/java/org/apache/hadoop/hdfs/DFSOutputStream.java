@@ -74,7 +74,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.PureJavaCrc32;
 
 
 /****************************************************************
@@ -1206,8 +1205,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   }
 
   private DFSOutputStream(DFSClient dfsClient, String src, long blockSize, Progressable progress,
-      int bytesPerChecksum, short replication) throws IOException {
-    super(new PureJavaCrc32(), bytesPerChecksum, 4);
+      DataChecksum checksum, short replication) throws IOException {
+    super(checksum, checksum.getBytesPerChecksum(), checksum.getChecksumSize());
+    int bytesPerChecksum = checksum.getBytesPerChecksum();
     this.dfsClient = dfsClient;
     this.src = src;
     this.blockSize = blockSize;
@@ -1225,8 +1225,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                             "multiple of io.bytes.per.checksum");
                             
     }
-    checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
-                                            bytesPerChecksum);
+    this.checksum = checksum;
   }
 
   /**
@@ -1235,11 +1234,12 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked, EnumSet<CreateFlag> flag,
       boolean createParent, short replication, long blockSize, Progressable progress,
-      int buffersize, int bytesPerChecksum) 
+      int buffersize, DataChecksum checksum) 
       throws IOException {
-    this(dfsClient, src, blockSize, progress, bytesPerChecksum, replication);
+    this(dfsClient, src, blockSize, progress, checksum, replication);
 
-    computePacketChunkSize(dfsClient.getConf().writePacketSize, bytesPerChecksum);
+    computePacketChunkSize(dfsClient.getConf().writePacketSize,
+        checksum.getBytesPerChecksum());
 
     try {
       dfsClient.namenode.create(
@@ -1264,8 +1264,8 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   DFSOutputStream(DFSClient dfsClient, String src, int buffersize, Progressable progress,
       LocatedBlock lastBlock, HdfsFileStatus stat,
-      int bytesPerChecksum) throws IOException {
-    this(dfsClient, src, stat.getBlockSize(), progress, bytesPerChecksum, stat.getReplication());
+      DataChecksum checksum) throws IOException {
+    this(dfsClient, src, stat.getBlockSize(), progress, checksum, stat.getReplication());
     initialFileSize = stat.getLen(); // length of file when opened
 
     //
@@ -1274,9 +1274,10 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     if (lastBlock != null) {
       // indicate that we are appending to an existing block
       bytesCurBlock = lastBlock.getBlockSize();
-      streamer = new DataStreamer(lastBlock, stat, bytesPerChecksum);
+      streamer = new DataStreamer(lastBlock, stat, checksum.getBytesPerChecksum());
     } else {
-      computePacketChunkSize(dfsClient.getConf().writePacketSize, bytesPerChecksum);
+      computePacketChunkSize(dfsClient.getConf().writePacketSize,
+          checksum.getBytesPerChecksum());
       streamer = new DataStreamer();
     }
     streamer.start();

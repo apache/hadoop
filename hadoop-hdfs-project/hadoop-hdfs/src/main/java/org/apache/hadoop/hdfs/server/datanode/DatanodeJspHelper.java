@@ -124,7 +124,7 @@ public class DatanodeJspHelper {
         if (locations == null || locations.length == 0) {
           out.print("Empty file");
         } else {
-          DatanodeInfo chosenNode = JspHelper.bestNode(firstBlock);
+          DatanodeInfo chosenNode = JspHelper.bestNode(firstBlock, conf);
           String fqdn = InetAddress.getByName(chosenNode.getHost())
               .getCanonicalHostName();
           String datanodeAddr = chosenNode.getName();
@@ -299,7 +299,7 @@ public class DatanodeJspHelper {
     // URL for TAIL
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     try {
-      chosenNode = JspHelper.bestNode(lastBlk);
+      chosenNode = JspHelper.bestNode(lastBlk, conf);
     } catch (IOException e) {
       out.print(e.toString());
       dfs.close();
@@ -514,7 +514,7 @@ public class DatanodeJspHelper {
                 .getGenerationStamp());
             nextStartOffset = 0;
             nextBlockSize = nextBlock.getBlock().getNumBytes();
-            DatanodeInfo d = JspHelper.bestNode(nextBlock);
+            DatanodeInfo d = JspHelper.bestNode(nextBlock, conf);
             String datanodeAddr = d.getName();
             nextDatanodePort = Integer.parseInt(datanodeAddr.substring(
                 datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
@@ -569,7 +569,7 @@ public class DatanodeJspHelper {
             if (prevStartOffset < 0)
               prevStartOffset = 0;
             prevBlockSize = prevBlock.getBlock().getNumBytes();
-            DatanodeInfo d = JspHelper.bestNode(prevBlock);
+            DatanodeInfo d = JspHelper.bestNode(prevBlock, conf);
             String datanodeAddr = d.getName();
             prevDatanodePort = Integer.parseInt(datanodeAddr.substring(
                 datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
@@ -686,7 +686,7 @@ public class DatanodeJspHelper {
     long genStamp = lastBlk.getBlock().getGenerationStamp();
     DatanodeInfo chosenNode;
     try {
-      chosenNode = JspHelper.bestNode(lastBlk);
+      chosenNode = JspHelper.bestNode(lastBlk, conf);
     } catch (IOException e) {
       out.print(e.toString());
       dfs.close();

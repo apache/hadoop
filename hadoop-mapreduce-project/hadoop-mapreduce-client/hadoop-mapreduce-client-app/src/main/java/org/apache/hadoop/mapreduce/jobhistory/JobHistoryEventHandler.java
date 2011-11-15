@@ -400,6 +400,7 @@ public class JobHistoryEventHandler extends AbstractService
         JobSubmittedEvent jobSubmittedEvent =
             (JobSubmittedEvent) event.getHistoryEvent();
         mi.getJobIndexInfo().setSubmitTime(jobSubmittedEvent.getSubmitTime());
+        mi.getJobIndexInfo().setQueueName(jobSubmittedEvent.getJobQueueName());
       }
      
       // If this is JobFinishedEvent, close the writer and setup the job-index

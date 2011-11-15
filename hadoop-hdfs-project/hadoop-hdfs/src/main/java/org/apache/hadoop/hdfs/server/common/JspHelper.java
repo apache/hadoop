@@ -56,14 +56,17 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
+import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -117,7 +120,8 @@ public class JspHelper {
       return 0;
     }
   }
-  public static DatanodeInfo bestNode(LocatedBlocks blks) throws IOException {
+  public static DatanodeInfo bestNode(LocatedBlocks blks, Configuration conf)
+      throws IOException {
     HashMap<DatanodeInfo, NodeRecord> map =
       new HashMap<DatanodeInfo, NodeRecord>();
     for (LocatedBlock block : blks.getLocatedBlocks()) {
@@ -133,16 +137,17 @@ public class JspHelper {
     }
     NodeRecord[] nodes = map.values().toArray(new NodeRecord[map.size()]);
     Arrays.sort(nodes, new NodeRecordComparator());
-    return bestNode(nodes, false);
+    return bestNode(nodes, false, conf);
   }
 
-  public static DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
+  public static DatanodeInfo bestNode(LocatedBlock blk, Configuration conf)
+      throws IOException {
     DatanodeInfo[] nodes = blk.getLocations();
-    return bestNode(nodes, true);
+    return bestNode(nodes, true, conf);
   }
 
-  public static DatanodeInfo bestNode(DatanodeInfo[] nodes, boolean doRandom)
-    throws IOException {
+  public static DatanodeInfo bestNode(DatanodeInfo[] nodes, boolean doRandom,
+      Configuration conf) throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     DatanodeInfo chosenNode = null;
     int failures = 0;
@@ -169,7 +174,7 @@ public class JspHelper {
           chosenNode.getHost() + ":" + chosenNode.getInfoPort());
         
       try {
-        s = new Socket();
+        s = NetUtils.getDefaultSocketFactory(conf).createSocket();
         s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
         s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       } catch (IOException e) {
@@ -191,27 +196,26 @@ public class JspHelper {
       long blockSize, long offsetIntoBlock, long chunkSizeToView,
       JspWriter out, Configuration conf) throws IOException {
     if (chunkSizeToView == 0) return;
-    Socket s = new Socket();
+    Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
     s.connect(addr, HdfsServerConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
       
-    long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
+    int amtToRead = (int)Math.min(chunkSizeToView, blockSize - offsetIntoBlock);
       
       // Use the block name for file name. 
-    int bufferSize = conf.getInt(DFSConfigKeys.IO_FILE_BUFFER_SIZE_KEY,
-        DFSConfigKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
     String file = BlockReaderFactory.getFileName(addr, poolId, blockId);
-    BlockReader blockReader = BlockReaderFactory.newBlockReader(s, file,
+    BlockReader blockReader = BlockReaderFactory.newBlockReader(
+        conf, s, file,
         new ExtendedBlock(poolId, blockId, 0, genStamp), blockToken,
-        offsetIntoBlock, amtToRead, bufferSize);
+        offsetIntoBlock, amtToRead);
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;
     int retries = 2;
     while ( amtToRead > 0 ) {
-      int numRead;
+      int numRead = amtToRead;
       try {
-        numRead = blockReader.readAll(buf, readOffset, (int)amtToRead);
+        blockReader.readFully(buf, readOffset, amtToRead);
       }
       catch (IOException e) {
         retries--;
@@ -534,9 +538,10 @@ public class JspHelper {
       final boolean tryUgiParameter) throws IOException {
     final UserGroupInformation ugi;
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
+    final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
 
     if(UserGroupInformation.isSecurityEnabled()) {
-      final String user = request.getRemoteUser();
+      final String remoteUser = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
         Token<DelegationTokenIdentifier> token = 
@@ -544,9 +549,8 @@ public class JspHelper {
         token.decodeFromUrlString(tokenString);
         String serviceAddress = getNNServiceAddress(context, request);
         if (serviceAddress != null) {
-          LOG.info("Setting service in token: "
-              + new Text(serviceAddress));
           token.setService(new Text(serviceAddress));
+          token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
         }
         ByteArrayInputStream buf = new ByteArrayInputStream(token
             .getIdentifier());
@@ -561,30 +565,58 @@ public class JspHelper {
           }
         }
         ugi = id.getUser();
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
-        checkUsername(ugi.getShortUserName(), user);
+        if (ugi.getRealUser() == null) {
+          //non-proxy case
+          checkUsername(ugi.getShortUserName(), usernameFromQuery);
+          checkUsername(null, doAsUserFromQuery);
+        } else {
+          //proxy case
+          checkUsername(ugi.getRealUser().getShortUserName(), usernameFromQuery);
+          checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
+          ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+        }
         ugi.addToken(token);
         ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
-        if(user == null) {
+        if(remoteUser == null) {
           throw new IOException("Security enabled but user not " +
                                 "authenticated by filter");
         }
-        ugi = UserGroupInformation.createRemoteUser(user);
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
+        final UserGroupInformation realUgi = UserGroupInformation.createRemoteUser(remoteUser);
+        checkUsername(realUgi.getShortUserName(), usernameFromQuery);
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
-        ugi.setAuthenticationMethod(secureAuthMethod);
+        realUgi.setAuthenticationMethod(secureAuthMethod);
+        ugi = initUGI(realUgi, doAsUserFromQuery, request, true, conf);
       }
     } else { // Security's not on, pull from url
-      ugi = usernameFromQuery == null?
+      final UserGroupInformation realUgi = usernameFromQuery == null?
           getDefaultWebUser(conf) // not specified in request
           : UserGroupInformation.createRemoteUser(usernameFromQuery);
-      ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+      realUgi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+      ugi = initUGI(realUgi, doAsUserFromQuery, request, false, conf);
     }
     
     if(LOG.isDebugEnabled())
       LOG.debug("getUGI is returning: " + ugi.getShortUserName());
+    return ugi;
+  }
+
+  private static UserGroupInformation initUGI(final UserGroupInformation realUgi,
+      final String doAsUserFromQuery, final HttpServletRequest request,
+      final boolean isSecurityEnabled, final Configuration conf
+      ) throws AuthorizationException {
+    final UserGroupInformation ugi;
+    if (doAsUserFromQuery == null) {
+      //non-proxy case
+      ugi = realUgi;
+    } else {
+      //proxy case
+      ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, realUgi);
+      ugi.setAuthenticationMethod(
+          isSecurityEnabled? AuthenticationMethod.PROXY: AuthenticationMethod.SIMPLE);
+      ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+    }
     return ugi;
   }
 
@@ -593,7 +625,11 @@ public class JspHelper {
    */
   private static void checkUsername(final String expected, final String name
       ) throws IOException {
-    if (name == null) {
+    if (expected == null && name != null) {
+      throw new IOException("Usernames not matched: expecting null but name="
+          + name);
+    }
+    if (name == null) { //name is optional, null is okay
       return;
     }
     KerberosName u = new KerberosName(name);

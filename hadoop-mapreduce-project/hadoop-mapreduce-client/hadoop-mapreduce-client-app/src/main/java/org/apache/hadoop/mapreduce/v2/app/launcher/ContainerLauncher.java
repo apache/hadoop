@@ -36,5 +36,5 @@ public interface ContainerLauncher
   /**
    *  Maximum of 1 minute timeout for a Node to react to the command
    */
-  static final int DEFAULT_NM__COMMAND_TIMEOUT = 60000;
+  static final int DEFAULT_NM_COMMAND_TIMEOUT = 60000;
 }

@@ -28,7 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.RemoteBlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.SocketCache;
@@ -76,20 +75,20 @@ public class TestConnCache {
    * It verifies that all invocation to DFSInputStream.getBlockReader()
    * use the same socket.
    */
-  private class MockGetBlockReader implements Answer<RemoteBlockReader> {
-    public RemoteBlockReader reader = null;
+  private class MockGetBlockReader implements Answer<RemoteBlockReader2> {
+    public RemoteBlockReader2 reader = null;
     private Socket sock = null;
 
-    public RemoteBlockReader answer(InvocationOnMock invocation) throws Throwable {
-      RemoteBlockReader prevReader = reader;
-      reader = (RemoteBlockReader) invocation.callRealMethod();
+    public RemoteBlockReader2 answer(InvocationOnMock invocation) throws Throwable {
+      RemoteBlockReader2 prevReader = reader;
+      reader = (RemoteBlockReader2) invocation.callRealMethod();
       if (sock == null) {
         sock = reader.dnSock;
-      } else if (prevReader != null && prevReader.hasSentStatusCode()) {
-        // Can't reuse socket if the previous BlockReader didn't read till EOS.
+      } else if (prevReader != null) {
         assertSame("DFSInputStream should use the same socket",
                    sock, reader.dnSock);
-      } return reader;
+      }
+      return reader;
     }
   }
 

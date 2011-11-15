@@ -23,6 +23,7 @@ import org.apache.hadoop.mapred.gridmix.SleepJob;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapred.gridmix.emulators.resourceusage.*;
 
 /**
  * Gridmix system tests configurations. 
@@ -218,4 +219,67 @@ public class GridMixConfig {
    */
   public static final String CLUSTER_MAX_REDUCE_MEMORY = 
       JTConfig.JT_MAX_REDUCEMEMORY_MB;
+
+ /**
+  * Gridmix cpu emulation.
+  */
+ public static final String GRIDMIX_CPU_EMULATON =
+     ResourceUsageMatcher.RESOURCE_USAGE_EMULATION_PLUGINS;
+
+ /**
+  *  Gridmix cpu usage emulation plugin.
+  */
+ public  static final String GRIDMIX_CPU_USAGE_PLUGIN =
+     CumulativeCpuUsageEmulatorPlugin.class.getName();
+
+ /**
+  * Gridmix cpu emulation custom interval.
+  */
+ public static final String GRIDMIX_CPU_CUSTOM_INTERVAL =
+     CumulativeCpuUsageEmulatorPlugin.CPU_EMULATION_PROGRESS_INTERVAL;
+
+ /**
+  * Gridmix cpu emulation lower limit.
+  */
+ public static int GRIDMIX_CPU_EMULATION_LOWER_LIMIT = 55;
+
+ /**
+  * Gridmix cpu emulation upper limit.
+  */
+ public static int GRIDMIX_CPU_EMULATION_UPPER_LIMIT = 130;
+
+ /**
+  * Gridmix heap memory custom interval
+  */
+ public static final String GRIDMIX_HEAP_MEMORY_CUSTOM_INTRVL = 
+     TotalHeapUsageEmulatorPlugin.HEAP_EMULATION_PROGRESS_INTERVAL;
+  
+ /**
+  *  Gridmix heap free memory ratio
+  */
+ public static final String GRIDMIX_HEAP_FREE_MEMORY_RATIO =
+     TotalHeapUsageEmulatorPlugin.MIN_HEAP_FREE_RATIO;
+  
+ /**
+  *  Gridmix memory emulation plugin
+  */
+ public static final String GRIDMIX_MEMORY_EMULATION_PLUGIN = 
+     TotalHeapUsageEmulatorPlugin.class.getName();
+  
+ /**
+  *  Gridmix memory emulation
+  */
+ public static final String GRIDMIX_MEMORY_EMULATON = 
+     ResourceUsageMatcher.RESOURCE_USAGE_EMULATION_PLUGINS;
+  
+ /**
+  *  Gridmix memory emulation lower limit.
+  */
+ public static int GRIDMIX_MEMORY_EMULATION_LOWER_LIMIT = 55;
+  
+ /**
+  * Gridmix memory emulation upper limit. 
+  */
+ public static int GRIDMIX_MEMORY_EMULATION_UPPER_LIMIT = 130;
+
 }

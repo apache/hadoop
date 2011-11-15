@@ -53,7 +53,8 @@ public class UserProvider
       return JspHelper.getUGI(servletcontext, request, conf,
           AuthenticationMethod.KERBEROS, false);
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new SecurityException(
+          "Failed to obtain user group information: " + e, e);
     }
   }
 

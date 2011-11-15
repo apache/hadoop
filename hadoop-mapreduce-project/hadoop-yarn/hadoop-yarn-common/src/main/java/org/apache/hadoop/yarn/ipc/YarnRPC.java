@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.ipc;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
@@ -37,6 +37,8 @@ public abstract class YarnRPC {
   
   public abstract Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf);
+
+  public abstract void stopProxy(Object proxy, Configuration conf);
 
   public abstract Server getServer(Class protocol, Object instance,
       InetSocketAddress addr, Configuration conf,

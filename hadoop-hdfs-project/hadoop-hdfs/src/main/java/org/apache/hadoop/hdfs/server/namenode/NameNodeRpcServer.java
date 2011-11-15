@@ -744,17 +744,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
       throws IOException {
     nn.checkOperation(OperationCategory.READ);
+    String[] cookieTab = new String[] { cookie };
     Collection<FSNamesystem.CorruptFileBlockInfo> fbs =
-      namesystem.listCorruptFileBlocks(path, cookie);
-    
+      namesystem.listCorruptFileBlocks(path, cookieTab);
+
     String[] files = new String[fbs.size()];
-    String lastCookie = "";
     int i = 0;
     for(FSNamesystem.CorruptFileBlockInfo fb: fbs) {
       files[i++] = fb.path;
-      lastCookie = fb.block.getBlockName();
     }
-    return new CorruptFileBlocks(files, lastCookie);
+    return new CorruptFileBlocks(files, cookieTab[0]);
   }
 
   /**

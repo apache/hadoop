@@ -56,16 +56,15 @@ public class TestNoJobSetupCleanup extends HadoopTestCase {
     FileSystem fs = FileSystem.get(conf);
     assertTrue("Job output directory doesn't exit!", fs.exists(outDir));
 
-    // TODO
-    /*
-    // Disabling check for now to address builds until we fix underlying issue
-    // output still in temporary as job commit only seems
-    // to be called during job cleanup 
-    FileStatus[] list = fs.listStatus(outDir, new OutputFilter());
+    // job commit done only in cleanup 
+    // therefore output should still be in temp location
+    String tempWorkingPathStr = outDir + Path.SEPARATOR + "_temporary"
+        + Path.SEPARATOR + "0";
+    Path tempWorkingPath = new Path(tempWorkingPathStr);
+    FileStatus[] list = fs.listStatus(tempWorkingPath, new OutputFilter());
     int numPartFiles = numReds == 0 ? numMaps : numReds;
     assertTrue("Number of part-files is " + list.length + " and not "
         + numPartFiles, list.length == numPartFiles);
-    */
     return job;
   }
   

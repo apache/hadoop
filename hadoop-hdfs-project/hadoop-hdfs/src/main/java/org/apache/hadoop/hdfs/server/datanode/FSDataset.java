@@ -1258,7 +1258,7 @@ public class FSDataset implements FSDatasetInterface {
   /**
    * Get File name for a given block.
    */
-  public synchronized File getBlockFile(String bpid, Block b)
+  public File getBlockFile(String bpid, Block b)
       throws IOException {
     File f = validateBlockFile(bpid, b);
     if(f == null) {
@@ -1271,16 +1271,44 @@ public class FSDataset implements FSDatasetInterface {
   }
   
   @Override // FSDatasetInterface
-  public synchronized InputStream getBlockInputStream(ExtendedBlock b)
+  public InputStream getBlockInputStream(ExtendedBlock b)
       throws IOException {
-    return new FileInputStream(getBlockFile(b));
+    File f = getBlockFileNoExistsCheck(b);
+    try {
+      return new FileInputStream(f);
+    } catch (FileNotFoundException fnfe) {
+      throw new IOException("Block " + b + " is not valid. " +
+          "Expected block file at " + f + " does not exist.");
+    }
+  }
+  
+  /**
+   * Return the File associated with a block, without first
+   * checking that it exists. This should be used when the
+   * next operation is going to open the file for read anyway,
+   * and thus the exists check is redundant.
+   */
+  private File getBlockFileNoExistsCheck(ExtendedBlock b)
+      throws IOException {
+    File f = getFile(b.getBlockPoolId(), b.getLocalBlock());
+    if (f == null) {
+      throw new IOException("Block " + b + " is not valid");
+    }
+    return f;
   }
 
   @Override // FSDatasetInterface
-  public synchronized InputStream getBlockInputStream(ExtendedBlock b,
+  public InputStream getBlockInputStream(ExtendedBlock b,
       long seekOffset) throws IOException {
-    File blockFile = getBlockFile(b);
-    RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
+    File blockFile = getBlockFileNoExistsCheck(b);
+    RandomAccessFile blockInFile;
+    try {
+      blockInFile = new RandomAccessFile(blockFile, "r");
+    } catch (FileNotFoundException fnfe) {
+      throw new IOException("Block " + b + " is not valid. " +
+          "Expected block file at " + blockFile + " does not exist.");
+    }
+
     if (seekOffset > 0) {
       blockInFile.seek(seekOffset);
     }

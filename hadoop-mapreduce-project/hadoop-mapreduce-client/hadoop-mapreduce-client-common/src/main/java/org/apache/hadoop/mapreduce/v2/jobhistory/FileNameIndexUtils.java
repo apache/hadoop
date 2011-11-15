@@ -23,6 +23,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -35,6 +38,10 @@ public class FileNameIndexUtils {
   static final String DELIMITER = "-";
   static final String DELIMITER_ESCAPE = "%2D";
   
+  private static final Log LOG = LogFactory.getLog(FileNameIndexUtils.class);
+
+  // Job history file names need to be backwards compatible
+  // Only append new elements to the end of this list
   private static final int JOB_ID_INDEX = 0;
   private static final int SUBMIT_TIME_INDEX = 1;
   private static final int USER_INDEX = 2;
@@ -43,7 +50,7 @@ public class FileNameIndexUtils {
   private static final int NUM_MAPS_INDEX = 5;
   private static final int NUM_REDUCES_INDEX = 6;
   private static final int JOB_STATUS_INDEX = 7;
-  private static final int MAX_INDEX = JOB_STATUS_INDEX;
+  private static final int QUEUE_NAME_INDEX = 8;
 
   /**
    * Constructs the job history file name from the JobIndexInfo.
@@ -83,7 +90,11 @@ public class FileNameIndexUtils {
     
     //JobStatus
     sb.append(indexInfo.getJobStatus());
+    sb.append(DELIMITER);
     
+    //QueueName
+    sb.append(indexInfo.getQueueName());
+
     sb.append(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION);
     return encodeJobHistoryFileName(sb.toString());
   }
@@ -100,27 +111,60 @@ public class FileNameIndexUtils {
     JobIndexInfo indexInfo = new JobIndexInfo();
     
     String[] jobDetails = fileName.split(DELIMITER);
-    if (jobDetails.length != MAX_INDEX +1) {
-      throw new IOException("Failed to parse file: [" + jhFileName + "]. Expected " + (MAX_INDEX + 1) + "parts.");  
-    }
     
     JobID oldJobId = JobID.forName(decodeJobHistoryFileName(jobDetails[JOB_ID_INDEX]));
     JobId jobId = TypeConverter.toYarn(oldJobId);
     indexInfo.setJobId(jobId);
-    //TODO Catch NumberFormatException - Do not fail if there's only a few fields missing.
-    indexInfo.setSubmitTime(Long.parseLong(decodeJobHistoryFileName(jobDetails[SUBMIT_TIME_INDEX])));
-    
-    indexInfo.setUser(decodeJobHistoryFileName(jobDetails[USER_INDEX]));
-    
-    indexInfo.setJobName(decodeJobHistoryFileName(jobDetails[JOB_NAME_INDEX]));
-    
-    indexInfo.setFinishTime(Long.parseLong(decodeJobHistoryFileName(jobDetails[FINISH_TIME_INDEX])));
-    
-    indexInfo.setNumMaps(Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX])));
-    
-    indexInfo.setNumReduces(Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX])));
-    
-    indexInfo.setJobStatus(decodeJobHistoryFileName(jobDetails[JOB_STATUS_INDEX]));
+
+    // Do not fail if there are some minor parse errors
+    try {
+      try {
+        indexInfo.setSubmitTime(
+            Long.parseLong(decodeJobHistoryFileName(jobDetails[SUBMIT_TIME_INDEX])));
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse submit time from job history file "
+            + jhFileName + " : " + e);
+      }
+
+      indexInfo.setUser(
+          decodeJobHistoryFileName(jobDetails[USER_INDEX]));
+
+      indexInfo.setJobName(
+          decodeJobHistoryFileName(jobDetails[JOB_NAME_INDEX]));
+
+      try {
+        indexInfo.setFinishTime(
+            Long.parseLong(decodeJobHistoryFileName(jobDetails[FINISH_TIME_INDEX])));
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse finish time from job history file "
+            + jhFileName + " : " + e);
+      }
+
+      try {
+        indexInfo.setNumMaps(
+            Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX])));
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse num maps from job history file "
+            + jhFileName + " : " + e);
+      }
+
+      try {
+        indexInfo.setNumReduces(
+            Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX])));
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse num reduces from job history file "
+            + jhFileName + " : " + e);
+      }
+
+      indexInfo.setJobStatus(
+          decodeJobHistoryFileName(jobDetails[JOB_STATUS_INDEX]));
+
+      indexInfo.setQueueName(
+          decodeJobHistoryFileName(jobDetails[QUEUE_NAME_INDEX]));
+    } catch (IndexOutOfBoundsException e) {
+      LOG.warn("Parsing job history file with partial data encoded into name: "
+          + jhFileName);
+    }
     
     return indexInfo;
   }

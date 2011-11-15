@@ -60,6 +60,7 @@ public class HsJobsBlock extends HtmlBlock {
             th(".id", "Job ID").
             th(".name", "Name").
             th("User").
+            th("Queue").
             th(".state", "State").
             th("Maps Total").
             th("Maps Completed").
@@ -83,6 +84,7 @@ public class HsJobsBlock extends HtmlBlock {
           td().a(url("job", jobID), jobID)._().
           td(job.getName().toString()).
           td(job.getUserName()).
+          td(job.getQueueName()).
           td(job.getState().toString()).
           td(mapsTotal).
           td(mapsCompleted).
@@ -97,6 +99,7 @@ public class HsJobsBlock extends HtmlBlock {
         th().input("search_init").$type(InputType.text).$name("start_time").$value("Job ID")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("Name")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("User")._()._().
+        th().input("search_init").$type(InputType.text).$name("start_time").$value("Queue")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("State")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("Maps Total")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("Maps Completed")._()._().

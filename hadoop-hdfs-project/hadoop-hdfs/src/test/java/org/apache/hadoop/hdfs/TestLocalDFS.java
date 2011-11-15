@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.*;
 import java.io.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -27,7 +28,7 @@ import org.apache.hadoop.fs.Path;
  * This class tests the DFS class via the FileSystem interface in a single node
  * mini-cluster.
  */
-public class TestLocalDFS extends TestCase {
+public class TestLocalDFS {
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     DataOutputStream stm = fileSys.create(name);
@@ -59,6 +60,7 @@ public class TestLocalDFS extends TestCase {
   /**
    * Tests get/set working directory in DFS.
    */
+  @Test(timeout=20000)
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

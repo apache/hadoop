@@ -45,7 +45,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   static public class SimpleFilter implements Filter {
     private FilterConfig filterConfig = null;
 
-    public void init(FilterConfig filterConfig) {
+    public void init(FilterConfig filterConfig) throws ServletException {
       this.filterConfig = filterConfig;
     }
 
@@ -135,6 +135,38 @@ public class TestServletFilter extends HttpServerFunctionalTest {
       }
     } finally {
       http.stop();
+    }
+  }
+  
+  static public class ErrorFilter extends SimpleFilter {
+    @Override
+    public void init(FilterConfig arg0) throws ServletException {
+      throw new ServletException("Throwing the exception from Filter init");
+    }
+
+    /** Configuration for the filter */
+    static public class Initializer extends FilterInitializer {
+      public Initializer() {
+      }
+
+      public void initFilter(FilterContainer container, Configuration conf) {
+        container.addFilter("simple", ErrorFilter.class.getName(), null);
+      }
+    }
+  }
+
+  @Test
+  public void testServletFilterWhenInitThrowsException() throws Exception {
+    Configuration conf = new Configuration();
+    // start a http server with CountingFilter
+    conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
+        ErrorFilter.Initializer.class.getName());
+    HttpServer http = createTestServer(conf);
+    try {
+      http.start();
+      fail("expecting exception");
+    } catch (IOException e) {
+      assertTrue( e.getMessage().contains("Problem in starting http server. Server handlers failed"));
     }
   }
 }

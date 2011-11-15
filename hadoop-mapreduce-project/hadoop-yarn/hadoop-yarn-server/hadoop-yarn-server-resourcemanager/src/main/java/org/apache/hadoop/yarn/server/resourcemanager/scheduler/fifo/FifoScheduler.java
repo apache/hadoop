@@ -236,28 +236,30 @@ public class FifoScheduler implements ResourceScheduler {
           RMContainerEventType.RELEASED);
     }
 
-    if (!ask.isEmpty()) {
-      LOG.debug("allocate: pre-update" +
-          " applicationId=" + applicationAttemptId + 
-          " application=" + application);
-      application.showRequests();
+    synchronized (application) {
+      if (!ask.isEmpty()) {
+        LOG.debug("allocate: pre-update" +
+            " applicationId=" + applicationAttemptId + 
+            " application=" + application);
+        application.showRequests();
 
-      // Update application requests
-      application.updateResourceRequests(ask);
+        // Update application requests
+        application.updateResourceRequests(ask);
 
-      LOG.debug("allocate: post-update" +
-          " applicationId=" + applicationAttemptId + 
-          " application=" + application);
-      application.showRequests();
+        LOG.debug("allocate: post-update" +
+            " applicationId=" + applicationAttemptId + 
+            " application=" + application);
+        application.showRequests();
 
-      LOG.debug("allocate:" +
-          " applicationId=" + applicationAttemptId + 
-          " #ask=" + ask.size());
+        LOG.debug("allocate:" +
+            " applicationId=" + applicationAttemptId + 
+            " #ask=" + ask.size());
+      }
+
+      return new Allocation(
+          application.pullNewlyAllocatedContainers(), 
+          application.getHeadroom());
     }
-
-    return new Allocation(
-        application.pullNewlyAllocatedContainers(), 
-        application.getHeadroom());
   }
 
   private SchedulerApp getApplication(

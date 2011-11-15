@@ -55,6 +55,11 @@ Trunk (unreleased changes)
     HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
     (jitendra)
 
+    HADOOP-7776 Make the Ipc-Header in a RPC-Payload an explicit header (sanjay)
+
+    HADOOP-7688. Add servlet handler check in HttpServer.start().
+    (Uma Maheswara Rao G via szetszwo)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
@@ -94,6 +99,20 @@ Trunk (unreleased changes)
 
     HADOOP-7773. Add support for protocol buffer based RPC engine.
     (suresh)
+
+Release 0.23.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES                                                                    
+
+  IMPROVEMENTS
+
+    HADOOP-7801. HADOOP_PREFIX cannot be overriden. (Bruno Mahé via tomwhite)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 0.23.0 - 2011-11-01 
 
@@ -797,6 +816,12 @@ Release 0.23.0 - 2011-11-01
     (jitendra)
 
     HADOOP-7778. FindBugs warning in Token.getKind(). (tomwhite)
+
+    HADOOP-7798. Add support gpg signatures for maven release artifacts.
+    (cutting via acmurthy) 
+
+    HADOOP-7797. Fix top-level pom.xml to refer to correct staging maven
+    repository. (omalley via acmurthy) 
 
 Release 0.22.0 - Unreleased
 

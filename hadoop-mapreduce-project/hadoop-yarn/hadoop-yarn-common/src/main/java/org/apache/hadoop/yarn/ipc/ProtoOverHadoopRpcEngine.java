@@ -155,6 +155,7 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
       return actualReturnMessage;
     }
 
+    @Override
     public void close() throws IOException {
       if (!isClosed) {
         isClosed = true;

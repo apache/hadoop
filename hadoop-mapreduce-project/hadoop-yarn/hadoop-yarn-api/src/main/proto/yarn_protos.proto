@@ -216,6 +216,7 @@ message ApplicationSubmissionContextProto {
   optional string queue = 4 [default = "default"];
   optional PriorityProto priority = 5;
   optional ContainerLaunchContextProto am_container_spec = 6;
+  optional bool cancel_tokens_when_complete = 7 [default = true];
 }
 
 enum ApplicationAccessTypeProto {

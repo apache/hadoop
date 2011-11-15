@@ -67,7 +67,8 @@ public class TestDatanodeJsp {
     
     String viewFilePage = DFSTestUtil.urlGet(url);
     
-    assertTrue("page should show preview of file contents", viewFilePage.contains(FILE_DATA));
+    assertTrue("page should show preview of file contents, got: " + viewFilePage,
+        viewFilePage.contains(FILE_DATA));
     
     if (!doTail) {
       assertTrue("page should show link to download file", viewFilePage

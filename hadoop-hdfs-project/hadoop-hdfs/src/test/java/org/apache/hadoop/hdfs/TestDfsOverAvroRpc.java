@@ -19,11 +19,14 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 
+import org.junit.Test;
+
 /** Test for simple signs of life using Avro RPC.  Not an exhaustive test
  * yet, just enough to catch fundamental problems using Avro reflection to
  * infer namenode RPC protocols. */
 public class TestDfsOverAvroRpc extends TestLocalDFS {
 
+  @Test(timeout=20000)
   public void testWorkingDirectory() throws IOException {
     System.setProperty("hdfs.rpc.engine",
                        "org.apache.hadoop.ipc.AvroRpcEngine");

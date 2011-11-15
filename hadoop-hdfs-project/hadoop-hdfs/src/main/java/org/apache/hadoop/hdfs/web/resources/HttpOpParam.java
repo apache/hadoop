@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import javax.ws.rs.core.Response;
+
+
 /** Http operation parameter. */
 public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     extends EnumParam<E> {
@@ -44,6 +47,49 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
 
     /** @return a URI query string. */
     public String toQueryString();
+  }
+
+  /** Expects HTTP response 307 "Temporary Redirect". */
+  public static class TemporaryRedirectOp implements Op {
+    static final TemporaryRedirectOp CREATE = new TemporaryRedirectOp(PutOpParam.Op.CREATE);
+    static final TemporaryRedirectOp APPEND = new TemporaryRedirectOp(PostOpParam.Op.APPEND);
+    
+    /** Get an object for the given op. */
+    public static TemporaryRedirectOp valueOf(final Op op) {
+      if (op == CREATE.op) {
+        return CREATE;
+      } else if (op == APPEND.op) {
+        return APPEND;
+      }
+      throw new IllegalArgumentException(op + " not found.");
+    }
+
+    private final Op op;
+
+    private TemporaryRedirectOp(final Op op) {
+      this.op = op;
+    }
+
+    @Override
+    public Type getType() {
+      return op.getType();
+    }
+
+    @Override
+    public boolean getDoOutput() {
+      return op.getDoOutput();
+    }
+
+    /** Override the original expected response with "Temporary Redirect". */
+    @Override
+    public int getExpectedHttpResponseCode() {
+      return Response.Status.TEMPORARY_REDIRECT.getStatusCode();
+    }
+
+    @Override
+    public String toQueryString() {
+      return op.toQueryString();
+    }
   }
 
   HttpOpParam(final Domain<E> domain, final E value) {

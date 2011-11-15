@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -42,7 +43,7 @@ import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
 
-public class ApplicationPage extends NMView implements NMWebParams {
+public class ApplicationPage extends NMView implements YarnWebParams {
 
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
@@ -61,7 +62,7 @@ public class ApplicationPage extends NMView implements NMWebParams {
   }
 
   public static class ApplicationBlock extends HtmlBlock implements
-      NMWebParams {
+      YarnWebParams {
 
     private final Context nmContext;
     private final Configuration conf;

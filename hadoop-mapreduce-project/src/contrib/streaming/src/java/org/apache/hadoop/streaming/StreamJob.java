@@ -984,19 +984,6 @@ public class StreamJob implements Tool {
     return jobConf_.get(JTConfig.JT_IPC_ADDRESS);
   }
 
-  protected void jobInfo() {
-    if (isLocalHadoop()) {
-      LOG.info("Job running in-process (local Hadoop)");
-    } else {
-      String hp = getJobTrackerHostPort();
-      LOG.info("To kill this job, run:");
-      LOG.info(getHadoopClientHome() + "/bin/hadoop job  -D" + JTConfig.JT_IPC_ADDRESS + "=" + hp + " -kill "
-               + jobId_);
-      //LOG.info("Job file: " + running_.getJobFile());
-      LOG.info("Tracking URL: " + StreamUtil.qualifyHost(running_.getTrackingURL()));
-    }
-  }
-
   // Based on JobClient
   public int submitAndMonitorJob() throws IOException {
 
@@ -1012,7 +999,6 @@ public class StreamJob implements Tool {
     try {
       running_ = jc_.submitJob(jobConf_);
       jobId_ = running_.getID();
-      jobInfo();
       if (background_) {
         LOG.info("Job is running in background.");
       } else if (!jc_.monitorAndPrintJob(jobConf_, running_)) {

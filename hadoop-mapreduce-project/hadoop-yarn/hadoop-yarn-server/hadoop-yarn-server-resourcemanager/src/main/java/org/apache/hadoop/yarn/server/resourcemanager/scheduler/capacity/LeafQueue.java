@@ -245,16 +245,45 @@ public class LeafQueue implements CSQueue {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
     }
 
-    LOG.info("Initializing " + queueName +
-        ", capacity=" + capacity + 
-        ", asboluteCapacity=" + absoluteCapacity + 
-        ", maxCapacity=" + maxCapacity +
-        ", asboluteMaxCapacity=" + absoluteMaxCapacity +
-        ", userLimit=" + userLimit + ", userLimitFactor=" + userLimitFactor + 
-        ", maxApplications=" + maxApplications + 
-        ", maxApplicationsPerUser=" + maxApplicationsPerUser + 
-        ", state=" + state +
-        ", acls=" + aclsString);
+    LOG.info("Initializing " + queueName + "\n" +
+        "capacity = " + capacity +
+        " [= (float) configuredCapacity / 100 ]" + "\n" + 
+        "asboluteCapacity = " + absoluteCapacity +
+        " [= parentAbsoluteCapacity * capacity ]" + "\n" +
+        "maxCapacity = " + maxCapacity +
+        " [= configuredMaxCapacity ]" + "\n" +
+        "absoluteMaxCapacity = " + absoluteMaxCapacity +
+        " [= Float.MAX_VALUE if maximumCapacity undefined, " +
+        "(parentAbsoluteCapacity * maximumCapacity) / 100 otherwise ]" + "\n" +
+        "userLimit = " + userLimit +
+        " [= configuredUserLimit ]" + "\n" +
+        "userLimitFactor = " + userLimitFactor +
+        " [= configuredUserLimitFactor ]" + "\n" +
+        "maxApplications = " + maxApplications +
+        " [= (int)(configuredMaximumSystemApplications * absoluteCapacity) ]" + "\n" +
+        "maxApplicationsPerUser = " + maxApplicationsPerUser +
+        " [= (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
+        "maxActiveApplications = " + maxActiveApplications +
+        " [= max(" + 
+        "(int)((clusterResourceMemory / (float)DEFAULT_AM_RESOURCE) *" + 
+        "maxAMResourcePercent * absoluteCapacity)," + 
+        "1) ]" + "\n" +
+        "maxActiveApplicationsPerUser = " + maxActiveApplicationsPerUser +
+        " [= (int)(maxActiveApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
+        "utilization = " + utilization +
+        " [= usedResourcesMemory / queueLimit ]" + "\n" +
+        "usedCapacity = " + usedCapacity +
+        " [= usedResourcesMemory / (clusterResourceMemory * capacity) ]" + "\n" +
+        "maxAMResourcePercent = " + maxAMResourcePercent +
+        " [= configuredMaximumAMResourcePercent ]" + "\n" +
+        "minimumAllocationFactor = " + minimumAllocationFactor +
+        " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / maximumAllocationMemory ]" + "\n" +
+        "numContainers = " + numContainers +
+        " [= currentNumContainers ]" + "\n" +
+        "state = " + state +
+        " [= configuredState ]" + "\n" +
+        "acls = " + aclsString +
+        " [= configuredAcls ]" + "\n");
   }
   
   @Override

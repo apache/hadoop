@@ -23,29 +23,46 @@ package org.apache.hadoop.hdfs.security;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Map;
 
-import junit.framework.Assert;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
+import org.apache.hadoop.hdfs.web.resources.DoAsParam;
+import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
+import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.TestDoAsEffectiveUser;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
+import org.apache.log4j.Level;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,6 +106,7 @@ public class TestDelegationTokenForProxyUser {
   @Before
   public void setUp() throws Exception {
     config = new HdfsConfiguration();
+    config.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     config.setLong(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(
@@ -137,4 +155,63 @@ public class TestDelegationTokenForProxyUser {
     }
   }
   
+  @Test
+  public void testWebHdfsDoAs() throws Exception {
+    WebHdfsTestUtil.LOG.info("START: testWebHdfsDoAs()");
+    ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)ExceptionHandler.LOG).getLogger().setLevel(Level.ALL);
+    final UserGroupInformation ugi = UserGroupInformation.createRemoteUser(REAL_USER);
+    WebHdfsTestUtil.LOG.info("ugi.getShortUserName()=" + ugi.getShortUserName());
+    final WebHdfsFileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, config);
+    
+    final Path root = new Path("/");
+    cluster.getFileSystem().setPermission(root, new FsPermission((short)0777));
+
+    {
+      //test GETHOMEDIRECTORY with doAs
+      final URL url = WebHdfsTestUtil.toUrl(webhdfs,
+          GetOpParam.Op.GETHOMEDIRECTORY,  root, new DoAsParam(PROXY_USER));
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      final Map<?, ?> m = WebHdfsTestUtil.connectAndGetJson(conn, HttpServletResponse.SC_OK);
+      conn.disconnect();
+  
+      final Object responsePath = m.get(Path.class.getSimpleName());
+      WebHdfsTestUtil.LOG.info("responsePath=" + responsePath);
+      Assert.assertEquals("/user/" + PROXY_USER, responsePath);
+    }
+
+    {
+      //test GETHOMEDIRECTORY with DOas
+      final URL url = WebHdfsTestUtil.toUrl(webhdfs,
+          GetOpParam.Op.GETHOMEDIRECTORY,  root, new DoAsParam(PROXY_USER) {
+            @Override
+            public String getName() {
+              return "DOas";
+            }
+      });
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      final Map<?, ?> m = WebHdfsTestUtil.connectAndGetJson(conn, HttpServletResponse.SC_OK);
+      conn.disconnect();
+  
+      final Object responsePath = m.get(Path.class.getSimpleName());
+      WebHdfsTestUtil.LOG.info("responsePath=" + responsePath);
+      Assert.assertEquals("/user/" + PROXY_USER, responsePath);
+    }
+
+    {
+      //test create file with doAs
+      final Path f = new Path("/testWebHdfsDoAs/a.txt");
+      final PutOpParam.Op op = PutOpParam.Op.CREATE;
+      final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
+      out.write("Hello, webhdfs user!".getBytes());
+      out.close();
+  
+      final FileStatus status = webhdfs.getFileStatus(f);
+      WebHdfsTestUtil.LOG.info("status.getOwner()=" + status.getOwner());
+      Assert.assertEquals(PROXY_USER, status.getOwner());
+    }
+  }
 }

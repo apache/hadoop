@@ -19,7 +19,9 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
 this="${BASH_SOURCE-$0}"
-export HADOOP_PREFIX=`dirname "$this"`/..
+HADOOP_DEFAULT_PREFIX=`dirname "$this"`/..
+HADOOP_PREFIX=${HADOOP_PREFIX:-$HADOOP_DEFAULT_PREFIX}
+export HADOOP_PREFIX
 
 usage() {
   echo "

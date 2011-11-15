@@ -204,13 +204,13 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
 
     @Override
     synchronized public BlockWriteStreams createStreams(boolean isCreate, 
-        int bytesPerChunk, int checksumSize) throws IOException {
+        DataChecksum requestedChecksum) throws IOException {
       if (finalized) {
         throw new IOException("Trying to write to a finalized replica "
             + theBlock);
       } else {
         SimulatedOutputStream crcStream = new SimulatedOutputStream();
-        return new BlockWriteStreams(oStream, crcStream);
+        return new BlockWriteStreams(oStream, crcStream, requestedChecksum);
       }
     }
 
