@@ -202,15 +202,22 @@ public class TestDistributedLogSplitting {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    HRegionServer hrs = rsts.get(0).getRegionServer();
+    
     Path rootdir = FSUtils.getRootDir(conf);
-    final Path logDir = new Path(rootdir,
-        HLog.getHLogDirectoryName(hrs.getServerName().toString()));
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
     byte[] table = Bytes.toBytes("table");
-    List<HRegionInfo> regions = hrs.getOnlineRegions();
+    List<HRegionInfo> regions = null;
+    HRegionServer hrs = null;
+    for (int i = 0; i < NUM_RS; i++) {
+      hrs = rsts.get(i).getRegionServer();
+      regions = hrs.getOnlineRegions();
+      if (regions.size() != 0) break;
+    }
+    final Path logDir = new Path(rootdir, HLog.getHLogDirectoryName(hrs
+        .getServerName().toString()));
+    
     LOG.info("#regions = " + regions.size());
     Iterator<HRegionInfo> it = regions.iterator();
     while (it.hasNext()) {
