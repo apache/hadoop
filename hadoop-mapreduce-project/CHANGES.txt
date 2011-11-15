@@ -35,6 +35,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3243. Invalid tracking URL for streaming jobs (Jonathan Eagles 
     via mahadev)
 
+    MAPREDUCE-3331. Improvement to single node cluster setup documentation for 
+    0.23 (Anupam Seth via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
