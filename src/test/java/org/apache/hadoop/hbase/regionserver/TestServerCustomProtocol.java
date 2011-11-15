@@ -62,6 +62,7 @@ public class TestServerCustomProtocol {
     public int getPingCount();
     public int incrementCount(int diff);
     public String hello(String name);
+    public void noop();
   }
 
   /* Test protocol implementation */
@@ -93,6 +94,11 @@ public class TestServerCustomProtocol {
         return null;
       }
       return "Hello, "+name;
+    }
+
+    @Override
+    public void noop() {
+      // do nothing, just test void return type
     }
 
     @Override
@@ -330,6 +336,26 @@ public class TestServerCustomProtocol {
     verifyRegionResults(table, results, null, ROW_A);
     verifyRegionResults(table, results, null, ROW_B);
     verifyRegionResults(table, results, null, ROW_C);
+  }
+
+  @Test
+  public void testVoidReturnType() throws Throwable {
+    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+
+    Map<byte[],Object> results = table.coprocessorExec(PingProtocol.class,
+        ROW_A, ROW_C,
+        new Batch.Call<PingProtocol,Object>(){
+          public Object call(PingProtocol instance) {
+            instance.noop();
+            return null;
+          }
+        });
+
+    assertEquals("Should have results from three regions", 3, results.size());
+    // all results should be null
+    for (Object v : results.values()) {
+      assertNull(v);
+    }
   }
 
   private void verifyRegionResults(HTable table,

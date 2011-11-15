@@ -48,15 +48,13 @@ import java.io.Serializable;
  */
 public class ExecResult implements Writable {
   private byte[] regionName;
-  private Class<?> valueType;
   private Object value;
 
   public ExecResult() {
   }
 
-  public ExecResult(byte[] region, Class<?> valueType, Object value) {
+  public ExecResult(byte[] region, Object value) {
     this.regionName = region;
-    this.valueType = valueType;
     this.value = value;
   }
 
@@ -73,24 +71,11 @@ public class ExecResult implements Writable {
     Bytes.writeByteArray(out, regionName);
     HbaseObjectWritable.writeObject(out, value,
         value != null ? value.getClass() : Writable.class, null);
-    Class<?> alternativeSerializationClass;
-    if(value instanceof Writable){
-      alternativeSerializationClass = Writable.class;
-    } else {
-      alternativeSerializationClass = Serializable.class;
-    }
-    out.writeUTF((valueType != null ? valueType : alternativeSerializationClass).getName());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     regionName = Bytes.readByteArray(in);
     value = HbaseObjectWritable.readObject(in, null);
-    String className = in.readUTF();
-    try {
-      valueType = Classes.extendedForName(className);
-    } catch (ClassNotFoundException e) {
-      throw new IOException("Unable to find class of type: " + className );
-    }
   }
 }
