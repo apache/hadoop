@@ -149,6 +149,7 @@ public class GridmixJobVerification {
          zombieJob.getJobConf());
       verifyHighRamMemoryJobs(zombieJob, simuJobConf);
       verifyCPUEmulationOfJobs(zombieJob, jhInfo, simuJobConf);
+      verifyMemoryEmulationOfJobs(zombieJob, jhInfo, simuJobConf);
       LOG.info("Done.");
     }
     verifyDistributedCacheBetweenJobs(simuAndOrigJobsInfo);
@@ -357,6 +358,109 @@ public class GridmixJobVerification {
   }
 
   /**
+   * It verifies the heap memory resource usage of gridmix jobs with
+   * corresponding original job in the trace.
+   * @param zombieJob - Original job history.
+   * @param jhInfo - Simulated job history.
+   * @param simuJobConf - simulated job configuration.
+   */
+  public void verifyMemoryEmulationOfJobs(ZombieJob zombieJob,
+                 JobHistoryParser.JobInfo jhInfo,
+                                 JobConf simuJobConf) throws Exception {
+    long origJobMapsTHU = 0;
+    long origJobReducesTHU = 0;
+    long simuJobMapsTHU = 0;
+    long simuJobReducesTHU = 0;
+    boolean isMemEmulOn = false;
+    if (simuJobConf.get(GridMixConfig.GRIDMIX_MEMORY_EMULATON) != null) {
+      isMemEmulOn = 
+          simuJobConf.get(GridMixConfig.GRIDMIX_MEMORY_EMULATON).
+              contains(GridMixConfig.GRIDMIX_MEMORY_EMULATION_PLUGIN);
+    }
+
+    if (isMemEmulOn) {
+      for (int index = 0; index < zombieJob.getNumberMaps(); index ++) {
+        TaskInfo mapTask = zombieJob.getTaskInfo(TaskType.MAP, index);
+        if (mapTask.getResourceUsageMetrics().getHeapUsage() > 0) {
+          origJobMapsTHU += 
+                  mapTask.getResourceUsageMetrics().getHeapUsage();
+        }
+      }
+      LOG.info("Original Job Maps Total Heap Usage: " + origJobMapsTHU);
+
+      for (int index = 0; index < zombieJob.getNumberReduces(); index ++) {
+        TaskInfo reduceTask = zombieJob.getTaskInfo(TaskType.REDUCE, index);
+        if (reduceTask.getResourceUsageMetrics().getHeapUsage() > 0) {
+          origJobReducesTHU += 
+                  reduceTask.getResourceUsageMetrics().getHeapUsage();
+        }
+      }
+      LOG.info("Original Job Reduces Total Heap Usage: " + origJobReducesTHU);
+
+      simuJobMapsTHU = 
+          getCounterValue(jhInfo.getMapCounters(), 
+                          TaskCounter.COMMITTED_HEAP_BYTES.toString());
+      LOG.info("Simulated Job Maps Total Heap Usage: " + simuJobMapsTHU);
+
+      simuJobReducesTHU = 
+          getCounterValue(jhInfo.getReduceCounters(), 
+                          TaskCounter.COMMITTED_HEAP_BYTES.toString());
+      LOG.info("Simulated Jobs Reduces Total Heap Usage: " + simuJobReducesTHU);
+
+      long mapCount = jhInfo.getTotalMaps();
+      long reduceCount = jhInfo.getTotalReduces();
+
+      String strHeapRatio =
+          simuJobConf.get(GridMixConfig.GRIDMIX_HEAP_FREE_MEMORY_RATIO);
+      if (strHeapRatio == null) {
+        strHeapRatio = "0.3F";
+      }
+
+      if (mapCount > 0) {
+        double mapEmulFactor = (simuJobMapsTHU * 100) / origJobMapsTHU;
+        long mapEmulAccuracy = Math.round(mapEmulFactor);
+        LOG.info("Maps memory emulation accuracy of a job:" 
+                + mapEmulAccuracy + "%");
+        Assert.assertTrue("Map phase total memory emulation had crossed the "
+                         + "configured max limit.", mapEmulAccuracy 
+                         <= GridMixConfig.GRIDMIX_MEMORY_EMULATION_UPPER_LIMIT);
+        Assert.assertTrue("Map phase total memory emulation had not crossed " 
+                         + "the configured min limit.", mapEmulAccuracy 
+                         >= GridMixConfig.GRIDMIX_MEMORY_EMULATION_LOWER_LIMIT);
+        double expHeapRatio = Double.parseDouble(strHeapRatio);
+        LOG.info("expHeapRatio for maps:" + expHeapRatio);
+        double actHeapRatio = 
+                ((double)Math.abs(origJobMapsTHU - simuJobMapsTHU)) ;
+        actHeapRatio /= origJobMapsTHU;
+          LOG.info("actHeapRatio for maps:" + actHeapRatio);
+          Assert.assertTrue("Simulate job maps heap ratio not matched.",
+                            actHeapRatio <= expHeapRatio); 
+      }
+
+      if (reduceCount >0) {
+        double reduceEmulFactor = (simuJobReducesTHU * 100) / origJobReducesTHU;
+        long reduceEmulAccuracy = Math.round(reduceEmulFactor);
+        LOG.info("Reduces memory emulation accuracy of a job:" 
+                + reduceEmulAccuracy + "%");
+        Assert.assertTrue("Reduce phase total memory emulation had crossed "
+                         + "configured max limit.", reduceEmulAccuracy 
+                         <= GridMixConfig.GRIDMIX_MEMORY_EMULATION_UPPER_LIMIT); 
+        Assert.assertTrue("Reduce phase total memory emulation had not " 
+                         + "crosssed configured min limit.", reduceEmulAccuracy 
+                         >= GridMixConfig.GRIDMIX_MEMORY_EMULATION_LOWER_LIMIT);
+        double expHeapRatio = Double.parseDouble(strHeapRatio);
+        LOG.info("expHeapRatio for reduces:" + expHeapRatio);
+        double actHeapRatio = 
+                ((double)Math.abs(origJobReducesTHU - simuJobReducesTHU));
+        actHeapRatio /= origJobReducesTHU;
+          LOG.info("actHeapRatio for reduces:" + actHeapRatio);
+          Assert.assertTrue("Simulate job reduces heap ratio not matched.",
+                            actHeapRatio <= expHeapRatio); 
+      }
+    }
+  }
+
+  /**
    * It verifies the cpu resource usage of  a gridmix job against
    * their original job.
    * @param origJobHistory - Original job history.
@@ -367,7 +471,14 @@ public class GridmixJobVerification {
        JobHistoryParser.JobInfo simuJobHistoryInfo,
        JobConf simuJobConf) throws Exception {
 
+    boolean isCpuEmulOn = false;
     if (simuJobConf.get(GridMixConfig.GRIDMIX_CPU_EMULATON) != null) {
+      isCpuEmulOn = 
+          simuJobConf.get(GridMixConfig.GRIDMIX_CPU_EMULATON).
+              contains(GridMixConfig.GRIDMIX_CPU_USAGE_PLUGIN);
+    }
+
+    if (isCpuEmulOn) {
       Map<String,Long> origJobMetrics =
                        getOriginalJobCPUMetrics(origJobHistory);
       Map<String,Long> simuJobMetrics =

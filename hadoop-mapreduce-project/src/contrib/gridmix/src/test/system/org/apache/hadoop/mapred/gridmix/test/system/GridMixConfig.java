@@ -248,4 +248,38 @@ public class GridMixConfig {
   */
  public static int GRIDMIX_CPU_EMULATION_UPPER_LIMIT = 130;
 
+ /**
+  * Gridmix heap memory custom interval
+  */
+ public static final String GRIDMIX_HEAP_MEMORY_CUSTOM_INTRVL = 
+     TotalHeapUsageEmulatorPlugin.HEAP_EMULATION_PROGRESS_INTERVAL;
+  
+ /**
+  *  Gridmix heap free memory ratio
+  */
+ public static final String GRIDMIX_HEAP_FREE_MEMORY_RATIO =
+     TotalHeapUsageEmulatorPlugin.MIN_HEAP_FREE_RATIO;
+  
+ /**
+  *  Gridmix memory emulation plugin
+  */
+ public static final String GRIDMIX_MEMORY_EMULATION_PLUGIN = 
+     TotalHeapUsageEmulatorPlugin.class.getName();
+  
+ /**
+  *  Gridmix memory emulation
+  */
+ public static final String GRIDMIX_MEMORY_EMULATON = 
+     ResourceUsageMatcher.RESOURCE_USAGE_EMULATION_PLUGINS;
+  
+ /**
+  *  Gridmix memory emulation lower limit.
+  */
+ public static int GRIDMIX_MEMORY_EMULATION_LOWER_LIMIT = 55;
+  
+ /**
+  * Gridmix memory emulation upper limit. 
+  */
+ public static int GRIDMIX_MEMORY_EMULATION_UPPER_LIMIT = 130;
+
 }

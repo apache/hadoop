@@ -7,6 +7,8 @@ Release 0.23.1 - Unreleased
   NEW FEATURES                                                                    
 
   IMPROVEMENTS
+    MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.
+                    (Vinay Thota via amarrk)
 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
                     (Vinay Thota via amarrk)
