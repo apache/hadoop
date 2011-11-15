@@ -67,7 +67,7 @@ public class TestCapBasedLoadManager extends TestCase {
       ts.add(getRunningReduceTaskStatus());
     }
     TaskTrackerStatus tracker = new TaskTrackerStatus("tracker", 
-        "tracker_host", 1234, ts, 0, mapCap, reduceCap);
+        "tracker_host", 1234, ts, 0, 0, mapCap, reduceCap);
     return tracker;
   }
 

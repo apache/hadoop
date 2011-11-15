@@ -377,7 +377,7 @@ public class TestFairScheduler extends TestCase {
           System.out.println("Creating TaskTracker tt" + id + " on " + host);
           TaskTracker tt = new TaskTracker("tt" + id);
           tt.setStatus(new TaskTrackerStatus("tt" + id, host, 0,
-              new ArrayList<TaskStatus>(), 0,
+              new ArrayList<TaskStatus>(), 0, 0,
               maxMapTasksPerTracker, maxReduceTasksPerTracker));
           trackers.put("tt" + id, tt);
         }

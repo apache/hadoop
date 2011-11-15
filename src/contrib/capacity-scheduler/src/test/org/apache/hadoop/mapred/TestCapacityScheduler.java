@@ -472,7 +472,7 @@ public class TestCapacityScheduler extends TestCase {
         String ttName = "tt" + i;
         TaskTracker tt = new TaskTracker(ttName);
         tt.setStatus(new TaskTrackerStatus(ttName, ttName + ".host", i,
-                                           new ArrayList<TaskStatus>(), 0, 
+                                           new ArrayList<TaskStatus>(), 0, 0,
                                            maxMapTasksPerTracker,
                                            maxReduceTasksPerTracker));
         trackers.put(ttName, tt);
@@ -482,7 +482,7 @@ public class TestCapacityScheduler extends TestCase {
     public void addTaskTracker(String ttName) {
       TaskTracker tt = new TaskTracker(ttName);
       tt.setStatus(new TaskTrackerStatus(ttName, ttName + ".host", 1,
-                                         new ArrayList<TaskStatus>(), 0,
+                                         new ArrayList<TaskStatus>(), 0, 0,
                                          maxMapTasksPerTracker, 
                                          maxReduceTasksPerTracker));
       trackers.put(ttName, tt);
