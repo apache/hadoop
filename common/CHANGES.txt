@@ -553,6 +553,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7730. Allow TestCLI to be run against a cluster (cos)
 
+    HADOOP-7450. Upgrade jetty to 6.1.26.
+    (Konstantin Boudnik and Jitendra Nath Pandey via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

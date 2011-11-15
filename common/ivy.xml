@@ -99,16 +99,6 @@
 
     <!--Configuration: httpclient-->
 
-    <!--
-    commons-httpclient asks for too many files.
-    All it needs is commons-codec and commons-logging JARs
-    -->
-    <dependency org="commons-httpclient"
-      name="commons-httpclient"
-      rev="${commons-httpclient.version}"
-      conf="httpclient->master">
-    </dependency>
-
     <dependency org="commons-codec"
       name="commons-codec"
       rev="${commons-codec.version}"
@@ -120,19 +110,12 @@
       conf="ftp->default"/>
 
     <!--Configuration: Jetty -->
-
-<!-- <dependency org="javax.servlet"
-      name="servlet-api"
-      rev="${servlet-api.version}"
-      conf="jetty->master"/>   -->
     <dependency org="org.mortbay.jetty"
       name="jetty"
       rev="${jetty.version}"
-      conf="jetty->master"/>
-    <dependency org="org.mortbay.jetty"
-      name="jetty-util"
-      rev="${jetty-util.version}"
-      conf="jetty->master"/>
+      conf="jetty->default">
+      <exclude module="ant"/>
+    </dependency>
 
     <dependency org="tomcat"
       name="jasper-runtime"
@@ -143,13 +126,9 @@
       rev="${jasper.version}"
       conf="jetty->master"/>
     <dependency org="org.mortbay.jetty"
-      name="jsp-api-2.1"
+      name="jsp-2.1-jetty"
       rev="${jetty.version}"
-      conf="jetty->master"/>
-    <dependency org="org.mortbay.jetty"
-      name="jsp-2.1"
-      rev="${jetty.version}"
-      conf="jetty->master"/>
+      conf="jetty->default"/>
     <dependency org="commons-el"
       name="commons-el"
       rev="${commons-el.version}"
@@ -182,15 +161,11 @@
     <dependency org="net.java.dev.jets3t"
       name="jets3t"
       rev="${jets3t.version}"
-      conf="s3-client->master"/>
+      conf="s3-client->default"/>
     <dependency org="commons-net"
       name="commons-net"
       rev="${commons-net.version}"
       conf="s3-client->master"/> 
-    <dependency org="org.mortbay.jetty"
-      name="servlet-api-2.5"
-      rev="${servlet-api-2.5.version}"
-      conf="s3-client->master"/>
     <dependency org="net.sf.kosmosfs"
       name="kfs"
       rev="${kfs.version}"
@@ -198,23 +173,6 @@
 
     <!--Configuration: test -->
     <!--artifacts needed for testing -->
-
-    <dependency org="org.apache.ftpserver"
-      name="ftplet-api"
-      rev="${ftplet-api.version}"
-      conf="test->default"/>
-    <dependency org="org.apache.mina"
-      name="mina-core"
-      rev="${mina-core.version}"
-      conf="test->default"/>
-    <dependency org="org.apache.ftpserver"
-      name="ftpserver-core"
-      rev="${ftpserver-core.version}"
-      conf="test->default"/>
-    <dependency org="org.apache.ftpserver"
-      name="ftpserver-deprecated"
-      rev="${ftpserver-deprecated.version}"
-      conf="test->default"/>
 
     <dependency org="junit"
       name="junit"
@@ -252,10 +210,6 @@
       name="core"
       rev="${core.version}"
       conf="common->master"/>
-    <dependency org="oro"
-      name="oro"
-      rev="${oro.version}"
-      conf="common->default"/>
     <dependency org="org.slf4j"
       name="slf4j-log4j12"
       rev="${slf4j-log4j12.version}"
@@ -280,11 +234,9 @@
       <exclude module="ant"/>
       <exclude module="jetty"/>
       <exclude module="slf4j-api"/>
+      <exclude module="velocity"/>
+      <exclude module="netty" />
     </dependency>
-    <dependency org="org.codehaus.jackson"
-      name="jackson-mapper-asl"
-      rev="${jackson.version}"
-      conf="common->default"/> 
     <dependency org="com.thoughtworks.paranamer"
       name="paranamer"
       rev="${paranamer.version}"
