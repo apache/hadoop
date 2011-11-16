@@ -88,11 +88,19 @@ public class TestContainerLauncher {
 
     app.waitForState(job, JobState.FAILED);
 
-    LOG.info("attempt.getDiagnostics: " + attempt.getDiagnostics());
-    Assert.assertTrue(attempt.getDiagnostics().toString().contains(
-        "Container launch failed for container_0_0000_01_000000 : "));
-    Assert.assertTrue(attempt.getDiagnostics().toString().contains(
-        ": java.lang.InterruptedException"));
+    String diagnostics = attempt.getDiagnostics().toString();
+    LOG.info("attempt.getDiagnostics: " + diagnostics);
+    if (swallowInterrupts) {
+      Assert.assertEquals("[Container launch failed for "
+          + "container_0_0000_01_000000 : Start-container for "
+          + "container_0_0000_01_000000 got interrupted. Returning.]",
+          diagnostics);
+    } else {
+      Assert.assertTrue(diagnostics.contains("Container launch failed for "
+          + "container_0_0000_01_000000 : "));
+      Assert.assertTrue(diagnostics
+          .contains(": java.lang.InterruptedException"));
+    }
 
     app.stop();
   }
@@ -119,11 +127,10 @@ public class TestContainerLauncher {
             }
           } catch (InterruptedException e) {
             LOG.info(e);
-            if (!swallowInterrupts) {
+            if (!MRAppWithSlowNM.this.swallowInterrupts) {
               throw new IOException(e);
-            } else {
-              Thread.currentThread().interrupt();
             }
+            Thread.currentThread().interrupt();
           }
           return null;
         }
