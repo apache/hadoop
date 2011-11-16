@@ -102,8 +102,11 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
-            <yarn.mr.jar>${project.build.directory}/${project.artifactId}-${project.version}.jar</yarn.mr.jar>
+            <yarn.mr.jar>${project.parent.basedir}/hadoop-mapreduce-client-app/target/hadoop-mapreduce-client-app-${project.version}.jar</yarn.mr.jar>
           </systemPropertyVariables>
+          <environmentVariables>
+            <JAVA_HOME>${java.home}</JAVA_HOME>
+          </environmentVariables>
           <additionalClasspathElements>
             <!-- workaround for JobConf#setJarByClass -->
             <additionalClasspathElement>${project.build.directory}/${project.artifactId}-${project.version}-tests.jar</additionalClasspathElement>

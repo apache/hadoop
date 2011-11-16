@@ -41,9 +41,6 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
     has wrong configuration or permissions. (Hitesh Shah via vinodkv)
 
-    MAPREDUCE-3355. Fixed MR AM's ContainerLauncher to handle node-command
-    timeouts correctly. (vinodkv)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -88,6 +85,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3324. Not All HttpServer tools links (stacks,logs,config,metrics) are 
     accessible through all UI servers (Jonathan Eagles via mahadev)
+
+    MAPREDUCE-3355. Fixed MR AM's ContainerLauncher to handle node-command
+    timeouts correctly. (vinodkv)
+
+    MAPREDUCE-3407. Fixed pom files to refer to the correct MR app-jar needed
+    by the integration tests. (Hitesh Shah via vinodkv)
 
 Release 0.23.0 - 2011-11-01 
 

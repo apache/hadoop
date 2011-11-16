@@ -112,7 +112,10 @@
           <systemPropertyVariables>
             <yarn.ds.jar>${project.build.directory}/${project.artifactId}-${project.version}.jar</yarn.ds.jar>
           </systemPropertyVariables>
-        </configuration>
+          <environmentVariables>
+            <JAVA_HOME>${java.home}</JAVA_HOME>
+          </environmentVariables>
+       </configuration>
       </plugin>
     </plugins>
   </build>
