@@ -29,7 +29,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
  * Handles SPLIT region event on Master.
@@ -75,7 +77,8 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
 
   @Override
   public void process() {
-    LOG.debug("Handling SPLIT event for " + this.parent.getEncodedName() +
+    String encodedRegionName = this.parent.getEncodedName();
+    LOG.debug("Handling SPLIT event for " + encodedRegionName +
       "; deleting node");
     // The below is for testing ONLY!  We can't do fault injection easily, so
     // resort to this kinda uglyness -- St.Ack 02/25/2011.
@@ -93,12 +96,19 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
         // It's possible that the RS tickles in between the reading of the
         // znode and the deleting, so it's safe to retry.
         successful = ZKAssign.deleteNode(this.server.getZooKeeper(),
-          this.parent.getEncodedName(),
+          encodedRegionName,
           EventHandler.EventType.RS_ZK_REGION_SPLIT);
       }
     } catch (KeeperException e) {
-      server.abort("Error deleting SPLIT node in ZK for transition ZK node (" +
-        parent.getEncodedName() + ")", e);
+      if (e instanceof NoNodeException) {
+        String znodePath = ZKUtil.joinZNode(
+            this.server.getZooKeeper().splitLogZNode, encodedRegionName);
+        LOG.debug("The znode " + znodePath
+            + " does not exist.  May be deleted already.");
+      } else {
+        server.abort("Error deleting SPLIT node in ZK for transition ZK node (" +
+            parent.getEncodedName() + ")", e);
+      }
     }
     LOG.info("Handled SPLIT report); parent=" +
       this.parent.getRegionNameAsString() +
