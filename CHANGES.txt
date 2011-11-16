@@ -495,7 +495,7 @@ Release 0.92.0 - Unreleased
    HBASE-3541  REST Multi Gets (Elliott Clark via Stack)
    HBASE-3052  Add ability to have multiple ZK servers in a quorum in
                MiniZooKeeperCluster for test writing (Liyin Tang via Stack)
-   HBASE-3696  isMajorCompaction() check triggers lots of listStatus DFS RPC
+   HBASE-3693  isMajorCompaction() check triggers lots of listStatus DFS RPC
                calls from HBase (Liyin Tang via Stack)
    HBASE-3717  deprecate HTable isTableEnabled() methods in favor of
                HBaseAdmin methods (David Butler via Stack)
@@ -568,7 +568,7 @@ Release 0.92.0 - Unreleased
                (Adam Worthington)
    HBASE-2556  Add convenience method to HBaseAdmin to get a collection of
                HRegionInfo objects for each table (Ming Ma)
-   HBASE-3592  Guava snuck back in as a dependency via hbase-3777
+   HBASE-3952  Guava snuck back in as a dependency via hbase-3777
    HBASE-3808  Implement Executor.toString for master handlers at least
                (Brock Noland)
    HBASE-3873  Mavenize Hadoop Snappy JAR/SOs project dependencies
