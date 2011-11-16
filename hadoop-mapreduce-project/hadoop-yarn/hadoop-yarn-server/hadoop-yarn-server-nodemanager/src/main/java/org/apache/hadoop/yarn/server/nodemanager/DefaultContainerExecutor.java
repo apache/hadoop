@@ -70,6 +70,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   @Override
+  public void init() throws IOException {
+    // nothing to do or verify here
+  }
+  
+  @Override
   public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
       List<Path> localDirs) throws IOException, InterruptedException {

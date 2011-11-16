@@ -39,11 +39,14 @@
 
 void display_usage(FILE *stream) {
   fprintf(stream,
+          "Usage: container-executor --checksetup\n");
+  fprintf(stream,
       "Usage: container-executor user command command-args\n");
   fprintf(stream, "Commands:\n");
   fprintf(stream, "   initialize container: %2d appid tokens cmd app...\n",
 	  INITIALIZE_CONTAINER);
-  fprintf(stream, "   launch container:    %2d appid containerid workdir container-script tokens\n",
+  fprintf(stream,
+      "   launch container:    %2d appid containerid workdir container-script tokens pidfile\n",
 	  LAUNCH_CONTAINER);
   fprintf(stream, "   signal container:    %2d container-pid signal\n",
 	  SIGNAL_CONTAINER);
@@ -52,14 +55,31 @@ void display_usage(FILE *stream) {
 }
 
 int main(int argc, char **argv) {
-  //Minimum number of arguments required to run the container-executor
+  int invalid_args = 0; 
+  int do_check_setup = 0;
+  
+  LOGFILE = stdout;
+  ERRORFILE = stderr;
+
+  // Minimum number of arguments required to run 
+  // the std. container-executor commands is 4
+  // 4 args not needed for checksetup option
   if (argc < 4) {
+    invalid_args = 1;
+    if (argc == 2) {
+      const char *arg1 = argv[1];
+      if (strcmp("--checksetup", arg1) == 0) {
+        invalid_args = 0;
+        do_check_setup = 1;        
+      }      
+    }
+  }
+  
+  if (invalid_args != 0) {
     display_usage(stdout);
     return INVALID_ARGUMENT_NUMBER;
   }
 
-  LOGFILE = stdout;
-  ERRORFILE = stderr;
   int command;
   const char * app_id = NULL;
   const char * container_id = NULL;
@@ -111,11 +131,19 @@ int main(int argc, char **argv) {
     return INVALID_CONTAINER_EXEC_PERMISSIONS;
   }
 
+  if (do_check_setup != 0) {
+    // basic setup checks done
+    // verified configs available and valid
+    // verified executor permissions
+    return 0;
+  }
+
   //checks done for user name
   if (argv[optind] == NULL) {
     fprintf(ERRORFILE, "Invalid user name.\n");
     return INVALID_USER_NAME;
   }
+
   int ret = set_user(argv[optind]);
   if (ret != 0) {
     return ret;
@@ -143,7 +171,7 @@ int main(int argc, char **argv) {
     break;
   case LAUNCH_CONTAINER:
     if (argc < 9) {
-      fprintf(ERRORFILE, "Too few arguments (%d vs 8) for launch container\n",
+      fprintf(ERRORFILE, "Too few arguments (%d vs 9) for launch container\n",
 	      argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;

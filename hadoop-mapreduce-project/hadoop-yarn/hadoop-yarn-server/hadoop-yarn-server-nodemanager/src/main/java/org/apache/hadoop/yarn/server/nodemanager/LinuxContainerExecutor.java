@@ -100,6 +100,29 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       : conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
   }
 
+  @Override 
+  public void init() throws IOException {        
+    // Send command to executor which will just start up, 
+    // verify configuration/permissions and exit
+    List<String> command = new ArrayList<String>(
+        Arrays.asList(containerExecutorExe,
+            "--checksetup"));
+    String[] commandArray = command.toArray(new String[command.size()]);
+    ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("checkLinuxExecutorSetup: " + Arrays.toString(commandArray));
+    }
+    try {
+      shExec.execute();
+    } catch (ExitCodeException e) {
+      int exitCode = shExec.getExitCode();
+      LOG.warn("Exit code from container is : " + exitCode);
+      logOutput(shExec.getOutput());
+      throw new IOException("Linux container executor not configured properly"
+          + " (error=" + exitCode + ")", e);
+    }
+  }
+  
   @Override
   public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,

@@ -99,7 +99,7 @@ public class TestUserGroupInformation {
                           (new InputStreamReader(pp.getInputStream()));
     String userName = br.readLine().trim();
     // get the groups
-    pp = Runtime.getRuntime().exec("id -Gn");
+    pp = Runtime.getRuntime().exec("id -Gn " + userName);
     br = new BufferedReader(new InputStreamReader(pp.getInputStream()));
     String line = br.readLine();
     System.out.println(userName + ":" + line);

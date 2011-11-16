@@ -113,6 +113,9 @@ Release 0.23.1 - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES
+   
+   HADOOP-7811. TestUserGroupInformation#testGetServerSideGroups test fails in chroot.
+   (Jonathan Eagles via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 
