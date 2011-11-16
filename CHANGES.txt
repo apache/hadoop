@@ -843,6 +843,7 @@ Release 0.90.5 - Unreleased
                via todd)
    HBASE-4562  When split doing offlineParentInMeta encounters error, it'll
                cause data loss (bluedavy via Lars H)
+   HBASE-4800  Result.compareResults is incorrect (James Taylor and Lars H)
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)

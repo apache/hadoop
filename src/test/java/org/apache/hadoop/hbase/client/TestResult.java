@@ -95,4 +95,27 @@ public class TestResult extends TestCase {
       assertTrue(r.containsColumn(family, qf));
     }
   }
+
+  /**
+   * Verify that Result.compareResults(...) behaves correctly.
+   */
+  public void testCompareResults() throws Exception {
+    byte [] value1 = Bytes.toBytes("value1");
+    byte [] qual = Bytes.toBytes("qual");
+
+    KeyValue kv1 = new KeyValue(row, family, qual, value);
+    KeyValue kv2 = new KeyValue(row, family, qual, value1);
+
+    Result r1 = new Result(new KeyValue[] {kv1});
+    Result r2 = new Result(new KeyValue[] {kv2});
+    // no exception thrown
+    Result.compareResults(r1, r1);
+    try {
+      // these are different (HBASE-4800)
+      Result.compareResults(r1, r2);
+      fail();
+    } catch (Exception x) {
+      assertTrue(x.getMessage().startsWith("This result was different:"));
+    }
+  }
 }
