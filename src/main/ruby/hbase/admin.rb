@@ -293,7 +293,11 @@ module Hbase
       status = Pair.new()
       begin
         status = @admin.getAlterStatus(table_name.to_java_bytes)
-        puts "#{status.getSecond() - status.getFirst()}/#{status.getSecond()} regions updated."
+        if status.getSecond() != 0
+          puts "#{status.getSecond() - status.getFirst()}/#{status.getSecond()} regions updated."
+        else
+          puts "All regions updated."
+        end
 	      sleep 1
       end while status != nil && status.getFirst() != 0
       puts "Done."
