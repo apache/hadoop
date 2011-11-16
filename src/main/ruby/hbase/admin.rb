@@ -332,7 +332,7 @@ module Hbase
 
           # If column already exist, then try to alter it. Create otherwise.
           if htd.hasFamily(column_name.to_java_bytes)
-            @admin.modifyColumn(table_name, column_name, descriptor)
+            @admin.modifyColumn(table_name, descriptor)
             if wait == true
               puts "Updating all regions with the new schema..."
               alter_status(table_name)

@@ -428,6 +428,7 @@ Release 0.92.0 - Unreleased
                methods
    HBASE-4792  SplitRegionHandler doesn't care if it deletes the znode or not,
                leaves the parent region stuck offline
+   HBASE-4793  HBase shell still using deprecated methods removed in HBASE-4436
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
