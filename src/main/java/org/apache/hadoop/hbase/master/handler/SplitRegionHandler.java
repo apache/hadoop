@@ -87,9 +87,15 @@ public class SplitRegionHandler extends EventHandler implements TotesHRegionInfo
       this.daughters.get(0), this.daughters.get(1));
     // Remove region from ZK
     try {
-      ZKAssign.deleteNode(this.server.getZooKeeper(),
-        this.parent.getEncodedName(),
-        EventHandler.EventType.RS_ZK_REGION_SPLIT);
+
+      boolean successful = false;
+      while (!successful) {
+        // It's possible that the RS tickles in between the reading of the
+        // znode and the deleting, so it's safe to retry.
+        successful = ZKAssign.deleteNode(this.server.getZooKeeper(),
+          this.parent.getEncodedName(),
+          EventHandler.EventType.RS_ZK_REGION_SPLIT);
+      }
     } catch (KeeperException e) {
       server.abort("Error deleting SPLIT node in ZK for transition ZK node (" +
         parent.getEncodedName() + ")", e);

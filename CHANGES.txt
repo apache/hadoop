@@ -426,6 +426,8 @@ Release 0.92.0 - Unreleased
    HBASE-4776  HLog.closed should be checked inside of updateLock
    HBASE-4784  Void return types not handled correctly for CoprocessorProtocol
                methods
+   HBASE-4792  SplitRegionHandler doesn't care if it deletes the znode or not,
+               leaves the parent region stuck offline
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

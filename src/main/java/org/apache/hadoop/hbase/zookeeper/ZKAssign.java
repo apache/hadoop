@@ -499,13 +499,13 @@ public class ZKAssign {
     }
     if (expectedVersion != -1
         && stat.getVersion() != expectedVersion) {
-      LOG.warn("The node we are trying to delete is not the expected one. " +
-        "Got a version mismatch");
+      LOG.warn("The node " + regionName + " we are trying to delete is not" +
+        " the expected one. Got a version mismatch");
       return false;
     }
     if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
       LOG.warn(zkw.prefix("Attempting to delete " +
-          "unassigned node in " + expectedState +
+          "unassigned node " + regionName + " in " + expectedState +
           " state but after verifying state, we got a version mismatch"));
       return false;
     }
