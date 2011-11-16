@@ -659,6 +659,8 @@ Release 0.22.0 - Unreleased
     HDFS-2002. Incorrect computation of needed blocks in getTurnOffTip().
     (Plamen Jeliazkov via shv)
 
+    HDFS-2513. Bump jetty to 6.1.26 (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
