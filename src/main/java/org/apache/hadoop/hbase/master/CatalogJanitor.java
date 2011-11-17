@@ -194,13 +194,18 @@ class CatalogJanitor extends Chore {
   throws IOException {
     boolean result = false;
     // Run checks on each daughter split.
+    HRegionInfo a_region = getDaughterRegionInfo(rowContent, HConstants.SPLITA_QUALIFIER);
+    HRegionInfo b_region = getDaughterRegionInfo(rowContent, HConstants.SPLITB_QUALIFIER);
     Pair<Boolean, Boolean> a =
-      checkDaughter(parent, rowContent, HConstants.SPLITA_QUALIFIER);
+      checkDaughterInFs(parent, a_region, HConstants.SPLITA_QUALIFIER);
     Pair<Boolean, Boolean> b =
-      checkDaughter(parent, rowContent, HConstants.SPLITB_QUALIFIER);
+      checkDaughterInFs(parent, b_region, HConstants.SPLITB_QUALIFIER);
     if (hasNoReferences(a) && hasNoReferences(b)) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
+	  // wipe out daughter references from parent region
+      removeDaughtersFromParent(parent);
+
       // This latter regionOffline should not be necessary but is done for now
       // until we let go of regionserver to master heartbeats.  See HBASE-3368.
       if (this.services.getAssignmentManager() != null) {
@@ -228,35 +233,6 @@ class CatalogJanitor extends Chore {
   }
 
   /**
-   * See if the passed daughter has references in the filesystem to the parent
-   * and if not, remove the note of daughter region in the parent row: its
-   * column info:splitA or info:splitB.
-   * @param parent
-   * @param rowContent
-   * @param qualifier
-   * @return A pair where the first boolean says whether or not the daughter
-   * region directory exists in the filesystem and then the second boolean says
-   * whether the daughter has references to the parent.
-   * @throws IOException
-   */
-  Pair<Boolean, Boolean> checkDaughter(final HRegionInfo parent,
-    final Result rowContent, final byte [] qualifier)
-  throws IOException {
-    HRegionInfo hri = getDaughterRegionInfo(rowContent, qualifier);
-    Pair<Boolean, Boolean> result =
-      checkDaughterInFs(parent, rowContent, hri, qualifier);
-    if (result.getFirst() && !result.getSecond()) {
-      // Remove daughter from the parent IFF the daughter region exists in FS.
-      // If there is no daughter region in the filesystem, must be because of
-      // a failed split.  The ServerShutdownHandler will do the fixup.  Don't
-      // do any deletes in here that could intefere with ServerShutdownHandler
-      // fixup
-      removeDaughterFromParent(parent, hri, qualifier);
-    }
-    return result;
-  }
-
-  /**
    * Get daughter HRegionInfo out of parent info:splitA/info:splitB columns.
    * @param result
    * @param which Whether "info:splitA" or "info:splitB" column
@@ -272,27 +248,19 @@ class CatalogJanitor extends Chore {
   }
 
   /**
-   * Remove mention of daughter from parent row.
-   * parent row.
-   * @param metaRegionName
-   * @param srvr
+   * Remove mention of daughters from parent row.
    * @param parent
-   * @param split
-   * @param qualifier
    * @throws IOException
    */
-  private void removeDaughterFromParent(final HRegionInfo parent,
-    final HRegionInfo split, final byte [] qualifier)
+  private void removeDaughtersFromParent(final HRegionInfo parent)
   throws IOException {
-    MetaEditor.deleteDaughterReferenceInParent(this.server.getCatalogTracker(),
-      parent, qualifier, split);
+    MetaEditor.deleteDaughtersReferencesInParent(this.server.getCatalogTracker(), parent);
   }
 
   /**
    * Checks if a daughter region -- either splitA or splitB -- still holds
    * references to parent.
    * @param parent Parent region name. 
-   * @param rowContent Keyed content of the parent row in meta region.
    * @param split Which column family.
    * @param qualifier Which of the daughters to look at, splitA or splitB.
    * @return A pair where the first boolean says whether or not the daughter
@@ -301,7 +269,7 @@ class CatalogJanitor extends Chore {
    * @throws IOException
    */
   Pair<Boolean, Boolean> checkDaughterInFs(final HRegionInfo parent,
-    final Result rowContent, final HRegionInfo split,
+    final HRegionInfo split,
     final byte [] qualifier)
   throws IOException {
     boolean references = false;

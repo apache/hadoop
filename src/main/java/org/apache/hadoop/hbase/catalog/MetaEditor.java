@@ -276,24 +276,21 @@ public class MetaEditor {
   }
 
   /**
-   * Deletes daughter reference in offlined split parent.
+   * Deletes daughters references in offlined split parent.
    * @param catalogTracker
    * @param parent Parent row we're to remove daughter reference from
-   * @param qualifier SplitA or SplitB daughter to remove
-   * @param daughter
    * @throws NotAllMetaRegionsOnlineException
    * @throws IOException
    */
-  public static void deleteDaughterReferenceInParent(CatalogTracker catalogTracker,
-      final HRegionInfo parent, final byte [] qualifier,
-      final HRegionInfo daughter)
+  public static void deleteDaughtersReferencesInParent(CatalogTracker catalogTracker,
+      final HRegionInfo parent)
   throws NotAllMetaRegionsOnlineException, IOException {
     Delete delete = new Delete(parent.getRegionName());
-    delete.deleteColumns(HConstants.CATALOG_FAMILY, qualifier);
+    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
+    delete.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
     deleteMetaTable(catalogTracker, delete);
-    LOG.info("Deleted daughter reference " + daughter.getRegionNameAsString() +
-      ", qualifier=" + Bytes.toStringBinary(qualifier) + ", from parent " +
-      parent.getRegionNameAsString());
+    LOG.info("Deleted daughters references, qualifier=" + Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) + " and qualifier=" 
+		+ Bytes.toStringBinary(HConstants.SPLITA_QUALIFIER) + ", from parent " + parent.getRegionNameAsString());
   }
 
   public static HRegionInfo getHRegionInfo(
