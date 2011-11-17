@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -37,8 +37,7 @@ public class TestDistributedShell {
   protected static MiniYARNCluster yarnCluster = null;
   protected static Configuration conf = new Configuration();
 
-  protected static String APPMASTER_JAR = System.getProperty("yarn.ds.jar",
-      JobConf.findContainingJar(ApplicationMaster.class));
+  protected static String APPMASTER_JAR = JarFinder.getJar(ApplicationMaster.class);
 
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {

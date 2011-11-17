@@ -44,6 +44,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
     client APIs cross MR1 and MR2. (Ahmed via tucu)
 
+    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
+    client APIs cross MR1 and MR2. (Ahmed via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
+import org.apache.hadoop.util.JarFinder;
 
 /**
  * A MiniMRCluster factory. In MR2, it provides a wrapper MiniMRClientCluster
@@ -57,7 +58,8 @@ public class MiniMRClientClusterFactory {
     Job job = Job.getInstance(conf);
 
     job.addFileToClassPath(appJar);
-    job.setJarByClass(caller);
+    String callerJar = JarFinder.getJar(caller);
+    job.setJar(callerJar);
 
     MiniMRYarnCluster miniMRYarnCluster = new MiniMRYarnCluster(caller
         .getName(), noOfNMs);
