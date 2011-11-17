@@ -715,6 +715,7 @@ Release 0.92.0 - Unreleased
    HBASE-4759  Migrate from JUnit 4.8.2 to JUnit 4.10 (nkeywal)
    HBASE-4554  Allow set/unset coprocessor table attributes from shell
                (Mingjie Lai)
+   HBASE-4771  Script to List HRegion Availability
 
   TASKS
    HBASE-3559  Move report of split to master OFF the heartbeat channel
