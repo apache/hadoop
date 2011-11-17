@@ -82,7 +82,7 @@
             <goals>
               <goal>jar</goal>
             </goals>
-            <!-- strictly speaking, the unit test is really a regression test. It 
+            <!-- strictly speaking, the unit test is really a regression test. It
                  needs the main jar to be available to be able to run. -->
             <phase>test-compile</phase>
           </execution>
@@ -109,9 +109,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <systemPropertyVariables>
-            <yarn.ds.jar>${project.build.directory}/${project.artifactId}-${project.version}.jar</yarn.ds.jar>
-          </systemPropertyVariables>
           <environmentVariables>
             <JAVA_HOME>${java.home}</JAVA_HOME>
           </environmentVariables>

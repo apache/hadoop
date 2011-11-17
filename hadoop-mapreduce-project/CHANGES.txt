@@ -37,6 +37,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
     client APIs cross MR1 and MR2. (Ahmed via tucu)
 
+    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
+    (tucu)
+
   BUG FIXES
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
                     (amarrk)
