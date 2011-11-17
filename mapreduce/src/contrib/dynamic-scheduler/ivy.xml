@@ -47,7 +47,6 @@
     <dependency org="log4j" name="log4j" rev="${log4j.version}" conf="common->master"/>
     <dependency org="net.java.dev.jets3t" name="jets3t" rev="${jets3t.version}" conf="common->master"/>
     <dependency org="commons-net" name="commons-net" rev="${commons-net.version}" conf="common->master"/>  
-    <dependency org="org.mortbay.jetty" name="servlet-api-2.5" rev="${servlet-api-2.5.version}" conf="common->master"/>
     <dependency org="junit" name="junit" rev="${junit.version}" conf="common->default"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="${slf4j-api.version}" conf="common->master"/>
   </dependencies>

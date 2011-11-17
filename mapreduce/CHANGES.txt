@@ -636,6 +636,8 @@ Release 0.22.0 - Unreleased
     enhanced UI for queue information.
     (Krishna Ramachandran and Milind Bhandarkar via shv) 
 
+    MAPREDUCE-3311. Bump jetty to 6.1.26 (cos)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

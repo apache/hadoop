@@ -52,18 +52,14 @@
                 rev="${commons-cli.version}" conf="common->default"/>
     <dependency org="commons-logging" name="commons-logging" 
                 rev="${commons-logging.version}" conf="common->default"/>
+    <dependency org="commons-lang" name="commons-lang"
+                rev="${commons-lang.version}" conf="common->default"/>
     <dependency org="junit" name="junit" 
                 rev="${junit.version}" conf="common->default"/>
     <dependency org="org.mortbay.jetty" name="jetty-util"
                 rev="${jetty-util.version}" conf="common->master"/>
     <dependency org="org.mortbay.jetty" name="jetty" 
                 rev="${jetty.version}" conf="common->master"/>
-    <dependency org="org.mortbay.jetty" name="jsp-api-2.1" 
-                rev="${jetty.version}" conf="common->master"/>
-    <dependency org="org.mortbay.jetty" name="jsp-2.1" 
-                rev="${jetty.version}" conf="common->master"/>
-    <dependency org="org.mortbay.jetty" name="servlet-api-2.5" 
-                rev="${servlet-api-2.5.version}" conf="common->master"/>
     <dependency org="commons-httpclient" name="commons-httpclient" 
                 rev="${commons-httpclient.version}" conf="common->default"/>
     <dependency org="log4j" name="log4j" 
