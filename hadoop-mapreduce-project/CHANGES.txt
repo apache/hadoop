@@ -34,6 +34,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3149. Add a test to verify that TokenCache handles file system 
     uri with no authority. (John George via jitendra)
 
+    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
+    client APIs cross MR1 and MR2. (Ahmed via tucu)
+
   BUG FIXES
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
                     (amarrk)
