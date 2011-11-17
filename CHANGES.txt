@@ -793,6 +793,8 @@ Release 0.92.0 - Unreleased
                clusters
    HBASE-4377  [hbck] Offline rebuild .META. from fs data only
                (Jonathan Hsieh)
+   HBASE-4806  Fix logging message in HbaseObjectWritable
+               (Jonathan Hsieh via todd)
 
 Release 0.90.5 - Unreleased
 

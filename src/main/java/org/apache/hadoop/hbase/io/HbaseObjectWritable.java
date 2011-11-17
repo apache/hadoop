@@ -593,8 +593,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
           ois = new ObjectInputStream(bis);
           instance = ois.readObject();
         } catch (ClassNotFoundException e) {
-          LOG.error("Error in readFields", e);
-          throw new IOException("Error in readFields", e);
+          LOG.error("Class not found when attempting to deserialize object", e);
+          throw new IOException("Class not found when attempting to " +
+              "deserialize object", e);
         } finally {
           if(bis!=null) bis.close();
           if(ois!=null) ois.close();
