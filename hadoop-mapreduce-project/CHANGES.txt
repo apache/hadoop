@@ -41,6 +41,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
     has wrong configuration or permissions. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
+    client APIs cross MR1 and MR2. (Ahmed via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
