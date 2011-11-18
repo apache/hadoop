@@ -445,6 +445,8 @@ Release 0.92.0 - Unreleased
    HBASE-4518  TestServerCustomProtocol fails intermittently
    HBASE-4778  Don't ignore corrupt StoreFiles when opening a region
    HBASE-4790  Occasional TestDistributedLogSplitting failure (Jinchao)
+   HBASE-4816  Regionserver wouldn't go down because split happened exactly at same time
+               we issued bulk user region close call on our way out
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

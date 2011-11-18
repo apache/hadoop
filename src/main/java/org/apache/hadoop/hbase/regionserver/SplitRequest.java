@@ -52,6 +52,11 @@ class SplitRequest implements Runnable {
 
   @Override
   public void run() {
+    if (this.server.isStopping() || this.server.isStopped()) {
+      LOG.debug("Skipping split because server is stopping=" +
+        this.server.isStopping() + " or stopped=" + this.server.isStopped());
+      return;
+    }
     try {
       final long startTime = System.currentTimeMillis();
       SplitTransaction st = new SplitTransaction(parent, midKey);
@@ -90,5 +95,4 @@ class SplitRequest implements Runnable {
       server.checkFileSystem();
     }
   }
-
 }
