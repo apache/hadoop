@@ -9,6 +9,9 @@ Release 0.23.1 - UNRELEASED
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 
+    HDFS-2544. Hadoop scripts unconditionally source
+    "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
