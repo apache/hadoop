@@ -325,7 +325,17 @@ public class TrackerDistributedCacheManager {
     if (!checkPermissionOfOther(fs, current, FsAction.READ)) {
       return false;
     }
-    current = current.getParent();
+    return ancestorsHaveExecutePermissions(fs, current.getParent());
+  }
+
+  /**
+   * Returns true if all ancestors of the specified path have the 'execute'
+   * permission set for all users (i.e. that other users can traverse
+   * the directory heirarchy to the given path)
+   */
+  static boolean ancestorsHaveExecutePermissions(FileSystem fs, Path path)
+    throws IOException {
+    Path current = path;
     while (current != null) {
       //the subdirs in the path should have execute permissions for others
       if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE)) {
@@ -335,6 +345,7 @@ public class TrackerDistributedCacheManager {
     }
     return true;
   }
+
   /**
    * Checks for a given path whether the Other permissions on it 
    * imply the permission in the passed FsAction

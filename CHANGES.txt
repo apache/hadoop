@@ -32,6 +32,9 @@ Release 0.20.206.0 - unreleased
     MAPREDUCE-3405. Fix compilation in contrib tests broken by commit
     of MAPREDUCE-3015. (todd)
 
+    MAPREDUCE-2073. TestTrackerDistributedCacheManager should be
+    up-front about requirements on build environment. (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
