@@ -177,12 +177,27 @@ public class HConnectionManager {
     synchronized (HBASE_INSTANCES) {
       HConnectionImplementation connection = HBASE_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = new HConnectionImplementation(conf);
+        connection = new HConnectionImplementation(conf, true);
         HBASE_INSTANCES.put(connectionKey, connection);
       }
       connection.incCount();
       return connection;
     }
+  }
+
+  /**
+   * Create a new HConnection instance using the passed <code>conf</code>
+   * instance.
+   * Note: This bypasses the usual HConnection life cycle management!
+   * Use this with caution, the caller is responsible for closing the
+   * created connection.
+   * @param conf configuration
+   * @return HConnection object for <code>conf</code>
+   * @throws ZooKeeperConnectionException
+   */
+  public static HConnection createConnection(Configuration conf)
+  throws ZooKeeperConnectionException {
+    return new HConnectionImplementation(conf, false);
   }
 
   /**
@@ -483,15 +498,17 @@ public class HConnectionManager {
     private boolean stopProxy;
     private int refCount;
 
-
+    // indicates whether this connection's life cycle is managed
+    private final boolean managed;
     /**
      * constructor
      * @param conf Configuration object
      */
     @SuppressWarnings("unchecked")
-    public HConnectionImplementation(Configuration conf)
+    public HConnectionImplementation(Configuration conf, boolean managed)
     throws ZooKeeperConnectionException {
       this.conf = conf;
+      this.managed = managed;
       String serverClassName = conf.get(HConstants.REGION_SERVER_CLASS,
         HConstants.DEFAULT_REGION_SERVER_CLASS);
       this.closed = false;
@@ -1638,6 +1655,11 @@ public class HConnectionManager {
       this.aborted = true;
       this.closed = true;
     }
+
+    @Override
+    public boolean isClosed() {
+      return this.closed;
+    }
     
     @Override
     public boolean isAborted(){
@@ -1711,7 +1733,11 @@ public class HConnectionManager {
     }
 
     public void close() {
-      HConnectionManager.deleteConnection((HConnection)this, stopProxy, false);
+      if (managed) {
+        HConnectionManager.deleteConnection((HConnection)this, stopProxy, false);
+      } else {
+        close(true);
+      }
       LOG.debug("The connection to " + this.zooKeeper + " has been closed.");
     }
 

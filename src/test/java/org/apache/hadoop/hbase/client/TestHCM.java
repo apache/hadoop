@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -204,5 +206,52 @@ public class TestHCM {
           + getHConnectionManagerCacheSize());
       Thread.sleep(50);
     }
+  }
+
+  @Test
+  public void testClosing() throws Exception {
+    Configuration configuration = TEST_UTIL.getConfiguration();
+    configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
+        String.valueOf(_randy.nextInt()));
+
+    HConnection c1 = HConnectionManager.createConnection(configuration);
+    HConnection c2 = HConnectionManager.createConnection(configuration);
+
+    HConnection c3 = HConnectionManager.getConnection(configuration);
+    HConnection c4 = HConnectionManager.getConnection(configuration);
+    assertTrue(c3 == c4);
+
+    c1.close();
+    assertTrue(c1.isClosed());
+    assertFalse(c2.isClosed());
+    assertFalse(c3.isClosed());
+
+    c3.close();
+    // still a reference left
+    assertFalse(c3.isClosed());
+    c3.close();
+    assertTrue(c3.isClosed());
+    // c3 was removed from the cache
+    assertTrue(HConnectionManager.getConnection(configuration) != c3);
+
+    assertFalse(c2.isClosed());
+  }
+
+  /**
+   * Trivial test to verify that nobody messes with
+   * {@link HConnectionManager#createConnection(Configuration)}
+   */
+  @Test
+  public void testCreateConnection() throws Exception {
+    Configuration configuration = TEST_UTIL.getConfiguration();
+    HConnection c1 = HConnectionManager.createConnection(configuration);
+    HConnection c2 = HConnectionManager.createConnection(configuration);
+    // created from the same configuration, yet they are different
+    assertTrue(c1 != c2);
+    assertTrue(c1.getConfiguration() == c2.getConfiguration());
+    // make sure these were not cached
+    HConnection c3 = HConnectionManager.getConnection(configuration);
+    assertTrue(c1 != c3);
+    assertTrue(c2 != c3);
   }
 }

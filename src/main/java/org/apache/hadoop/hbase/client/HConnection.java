@@ -369,4 +369,8 @@ public interface HConnection extends Abortable, Closeable {
   public HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
   throws IOException;
 
+  /**
+   * @return true if this connection is closed
+   */
+  public boolean isClosed();
 }

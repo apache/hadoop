@@ -76,7 +76,7 @@ public class HConnectionTestingUtility {
       HConnectionImplementation connection =
         HConnectionManager.HBASE_INSTANCES.get(connectionKey);
       if (connection == null) {
-        connection = Mockito.spy(new HConnectionImplementation(conf));
+        connection = Mockito.spy(new HConnectionImplementation(conf, true));
         HConnectionManager.HBASE_INSTANCES.put(connectionKey, connection);
       }
       return connection;
