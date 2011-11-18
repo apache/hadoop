@@ -16,9 +16,7 @@
 # limitations under the License.
 #
 
-if [ "$HADOOP_PREFIX" = "" ]; then
-export HADOOP_PREFIX=/usr/local/share/hadoop
-fi
+export HADOOP_PREFIX=${HADOOP_PREFIX:-/usr/local/share/hadoop}
 
 if [ "$OS_ARCH" = "" ]; then
 export OS_ARCH=amd64

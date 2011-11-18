@@ -12,6 +12,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2544. Hadoop scripts unconditionally source
     "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
 
+    HDFS-2543. HADOOP_PREFIX cannot be overridden. (Bruno Mahé via tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
