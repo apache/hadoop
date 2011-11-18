@@ -38,7 +38,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -82,9 +81,9 @@ class DataXceiver extends Receiver implements Runnable {
   private final String remoteAddress; // address of remote side
   private final String localAddress;  // local address of this daemon
   private final DataNode datanode;
+  private final DNConf dnConf;
   private final DataXceiverServer dataXceiverServer;
 
-  private int socketKeepaliveTimeout;
   private long opStartTime; //the start time of receiving an Op
   
   public DataXceiver(Socket s, DataNode datanode, 
@@ -95,13 +94,10 @@ class DataXceiver extends Receiver implements Runnable {
     this.s = s;
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
+    this.dnConf = datanode.getDnConf();
     this.dataXceiverServer = dataXceiverServer;
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
-
-    socketKeepaliveTimeout = datanode.getConf().getInt(
-        DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY,
-        DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Number of active connections is: "
@@ -144,8 +140,8 @@ class DataXceiver extends Receiver implements Runnable {
 
         try {
           if (opsProcessed != 0) {
-            assert socketKeepaliveTimeout > 0;
-            s.setSoTimeout(socketKeepaliveTimeout);
+            assert dnConf.socketKeepaliveTimeout > 0;
+            s.setSoTimeout(dnConf.socketKeepaliveTimeout);
           }
           op = readOp();
         } catch (InterruptedIOException ignored) {
@@ -180,7 +176,7 @@ class DataXceiver extends Receiver implements Runnable {
         opStartTime = now();
         processOp(op);
         ++opsProcessed;
-      } while (!s.isClosed() && socketKeepaliveTimeout > 0);
+      } while (!s.isClosed() && dnConf.socketKeepaliveTimeout > 0);
     } catch (Throwable t) {
       LOG.error(datanode.getMachineName() + ":DataXceiver error processing " +
                 ((op == null) ? "unknown" : op.name()) + " operation " +
@@ -205,7 +201,7 @@ class DataXceiver extends Receiver implements Runnable {
       final long blockOffset,
       final long length) throws IOException {
     OutputStream baseStream = NetUtils.getOutputStream(s, 
-        datanode.socketWriteTimeout);
+        dnConf.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
         baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
     checkAccess(out, true, block, blockToken,
@@ -231,13 +227,13 @@ class DataXceiver extends Receiver implements Runnable {
       } catch(IOException e) {
         String msg = "opReadBlock " + block + " received exception " + e; 
         LOG.info(msg);
-        sendResponse(s, ERROR, msg, datanode.socketWriteTimeout);
+        sendResponse(s, ERROR, msg, dnConf.socketWriteTimeout);
         throw e;
       }
       
       // send op status
       writeSuccessWithChecksumInfo(blockSender,
-          getStreamWithTimeout(s, datanode.socketWriteTimeout));
+          getStreamWithTimeout(s, dnConf.socketWriteTimeout));
 
       long read = blockSender.sendBlock(out, baseStream, null); // send data
 
@@ -335,7 +331,7 @@ class DataXceiver extends Receiver implements Runnable {
     // reply to upstream datanode or client 
     final DataOutputStream replyOut = new DataOutputStream(
         new BufferedOutputStream(
-            NetUtils.getOutputStream(s, datanode.socketWriteTimeout),
+            NetUtils.getOutputStream(s, dnConf.socketWriteTimeout),
             HdfsConstants.SMALL_BUFFER_SIZE));
     checkAccess(replyOut, isClient, block, blockToken,
         Op.WRITE_BLOCK, BlockTokenSecretManager.AccessMode.WRITE);
@@ -370,9 +366,9 @@ class DataXceiver extends Receiver implements Runnable {
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
-          int timeoutValue = datanode.socketTimeout
+          int timeoutValue = dnConf.socketTimeout
               + (HdfsServerConstants.READ_TIMEOUT_EXTENSION * targets.length);
-          int writeTimeout = datanode.socketWriteTimeout + 
+          int writeTimeout = dnConf.socketWriteTimeout + 
                       (HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * targets.length);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
@@ -508,7 +504,7 @@ class DataXceiver extends Receiver implements Runnable {
     updateCurrentThreadName(Op.TRANSFER_BLOCK + " " + blk);
 
     final DataOutputStream out = new DataOutputStream(
-        NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+        NetUtils.getOutputStream(s, dnConf.socketWriteTimeout));
     try {
       datanode.transferReplicaForPipelineRecovery(blk, targets, clientName);
       writeResponse(Status.SUCCESS, null, out);
@@ -521,7 +517,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void blockChecksum(final ExtendedBlock block,
       final Token<BlockTokenIdentifier> blockToken) throws IOException {
     final DataOutputStream out = new DataOutputStream(
-        NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+        NetUtils.getOutputStream(s, dnConf.socketWriteTimeout));
     checkAccess(out, true, block, blockToken,
         Op.BLOCK_CHECKSUM, BlockTokenSecretManager.AccessMode.READ);
     updateCurrentThreadName("Reading metadata for block " + block);
@@ -581,7 +577,7 @@ class DataXceiver extends Receiver implements Runnable {
         LOG.warn("Invalid access token in request from " + remoteAddress
             + " for OP_COPY_BLOCK for block " + block + " : "
             + e.getLocalizedMessage());
-        sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token", datanode.socketWriteTimeout);
+        sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token", dnConf.socketWriteTimeout);
         return;
       }
 
@@ -591,7 +587,7 @@ class DataXceiver extends Receiver implements Runnable {
       String msg = "Not able to copy block " + block.getBlockId() + " to " 
       + s.getRemoteSocketAddress() + " because threads quota is exceeded."; 
       LOG.info(msg);
-      sendResponse(s, ERROR, msg, datanode.socketWriteTimeout);
+      sendResponse(s, ERROR, msg, dnConf.socketWriteTimeout);
       return;
     }
 
@@ -606,7 +602,7 @@ class DataXceiver extends Receiver implements Runnable {
 
       // set up response stream
       OutputStream baseStream = NetUtils.getOutputStream(
-          s, datanode.socketWriteTimeout);
+          s, dnConf.socketWriteTimeout);
       reply = new DataOutputStream(new BufferedOutputStream(
           baseStream, HdfsConstants.SMALL_BUFFER_SIZE));
 
@@ -659,7 +655,7 @@ class DataXceiver extends Receiver implements Runnable {
             + " for OP_REPLACE_BLOCK for block " + block + " : "
             + e.getLocalizedMessage());
         sendResponse(s, ERROR_ACCESS_TOKEN, "Invalid access token",
-            datanode.socketWriteTimeout);
+            dnConf.socketWriteTimeout);
         return;
       }
     }
@@ -668,7 +664,7 @@ class DataXceiver extends Receiver implements Runnable {
       String msg = "Not able to receive block " + block.getBlockId() + " from " 
           + s.getRemoteSocketAddress() + " because threads quota is exceeded."; 
       LOG.warn(msg);
-      sendResponse(s, ERROR, msg, datanode.socketWriteTimeout);
+      sendResponse(s, ERROR, msg, dnConf.socketWriteTimeout);
       return;
     }
 
@@ -684,11 +680,11 @@ class DataXceiver extends Receiver implements Runnable {
       InetSocketAddress proxyAddr = NetUtils.createSocketAddr(
           proxySource.getName());
       proxySock = datanode.newSocket();
-      NetUtils.connect(proxySock, proxyAddr, datanode.socketTimeout);
-      proxySock.setSoTimeout(datanode.socketTimeout);
+      NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
+      proxySock.setSoTimeout(dnConf.socketTimeout);
 
       OutputStream baseStream = NetUtils.getOutputStream(proxySock, 
-          datanode.socketWriteTimeout);
+          dnConf.socketWriteTimeout);
       proxyOut = new DataOutputStream(new BufferedOutputStream(baseStream,
           HdfsConstants.SMALL_BUFFER_SIZE));
 
@@ -750,7 +746,7 @@ class DataXceiver extends Receiver implements Runnable {
       
       // send response back
       try {
-        sendResponse(s, opStatus, errMsg, datanode.socketWriteTimeout);
+        sendResponse(s, opStatus, errMsg, dnConf.socketWriteTimeout);
       } catch (IOException ioe) {
         LOG.warn("Error writing reply back to " + s.getRemoteSocketAddress());
       }
@@ -826,7 +822,7 @@ class DataXceiver extends Receiver implements Runnable {
           if (reply) {
             if (out == null) {
               out = new DataOutputStream(
-                  NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+                  NetUtils.getOutputStream(s, dnConf.socketWriteTimeout));
             }
             
             BlockOpResponseProto.Builder resp = BlockOpResponseProto.newBuilder()

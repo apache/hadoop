@@ -185,8 +185,8 @@ class BlockSender implements java.io.Closeable {
       this.corruptChecksumOk = corruptChecksumOk;
       this.verifyChecksum = verifyChecksum;
       this.clientTraceFmt = clientTraceFmt;
-      this.readaheadLength = datanode.getReadaheadLength();
-      this.shouldDropCacheBehindRead = datanode.shouldDropCacheBehindReads();
+      this.readaheadLength = datanode.getDnConf().readaheadLength;
+      this.shouldDropCacheBehindRead = datanode.getDnConf().dropCacheBehindReads;
       
       synchronized(datanode.data) { 
         this.replica = getReplica(block, datanode);
@@ -215,7 +215,7 @@ class BlockSender implements java.io.Closeable {
 
       // transferToFully() fails on 32 bit platforms for block sizes >= 2GB,
       // use normal transfer in those cases
-      this.transferToAllowed = datanode.transferToAllowed &&
+      this.transferToAllowed = datanode.getDnConf().transferToAllowed &&
         (!is32Bit || length <= Integer.MAX_VALUE);
 
       DataChecksum csum;
