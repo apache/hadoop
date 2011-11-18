@@ -56,6 +56,10 @@
       name="commons-logging"
       rev="${commons-logging.version}"
       conf="common->default"/>
+    <dependency org="commons-lang"
+      name="commons-lang"
+      rev="${commons-lang.version}"
+      conf="common->default"/>
     <dependency org="log4j"
       name="log4j"
       rev="${log4j.version}"

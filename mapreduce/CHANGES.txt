@@ -638,6 +638,9 @@ Release 0.22.0 - Unreleased
 
     MAPREDUCE-3311. Bump jetty to 6.1.26 (cos)
 
+    MAPREDUCE-3429. Few contrib tests are failing because of the missing
+    commons-lang dependency (cos)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
