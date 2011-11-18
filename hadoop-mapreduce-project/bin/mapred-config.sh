@@ -22,8 +22,10 @@ bin=`which "$0"`
 bin=`dirname "${bin}"`
 bin=`cd "$bin"; pwd`
 
-if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
-  . "$bin/../libexec/hadoop-config.sh"
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+if [ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]; then
+  . "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh"
 elif [ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]; then
   . "$HADOOP_COMMON_HOME"/libexec/hadoop-config.sh
 elif [ -e "${HADOOP_COMMON_HOME}/bin/hadoop-config.sh" ]; then

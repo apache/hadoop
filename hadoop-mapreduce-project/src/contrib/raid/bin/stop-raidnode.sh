@@ -25,7 +25,9 @@ params=$#
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hadoop-config.sh
+DEFAULT_LIBEXEC_DIR="$bin"
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
 # get arguments
 if [ $# -ge 1 ]; then
