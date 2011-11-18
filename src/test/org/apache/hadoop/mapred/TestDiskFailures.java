@@ -108,7 +108,7 @@ public class TestDiskFailures extends ClusterMapReduceTestCase {
     waitForDiskHealthCheck();
     assertTrue(
         "Tasktracker is not dead even though all mapred local dirs became bad.",
-        cluster.getTaskTrackerRunner(0).isDead);
+        cluster.getTaskTrackerRunner(0).exited);
     rb = getMetrics(new TaskTrackerMetricsSource(tt));
     assertGauge("failedDirs", 4, rb);
   }

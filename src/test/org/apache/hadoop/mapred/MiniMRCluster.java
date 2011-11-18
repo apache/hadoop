@@ -146,6 +146,7 @@ public class MiniMRCluster {
     String[] localDirs;
     volatile boolean isInitialized = false;
     volatile boolean isDead = false;
+    volatile boolean exited = false;
     int numDir;
 
     TaskTrackerRunner(int trackerId, int numDir, String hostname, 
@@ -216,11 +217,11 @@ public class MiniMRCluster {
           tt.run();
         }
       } catch (Throwable e) {
+        isDead = true;
         tt = null;
         LOG.error("task tracker " + trackerId + " crashed", e);
       }
-      // TaskTracker finished execution unexpectedly. So marking it as dead.
-      isDead = true;
+      exited = true;
     }
  
     /**

@@ -68,6 +68,8 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-3394. Add log guard for a debug message in ReduceTask (todd)
 
+    MAPREDUCE-3419. Don't mark exited TT threads as dead in MiniMRCluster (eli)
+
 Release 0.20.205.1 - unreleased
 
   NEW FEATURES
