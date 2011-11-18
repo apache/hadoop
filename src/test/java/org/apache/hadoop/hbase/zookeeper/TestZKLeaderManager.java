@@ -149,7 +149,7 @@ public class TestZKLeaderManager {
     assertNotNull("Leader should exist", currentLeader);
     LOG.debug("Current leader index is "+currentLeader.getIndex());
 
-    byte[] znodeData = ZKUtil.getData(CANDIDATES[0].getWatcher(), LEADER_ZNODE);
+    byte[] znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
     assertNotNull("Leader znode should contain leader index", znodeData);
     assertTrue("Leader znode should not be empty", znodeData.length > 0);
     int storedIndex = Bytes.toInt(znodeData);
@@ -167,7 +167,7 @@ public class TestZKLeaderManager {
     assertNotNull("New leader should exist after abdication", currentLeader);
     LOG.debug("New leader index is "+currentLeader.getIndex());
 
-    znodeData = ZKUtil.getData(CANDIDATES[0].getWatcher(), LEADER_ZNODE);
+    znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
     assertNotNull("Leader znode should contain leader index", znodeData);
     assertTrue("Leader znode should not be empty", znodeData.length > 0);
     storedIndex = Bytes.toInt(znodeData);
@@ -185,7 +185,7 @@ public class TestZKLeaderManager {
     assertNotNull("New leader should exist after stop", currentLeader);
     LOG.debug("New leader index is "+currentLeader.getIndex());
 
-    znodeData = ZKUtil.getData(CANDIDATES[0].getWatcher(), LEADER_ZNODE);
+    znodeData = ZKUtil.getData(currentLeader.getWatcher(), LEADER_ZNODE);
     assertNotNull("Leader znode should contain leader index", znodeData);
     assertTrue("Leader znode should not be empty", znodeData.length > 0);
     storedIndex = Bytes.toInt(znodeData);
