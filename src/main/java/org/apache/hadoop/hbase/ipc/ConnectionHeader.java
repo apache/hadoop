@@ -25,26 +25,26 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * The IPC connection header sent by the client to the server
  * on connection establishment.
  */
 class ConnectionHeader implements Writable {
-  private String protocol;
+  protected String protocol;
 
   public ConnectionHeader() {}
 
   /**
    * Create a new {@link ConnectionHeader} with the given <code>protocol</code>
-   * and {@link UserGroupInformation}.
+   * and {@link User}.
    * @param protocol protocol used for communication between the IPC client
    *                 and the server
-   * @param ugi {@link UserGroupInformation} of the client communicating with
+   * @param user {@link User} of the client communicating with
    *            the server
    */
-  public ConnectionHeader(String protocol, UserGroupInformation ugi) {
+  public ConnectionHeader(String protocol, User user) {
     this.protocol = protocol;
   }
 
@@ -65,7 +65,7 @@ class ConnectionHeader implements Writable {
     return protocol;
   }
 
-  public UserGroupInformation getUgi() {
+  public User getUser() {
     return null;
   }
 

@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 
@@ -30,6 +31,9 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
  * The Master publishes this Interface for RegionServers to register themselves
  * on.
  */
+@KerberosInfo(
+    serverPrincipal = "hbase.master.kerberos.principal",
+    clientPrincipal = "hbase.regionserver.kerberos.principal")
 public interface HMasterRegionInterface extends VersionedProtocol {
   /**
    * This Interfaces' version. Version changes when the Interface changes.

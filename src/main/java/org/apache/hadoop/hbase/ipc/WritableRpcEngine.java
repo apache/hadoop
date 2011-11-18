@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.util.Objects;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.conf.*;
 
@@ -124,13 +124,13 @@ class WritableRpcEngine implements RpcEngine {
   private static class Invoker implements InvocationHandler {
     private Class<? extends VersionedProtocol> protocol;
     private InetSocketAddress address;
-    private UserGroupInformation ticket;
+    private User ticket;
     private HBaseClient client;
     private boolean isClosed = false;
     final private int rpcTimeout;
 
     public Invoker(Class<? extends VersionedProtocol> protocol,
-                   InetSocketAddress address, UserGroupInformation ticket,
+                   InetSocketAddress address, User ticket,
                    Configuration conf, SocketFactory factory, int rpcTimeout) {
       this.protocol = protocol;
       this.address = address;
@@ -171,7 +171,7 @@ class WritableRpcEngine implements RpcEngine {
    * talking to a server at the named address. */
   public VersionedProtocol getProxy(
       Class<? extends VersionedProtocol> protocol, long clientVersion,
-      InetSocketAddress addr, UserGroupInformation ticket,
+      InetSocketAddress addr, User ticket,
       Configuration conf, SocketFactory factory, int rpcTimeout)
     throws IOException {
 
@@ -205,7 +205,7 @@ class WritableRpcEngine implements RpcEngine {
   public Object[] call(Method method, Object[][] params,
                        InetSocketAddress[] addrs,
                        Class<? extends VersionedProtocol> protocol,
-                       UserGroupInformation ticket, Configuration conf)
+                       User ticket, Configuration conf)
     throws IOException, InterruptedException {
 
     Invocation[] invocations = new Invocation[params.length];

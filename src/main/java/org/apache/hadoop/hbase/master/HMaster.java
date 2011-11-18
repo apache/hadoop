@@ -244,14 +244,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     setName(MASTER + "-" + this.serverName.toString());
 
     Replication.decorateMasterConfiguration(this.conf);
-    this.rpcServer.startThreads();
 
     // Hack! Maps DFSClient => Master for logs.  HDFS made this
     // config param for task trackers, but we can piggyback off of it.
     if (this.conf.get("mapred.task.id") == null) {
       this.conf.set("mapred.task.id", "hb_m_" + this.serverName.toString());
     }
+
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" + isa.getPort(), this, true);
+    this.rpcServer.startThreads();
     this.metrics = new MasterMetrics(getServerName().toString());
   }
 

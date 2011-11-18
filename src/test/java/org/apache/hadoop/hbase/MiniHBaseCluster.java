@@ -222,7 +222,7 @@ public class MiniHBaseCluster {
       t.start();
       t.waitForServerOnline();
     } catch (InterruptedException ie) {
-      throw new IOException("Interrupted executing UserGroupInformation.doAs()", ie);
+      throw new IOException("Interrupted adding regionserver to cluster", ie);
     }
     return t;
   }
@@ -295,7 +295,7 @@ public class MiniHBaseCluster {
       t.start();
       t.waitForServerOnline();
     } catch (InterruptedException ie) {
-      throw new IOException("Interrupted executing UserGroupInformation.doAs()", ie);
+      throw new IOException("Interrupted adding master to cluster", ie);
     }
     return t;
   }

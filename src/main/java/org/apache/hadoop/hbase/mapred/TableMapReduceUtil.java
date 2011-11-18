@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -89,6 +90,12 @@ public class TableMapReduceUtil {
       } catch (IOException e) {
         e.printStackTrace();
       }
+    }
+    try {
+      initCredentials(job);
+    } catch (IOException ioe) {
+      // just spit out the stack trace?  really?
+      ioe.printStackTrace();
     }
   }
 
@@ -157,6 +164,18 @@ public class TableMapReduceUtil {
     }
     if (addDependencyJars) {
       addDependencyJars(job);
+    }
+    initCredentials(job);
+  }
+
+  public static void initCredentials(JobConf job) throws IOException {
+    if (User.isHBaseSecurityEnabled(job)) {
+      try {
+        User.getCurrent().obtainAuthTokenForJob(job);
+      } catch (InterruptedException ie) {
+        ie.printStackTrace();
+        Thread.interrupted();
+      }
     }
   }
 

@@ -25,7 +25,7 @@ import java.net.InetSocketAddress;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.conf.Configuration;
 
 /** An RPC implementation. */
@@ -34,7 +34,7 @@ interface RpcEngine {
   /** Construct a client-side proxy object. */
   VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
                   long clientVersion, InetSocketAddress addr,
-                  UserGroupInformation ticket, Configuration conf,
+                  User ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout) throws IOException;
 
   /** Stop this proxy. */
@@ -43,7 +43,7 @@ interface RpcEngine {
   /** Expert: Make multiple, parallel calls to a set of servers. */
   Object[] call(Method method, Object[][] params, InetSocketAddress[] addrs,
                 Class<? extends VersionedProtocol> protocol,
-                UserGroupInformation ticket, Configuration conf)
+                User ticket, Configuration conf)
     throws IOException, InterruptedException;
 
   /** Construct a server for a protocol implementation instance. */

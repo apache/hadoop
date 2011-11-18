@@ -40,9 +40,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -133,6 +135,7 @@ public class TableMapReduceUtil {
     if (addDependencyJars) {
       addDependencyJars(job);
     }
+    initCredentials(job);
   }
   
   /**
@@ -209,6 +212,17 @@ public class TableMapReduceUtil {
   throws IOException {
       initTableMapperJob(table, scan, mapper, outputKeyClass,
               outputValueClass, job, addDependencyJars, TableInputFormat.class);
+  }
+
+  public static void initCredentials(Job job) throws IOException {
+    if (User.isHBaseSecurityEnabled(job.getConfiguration())) {
+      try {
+        User.getCurrent().obtainAuthTokenForJob(job.getConfiguration(), job);
+      } catch (InterruptedException ie) {
+        LOG.info("Interrupted obtaining user authentication token");
+        Thread.interrupted();
+      }
+    }
   }
 
   /**
@@ -364,6 +378,8 @@ public class TableMapReduceUtil {
     if (addDependencyJars) {
       addDependencyJars(job);
     }
+
+    initCredentials(job);
   }
 
   /**

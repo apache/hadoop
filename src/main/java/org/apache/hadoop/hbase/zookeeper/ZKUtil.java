@@ -567,6 +567,35 @@ public class ZKUtil {
   }
 
   /**
+   * Returns the date of child znodes of the specified znode.  Also sets a watch on
+   * the specified znode which will capture a NodeDeleted event on the specified
+   * znode as well as NodeChildrenChanged if any children of the specified znode
+   * are created or deleted.
+   *
+   * Returns null if the specified node does not exist.  Otherwise returns a
+   * list of children of the specified node.  If the node exists but it has no
+   * children, an empty list will be returned.
+   *
+   * @param zkw zk reference
+   * @param znode path of node to list and watch children of
+   * @return list of data of children of the specified node, an empty list if the node
+   *          exists but has no children, and null if the node does not exist
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static List<NodeAndData> getChildDataAndWatchForNewChildren(
+      ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
+    List<String> nodes =
+      ZKUtil.listChildrenAndWatchForNewChildren(zkw, baseNode);
+    List<NodeAndData> newNodes = new ArrayList<NodeAndData>();
+    for (String node: nodes) {
+      String nodePath = ZKUtil.joinZNode(baseNode, node);
+      byte [] data = ZKUtil.getDataAndWatch(zkw, nodePath);
+      newNodes.add(new NodeAndData(nodePath, data));
+    }
+    return newNodes;
+  }
+
+  /**
    * Update the data of an existing node with the expected version to have the
    * specified data.
    *

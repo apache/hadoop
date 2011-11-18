@@ -558,6 +558,39 @@
     specified in hbase.regionserver.keytab.file
     </description>
   </property>
+
+  <!-- Additional configuration specific to HBase security -->
+  <property>
+    <name>hadoop.policy.file</name>
+    <value>hbase-policy.xml</value>
+    <description>The policy configuration file used by RPC servers to make
+      authorization decisions on client requests.  Only used when HBase
+      security is enabled.
+    </description>
+  </property>
+  <property>
+    <name>hbase.superuser</name>
+    <value></value>
+    <description>List of users or groups (comma-separated), who are allowed
+    full privileges, regardless of stored ACLs, across the cluster.
+    Only used when HBase security is enabled.
+    </description>
+  </property>
+  <property>
+    <name>hbase.auth.key.update.interval</name>
+    <value>86400000</value>
+    <description>The update interval for master key for authentication tokens 
+    in servers in milliseconds.  Only used when HBase security is enabled.
+    </description>
+  </property>
+  <property>
+    <name>hbase.auth.token.max.lifetime</name>
+    <value>604800000</value>
+    <description>The maximum lifetime in milliseconds after which an
+    authentication token expires.  Only used when HBase security is enabled.
+    </description>
+  </property>
+
   <property>
     <name>zookeeper.session.timeout</name>
     <value>180000</value>

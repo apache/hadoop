@@ -244,6 +244,7 @@
         <enabled>false</enabled>
       </snapshots>
     </repository>
+
   </repositories>
 
   <build>
@@ -372,6 +373,14 @@
         </includes>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <excludes>
+          <exclude>hbase-site.xml</exclude>
+        </excludes>
+      </testResource>
+    </testResources>
 
     <plugins>
       <plugin>
@@ -660,12 +669,12 @@
               <target>
                 <!-- Complements the assembly -->
 
-                <mkdir dir="${project.build.directory}/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}/lib/native/${build.platform}"/>
+                <mkdir dir="${project.build.directory}/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}"/>
 
                 <!-- Using Unix cp to preserve symlinks, using script to handle wildcards -->
                 <echo file="${project.build.directory}/copynativelibs.sh">
                     if [ `ls ${project.build.directory}/nativelib | wc -l` -ne 0 ]; then
-                      cp -PR ${project.build.directory}/nativelib/lib* ${project.build.directory}/${project.artifactId}-${project.version}/${project.artifactId}-${project.version}/lib/native/${build.platform}
+                      cp -PR ${project.build.directory}/nativelib/lib* ${project.build.directory}/${project.build.finalName}/${project.build.finalName}/lib/native/${build.platform}
                     fi
                 </echo>
                 <exec executable="sh" dir="${project.build.directory}" failonerror="true">
@@ -674,9 +683,9 @@
 
                 <!-- Using Unix tar to preserve symlinks -->
                 <exec executable="tar" failonerror="yes"
-                  dir="${project.build.directory}/${project.artifactId}-${project.version}">
+                  dir="${project.build.directory}/${project.build.finalName}">
                     <arg value="czf"/>
-                    <arg value="${project.build.directory}/${project.artifactId}-${project.version}.tar.gz"/>
+                    <arg value="${project.build.directory}/${project.build.finalName}.tar.gz"/>
                     <arg value="."/>
                 </exec>
 
@@ -1292,6 +1301,32 @@
           <scope>test</scope>
         </dependency>
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-test-resource</id>
+                <goals>
+                  <goal>add-test-resource</goal>
+                </goals>
+                <configuration>
+                  <resources>
+                    <resource>
+                      <directory>src/test/resources</directory>
+                      <includes>
+                        <include>hbase-site.xml</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     
     
@@ -1334,6 +1369,61 @@
         <myThreadCount>1</myThreadCount>          
       </properties>
     </profile>     
+
+    <!-- profile for building against Hadoop 0.20+security-->
+    <profile>
+      <id>security</id>
+      <build>
+        <finalName>${artifactId}-${version}-security</finalName>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-source</id>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/security/src/main/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>add-test-source</id>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/security/src/test/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>add-test-resource</id>
+                <goals>
+                  <goal>add-test-resource</goal>
+                </goals>
+                <configuration>
+                  <resources>
+                    <resource>
+                      <directory>${project.basedir}/security/src/test/resources</directory>
+                      <includes>
+                        <include>hbase-site.xml</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
 
     <!--
       profile for building against Hadoop 0.22.0. Activate using:
@@ -1479,6 +1569,32 @@
           <scope>test</scope>
         </dependency>
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-test-resource</id>
+                <goals>
+                  <goal>add-test-resource</goal>
+                </goals>
+                <configuration>
+                  <resources>
+                    <resource>
+                      <directory>src/test/resources</directory>
+                      <includes>
+                        <include>hbase-site.xml</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <!--
@@ -1635,6 +1751,32 @@
           <scope>test</scope>
         </dependency>
       </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>add-test-resource</id>
+                <goals>
+                  <goal>add-test-resource</goal>
+                </goals>
+                <configuration>
+                  <resources>
+                    <resource>
+                      <directory>src/test/resources</directory>
+                      <includes>
+                        <include>hbase-site.xml</include>
+                      </includes>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
  

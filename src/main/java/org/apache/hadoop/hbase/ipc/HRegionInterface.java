@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.security.TokenInfo;
+import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.VersionedProtocol;
@@ -54,6 +56,9 @@ import org.apache.hadoop.hbase.ipc.VersionedProtocol;
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
  */
+@KerberosInfo(
+    serverPrincipal = "hbase.regionserver.kerberos.principal")
+@TokenInfo("HBASE_AUTH_TOKEN")
 public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortable {
   /**
    * This Interfaces' version. Version changes when the Interface changes.

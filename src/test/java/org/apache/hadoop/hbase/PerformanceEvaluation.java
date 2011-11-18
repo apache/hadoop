@@ -573,6 +573,9 @@ public class PerformanceEvaluation {
     // Add a Class from the hbase.jar so it gets registered too.
     TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
       org.apache.hadoop.hbase.util.Bytes.class);
+
+    TableMapReduceUtil.initCredentials(job);
+
     job.waitForCompletion(true);
   }
 

@@ -45,6 +45,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
@@ -53,9 +54,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -159,7 +158,7 @@ public class HBaseClient {
   }
 
   /** A call waiting for a value. */
-  private class Call {
+  protected class Call {
     final int id;                                       // call id
     final Writable param;                               // parameter
     Writable value;                               // value, null if error
@@ -210,18 +209,18 @@ public class HBaseClient {
   /** Thread that reads responses and notifies callers.  Each connection owns a
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
-  private class Connection extends Thread {
+  protected class Connection extends Thread {
     private ConnectionHeader header;              // connection header
-    private ConnectionId remoteId;
-    private Socket socket = null;                 // connected socket
-    private DataInputStream in;
-    private DataOutputStream out;
+    protected ConnectionId remoteId;
+    protected Socket socket = null;                 // connected socket
+    protected DataInputStream in;
+    protected DataOutputStream out;
 
     // currently active calls
-    private final ConcurrentSkipListMap<Integer, Call> calls = new ConcurrentSkipListMap<Integer, Call>();
-    private final AtomicLong lastActivity = new AtomicLong();// last I/O activity time
+    protected final ConcurrentSkipListMap<Integer, Call> calls = new ConcurrentSkipListMap<Integer, Call>();
+    protected final AtomicLong lastActivity = new AtomicLong();// last I/O activity time
     protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
-    private IOException closeException; // close reason
+    protected IOException closeException; // close reason
 
     public Connection(ConnectionId remoteId) throws IOException {
       if (remoteId.getAddress().isUnresolved()) {
@@ -229,7 +228,7 @@ public class HBaseClient {
                                        remoteId.getAddress().getHostName());
       }
       this.remoteId = remoteId;
-      UserGroupInformation ticket = remoteId.getTicket();
+      User ticket = remoteId.getTicket();
       Class<? extends VersionedProtocol> protocol = remoteId.getProtocol();
 
       header = new ConnectionHeader(
@@ -237,12 +236,12 @@ public class HBaseClient {
 
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
         remoteId.getAddress().toString() +
-        ((ticket==null)?" from an unknown user": (" from " + ticket.getUserName())));
+        ((ticket==null)?" from an unknown user": (" from " + ticket.getName())));
       this.setDaemon(true);
     }
 
     /** Update lastActivity with the current time. */
-    private void touch() {
+    protected void touch() {
       lastActivity.set(System.currentTimeMillis());
     }
 
@@ -265,7 +264,7 @@ public class HBaseClient {
      * reading. If no failure is detected, it retries until at least
      * a byte is read.
      */
-    private class PingInputStream extends FilterInputStream {
+    protected class PingInputStream extends FilterInputStream {
       /* constructor */
       protected PingInputStream(InputStream in) {
         super(in);
@@ -317,40 +316,50 @@ public class HBaseClient {
       }
     }
 
+    protected synchronized void setupConnection() throws IOException {
+      short ioFailures = 0;
+      short timeoutFailures = 0;
+      while (true) {
+        try {
+          this.socket = socketFactory.createSocket();
+          this.socket.setTcpNoDelay(tcpNoDelay);
+          this.socket.setKeepAlive(tcpKeepAlive);
+          // connection time out is 20s
+          NetUtils.connect(this.socket, remoteId.getAddress(),
+              getSocketTimeout(conf));
+          if (remoteId.rpcTimeout > 0) {
+            pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
+          }
+          this.socket.setSoTimeout(pingInterval);
+          return;
+        } catch (SocketTimeoutException toe) {
+          /* The max number of retries is 45,
+           * which amounts to 20s*45 = 15 minutes retries.
+           */
+          handleConnectionFailure(timeoutFailures++, maxRetries, toe);
+        } catch (IOException ie) {
+          handleConnectionFailure(ioFailures++, maxRetries, ie);
+        }
+      }
+    }
+
     /** Connect to the server and set up the I/O streams. It then sends
      * a header to the server and starts
      * the connection thread that waits for responses.
      * @throws java.io.IOException e
      */
-    protected synchronized void setupIOstreams() throws IOException {
+    protected synchronized void setupIOstreams()
+        throws IOException, InterruptedException {
+
       if (socket != null || shouldCloseConnection.get()) {
         return;
       }
 
-      short ioFailures = 0;
-      short timeoutFailures = 0;
       try {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Connecting to "+remoteId.getAddress());
+          LOG.debug("Connecting to "+remoteId);
         }
-        while (true) {
-          try {
-            this.socket = socketFactory.createSocket();
-            this.socket.setTcpNoDelay(tcpNoDelay);
-            this.socket.setKeepAlive(tcpKeepAlive);
-            NetUtils.connect(this.socket, remoteId.getAddress(),
-              getSocketTimeout(conf));
-            if (remoteId.rpcTimeout > 0) {
-              pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
-            }
-            this.socket.setSoTimeout(pingInterval);
-            break;
-          } catch (SocketTimeoutException toe) {
-            handleConnectionFailure(timeoutFailures++, maxRetries, toe);
-          } catch (IOException ie) {
-            handleConnectionFailure(ioFailures++, maxRetries, ie);
-          }
-        }
+        setupConnection();
         this.in = new DataInputStream(new BufferedInputStream
             (new PingInputStream(NetUtils.getInputStream(socket))));
         this.out = new DataOutputStream
@@ -370,7 +379,22 @@ public class HBaseClient {
       }
     }
 
-    /* Handle connection failures
+    protected void closeConnection() {
+      // close the current connection
+      if (socket != null) {
+        try {
+          socket.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close a socket", e);
+        }
+      }
+      // set socket to null so that the next call to setupIOstreams
+      // can start the process of connect all over again.
+      socket = null;
+    }
+
+    /**
+     *  Handle connection failures
      *
      * If the current number of retries is equal to the max number of retries,
      * stop retrying and throw the exception; Otherwise backoff N seconds and
@@ -386,17 +410,8 @@ public class HBaseClient {
      */
     private void handleConnectionFailure(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
-      // close the current connection
-      if (socket != null) { // could be null if the socket creation failed
-        try {
-          socket.close();
-        } catch (IOException e) {
-          LOG.warn("Not able to close a socket", e);
-        }
-      }
-      // set socket to null so that the next call to setupIOstreams
-      // can start the process of connect all over again.
-      socket = null;
+
+      closeConnection();
 
       // throw the exception if the maximum number of retries is reached
       if (curRetries >= maxRetries) {
@@ -435,7 +450,7 @@ public class HBaseClient {
      * Return true if it is time to read a response; false otherwise.
      */
     @SuppressWarnings({"ThrowableInstanceNeverThrown"})
-    private synchronized boolean waitForWork() {
+    protected synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
         long timeout = maxIdleTime-
               (System.currentTimeMillis()-lastActivity.get());
@@ -541,7 +556,7 @@ public class HBaseClient {
     /* Receive a response.
      * Because only one receiver, so no synchronization on in.
      */
-    private void receiveResponse() {
+    protected void receiveResponse() {
       if (shouldCloseConnection.get()) {
         return;
       }
@@ -598,7 +613,7 @@ public class HBaseClient {
       }
     }
 
-    private synchronized void markClosed(IOException e) {
+    protected synchronized void markClosed(IOException e) {
       if (shouldCloseConnection.compareAndSet(false, true)) {
         closeException = e;
         notifyAll();
@@ -606,7 +621,7 @@ public class HBaseClient {
     }
 
     /** Close the connection. */
-    private synchronized void close() {
+    protected synchronized void close() {
       if (!shouldCloseConnection.get()) {
         LOG.error("The connection is not in the closed state");
         return;
@@ -647,11 +662,11 @@ public class HBaseClient {
     }
 
     /* Cleanup all calls and mark them as done */
-    private void cleanupCalls() {
+    protected void cleanupCalls() {
       cleanupCalls(0);
     }
 
-    private void cleanupCalls(long rpcTimeout) {
+    protected void cleanupCalls(long rpcTimeout) {
       Iterator<Entry<Integer, Call>> itor = calls.entrySet().iterator();
       while (itor.hasNext()) {
         Call c = itor.next().getValue();
@@ -687,7 +702,7 @@ public class HBaseClient {
   }
 
   /** Call implementation used for parallel calls. */
-  private class ParallelCall extends Call {
+  protected class ParallelCall extends Call {
     private final ParallelResults results;
     protected final int index;
 
@@ -705,7 +720,7 @@ public class HBaseClient {
   }
 
   /** Result collector for parallel calls. */
-  private static class ParallelResults {
+  protected static class ParallelResults {
     protected final Writable[] values;
     protected int size;
     protected int count;
@@ -778,7 +793,7 @@ public class HBaseClient {
    * @return either a {@link PoolType#RoundRobin} or
    *         {@link PoolType#ThreadLocal}
    */
-  private static PoolType getPoolType(Configuration config) {
+  protected static PoolType getPoolType(Configuration config) {
     return PoolType.valueOf(config.get(HConstants.HBASE_CLIENT_IPC_POOL_TYPE),
         PoolType.RoundRobin, PoolType.ThreadLocal);
   }
@@ -790,7 +805,7 @@ public class HBaseClient {
    * @param config
    * @return the maximum pool size
    */
-  private static int getPoolSize(Configuration config) {
+  protected static int getPoolSize(Configuration config) {
     return config.getInt(HConstants.HBASE_CLIENT_IPC_POOL_SIZE, 1);
   }
 
@@ -843,7 +858,7 @@ public class HBaseClient {
   }
 
   public Writable call(Writable param, InetSocketAddress addr,
-                       UserGroupInformation ticket, int rpcTimeout)
+                       User ticket, int rpcTimeout)
                        throws IOException, InterruptedException {
     return call(param, addr, null, ticket, rpcTimeout);
   }
@@ -855,7 +870,7 @@ public class HBaseClient {
    * threw an exception. */
   public Writable call(Writable param, InetSocketAddress addr,
                        Class<? extends VersionedProtocol> protocol,
-                       UserGroupInformation ticket, int rpcTimeout)
+                       User ticket, int rpcTimeout)
       throws InterruptedException, IOException {
     Call call = new Call(param);
     Connection connection = getConnection(addr, protocol, ticket, rpcTimeout, call);
@@ -902,7 +917,7 @@ public class HBaseClient {
    * @return an exception to throw
    */
   @SuppressWarnings({"ThrowableInstanceNeverThrown"})
-  private IOException wrapException(InetSocketAddress addr,
+  protected IOException wrapException(InetSocketAddress addr,
                                          IOException exception) {
     if (exception instanceof ConnectException) {
       //connection refused; include the host:port in the error
@@ -929,7 +944,7 @@ public class HBaseClient {
    * @param addresses socket addresses
    * @return  Writable[]
    * @throws IOException e
-   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], Class, UserGroupInformation)} instead
+   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], Class, User)} instead
    */
   @Deprecated
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
@@ -943,7 +958,7 @@ public class HBaseClient {
    * contains nulls for calls that timed out or errored.  */
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
                          Class<? extends VersionedProtocol> protocol,
-                         UserGroupInformation ticket)
+                         User ticket)
       throws IOException, InterruptedException {
     if (addresses.length == 0) return new Writable[0];
 
@@ -976,12 +991,12 @@ public class HBaseClient {
 
   /* Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
-  private Connection getConnection(InetSocketAddress addr,
+  protected Connection getConnection(InetSocketAddress addr,
                                    Class<? extends VersionedProtocol> protocol,
-                                   UserGroupInformation ticket,
+                                   User ticket,
                                    int rpcTimeout,
                                    Call call)
-                                   throws IOException {
+                                   throws IOException, InterruptedException {
     if (!running.get()) {
       // the client is stopped
       throw new IOException("The client is stopped");
@@ -1014,16 +1029,16 @@ public class HBaseClient {
    * This class holds the address and the user ticket. The client connections
    * to servers are uniquely identified by <remoteAddress, ticket>
    */
-  private static class ConnectionId {
+  protected static class ConnectionId {
     final InetSocketAddress address;
-    final UserGroupInformation ticket;
-    final private int rpcTimeout;
+    final User ticket;
+    final int rpcTimeout;
     Class<? extends VersionedProtocol> protocol;
     private static final int PRIME = 16777619;
 
     ConnectionId(InetSocketAddress address,
         Class<? extends VersionedProtocol> protocol,
-        UserGroupInformation ticket,
+        User ticket,
         int rpcTimeout) {
       this.protocol = protocol;
       this.address = address;
@@ -1039,7 +1054,7 @@ public class HBaseClient {
       return protocol;
     }
 
-    UserGroupInformation getTicket() {
+    User getTicket() {
       return ticket;
     }
 
@@ -1048,8 +1063,8 @@ public class HBaseClient {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
        return address.equals(id.address) && protocol == id.protocol &&
-           ticket == id.ticket && rpcTimeout == id.rpcTimeout;
-       //Note : ticket is a ref comparision.
+              ((ticket != null && ticket.equals(id.ticket)) ||
+               (ticket == id.ticket)) && rpcTimeout == id.rpcTimeout;
      }
      return false;
     }
@@ -1058,8 +1073,7 @@ public class HBaseClient {
     public int hashCode() {
       return (address.hashCode() + PRIME * (
                   PRIME * System.identityHashCode(protocol) ^
-                  System.identityHashCode(ticket)
-                )) ^ rpcTimeout;
+             (ticket == null ? 0 : ticket.hashCode()) )) ^ rpcTimeout;
     }
   }
 }

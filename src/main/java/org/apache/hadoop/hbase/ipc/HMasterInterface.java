@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.UnknownRegionException;
+import org.apache.hadoop.hbase.security.TokenInfo;
+import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -37,6 +39,9 @@ import org.apache.hadoop.hbase.util.Pair;
  * number in HBaseRPCProtocolVersion
  *
  */
+@KerberosInfo(
+    serverPrincipal = "hbase.master.kerberos.principal")
+@TokenInfo("HBASE_AUTH_TOKEN")
 public interface HMasterInterface extends VersionedProtocol {
   /**
    * This Interfaces' version. Version changes when the Interface changes.

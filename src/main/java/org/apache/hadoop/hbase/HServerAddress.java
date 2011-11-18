@@ -121,7 +121,10 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
 
   /** @return Hostname */
   public String getHostname() {
-    return this.address.getHostName();
+    // Kerberos is case-sensitive, and dictates that, where hostnames are
+    // case-insensitive (as in DNS), the lowercase version must be used
+    // So here we lowercase to properly interact with kerberos auth
+    return this.address.getHostName().toLowerCase();
   }
 
   /**

@@ -798,6 +798,7 @@ Release 0.92.0 - Unreleased
                (Jonathan Hsieh)
    HBASE-4806  Fix logging message in HbaseObjectWritable
                (Jonathan Hsieh via todd)
+   HBASE-2742  Provide strong authentication with a secure RPC engine         
 
 Release 0.90.5 - Unreleased
 

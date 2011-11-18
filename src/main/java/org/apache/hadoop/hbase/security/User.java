@@ -33,6 +33,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+
 import org.apache.commons.logging.Log;
 
 /**
@@ -47,6 +48,9 @@ import org.apache.commons.logging.Log;
  * </p>
  */
 public abstract class User {
+  public static final String HBASE_SECURITY_CONF_KEY =
+      "hbase.security.authentication";
+
   /**
    * Flag to differentiate between API-incompatible changes to
    * {@link org.apache.hadoop.security.UserGroupInformation} between vanilla
@@ -61,7 +65,12 @@ public abstract class User {
     }
   }
   private static Log LOG = LogFactory.getLog(User.class);
+
   protected UserGroupInformation ugi;
+
+  public UserGroupInformation getUGI() {
+    return ugi;
+  }
 
   /**
    * Returns the full user name.  For Kerberos principals this will include
@@ -70,6 +79,15 @@ public abstract class User {
    */
   public String getName() {
     return ugi.getUserName();
+  }
+
+  /**
+   * Returns the list of groups of which this user is a member.  On secure
+   * Hadoop this returns the group information for the user as resolved on the
+   * server.  For 0.20 based Hadoop, the group names are passed from the client.
+   */
+  public String[] getGroupNames() {
+    return ugi.getGroupNames();
   }
 
   /**
@@ -90,6 +108,24 @@ public abstract class User {
   public abstract <T> T runAs(PrivilegedExceptionAction<T> action)
       throws IOException, InterruptedException;
 
+  /**
+   * Requests an authentication token for this user and stores it in the
+   * user's credentials.
+   *
+   * @throws IOException
+   */
+  public abstract void obtainAuthTokenForJob(Configuration conf, Job job)
+      throws IOException, InterruptedException;
+
+  /**
+   * Requests an authentication token for this user and stores it in the
+   * user's credentials.
+   *
+   * @throws IOException
+   */
+  public abstract void obtainAuthTokenForJob(JobConf job)
+      throws IOException, InterruptedException;
+
   public String toString() {
     return ugi.toString();
   }
@@ -104,10 +140,26 @@ public abstract class User {
     } else {
       user = new HadoopUser();
     }
-    if (user.ugi == null) {
+    if (user.getUGI() == null) {
       return null;
     }
     return user;
+  }
+
+  /**
+   * Wraps an underlying {@code UserGroupInformation} instance.
+   * @param ugi The base Hadoop user
+   * @return
+   */
+  public static User create(UserGroupInformation ugi) {
+    if (ugi == null) {
+      return null;
+    }
+
+    if (IS_SECURE_HADOOP) {
+      return new SecureHadoopUser(ugi);
+    }
+    return new HadoopUser(ugi);
   }
 
   /**
@@ -150,8 +202,8 @@ public abstract class User {
   }
 
   /**
-   * Returns whether or not Kerberos authentication is configured.  For
-   * non-secure Hadoop, this always returns <code>false</code>.
+   * Returns whether or not Kerberos authentication is configured for Hadoop.
+   * For non-secure Hadoop, this always returns <code>false</code>.
    * For secure Hadoop, it will return the value from
    * {@code UserGroupInformation.isSecurityEnabled()}.
    */
@@ -161,6 +213,15 @@ public abstract class User {
     } else {
       return HadoopUser.isSecurityEnabled();
     }
+  }
+
+  /**
+   * Returns whether or not secure authentication is enabled for HBase
+   * (whether <code>hbase.security.authentication</code> is set to
+   * <code>kerberos</code>.
+   */
+  public static boolean isHBaseSecurityEnabled(Configuration conf) {
+    return "kerberos".equalsIgnoreCase(conf.get(HBASE_SECURITY_CONF_KEY));
   }
 
   /* Concrete implementations */
@@ -201,7 +262,7 @@ public abstract class User {
 
     @Override
     public String getShortName() {
-      return ugi.getUserName();
+      return ugi != null ? ugi.getUserName() : null;
     }
 
     @Override
@@ -260,6 +321,20 @@ public abstract class User {
       return result;
     }
 
+    @Override
+    public void obtainAuthTokenForJob(Configuration conf, Job job)
+        throws IOException, InterruptedException {
+      // this is a no-op.  token creation is only supported for kerberos
+      // authenticated clients
+    }
+
+    @Override
+    public void obtainAuthTokenForJob(JobConf job)
+        throws IOException, InterruptedException {
+      // this is a no-op.  token creation is only supported for kerberos
+      // authenticated clients
+    }
+
     /** @see User#createUserForTesting(org.apache.hadoop.conf.Configuration, String, String[]) */
     public static User createUserForTesting(Configuration conf,
         String name, String[] groups) {
@@ -311,6 +386,8 @@ public abstract class User {
    * 0.20 and versions 0.21 and above.
    */
   private static class SecureHadoopUser extends User {
+    private String shortName;
+
     private SecureHadoopUser() throws IOException {
       try {
         ugi = (UserGroupInformation) callStatic("getCurrentUser");
@@ -330,8 +407,11 @@ public abstract class User {
 
     @Override
     public String getShortName() {
+      if (shortName != null) return shortName;
+
       try {
-        return (String)call(ugi, "getShortUserName", null, null);
+        shortName = (String)call(ugi, "getShortUserName", null, null);
+        return shortName;
       } catch (RuntimeException re) {
         throw re;
       } catch (Exception e) {
@@ -369,6 +449,55 @@ public abstract class User {
       } catch (Exception e) {
         throw new UndeclaredThrowableException(e,
             "Unexpected exception in runAs(PrivilegedExceptionAction)");
+      }
+    }
+
+    @Override
+    public void obtainAuthTokenForJob(Configuration conf, Job job)
+        throws IOException, InterruptedException {
+      try {
+        Class c = Class.forName(
+            "org.apache.hadoop.hbase.security.token.TokenUtil");
+        Methods.call(c, null, "obtainTokenForJob",
+            new Class[]{Configuration.class, UserGroupInformation.class,
+                Job.class},
+            new Object[]{conf, ugi, job});
+      } catch (ClassNotFoundException cnfe) {
+        throw new RuntimeException("Failure loading TokenUtil class, "
+            +"is secure RPC available?", cnfe);
+      } catch (IOException ioe) {
+        throw ioe;
+      } catch (InterruptedException ie) {
+        throw ie;
+      } catch (RuntimeException re) {
+        throw re;
+      } catch (Exception e) {
+        throw new UndeclaredThrowableException(e,
+            "Unexpected error calling TokenUtil.obtainAndCacheToken()");
+      }
+    }
+
+    @Override
+    public void obtainAuthTokenForJob(JobConf job)
+        throws IOException, InterruptedException {
+      try {
+        Class c = Class.forName(
+            "org.apache.hadoop.hbase.security.token.TokenUtil");
+        Methods.call(c, null, "obtainTokenForJob",
+            new Class[]{JobConf.class, UserGroupInformation.class},
+            new Object[]{job, ugi});
+      } catch (ClassNotFoundException cnfe) {
+        throw new RuntimeException("Failure loading TokenUtil class, "
+            +"is secure RPC available?", cnfe);
+      } catch (IOException ioe) {
+        throw ioe;
+      } catch (InterruptedException ie) {
+        throw ie;
+      } catch (RuntimeException re) {
+        throw re;
+      } catch (Exception e) {
+        throw new UndeclaredThrowableException(e,
+            "Unexpected error calling TokenUtil.obtainAndCacheToken()");
       }
     }
 

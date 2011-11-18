@@ -27,8 +27,7 @@ import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.metrics.util.*;
 
 import java.lang.reflect.Method;
 
@@ -46,11 +45,15 @@ import java.lang.reflect.Method;
  */
 public class HBaseRpcMetrics implements Updater {
   public static final String NAME_DELIM = "$";
-  private MetricsRecord metricsRecord;
+  private final MetricsRegistry registry = new MetricsRegistry();
+  private final MetricsRecord metricsRecord;
+  private final RpcServer myServer;
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
   private final HBaseRPCStatistics rpcStatistics;
 
-  public HBaseRpcMetrics(String hostName, String port) {
+  public HBaseRpcMetrics(String hostName, String port,
+      final RpcServer server) {
+    myServer = server;
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
 
@@ -73,13 +76,29 @@ public class HBaseRpcMetrics implements Updater {
    *  - they can be set directly by calling their set/inc methods
    *  -they can also be read directly - e.g. JMX does this.
    */
-  public final MetricsRegistry registry = new MetricsRegistry();
 
-  public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime", registry);
-  public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime", registry);
-  public MetricsTimeVaryingRate rpcSlowResponseTime = new MetricsTimeVaryingRate("RpcSlowResponse", registry);
-
-  //public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
+  public final MetricsTimeVaryingLong receivedBytes =
+         new MetricsTimeVaryingLong("ReceivedBytes", registry);
+  public final MetricsTimeVaryingLong sentBytes =
+         new MetricsTimeVaryingLong("SentBytes", registry);
+  public final MetricsTimeVaryingRate rpcQueueTime =
+          new MetricsTimeVaryingRate("RpcQueueTime", registry);
+  public MetricsTimeVaryingRate rpcProcessingTime =
+          new MetricsTimeVaryingRate("RpcProcessingTime", registry);
+  public final MetricsIntValue numOpenConnections =
+          new MetricsIntValue("NumOpenConnections", registry);
+  public final MetricsIntValue callQueueLen =
+          new MetricsIntValue("callQueueLen", registry);
+  public final MetricsTimeVaryingInt authenticationFailures = 
+          new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
+  public final MetricsTimeVaryingInt authenticationSuccesses =
+          new MetricsTimeVaryingInt("rpcAuthenticationSuccesses", registry);
+  public final MetricsTimeVaryingInt authorizationFailures =
+          new MetricsTimeVaryingInt("rpcAuthorizationFailures", registry);
+  public final MetricsTimeVaryingInt authorizationSuccesses =
+         new MetricsTimeVaryingInt("rpcAuthorizationSuccesses", registry);
+  public MetricsTimeVaryingRate rpcSlowResponseTime =
+      new MetricsTimeVaryingRate("RpcSlowResponse", registry);
 
   private void initMethods(Class<? extends VersionedProtocol> protocol) {
     for (Method m : protocol.getDeclaredMethods()) {
@@ -182,19 +201,15 @@ public class HBaseRpcMetrics implements Updater {
 
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
-   * @param context ctx
    */
-  public void doUpdates(MetricsContext context) {
-    rpcQueueTime.pushMetric(metricsRecord);
-    rpcProcessingTime.pushMetric(metricsRecord);
-
-    synchronized (registry) {
-      // Iterate through the registry to propagate the different rpc metrics.
-
-      for (String metricName : registry.getKeyList() ) {
-        MetricsTimeVaryingRate value = (MetricsTimeVaryingRate) registry.get(metricName);
-
-        value.pushMetric(metricsRecord);
+  public void doUpdates(final MetricsContext context) {
+    synchronized (this) {
+      // ToFix - fix server to use the following two metrics directly so
+      // the metrics do not have be copied here.
+      numOpenConnections.set(myServer.getNumOpenConnections());
+      callQueueLen.set(myServer.getCallQueueLen());
+      for (MetricsBase m : registry.getMetricsList()) {
+        m.pushMetric(metricsRecord);
       }
     }
     metricsRecord.update();

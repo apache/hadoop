@@ -26,12 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
-
 import javax.net.SocketFactory;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -78,7 +76,12 @@ public class HBaseRPC {
     super();
   }                                  // no public ctor
 
-  private static final String RPC_ENGINE_PROP = "hbase.rpc.engine";
+  /**
+   * Configuration key for the {@link RpcEngine} implementation to load to
+   * handle connection protocols.  Handlers for individual protocols can be
+   * configured using {@code "hbase.rpc.engine." + protocol.class.name}.
+   */
+  public static final String RPC_ENGINE_PROP = "hbase.rpc.engine";
 
   // cache of RpcEngines by protocol
   private static final Map<Class,RpcEngine> PROTOCOL_ENGINES
@@ -274,8 +277,8 @@ public class HBaseRPC {
   public static VersionedProtocol getProxy(Class<? extends VersionedProtocol> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
       SocketFactory factory, int rpcTimeout) throws IOException {
-    return getProxy(protocol, clientVersion, addr, null, conf, factory,
-        rpcTimeout);
+    return getProxy(protocol, clientVersion, addr,
+        User.getCurrent(), conf, factory, rpcTimeout);
   }
 
   /**
@@ -294,7 +297,7 @@ public class HBaseRPC {
    */
   public static VersionedProtocol getProxy(
       Class<? extends VersionedProtocol> protocol,
-      long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
+      long clientVersion, InetSocketAddress addr, User ticket,
       Configuration conf, SocketFactory factory, int rpcTimeout)
   throws IOException {
     VersionedProtocol proxy =
@@ -349,11 +352,16 @@ public class HBaseRPC {
    * @param conf configuration
    * @return values
    * @throws IOException e
+   * @deprecated Instead of calling statically, use
+   *     {@link HBaseRPC#getProtocolEngine(Class, org.apache.hadoop.conf.Configuration)}
+   *     to obtain an {@link RpcEngine} instance and then use
+   *     {@link RpcEngine#call(java.lang.reflect.Method, Object[][], java.net.InetSocketAddress[], Class, org.apache.hadoop.hbase.security.User, org.apache.hadoop.conf.Configuration)}
    */
+  @Deprecated
   public static Object[] call(Method method, Object[][] params,
       InetSocketAddress[] addrs,
       Class<? extends VersionedProtocol> protocol,
-      UserGroupInformation ticket,
+      User ticket,
       Configuration conf)
     throws IOException, InterruptedException {
     return getProtocolEngine(protocol, conf)
