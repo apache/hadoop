@@ -264,7 +264,7 @@
                 <configuration>
                   <appendAssemblyId>false</appendAssemblyId>
                   <attach>false</attach>
-                  <finalName>hadoop-dist-${project.version}-src</finalName>
+                  <finalName>hadoop-${project.version}-src</finalName>
                   <outputDirectory>hadoop-dist/target</outputDirectory>
                   <!-- Not using descriptorRef and hadoop-assembly dependency -->
                   <!-- to avoid making hadoop-main to depend on a module      -->
@@ -288,7 +288,7 @@
                 <configuration>
                   <target>
                     <echo/>
-                    <echo>Hadoop source tar available at: ${basedir}/hadoop-dist/target/hadoop-dist-${project.version}-src.tar.gz</echo>
+                    <echo>Hadoop source tar available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src.tar.gz</echo>
                     <echo/>
                   </target>
                 </configuration>
