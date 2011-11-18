@@ -55,6 +55,10 @@ public class BlockPoolTokenSecretManager extends
     }
     return secretMgr;
   }
+  
+  public synchronized boolean isBlockPoolRegistered(String bpid) {
+    return map.containsKey(bpid);
+  }
 
   /** Return an empty BlockTokenIdentifer */
   @Override

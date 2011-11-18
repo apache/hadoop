@@ -7,6 +7,7 @@ Release 0.23.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 
   OPTIMIZATIONS
 
