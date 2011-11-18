@@ -117,6 +117,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7811. TestUserGroupInformation#testGetServerSideGroups test fails in chroot.
    (Jonathan Eagles via mahadev)
 
+   HADOOP-7787. Make source tarball use conventional name.
+   (Bruno Mahé via tomwhite)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
