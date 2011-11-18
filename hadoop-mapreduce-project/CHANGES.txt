@@ -47,6 +47,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3373. Hadoop scripts unconditionally source
     "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
 
+    MAPREDUCE-3372. HADOOP_PREFIX cannot be overridden.
+    (Bruno Mahé via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
