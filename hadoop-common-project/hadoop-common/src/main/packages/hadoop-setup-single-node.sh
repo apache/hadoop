@@ -25,7 +25,9 @@ if [ "$HADOOP_HOME" != "" ]; then
   echo
 fi
 
-. "$bin"/../libexec/hadoop-config.sh
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
 usage() {
   echo "

@@ -504,7 +504,10 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
   fi
   chmod 755 -R ${HADOOP_PREFIX}/sbin/*hadoop*
   chmod 755 -R ${HADOOP_PREFIX}/bin/hadoop
-  chmod 755 -R ${HADOOP_PREFIX}/libexec/hadoop-config.sh
+
+  HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-${HADOOP_PREFIX}/libexec}
+  chmod 755 -R ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh
+
   mkdir -p /home/${HADOOP_MR_USER}
   chown ${HADOOP_MR_USER}:${HADOOP_GROUP} /home/${HADOOP_MR_USER}
   HDFS_DIR=`echo ${HADOOP_HDFS_DIR} | sed -e 's/,/ /g'`
