@@ -1147,4 +1147,23 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     }
   }
 
+  public void testRemoveTaskDistributedCacheManager() throws Exception {
+    if (!canRun()) {
+      return;
+    }
+    TrackerDistributedCacheManager manager = new TrackerDistributedCacheManager(
+        conf, taskController);
+    JobID jobId = new JobID("jobtracker", 1);
+    manager.newTaskDistributedCacheManager(jobId, conf);
+
+    TaskDistributedCacheManager taskDistributedCacheManager = manager
+        .getTaskDistributedCacheManager(jobId);
+    assertNotNull(taskDistributedCacheManager);
+
+    manager.removeTaskDistributedCacheManager(jobId);
+
+    taskDistributedCacheManager = manager.getTaskDistributedCacheManager(jobId);
+    assertNull(taskDistributedCacheManager);
+  }
+
 }

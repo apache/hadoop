@@ -35,6 +35,9 @@ Release 0.20.206.0 - unreleased
     MAPREDUCE-2073. TestTrackerDistributedCacheManager should be
     up-front about requirements on build environment. (todd)
 
+    MAPREDUCE-3343. TaskTracker Out of Memory because of distributed cache.
+    (Zhao Yunjiong).
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to

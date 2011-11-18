@@ -675,6 +675,18 @@ public class TrackerDistributedCacheManager {
     }
   }
 
+  public void removeTaskDistributedCacheManager(JobID jobId) {
+    jobArchives.remove(jobId);
+  }
+
+  /*
+   * This method is called from unit tests.
+   */
+  protected TaskDistributedCacheManager getTaskDistributedCacheManager(
+      JobID jobId) {
+    return jobArchives.get(jobId);
+  }
+
   /**
    * Determines timestamps of files to be cached, and stores those
    * in the configuration.  This is intended to be used internally by JobClient
