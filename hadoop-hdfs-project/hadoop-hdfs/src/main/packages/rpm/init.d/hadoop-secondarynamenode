@@ -27,7 +27,7 @@ source /etc/default/hadoop-env.sh
 RETVAL=0
 PIDFILE="${HADOOP_PID_DIR}/hadoop-hdfs-secondarynamenode.pid"
 desc="Hadoop secondary namenode daemon"
-export HADOOP_PREFIX="/usr"
+export HADOOP_PREFIX=${HADOOP_PREFIX:-/usr}
 
 start() {
   echo -n $"Starting $desc (hadoop-secondarynamenode): "
