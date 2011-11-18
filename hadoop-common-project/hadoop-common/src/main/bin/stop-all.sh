@@ -23,7 +23,9 @@ echo "This script is Deprecated. Instead use stop-dfs.sh and stop-mapred.sh"
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/../libexec/hadoop-config.sh
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+. $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
 # stop hdfs daemons if hdfs is present
 if [ -f "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh ]; then

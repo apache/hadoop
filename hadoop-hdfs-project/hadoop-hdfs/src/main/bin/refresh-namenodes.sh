@@ -23,7 +23,9 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin/../libexec/hdfs-config.sh"
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+. $HADOOP_LIBEXEC_DIR/hdfs-config.sh
 
 namenodes=$("$HADOOP_PREFIX/bin/hdfs" getconf -nnRpcAddresses)
 if [ "$?" != '0' ] ; then errorFlag='1' ; 

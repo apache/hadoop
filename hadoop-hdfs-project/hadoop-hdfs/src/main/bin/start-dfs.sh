@@ -25,7 +25,9 @@ usage="Usage: start-dfs.sh [-upgrade|-rollback]"
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/../libexec/hdfs-config.sh
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+. $HADOOP_LIBEXEC_DIR/hdfs-config.sh
 
 # get arguments
 if [ $# -ge 1 ]; then

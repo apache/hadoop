@@ -110,12 +110,18 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7801. HADOOP_PREFIX cannot be overriden. (Bruno Mahé via tomwhite)
 
+    HADOOP-7802. Hadoop scripts unconditionally source
+    "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
    
    HADOOP-7811. TestUserGroupInformation#testGetServerSideGroups test fails in chroot.
    (Jonathan Eagles via mahadev)
+
+   HADOOP-7787. Make source tarball use conventional name.
+   (Bruno Mahé via tomwhite)
 
 Release 0.23.0 - 2011-11-01 
 

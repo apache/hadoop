@@ -61,7 +61,7 @@ public class DataNodeTestUtils {
       bpos.setNamespaceInfo(nsifno);
 
       dn.setBPNamenode(bpid, nn);
-      bpos.setupBPStorage();
+      dn.initBlockPool(bpos, nsifno);
     }
   }
 }

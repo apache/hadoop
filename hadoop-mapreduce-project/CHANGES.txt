@@ -34,6 +34,12 @@ Trunk (unreleased changes)
     MAPREDUCE-3149. Add a test to verify that TokenCache handles file system 
     uri with no authority. (John George via jitendra)
 
+    MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
+    client APIs cross MR1 and MR2. (Ahmed via tucu)
+
+    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
+    (tucu)
+
   BUG FIXES
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
                     (amarrk)
@@ -93,6 +99,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
     has wrong configuration or permissions. (Hitesh Shah via vinodkv)
+
+    MAPREDUCE-3373. Hadoop scripts unconditionally source
+    "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
+
+    MAPREDUCE-3372. HADOOP_PREFIX cannot be overridden.
+    (Bruno Mahé via tomwhite)
 
   OPTIMIZATIONS
 

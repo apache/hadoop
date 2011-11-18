@@ -12,7 +12,7 @@
 #   limitations under the License.
 
 
-export HADOOP_PREFIX=../../../../..
+export HADOOP_PREFIX=${HADOOP_PREFIX:-../../../../..}
 
 export CLASSPATH="$HADOOP_PREFIX/build/classes"
 export CLASSPATH=${CLASSPATH}:"$HADOOP_PREFIX/build/contrib/abacus/classes"
