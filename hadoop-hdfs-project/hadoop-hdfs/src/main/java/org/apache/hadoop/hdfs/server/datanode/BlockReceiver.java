@@ -185,8 +185,8 @@ class BlockReceiver implements Closeable {
               " while receiving block " + block + " from " + inAddr);
         }
       }
-      this.dropCacheBehindWrites = datanode.shouldDropCacheBehindWrites();
-      this.syncBehindWrites = datanode.shouldSyncBehindWrites();
+      this.dropCacheBehindWrites = datanode.getDnConf().dropCacheBehindWrites;
+      this.syncBehindWrites = datanode.getDnConf().syncBehindWrites;
       
       final boolean isCreate = isDatanode || isTransfer 
           || stage == BlockConstructionStage.PIPELINE_SETUP_CREATE;
@@ -249,7 +249,7 @@ class BlockReceiver implements Closeable {
     try {
       if (checksumOut != null) {
         checksumOut.flush();
-        if (datanode.syncOnClose && (cout instanceof FileOutputStream)) {
+        if (datanode.getDnConf().syncOnClose && (cout instanceof FileOutputStream)) {
           ((FileOutputStream)cout).getChannel().force(true);
         }
         checksumOut.close();
@@ -265,7 +265,7 @@ class BlockReceiver implements Closeable {
     try {
       if (out != null) {
         out.flush();
-        if (datanode.syncOnClose && (out instanceof FileOutputStream)) {
+        if (datanode.getDnConf().syncOnClose && (out instanceof FileOutputStream)) {
           ((FileOutputStream)out).getChannel().force(true);
         }
         out.close();
@@ -435,7 +435,7 @@ class BlockReceiver implements Closeable {
        * calculation in DFSClient to make the guess accurate.
        */
       int chunkSize = bytesPerChecksum + checksumSize;
-      int chunksPerPacket = (datanode.writePacketSize - PacketHeader.PKT_HEADER_LEN
+      int chunksPerPacket = (datanode.getDnConf().writePacketSize - PacketHeader.PKT_HEADER_LEN
                              + chunkSize - 1)/chunkSize;
       buf = ByteBuffer.allocate(PacketHeader.PKT_HEADER_LEN +
                                 Math.max(chunksPerPacket, 1) * chunkSize);

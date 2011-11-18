@@ -19,15 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
@@ -51,17 +44,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOUR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SIMULATEDDATASTORAGE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SIMULATEDDATASTORAGE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_TRANSFERTO_ALLOWED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_FEDERATION_NAMESERVICES;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
@@ -104,7 +90,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -402,10 +387,7 @@ public class DataNode extends Configured
   AtomicInteger xmitsInProgress = new AtomicInteger();
   Daemon dataXceiverServer = null;
   ThreadGroup threadGroup = null;
-  long blockReportInterval;
-  long deleteReportInterval;
-  long initialBlockReportDelay = DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT * 1000L;
-  long heartBeatInterval;
+  private DNConf dnConf;
   private boolean heartbeatsDisabledForTests = false;
   private DataStorage storage = null;
   private HttpServer infoServer = null;
@@ -415,18 +397,9 @@ public class DataNode extends Configured
   private volatile String hostName; // Host name of this datanode
   
   private static String dnThreadName;
-  int socketTimeout;
-  int socketWriteTimeout = 0;  
-  boolean transferToAllowed = true;
-  private boolean dropCacheBehindWrites = false;
-  private boolean syncBehindWrites = false;
-  private boolean dropCacheBehindReads = false;
-  private long readaheadLength = 0;
 
-  int writePacketSize = 0;
   boolean isBlockTokenEnabled;
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
-  boolean syncOnClose;
   
   public DataBlockScanner blockScanner = null;
   private DirectoryScanner directoryScanner = null;
@@ -494,51 +467,6 @@ public class DataNode extends Configured
     return name;
   }
 
-  private void initConfig(Configuration conf) {
-    this.socketTimeout =  conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
-                                      HdfsServerConstants.READ_TIMEOUT);
-    this.socketWriteTimeout = conf.getInt(DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
-                                          HdfsServerConstants.WRITE_TIMEOUT);
-    /* Based on results on different platforms, we might need set the default 
-     * to false on some of them. */
-    this.transferToAllowed = conf.getBoolean(
-        DFS_DATANODE_TRANSFERTO_ALLOWED_KEY,
-        DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT);
-    this.writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 
-                                       DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
-
-    this.readaheadLength = conf.getLong(
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_KEY,
-        DFSConfigKeys.DFS_DATANODE_READAHEAD_BYTES_DEFAULT);
-    this.dropCacheBehindWrites = conf.getBoolean(
-        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_KEY,
-        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_WRITES_DEFAULT);
-    this.syncBehindWrites = conf.getBoolean(
-        DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_KEY,
-        DFSConfigKeys.DFS_DATANODE_SYNC_BEHIND_WRITES_DEFAULT);
-    this.dropCacheBehindReads = conf.getBoolean(
-        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_KEY,
-        DFSConfigKeys.DFS_DATANODE_DROP_CACHE_BEHIND_READS_DEFAULT);
-
-    this.blockReportInterval = conf.getLong(DFS_BLOCKREPORT_INTERVAL_MSEC_KEY,
-        DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT);
-    this.initialBlockReportDelay = conf.getLong(
-        DFS_BLOCKREPORT_INITIAL_DELAY_KEY,
-        DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT) * 1000L;
-    if (this.initialBlockReportDelay >= blockReportInterval) {
-      this.initialBlockReportDelay = 0;
-      LOG.info("dfs.blockreport.initialDelay is greater than " +
-        "dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
-    }
-    this.heartBeatInterval = conf.getLong(DFS_HEARTBEAT_INTERVAL_KEY,
-        DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000L;
-
-    this.deleteReportInterval = 100 * heartBeatInterval;
-    // do we need to sync block file contents to disk when blockfile is closed?
-    this.syncOnClose = conf.getBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, 
-                                       DFS_DATANODE_SYNCONCLOSE_DEFAULT);
-  }
-  
   private void startInfoServer(Configuration conf) throws IOException {
     // create a servlet to serve full-file content
     InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
@@ -709,7 +637,7 @@ public class DataNode extends Configured
     // find free port or use privileged port provided
     ServerSocket ss;
     if(secureResources == null) {
-      ss = (socketWriteTimeout > 0) ? 
+      ss = (dnConf.socketWriteTimeout > 0) ? 
           ServerSocketChannel.open().socket() : new ServerSocket();
           Server.bind(ss, socAddr, 0);
     } else {
@@ -794,11 +722,13 @@ public class DataNode extends Configured
     private volatile boolean shouldServiceRun = true;
     UpgradeManagerDatanode upgradeManager = null;
     private final DataNode dn;
+    private final DNConf dnConf;
 
     BPOfferService(InetSocketAddress nnAddr, DataNode dn) {
       this.dn = dn;
       this.bpRegistration = dn.createRegistration();
       this.nnAddr = nnAddr;
+      this.dnConf = dn.getDnConf();
     }
 
     /**
@@ -900,9 +830,9 @@ public class DataNode extends Configured
     void scheduleBlockReport(long delay) {
       if (delay > 0) { // send BR after random delay
         lastBlockReport = System.currentTimeMillis()
-        - ( dn.blockReportInterval - DFSUtil.getRandom().nextInt((int)(delay)));
+        - ( dnConf.blockReportInterval - DFSUtil.getRandom().nextInt((int)(delay)));
       } else { // send at next heartbeat
-        lastBlockReport = lastHeartbeat - dn.blockReportInterval;
+        lastBlockReport = lastHeartbeat - dnConf.blockReportInterval;
       }
       resetBlockReportTime = true; // reset future BRs for randomness
     }
@@ -1007,7 +937,7 @@ public class DataNode extends Configured
       // send block report if timer has expired.
       DatanodeCommand cmd = null;
       long startTime = now();
-      if (startTime - lastBlockReport > dn.blockReportInterval) {
+      if (startTime - lastBlockReport > dnConf.blockReportInterval) {
 
         // Create block report
         long brCreateStartTime = now();
@@ -1029,7 +959,7 @@ public class DataNode extends Configured
         // If we have sent the first block report, then wait a random
         // time before we start the periodic block reports.
         if (resetBlockReportTime) {
-          lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int)(dn.blockReportInterval));
+          lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int)(dnConf.blockReportInterval));
           resetBlockReportTime = false;
         } else {
           /* say the last block report was at 8:20:14. The current report
@@ -1039,7 +969,7 @@ public class DataNode extends Configured
            *   2) unexpected like 11:35:43, next report should be at 12:20:14
            */
           lastBlockReport += (now() - lastBlockReport) /
-          dn.blockReportInterval * dn.blockReportInterval;
+          dnConf.blockReportInterval * dnConf.blockReportInterval;
         }
         LOG.info("sent block report, processed command:" + cmd);
       }
@@ -1101,10 +1031,10 @@ public class DataNode extends Configured
      */
     private void offerService() throws Exception {
       LOG.info("For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
-          + dn.deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
-          + dn.blockReportInterval + "msec" + " Initial delay: "
-          + dn.initialBlockReportDelay + "msec" + "; heartBeatInterval="
-          + dn.heartBeatInterval);
+          + dnConf.deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
+          + dnConf.blockReportInterval + "msec" + " Initial delay: "
+          + dnConf.initialBlockReportDelay + "msec" + "; heartBeatInterval="
+          + dnConf.heartBeatInterval);
 
       //
       // Now loop for a long time....
@@ -1116,7 +1046,7 @@ public class DataNode extends Configured
           //
           // Every so often, send heartbeat or block-report
           //
-          if (startTime - lastHeartbeat > dn.heartBeatInterval) {
+          if (startTime - lastHeartbeat > dnConf.heartBeatInterval) {
             //
             // All heartbeat messages include following info:
             // -- Datanode name
@@ -1140,7 +1070,7 @@ public class DataNode extends Configured
             }
           }
           if (pendingReceivedRequests > 0
-              || (startTime - lastDeletedReport > dn.deleteReportInterval)) {
+              || (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
             reportReceivedDeletedBlocks();
             lastDeletedReport = startTime;
           }
@@ -1157,7 +1087,7 @@ public class DataNode extends Configured
           // There is no work to do;  sleep until hearbeat timer elapses, 
           // or work arrives, and then iterate again.
           //
-          long waitTime = dn.heartBeatInterval - 
+          long waitTime = dnConf.heartBeatInterval - 
           (System.currentTimeMillis() - lastHeartbeat);
           synchronized(receivedAndDeletedBlockList) {
             if (waitTime > 0 && pendingReceivedRequests == 0) {
@@ -1180,7 +1110,7 @@ public class DataNode extends Configured
           }
           LOG.warn("RemoteException in offerService", re);
           try {
-            long sleepTime = Math.min(1000, dn.heartBeatInterval);
+            long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
             Thread.sleep(sleepTime);
           } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
@@ -1248,7 +1178,7 @@ public class DataNode extends Configured
       LOG.info("in register:" + ";bpDNR="+bpRegistration.storageInfo);
 
       // random short delay - helps scatter the BR from all DNs
-      scheduleBlockReport(dn.initialBlockReportDelay);
+      scheduleBlockReport(dnConf.initialBlockReportDelay);
     }
 
 
@@ -1458,11 +1388,11 @@ public class DataNode extends Configured
     this.secureResources = resources;
     this.dataDirs = dataDirs;
     this.conf = conf;
+    this.dnConf = new DNConf(conf);
 
     storage = new DataStorage();
     
     // global DN settings
-    initConfig(conf);
     registerMXBean();
     initDataXceiver(conf);
     startInfoServer(conf);
@@ -1710,7 +1640,7 @@ public class DataNode extends Configured
    * Creates either NIO or regular depending on socketWriteTimeout.
    */
   protected Socket newSocket() throws IOException {
-    return (socketWriteTimeout > 0) ? 
+    return (dnConf.socketWriteTimeout > 0) ? 
            SocketChannel.open().socket() : new Socket();                                   
   }
 
@@ -2135,10 +2065,10 @@ public class DataNode extends Configured
         InetSocketAddress curTarget = 
           NetUtils.createSocketAddr(targets[0].getName());
         sock = newSocket();
-        NetUtils.connect(sock, curTarget, socketTimeout);
-        sock.setSoTimeout(targets.length * socketTimeout);
+        NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
+        sock.setSoTimeout(targets.length * dnConf.socketTimeout);
 
-        long writeTimeout = socketWriteTimeout + 
+        long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream baseStream = NetUtils.getOutputStream(sock, writeTimeout);
         out = new DataOutputStream(new BufferedOutputStream(baseStream,
@@ -2581,7 +2511,7 @@ public class DataNode extends Configured
         DatanodeRegistration bpReg = bpos.bpRegistration;
         InterDatanodeProtocol datanode = bpReg.equals(id)?
             this: DataNode.createInterDataNodeProtocolProxy(id, getConf(),
-                socketTimeout);
+                dnConf.socketTimeout);
         ReplicaRecoveryInfo info = callInitReplicaRecovery(datanode, rBlock);
         if (info != null &&
             info.getGenerationStamp() >= block.getGenerationStamp() &&
@@ -2970,20 +2900,8 @@ public class DataNode extends Configured
                        (DataXceiverServer) this.dataXceiverServer.getRunnable();
     return dxcs.balanceThrottler.getBandwidth();
   }
-
-  long getReadaheadLength() {
-    return readaheadLength;
-  }
-
-  boolean shouldDropCacheBehindWrites() {
-    return dropCacheBehindWrites;
-  }
-
-  boolean shouldDropCacheBehindReads() {
-    return dropCacheBehindReads;
-  }
   
-  boolean shouldSyncBehindWrites() {
-    return syncBehindWrites;
+  DNConf getDnConf() {
+    return dnConf;
   }
 }
