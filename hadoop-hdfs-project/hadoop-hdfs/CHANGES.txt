@@ -117,6 +117,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2562. Refactor DN configuration variables out of DataNode class
     (todd)
 
+    HDFS-2563. Some cleanup in BPOfferService. (todd)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
