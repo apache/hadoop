@@ -64,6 +64,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -97,6 +98,11 @@ public class TestAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    this.admin.close();
   }
 
   @Test
