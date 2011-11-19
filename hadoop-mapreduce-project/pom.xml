@@ -35,12 +35,13 @@
     <fork.mode>once</fork.mode>
     <mr.basedir>${basedir}</mr.basedir>
   </properties>
-  
+
   <modules>
     <module>hadoop-yarn</module>
-    <module>hadoop-mapreduce-client</module>
+      <module>hadoop-mapreduce-client</module>
+      <module>hadoop-mapreduce-examples</module>
   </modules>
-  
+
   <dependencies>
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -106,7 +107,7 @@
         </exclusion>
       </exclusions>
     </dependency>
- 
+
     <dependency>
      <groupId>org.slf4j</groupId>
        <artifactId>slf4j-api</artifactId>
@@ -166,9 +167,9 @@
       <artifactId>clover</artifactId>
       <version>3.0.2</version>
     </dependency>
- 
+
   </dependencies>
-  
+
   <build>
     <pluginManagement>
       <plugins>
@@ -321,7 +322,7 @@
             </executions>
           </plugin>
         </plugins>
-      </build>      
+      </build>
     </profile>
     <profile>
       <id>dist</id>

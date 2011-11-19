@@ -45,6 +45,9 @@
     <hadoop.assemblies.version>${project.version}</hadoop.assemblies.version>
 
     <commons-daemon.version>1.0.3</commons-daemon.version>
+
+    <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
+    <test.build.data>${test.build.dir}</test.build.data>
   </properties>
 
   <dependencyManagement>
@@ -93,6 +96,51 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-yarn-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+         <artifactId>hadoop-yarn-server-tests</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+         <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-hs</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-examples</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -174,6 +222,11 @@
         <version>1.8</version>
       </dependency>
 
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty-servlet-tester</artifactId>
+        <version>6.1.26</version>
+      </dependency>
       <dependency>
         <groupId>tomcat</groupId>
         <artifactId>jasper-compiler</artifactId>

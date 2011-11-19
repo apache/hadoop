@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -13,41 +13,34 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <project>
-  <parent>
-    <artifactId>hadoop-mapreduce-client</artifactId>
-    <groupId>org.apache.hadoop</groupId>
-    <version>0.23.0-SNAPSHOT</version>
-  </parent>
   <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.hadoop</groupId>
+    <artifactId>hadoop-project</artifactId>
+    <version>0.23.0-SNAPSHOT</version>
+    <relativePath>../../hadoop-project</relativePath>
+  </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+  <artifactId>hadoop-streaming</artifactId>
   <version>0.23.0-SNAPSHOT</version>
-  <name>hadoop-mapreduce-client-jobclient</name>
+  <description>Apache Hadoop MapReduce Streaming</description>
+  <name>Apache Hadoop MapReduce Streaming</name>
+  <packaging>jar</packaging>
 
   <properties>
-    <fork.mode>always</fork.mode>
-    <!-- Needed for generating FindBugs warnings using parent pom -->
-    <mr.basedir>${project.parent.basedir}/../</mr.basedir>
+    <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
+    <test.exclude.pattern>%regex[.*(TestStreamingBadRecords|TestStreamingCombiner|TestStreamingStatus|TestUlimit).*]</test.exclude.pattern>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-app</artifactId>
-      <scope>test</scope>
+      <artifactId>hadoop-annotations</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-app</artifactId>
-      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -57,30 +50,35 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-      <scope>test</scope>
+      <artifactId>hadoop-mapreduce-client-core</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-      <scope>test</scope>
+      <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+      <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+      <scope>test</scope>
       <type>test-jar</type>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-common</artifactId>
-      <scope>test</scope>
+      <artifactId>hadoop-common</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-tests</artifactId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>test</scope>
       <type>test-jar</type>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -88,29 +86,35 @@
       <scope>test</scope>
       <type>test-jar</type>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-tests</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
       <plugin>
-        <artifactId>maven-jar-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
+            <id>create-log-dir</id>
+            <phase>process-test-resources</phase>
             <goals>
-              <goal>test-jar</goal>
+              <goal>run</goal>
             </goals>
-            <phase>test-compile</phase>
+            <configuration>
+              <target>
+                <delete dir="${test.build.data}"/>
+                <mkdir dir="${test.build.data}"/>
+                <mkdir dir="${hadoop.log.dir}"/>
+              </target>
+            </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <environmentVariables>
-            <JAVA_HOME>${java.home}</JAVA_HOME>
-          </environmentVariables>
-        </configuration>
       </plugin>
     </plugins>
   </build>
