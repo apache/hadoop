@@ -115,11 +115,11 @@ class LogRoller extends HasThread implements WALActionsListener {
   }
 
   /**
-   * @param region Encoded name of region to flush.
+   * @param encodedRegionName Encoded name of region to flush.
    */
-  private void scheduleFlush(final byte [] region) {
+  private void scheduleFlush(final byte [] encodedRegionName) {
     boolean scheduled = false;
-    HRegion r = this.services.getFromOnlineRegions(Bytes.toString(region));
+    HRegion r = this.services.getFromOnlineRegions(Bytes.toString(encodedRegionName));
     FlushRequester requester = null;
     if (r != null) {
       requester = this.services.getFlushRequester();
@@ -129,8 +129,9 @@ class LogRoller extends HasThread implements WALActionsListener {
       }
     }
     if (!scheduled) {
-    LOG.warn("Failed to schedule flush of " +
-      Bytes.toString(region) + "r=" + r + ", requester=" + requester);
+      LOG.warn("Failed to schedule flush of " +
+        Bytes.toString(encodedRegionName) + ", region=" + r + ", requester=" +
+        requester);
     }
   }
 

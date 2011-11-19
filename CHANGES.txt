@@ -433,6 +433,8 @@ Release 0.92.0 - Unreleased
    HBASE-4796  Race between SplitRegionHandlers for the same region kills the master
    HBASE-4799  Catalog Janitor logic bug causes region leackage
    HBASE-4436  Remove @deprecated Scan methods in 0.90 from TRUNK and 0.92
+   HBASE-4789  On split, parent region is sticking around in oldest sequenceid to
+               region map though not online; we don't cleanup WALs
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently

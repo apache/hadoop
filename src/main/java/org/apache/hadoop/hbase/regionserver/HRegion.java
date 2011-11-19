@@ -1169,7 +1169,7 @@ public class HRegion implements HeapSize { // , Writable{
     long currentMemStoreSize = 0;
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
     try {
-      sequenceId = (wal == null)? myseqid :
+      sequenceId = (wal == null)? myseqid:
         wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
       completeSequenceId = this.getCompleteCacheFlushSequenceId(sequenceId);
 
@@ -1184,9 +1184,9 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    status.setStatus("Flushing stores");
-
-    LOG.debug("Finished snapshotting, commencing flushing stores");
+    String s = "Finished snapshotting " + this + ", commencing wait for rwcc";
+    status.setStatus(s);
+    LOG.debug(s);
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so hlog content can be replayed and put back into the memstore.

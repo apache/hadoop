@@ -183,8 +183,8 @@ public class HLog implements Syncable {
     Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
   /*
-   * Map of regions to most recent sequence/edit id in their memstore.
-   * Key is encoded region name.
+   * Map of encoded region names to their most recent sequence/edit id in their
+   * memstore.
    */
   private final ConcurrentSkipListMap<byte [], Long> lastSeqWritten =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
@@ -713,9 +713,8 @@ public class HLog implements Syncable {
     // If too many log files, figure which regions we need to flush.
     // Array is an array of encoded region names.
     byte [][] regions = null;
-    int logCount = this.outputfiles.size();
-    if (logCount > this.maxLogs && this.outputfiles != null &&
-        this.outputfiles.size() > 0) {
+    int logCount = this.outputfiles == null? 0: this.outputfiles.size();
+    if (logCount > this.maxLogs && logCount > 0) {
       // This is an array of encoded region names.
       regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
         this.lastSeqWritten);
@@ -737,7 +736,7 @@ public class HLog implements Syncable {
    * Return regions (memstores) that have edits that are equal or less than
    * the passed <code>oldestWALseqid</code>.
    * @param oldestWALseqid
-   * @param regionsToSeqids
+   * @param regionsToSeqids Encoded region names to sequence ids
    * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
    * necessarily in order).  Null if no regions found.
    */
@@ -748,6 +747,7 @@ public class HLog implements Syncable {
     for (Map.Entry<byte [], Long> e: regionsToSeqids.entrySet()) {
       if (e.getValue().longValue() <= oldestWALseqid) {
         if (regions == null) regions = new ArrayList<byte []>();
+        // Key is encoded region name.
         regions.add(e.getKey());
       }
     }
@@ -770,6 +770,7 @@ public class HLog implements Syncable {
     byte [] oldestRegion = null;
     for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
       if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
+        // Key is encoded region name.
         oldestRegion = e.getKey();
         break;
       }
@@ -1015,9 +1016,9 @@ public class HLog implements Syncable {
         // is greater than or equal to the value in lastSeqWritten.
         // Use encoded name.  Its shorter, guaranteed unique and a subset of
         // actual  name.
-        byte [] hriKey = info.getEncodedNameAsBytes();
-        this.lastSeqWritten.putIfAbsent(hriKey, seqNum);
-        HLogKey logKey = makeKey(hriKey, tableName, seqNum, now, clusterId);
+        byte [] encodedRegionName = info.getEncodedNameAsBytes();
+        this.lastSeqWritten.putIfAbsent(encodedRegionName, seqNum);
+        HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterId);
         doWrite(info, logKey, edits, htd);
         this.numEntries.incrementAndGet();
         if (htd.isDeferredLogFlush()) {
@@ -1358,6 +1359,11 @@ public class HLog implements Syncable {
       // Cleaning up of lastSeqWritten is in the finally clause because we
       // don't want to confuse getOldestOutstandingSeqNum()
       this.lastSeqWritten.remove(getSnapshotName(encodedRegionName));
+      Long l = this.lastSeqWritten.remove(encodedRegionName);
+      if (l != null) {
+        LOG.warn("Why is there a raw encodedRegionName in lastSeqWritten? name=" +
+          Bytes.toString(encodedRegionName) + ", seqid=" + l);
+       }
       this.cacheFlushLock.unlock();
     }
   }
