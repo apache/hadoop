@@ -210,42 +210,52 @@ to ensure well-formedness of your document after an edit session.
           <para>
               This version of HBase will only run on <link
         xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop
-        0.20.x</link>. It will not run on hadoop 0.21.x (nor 0.22.x).
+        0.20.x</link>. It will not run on hadoop 0.21.x (but may run on 0.22.x/0.23.x).
         HBase will lose data unless it is running on an HDFS that has a durable
-        <code>sync</code>. Hadoop 0.20.2 and Hadoop 0.20.203.0 DO NOT have this attribute.
-        Currently only the <link
-        xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
-        branch has this a working sync<footnote>
-            <para>See <link
-            xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</link>
-            in branch-0.20-append to see list of patches involved adding
-            append on the Hadoop 0.20 branch.</para>
-          </footnote>. No official releases have been made from the branch-0.20-append branch up
-        to now so you will have to build your own Hadoop from the tip of this
-        branch.  Michael Noll has written a detailed blog,
+        <code>sync</code>. Hadoop 0.20.2, Hadoop 0.20.203.0, and Hadoop 0.20.204.0
+	DO NOT have this attribute.
+        Currently only Hadoop versions 0.20.205.x or any release in excess of this
+        version has a durable sync.  You have to explicitly enable it though by
+        setting <varname>dfs.support.append</varname> equal to true on both
+        the client side -- in <filename>hbase-site.xml</filename> though it should
+        be on in your <filename>base-default.xml</filename> file -- and on the
+        serverside in <filename>hdfs-site.xml</filename> (You will have to restart
+        your cluster after setting this configuration).  Ignore the chicken-little
+        comment you'll find in the <filename>hdfs-site.xml</filename> in the
+        description for this configuration; it says it is not enabled because there
+        are <quote>... bugs in the 'append code' and is not supported in any production
+        cluster.</quote> because it is not true (I'm sure there are bugs but the
+        append code has been running in production at large scale deploys and is on
+        by default in the offerings of hadoop by commercial vendors)
+        <footnote><para>Until recently only the
+        <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
+        branch had a working sync but no official release was ever made from this branch.
+        You had to build it yourself. Michael Noll wrote a detailed blog,
         <link xlink:href="http://www.michael-noll.com/blog/2011/04/14/building-an-hadoop-0-20-x-version-for-hbase-0-90-2/">Building
         an Hadoop 0.20.x version for HBase 0.90.2</link>, on how to build an
-    Hadoop from branch-0.20-append.  Recommended <footnote><para>Praveen Kumar has written
+    Hadoop from branch-0.20-append.  Recommended.</para></footnote>
+    <footnote><para>Praveen Kumar has written
             a complimentary article,
             <link xlink:href="http://praveen.kumar.in/2011/06/20/building-hadoop-and-hbase-for-hbase-maven-application-development/">Building Hadoop and HBase for HBase Maven application development</link>.
-</para></footnote>.</para>
+</para></footnote><footnote>Cloudera have <varname>dfs.support.append</varname> set to true by default.</footnote>.</para>
 
-<para>Or rather than build your own, you could use the
+<para>Or use the
     <link xlink:href="http://www.cloudera.com/">Cloudera</link> or
     <link xlink:href="http://www.mapr.com/">MapR</link> distributions.
     Cloudera' <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>
-    is Apache Hadoop 0.20.x plus patches including all of the 0.20-append additions
-    needed to add a durable sync. Use the released version of CDH3 at least (They
-    have just posted an update).  MapR includes a commercial, reimplementation of HDFS.
+    is Apache Hadoop 0.20.x plus patches including all of the 
+    <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
+    additions needed to add a durable sync. Use the released, most recent version of CDH3.</para>
+    <para>
+    <link xlink:href="http://www.mapr.com/">MapR</link>
+    includes a commercial, reimplementation of HDFS.
     It has a durable sync as well as some other interesting features that are not
     yet in Apache Hadoop.  Their <link xlink:href="http://www.mapr.com/products/mapr-editions/m3-edition">M3</link>
     product is free to use and unlimited.
     </para>
 
         <para>Because HBase depends on Hadoop, it bundles an instance of the
-        Hadoop jar under its <filename>lib</filename> directory. The bundled
-        Hadoop was made from the Apache branch-0.20-append branch at the time
-        of the HBase's release.  The bundled jar is ONLY for use in standalone mode.
+        Hadoop jar under its <filename>lib</filename> directory. The bundled jar is ONLY for use in standalone mode.
         In distributed mode, it is <emphasis>critical</emphasis> that the version of Hadoop that is out
         on your cluster match what is under HBase.  Replace the hadoop jar found in the HBase
         <filename>lib</filename> directory with the hadoop jar you are running on
@@ -1114,7 +1124,16 @@ of all regions.
       
       </section>
 
+      <section xml:id="other_configuration"><title>Other Configurations</title>
+         <section xml:id="balancer_config"><title>Balancer</title>
+           <para>The balancer is periodic operation run on the master to redistribute regions on the cluster.  It is configured via
+           <varname>hbase.balancer.period</varname> and defaults to 300000 (5 minutes). </para>
+           <para>See <xref linkend="master.processes.loadbalancer" /> for more information on the LoadBalancer.
+           </para>
+         </section>
       </section>
+      
+      </section> <!--  important config -->
 
 	  <section xml:id="config.bloom">
 	    <title>Bloom Filter Configuration</title>

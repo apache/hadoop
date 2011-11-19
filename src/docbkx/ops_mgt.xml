@@ -108,13 +108,26 @@
 --peer.adr=server1,server2,server3:2181:/hbase TestTable</programlisting>
         </para>
     </section>
+    <section xml:id="export">
+       <title>Export</title>
+       <para>Export is a utility that will dump the contents of table to HDFS in a sequence file.  Invoke via:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Export &lt;tablename&gt; &lt;outputdir&gt; [&lt;versions&gt; [&lt;starttime&gt; [&lt;endtime&gt;]]]
+</programlisting>
+       </para>
+    </section>
+    <section xml:id="import">
+       <title>Import</title>
+       <para>Import is a utility that will load data that has been exported back into HBase.  Invoke via:
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
+</programlisting>
+       </para>
+    </section>
     <section xml:id="rowcounter">
        <title>RowCounter</title>
        <para>RowCounter is a utility that will count all the rows of a table.  This is a good utility to use
        as a sanity check to ensure that HBase can read all the blocks of a table if there are any concerns of metadata inconsistency.
-<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter
+<programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
 </programlisting>
-
        </para>
     </section>
            
@@ -252,15 +265,163 @@ false
     </section>
     </section>  <!--  node mgt -->
 
+  <section xml:id="hbase_metrics">
+  <title>Metrics</title>
+  <section xml:id="metric_setup">
+  <title>Metric Setup</title>
+  <para>See <link xlink:href="http://hbase.apache.org/metrics.html">Metrics</link> for
+  an introduction and how to enable Metrics emission.
+  </para>
+  </section>
+   <section xml:id="rs_metrics">
+   <title>RegionServer Metrics</title>
+          <section xml:id="hbase.regionserver.blockCacheCount"><title><varname>hbase.regionserver.blockCacheCount</varname></title>
+          <para>Block cache item count in memory.  This is the number of blocks of storefiles (HFiles) in the cache.</para>
+		  </section>
+         <section xml:id="hbase.regionserver.blockCacheFree"><title><varname>hbase.regionserver.blockCacheFree</varname></title>
+          <para>Block cache memory available (bytes).</para>
+		  </section>
+         <section xml:id="hbase.regionserver.blockCacheHitRatio"><title><varname>hbase.regionserver.blockCacheHitRatio</varname></title>
+          <para>Block cache hit ratio (0 to 100).  TODO:  describe impact to ratio where read requests that have cacheBlocks=false</para>
+		  </section>
+          <section xml:id="hbase.regionserver.blockCacheSize"><title><varname>hbase.regionserver.blockCacheSize</varname></title>
+          <para>Block cache size in memory (bytes).  i.e., memory in use by the BlockCache</para>
+		  </section>
+          <section xml:id="hbase.regionserver.compactionQueueSize"><title><varname>hbase.regionserver.compactionQueueSize</varname></title>
+          <para>Size of the compaction queue.  This is the number of stores in the region that have been targeted for compaction.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsReadLatency_avg_time"><title><varname>hbase.regionserver.fsReadLatency_avg_time</varname></title>
+          <para>Filesystem read latency (ms).  This is the average time to read from HDFS.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsReadLatency_num_ops"><title><varname>hbase.regionserver.fsReadLatency_num_ops</varname></title>
+          <para>TODO</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsSyncLatency_avg_time"><title><varname>hbase.regionserver.fsSyncLatency_avg_time</varname></title>
+          <para>Filesystem sync latency (ms)</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsSyncLatency_num_ops"><title><varname>hbase.regionserver.fsSyncLatency_num_ops</varname></title>
+          <para>TODO</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsWriteLatency_avg_time"><title><varname>hbase.regionserver.fsWriteLatency_avg_time</varname></title>
+          <para>Filesystem write latency (ms)</para>
+		  </section>
+          <section xml:id="hbase.regionserver.fsWriteLatency_num_ops"><title><varname>hbase.regionserver.fsWriteLatency_num_ops</varname></title>
+          <para>TODO</para>
+		  </section>
+          <section xml:id="hbase.regionserver.memstoreSizeMB"><title><varname>hbase.regionserver.memstoreSizeMB</varname></title>
+          <para>Sum of all the memstore sizes in this RegionServer (MB)</para>
+		  </section>
+          <section xml:id="hbase.regionserver.regions"><title><varname>hbase.regionserver.regions</varname></title>
+          <para>Number of regions served by the RegionServer</para>
+		  </section>
+          <section xml:id="hbase.regionserver.requests"><title><varname>hbase.regionserver.requests</varname></title>
+          <para>Total number of read and write requests.  Requests correspond to RegionServer RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000 will result in 1 request for each 'next' call (i.e., not each row).  A bulk-load request will constitute 1 request per HFile.</para>
+		  </section>
+          <section xml:id="hbase.regionserver.storeFileIndexSizeMB"><title><varname>hbase.regionserver.storeFileIndexSizeMB</varname></title>
+          <para>Sum of all the storefile index sizes in this RegionServer (MB)</para>
+		  </section>
+          <section xml:id="hbase.regionserver.stores"><title><varname>hbase.regionserver.stores</varname></title>
+          <para>Number of stores open on the RegionServer.  A store corresponds to a column family.  For example, if a table (which contains the column family) has 3 regions on a RegionServer, there will be 3 stores open for that column family. </para>
+		  </section>
+          <section xml:id="hbase.regionserver.storeFiles"><title><varname>hbase.regionserver.storeFiles</varname></title>
+          <para>Number of store filles open on the RegionServer.  A store may have more than one storefile (HFile).</para>
+		  </section>
+   </section>
+  </section>
+
   <section xml:id="ops.monitoring">
     <title >HBase Monitoring</title>
     <para>TODO
     </para>
   </section>
+  
+  <section xml:id="cluster_replication">
+    <title>Cluster Replication</title>
+    <para>See <link xlink:href="http://hbase.apache.org/replication.html">Cluster Replication</link>.
+    </para>
+  </section>
+  
   <section xml:id="ops.backup">
     <title >HBase Backup</title>
-    <para>See <link xlink:href="http://blog.sematext.com/2011/03/11/hbase-backup-options/">HBase Backup Options</link> over on the Sematext Blog.
+    <para>There are two broad strategies for performing HBase backups: backing up with a full cluster shutdown, and backing up on a live cluster. 
+    Each approach has pros and cons.   
     </para>
+    <para>For additional information, see <link xlink:href="http://blog.sematext.com/2011/03/11/hbase-backup-options/">HBase Backup Options</link> over on the Sematext Blog.
+    </para>
+    <section xml:id="ops.backup.fullshutdown"><title>Full Shutdown Backup</title>
+      <para>Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used a back-end analytic capacity
+      and not serving front-end web-pages.  The benefits are that the NameNode/Master are RegionServers are down, so there is no chance of missing
+      any in-flight changes to either StoreFiles or metadata.  The obvious con is that the cluster is down.  The steps include:
+      </para>
+      <section xml:id="ops.backup.fullshutdown.stop"><title>Stop HBase</title>
+        <para>
+        </para>
+      </section>
+      <section xml:id="ops.backup.fullshutdown.distcp"><title>Distcp</title>
+        <para>Distcp could be used to either copy the contents of the HBase directory in HDFS to either the same cluster in another directory, or 
+        to a different cluster.
+        </para>
+        <para>Note:  Distcp works in this situation because the cluster is down and there are no in-flight edits to files.  
+        Distcp-ing of files in the HBase directory is not generally recommended on a live cluster.
+        </para>
+      </section>
+      <section xml:id="ops.backup.fullshutdown.restore"><title>Restore (if needed)</title>
+        <para>The backup of the hbase directory from HDFS is copied onto the 'real' hbase directory via distcp.  The act of copying these files 
+        creates new HDFS metadata, which is why a restore of the NameNode edits from the time of the HBase backup isn't required for this kind of
+        restore, because it's a restore (via distcp) of a specific HDFS directory (i.e., the HBase part) not the entire HDFS file-system.
+        </para>
+      </section>
+    </section>
+    <section xml:id="ops.backup.live.replication"><title>Live Cluster Backup - Replication</title>
+      <para>This approach assumes that there is a second cluster.  
+      See the HBase page on <link xlink:href="http://hbase.apache.org/replication.html">replication</link> for more information.
+      </para>
+    </section>
+    <section xml:id="ops.backup.live.copytable"><title>Live Cluster Backup - CopyTable</title>
+      <para>The <xref linkend="copytable" /> utility could either be used to copy data from one table to another on the 
+      same cluster, or to copy data to another table on another cluster.
+      </para>
+      <para>Since the cluster is up, there is a risk that edits could be missed in the copy process.
+      </para>
+    </section>
+    <section xml:id="ops.backup.live.export"><title>Live Cluster Backup - Export</title>
+      <para>The <xref linkend="export" /> approach dumps the content of a table to HDFS on the same cluster.  To restore the data, the
+      <xref linkend="import" /> utility would be used.
+      </para>
+      <para>Since the cluster is up, there is a risk that edits could be missed in the export process.
+      </para>
+    </section>
+  </section>  <!--  backup -->
+  <section xml:id="ops.capacity"><title>Capacity Planning</title>
+    <section xml:id="ops.capacity.storage"><title>Storage</title>
+      <para>A common question for HBase administrators is estimating how much storage will be required for an HBase cluster.
+      There are several apsects to consider, the most important of which is what data load into the cluster.  Start
+      with a solid understanding of how HBase handles data internally (KeyValue).
+      </para>
+      <section xml:id="ops.capacity.storage.kv"><title>KeyValue</title>
+        <para>HBase storage will be dominated by KeyValues.  See <xref linkend="keyvalue" /> and <xref linkend="keysize" /> for 
+        how HBase stores data internally.  
+        </para>
+        <para>It is critical to understand that there is a KeyValue instance for every attribute stored in a row, and the 
+        rowkey-length, ColumnFamily name-length and attribute lengths will drive the size of the database more than any other
+        factor.
+        </para>
+      </section>
+      <section xml:id="ops.capacity.storage.sf"><title>StoreFiles and Blocks</title>
+        <para>KeyValue instances are aggregated into blocks, and the blocksize is configurable on a per-ColumnFamily basis.
+        Blocks are aggregated into StoreFile's.  See <xref linkend="regions.arch" />.
+        </para>
+      </section>
+      <section xml:id="ops.capacity.storage.hdfs"><title>HDFS Block Replication</title>
+        <para>Because HBase runs on top of HDFS, factor in HDFS block replication into storage calculations.
+        </para>
+      </section>
+    </section>
+    <section xml:id="ops.capacity.regions"><title>Regions</title>
+      <para>Another common question for HBase administrators is determining the right number of regions per
+      RegionServer.  This affects both storage and hardware planning. See <xref linkend="perf.number.of.regions" />.
+      </para>
+    </section>
   </section>
 
 </chapter>

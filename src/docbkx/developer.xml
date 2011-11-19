@@ -26,8 +26,9 @@
  * limitations under the License.
  */
 -->
-    <title>Developing HBase</title>
-    <para>This chapter will be of interest only to those developing HBase (i.e., as opposed to using it).
+    <title>Building and Developing HBase</title>
+    <para>This chapter will be of interest only to those building and developing HBase (i.e., as opposed to
+    just downloading the latest distribution).
     </para>
     <section xml:id="repos">
       <title>HBase Repositories</title>
@@ -43,7 +44,8 @@ svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk
 git clone git://git.apache.org/hbase.git
         </programlisting>
       </section>         
-    </section>         
+    </section>    
+             
     <section xml:id="ides"> 
         <title>IDEs</title>
         <section xml:id="eclipse">
@@ -115,11 +117,56 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
              </section>
         </section>
     </section> 
+    
+        <section xml:id="build">
+       <title>Building HBase</title>
+      <para>This section will be of interest only to those building HBase from source.
+      </para>
+      <section xml:id="build.snappy">
+        <title>Building in snappy compression support</title>
+        <para>Pass <code>-Dsnappy</code> to trigger the snappy maven profile for building
+            snappy native libs into hbase.</para>
+      </section>
+
+      <section xml:id="mvn_repo">
+        <title>Adding an HBase release to Apache's Maven Repository</title>
+        <para>Follow the instructions at
+        <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link>.
+            The 'trick' to making it all work is answering the questions put to you by the mvn release plugin properly,
+            making sure it is using the actual branch AND before doing the <command>mvn release:perform</command> step,
+            VERY IMPORTANT, hand edit the release.properties file that was put under <varname>${HBASE_HOME}</varname>
+            by the previous step, <command>release:perform</command>. You need to edit it to make it point at
+            right locations in SVN.
+        </para>
+        <para>If you see run into the below, its because you need to edit version in the pom.xml and add
+        <code>-SNAPSHOT</code> to the version (and commit).
+        <programlisting>[INFO] Scanning for projects...
+[INFO] Searching repository for plugin with prefix: 'release'.
+[INFO] ------------------------------------------------------------------------
+[INFO] Building HBase
+[INFO]    task-segment: [release:prepare] (aggregator-style)
+[INFO] ------------------------------------------------------------------------
+[INFO] [release:prepare {execution: default-cli}]
+[INFO] ------------------------------------------------------------------------
+[ERROR] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] You don't have a SNAPSHOT project in the reactor projects list.
+[INFO] ------------------------------------------------------------------------
+[INFO] For more information, run Maven with the -e switch
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 3 seconds
+[INFO] Finished at: Sat Mar 26 18:11:07 PDT 2011
+[INFO] Final Memory: 35M/423M
+[INFO] -----------------------------------------------------------------------</programlisting>
+        </para>
+      </section>
+    </section> <!--  build -->
+    
     <section xml:id="maven.build.commands"> 
        <title>Maven Build Commands</title>
        <para>All commands executed from the local HBase project directory.
        </para>
-       <para>Note:  use Maven 2, not Maven 3.
+       <para>Note: use Maven 3 (Maven 2 may work but we suggest you use Maven 3).
        </para>
        <section xml:id="maven.build.commands.compile"> 
           <title>Compile</title>
@@ -139,12 +186,33 @@ mvn test
 mvn test -Dtest=TestXYZ
           </programlisting>
        </section>       
-           
+       <section xml:id="maven.build.commands.unit2"> 
+          <title>Run a Few Unit Tests</title>
+          <programlisting>
+mvn test -Dtest=TestXYZ,TestABC
+          </programlisting>
+       </section>       
+       <section xml:id="maven.build.commands.unit.package"> 
+          <title>Run all Unit Tests for a Package</title>
+          <programlisting>
+mvn test -Dtest=org.apache.hadoop.hbase.client.*
+          </programlisting>
+       </section>
+       <section xml:id="maven.build.commanas.integration.tests"> 
+          <title>Integration Tests</title>
+          <para>HBase 0.92 added a <varname>verify</varname> maven target. Invoking it with run all the phases up to and including the verify phase via the maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>, running all the unit tests as well as the long running unit and integration tests.
+          </para>
+          <programlisting>
+mvn verify
+          </programlisting>
+      </section>
     </section>
   
     <section xml:id="getting.involved"> 
         <title>Getting Involved</title>
         <para>HBase gets better only when people contribute!
+        </para>
+        <para>As HBase is an Apache Software Foundation project, see <xref linkend="asf"/> for more information about how the ASF functions.
         </para>
         <section xml:id="mailing.list">
           <title>Mailing Lists</title>
@@ -172,7 +240,18 @@ mvn test -Dtest=TestXYZ
                 </itemizedlist>  
              </para> 
         </section>
-       </section>
+        <section xml:id="submitting.patches.jira.code">
+          <title>Code Blocks in Jira Comments</title>
+          <para>A commonly used macro in Jira is {code}. If you do this in a Jira comment...
+<programlisting>
+{code}
+   code snippet
+{code}
+</programlisting>
+              ... Jira will format the code snippet like code, instead of a regular comment.  It improves readability.
+          </para>
+        </section>
+       </section>  <!--  jira -->
       </section>  <!--  getting involved -->
       
       <section xml:id="developing">
@@ -371,6 +450,9 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
          <section xml:id="reviewboard">
             <title>ReviewBoard</title>
           <para>Larger patches should go through <link xlink:href="http://reviews.apache.org">ReviewBoard</link>.
+          </para>
+          <para>For more information on how to use ReviewBoard, see
+           <link xlink:href="http://www.reviewboard.org/docs/manual/1.5/">the ReviewBoard documentation</link>.
           </para>
         </section> 
         <section xml:id="committing.patches">

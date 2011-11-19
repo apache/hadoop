@@ -140,6 +140,14 @@
       <para>The number of regions for an HBase table is driven by the <xref
               linkend="bigger.regions" />. Also, see the architecture
           section on <xref linkend="arch.regions.size" /></para>
+       <para>A lower number of regions is preferred, generally in the range of 20 to low-hundreds
+       per RegionServer.  Adjust the regionsize as appropriate to achieve this number. 
+       </para>
+       <para>For the 0.90.x codebase, the upper-bound of regionsize is about 4Gb.
+       For 0.92.x codebase, due to the HFile v2 change much larger regionsizes can be supported (e.g., 20Gb).
+       </para>
+       <para>You may need to experiment with this setting based on your hardware configuration and application needs.
+       </para>
     </section>
 
     <section xml:id="perf.compactions.and.splits">
@@ -148,12 +156,6 @@
       <para>For larger systems, managing <link
       linkend="disable.splitting">compactions and splits</link> may be
       something you want to consider.</para>
-    </section>
-
-    <section xml:id="perf.compression">
-      <title>Compression</title>
-      <para>Production systems should use compression with their column family definitions.  See <xref linkend="compression" /> for more information.
-      </para>
     </section>
 
     <section xml:id="perf.handlers">
@@ -213,7 +215,52 @@
       <title>Key and Attribute Lengths</title>
       <para>See <xref linkend="keysize" />.</para>
     </section>
-  </section>
+    <section xml:id="schema.regionsize"><title>Table RegionSize</title>
+    <para>The regionsize can be set on a per-table basis via <code>setFileSize</code> on
+    <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HTableDescriptor.html">HTableDescriptor</link> in the 
+    event where certain tables require different regionsizes than the configured default regionsize.
+    </para>
+    <para>See <xref linkend="perf.number.of.regions"/> for more information.
+    </para>
+    </section>
+    <section xml:id="schema.bloom">
+    <title>Bloom Filters</title>
+    <para>Bloom Filters can be enabled per-ColumnFamily.
+        Use <code>HColumnDescriptor.setBloomFilterType(NONE | ROW |
+        ROWCOL)</code> to enable blooms per Column Family. Default =
+        <varname>NONE</varname> for no bloom filters. If
+        <varname>ROW</varname>, the hash of the row will be added to the bloom
+        on each insert. If <varname>ROWCOL</varname>, the hash of the row +
+        column family + column family qualifier will be added to the bloom on
+        each key insert.</para>
+    <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> and 
+    <xref linkend="blooms"/> for more information.
+    </para>
+    </section>
+    <section xml:id="schema.cf.blocksize"><title>ColumnFamily BlockSize</title>
+    <para>The blocksize can be configured for each ColumnFamily in a table, and this defaults to 64k.  Larger cell values require larger blocksizes. 
+    There is an inverse relationship between blocksize and the resulting StoreFile indexes (i.e., if the blocksize is doubled then the resulting
+    indexes should be roughly halved).
+    </para>
+    <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> 
+    and <xref linkend="store"/>for more information.
+    </para>
+    </section>
+    <section xml:id="cf.in.memory">
+    <title>In-Memory ColumnFamilies</title>
+    <para>ColumnFamilies can optionally be defined as in-memory.  Data is still persisted to disk, just like any other ColumnFamily.  
+    In-memory blocks have the highest priority in the <xref linkend="block.cache" />, but it is not a guarantee that the entire table
+    will be in memory.
+    </para>
+    <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link> for more information.
+    </para>
+    </section>
+    <section xml:id="perf.compression">
+      <title>Compression</title>
+      <para>Production systems should use compression with their ColumnFamily definitions.  See <xref linkend="compression" /> for more information.
+      </para>
+    </section>
+  </section>  <!--  perf schema -->
   
   <section xml:id="perf.writing">
     <title>Writing to HBase</title>
@@ -348,6 +395,18 @@ Deferred log flush can be configured on tables via <link
       rows at a time to the client to be processed. There is a cost/benefit to
       have the cache value be large because it costs more in memory for both
       client and RegionServer, so bigger isn't always better.</para>
+      <section xml:id="perf.hbase.client.caching.mr">
+        <title>Scan Caching in MapReduce Jobs</title>
+        <para>Scan settings in MapReduce jobs deserve special attention.  Timeouts can result (e.g., UnknownScannerException)
+        in Map tasks if it takes longer to process a batch of records before the client goes back to the RegionServer for the
+        next set of data.  This problem can occur because there is non-trivial processing occuring per row.  If you process
+        rows quickly, set caching higher.  If you process rows more slowly (e.g., lots of transformations per row, writes), 
+        then set caching lower.
+        </para>
+        <para>Timeouts can also happen in a non-MapReduce use case (i.e., single threaded HBase client doing a Scan), but the
+        processing that is often performed in MapReduce jobs tends to exacerbate this issue.
+        </para>
+      </section>
     </section>
     <section xml:id="perf.hbase.client.selection">
       <title>Scan Attribute Selection</title>
@@ -431,4 +490,35 @@ htable.close();</programlisting></para>
        </para>
      </section>
   </section>  <!--  deleting -->
+
+  <section xml:id="perf.hdfs"><title>HDFS</title>
+   <para>Because HBase runs on <xref linkend="arch.hdfs" /> it is important to understand how it works and how it affects
+   HBase.
+   </para>
+    <section xml:id="perf.hdfs.curr"><title>Current Issues With Low-Latency Reads</title>
+      <para>The original use-case for HDFS was batch processing.  As such, there low-latency reads were historically not a priority.
+      With the increased adoption of HBase this is changing, and several improvements are already in development.
+      See the 
+      <link xlink:href="https://issues.apache.org/jira/browse/HDFS-1599">Umbrella Jira Ticket for HDFS Improvements for HBase</link>.
+      </para>
+    </section>
+    <section xml:id="perf.hdfs.comp"><title>Performance Comparisons of HBase vs. HDFS</title>
+     <para>A fairly common question on the dist-list is why HBase isn't as performant as HDFS files in a batch context (e.g., as 
+     a MapReduce source or sink).  The short answer is that HBase is doing a lot more than HDFS (e.g., reading the KeyValues, 
+     returning the most current row or specified timestamps, etc.), and as such HBase is 4-5 times slower than HDFS in this 
+     processing context.  Not that there isn't room for improvement (and this gap will, over time, be reduced), but HDFS
+      will always be faster in this use-case.
+     </para>
+    </section>
+  </section>
+  
+  <section xml:id="perf.ec2"><title>Amazon EC2</title>
+   <para>Performance questions are common on Amazon EC2 environments because it is a shared environment.  You will
+   not see the same throughput as a dedicated server.  In terms of running tests on EC2, run them several times for the same
+   reason (i.e., it's a shared environment and you don't know what else is happening on the server).
+   </para>
+   <para>If you are running on EC2 and post performance questions on the dist-list, please state this fact up-front that
+    because EC2 issues are practically a separate class of performance issues.
+   </para>
+  </section>
 </chapter>

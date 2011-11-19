@@ -461,12 +461,16 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
     
     <section xml:id="trouble.client">
       <title>Client</title>
+       <para>For more information on the HBase client, see <xref linkend="client"/>. 
+       </para>
        <section xml:id="trouble.client.scantimeout">
-            <title>ScannerTimeoutException</title>
+            <title>ScannerTimeoutException or UnknownScannerException</title>
             <para>This is thrown if the time between RPC calls from the client to RegionServer exceeds the scan timeout.  
             For example, if <code>Scan.setCaching</code> is set to 500, then there will be an RPC call to fetch the next batch of rows every 500 <code>.next()</code> calls on the ResultScanner
             because data is being transferred in blocks of 500 rows to the client.  Reducing the setCaching value may be an option, but setting this value too low makes for inefficient
             processing on numbers of rows.
+            </para>
+            <para>See <xref linkend="perf.hbase.client.caching"/>.
             </para>
        </section>    
        <section xml:id="trouble.client.scarylogs">
@@ -523,12 +527,16 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
     </section>
     <section xml:id="trouble.namenode">
       <title>NameNode</title>
+       <para>For more information on the NameNode, see <xref linkend="arch.hdfs"/>. 
+       </para>
        <section xml:id="trouble.namenode.disk">
             <title>HDFS Utilization of Tables and Regions</title>
             <para>To determine how much space HBase is using on HDFS use the <code>hadoop</code> shell commands from the NameNode.  For example... </para>
             <para><programlisting>hadoop fs -dus /hbase/</programlisting> ...returns the summarized disk utilization for all HBase objects.  </para>
             <para><programlisting>hadoop fs -dus /hbase/myTable</programlisting> ...returns the summarized disk utilization for the HBase table 'myTable'. </para>
             <para><programlisting>hadoop fs -du /hbase/myTable</programlisting> ...returns a list of the regions under the HBase table 'myTable' and their disk utilization. </para>
+            <para>For more information on HDFS shell commands, see the <link xlink:href="http://hadoop.apache.org/common/docs/current/file_system_shell.html">HDFS FileSystem Shell documentation</link>.
+            </para>
        </section>    
        <section xml:id="trouble.namenode.hbase.objects">
             <title>Browsing HDFS for HBase Objects</title>
@@ -552,6 +560,9 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
                <filename>/&lt;HLog&gt;</filename>           (WAL HLog files for the RegionServer)
             </programlisting>
             </para>
+		    <para>See the <link xlink:href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic 
+		    utilities like <code>fsck</code>. 
+            </para>
           <section xml:id="trouble.namenode.uncompaction">
             <title>Use Cases</title>
               <para>Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.  If there are a large number of StoreFiles for each ColumnFamily it could 
@@ -565,6 +576,8 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S&lt;l  Mar04 9855:48 /usr/java/j
         
     <section xml:id="trouble.rs">
       <title>RegionServer</title>
+        <para>For more information on the RegionServers, see <xref linkend="regionserver.arch"/>. 
+       </para>
       <section xml:id="trouble.rs.startup">
         <title>Startup Errors</title>
           <section xml:id="trouble.rs.startup.master-no-region">
@@ -747,6 +760,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
 
     <section xml:id="trouble.master">
       <title>Master</title>
+       <para>For more information on the Master, see <xref linkend="master"/>. 
+       </para>
       <section xml:id="trouble.master.startup">
         <title>Startup Errors</title>
           <section xml:id="trouble.master.startup.migration">
@@ -812,6 +827,13 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
              <para>Questions on HBase and Amazon EC2 come up frequently on the HBase dist-list. Search for old threads using <link xlink:href="http://search-hadoop.com/">Search Hadoop</link>
              </para>
           </section>
+          <section xml:id="trouble.ec2.connection">
+             <title>Remote Java Connection into EC2 Cluster Not Working</title>
+             <para>
+             See Andrew's answer here, up on the user list: <link xlink:href="http://search-hadoop.com/m/sPdqNFAwyg2">Remote Java client connection into EC2 instance</link>.
+             </para>
+          </section>
+          
     </section>
     
   </chapter>
