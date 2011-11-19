@@ -87,6 +87,10 @@ module Shell
       @hbase_replication_admin ||= hbase.replication_admin(formatter)
     end
 
+    def hbase_security_admin
+      @hbase_security_admin ||= hbase.security_admin(formatter)
+    end
+
     def export_commands(where)
       ::Shell.commands.keys.each do |cmd|
         where.send :instance_eval, <<-EOF
@@ -281,6 +285,17 @@ Shell.load_command_group(
     disable_peer
     start_replication
     stop_replication
+  ]
+)
+
+Shell.load_command_group(
+  'security',
+  :full_name => 'SECURITY TOOLS',
+  :comment => "NOTE: Above commands are only applicable if running with the AccessController coprocessor",
+  :commands => %w[
+    grant
+    revoke
+    user_permission
   ]
 )
 

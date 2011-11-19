@@ -22,6 +22,7 @@ include Java
 
 require 'hbase/admin'
 require 'hbase/table'
+require 'hbase/security'
 
 module Hbase
   class Hbase
@@ -52,5 +53,8 @@ module Hbase
       ::Hbase::RepAdmin.new(configuration, formatter)
     end
 
+    def security_admin(formatter)
+      ::Hbase::SecurityAdmin.new(configuration, formatter)
+    end
   end
 end

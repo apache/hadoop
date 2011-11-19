@@ -48,10 +48,10 @@ import java.io.IOException;
  */
 public abstract class BaseRegionObserver implements RegionObserver {
   @Override
-  public void start(CoprocessorEnvironment e) { }
+  public void start(CoprocessorEnvironment e) throws IOException { }
 
   @Override
-  public void stop(CoprocessorEnvironment e) { }
+  public void stop(CoprocessorEnvironment e) throws IOException { }
 
   @Override
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e) { }

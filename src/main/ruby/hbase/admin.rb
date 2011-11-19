@@ -281,7 +281,6 @@ module Hbase
       @admin.createTable(table_description)
     end
 
-    #----------------------------------------------------------------------------------------------
     # Check the status of alter command (number of regions reopened)
     def alter_status(table_name)
       # Table name should be a string
@@ -328,7 +327,17 @@ module Hbase
 
         # No method parameter, try to use the args as a column definition
         unless method = arg.delete(METHOD)
+          # Note that we handle owner here, and also below (see (2)) as part of the "METHOD => 'table_att'" table attributes.
+          # In other words, if OWNER is specified, then METHOD is set to table_att.
+          #   alter 'tablename', {OWNER => 'username'} (that is, METHOD => 'table_att' is not specified).
+          if arg[OWNER]
+            htd.setOwnerString(arg[OWNER])
+            @admin.modifyTable(table_name.to_java_bytes, htd)
+            return
+          end
+
           descriptor = hcd(arg, htd)
+
           if arg[COMPRESSION_COMPACT]
             descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
           end
@@ -368,6 +377,8 @@ module Hbase
           htd.setReadOnly(JBoolean.valueOf(arg[READONLY])) if arg[READONLY]
           htd.setMemStoreFlushSize(JLong.valueOf(arg[MEMSTORE_FLUSHSIZE])) if arg[MEMSTORE_FLUSHSIZE]
           htd.setDeferredLogFlush(JBoolean.valueOf(arg[DEFERRED_LOG_FLUSH])) if arg[DEFERRED_LOG_FLUSH]
+          # (2) Here, we handle the alternate syntax of ownership setting, where method => 'table_att' is specified.
+          htd.setOwnerString(arg[OWNER]) if arg[OWNER]
 
           # set a coprocessor attribute
           if arg.kind_of?(Hash)

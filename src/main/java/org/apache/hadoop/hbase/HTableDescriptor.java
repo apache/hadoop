@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -80,7 +81,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
   private static final ImmutableBytesWritable MAX_FILESIZE_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(MAX_FILESIZE));
-  
+
+  public static final String OWNER = "OWNER";
+  public static final ImmutableBytesWritable OWNER_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(OWNER));
+
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata 
    * attribute which denotes if the table is Read Only
@@ -90,7 +95,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String READONLY = "READONLY";
   private static final ImmutableBytesWritable READONLY_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(READONLY));
-  
+
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata 
    * attribute which represents the maximum size of the memstore after which 
@@ -101,7 +106,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String MEMSTORE_FLUSHSIZE = "MEMSTORE_FLUSHSIZE";
   private static final ImmutableBytesWritable MEMSTORE_FLUSHSIZE_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
-  
+
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata 
    * attribute which denotes if the table is a -ROOT- region or not
@@ -111,7 +116,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final String IS_ROOT = "IS_ROOT";
   private static final ImmutableBytesWritable IS_ROOT_KEY =
     new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
-  
+
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata 
    * attribute which denotes if it is a catalog table, either
@@ -1064,7 +1069,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
       HConstants.ROOT_TABLE_NAME,
       new HColumnDescriptor[] { new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-          10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+          10,  // Ten is arbitrary number.  Keep versions to help debugging.
           Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
           HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),  
           HConstants.REPLICATION_SCOPE_LOCAL) });
@@ -1073,8 +1078,31 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
           new HColumnDescriptor(HConstants.CATALOG_FAMILY,
-            10, // Ten is arbitrary number.  Keep versions to help debuggging.
+            10, // Ten is arbitrary number.  Keep versions to help debugging.
             Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
             HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
             HConstants.REPLICATION_SCOPE_LOCAL)});
+
+
+  public void setOwner(User owner) {
+    setOwnerString(owner != null ? owner.getShortName() : null);
+  }
+
+  // used by admin.rb:alter(table_name,*args) to update owner.
+  public void setOwnerString(String ownerString) {
+    if (ownerString != null) {
+      setValue(OWNER_KEY, Bytes.toBytes(ownerString));
+    } else {
+      values.remove(OWNER_KEY);
+    }
+  }
+
+  public String getOwnerString() {
+    if (getValue(OWNER_KEY) != null) {
+      return Bytes.toString(getValue(OWNER_KEY));
+    }
+    // Note that every table should have an owner (i.e. should have OWNER_KEY set).
+    // .META. and -ROOT- should return system user as owner, not null (see MasterFileSystem.java:bootstrap()).
+    return null;
+  }
 }

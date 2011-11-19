@@ -53,6 +53,10 @@ module Shell
         shell.hbase_replication_admin
       end
 
+      def security_admin
+        shell.hbase_security_admin
+      end
+
       #----------------------------------------------------------------------
 
       def formatter

@@ -622,6 +622,12 @@
   </property>
 
   <property>
+    <name>zookeeper.znode.acl.parent</name>
+    <value>acl</value>
+    <description>Root ZNode for access control lists.</description>
+  </property>
+  
+  <property>
     <name>hbase.coprocessor.region.classes</name>
     <value></value>
     <description>A comma-separated list of Coprocessors that are loaded by

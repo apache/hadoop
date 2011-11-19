@@ -381,6 +381,9 @@ public class ZKUtil {
     public String toString() {
       return node + " (" + RegionTransitionData.fromBytes(data) + ")";
     }
+    public boolean isEmpty() {
+      return (data.length == 0);
+    }
   }
 
   /**
