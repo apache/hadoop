@@ -18,37 +18,31 @@
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
     <version>0.24.0-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-tools</artifactId>
+  <artifactId>hadoop-mapreduce-examples</artifactId>
   <version>0.24.0-SNAPSHOT</version>
-  <description>Apache Hadoop Tools</description>
-  <name>Apache Hadoop Tools</name>
-  <packaging>pom</packaging>
+  <description>Apache Hadoop MapReduce Examples</description>
+  <name>Apache Hadoop MapReduce Examples</name>
+  <packaging>jar</packaging>
 
-  <modules>
-    <module>hadoop-streaming</module>
-  </modules>
-
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>pom.xml</include>
-          </includes>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
 
 </project>
