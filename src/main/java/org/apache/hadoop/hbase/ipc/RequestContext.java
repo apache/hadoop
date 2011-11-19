@@ -46,7 +46,7 @@ public class RequestContext {
   /**
    * Returns the user credentials associated with the current RPC request or
    * <code>null</code> if no credentials were provided.
-   * @return
+   * @return A User
    */
   public static User getRequestUser() {
     RequestContext ctx = instance.get();

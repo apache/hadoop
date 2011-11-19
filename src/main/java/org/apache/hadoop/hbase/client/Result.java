@@ -60,8 +60,8 @@ import org.apache.hadoop.io.Writable;
  * A Result is backed by an array of {@link KeyValue} objects, each representing
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
  *
- * The underlying {@link KeyValue} objects can be accessed through the methods
- * {@link #sorted()} and {@link #list()}.  Each KeyValue can then be accessed
+ * The underlying {@link KeyValue} objects can be accessed through the method {@link #list()}.
+ * Each KeyValue can then be accessed
  * through {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.
  */

@@ -168,7 +168,6 @@ implements Configurable {
    * Overrides previous calls to addFamily for any families in the input.
    *
    * @param columns array of columns, formatted as <pre>family:qualifier</pre>
-   * @return this
    */
   public static void addColumns(Scan scan, byte [][] columns) {
     for (byte[] column : columns) {

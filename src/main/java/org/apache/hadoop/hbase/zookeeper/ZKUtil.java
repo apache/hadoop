@@ -580,7 +580,7 @@ public class ZKUtil {
    * children, an empty list will be returned.
    *
    * @param zkw zk reference
-   * @param znode path of node to list and watch children of
+   * @param baseNode path of node to list and watch children of
    * @return list of data of children of the specified node, an empty list if the node
    *          exists but has no children, and null if the node does not exist
    * @throws KeeperException if unexpected zookeeper exception
