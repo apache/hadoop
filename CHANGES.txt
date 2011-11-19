@@ -37,6 +37,8 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-3343. TaskTracker Out of Memory because of distributed cache.
     (Zhao Yunjiong).
+    
+    HADOOP-7297. Remove docs for CN and BN, as they aren't present. (harsh)
 
   IMPROVEMENTS
 

@@ -112,25 +112,9 @@
     		problems.
     	</li>
     	<li>
-    		Secondary NameNode (deprecated): performs periodic checkpoints of the 
+    		Secondary NameNode: performs periodic checkpoints of the
     		namespace and helps keep the size of file containing log of HDFS 
     		modifications within certain limits at the NameNode.
-    		Replaced by Checkpoint node.
-    	</li>
-    	<li>
-    		Checkpoint node: performs periodic checkpoints of the namespace and
-    		helps minimize the size of the log stored at the NameNode 
-    		containing changes to the HDFS.
-    		Replaces the role previously filled by the Secondary NameNode. 
-    		NameNode allows multiple Checkpoint nodes simultaneously, 
-    		as long as there are no Backup nodes registered with the system.
-    	</li>
-    	<li>
-    		Backup node: An extension to the Checkpoint node.
-    		In addition to checkpointing it also receives a stream of edits 
-    		from the NameNode and maintains its own in-memory copy of the namespace,
-    		which is always in sync with the active NameNode namespace state.
-    		Only one Backup node may be registered with the NameNode at once.
     	</li>
       </ul>
     </li>
@@ -232,12 +216,6 @@
    
    </section> 
 	<section> <title>Secondary NameNode</title>
-   <note>
-   The Secondary NameNode has been deprecated. 
-   Instead, consider using the 
-   <a href="hdfs_user_guide.html#Checkpoint+Node">Checkpoint Node</a> or 
-   <a href="hdfs_user_guide.html#Backup+Node">Backup Node</a>.
-   </note>
    <p>	
      The NameNode stores modifications to the file system as a log
      appended to a native file system file, <code>edits</code>. 
@@ -283,114 +261,6 @@
    <p>
      For command usage, see  
      <a href="commands_manual.html#secondarynamenode">secondarynamenode</a>.
-   </p>
-   
-   </section><section> <title> Checkpoint Node </title>
-   <p>NameNode persists its namespace using two files: <code>fsimage</code>,
-      which is the latest checkpoint of the namespace and <code>edits</code>,
-      a journal (log) of changes to the namespace since the checkpoint.
-      When a NameNode starts up, it merges the <code>fsimage</code> and
-      <code>edits</code> journal to provide an up-to-date view of the
-      file system metadata.
-      The NameNode then overwrites <code>fsimage</code> with the new HDFS state 
-      and begins a new <code>edits</code> journal. 
-   </p>
-   <p>
-     The Checkpoint node periodically creates checkpoints of the namespace. 
-     It downloads <code>fsimage</code> and <code>edits</code> from the active 
-     NameNode, merges them locally, and uploads the new image back to the 
-     active NameNode.
-     The Checkpoint node usually runs on a different machine than the NameNode
-     since its memory requirements are on the same order as the NameNode.
-     The Checkpoint node is started by 
-     <code>bin/hdfs namenode -checkpoint</code> on the node 
-     specified in the configuration file.
-   </p>
-   <p>The location of the Checkpoint (or Backup) node and its accompanying 
-      web interface are configured via the <code>dfs.backup.address</code> 
-      and <code>dfs.backup.http.address</code> configuration variables.
-	 </p>
-   <p>
-     The start of the checkpoint process on the Checkpoint node is 
-     controlled by two configuration parameters.
-   </p>
-   <ul>
-      <li>
-        <code>fs.checkpoint.period</code>, set to 1 hour by default, specifies
-        the maximum delay between two consecutive checkpoints 
-      </li>
-      <li>
-        <code>fs.checkpoint.size</code>, set to 64MB by default, defines the
-        size of the edits log file that forces an urgent checkpoint even if 
-        the maximum checkpoint delay is not reached.
-      </li>
-   </ul>
-   <p>
-     The Checkpoint node stores the latest checkpoint in a  
-     directory that is structured the same as the NameNode's
-     directory. This allows the checkpointed image to be always available for
-     reading by the NameNode if necessary.
-     See <a href="hdfs_user_guide.html#Import+Checkpoint">Import Checkpoint</a>.
-   </p>
-   <p>Multiple checkpoint nodes may be specified in the cluster configuration file.</p>
-   <p>
-     For command usage, see  
-     <a href="commands_manual.html#namenode">namenode</a>.
-   </p>
-   </section>
-
-   <section> <title> Backup Node </title>
-   <p>	
-    The Backup node provides the same checkpointing functionality as the 
-    Checkpoint node, as well as maintaining an in-memory, up-to-date copy of the
-    file system namespace that is always synchronized with the active NameNode state.
-    Along with accepting a journal stream of file system edits from 
-    the NameNode and persisting this to disk, the Backup node also applies 
-    those edits into its own copy of the namespace in memory, thus creating 
-    a backup of the namespace.
-   </p>
-   <p>
-    The Backup node does not need to download 
-    <code>fsimage</code> and <code>edits</code> files from the active NameNode
-    in order to create a checkpoint, as would be required with a 
-    Checkpoint node or Secondary NameNode, since it already has an up-to-date 
-    state of the namespace state in memory.
-    The Backup node checkpoint process is more efficient as it only needs to 
-    save the namespace into the local <code>fsimage</code> file and reset
-    <code>edits</code>.
-   </p> 
-   <p>
-    As the Backup node maintains a copy of the
-    namespace in memory, its RAM requirements are the same as the NameNode.
-   </p> 
-   <p>
-    The NameNode supports one Backup node at a time. No Checkpoint nodes may be
-    registered if a Backup node is in use. Using multiple Backup nodes 
-    concurrently will be supported in the future.
-   </p> 
-   <p>
-    The Backup node is configured in the same manner as the Checkpoint node.
-    It is started with <code>bin/hdfs namenode -checkpoint</code>.
-   </p>
-   <p>The location of the Backup (or Checkpoint) node and its accompanying 
-      web interface are configured via the <code>dfs.backup.address</code> 
-      and <code>dfs.backup.http.address</code> configuration variables.
-	 </p>
-   <p>
-    Use of a Backup node provides the option of running the NameNode with no 
-    persistent storage, delegating all responsibility for persisting the state
-    of the namespace to the Backup node. 
-    To do this, start the NameNode with the 
-    <code>-importCheckpoint</code> option, along with specifying no persistent
-    storage directories of type edits <code>dfs.name.edits.dir</code> 
-    for the NameNode configuration.
-   </p> 
-   <p>
-    For a complete discussion of the motivation behind the creation of the 
-    Backup node and Checkpoint node, see 
-    <a href="https://issues.apache.org/jira/browse/HADOOP-4539">HADOOP-4539</a>.
-    For command usage, see  
-     <a href="commands_manual.html#namenode">namenode</a>.
    </p>
    </section>
 
