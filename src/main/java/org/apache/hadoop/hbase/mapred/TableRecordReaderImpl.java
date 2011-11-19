@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.StringUtils;
@@ -59,7 +60,7 @@ public class TableRecordReaderImpl {
     if ((endRow != null) && (endRow.length > 0)) {
       if (trrRowFilter != null) {
         Scan scan = new Scan(firstRow, endRow);
-        scan.addColumns(trrInputColumns);
+        TableInputFormat.addColumns(scan, trrInputColumns);
         scan.setFilter(trrRowFilter);
         scan.setCacheBlocks(false);
         this.scanner = this.htable.getScanner(scan);
@@ -68,7 +69,7 @@ public class TableRecordReaderImpl {
             Bytes.toStringBinary(firstRow) + ", endRow: " +
             Bytes.toStringBinary(endRow));
         Scan scan = new Scan(firstRow, endRow);
-        scan.addColumns(trrInputColumns);
+        TableInputFormat.addColumns(scan, trrInputColumns);
         this.scanner = this.htable.getScanner(scan);
       }
     } else {
@@ -76,8 +77,8 @@ public class TableRecordReaderImpl {
           Bytes.toStringBinary(firstRow) + ", no endRow");
 
       Scan scan = new Scan(firstRow);
-      scan.addColumns(trrInputColumns);
-//      scan.setFilter(trrRowFilter);
+      TableInputFormat.addColumns(scan, trrInputColumns);
+      scan.setFilter(trrRowFilter);
       this.scanner = this.htable.getScanner(scan);
     }
   }

@@ -235,7 +235,14 @@ module Hbase
           org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
         end
 
-        columns.each { |c| scan.addColumns(c) }
+        columns.each do |c| 
+          family, qualifier = parse_column_name(c.to_s)
+          if qualifier
+            scan.addColumn(family, qualifier)
+          else
+            scan.addFamily(family)
+          end
+        end
 
         unless filter.class == String
           scan.setFilter(filter)
