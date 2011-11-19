@@ -69,7 +69,8 @@ public abstract class TableEventHandler extends EventHandler {
     try {
       this.masterServices.checkTableModifiable(tableName);
     } catch (TableNotDisabledException ex)  {
-      if (eventType.isOnlineSchemaChangeSupported()) {
+      if (isOnlineSchemaChangeAllowed()
+          && eventType.isOnlineSchemaChangeSupported()) {
         LOG.debug("Ignoring table not disabled exception " +
             "for supporting online schema changes.");
       }	else {
@@ -77,6 +78,11 @@ public abstract class TableEventHandler extends EventHandler {
       }
     }
     this.tableNameStr = Bytes.toString(this.tableName);
+  }
+
+  private boolean isOnlineSchemaChangeAllowed() {
+    return this.server.getConfiguration().getBoolean(
+        "hbase.online.schema.update.enable", false);
   }
 
   @Override

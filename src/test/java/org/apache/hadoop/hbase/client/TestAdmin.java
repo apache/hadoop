@@ -319,6 +319,8 @@ public class TestAdmin {
   @Test 
   public void testOnlineChangeTableSchema() throws IOException, InterruptedException {
     final byte [] tableName = Bytes.toBytes("changeTableSchemaOnline");
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
+        "hbase.online.schema.update.enable", true);
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
@@ -399,6 +401,38 @@ public class TestAdmin {
     this.admin.deleteTable(tableName);
     this.admin.listTables();
     assertFalse(this.admin.tableExists(tableName));
+  }
+  
+  @Test
+  public void testShouldFailOnlineSchemaUpdateIfOnlineSchemaIsNotEnabled()
+      throws Exception {
+    final byte[] tableName = Bytes.toBytes("changeTableSchemaOnlineFailure");
+    TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
+        "hbase.online.schema.update.enable", false);
+    HTableDescriptor[] tables = admin.listTables();
+    int numTables = tables.length;
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
+    tables = this.admin.listTables();
+    assertEquals(numTables + 1, tables.length);
+
+    // FIRST, do htabledescriptor changes.
+    HTableDescriptor htd = this.admin.getTableDescriptor(tableName);
+    // Make a copy and assert copy is good.
+    HTableDescriptor copy = new HTableDescriptor(htd);
+    assertTrue(htd.equals(copy));
+    // Now amend the copy. Introduce differences.
+    long newFlushSize = htd.getMemStoreFlushSize() / 2;
+    copy.setMemStoreFlushSize(newFlushSize);
+    final String key = "anyoldkey";
+    assertTrue(htd.getValue(key) == null);
+    copy.setValue(key, key);
+    boolean expectedException = false;
+    try {
+      modifyTable(tableName, copy);
+    } catch (TableNotDisabledException re) {
+      expectedException = true;
+    }
+    assertTrue("Online schema update should not happen.", expectedException);
   }
 
   /**

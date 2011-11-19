@@ -782,12 +782,22 @@
       </description>
   </property>
   <property>
+    <name>hbase.online.schema.update.enable</name>
+    <value>false</value>
+    <description>
+    Set true to enable online schema changes.  This is an experimental feature.  
+    There are known issues modifying table schemas at the same time a region
+    split is happening so your table needs to be quiescent or else you have to
+    be running with splits disabled.
+    </description>
+  </property>
+  <property>
     <name>dfs.support.append</name>
     <value>true</value>
     <description>Does HDFS allow appends to files?
     This is an hdfs config. set in here so the hdfs client will do append support.
     You must ensure that this config. is true serverside too when running hbase
     (You will have to restart your cluster after setting it).
-  </description>
-</property>
+    </description>
+  </property>
 </configuration>
