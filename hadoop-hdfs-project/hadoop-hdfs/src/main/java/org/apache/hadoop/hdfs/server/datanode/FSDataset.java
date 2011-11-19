@@ -459,7 +459,7 @@ public class FSDataset implements FSDatasetInterface {
         long metaFileLen = metaFile.length();
         int crcHeaderLen = DataChecksum.getChecksumHeaderSize();
         if (!blockFile.exists() || blockFileLen == 0 ||
-            !metaFile.exists() || metaFileLen < (long)crcHeaderLen) {
+            !metaFile.exists() || metaFileLen < crcHeaderLen) {
           return 0;
         }
         checksumIn = new DataInputStream(
@@ -578,7 +578,7 @@ public class FSDataset implements FSDatasetInterface {
      * reserved capacity.
      * @return the unreserved number of bytes left in this filesystem. May be zero.
      */
-    long getCapacity() throws IOException {
+    long getCapacity() {
       long remaining = usage.getCapacity() - reserved;
       return remaining > 0 ? remaining : 0;
     }
@@ -818,7 +818,7 @@ public class FSDataset implements FSDatasetInterface {
       return dfsUsed;
     }
 
-    private long getCapacity() throws IOException {
+    private long getCapacity() {
       long capacity = 0L;
       for (FSVolume vol : volumes) {
         capacity += vol.getCapacity();
@@ -1667,7 +1667,7 @@ public class FSDataset implements FSDatasetInterface {
     }
     if (!oldmeta.renameTo(newmeta)) {
       replicaInfo.setGenerationStamp(oldGS); // restore old GS
-      throw new IOException("Block " + (Block)replicaInfo + " reopen failed. " +
+      throw new IOException("Block " + replicaInfo + " reopen failed. " +
                             " Unable to move meta file  " + oldmeta +
                             " to " + newmeta);
     }
@@ -2018,7 +2018,7 @@ public class FSDataset implements FSDatasetInterface {
   /**
    * Find the file corresponding to the block and return it if it exists.
    */
-  File validateBlockFile(String bpid, Block b) throws IOException {
+  File validateBlockFile(String bpid, Block b) {
     //Should we check for metadata file too?
     File f = getFile(bpid, b);
     
@@ -2327,7 +2327,7 @@ public class FSDataset implements FSDatasetInterface {
         if (datanode.blockScanner != null) {
           datanode.blockScanner.addBlock(new ExtendedBlock(bpid, diskBlockInfo));
         }
-        DataNode.LOG.warn("Added missing block to memory " + (Block)diskBlockInfo);
+        DataNode.LOG.warn("Added missing block to memory " + diskBlockInfo);
         return;
       }
       /*
@@ -2600,7 +2600,7 @@ public class FSDataset implements FSDatasetInterface {
    * get list of all bpids
    * @return list of bpids
    */
-  public String [] getBPIdlist() throws IOException {
+  public String [] getBPIdlist() {
     return volumeMap.getBlockPoolList();
   }
   

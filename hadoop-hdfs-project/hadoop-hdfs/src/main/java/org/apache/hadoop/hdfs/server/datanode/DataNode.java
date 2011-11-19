@@ -239,8 +239,7 @@ public class DataNode extends Configured
    * Use {@link NetUtils#createSocketAddr(String)} instead.
    */
   @Deprecated
-  public static InetSocketAddress createSocketAddr(String target
-                                                   ) throws IOException {
+  public static InetSocketAddress createSocketAddr(String target) {
     return NetUtils.createSocketAddr(target);
   }
   
@@ -334,14 +333,14 @@ public class DataNode extends Configured
       }
     }
     
-    void joinAll() throws InterruptedException {
+    void joinAll() {
       for (BPOfferService bpos: this.getAllNamenodeThreads()) {
         bpos.join();
       }
     }
     
     void refreshNamenodes(Configuration conf)
-        throws IOException, InterruptedException {
+        throws IOException {
       LOG.info("Refresh request received for nameservices: "
           + conf.get(DFS_FEDERATION_NAMESERVICES));
       List<InetSocketAddress> newAddresses = 
@@ -859,8 +858,7 @@ public class DataNode extends Configured
 
     private void connectToNNAndHandshake() throws IOException {
       // get NN proxy
-      bpNamenode = 
-        (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
+      bpNamenode = (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
             DatanodeProtocol.versionID, nnAddr, dn.getConf());
 
       // First phase of the handshake with NN - get the namespace
@@ -2120,7 +2118,7 @@ public class DataNode extends Configured
      * entire target list, the block, and the data.
      */
     DataTransfer(DatanodeInfo targets[], ExtendedBlock b, BlockConstructionStage stage,
-        final String clientname) throws IOException {
+        final String clientname) {
       if (DataTransferProtocol.LOG.isDebugEnabled()) {
         DataTransferProtocol.LOG.debug(getClass().getSimpleName() + ": "
             + b + " (numBytes=" + b.getNumBytes() + ")"
@@ -2896,13 +2894,7 @@ public class DataNode extends Configured
   }
   
   public void refreshNamenodes(Configuration conf) throws IOException {
-    try {
-      blockPoolManager.refreshNamenodes(conf);
-    } catch (InterruptedException ex) {
-      IOException eio = new IOException();
-      eio.initCause(ex);
-      throw eio;
-    }
+    blockPoolManager.refreshNamenodes(conf);
   }
 
   @Override //ClientDatanodeProtocol

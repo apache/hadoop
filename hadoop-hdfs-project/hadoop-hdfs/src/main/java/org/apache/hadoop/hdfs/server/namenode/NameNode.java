@@ -258,11 +258,12 @@ public class NameNode {
    * If the service rpc is not configured returns null
    */
   protected InetSocketAddress getServiceRpcServerAddress(Configuration conf)
-    throws IOException {
+      throws IOException {
     return NameNode.getServiceAddress(conf, false);
   }
 
-  protected InetSocketAddress getRpcServerAddress(Configuration conf) throws IOException {
+  protected InetSocketAddress getRpcServerAddress(Configuration conf)
+      throws IOException {
     return getAddress(conf);
   }
   

@@ -52,6 +52,8 @@ Trunk (unreleased changes)
 
     HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
 
+    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
+    (Hari Mankude via eli)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
