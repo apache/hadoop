@@ -122,11 +122,17 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.datanode.https.address</name>
   <value>0.0.0.0:50475</value>
+  <description>The datanode secure http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
 </property>
 
 <property>
   <name>dfs.namenode.https-address</name>
   <value>0.0.0.0:50470</value>
+  <description>The namenode secure http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
 </property>
 
  <property>
