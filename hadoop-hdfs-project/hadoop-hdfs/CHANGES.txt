@@ -152,6 +152,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2502. hdfs-default.xml should include dfs.name.dir.restore.
     (harsh via eli)
+
+    HDFS-2567. When 0 DNs are available, show a proper error when
+    trying to browse DFS via web UI. (harsh via eli)
     
 Release 0.23.0 - 2011-11-01 
 

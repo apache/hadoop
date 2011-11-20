@@ -380,7 +380,13 @@ class NamenodeJspHelper {
     final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
-    final DatanodeID datanode = getRandomDatanode(nn);
+    // We can't redirect if there isn't a DN to redirect to.
+    // Lets instead show a proper error message.
+    if (nn.getNamesystem().getNumLiveDataNodes() < 1) {
+      throw new IOException("Can't browse the DFS since there are no " +
+          "live nodes available to redirect to.");
+    }
+    final DatanodeID datanode = getRandomDatanode(nn);;
     UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     String tokenString = getDelegationToken(
         nn.getRpcServer(), request, conf, ugi);
