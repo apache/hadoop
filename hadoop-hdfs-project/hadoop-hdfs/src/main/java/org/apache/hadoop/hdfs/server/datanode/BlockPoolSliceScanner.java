@@ -34,7 +34,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -252,8 +251,9 @@ class BlockPoolSliceScanner {
      */
     long period = Math.min(scanPeriod, 
                            Math.max(blockMap.size(),1) * 600 * 1000L);
+    int periodInt = Math.abs((int)period);
     return System.currentTimeMillis() - scanPeriod + 
-        DFSUtil.getRandom().nextInt((int)period);    
+        DFSUtil.getRandom().nextInt(periodInt);
   }
 
   /** Adds block to list of blocks */
