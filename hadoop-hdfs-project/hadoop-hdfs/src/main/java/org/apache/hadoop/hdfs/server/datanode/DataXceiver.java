@@ -163,14 +163,6 @@ class DataXceiver extends Receiver implements Runnable {
           s.setSoTimeout(stdTimeout);
         }
 
-        // Make sure the xceiver count is not exceeded
-        int curXceiverCount = datanode.getXceiverCount();
-        if (curXceiverCount > dataXceiverServer.maxXceiverCount) {
-          throw new IOException("xceiverCount " + curXceiverCount
-                                + " exceeds the limit of concurrent xcievers "
-                                + dataXceiverServer.maxXceiverCount);
-        }
-
         opStartTime = now();
         processOp(op);
         ++opsProcessed;

@@ -135,6 +135,15 @@ class DataXceiverServer implements Runnable {
       try {
         s = ss.accept();
         s.setTcpNoDelay(true);
+
+        // Make sure the xceiver count is not exceeded
+        int curXceiverCount = datanode.getXceiverCount();
+        if (curXceiverCount > maxXceiverCount) {
+          throw new IOException("Xceiver count " + curXceiverCount
+              + " exceeds the limit of concurrent xcievers: "
+              + maxXceiverCount);
+        }
+
         new Daemon(datanode.threadGroup, new DataXceiver(s, datanode, this))
             .start();
       } catch (SocketTimeoutException ignored) {
