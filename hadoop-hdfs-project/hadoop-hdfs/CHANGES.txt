@@ -134,8 +134,11 @@ Release 0.23.1 - UNRELEASED
   BUG FIXES
 
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
-    may request a random number with a negative seed value. (harsh)
+    may request a random number with a negative seed value. (harsh via eli)
 
+    HDFS-2502. hdfs-default.xml should include dfs.name.dir.restore.
+    (harsh via eli)
+    
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
