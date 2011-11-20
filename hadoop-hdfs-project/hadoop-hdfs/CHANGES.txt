@@ -124,6 +124,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
     (Uma Maheswara Rao G via eli)
 
+    HDFS-2568. Use a set to manage child sockets in XceiverServer.
+    (harsh via eli)
+
     HDFS-2536. Remove unused imports. (harsh via eli)
 
   OPTIMIZATIONS
