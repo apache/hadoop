@@ -40,9 +40,9 @@ import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
 /**
@@ -696,6 +696,41 @@ public class ZKUtil {
     setData(zkw, znode, data, -1);
   }
 
+  public static boolean isSecureZooKeeper(Configuration conf) {
+    // TODO: We need a better check for security enabled ZooKeeper. Currently
+    // the secure ZooKeeper client is set up using a supplied JaaS
+    // configuration file. But if the system property for the JaaS
+    // configuration file is set, this may not be an exclusive indication
+    // that HBase should set ACLs on znodes. As an alternative, we could do
+    // this more like Hadoop and build a JaaS configuration programmatically
+    // based on a site conf setting. The scope of such a change will be
+    // addressed in HBASE-4791.
+    return (System.getProperty("java.security.auth.login.config") != null);
+  }
+
+  private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
+    if (isSecureZooKeeper(zkw.getConfiguration())) {
+      // Certain znodes must be readable by non-authenticated clients
+      if ((node.equals(zkw.rootServerZNode) == true) ||
+          (node.equals(zkw.masterAddressZNode) == true) ||
+          (node.equals(zkw.clusterIdZNode) == true)) {
+        return ZooKeeperWatcher.CREATOR_ALL_AND_WORLD_READABLE;
+      }
+      return Ids.CREATOR_ALL_ACL;
+    } else {
+      return Ids.OPEN_ACL_UNSAFE;
+    }
+  }
+
+  public static void waitForZKConnectionIfAuthenticating(ZooKeeperWatcher zkw)
+      throws InterruptedException {
+    if (isSecureZooKeeper(zkw.getConfiguration())) {
+       LOG.debug("Waiting for ZooKeeperWatcher to authenticate");
+       zkw.saslLatch.await();
+       LOG.debug("Done waiting.");
+    }
+  }
+
   //
   // Node creation
   //
@@ -722,7 +757,8 @@ public class ZKUtil {
       String znode, byte [] data)
   throws KeeperException {
     try {
-      zkw.getRecoverableZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+      waitForZKConnectionIfAuthenticating(zkw);
+      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.EPHEMERAL);
     } catch (KeeperException.NodeExistsException nee) {
       if(!watchAndCheckExists(zkw, znode)) {
@@ -761,7 +797,8 @@ public class ZKUtil {
       ZooKeeperWatcher zkw, String znode, byte [] data)
   throws KeeperException {
     try {
-      zkw.getRecoverableZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+      waitForZKConnectionIfAuthenticating(zkw);
+      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
       try {
@@ -798,7 +835,8 @@ public class ZKUtil {
       String znode, byte [] data)
   throws KeeperException, KeeperException.NodeExistsException {
     try {
-      zkw.getRecoverableZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+      waitForZKConnectionIfAuthenticating(zkw);
+      zkw.getRecoverableZooKeeper().create(znode, data, createACL(zkw, znode),
           CreateMode.PERSISTENT);
       return zkw.getRecoverableZooKeeper().exists(znode, zkw).getVersion();
     } catch (InterruptedException e) {
@@ -825,8 +863,13 @@ public class ZKUtil {
   public static void asyncCreate(ZooKeeperWatcher zkw,
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
       final Object ctx) {
-    zkw.getRecoverableZooKeeper().getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
-       CreateMode.PERSISTENT, cb, ctx);
+    try {
+      waitForZKConnectionIfAuthenticating(zkw);
+      zkw.getRecoverableZooKeeper().getZooKeeper().create(znode, data,
+          createACL(zkw, znode), CreateMode.PERSISTENT, cb, ctx);
+    } catch (InterruptedException e) {
+      zkw.interruptedException(e);
+    }
   }
 
   /**
@@ -844,8 +887,9 @@ public class ZKUtil {
   throws KeeperException {
     try {
       RecoverableZooKeeper zk = zkw.getRecoverableZooKeeper();
+      waitForZKConnectionIfAuthenticating(zkw);
       if (zk.exists(znode, false) == null) {
-        zk.create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
+        zk.create(znode, new byte[0], createACL(zkw,znode),
             CreateMode.PERSISTENT);
       }
     } catch(KeeperException.NodeExistsException nee) {
@@ -881,7 +925,8 @@ public class ZKUtil {
       if(znode == null) {
         return;
       }
-      zkw.getRecoverableZooKeeper().create(znode, new byte[0], Ids.OPEN_ACL_UNSAFE,
+      waitForZKConnectionIfAuthenticating(zkw);
+      zkw.getRecoverableZooKeeper().create(znode, new byte[0], createACL(zkw, znode),
           CreateMode.PERSISTENT);
     } catch(KeeperException.NodeExistsException nee) {
       return;

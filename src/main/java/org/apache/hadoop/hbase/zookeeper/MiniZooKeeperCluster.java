@@ -33,8 +33,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.zookeeper.server.NIOServerCnxn;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 
@@ -54,20 +56,25 @@ public class MiniZooKeeperCluster {
   private int defaultClientPort = 21818; // use non-standard port
   private int clientPort = defaultClientPort; 
   
-  private List<NIOServerCnxn.Factory> standaloneServerFactoryList;
+  private List<NIOServerCnxnFactory> standaloneServerFactoryList;
   private List<ZooKeeperServer> zooKeeperServers;
   private List<Integer> clientPortList;
   
   private int activeZKServerIndex;
   private int tickTime = 0;
+  private Configuration configuration;
 
-  /** Create mini ZooKeeper cluster. */
   public MiniZooKeeperCluster() {
+    this(new Configuration());
+  }
+
+  public MiniZooKeeperCluster(Configuration configuration) {
     this.started = false;
+    this.configuration = configuration;
     activeZKServerIndex = -1;
     zooKeeperServers = new ArrayList<ZooKeeperServer>();
     clientPortList = new ArrayList<Integer>();
-    standaloneServerFactoryList = new ArrayList<NIOServerCnxn.Factory>();
+    standaloneServerFactoryList = new ArrayList<NIOServerCnxnFactory>();
   }
 
   public void setDefaultClientPort(int clientPort) {
@@ -132,11 +139,14 @@ public class MiniZooKeeperCluster {
         tickTimeToUse = TICK_TIME;
       }
       ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);    
-      NIOServerCnxn.Factory standaloneServerFactory;
+      NIOServerCnxnFactory standaloneServerFactory;
       while (true) {
         try {
-          standaloneServerFactory =
-            new NIOServerCnxn.Factory(new InetSocketAddress(clientPort));
+          standaloneServerFactory = new NIOServerCnxnFactory();
+          standaloneServerFactory.configure(
+            new InetSocketAddress(clientPort),
+            configuration.getInt(HConstants.ZOOKEEPER_MAX_CLIENT_CNXNS,
+              1000));
         } catch (BindException e) {
           LOG.info("Failed binding ZK Server to client port: " + clientPort);
           //this port is already in use. try to use another
@@ -186,7 +196,7 @@ public class MiniZooKeeperCluster {
     }
     // shut down all the zk servers
     for (int i = 0; i < standaloneServerFactoryList.size(); i++) {
-      NIOServerCnxn.Factory standaloneServerFactory = 
+      NIOServerCnxnFactory standaloneServerFactory =
         standaloneServerFactoryList.get(i);      
       int clientPort = clientPortList.get(i);
       
@@ -218,7 +228,7 @@ public class MiniZooKeeperCluster {
     }
     
     // Shutdown the current active one
-    NIOServerCnxn.Factory standaloneServerFactory = 
+    NIOServerCnxnFactory standaloneServerFactory =
       standaloneServerFactoryList.get(activeZKServerIndex);
     int clientPort = clientPortList.get(activeZKServerIndex);
     
@@ -259,7 +269,7 @@ public class MiniZooKeeperCluster {
     
     int backupZKServerIndex = activeZKServerIndex+1;
     // Shutdown the current active one
-    NIOServerCnxn.Factory standaloneServerFactory = 
+    NIOServerCnxnFactory standaloneServerFactory =
       standaloneServerFactoryList.get(backupZKServerIndex);
     int clientPort = clientPortList.get(backupZKServerIndex);
     

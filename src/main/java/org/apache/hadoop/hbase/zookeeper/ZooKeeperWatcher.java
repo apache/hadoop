@@ -20,8 +20,12 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +37,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.data.ACL;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -48,7 +54,7 @@ import org.apache.zookeeper.Watcher;
 public class ZooKeeperWatcher implements Watcher, Abortable {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 
-  // Identifiier for this watcher (for logging only).  Its made of the prefix
+  // Identifier for this watcher (for logging only).  It is made of the prefix
   // passed on construction and the zookeeper sessionid.
   private String identifier;
 
@@ -64,6 +70,13 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   // listeners to be notified
   private final List<ZooKeeperListener> listeners =
     new CopyOnWriteArrayList<ZooKeeperListener>();
+
+  // Used by ZKUtil:waitForZKConnectionIfAuthenticating to wait for SASL
+  // negotiation to complete
+  public CountDownLatch saslLatch = new CountDownLatch(1);
+
+  // set of unassigned nodes watched
+  private Set<String> unassignedNodes = new HashSet<String>();
 
   // node names
 
@@ -88,10 +101,16 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   // znode used for log splitting work assignment
   public String splitLogZNode;
 
+  // Certain ZooKeeper nodes need to be world-readable
+  public static final ArrayList<ACL> CREATOR_ALL_AND_WORLD_READABLE =
+    new ArrayList<ACL>() { {
+      add(new ACL(ZooDefs.Perms.READ,ZooDefs.Ids.ANYONE_ID_UNSAFE));
+      add(new ACL(ZooDefs.Perms.ALL,ZooDefs.Ids.AUTH_IDS));
+    }};
+
   private final Configuration conf;
 
   private final Exception constructorCaller;
-
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
@@ -315,17 +334,38 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         LOG.debug(this.identifier + " connected");
         break;
 
+      case SaslAuthenticated:
+        if (ZKUtil.isSecureZooKeeper(this.conf)) {
+          // We are authenticated, clients can proceed.
+          saslLatch.countDown();
+        }
+        break;
+
+      case AuthFailed:
+        if (ZKUtil.isSecureZooKeeper(this.conf)) {
+          // We could not be authenticated, but clients should proceed anyway.
+          // Only access to znodes that require SASL authentication will be
+          // denied. The client may never need to access them.
+          saslLatch.countDown();
+        }
+        break;
+
       // Abort the server if Disconnected or Expired
-      // TODO: Åny reason to handle these two differently?
       case Disconnected:
         LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
 
       case Expired:
+        if (ZKUtil.isSecureZooKeeper(this.conf)) {
+          // We consider Expired equivalent to AuthFailed for this
+          // connection. Authentication is never going to complete. The
+          // client should proceed to do cleanup.
+          saslLatch.countDown();
+        }
         String msg = prefix(this.identifier + " received expired from " +
           "ZooKeeper, aborting");
         // TODO: One thought is to add call to ZooKeeperListener so say,
-        // ZooKeperNodeTracker can zero out its data values.
+        // ZooKeeperNodeTracker can zero out its data values.
         if (this.abortable != null) this.abortable.abort(msg,
             new KeeperException.SessionExpiredException());
         break;
@@ -394,6 +434,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
       }
     } catch (InterruptedException e) {
     }
+  }
+
+  public Configuration getConfiguration() {
+    return conf;
   }
 
   @Override

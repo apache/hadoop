@@ -788,7 +788,7 @@
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.7.0</thrift.version>
-    <zookeeper.version>3.3.3</zookeeper.version>
+    <zookeeper.version>3.4.0-SNAPSHOT</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
 
     <package.prefix>/usr</package.prefix>	           
@@ -1373,6 +1373,9 @@
     <!-- profile for building against Hadoop 0.20+security-->
     <profile>
       <id>security</id>
+      <properties>
+        <hadoop.version>0.20.205.1-7070-SNAPSHOT</hadoop.version>
+      </properties>
       <build>
         <finalName>${artifactId}-${version}-security</finalName>
         <plugins>
