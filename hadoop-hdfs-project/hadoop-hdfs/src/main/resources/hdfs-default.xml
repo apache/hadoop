@@ -194,6 +194,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.name.dir.restore</name>
+  <value>false</value>
+  <description>Set to true to enable NameNode to attempt recovering a
+      previously failed dfs.name.dir. When enabled, a recovery of any failed
+      directory is attempted during checkpoint.</description>
+</property>
+
+<property>
   <name>dfs.namenode.fs-limits.max-component-length</name>
   <value>0</value>
   <description>Defines the maximum number of characters in each component
