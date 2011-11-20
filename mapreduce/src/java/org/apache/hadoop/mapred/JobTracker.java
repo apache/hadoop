@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.Text;
@@ -1553,18 +1554,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           }
         } catch (FileNotFoundException fnf) {} //ignore
         // Make sure that the backup data is preserved
-        FileStatus[] systemDirData;
+        FileStatus[] jobDirData;
         try {
-          systemDirData = fs.listStatus(this.systemDir);
+          jobDirData = getJobFilesForRecovery(fs, systemDir);
         } catch (FileNotFoundException fnfe) {
-          systemDirData = null;
+          jobDirData = null;
         }
         
         // Check if the history is enabled .. as we can't have persistence with 
         // history disabled
         if (conf.getBoolean(JT_RESTART_ENABLED, false) 
-            && systemDirData != null) {
-          for (FileStatus status : systemDirData) {
+            && jobDirData != null) {
+          for (FileStatus status : jobDirData) {
             try {
               recoveryManager.addJobForRecovery(status);
             } catch (Throwable t) {
@@ -1640,6 +1641,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
     //initializes the job status store
     completedJobStatusStore = new CompletedJobStatusStore(conf, aclsManager);
+  }
+
+  /**
+   * Expects Recovery Manager to be initialized
+   */
+  FileStatus[] getJobFilesForRecovery(FileSystem fs, Path jobFolderPath)
+      throws IOException {
+    return fs.listStatus(jobFolderPath, new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        if (path.getName().startsWith(
+            recoveryManager.getRestartCountFile().getName())) {
+          return false;
+        }
+        return true;
+      }
+    });
   }
 
   /**

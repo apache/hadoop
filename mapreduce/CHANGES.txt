@@ -641,6 +641,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-3429. Few contrib tests are failing because of the missing
     commons-lang dependency (cos)
 
+    MAPREDUCE-2059. RecoveryManager excludes jobtracker.info from the list of
+    jobs to be recovered. (Subroto Sanyal via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES
