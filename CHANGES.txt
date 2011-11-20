@@ -40,6 +40,9 @@ Release 0.20.206.0 - unreleased
     
     HADOOP-7297. Remove docs for CN and BN, as they aren't present. (harsh)
 
+    HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
+    may request a random number with a negative seed value. (harsh via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to

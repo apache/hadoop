@@ -248,8 +248,9 @@ class DataBlockScanner implements Runnable {
      */
     long period = Math.min(scanPeriod, 
                            Math.max(blockMap.size(),1) * 600 * 1000L);
+    int periodInt = Math.abs((int)period);
     return System.currentTimeMillis() - scanPeriod + 
-           random.nextInt((int)period);    
+           random.nextInt(periodInt);    
   }
 
   /** Adds block to list of blocks */
