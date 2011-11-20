@@ -661,6 +661,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-2513. Bump jetty to 6.1.26 (cos)
 
+    HDFS-2573. TestFiDataXceiverServer is failing, not testing OOME (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
