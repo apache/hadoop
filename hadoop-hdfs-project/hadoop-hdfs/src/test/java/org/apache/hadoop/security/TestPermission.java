@@ -18,7 +18,6 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
-import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;

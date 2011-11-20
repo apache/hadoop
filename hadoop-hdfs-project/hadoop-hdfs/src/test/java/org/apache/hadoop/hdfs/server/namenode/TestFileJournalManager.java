@@ -21,21 +21,13 @@ import static org.junit.Assert.*;
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.Arrays;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Iterator;
 
 import java.io.RandomAccessFile;
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
 import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.security.SecurityUtil;
 import org.junit.Test;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -47,9 +39,6 @@ import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_FAIL;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.base.Joiner;
-
-import java.util.zip.CheckedInputStream;
-import java.util.zip.Checksum;
 
 public class TestFileJournalManager {
 
