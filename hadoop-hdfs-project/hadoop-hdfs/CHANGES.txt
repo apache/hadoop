@@ -22,6 +22,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2568. Use a set to manage child sockets in XceiverServer.
     (harsh via eli)
 
+    HDFS-2454. Move maxXceiverCount check to before starting the
+    thread in dataXceiver. (harsh via eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
