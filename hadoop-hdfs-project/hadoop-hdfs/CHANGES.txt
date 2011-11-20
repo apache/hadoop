@@ -55,6 +55,8 @@ Trunk (unreleased changes)
     HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
     (Hari Mankude via eli)
 
+    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)

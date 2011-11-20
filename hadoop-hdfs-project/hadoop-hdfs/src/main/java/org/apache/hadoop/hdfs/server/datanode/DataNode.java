@@ -454,11 +454,8 @@ public class DataNode extends Configured
 
   private static String getHostName(Configuration config)
       throws UnknownHostException {
-    String name = null;
     // use configured nameserver & interface to get local hostname
-    if (config.get(DFS_DATANODE_HOST_NAME_KEY) != null) {
-      name = config.get(DFS_DATANODE_HOST_NAME_KEY);
-    }
+    String name = config.get(DFS_DATANODE_HOST_NAME_KEY);
     if (name == null) {
       name = DNS
           .getDefaultHost(config.get(DFS_DATANODE_DNS_INTERFACE_KEY,
