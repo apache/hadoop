@@ -306,7 +306,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if loading fails
    */
   public static FSNamesystem loadFromDisk(Configuration conf) throws IOException {
-    FSImage fsImage = new FSImage(conf);
+    Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
+    Collection<URI> namespaceEditsDirs = 
+      FSNamesystem.getNamespaceEditsDirs(conf);
+
+    if (namespaceDirs.size() == 1) {
+      LOG.warn("Only one " + DFS_NAMENODE_NAME_DIR_KEY
+          + " directory configured , beware data loss!");
+    }
+    if (namespaceEditsDirs.size() == 1) {
+      LOG.warn("Only one " + DFS_NAMENODE_EDITS_DIR_KEY
+          + " directory configured , beware data loss!");
+    }
+
+    FSImage fsImage = new FSImage(conf, namespaceDirs, namespaceEditsDirs);
     FSNamesystem namesystem = new FSNamesystem(conf, fsImage);
 
     long loadStart = now();

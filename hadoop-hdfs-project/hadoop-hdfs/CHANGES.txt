@@ -121,6 +121,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2563. Some cleanup in BPOfferService. (todd)
 
+    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
+    (Uma Maheswara Rao G via eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
