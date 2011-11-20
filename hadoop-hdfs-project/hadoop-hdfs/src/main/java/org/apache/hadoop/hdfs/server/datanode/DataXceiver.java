@@ -128,7 +128,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void run() {
     int opsProcessed = 0;
     Op op = null;
-    dataXceiverServer.childSockets.put(s, s);
+    dataXceiverServer.childSockets.add(s);
     try {
       int stdTimeout = s.getSoTimeout();
 

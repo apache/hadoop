@@ -19,6 +19,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2563. Some cleanup in BPOfferService. (todd)
 
+    HDFS-2568. Use a set to manage child sockets in XceiverServer.
+    (harsh via eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
