@@ -97,7 +97,7 @@ int write_config_file(char *file_name) {
     fprintf(file, "," TEST_ROOT "/local-%d", i);
   }
   fprintf(file, "\n");
-  fprintf(file, "hadoop.log.dir=" TEST_ROOT "/logs\n");
+  fprintf(file, "hadoop.log.dir=" TEST_ROOT "/logs");
   fclose(file);
   return 0;
 }

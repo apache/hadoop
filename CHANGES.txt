@@ -43,6 +43,9 @@ Release 0.20.206.0 - unreleased
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
     may request a random number with a negative seed value. (harsh via eli)
 
+    MAPREDUCE-2377. task-controller fails to parse configuration if it
+    doesn't end in \n. (todd via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
