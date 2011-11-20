@@ -130,6 +130,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2454. Move maxXceiverCount check to before starting the
     thread in dataXceiver. (harsh via eli)
 
+    HDFS-2570. Add descriptions for dfs.*.https.address in hdfs-default.xml.
+    (eli)
+
     HDFS-2536. Remove unused imports. (harsh via eli)
 
   OPTIMIZATIONS
