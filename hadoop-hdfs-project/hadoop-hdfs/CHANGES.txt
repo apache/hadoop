@@ -133,6 +133,9 @@ Release 0.23.1 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
+    may request a random number with a negative seed value. (harsh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
