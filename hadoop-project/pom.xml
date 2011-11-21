@@ -589,6 +589,7 @@
 
             <java.net.preferIPv4Stack>true</java.net.preferIPv4Stack>
             <java.security.krb5.conf>${basedir}/src/test/resources/krb5.conf</java.security.krb5.conf>
+            <java.security.egd>file:///dev/urandom</java.security.egd>
           </systemPropertyVariables>
           <includes>
             <include>**/Test*.java</include>
