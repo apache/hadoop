@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
@@ -145,7 +149,7 @@ public class NameNodeHttpServer {
             }
           };
 
-          boolean certSSL = conf.getBoolean("dfs.https.enable", false);
+          boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
           boolean useKrb = UserGroupInformation.isSecurityEnabled();
           if (certSSL || useKrb) {
             boolean needClientAuth = conf.getBoolean(
@@ -156,14 +160,14 @@ public class NameNodeHttpServer {
                     DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
             Configuration sslConf = new HdfsConfiguration(false);
             if (certSSL) {
-              sslConf.addResource(conf.get(
-                  "dfs.https.server.keystore.resource", "ssl-server.xml"));
+              sslConf.addResource(conf.get(DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+                  DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
             }
             httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth,
                 useKrb);
             // assume same ssl port for all datanodes
             InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf
-                .get("dfs.datanode.https.address", infoHost + ":" + 50475));
+                .get(DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 50475));
             httpServer.setAttribute("datanode.https.port", datanodeSslPort
                 .getPort());
           }

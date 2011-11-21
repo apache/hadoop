@@ -308,23 +308,23 @@ public class TestHDFSServerPorts extends TestCase {
       // start data-node on the same port as name-node
       Configuration conf2 = new HdfsConfiguration(config);
       conf2.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, new File(hdfsDir, "data").getPath());
-      conf2.set("dfs.datanode.address",
+      conf2.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY,
                 FileSystem.getDefaultUri(config).getAuthority());
-      conf2.set("dfs.datanode.http.address", THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, THIS_HOST);
       boolean started = canStartDataNode(conf2);
       assertFalse(started); // should fail
 
       // bind http server to the same port as name-node
-      conf2.set("dfs.datanode.address", THIS_HOST);
-      conf2.set("dfs.datanode.http.address", 
+      conf2.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY,
                 config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY));
       started = canStartDataNode(conf2);
       assertFalse(started); // should fail
     
       // both ports are different from the name-node ones
-      conf2.set("dfs.datanode.address", THIS_HOST);
-      conf2.set("dfs.datanode.http.address", THIS_HOST);
-      conf2.set("dfs.datanode.ipc.address", THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, THIS_HOST);
+      conf2.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, THIS_HOST);
       started = canStartDataNode(conf2);
       assertTrue(started); // should start now
     } finally {

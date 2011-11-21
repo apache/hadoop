@@ -42,7 +42,7 @@ public class TestPread extends TestCase {
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
     DataOutputStream stm = fileSys.create(name, true, 4096, (short)1,
-                                          (long)blockSize);
+                                          blockSize);
     // test empty file open and read
     stm.close();
     FSDataInputStream in = fileSys.open(name);
@@ -61,7 +61,7 @@ public class TestPread extends TestCase {
       assertTrue("Cannot delete file", false);
     
     // now create the real file
-    stm = fileSys.create(name, true, 4096, (short)1, (long)blockSize);
+    stm = fileSys.create(name, true, 4096, (short)1, blockSize);
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
     stm.write(buffer);
@@ -206,7 +206,7 @@ public class TestPread extends TestCase {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
     conf.setLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 4096);
     if (simulatedStorage) {
-      conf.setBoolean("dfs.datanode.simulateddatastorage", true);
+      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_SIMULATEDDATASTORAGE_KEY, true);
     }
     if (disableTransferTo) {
       conf.setBoolean("dfs.datanode.transferTo.allowed", false);

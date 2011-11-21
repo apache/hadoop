@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.junit.AfterClass;
@@ -66,7 +67,7 @@ public class FileAppendTest4 {
   }
 
   @AfterClass
-  public static void tearDown() throws IOException {
+  public static void tearDown() {
     cluster.shutdown();
   }
   
@@ -91,7 +92,7 @@ public class FileAppendTest4 {
             new Path("foo"+ oldFileLen +"_"+ flushedBytes1 +"_"+ flushedBytes2);
           LOG.info("Creating file " + p);
           FSDataOutputStream out = fs.create(p, false, 
-              conf.getInt("io.file.buffer.size", 4096), 
+              conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096), 
               REPLICATION, BLOCK_SIZE);
           out.write(contents, 0, oldFileLen);
           out.close();

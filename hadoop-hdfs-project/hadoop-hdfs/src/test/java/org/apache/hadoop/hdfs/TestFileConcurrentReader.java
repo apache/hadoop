@@ -311,8 +311,9 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     final int writeSize,
     Configuration conf
   ) throws IOException {
-    conf.setBoolean("dfs.support.append", syncType == SyncType.APPEND);
-    conf.setBoolean("dfs.datanode.transferTo.allowed", transferToAllowed);
+    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, syncType == SyncType.APPEND);
+    conf.setBoolean(DFSConfigKeys.DFS_DATANODE_TRANSFERTO_ALLOWED_KEY,
+        transferToAllowed);
     init(conf);
 
     final Path file = new Path("/block-being-written-to");

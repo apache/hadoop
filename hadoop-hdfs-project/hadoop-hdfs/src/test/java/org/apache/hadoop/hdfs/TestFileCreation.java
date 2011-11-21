@@ -28,6 +28,7 @@ import java.util.EnumSet;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -75,9 +76,9 @@ public class TestFileCreation extends junit.framework.TestCase {
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     System.out.println("createFile: Created " + name + " with " + repl + " replica.");
-    FSDataOutputStream stm = fileSys.create(name, true,
-                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                                            (short)repl, (long)blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
+        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+        (short) repl, blockSize);
     return stm;
   }
 
@@ -638,7 +639,6 @@ public class TestFileCreation extends junit.framework.TestCase {
       out = createNonRecursive(fs, path, 1, createFlag);
       out.close();
       // Create a file when parent dir exists as file, should fail
-      expectedException = null;
       try {
         createNonRecursive(fs, new Path(path, "Create"), 1, createFlag);
       } catch (IOException e) {
@@ -704,7 +704,7 @@ public class TestFileCreation extends junit.framework.TestCase {
         + " replica.");
     FSDataOutputStream stm = ((DistributedFileSystem) fs).createNonRecursive(
         name, FsPermission.getDefault(), flag, fs.getConf().getInt(
-            "io.file.buffer.size", 4096), (short) repl, (long) blockSize, null);
+            CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096), (short) repl,  blockSize, null);
     return stm;
   }
   

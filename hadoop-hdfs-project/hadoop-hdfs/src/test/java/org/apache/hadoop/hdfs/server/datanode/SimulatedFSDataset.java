@@ -65,9 +65,9 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
   
   public static final String CONFIG_PROPERTY_SIMULATED =
-                                    "dfs.datanode.simulateddatastorage";
+      DFSConfigKeys.DFS_DATANODE_SIMULATEDDATASTORAGE_KEY;
   public static final String CONFIG_PROPERTY_CAPACITY =
-                            "dfs.datanode.simulateddatastorage.capacity";
+      DFSConfigKeys.DFS_DATANODE_SIMULATEDDATASTORAGE_CAPACITY_KEY;
   
   public static final long DEFAULT_CAPACITY = 2L<<40; // 1 terabyte
   public static final byte DEFAULT_DATABYTE = 9; // 1 terabyte
@@ -135,7 +135,7 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
       }
     }
     
-    synchronized SimulatedInputStream getIStream() throws IOException {
+    synchronized SimulatedInputStream getIStream() {
       if (!finalized) {
         // throw new IOException("Trying to read an unfinalized block");
          return new SimulatedInputStream(oStream.getLength(), DEFAULT_DATABYTE);
@@ -362,7 +362,7 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
   private SimulatedStorage storage = null;
   private String storageId;
   
-  public SimulatedFSDataset(Configuration conf) throws IOException {
+  public SimulatedFSDataset(Configuration conf) {
     setConf(conf);
   }
   

@@ -21,6 +21,8 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -43,7 +45,7 @@ public class TestFSOutputSummer extends TestCase {
   /* create a file, write all data at once */
   private void writeFile1(Path name) throws Exception {
     FSDataOutputStream stm = fileSys.create(name, true, 
-               fileSys.getConf().getInt("io.file.buffer.size", 4096),
+               fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY, 4096),
                NUM_OF_DATANODES, BLOCK_SIZE);
     stm.write(expected);
     stm.close();
@@ -54,7 +56,7 @@ public class TestFSOutputSummer extends TestCase {
   /* create a file, write data chunk by chunk */
   private void writeFile2(Path name) throws Exception {
     FSDataOutputStream stm = fileSys.create(name, true, 
-               fileSys.getConf().getInt("io.file.buffer.size", 4096),
+               fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY, 4096),
                NUM_OF_DATANODES, BLOCK_SIZE);
     int i=0;
     for( ;i<FILE_SIZE-BYTES_PER_CHECKSUM; i+=BYTES_PER_CHECKSUM) {
@@ -69,7 +71,7 @@ public class TestFSOutputSummer extends TestCase {
   /* create a file, write data with vairable amount of data */
   private void writeFile3(Path name) throws Exception {
     FSDataOutputStream stm = fileSys.create(name, true, 
-        fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        fileSys.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY, 4096),
         NUM_OF_DATANODES, BLOCK_SIZE);
     stm.write(expected, 0, HALF_CHUNK_SIZE);
     stm.write(expected, HALF_CHUNK_SIZE, BYTES_PER_CHECKSUM+2);
