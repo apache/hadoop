@@ -104,6 +104,9 @@ Trunk (unreleased changes)
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
                reference to rpcProxyWithoutRetry (atm)
 
+    HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
+               via todd)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
