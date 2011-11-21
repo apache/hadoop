@@ -149,7 +149,7 @@ public class RunJar {
     File tmpDir = new File(new Configuration().get("hadoop.tmp.dir"));
     ensureDirectory(tmpDir);
 
-    File workDir;
+    final File workDir;
     try { 
       workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
     } catch (IOException ioe) {
@@ -158,6 +158,7 @@ public class RunJar {
       System.err.println("Error creating temp dir in " + tmpDir + " due to " 
           + ioe.getMessage());
       System.exit(-1);
+      return;
     }
 
     if (!workDir.delete()) {
