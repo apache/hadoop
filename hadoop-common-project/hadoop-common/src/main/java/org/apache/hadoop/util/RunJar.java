@@ -153,10 +153,10 @@ public class RunJar {
     try { 
       workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
     } catch (IOException ioe) {
-      // if user has insufficient perms to write to tmpDir, default  
+      // If user has insufficient perms to write to tmpDir, default  
       // "Permission denied" message doesn't specify a filename. 
-      System.err.println("Error creating temp dir in " + tmpDir + " due to " 
-          + ioe.getMessage());
+      System.err.println("Error creating temp dir in hadoop.tmp.dir "
+                         + tmpDir + " due to " + ioe.getMessage());
       System.exit(-1);
       return;
     }
