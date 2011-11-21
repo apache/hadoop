@@ -29,7 +29,7 @@ export HADOOP_CLIENT_OPTS="-Xmx128m $HADOOP_CLIENT_OPTS"
 #HADOOP_JAVA_PLATFORM_OPTS="-XX:-UsePerfData $HADOOP_JAVA_PLATFORM_OPTS"
 
 # On secure datanodes, user to run the datanode as after dropping privileges
-export HADOOP_SECURE_DN_USER=${HADOOP_HDFS_USER}
+export HADOOP_SECURE_DN_USER=${HADOOP_SECURE_DN_USER}
 
 # Where log files are stored.  $HADOOP_HOME/logs by default.
 export HADOOP_LOG_DIR=${HADOOP_LOG_DIR}/$USER

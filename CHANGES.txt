@@ -433,6 +433,9 @@ Release 0.20.205.0 - 2011.10.06
 
     MAPREDUCE-3076. Annotate o.a.h.mapreduce.TestSleepJob with @Ignore since it
     is not a junit test.  (acmurthy via szetszwo)
+    
+    HADOOP-7658. Fix hadoop config template for secured and unsecured
+    installation (Eric Yang via gkesavan)
 
     HADOOP-7645. HTTP auth tests requiring Kerberos infrastructure are not
     disabled on branch-0.20-security. (jitendra)
