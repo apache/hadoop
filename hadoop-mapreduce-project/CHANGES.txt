@@ -104,6 +104,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3437. Fix examples pom to refer to the correct 0.23 snapshot
     version. (Jonathan Eagles via todd)
 
+    MAPREDUCE-3434. Nightly build broken (Hitesh Shah via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
