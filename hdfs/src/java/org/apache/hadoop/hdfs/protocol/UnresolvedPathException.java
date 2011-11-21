@@ -32,10 +32,10 @@ import org.apache.hadoop.fs.Path;
 @InterfaceStability.Evolving
 public final class UnresolvedPathException extends UnresolvedLinkException {
   private static final long serialVersionUID = 1L;
-  private String originalPath;  // The original path containing the link
-  private String linkTarget;    // The target of the link 
-  private String remainingPath; // The path part following the link
-  
+  private String path;        // The path containing the link
+  private String preceding;   // The path part preceding the link
+  private String remainder;   // The path part following the link
+  private String linkTarget;  // The link's target
 
   /**
    * Used by RemoteException to instantiate an UnresolvedPathException.
@@ -44,22 +44,30 @@ public final class UnresolvedPathException extends UnresolvedLinkException {
     super(msg);
   }
   
-  public UnresolvedPathException(String originalPath, String remainingPath, 
-      String linkTarget) {
-    this.originalPath  = originalPath;
-    this.remainingPath = remainingPath;
-    this.linkTarget    = linkTarget;
+  public UnresolvedPathException(String path, String preceding,
+      String remainder, String linkTarget) {
+    this.path = path;
+    this.preceding = preceding;
+    this.remainder = remainder;
+    this.linkTarget = linkTarget;
   }
 
-  public Path getUnresolvedPath() throws IOException {
-    return new Path(originalPath);
-  }
-  
+  /**
+   * Return a path with the link resolved with the target.
+   */
   public Path getResolvedPath() throws IOException {
-    if (remainingPath == null || "".equals(remainingPath)) {
-      return new Path(linkTarget);
+    // If the path is absolute we cam throw out the preceding part and
+    // just append the remainder to the target, otherwise append each
+    // piece to resolve the link in path.
+    boolean noRemainder = (remainder == null || "".equals(remainder));
+    Path target = new Path(linkTarget);
+    if (target.isUriPathAbsolute()) {
+      return noRemainder ? target : new Path(target, remainder);
+    } else {
+      return noRemainder
+        ? new Path(preceding, target)
+        : new Path(new Path(preceding, linkTarget), remainder);
     }
-    return new Path(linkTarget, remainingPath);
   }
 
   @Override
@@ -68,7 +76,7 @@ public final class UnresolvedPathException extends UnresolvedLinkException {
     if (msg != null) {
       return msg;
     }
-    String myMsg = "Unresolved path " + originalPath;
+    String myMsg = "Unresolved path " + path;
     try {
       return getResolvedPath().toString();
     } catch (IOException e) {

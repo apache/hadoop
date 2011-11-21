@@ -20,6 +20,9 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.URI;
 
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.log4j.Level;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileContext;
@@ -28,9 +31,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import org.apache.hadoop.ipc.RemoteException;
+
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.BeforeClass;
@@ -40,6 +45,10 @@ import org.junit.AfterClass;
  * Test symbolic links using FileContext and Hdfs.
  */
 public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
+
+  {
+    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+  }
 
   private static MiniDFSCluster cluster;
   
@@ -250,8 +259,8 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     Path link = new Path(testBaseDir1(), "symlinkToFile");
     createAndWriteFile(file);
     fc.createSymlink(file, link, false);
-    FileStatus stat_file = fc.getFileStatus(file);
-    FileStatus stat_link = fc.getFileStatus(link);
-    assertEquals(stat_link.getOwner(), stat_file.getOwner());
+    FileStatus statFile = fc.getFileStatus(file);
+    FileStatus statLink = fc.getFileStatus(link);
+    assertEquals(statLink.getOwner(), statFile.getOwner());
   }
 }
