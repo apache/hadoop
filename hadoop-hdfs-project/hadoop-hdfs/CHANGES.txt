@@ -5,6 +5,8 @@ Trunk (unreleased changes)
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+    HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
