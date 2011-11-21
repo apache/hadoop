@@ -272,6 +272,6 @@
     </Match>
     <Match>
       <!-- protobuf generated code -->
-      <Class name="org.apache.hadoop.ipc.protobuf.HadoopRpcProtos"/>
+      <Class name="~org\.apache\.hadoop\.ipc\.protobuf\.HadoopRpcProtos.*"/>
     </Match>
  </FindBugsFilter>
