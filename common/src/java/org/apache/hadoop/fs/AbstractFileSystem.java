@@ -348,7 +348,7 @@ public abstract class AbstractFileSystem {
     checkPath(p);
     String s = p.toUri().getPath();
     if (!isValidName(s)) {
-      throw new InvalidPathException("Path part " + s + " from URI" + p
+      throw new InvalidPathException("Path part " + s + " from URI " + p
           + " is not a valid filename.");
     }
     return s;

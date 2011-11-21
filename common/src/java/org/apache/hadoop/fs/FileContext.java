@@ -1014,29 +1014,28 @@ public final class FileContext {
    * Return a fully qualified version of the given symlink target if it
    * has no scheme and authority. Partially and fully qualified paths 
    * are returned unmodified.
-   * @param linkFS The AbstractFileSystem of link 
-   * @param link   The path of the symlink
-   * @param target The symlink's target
+   * @param pathFS The AbstractFileSystem of the path
+   * @param pathWithLink Path that contains the symlink
+   * @param target The symlink's absolute target
    * @return Fully qualified version of the target.
    */
-  private Path qualifySymlinkTarget(final AbstractFileSystem linkFS, 
-      Path link, Path target) {
-    /* NB: makeQualified uses link's scheme/authority, if specified, 
-     * and the scheme/authority of linkFS, if not. If link does have
-     * a scheme and authority they should match those of linkFS since
-     * resolve updates the path and file system of a path that contains
-     * links each time a link is encountered.
+  private Path qualifySymlinkTarget(final AbstractFileSystem pathFS,
+    Path pathWithLink, Path target) {
+    /* NB: makeQualified uses the target's scheme and authority, if
+     * specified, and the scheme and authority of pathFS, if not. If
+     * the path does have a scheme and authority we assert they match
+     * those of pathFS since resolve updates the file system of a path
+     * that contains links each time a link is encountered.
      */
-    final String linkScheme = link.toUri().getScheme();
-    final String linkAuth   = link.toUri().getAuthority();
-    if (linkScheme != null && linkAuth != null) {
-      assert linkScheme.equals(linkFS.getUri().getScheme());
-      assert linkAuth.equals(linkFS.getUri().getAuthority());
+    final String scheme = target.toUri().getScheme();
+    final String auth   = target.toUri().getAuthority();
+    if (scheme != null && auth != null) {
+      assert scheme.equals(pathFS.getUri().getScheme());
+      assert auth.equals(pathFS.getUri().getAuthority());
     }
-    final boolean justPath = (target.toUri().getScheme() == null &&
-                              target.toUri().getAuthority() == null);
-    return justPath ? target.makeQualified(linkFS.getUri(), link.getParent()) 
-                    : target;
+    return (scheme == null && auth == null)
+      ? target.makeQualified(pathFS.getUri(), pathWithLink.getParent())
+      : target;
   }
   
   /**
@@ -1070,16 +1069,19 @@ public final class FileContext {
   }
   
   /**
-   * Returns the un-interpreted target of the given symbolic link.
-   * Transparently resolves all links up to the final path component.
-   * @param f
+   * Returns the target of the given symbolic link as it was specified
+   * when the link was created.  Links in the path leading up to the
+   * final path component are resolved transparently.
+   *
+   * @param f the path to return the target of
    * @return The un-interpreted target of the symbolic link.
    * 
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException If path <code>f</code> does not exist
    * @throws UnsupportedFileSystemException If file system for <code>f</code> is
    *           not supported
-   * @throws IOException If an I/O error occurred
+   * @throws IOException If the given path does not refer to a symlink
+   *           or an I/O error occurred
    */
   public Path getLinkTarget(final Path f) throws AccessControlException,
       FileNotFoundException, UnsupportedFileSystemException, IOException {
@@ -1199,7 +1201,7 @@ public final class FileContext {
    * getFsStatus, getFileStatus, exists, and listStatus.
    * 
    * Symlink targets are stored as given to createSymlink, assuming the 
-   * underlying file system is capable of storign a fully qualified URI. 
+   * underlying file system is capable of storing a fully qualified URI.
    * Dangling symlinks are permitted. FileContext supports four types of 
    * symlink targets, and resolves them as follows
    * <pre>
