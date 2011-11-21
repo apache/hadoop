@@ -110,6 +110,10 @@
           <environmentVariables>
             <JAVA_HOME>${java.home}</JAVA_HOME>
           </environmentVariables>
+          <additionalClasspathElements>
+            <!-- workaround for JobConf#setJarByClass -->
+            <additionalClasspathElement>${project.build.directory}/${project.artifactId}-${project.version}-tests.jar</additionalClasspathElement>
+          </additionalClasspathElements>
         </configuration>
       </plugin>
     </plugins>
