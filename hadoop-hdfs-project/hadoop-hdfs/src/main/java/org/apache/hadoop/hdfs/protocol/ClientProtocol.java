@@ -813,9 +813,9 @@ public interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Create symlink to a file or directory.
-   * @param target The pathname of the destination that the
+   * @param target The path of the destination that the
    *               link points to.
-   * @param link The pathname of the link being created.
+   * @param link The path of the link being created.
    * @param dirPerm permissions to use when creating parent directories
    * @param createParent - if true then missing parent dirs are created
    *                       if false then parent must exist
@@ -836,14 +836,16 @@ public interface ClientProtocol extends VersionedProtocol {
       IOException;
 
   /**
-   * Resolve the first symbolic link on the specified path.
-   * @param path The pathname that needs to be resolved
-   * 
-   * @return The pathname after resolving the first symbolic link if any.
-   * 
+   * Return the target of the given symlink. If there is an intermediate
+   * symlink in the path (ie a symlink leading up to the final path component)
+   * then the given path is returned with this symlink resolved.
+   *
+   * @param path The path with a link that needs resolution.
+   * @return The path after resolving the first symbolic link in the path.
    * @throws AccessControlException permission denied
    * @throws FileNotFoundException If <code>path</code> does not exist
-   * @throws IOException If an I/O error occurred
+   * @throws IOException If the given path does not refer to a symlink
+   *           or an I/O error occurred
    */
   public String getLinkTarget(String path) throws AccessControlException,
       FileNotFoundException, IOException; 
