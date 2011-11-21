@@ -91,15 +91,14 @@
                rev="${yarn.version}" conf="compile->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-yarn-common"
                rev="${yarn.version}" conf="compile->default"/>
+   <dependency org="org.apache.hadoop" name="hadoop-mapreduce-examples"
+               rev="${yarn.version}" conf="compile->default"/>
    <dependency org="log4j" name="log4j" rev="${log4j.version}" 
                conf="compile->master"/>
-
-   <!--
-   <dependency org="org.apache.hadoop" name="hadoop-yarn-common"
-               rev="${yarn.version}" conf="test->default">
-     <artifact name="hadoop-yarn-common" type="jar" ext="jar" classifier="tests"/>
+   <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-jobclient"
+               rev="${yarn.version}" conf="compile->default">
+     <artifact name="hadoop-mapreduce-client-jobclient" type="tests" ext="jar" m:classifier="tests"/>
    </dependency>
-   -->
 
    <dependency org="checkstyle" name="checkstyle" rev="${checkstyle.version}"
                conf="checkstyle->default"/>

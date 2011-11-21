@@ -157,6 +157,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3447. mapreduce examples not working (mahadev)
 
+    MAPREDUCE-3444. trunk/0.23 builds broken (Hitesh Shah via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
