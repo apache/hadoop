@@ -155,6 +155,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3434. Nightly build broken (Hitesh Shah via mahadev)
 
+    MAPREDUCE-3447. mapreduce examples not working (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
