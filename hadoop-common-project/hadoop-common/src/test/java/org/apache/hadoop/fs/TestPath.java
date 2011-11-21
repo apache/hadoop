@@ -95,6 +95,7 @@ public class TestPath extends TestCase {
     assertEquals(new Path("/foo"), new Path("/foo/bar").getParent());
     assertEquals(new Path("foo"), new Path("foo/bar").getParent());
     assertEquals(new Path("/"), new Path("/foo").getParent());
+    assertEquals(null, new Path("/").getParent());
     if (Path.WINDOWS) {
       assertEquals(new Path("c:/"), new Path("c:/foo").getParent());
     }
@@ -158,6 +159,13 @@ public class TestPath extends TestCase {
 
     assertEquals(new Path("foo/bar/baz","../../..").toString(), "");
     assertEquals(new Path("foo/bar/baz","../../../../..").toString(), "../..");
+  }
+
+  /** Test Path objects created from other Path objects */
+  public void testChildParentResolution() throws URISyntaxException, IOException {
+    Path parent = new Path("foo1://bar1/baz1");
+    Path child  = new Path("foo2://bar2/baz2");
+    assertEquals(child, new Path(parent, child));
   }
   
   public void testScheme() throws java.io.IOException {

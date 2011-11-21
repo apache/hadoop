@@ -28,8 +28,9 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
-import static org.junit.Assert.*;
 
+import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
@@ -238,6 +239,31 @@ public abstract class FileContextSymlinkBaseTest {
     assertFalse(isDir(fc, linkToFile));
     assertEquals(file.toUri().getPath(), 
                  fc.getLinkTarget(linkToFile).toString());
+    // The local file system does not fully resolve the link
+    // when obtaining the file status
+    if (!"file".equals(getScheme())) {
+      assertEquals(fc.getFileStatus(file), fc.getFileStatus(linkToFile));
+      assertEquals(fc.makeQualified(file),
+                   fc.getFileStatus(linkToFile).getPath());
+      assertEquals(fc.makeQualified(linkToFile),
+                   fc.getFileLinkStatus(linkToFile).getPath());
+    }
+  }
+
+  @Test
+  /** Stat a relative link to a file */
+  public void testStatRelLinkToFile() throws IOException {
+    assumeTrue(!"file".equals(getScheme()));
+    Path baseDir    = new Path(testBaseDir1());
+    Path file       = new Path(testBaseDir1(), "file");
+    Path linkToFile = new Path(testBaseDir1(), "linkToFile");
+    createAndWriteFile(file);
+    fc.createSymlink(new Path("file"), linkToFile, false);
+    assertEquals(fc.getFileStatus(file), fc.getFileStatus(linkToFile));
+    assertEquals(fc.makeQualified(file),
+                 fc.getFileStatus(linkToFile).getPath());
+    assertEquals(fc.makeQualified(linkToFile),
+                 fc.getFileLinkStatus(linkToFile).getPath());
   }
 
   @Test
@@ -474,18 +500,15 @@ public abstract class FileContextSymlinkBaseTest {
    * creating using a partially qualified path is file system specific.
    */
   public void testCreateLinkUsingPartQualPath1() throws IOException {
+    // Partially qualified paths are covered for local file systems
+    // in the previous test.
+    assumeTrue(!"file".equals(getScheme()));
     Path schemeAuth   = new Path(testURI().toString());
     Path fileWoHost   = new Path(getScheme()+"://"+testBaseDir1()+"/file");
     Path link         = new Path(testBaseDir1()+"/linkToFile");
     Path linkQual     = new Path(schemeAuth, testBaseDir1()+"/linkToFile");
-    
-    // Partially qualified paths are covered for local file systems
-    // in the previous test.
-    if ("file".equals(getScheme())) {
-      return;
-    }
     FileContext localFc = FileContext.getLocalFSFileContext();
-    
+
     fc.createSymlink(fileWoHost, link, false);
     // Partially qualified path is stored
     assertEquals(fileWoHost, fc.getLinkTarget(linkQual));    
@@ -748,7 +771,7 @@ public abstract class FileContextSymlinkBaseTest {
   }
 
   @Test
-  /** Test create symlink to ../foo */
+  /** Test create symlink to ../file */
   public void testCreateLinkToDotDotPrefix() throws IOException {
     Path file = new Path(testBaseDir1(), "file");
     Path dir  = new Path(testBaseDir1(), "test");
@@ -1205,24 +1228,30 @@ public abstract class FileContextSymlinkBaseTest {
   }
   
   @Test
-  /** Operate on a file using a path with an intermediate symlink */  
-  public void testAccessFileViaSymlink() throws IOException {
+  /**
+   * Create, write, read, append, rename, get the block locations,
+   * checksums, and delete a file using a path with a symlink as an
+   * intermediate path component where the link target was specified
+   * using an absolute path. Rename is covered in more depth below.
+   */
+  public void testAccessFileViaInterSymlinkAbsTarget() throws IOException {
     Path baseDir        = new Path(testBaseDir1());
+    Path file           = new Path(testBaseDir1(), "file");
     Path fileNew        = new Path(baseDir, "fileNew");
     Path linkToDir      = new Path(testBaseDir2(), "linkToDir");
     Path fileViaLink    = new Path(linkToDir, "file");
     Path fileNewViaLink = new Path(linkToDir, "fileNew");
     fc.createSymlink(baseDir, linkToDir, false);
-    // Create, write, read, append, rename, get block locations and 
-    // checksums, and delete a file using a path that contains a 
-    // symlink as an intermediate path component. Rename is covered 
-    // in more depth below.
     createAndWriteFile(fileViaLink);
     assertTrue(exists(fc, fileViaLink));
     assertTrue(isFile(fc, fileViaLink));
     assertFalse(isDir(fc, fileViaLink));
     assertFalse(fc.getFileLinkStatus(fileViaLink).isSymlink());
     assertFalse(isDir(fc, fileViaLink));
+    assertEquals(fc.getFileStatus(file),
+                 fc.getFileLinkStatus(file));
+    assertEquals(fc.getFileStatus(fileViaLink),
+                 fc.getFileLinkStatus(fileViaLink));
     readFile(fileViaLink);
     appendToFile(fileViaLink);
     fc.rename(fileViaLink, fileNewViaLink);
@@ -1235,6 +1264,58 @@ public abstract class FileContextSymlinkBaseTest {
                  fc.getFileChecksum(fileNewViaLink));
     fc.delete(fileNewViaLink, true);
     assertFalse(exists(fc, fileNewViaLink));
+  }
+
+  @Test
+  /**
+   * Operate on a file using a path with an intermediate symlink where
+   * the link target was specified as a fully qualified path.
+   */
+  public void testAccessFileViaInterSymlinkQualTarget() throws IOException {
+    Path baseDir        = new Path(testBaseDir1());
+    Path file           = new Path(testBaseDir1(), "file");
+    Path fileNew        = new Path(baseDir, "fileNew");
+    Path linkToDir      = new Path(testBaseDir2(), "linkToDir");
+    Path fileViaLink    = new Path(linkToDir, "file");
+    Path fileNewViaLink = new Path(linkToDir, "fileNew");
+    fc.createSymlink(fc.makeQualified(baseDir), linkToDir, false);
+    createAndWriteFile(fileViaLink);
+    assertEquals(fc.getFileStatus(file),
+                 fc.getFileLinkStatus(file));
+    assertEquals(fc.getFileStatus(fileViaLink),
+                 fc.getFileLinkStatus(fileViaLink));
+    readFile(fileViaLink);
+  }
+
+  @Test
+  /**
+   * Operate on a file using a path with an intermediate symlink where
+   * the link target was specified as a relative path.
+   */
+  public void testAccessFileViaInterSymlinkRelTarget() throws IOException {
+    assumeTrue(!"file".equals(getScheme()));
+    Path baseDir     = new Path(testBaseDir1());
+    Path dir         = new Path(testBaseDir1(), "dir");
+    Path file        = new Path(dir, "file");
+    Path linkToDir   = new Path(testBaseDir1(), "linkToDir");
+    Path fileViaLink = new Path(linkToDir, "file");
+
+    fc.mkdir(dir, FileContext.DEFAULT_PERM, false);
+    fc.createSymlink(new Path("dir"), linkToDir, false);
+    createAndWriteFile(fileViaLink);
+    // Note that getFileStatus returns fully qualified paths even
+    // when called on an absolute path.
+    assertEquals(fc.makeQualified(file),
+                 fc.getFileStatus(file).getPath());
+    // In each case getFileLinkStatus returns the same FileStatus
+    // as getFileStatus since we're not calling it on a link and
+    // FileStatus objects are compared by Path.
+    assertEquals(fc.getFileStatus(file),
+                 fc.getFileLinkStatus(file));
+    assertEquals(fc.getFileStatus(fileViaLink),
+                 fc.getFileLinkStatus(fileViaLink));
+    assertEquals(fc.getFileStatus(fileViaLink),
+                 fc.getFileLinkStatus(file));
   }
 
   @Test
