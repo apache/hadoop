@@ -149,18 +149,7 @@ public class RunJar {
     File tmpDir = new File(new Configuration().get("hadoop.tmp.dir"));
     ensureDirectory(tmpDir);
 
-    final File workDir;
-    try { 
-      workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
-    } catch (IOException ioe) {
-      // If user has insufficient perms to write to tmpDir, default  
-      // "Permission denied" message doesn't specify a filename. 
-      System.err.println("Error creating temp dir in hadoop.tmp.dir "
-                         + tmpDir + " due to " + ioe.getMessage());
-      System.exit(-1);
-      return;
-    }
-
+    final File workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
     if (!workDir.delete()) {
       System.err.println("Delete failed for " + workDir);
       System.exit(-1);
