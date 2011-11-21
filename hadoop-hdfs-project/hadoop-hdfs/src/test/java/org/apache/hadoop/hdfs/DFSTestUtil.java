@@ -84,6 +84,7 @@ public class DFSTestUtil {
   
   private int maxLevels;// = 3;
   private int maxSize;// = 8*1024;
+  private int minSize = 1;
   private int nFiles;
   private MyFile[] files;
   
@@ -139,7 +140,7 @@ public class DFSTestUtil {
       long fidx = -1;
       while (fidx < 0) { fidx = gen.nextLong(); }
       name = name + Long.toString(fidx);
-      size = gen.nextInt(maxSize);
+      size = minSize + gen.nextInt(maxSize - minSize);
       seed = gen.nextLong();
     }
     
