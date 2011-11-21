@@ -7,6 +7,8 @@ Trunk (unreleased changes)
 
     HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
 
+    HDFS-2518. Add protobuf service for NamenodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
