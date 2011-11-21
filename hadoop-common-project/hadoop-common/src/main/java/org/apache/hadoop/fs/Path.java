@@ -68,13 +68,14 @@ public class Path implements Comparable {
     // Add a slash to parent's path so resolution is compatible with URI's
     URI parentUri = parent.uri;
     String parentPath = parentUri.getPath();
-    if (!(parentPath.equals("/") || parentPath.equals("")))
+    if (!(parentPath.equals("/") || parentPath.equals(""))) {
       try {
         parentUri = new URI(parentUri.getScheme(), parentUri.getAuthority(),
                       parentUri.getPath()+"/", null, parentUri.getFragment());
       } catch (URISyntaxException e) {
         throw new IllegalArgumentException(e);
       }
+    }
     URI resolved = parentUri.resolve(child.uri);
     initialize(resolved.getScheme(), resolved.getAuthority(),
                resolved.getPath(), resolved.getFragment());
@@ -213,7 +214,8 @@ public class Path implements Comparable {
    * There is some ambiguity here. An absolute path is a slash
    * relative name without a scheme or an authority.
    * So either this method was incorrectly named or its
-   * implementation is incorrect.
+   * implementation is incorrect. This method returns true
+   * even if there is a scheme and authority.
    */
   public boolean isAbsolute() {
      return isUriPathAbsolute();
@@ -307,18 +309,15 @@ public class Path implements Comparable {
     return depth;
   }
 
-  
   /**
    *  Returns a qualified path object.
    *  
    *  Deprecated - use {@link #makeQualified(URI, Path)}
    */
- 
   @Deprecated
   public Path makeQualified(FileSystem fs) {
     return makeQualified(fs.getUri(), fs.getWorkingDirectory());
   }
-  
   
   /** Returns a qualified path object. */
   @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
