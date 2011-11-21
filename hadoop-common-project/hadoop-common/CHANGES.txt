@@ -25,6 +25,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)
 
+   HADOOP-6614. RunJar should provide more diags when it can't create
+   a temp file. (Jonathan Hsieh via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
