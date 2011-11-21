@@ -482,6 +482,8 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2411. With webhdfs enabled in secure mode the auth to local mappings 
     are not being respected. (jitendra)
 
+    HADOOP-7676. Enable hbase to run as hdfs user (gkesavan)
+
   IMPROVEMENTS
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
