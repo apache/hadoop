@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertEquals;
-
 import java.net.URL;
 import java.util.Collection;
 

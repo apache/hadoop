@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 

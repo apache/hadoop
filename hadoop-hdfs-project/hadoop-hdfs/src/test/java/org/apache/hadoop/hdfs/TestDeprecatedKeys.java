@@ -20,9 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
-
 import junit.framework.TestCase;
 
 public class TestDeprecatedKeys extends TestCase {

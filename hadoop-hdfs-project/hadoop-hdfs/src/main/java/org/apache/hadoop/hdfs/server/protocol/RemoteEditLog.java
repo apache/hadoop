@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.protocol;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Comparator;
-
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.Writable;
 

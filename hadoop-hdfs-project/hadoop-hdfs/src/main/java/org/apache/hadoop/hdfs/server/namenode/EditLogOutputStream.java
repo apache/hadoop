@@ -18,12 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
-import java.util.zip.Checksum;
-
 import static org.apache.hadoop.hdfs.server.common.Util.now;
-
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.Writable;
 
 /**
  * A generic abstract class to support journaling of edits logs into 

@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * This test checks correctness of port usage by hdfs components:

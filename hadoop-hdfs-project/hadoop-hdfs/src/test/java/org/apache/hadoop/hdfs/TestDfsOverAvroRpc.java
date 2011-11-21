@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
-
 /** Test for simple signs of life using Avro RPC.  Not an exhaustive test
  * yet, just enough to catch fundamental problems using Avro reflection to
  * infer namenode RPC protocols. */

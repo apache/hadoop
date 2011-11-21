@@ -26,7 +26,6 @@ import java.io.EOFException;
 import java.io.DataInputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.annotations.VisibleForTesting;

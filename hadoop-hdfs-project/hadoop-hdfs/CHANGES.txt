@@ -28,6 +28,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2570. Add descriptions for dfs.*.https.address in hdfs-default.xml.
     (eli)
 
+    HDFS-2536. Remove unused imports. (harsh via eli)
+
     HDFS-2566. Move BPOfferService to be a non-inner class. (todd)
 
   OPTIMIZATIONS

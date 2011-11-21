@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 
 /**

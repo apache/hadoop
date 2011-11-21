@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.AbstractList;
 
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
