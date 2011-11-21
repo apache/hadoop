@@ -101,6 +101,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3407. Fixed pom files to refer to the correct MR app-jar needed
     by the integration tests. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3437. Fix examples pom to refer to the correct 0.23 snapshot
+    version. (Jonathan Eagles via todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
