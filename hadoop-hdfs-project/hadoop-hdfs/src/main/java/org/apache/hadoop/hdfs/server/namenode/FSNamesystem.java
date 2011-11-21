@@ -2016,10 +2016,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  /** Get the file info for a specific file.
+  /**
+   * Get the file info for a specific file.
+   *
    * @param src The string representation of the path to the file
    * @param resolveLink whether to throw UnresolvedLinkException 
-   *        if src refers to a symlinks
+   *        if src refers to a symlink
    *
    * @throws AccessControlException if access is denied
    * @throws UnresolvedLinkException if a symlink is encountered.

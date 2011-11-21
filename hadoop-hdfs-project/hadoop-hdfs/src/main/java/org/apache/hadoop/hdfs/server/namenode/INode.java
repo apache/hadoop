@@ -372,14 +372,16 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 
   /**
    * Given some components, create a path name.
-   * @param components
+   * @param components The path components
+   * @param start index
+   * @param end index
    * @return concatenated path
    */
-  static String constructPath(byte[][] components, int start) {
+  static String constructPath(byte[][] components, int start, int end) {
     StringBuilder buf = new StringBuilder();
-    for (int i = start; i < components.length; i++) {
+    for (int i = start; i < end; i++) {
       buf.append(DFSUtil.bytes2String(components[i]));
-      if (i < components.length - 1) {
+      if (i < end - 1) {
         buf.append(Path.SEPARATOR);
       }
     }
