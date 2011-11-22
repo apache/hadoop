@@ -41,6 +41,8 @@ Trunk (unreleased changes)
     (tucu)
 
   BUG FIXES
+    MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
+
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
                     (amarrk)
 
