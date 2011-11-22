@@ -479,7 +479,12 @@ public class TestFairScheduler extends TestCase {
       statuses.put(attemptId, status);
       trackerForTip.put(attemptId, trackerStatus);
       status.setRunState(TaskStatus.State.RUNNING);
-      trackerStatus.getTaskReports().add(status);
+    }
+    
+    public void reportTaskOnTracker(String trackerName, Task t) {
+      FakeTaskInProgress tip = tips.get(t.getTaskID().toString());
+      TaskTrackerStatus trackerStatus = trackers.get(trackerName).getStatus();
+      trackerStatus.getTaskReports().add(tip.getTaskStatus(t.getTaskID()));
     }
     
     public void finishTask(String taskTrackerName, String attemptId) {
@@ -2852,6 +2857,9 @@ public class TestFairScheduler extends TestCase {
   protected void checkAssignment(String taskTrackerName,
       String... expectedTasks) throws IOException {
     List<Task> tasks = scheduler.assignTasks(tracker(taskTrackerName));
+    for (Task t : tasks) {
+      taskTrackerManager.reportTaskOnTracker(taskTrackerName, t);
+    }
     assertNotNull(tasks);
     System.out.println("Assigned tasks:");
     for (int i = 0; i < tasks.size(); i++)

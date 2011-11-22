@@ -46,6 +46,9 @@ Release 0.20.206.0 - unreleased
     MAPREDUCE-2377. task-controller fails to parse configuration if it
     doesn't end in \n. (todd via eli)
 
+    MAPREDUCE-2905. Fix fair scheduler to prevent clumping of tasks when
+    assignmultiple is enabled. (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for 

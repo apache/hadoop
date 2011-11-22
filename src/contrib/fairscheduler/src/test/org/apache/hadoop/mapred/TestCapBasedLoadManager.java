@@ -75,7 +75,7 @@ public class TestCapBasedLoadManager extends TestCase {
    * A single test of canAssignMap.
    */
   private void oneTestCanAssignMap(float maxDiff, int mapCap, int runningMap,
-      int totalMapSlots, int totalRunnableMap, boolean expected) {
+      int totalMapSlots, int totalRunnableMap, int expectedAssigned) {
     
     CapBasedLoadManager manager = new CapBasedLoadManager();
     Configuration conf = new Configuration();
@@ -84,14 +84,16 @@ public class TestCapBasedLoadManager extends TestCase {
     
     TaskTrackerStatus ts = getTaskTrackerStatus(mapCap, 1, runningMap, 1);
     
+    int numAssigned = 0;
+    while (manager.canAssignMap(ts, totalRunnableMap, totalMapSlots, numAssigned)) {
+      numAssigned++;
+    }
+      
     assertEquals( "When maxDiff=" + maxDiff + ", with totalRunnableMap=" 
         + totalRunnableMap + " and totalMapSlots=" + totalMapSlots
         + ", a tracker with runningMap=" + runningMap + " and mapCap="
-        + mapCap + " should " + (expected ? "" : "not ")
-        + "be able to take more Maps.",
-        expected,
-        manager.canAssignMap(ts, totalRunnableMap, totalMapSlots)
-        );
+        + mapCap + " should be able to assign " + expectedAssigned + " maps",
+        expectedAssigned, numAssigned);
   }
   
   
@@ -99,52 +101,60 @@ public class TestCapBasedLoadManager extends TestCase {
    * Test canAssignMap method.
    */
   public void testCanAssignMap() {
-    oneTestCanAssignMap(0.0f, 5, 0, 50, 1, true);
-    oneTestCanAssignMap(0.0f, 5, 1, 50, 10, false);
-    oneTestCanAssignMap(0.2f, 5, 1, 50, 10, true);
-    oneTestCanAssignMap(0.0f, 5, 1, 50, 11, true);
-    oneTestCanAssignMap(0.0f, 5, 2, 50, 11, false);
-    oneTestCanAssignMap(0.3f, 5, 2, 50, 6, true);
-    oneTestCanAssignMap(1.0f, 5, 5, 50, 50, false);
+    oneTestCanAssignMap(0.0f, 5, 0, 50, 1, 1);
+    oneTestCanAssignMap(0.0f, 5, 1, 50, 10, 0);
+    // 20% load + 20% diff = 40% of available slots, but rounds
+    // up with floating point error: so we get 3/5 slots on TT.
+    // 1 already taken, so assigns 2 more
+    oneTestCanAssignMap(0.2f, 5, 1, 50, 10, 2);
+    oneTestCanAssignMap(0.0f, 5, 1, 50, 11, 1);
+    oneTestCanAssignMap(0.0f, 5, 2, 50, 11, 0);
+    oneTestCanAssignMap(0.3f, 5, 2, 50, 6, 1);
+    oneTestCanAssignMap(1.0f, 5, 5, 50, 50, 0);
   }
   
   
   /**
    * A single test of canAssignReduce.
    */
-  private void oneTestCanAssignReduce(float maxDiff, int ReduceCap,
+  private void oneTestCanAssignReduce(float maxDiff, int reduceCap,
       int runningReduce, int totalReduceSlots, int totalRunnableReduce,
-      boolean expected) {
+      int expectedAssigned) {
     
     CapBasedLoadManager manager = new CapBasedLoadManager();
     Configuration conf = new Configuration();
     conf.setFloat("mapred.fairscheduler.load.max.diff", maxDiff);
     manager.setConf(conf);
     
-    TaskTrackerStatus ts = getTaskTrackerStatus(1, ReduceCap, 1,
+    TaskTrackerStatus ts = getTaskTrackerStatus(1, reduceCap, 1,
         runningReduce);
     
+    int numAssigned = 0;
+    while (manager.canAssignReduce(ts, totalRunnableReduce, totalReduceSlots, numAssigned)) {
+      numAssigned++;
+    }
+      
     assertEquals( "When maxDiff=" + maxDiff + ", with totalRunnableReduce=" 
         + totalRunnableReduce + " and totalReduceSlots=" + totalReduceSlots
-        + ", a tracker with runningReduce=" + runningReduce
-        + " and ReduceCap=" + ReduceCap + " should "
-        + (expected ? "" : "not ") + "be able to take more Reduces.",
-        expected,
-        manager.canAssignReduce(ts, totalRunnableReduce, totalReduceSlots)
-        );
+        + ", a tracker with runningReduce=" + runningReduce + " and reduceCap="
+        + reduceCap + " should be able to assign " + expectedAssigned + " reduces",
+        expectedAssigned, numAssigned);
   }
     
   /** 
    * Test canAssignReduce method.
    */
   public void testCanAssignReduce() {
-    oneTestCanAssignReduce(0.0f, 5, 0, 50, 1, true);
-    oneTestCanAssignReduce(0.0f, 5, 1, 50, 10, false);
-    oneTestCanAssignReduce(0.2f, 5, 1, 50, 10, true);
-    oneTestCanAssignReduce(0.0f, 5, 1, 50, 11, true);
-    oneTestCanAssignReduce(0.0f, 5, 2, 50, 11, false);
-    oneTestCanAssignReduce(0.3f, 5, 2, 50, 6, true);
-    oneTestCanAssignReduce(1.0f, 5, 5, 50, 50, false);
+    oneTestCanAssignReduce(0.0f, 5, 0, 50, 1, 1);
+    oneTestCanAssignReduce(0.0f, 5, 1, 50, 10, 0);
+    // 20% load + 20% diff = 40% of available slots, but rounds
+    // up with floating point error: so we get 3/5 slots on TT.
+    // 1 already taken, so assigns 2 more
+    oneTestCanAssignReduce(0.2f, 5, 1, 50, 10, 2);
+    oneTestCanAssignReduce(0.0f, 5, 1, 50, 11, 1);
+    oneTestCanAssignReduce(0.0f, 5, 2, 50, 11, 0);
+    oneTestCanAssignReduce(0.3f, 5, 2, 50, 6, 1);
+    oneTestCanAssignReduce(1.0f, 5, 5, 50, 50, 0);
   }
   
 }

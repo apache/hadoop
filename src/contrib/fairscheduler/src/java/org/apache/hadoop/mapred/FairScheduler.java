@@ -439,7 +439,8 @@ public class FairScheduler extends TaskScheduler {
       if (!mapRejected) {
         if (mapsAssigned == mapCapacity ||
             runningMaps == runnableMaps ||
-            !loadMgr.canAssignMap(tts, runnableMaps, totalMapSlots)) {
+            !loadMgr.canAssignMap(tts, runnableMaps,
+                totalMapSlots, mapsAssigned)) {
           eventLog.log("INFO", "Can't assign another MAP to " + trackerName);
           mapRejected = true;
         }
@@ -447,7 +448,8 @@ public class FairScheduler extends TaskScheduler {
       if (!reduceRejected) {
         if (reducesAssigned == reduceCapacity ||
             runningReduces == runnableReduces ||
-            !loadMgr.canAssignReduce(tts, runnableReduces, totalReduceSlots)) {
+            !loadMgr.canAssignReduce(tts, runnableReduces,
+                totalReduceSlots, reducesAssigned)) {
           eventLog.log("INFO", "Can't assign another REDUCE to " + trackerName);
           reduceRejected = true;
         }
@@ -470,7 +472,8 @@ public class FairScheduler extends TaskScheduler {
       } else {
         // If both types are available, choose the task type with fewer running
         // tasks on the task tracker to prevent that task type from starving
-        if (tts.countMapTasks() <= tts.countReduceTasks()) {
+        if (tts.countMapTasks() + mapsAssigned <=
+            tts.countReduceTasks() + reducesAssigned) {
           taskType = TaskType.MAP;
         } else {
           taskType = TaskType.REDUCE;

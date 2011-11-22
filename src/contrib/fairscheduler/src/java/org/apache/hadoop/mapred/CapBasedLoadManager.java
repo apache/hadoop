@@ -49,16 +49,17 @@ public class CapBasedLoadManager extends LoadManager {
 
   @Override
   public boolean canAssignMap(TaskTrackerStatus tracker,
-      int totalRunnableMaps, int totalMapSlots) {
-    return tracker.countMapTasks() < getCap(totalRunnableMaps,
-        tracker.getMaxMapSlots(), totalMapSlots);
+      int totalRunnableMaps, int totalMapSlots, int alreadyAssigned) {
+    int cap = getCap(totalRunnableMaps, tracker.getMaxMapSlots(), totalMapSlots);
+    return tracker.countMapTasks() + alreadyAssigned < cap;
   }
 
   @Override
   public boolean canAssignReduce(TaskTrackerStatus tracker,
-      int totalRunnableReduces, int totalReduceSlots) {
-    return tracker.countReduceTasks() < getCap(totalRunnableReduces,
-        tracker.getMaxReduceSlots(), totalReduceSlots);
+      int totalRunnableReduces, int totalReduceSlots, int alreadyAssigned) {
+    int cap = getCap(totalRunnableReduces, tracker.getMaxReduceSlots(),
+        totalReduceSlots); 
+    return tracker.countReduceTasks() + alreadyAssigned < cap;
   }
 
   @Override
