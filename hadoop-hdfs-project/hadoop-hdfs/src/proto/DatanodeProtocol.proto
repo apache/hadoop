@@ -1,0 +1,344 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file contains protocol buffers that are used throughout HDFS -- i.e.
+// by the client, server, and data transfer protocols.
+
+option java_package = "org.apache.hadoop.hdfs.protocol.proto";
+option java_outer_classname = "DatanodeProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "hdfs.proto";
+
+/**
+ * Information to identify a datanode to a namenode
+ */
+message DatanodeRegistrationProto {
+  required DatanodeIDProto datanodeID = 1;    // Datanode information
+  required StorageInfoProto storateInfo = 2;  // Node information
+  required ExportedBlockKeysProto keys = 3;   // Block keys
+}
+
+/**
+ * Commands sent from namenode to the datanodes
+ */
+message DatanodeCommandProto {
+  enum Type {
+    BalancerBandwidthCommand = 0;
+    BlockCommand = 1;
+    BlockRecoveryCommand = 2;
+    FinalizeCommand = 3;
+    KeyUpdateCommand = 4;
+    RegisterCommand = 5;
+    UpgradeCommand = 6;
+  }
+
+  required Type cmdType = 1;    // Type of the command
+
+  // One of the following command is available when the corresponding
+  // cmdType is set
+  optional BalancerBandwidthCommandProto balancerCmd = 2;
+  optional BlockCommandProto blkCmd = 3;
+  optional BlockRecoveryCommndProto recoveryCmd = 4;
+  optional FinalizeCommandProto finalizeCmd = 5;
+  optional KeyUpdateCommandProto keyUpdateCmd = 6;
+  optional RegisterCommandProto registerCmd = 7;
+  optional UpgradeCommandProto upgradeCmd = 8;
+}
+
+/**
+ * Command sent from namenode to datanode to set the
+ * maximum bandwidth to be used for balancing.
+ */
+message BalancerBandwidthCommandProto {
+
+  // Maximum bandwidth to be used by datanode for balancing
+  required uint64 bandwidth = 1;
+}
+
+/**
+ * Command to instruct datanodes to perform certain action
+ * on the given set of blocks.
+ */
+message BlockCommandProto {
+  enum Action {
+    UNKNOWN = 0;    // Unknown action   
+    TRANSFER = 1;   // Transfer blocks to another datanode
+    INVALIDATE = 2; // Invalidate blocks
+    SHUTDOWN = 3;   // Shutdown node
+  }
+  required uint32 action = 1;
+  required string blockPoolId = 2;
+  repeated BlockProto blocks = 3;
+  repeated DatanodeIDsProto targets = 4;
+}
+
+/**
+ * List of blocks to be recovered by the datanode
+ */
+message BlockRecoveryCommndProto {
+  repeated RecoveringBlockProto blocks = 1;
+}
+
+/**
+ * Finalize the upgrade at the datanode
+ */
+message FinalizeCommandProto {
+  required string blockPoolId = 1; // Block pool to be finalized
+}
+
+/**
+ * Update the block keys at the datanode
+ */
+message KeyUpdateCommandProto {
+  required ExportedBlockKeysProto keys = 1;
+}
+
+/**
+ * Instruct datanode to register with the namenode
+ */
+message RegisterCommandProto {
+  // void
+}
+
+/**
+ * Generic distributed upgrade Command
+ */
+message UpgradeCommandProto {
+  enum Action {
+    UNKNOWN = 0;          // Unknown action
+    REPORT_STATUS = 100;  // Report upgrade status
+    START_UPGRADE = 101;  // Start upgrade
+  }
+  required uint32 action = 1;  // Upgrade action
+  required uint32 version = 2; // Version of the upgrade
+  required uint32 upgradeStatus = 3; // % completed in range 0 & 100
+}
+
+/**
+ * registration - Information of the datanode registering with the namenode
+ */
+message RegisterDatanodeRequestProto {
+  required DatanodeRegistrationProto registration = 1; // Datanode info
+}
+
+/**
+ * registration - Update registration of the datanode that successfully 
+ *                registered. StorageInfo will be updated to include new 
+ *                storage ID if the datanode did not have one in the request.
+ */
+message RegisterDatanodeResponseProto {
+  required DatanodeRegistrationProto registration = 1; // Datanode info
+}
+
+/**
+ * registration - datanode registration information
+ * capacity - total storage capacity available at the datanode
+ * dfsUsed - storage used by HDFS
+ * remaining - remaining storage available for HDFS
+ * blockPoolUsed - storage used by the block pool
+ * xmitsInProgress - number of transfers from this datanode to others
+ * xceiverCount - number of active transceiver threads
+ * failedVolumes - number of failed volumes
+ */
+message HeartbeatRequestProto {
+  required DatanodeRegistrationProto registration = 1; // Datanode info
+  required uint64 capacity = 2;
+  required uint64 dfsUsed = 3;
+  required uint64 remaining = 4;
+  required uint64 blockPoolUsed = 5;
+  required uint32 xmitsInProgress = 6;
+  required uint32 xceiverCount = 7;
+  required uint32 failedVolumes = 8;
+}
+
+/**
+ * cmds - Commands from namenode to datanode.
+ */
+message HeartbeatResponseProto {
+  repeated DatanodeCommandProto cmds = 1;
+}
+
+/**
+ * registration - datanode registration information
+ * blockPoolID  - block pool ID of the reported blocks
+ * blocks       - each block is represented as two longs in the array.
+ *                first long represents block ID
+ *                second long represents length
+ */
+message BlockReportRequestProto {
+  required DatanodeRegistrationProto registration = 1;
+  required string blockPoolId = 2;
+  repeated uint64 blocks = 3 [packed=true];
+}
+
+/**
+ * cmd - Command from namenode to the datanode
+ */
+message BlockReportResponseProto {
+  required DatanodeCommandProto cmd = 1;
+} 
+
+/**
+ * Data structure to send received or deleted block information
+ * from datanode to namenode.
+ *
+ * deleteHint set to "-" indicates block deletion.
+ * other deleteHint indicates block addition.
+ */
+message ReceivedDeletedBlockInfoProto {
+  required BlockProto block = 1;
+  optional string deleteHint = 2;
+}
+
+/**
+ * registration - datanode registration information
+ * blockPoolID  - block pool ID of the reported blocks
+ * blocks       - Received/deleted block list
+ */
+message BlockReceivedAndDeletedRequestProto {
+  required DatanodeRegistrationProto registration = 1;
+  required string blockPoolId = 2;
+  repeated ReceivedDeletedBlockInfoProto blocks = 3;
+}
+
+/**
+ * void response
+ */
+message BlockReceivedAndDeletedResponseProto {
+}
+
+/**
+ * registartion - Datanode reporting the error
+ * errorCode - error code indicating the error
+ * msg - Free text description of the error
+ */
+message ErrorReportRequestProto {
+  enum ErrorCode {
+    NOTIFY = 0;           // Error report to be logged at the namenode
+    DISK_ERROR = 1;       // DN has disk errors but still has valid volumes
+    INVALID_BLOCK = 2;    // Command from namenode has invalid block ID
+    FATAL_DISK_ERROR = 3; // No valid volumes left on datanode
+  }
+  required DatanodeRegistrationProto registartion = 1; // Registartion info
+  required uint32 errorCode = 2;  // Error code
+  required string msg = 3;        // Error message
+}
+
+/**
+ * void response
+ */
+message ErrorReportResponseProto {
+}
+
+/**
+ * cmd - Upgrade command sent from datanode to namenode
+ */
+message ProcessUpgradeRequestProto {
+  optional UpgradeCommandProto cmd = 1;
+}
+
+/**
+ * cmd - Upgrade command sent from namenode to datanode
+ */
+message ProcessUpgradeResponseProto {
+  optional UpgradeCommandProto cmd = 1;
+}
+
+/**
+ * blocks - list of blocks that are reported as corrupt
+ */
+message ReportBadBlocksRequestProto {
+  repeated LocatedBlockProto blocks = 1;
+}
+
+/**
+ * void response
+ */
+message ReportBadBlocksResponseProto {
+}
+
+/**
+ * Commit block synchronization request during lease recovery
+ */
+message CommitBlockSynchronizationRequestProto {
+  required ExtendedBlockProto block = 1;
+  required uint64 newGenStamp = 2;
+  required uint64 newLength = 3;
+  required bool closeFile = 4;
+  required bool deleteBlock = 5;
+  repeated DatanodeIDProto newTaragets = 6;
+}
+
+/**
+ * void response
+ */
+message CommitBlockSynchronizationResponseProto {
+}
+
+/**
+ * Protocol used from datanode to the namenode
+ * See the request and response for details of rpc call.
+ */
+service DatanodeProtocolService {
+  /**
+   * Register a datanode at a namenode
+   */
+  rpc registerDatanode(RegisterDatanodeRequestProto)
+      returns(RegisterDatanodeResponseProto);
+
+  /**
+   * Send heartbeat from datanode to namenode
+   */
+  rpc sendHeartbeat(HeartbeatRequestProto) returns(HeartbeatResponseProto);
+
+  /**
+   * Report blocks at a given datanode to the namenode
+   */
+  rpc blockReport(BlockReportRequestProto) returns(BlockReportResponseProto);
+
+  /**
+   * Report from datanode about recently received or deleted block
+   */
+  rpc blockReceivedAndDeleted(BlockReceivedAndDeletedRequestProto) 
+      returns(BlockReceivedAndDeletedResponseProto);
+
+  /**
+   * Report from a datanode of an error to the active namenode.
+   * Used for debugging.
+   */
+  rpc errorReport(ErrorReportRequestProto) returns(ErrorReportResponseProto);
+
+  /**
+   * Generic way to send commands from datanode to namenode during
+   * distributed upgrade process.
+   */
+  rpc processUpgrade(ProcessUpgradeRequestProto) returns(ProcessUpgradeResponseProto);
+
+  /**
+   * Report corrupt blocks at the specified location
+   */
+  rpc reportBadBlocks(ReportBadBlocksRequestProto) returns(ReportBadBlocksResponseProto);
+
+  /**
+   * Commit block synchronization during lease recovery.
+   */
+  rpc commitBlockSynchronization(CommitBlockSynchronizationRequestProto)
+      returns(CommitBlockSynchronizationResponseProto);
+}

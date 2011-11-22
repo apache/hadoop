@@ -11,6 +11,8 @@ Trunk (unreleased changes)
 
     HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
 
+    HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
