@@ -70,6 +70,7 @@ public class TestHBaseFsck {
   
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.distributed.log.splitting", false);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -119,6 +120,11 @@ public class TestHBaseFsck {
     // Try to fix the data
     assertErrors(doFsck(conf, true), new ERROR_CODE[]{
         ERROR_CODE.SERVER_DOES_NOT_MATCH_META});
+
+    // fixing assignements require opening regions is not synchronous.  To make
+    // the test pass consistentyl so for now we bake in some sleep to let it
+    // finish.  1s seems sufficient.
+    Thread.sleep(1000);
 
     // Should be fixed now
     assertNoErrors(doFsck(conf, false));

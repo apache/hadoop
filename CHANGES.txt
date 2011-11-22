@@ -437,6 +437,8 @@ Release 0.92.0 - Unreleased
                region map though not online; we don't cleanup WALs
    HBASE-4830  Regionserver BLOCKED on WAITING DFSClient$DFSOutputStream.waitForAckedSeqno
                running 0.20.205.0+
+   HBASE-4842  [hbck] Fix intermittent failures on TestHBaseFsck.testHBaseFsck
+               (Jon Hsieh)
 
   TESTS
    HBASE-4492  TestRollingRestart fails intermittently
