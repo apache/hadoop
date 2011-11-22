@@ -50,6 +50,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3372. HADOOP_PREFIX cannot be overridden.
     (Bruno Mahé via tomwhite)
 
+    MAPREDUCE-3411. Performance Upgrade for jQuery (Jonathan Eagles via 
+    mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES

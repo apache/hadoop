@@ -79,11 +79,11 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.
-      link(join("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/themes/",
+      link(join("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/",
                 getTheme(), "/jquery-ui.css")).
       link(root_url("static/dt-1.7.5/css/jui-dt.css")).
-      script("https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js").
-      script("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.9/jquery-ui.min.js").
+      script("https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js").
+      script("https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.min.js").
       script(root_url("static/dt-1.7.5/js/jquery.dataTables.min.js")).
       script(root_url("static/yarn.dt.plugins.js")).
       script(root_url("static/themeswitcher.js")).
