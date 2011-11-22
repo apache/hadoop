@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 
 import org.apache.hadoop.security.token.Token;
 import org.junit.Test;
@@ -209,6 +210,7 @@ public class TestConnCache {
     MockGetBlockReader answer = new MockGetBlockReader();
     Mockito.doAnswer(answer).when(in).getBlockReader(
                            (InetSocketAddress) Matchers.anyObject(),
+                           (DatanodeInfo) Matchers.anyObject(),
                            Matchers.anyString(),
                            (ExtendedBlock) Matchers.anyObject(),
                            (Token<BlockTokenIdentifier>) Matchers.anyObject(),
