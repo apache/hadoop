@@ -32,6 +32,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2566. Move BPOfferService to be a non-inner class. (todd)
 
+    HDFS-2552. Add Forrest doc for WebHDFS REST API.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
