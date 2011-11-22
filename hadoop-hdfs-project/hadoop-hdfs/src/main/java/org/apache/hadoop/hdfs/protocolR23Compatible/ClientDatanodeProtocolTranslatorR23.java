@@ -26,14 +26,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 
 
 /**
@@ -63,6 +66,23 @@ public class ClientDatanodeProtocolTranslatorR23 implements
     rpcProxy = createClientDatanodeProtocolProxy(addr, ticket, conf, factory);
   }
   
+  /**
+   * Constructor.
+   * @param datanodeid Datanode to connect to.
+   * @param conf Configuration.
+   * @param socketTimeout Socket timeout to use.
+   * @throws IOException
+   */
+  public ClientDatanodeProtocolTranslatorR23(DatanodeID datanodeid,
+      Configuration conf, int socketTimeout) throws IOException {
+    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getHost()
+        + ":" + datanodeid.getIpcPort());
+    rpcProxy = RPC.getProxy(ClientDatanodeWireProtocol.class,
+        ClientDatanodeWireProtocol.versionID, addr,
+        UserGroupInformation.getCurrentUser(), conf,
+        NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+  }
+
   static ClientDatanodeWireProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
       LocatedBlock locatedBlock)
@@ -134,4 +154,9 @@ public class ClientDatanodeProtocolTranslatorR23 implements
 
   }
 
+  @Override
+  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block,
+      Token<BlockTokenIdentifier> token) throws IOException {
+    return rpcProxy.getBlockLocalPathInfo(block, token);
+  }
 }

@@ -82,6 +82,12 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
+      <type>test-jar</type>
+    </dependency>
   </dependencies>
 
   <build>
@@ -104,6 +110,10 @@
           <environmentVariables>
             <JAVA_HOME>${java.home}</JAVA_HOME>
           </environmentVariables>
+          <additionalClasspathElements>
+            <!-- workaround for JobConf#setJarByClass -->
+            <additionalClasspathElement>${project.build.directory}/${project.artifactId}-${project.version}-tests.jar</additionalClasspathElement>
+          </additionalClasspathElements>
         </configuration>
       </plugin>
     </plugins>

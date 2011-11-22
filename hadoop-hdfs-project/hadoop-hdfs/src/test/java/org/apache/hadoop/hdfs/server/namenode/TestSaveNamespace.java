@@ -22,7 +22,6 @@ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.junit.Assert.*;
 
 import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;

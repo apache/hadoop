@@ -26,11 +26,11 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import junit.framework.Assert;
 import junit.framework.TestCase;
-import java.net.InetSocketAddress;
-
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
@@ -65,9 +65,9 @@ public class TestDFSAddressConfig extends TestCase {
       assertNotNull("Should have been able to stop simulated datanode", dnp);
     }
 
-    conf.unset("dfs.datanode.address");
-    conf.unset("dfs.datanode.http.address");
-    conf.unset("dfs.datanode.ipc.address");
+    conf.unset(DFS_DATANODE_ADDRESS_KEY);
+    conf.unset(DFS_DATANODE_HTTP_ADDRESS_KEY);
+    conf.unset(DFS_DATANODE_IPC_ADDRESS_KEY);
 
     cluster.startDataNodes(conf, 1, true, StartupOption.REGULAR,
                            null, null, null, false, true);
@@ -90,9 +90,9 @@ public class TestDFSAddressConfig extends TestCase {
       assertNotNull("Should have been able to stop simulated datanode", dnp);
     }
 
-    conf.set("dfs.datanode.address","0.0.0.0:0");
-    conf.set("dfs.datanode.http.address","0.0.0.0:0");
-    conf.set("dfs.datanode.ipc.address","0.0.0.0:0");
+    conf.set(DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
 
     cluster.startDataNodes(conf, 1, true, StartupOption.REGULAR,
                            null, null, null, false, true);

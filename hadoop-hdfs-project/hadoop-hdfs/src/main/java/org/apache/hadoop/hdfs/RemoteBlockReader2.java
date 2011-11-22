@@ -85,7 +85,7 @@ public class RemoteBlockReader2  implements BlockReader {
   
   Socket dnSock; //for now just sending the status code (e.g. checksumOk) after the read.
   private ReadableByteChannel in;
-  private DataChecksum checksum;
+  protected DataChecksum checksum;
   
   private PacketHeader curHeader;
   private ByteBuffer curPacketBuf = null;
@@ -96,25 +96,25 @@ public class RemoteBlockReader2  implements BlockReader {
   private long lastSeqNo = -1;
 
   /** offset in block where reader wants to actually read */
-  private long startOffset;
-  private final String filename;
+  protected long startOffset;
+  protected final String filename;
 
-  private static DirectBufferPool bufferPool =
+  protected static DirectBufferPool bufferPool =
     new DirectBufferPool();
   private ByteBuffer headerBuf = ByteBuffer.allocate(
       PacketHeader.PKT_HEADER_LEN);
 
-  private int bytesPerChecksum;
-  private int checksumSize;
+  protected int bytesPerChecksum;
+  protected int checksumSize;
 
   /**
    * The total number of bytes we need to transfer from the DN.
    * This is the amount that the user has requested plus some padding
    * at the beginning so that the read can begin on a chunk boundary.
    */
-  private long bytesNeededToFinish;
+  protected long bytesNeededToFinish;
 
-  private final boolean verifyChecksum;
+  protected final boolean verifyChecksum;
 
   private boolean sentStatusCode = false;
   
@@ -271,7 +271,7 @@ public class RemoteBlockReader2  implements BlockReader {
     }
   }
 
-  private RemoteBlockReader2(String file, String bpid, long blockId,
+  protected RemoteBlockReader2(String file, String bpid, long blockId,
       ReadableByteChannel in, DataChecksum checksum, boolean verifyChecksum,
       long startOffset, long firstChunkOffset, long bytesToRead, Socket dnSock) {
     // Path is used only for printing block and file information in debug

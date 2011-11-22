@@ -60,6 +60,8 @@ Trunk (unreleased changes)
     HADOOP-7688. Add servlet handler check in HttpServer.start().
     (Uma Maheswara Rao G via szetszwo)
 
+    HADOOP-7590. Mavenize streaming and MR examples. (tucu)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
@@ -93,6 +95,9 @@ Trunk (unreleased changes)
     HADOOP-7770. ViewFS getFileChecksum throws FileNotFoundException for files in 
     /tmp and /user. (Ravi Prakash via jitendra)
 
+    HADOOP-7833. Fix findbugs warnings in protobuf generated code.
+    (John Lee via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -122,6 +127,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)
+
+   HADOOP-6614. RunJar should provide more diags when it can't create
+   a temp file. (Jonathan Hsieh via eli)
 
 Release 0.23.0 - 2011-11-01 
 
@@ -1355,6 +1363,8 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7457. Remove out-of-date Chinese language documentation.
     (Jakob Homan via eli)
+
+    HADOOP-7783. Add more symlink tests that cover intermediate links. (eli)
 
 Release 0.21.1 - Unreleased
 

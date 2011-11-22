@@ -819,10 +819,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public String getLinkTarget(String path) throws IOException {
     nn.checkOperation(OperationCategory.READ);
     metrics.incrGetLinkTargetOps();
-    /* Resolves the first symlink in the given path, returning a
-     * new path consisting of the target of the symlink and any 
-     * remaining path components from the original path.
-     */
     try {
       HdfsFileStatus stat = namesystem.getFileInfo(path, false);
       if (stat != null) {

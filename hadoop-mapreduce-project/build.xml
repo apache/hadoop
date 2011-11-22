@@ -867,7 +867,6 @@
    <subant target="jar">
       <property name="version" value="${version}"/>
       <property name="dist.dir" value="${dist.dir}"/>
-      <fileset file="${contrib.dir}/streaming/build.xml"/>
       <fileset file="${contrib.dir}/gridmix/build.xml"/>
     </subant>
  </target>
@@ -897,12 +896,10 @@
       <sourcePath path="${mapred.src.dir}"/>
       <sourcePath path="${examples.dir}" />
       <sourcePath path="${tools.src}" />
-      <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
       <sourcePath path="${basedir}/src/contrib/gridmix/src/java" />
       <class location="${basedir}/build/${final.name}.jar" />
       <class location="${basedir}/build/${examples.final.name}.jar" />
       <class location="${basedir}/build/${tools.final.name}.jar" />
-      <class location="${basedir}/build/contrib/streaming/hadoop-${version}-streaming.jar" />
       <class location="${basedir}/build/contrib/gridmix/hadoop-${version}-gridmix.jar" />
     </findbugs>
 
@@ -962,7 +959,6 @@
        <packageset dir="src/contrib/data_join/src/java"/>
        <packageset dir="src/contrib/gridmix/src/java"/>
        <packageset dir="src/contrib/index/src/java"/>
-       <packageset dir="src/contrib/streaming/src/java"/>
        <packageset dir="src/contrib/vaidya/src/java"/>
        <packageset dir="src/contrib/vertica/src/java"/>
 
@@ -987,7 +983,6 @@
        <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
        <group title="contrib: Gridmix" packages="org.apache.hadoop.mapred.gridmix*"/>
        <group title="contrib: Index" packages="org.apache.hadoop.contrib.index*"/>
-       <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*:org.apache.hadoop.typedbytes*"/>
        <group title="contrib: Vaidya" packages="org.apache.hadoop.vaidya*"/>
        <group title="contrib: Vertica" packages="org.apache.hadoop.vertica*"/>
     </javadoc>
@@ -1026,7 +1021,6 @@
        <packageset dir="src/contrib/data_join/src/java"/>
        <packageset dir="src/contrib/gridmix/src/java"/>
        <packageset dir="src/contrib/index/src/java"/>
-       <packageset dir="src/contrib/streaming/src/java"/>
        <packageset dir="src/contrib/vaidya/src/java"/>
        <packageset dir="src/contrib/vertica/src/java"/>
        <packageset dir="${tools.src}"/>
@@ -1052,7 +1046,6 @@
        <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
        <group title="contrib: Gridmix" packages="org.apache.hadoop.mapred.gridmix*"/>
        <group title="contrib: Index" packages="org.apache.hadoop.contrib.index*"/>
-       <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*:org.apache.hadoop.typedbytes*"/>
        <group title="contrib: Vaidya" packages="org.apache.hadoop.vaidya*"/>
        <group title="contrib: Vertica" packages="org.apache.hadoop.vertica*"/>
 
@@ -1792,10 +1785,6 @@
                 output="${build.dir.eclipse-contrib-classes}/raid/main" />
         <source path="${contrib.dir}/raid/src/test"
                 output="${build.dir.eclipse-contrib-classes}/raid/test" />
-        <source path="${contrib.dir}/streaming/src/java"
-                output="${build.dir.eclipse-contrib-classes}/streaming/main" />
-        <source path="${contrib.dir}/streaming/src/test"
-                output="${build.dir.eclipse-contrib-classes}/streaming/test" />
         <source path="${contrib.dir}/vaidya/src/java"
                 output="${build.dir.eclipse-contrib-classes}/vaidya/main" />
         <source path="${contrib.dir}/vertica/src/java"

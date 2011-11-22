@@ -21,9 +21,13 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.token.Token;
 
 /**
  * This class is used on the server side.
@@ -115,5 +119,11 @@ public class ClientDatanodeProtocolServerSideTranslatorR23 implements
   @Override
   public void deleteBlockPool(String bpid, boolean force) throws IOException {
     server.deleteBlockPool(bpid, force);
+  }
+
+  @Override
+  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block,
+      Token<BlockTokenIdentifier> token) throws IOException {
+    return server.getBlockLocalPathInfo(block, token);
   }
 }

@@ -5,6 +5,12 @@ Trunk (unreleased changes)
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+    HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
+
+    HDFS-2518. Add protobuf service for NamenodeProtocol. (suresh)
+
+    HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
@@ -52,6 +58,13 @@ Trunk (unreleased changes)
 
     HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
 
+    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
+    (Hari Mankude via eli)
+
+    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
+
+    HDFS-2410. Further cleanup of hardcoded configuration keys and values.
+    (suresh)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -100,6 +113,9 @@ Trunk (unreleased changes)
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
                reference to rpcProxyWithoutRetry (atm)
 
+    HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
+               via todd)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -117,6 +133,24 @@ Release 0.23.1 - UNRELEASED
     HDFS-2562. Refactor DN configuration variables out of DataNode class
     (todd)
 
+    HDFS-2563. Some cleanup in BPOfferService. (todd)
+
+    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
+    (Uma Maheswara Rao G via eli)
+
+    HDFS-2568. Use a set to manage child sockets in XceiverServer.
+    (harsh via eli)
+
+    HDFS-2454. Move maxXceiverCount check to before starting the
+    thread in dataXceiver. (harsh via eli)
+
+    HDFS-2570. Add descriptions for dfs.*.https.address in hdfs-default.xml.
+    (eli)
+
+    HDFS-2536. Remove unused imports. (harsh via eli)
+
+    HDFS-2566. Move BPOfferService to be a non-inner class. (todd)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -127,8 +161,23 @@ Release 0.23.1 - UNRELEASED
     HDFS-2129. Simplify BlockReader to not inherit from FSInputChecker.
     (todd)
 
+    HDFS-2246. Enable reading a block directly from local file system
+    for a client on the same node as the block file.  (Andrew Purtell,
+    Suresh Srinivas and Jitendra Nath Pandey via szetszwo)
+
   BUG FIXES
 
+    HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
+    may request a random number with a negative seed value. (harsh via eli)
+
+    HDFS-2502. hdfs-default.xml should include dfs.name.dir.restore.
+    (harsh via eli)
+
+    HDFS-2567. When 0 DNs are available, show a proper error when
+    trying to browse DFS via web UI. (harsh via eli)
+
+    HDFS-2575. DFSTestUtil may create empty files (todd)
+    
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
@@ -1901,6 +1950,11 @@ Release 0.22.0 - Unreleased
 
     HDFS-2002. Incorrect computation of needed blocks in getTurnOffTip().
     (Plamen Jeliazkov via shv)
+
+    HDFS-2514. Link resolution bug for intermediate symlinks with
+    relative targets. (eli)
+
+    HDFS-2573. TestFiDataXceiverServer is failing, not testing OOME (cos)
 
 Release 0.21.1 - Unreleased
 

@@ -21,8 +21,6 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.LAYOUT_VERSION;
 
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,9 +36,12 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.test.GenericTestUtils;
 
+import org.junit.Test;
+import static org.junit.Assert.*;
+
 /**
  */
-public class TestDistributedUpgrade extends TestCase {
+public class TestDistributedUpgrade {
   private static final Log LOG = LogFactory.getLog(TestDistributedUpgrade.class);
   private Configuration conf;
   private int testCounter = 0;
@@ -95,6 +96,7 @@ public class TestDistributedUpgrade extends TestCase {
  
   /**
    */
+  @Test(timeout=120000)
   public void testDistributedUpgrade() throws Exception {
     int numDirs = 1;
     TestDFSUpgradeFromImage testImg = new TestDFSUpgradeFromImage();

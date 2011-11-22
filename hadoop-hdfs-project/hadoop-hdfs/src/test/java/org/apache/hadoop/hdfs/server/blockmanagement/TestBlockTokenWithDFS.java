@@ -31,6 +31,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -123,7 +124,7 @@ public class TestBlockTokenWithDFS {
   private static FSDataOutputStream writeFile(FileSystem fileSys, Path name,
       short repl, long blockSize) throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt("io.file.buffer.size", 4096), repl, blockSize);
+        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096), repl, blockSize);
     return stm;
   }
 
@@ -173,7 +174,7 @@ public class TestBlockTokenWithDFS {
   }
 
   // get a conf for testing
-  private static Configuration getConf(int numDataNodes) throws IOException {
+  private static Configuration getConf(int numDataNodes) {
     Configuration conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -181,7 +182,8 @@ public class TestBlockTokenWithDFS {
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
+        DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
     return conf;
   }
 

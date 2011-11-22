@@ -48,8 +48,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Receiver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto.Builder;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProtoOrBuilder;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientReadStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReadOpChecksumInfoProto;
@@ -128,7 +126,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void run() {
     int opsProcessed = 0;
     Op op = null;
-    dataXceiverServer.childSockets.put(s, s);
+    dataXceiverServer.childSockets.add(s);
     try {
       int stdTimeout = s.getSoTimeout();
 
@@ -163,14 +161,6 @@ class DataXceiver extends Receiver implements Runnable {
         // restore normal timeout
         if (opsProcessed != 0) {
           s.setSoTimeout(stdTimeout);
-        }
-
-        // Make sure the xceiver count is not exceeded
-        int curXceiverCount = datanode.getXceiverCount();
-        if (curXceiverCount > dataXceiverServer.maxXceiverCount) {
-          throw new IOException("xceiverCount " + curXceiverCount
-                                + " exceeds the limit of concurrent xcievers "
-                                + dataXceiverServer.maxXceiverCount);
         }
 
         opStartTime = now();

@@ -31,6 +31,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -88,17 +89,17 @@ public class TestDistributedFileSystem {
   @Test
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fileSys = cluster.getFileSystem();
-
+    MiniDFSCluster cluster = null;
     try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      FileSystem fileSys = cluster.getFileSystem();
+      
       // create two files
       fileSys.create(new Path("/test/dfsclose/file-0"));
       fileSys.create(new Path("/test/dfsclose/file-1"));
 
       fileSys.close();
-    }
-    finally {
+    } finally {
       if (cluster != null) {cluster.shutdown();}
     }
   }
@@ -106,10 +107,10 @@ public class TestDistributedFileSystem {
   @Test
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    FileSystem fileSys = cluster.getFileSystem();
-
+    MiniDFSCluster cluster = null;
     try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+      FileSystem fileSys = cluster.getFileSystem();
       String file = "/test/fileclosethenseek/file-0";
       Path path = new Path(file);
       // create file
@@ -455,7 +456,7 @@ public class TestDistributedFileSystem {
 
     final Path dir = new Path("/filechecksum");
     final int block_size = 1024;
-    final int buffer_size = conf.getInt("io.file.buffer.size", 4096);
+    final int buffer_size = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
 
     //try different number of blocks

@@ -391,7 +391,7 @@ public class TestBlocksWithNotEnoughRacks {
     Path excludeFile = new Path(dir, "exclude");
     assertTrue(localFileSys.mkdirs(dir));
     DFSTestUtil.writeFile(localFileSys, excludeFile, "");
-    conf.set("dfs.hosts.exclude", excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
 
     // Two blocks and four racks
     String racks[] = {"/rack1", "/rack1", "/rack2", "/rack2"};
@@ -441,7 +441,7 @@ public class TestBlocksWithNotEnoughRacks {
     Path excludeFile = new Path(dir, "exclude");
     assertTrue(localFileSys.mkdirs(dir));
     DFSTestUtil.writeFile(localFileSys, excludeFile, "");
-    conf.set("dfs.hosts.exclude", excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
 
     // All hosts are on two racks, only one host on /rack2
     String racks[] = {"/rack1", "/rack2", "/rack1", "/rack1", "/rack1"};

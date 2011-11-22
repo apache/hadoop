@@ -23,8 +23,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -191,18 +189,19 @@ class INodeDirectory extends INode {
         existing[index] = curNode;
       }
       if (curNode.isLink() && (!lastComp || (lastComp && resolveLink))) {
-        if(NameNode.stateChangeLog.isDebugEnabled()) {
+        final String path = constructPath(components, 0, components.length);
+        final String preceding = constructPath(components, 0, count);
+        final String remainder =
+          constructPath(components, count + 1, components.length);
+        final String link = DFSUtil.bytes2String(components[count]);
+        final String target = ((INodeSymlink)curNode).getLinkValue();
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("UnresolvedPathException " +
-              " count: " + count +
-              " componenent: " + DFSUtil.bytes2String(components[count]) +
-              " full path: " + constructPath(components, 0) +
-              " remaining path: " + constructPath(components, count+1) +
-              " symlink: " + ((INodeSymlink)curNode).getLinkValue());
+            " path: " + path + " preceding: " + preceding +
+            " count: " + count + " link: " + link + " target: " + target +
+            " remainder: " + remainder);
         }
-        final String linkTarget = ((INodeSymlink)curNode).getLinkValue();
-        throw new UnresolvedPathException(constructPath(components, 0),
-                                          constructPath(components, count+1),
-                                          linkTarget);
+        throw new UnresolvedPathException(path, preceding, remainder, target);
       }
       if (lastComp || !curNode.isDirectory()) {
         break;

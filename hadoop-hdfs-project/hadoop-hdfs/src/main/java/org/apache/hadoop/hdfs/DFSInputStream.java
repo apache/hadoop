@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 
 /****************************************************************
@@ -405,11 +406,8 @@ public class DFSInputStream extends FSInputStream {
       try {
         ExtendedBlock blk = targetBlock.getBlock();
         Token<BlockTokenIdentifier> accessToken = targetBlock.getBlockToken();
-        
-        blockReader = getBlockReader(
-            targetAddr, src, blk,
-            accessToken,
-            offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
+        blockReader = getBlockReader(targetAddr, chosenNode, src, blk,
+            accessToken, offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
             buffersize, verifyChecksum, dfsClient.clientName);
         if(connectFailedOnce) {
           DFSClient.LOG.info("Successfully connected to " + targetAddr +
@@ -543,7 +541,7 @@ public class DFSInputStream extends FSInputStream {
           if (pos > blockEnd) {
             currentNode = blockSeekTo(pos);
           }
-          int realLen = (int) Math.min((long) len, (blockEnd - pos + 1L));
+          int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
           int result = readBuffer(buf, off, realLen, corruptedBlockMap);
           
           if (result >= 0) {
@@ -666,12 +664,9 @@ public class DFSInputStream extends FSInputStream {
         Token<BlockTokenIdentifier> blockToken = block.getBlockToken();
             
         int len = (int) (end - start + 1);
-
-        reader = getBlockReader(targetAddr, src,
-                                block.getBlock(),
-                                blockToken,
-                                start, len, buffersize,
-                                verifyChecksum, dfsClient.clientName);
+        reader = getBlockReader(targetAddr, chosenNode, src, block.getBlock(),
+            blockToken, start, len, buffersize, verifyChecksum,
+            dfsClient.clientName);
         int nread = reader.readAll(buf, offset, len);
         if (nread != len) {
           throw new IOException("truncated return from reader.read(): " +
@@ -684,6 +679,10 @@ public class DFSInputStream extends FSInputStream {
                  e.getPos() + " from " + chosenNode.getName());
         // we want to remember what we have tried
         addIntoCorruptedBlockMap(block.getBlock(), chosenNode, corruptedBlockMap);
+      } catch (AccessControlException ex) {
+        DFSClient.LOG.warn("Short circuit access failed ", ex);
+        dfsClient.disableShortCircuit();
+        continue;
       } catch (IOException e) {
         if (e instanceof InvalidBlockTokenException && refetchToken > 0) {
           DFSClient.LOG.info("Will get a new access token and retry, "
@@ -726,6 +725,7 @@ public class DFSInputStream extends FSInputStream {
    * Otherwise, it will create a new connection.
    *
    * @param dnAddr  Address of the datanode
+   * @param chosenNode Chosen datanode information
    * @param file  File location
    * @param block  The Block object
    * @param blockToken  The access token for security
@@ -737,6 +737,7 @@ public class DFSInputStream extends FSInputStream {
    * @return New BlockReader instance
    */
   protected BlockReader getBlockReader(InetSocketAddress dnAddr,
+                                       DatanodeInfo chosenNode,
                                        String file,
                                        ExtendedBlock block,
                                        Token<BlockTokenIdentifier> blockToken,
@@ -746,6 +747,12 @@ public class DFSInputStream extends FSInputStream {
                                        boolean verifyChecksum,
                                        String clientName)
       throws IOException {
+    
+    if (dfsClient.shouldTryShortCircuitRead(dnAddr)) {
+      return DFSClient.getLocalBlockReader(dfsClient.conf, src, block,
+          blockToken, chosenNode, dfsClient.hdfsTimeout, startOffset);
+    }
+    
     IOException err = null;
     boolean fromCache = true;
 

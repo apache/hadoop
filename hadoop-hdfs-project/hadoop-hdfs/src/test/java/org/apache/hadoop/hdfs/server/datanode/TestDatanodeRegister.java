@@ -18,39 +18,41 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.AbstractList;
-
+import java.net.InetSocketAddress;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 
 public class TestDatanodeRegister { 
   public static final Log LOG = LogFactory.getLog(TestDatanodeRegister.class);
+
+  // Invalid address
+  static final InetSocketAddress INVALID_ADDR =
+    new InetSocketAddress("127.0.0.1", 1);
+
   @Test
   public void testDataNodeRegister() throws Exception {
-    DataNode.BPOfferService myMockBPOS = mock(DataNode.BPOfferService.class);
-    doCallRealMethod().when(myMockBPOS).register();
-    myMockBPOS.bpRegistration = mock(DatanodeRegistration.class);
-    when(myMockBPOS.bpRegistration.getStorageID()).thenReturn("myTestStorageID");
+    DataNode mockDN = mock(DataNode.class);
+    Mockito.doReturn(true).when(mockDN).shouldRun();
     
+    BPOfferService bpos = new BPOfferService(INVALID_ADDR, mockDN);
+
     NamespaceInfo fakeNSInfo = mock(NamespaceInfo.class);
     when(fakeNSInfo.getBuildVersion()).thenReturn("NSBuildVersion");
     DatanodeProtocol fakeDNProt = mock(DatanodeProtocol.class);
     when(fakeDNProt.versionRequest()).thenReturn(fakeNSInfo);
-    doCallRealMethod().when(myMockBPOS).setNameNode(fakeDNProt);
-    myMockBPOS.setNameNode( fakeDNProt );
+
+    bpos.setNameNode( fakeDNProt );
+    bpos.bpNSInfo = fakeNSInfo;
     try {   
-      myMockBPOS.register();
+      bpos.retrieveNamespaceInfo();
       fail("register() did not throw exception! " +
            "Expected: IncorrectVersionException");
     } catch (IncorrectVersionException ie) {

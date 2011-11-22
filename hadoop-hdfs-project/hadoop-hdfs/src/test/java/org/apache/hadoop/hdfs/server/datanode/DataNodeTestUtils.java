@@ -21,10 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
 /**
  * Utility class for accessing package-private DataNode information during tests.
@@ -41,27 +38,4 @@ public class DataNodeTestUtils {
     return dn.getDNRegistrationForBP(bpid);
   }
   
-  /**
-   * manually setup datanode to testing
-   * @param dn - datanode
-   * @param nsifno - namenode info
-   * @param bpid - block pool id
-   * @param nn - namenode object
-   * @throws IOException
-   */
-  public static void setBPNamenodeByIndex(DataNode dn,
-      NamespaceInfo nsifno, String bpid, DatanodeProtocol nn) 
-  throws IOException {
-    // setup the right BPOS..
-    BPOfferService [] bposs = dn.getAllBpOs();
-    if(bposs.length<0) {
-      throw new IOException("Datanode wasn't initializes with at least one NN");
-    }
-    for(BPOfferService bpos : bposs) {
-      bpos.setNamespaceInfo(nsifno);
-
-      dn.setBPNamenode(bpid, nn);
-      dn.initBlockPool(bpos, nsifno);
-    }
-  }
 }

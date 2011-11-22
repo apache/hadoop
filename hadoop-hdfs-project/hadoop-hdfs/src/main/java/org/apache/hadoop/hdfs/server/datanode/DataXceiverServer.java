@@ -23,9 +23,9 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.channels.AsynchronousCloseException;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -48,8 +48,8 @@ class DataXceiverServer implements Runnable {
   ServerSocket ss;
   DataNode datanode;
   // Record all sockets opened for data transfer
-  Map<Socket, Socket> childSockets = Collections.synchronizedMap(
-                                       new HashMap<Socket, Socket>());
+  Set<Socket> childSockets = Collections.synchronizedSet(
+                                       new HashSet<Socket>());
   
   /**
    * Maximal number of concurrent xceivers per node.
@@ -135,6 +135,15 @@ class DataXceiverServer implements Runnable {
       try {
         s = ss.accept();
         s.setTcpNoDelay(true);
+
+        // Make sure the xceiver count is not exceeded
+        int curXceiverCount = datanode.getXceiverCount();
+        if (curXceiverCount > maxXceiverCount) {
+          throw new IOException("Xceiver count " + curXceiverCount
+              + " exceeds the limit of concurrent xcievers: "
+              + maxXceiverCount);
+        }
+
         new Daemon(datanode.threadGroup, new DataXceiver(s, datanode, this))
             .start();
       } catch (SocketTimeoutException ignored) {
@@ -184,7 +193,7 @@ class DataXceiverServer implements Runnable {
 
     // close all the sockets that were accepted earlier
     synchronized (childSockets) {
-      for (Iterator<Socket> it = childSockets.values().iterator();
+      for (Iterator<Socket> it = childSockets.iterator();
            it.hasNext();) {
         Socket thissock = it.next();
         try {

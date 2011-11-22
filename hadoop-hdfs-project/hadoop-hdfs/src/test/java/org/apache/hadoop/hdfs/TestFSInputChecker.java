@@ -21,14 +21,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.util.EnumSet;
 import java.util.Random;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,7 +55,7 @@ public class TestFSInputChecker extends TestCase {
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
     FSDataOutputStream stm = fileSys.create(name, new FsPermission((short)0777),
-        true, fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        true, fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
         NUM_OF_DATANODES, BLOCK_SIZE, null);
     stm.write(expected);
     stm.close();
@@ -327,8 +326,10 @@ public class TestFSInputChecker extends TestCase {
   throws IOException {
     Path file = new Path("try.dat");
     writeFile(fileSys, file);
-    stm = fileSys.open(file,
-        fileSys.getConf().getInt("io.file.buffer.size", 4096));
+    stm = fileSys.open(
+        file,
+        fileSys.getConf().getInt(
+            CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096));
     checkSeekAndRead();
     stm.close();
     cleanupFile(fileSys, file);

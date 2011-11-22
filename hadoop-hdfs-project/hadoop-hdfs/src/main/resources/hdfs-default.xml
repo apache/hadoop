@@ -122,11 +122,17 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.datanode.https.address</name>
   <value>0.0.0.0:50475</value>
+  <description>The datanode secure http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
 </property>
 
 <property>
   <name>dfs.namenode.https-address</name>
   <value>0.0.0.0:50470</value>
+  <description>The namenode secure http server address and port.
+    If the port is 0 then the server will start on a free port.
+  </description>
 </property>
 
  <property>
@@ -191,6 +197,14 @@ creations/deletions), or "all".</description>
       should store the name table(fsimage).  If this is a comma-delimited list
       of directories then the name table is replicated in all of the
       directories, for redundancy. </description>
+</property>
+
+<property>
+  <name>dfs.namenode.name.dir.restore</name>
+  <value>false</value>
+  <description>Set to true to enable NameNode to attempt recovering a
+      previously failed dfs.name.dir. When enabled, a recovery of any failed
+      directory is attempted during checkpoint.</description>
 </property>
 
 <property>

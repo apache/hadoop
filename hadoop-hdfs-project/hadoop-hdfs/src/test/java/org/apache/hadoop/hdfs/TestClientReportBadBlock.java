@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -80,7 +81,7 @@ public class TestClientReportBadBlock {
         .build();
     cluster.waitActive();
     dfs = (DistributedFileSystem) cluster.getFileSystem();
-    buffersize = conf.getInt("io.file.buffer.size", 4096);
+    buffersize = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
   }
 
   @After

@@ -29,7 +29,6 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
-import org.junit.Test;
 
 public class TestHDFSCLI extends CLITestHelperDFS {
 
