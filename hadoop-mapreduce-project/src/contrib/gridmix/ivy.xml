@@ -64,6 +64,10 @@
                rev="${yarn.version}" conf="common->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-yarn-common"
                rev="${yarn.version}" conf="common->default"/>
+   <dependency org="org.apache.hadoop" name="hadoop-mapreduce-client-jobclient"
+               rev="${yarn.version}" conf="test->default">
+     <artifact name="hadoop-mapreduce-client-jobclient" type="tests" ext="jar" m:classifier="tests"/>
+   </dependency>
    <dependency org="commons-logging"
       name="commons-logging"
       rev="${commons-logging.version}"
