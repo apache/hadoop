@@ -866,6 +866,7 @@ Release 0.90.5 - Unreleased
                cause data loss (bluedavy via Lars H)
    HBASE-4800  Result.compareResults is incorrect (James Taylor and Lars H)
    HBASE-4848  TestScanner failing because hostname can't be null
+   HBASE-4849  TestCatalogTracker can fail if an existing zookeeper running
 
   IMPROVEMENT
    HBASE-4205  Enhance HTable javadoc (Eric Charles)
