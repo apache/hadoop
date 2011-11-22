@@ -2060,9 +2060,7 @@
           <p>Hadoop comes configured with a single mandatory queue, called 
           'default'. Queue names are defined in the 
           <code>mapred.queue.names</code> property of the Hadoop site
-          configuration. Some job schedulers, such as the 
-          <a href="capacity_scheduler.html">Capacity Scheduler</a>, 
-          support multiple queues.</p>
+          configuration.</p>
           
           <p>A job defines the queue it needs to be submitted to through the
           <code>mapreduce.job.queuename</code> property.

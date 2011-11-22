@@ -932,10 +932,6 @@
     <style basedir="${mapred.src.dir}" destdir="${build.docs}"
            includes="mapred-default.xml" style="conf/configuration.xsl"/>
     <antcall target="changes-to-html"/>
-    <subant target="docs">
-       <property name="build.docs" value="${build.docs}"/>
-       <fileset file="${contrib.dir}/build.xml"/>
-    </subant> 
   </target>
 
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
