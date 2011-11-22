@@ -42,6 +42,8 @@ Release 0.20.205.1 - unreleased
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides
     client APIs cross MR1 and MR2. (Ahmed via tucu)
 
+    HDFS-2552. Add Forrest doc for WebHDFS REST API.  (szetszwo)
+
   BUG FIXES
 
     HADOOP-7815. Fixed configuring map memory mb in hadoop-setup-conf.sh. 
