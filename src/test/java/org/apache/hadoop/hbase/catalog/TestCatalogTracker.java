@@ -102,8 +102,8 @@ public class TestCatalogTracker {
 
   private CatalogTracker constructAndStartCatalogTracker(final HConnection c)
   throws IOException, InterruptedException {
-    CatalogTracker ct = new CatalogTracker(this.watcher, null, c,
-        this.abortable, 0);
+    CatalogTracker ct = new CatalogTracker(this.watcher, UTIL.getConfiguration(),
+      c, this.abortable, 0);
     ct.start();
     return ct;
   }
