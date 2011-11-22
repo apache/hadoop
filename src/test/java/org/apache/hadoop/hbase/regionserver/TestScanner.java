@@ -248,7 +248,7 @@ public class TestScanner extends HBaseTestCase {
 
       // Store some new information
 
-      String address = "foo.bar.com:1234";
+      String address = "www.example.com:1234";
 
       put = new Put(ROW_KEY, System.currentTimeMillis(), null);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
