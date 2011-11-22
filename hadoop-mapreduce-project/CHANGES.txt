@@ -164,6 +164,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3454. [Gridmix] TestDistCacheEmulation is broken (Hitesh Shah
     via mahadev)
 
+    MAPREDUCE-3408. yarn-daemon.sh unconditionnaly sets yarn.root.logger 
+    (Bruno Mahe via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
