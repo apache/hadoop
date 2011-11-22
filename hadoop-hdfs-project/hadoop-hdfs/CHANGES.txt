@@ -1950,6 +1950,8 @@ Release 0.22.0 - Unreleased
     HDFS-2514. Link resolution bug for intermediate symlinks with
     relative targets. (eli)
 
+    HDFS-2573. TestFiDataXceiverServer is failing, not testing OOME (cos)
+
 Release 0.21.1 - Unreleased
 
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
