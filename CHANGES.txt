@@ -48,6 +48,9 @@ Release 0.20.206.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for 
+                    short running tasks. (amarrk)
+
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
     non-existent fair scheduler pools. (Ahmed Radwan via todd)
 
