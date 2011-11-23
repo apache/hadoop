@@ -34,6 +34,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2552. Add Forrest doc for WebHDFS REST API.  (szetszwo)
 
+    HDFS-2587. Add apt doc for WebHDFS REST API.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
