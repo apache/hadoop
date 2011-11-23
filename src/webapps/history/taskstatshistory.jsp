@@ -62,6 +62,7 @@
     Counters.fromEscapedCompactString(attempt.get(Keys.COUNTERS));
 %>
 
+<!DOCTYPE html>
 <html>
   <head>
     <title>Counters for <%=attemptid%></title>
