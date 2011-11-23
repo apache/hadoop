@@ -126,6 +126,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3464. mapreduce jsp pages missing DOCTYPE. (Dave Vronay via mattf)
 
+    MAPREDUCE-3265. Removed debug logs during job submission to LOG.debug to
+    cut down noise. (acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

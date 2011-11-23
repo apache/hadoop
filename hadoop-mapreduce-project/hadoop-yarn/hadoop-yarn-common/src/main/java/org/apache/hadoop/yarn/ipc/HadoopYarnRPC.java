@@ -45,7 +45,7 @@ public class HadoopYarnRPC extends YarnRPC {
   @Override
   public Object getProxy(Class protocol, InetSocketAddress addr,
       Configuration conf) {
-    LOG.info("Creating a HadoopYarnRpc proxy for protocol " + protocol);
+    LOG.debug("Creating a HadoopYarnRpc proxy for protocol " + protocol);
     RPC.setProtocolEngine(conf, protocol, AvroSpecificRpcEngine.class);
     try {
       return RPC.getProxy(protocol, 1, addr, conf);
@@ -64,7 +64,7 @@ public class HadoopYarnRPC extends YarnRPC {
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
       int numHandlers) {
-    LOG.info("Creating a HadoopYarnRpc server for protocol " + protocol + 
+    LOG.debug("Creating a HadoopYarnRpc server for protocol " + protocol + 
         " with " + numHandlers + " handlers");
     RPC.setProtocolEngine(conf, protocol, AvroSpecificRpcEngine.class);
     final RPC.Server hadoopServer;

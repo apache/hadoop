@@ -72,7 +72,7 @@ public class TaskLog {
     if (!LOG_DIR.exists()) {
       boolean b = LOG_DIR.mkdirs();
       if (!b) {
-        LOG.warn("mkdirs failed. Ignoring.");
+        LOG.debug("mkdirs failed. Ignoring.");
       }
     }
   }
