@@ -27,7 +27,7 @@
   //for java.io.Serializable
   private static final long serialVersionUID = 1L;
 %>
-
+<!DOCTYPE html>
 <html>
 <head>
 <%JspHelper.createTitle(out, request, request.getParameter("filename")); %>
