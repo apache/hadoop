@@ -12,7 +12,7 @@
 ~~ limitations under the License. See accompanying LICENSE file.
 
   ---
-  Hadoop Map Reduce Next Generation-${project.version} - Cluster Setup
+  Hadoop Distributed File System-${project.version} - Federation
   ---
   ---
   ${maven.build.timestamp}
@@ -57,12 +57,12 @@ HDFS Federation
     * Storage - is provided by datanodes by storing blocks on the local file 
       system and allows read/write access.
 
-  The current HDFS architecture allows only a single namespace for the 
+  The prior HDFS architecture allows only a single namespace for the 
   entire cluster. A single Namenode manages this namespace. HDFS 
-  Federation addresses limitation of current architecture by adding 
+  Federation addresses limitation of the prior architecture by adding 
   support multiple Namenodes/namespaces to HDFS file system.
     
-* {HDFS Federation}
+* {Multiple Namenodes/Namespaces}
 
   In order to scale the name service horizontally, federation uses multiple 
   independent Namenodes/namespaces. The Namenodes are federated, that is, the 
@@ -103,9 +103,9 @@ HDFS Federation
     of small files benefit from scaling the namespace by adding more 
     Namenodes to the cluster
 
-  * Performance - File system operation throughput is currently limited 
-    by a single Namenode. Adding more Namenodes to the cluster scales the 
-    file system read/write operations throughput.
+  * Performance - File system operation throughput is limited by a single
+    Namenode in the prior architecture. Adding more Namenodes to the cluster
+    scales the file system read/write operations throughput.
 
   * Isolation - A single Namenode offers no isolation in multi user 
     environment. An experimental application can overload the Namenode 
@@ -265,7 +265,7 @@ HDFS Federation
 > $HADOOP_PREFIX_HOME/bin/start-dfs.sh
 ----
 
-  To start the cluster run the following command:
+  To stop the cluster run the following command:
 
 ----
 > $HADOOP_PREFIX_HOME/bin/stop-dfs.sh
@@ -300,7 +300,7 @@ HDFS Federation
 ** Decommissioning
 
   Decommissioning is similar to prior releases. The nodes that need to be 
-  decommissioning are added to the exclude file at all the Namenode. Each 
+  decomissioned are added to the exclude file at all the Namenode. Each 
   Namenode decommissions its Block Pool. When all the Namenodes finish 
   decommissioning a datanode, the datanode is considered to be decommissioned.
 
