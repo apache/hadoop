@@ -27,6 +27,7 @@
   private static final long serialVersionUID = 1L;
 %>
 
+<!DOCTYPE html>
 <html>
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 <title>Hadoop SecondaryNameNode</title>

@@ -75,6 +75,7 @@
   }
 %>
 
+<!DOCTYPE html>
 <html>
   <head>
     <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerName%></title>

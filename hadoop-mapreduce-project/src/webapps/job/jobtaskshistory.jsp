@@ -53,6 +53,7 @@
   }
   Map<TaskID, JobHistoryParser.TaskInfo> tasks = job.getAllTasks(); 
 %>
+<!DOCTYPE html>
 <html>
 <body>
 <h2><%=taskStatus%> <%=taskType %> task list for <a href="jobdetailshistory.jsp?logFile=<%=logFile%>"><%=job.getJobId() %> </a></h2>

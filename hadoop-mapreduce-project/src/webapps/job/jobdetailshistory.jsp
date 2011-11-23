@@ -60,6 +60,7 @@
       reasonforFailure = job.getErrorInfo();
 %>
 
+<!DOCTYPE html>
 <html>
 <head>
 <title>Hadoop Job <%=jobid%> on History Viewer</title>
