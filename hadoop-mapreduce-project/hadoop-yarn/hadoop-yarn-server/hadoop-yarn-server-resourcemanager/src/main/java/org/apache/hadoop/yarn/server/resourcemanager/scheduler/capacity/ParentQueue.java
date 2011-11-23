@@ -153,6 +153,9 @@ public class ParentQueue implements CSQueue {
           float maximumCapacity, float absoluteMaxCapacity,
           QueueState state, Map<QueueACL, AccessControlList> acls
   ) {
+    // Sanity check
+    CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
+
     this.capacity = capacity;
     this.absoluteCapacity = absoluteCapacity;
     this.maximumCapacity = maximumCapacity;
@@ -162,9 +165,9 @@ public class ParentQueue implements CSQueue {
 
     this.acls = acls;
     
-    this.queueInfo.setCapacity(capacity);
-    this.queueInfo.setMaximumCapacity(maximumCapacity);
-    this.queueInfo.setQueueState(state);
+    this.queueInfo.setCapacity(this.capacity);
+    this.queueInfo.setMaximumCapacity(this.maximumCapacity);
+    this.queueInfo.setQueueState(this.state);
 
     StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
@@ -484,6 +487,9 @@ public class ParentQueue implements CSQueue {
    * @param maximumCapacity new max capacity
    */
   synchronized void setMaxCapacity(float maximumCapacity) {
+    // Sanity check
+    CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
+    
     this.maximumCapacity = maximumCapacity;
     float parentAbsoluteCapacity = 
         (rootQueue) ? 100.0f : parent.getAbsoluteCapacity();

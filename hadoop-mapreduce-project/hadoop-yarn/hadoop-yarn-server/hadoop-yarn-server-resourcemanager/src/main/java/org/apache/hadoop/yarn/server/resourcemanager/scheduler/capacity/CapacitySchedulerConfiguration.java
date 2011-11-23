@@ -160,6 +160,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return maxCapacity;
   }
   
+  public void setMaximumCapacity(String queue, int maxCapacity) {
+    setInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
+  }
+  
   public int getUserLimit(String queue) {
     int userLimit = 
       getInt(getQueuePrefix(queue) + USER_LIMIT, DEFAULT_USER_LIMIT);

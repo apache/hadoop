@@ -170,6 +170,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3408. yarn-daemon.sh unconditionnaly sets yarn.root.logger 
     (Bruno Mahe via mahadev)
 
+    MAPREDUCE-3329. Fixed CapacityScheduler to ensure maximum-capacity cannot
+    be lesser than capacity for any queue. (acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
