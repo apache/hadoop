@@ -40,9 +40,13 @@
 
 #define ATTEMPT_DIR_PATTERN TT_JOB_DIR_PATTERN "/%s/work"
 
+#define USER_LOG_PATTERN "%s/userlogs/%s"
+
+#define TASK_DIR_PATTERN USER_LOG_PATTERN "/%s"
+
 #define TASK_SCRIPT "taskjvm.sh"
 
-#define TT_LOCAL_TASK_DIR_PATTERN    "%s/taskTracker/%s/jobcache/%s/%s"
+#define TT_LOCAL_TASK_DIR_PATTERN "%s/taskTracker/%s/jobcache/%s/%s"
 
 #define TT_LOG_DIR_KEY "hadoop.log.dir"
 
@@ -100,7 +104,7 @@ char* get_executable() {
  *    * be user-owned by root
  *    * be group-owned by a configured special group.
  *    * others do not have any permissions
- *    * be setuid/setgid
+ *    * be setuid
  */
 int check_taskcontroller_permissions(char *executable_file) {
 
@@ -138,15 +142,16 @@ int check_taskcontroller_permissions(char *executable_file) {
   }
 
   // check others do not have read/write/execute permissions
-  if ((filestat.st_mode & S_IROTH) == S_IROTH || (filestat.st_mode & S_IWOTH)
-      == S_IWOTH || (filestat.st_mode & S_IXOTH) == S_IXOTH) {
+  if ((filestat.st_mode & S_IROTH) == S_IROTH ||
+      (filestat.st_mode & S_IWOTH) == S_IWOTH ||
+      (filestat.st_mode & S_IXOTH) == S_IXOTH) {
     fprintf(LOGFILE,
             "The task-controller binary should not have read or write or"
             " execute for others.\n");
     return -1;
   }
 
-  // Binary should be setuid/setgid executable
+  // Binary should be setuid executable
   if ((filestat.st_mode & S_ISUID) == 0) {
     fprintf(LOGFILE, "The task-controller binary should be set setuid.\n");
     return -1;
@@ -298,7 +303,7 @@ char* get_job_log_directory(const char* jobid) {
     fprintf(LOGFILE, "Log directory %s is not configured.\n", TT_LOG_DIR_KEY);
     return NULL;
   }
-  char *result = concatenate("%s/userlogs/%s", "job log dir", 2, log_dir, 
+  char *result = concatenate(USER_LOG_PATTERN, "job log dir", 2, log_dir, 
                              jobid);
   if (result == NULL) {
     fprintf(LOGFILE, "failed to get memory in get_job_log_directory for %s"
@@ -468,16 +473,18 @@ int create_attempt_directories(const char* user,
       result = -1;
       goto cleanup;
     }
-    sprintf(real_job_dir, "%s/userlogs/%s", random_local_dir, job_id);
+    sprintf(real_job_dir, USER_LOG_PATTERN, random_local_dir, job_id);
     result = create_directory_for_user(real_job_dir);
     if( result != 0) {
       result = -1;
       goto cleanup;
     }
-    sprintf(real_task_dir, "%s/userlogs/%s/%s",
+    sprintf(real_task_dir, TASK_DIR_PATTERN,
             random_local_dir, job_id, task_id);
     result = mkdirs(real_task_dir, perms); 
     if( result != 0) {
+      fprintf(LOGFILE, "Failed to create real task dir %s - %s\n",
+              real_task_dir, strerror(errno));
       result = -1; 
       goto cleanup;
     }
@@ -486,6 +493,7 @@ int create_attempt_directories(const char* user,
       fprintf(LOGFILE, "Failed to create symlink %s to %s - %s\n",
               link_task_log_dir, real_task_dir, strerror(errno));
       result = -1;
+      goto cleanup;
     }
   }
 
@@ -841,7 +849,11 @@ int initialize_job(const char *user, const char * good_local_dirs,
     fclose(stdout);
   }
   fclose(stderr);
-  chdir(primary_job_dir);
+  if (chdir(primary_job_dir)) {
+    fprintf(LOGFILE, "Failure to chdir to job dir - %s\n",
+            strerror(errno));
+    return -1;
+  }
   execvp(args[0], args);
   fprintf(LOGFILE, "Failure to exec job initialization process - %s\n",
 	  strerror(errno));
@@ -1132,7 +1144,7 @@ int delete_log_directory(const char *subdir, const char * good_local_dirs) {
 
   char **local_dir_ptr;
   for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
-     char *mapred_local_log_dir = concatenate("%s/userlogs/%s", 
+     char *mapred_local_log_dir = concatenate(USER_LOG_PATTERN, 
 				      "mapred local job log dir", 
 			      	      2, *local_dir_ptr, subdir);
      if (mapred_local_log_dir != NULL) {

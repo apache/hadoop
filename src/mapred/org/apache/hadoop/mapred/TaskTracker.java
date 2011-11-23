@@ -710,8 +710,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     fConf.setStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY, dirs);
     LOG.info("Good mapred local directories are: " + dirs);
     taskController.setConf(fConf);
-    // Setup task controller so that deletion of user dirs happens properly
-    taskController.setup(localDirAllocator, localStorage);
     server.setAttribute("conf", fConf);
 
     deleteUserDirectories(fConf);
@@ -1451,7 +1449,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     localStorage = new LocalStorage(fConf.getLocalDirs());
     localStorage.checkDirs();
     taskController = 
-      (TaskController) ReflectionUtils.newInstance(taskControllerClass, fConf);
+      (TaskController)ReflectionUtils.newInstance(taskControllerClass, fConf);
     taskController.setup(localDirAllocator, localStorage);
     lastNumFailures = localStorage.numFailures();
 

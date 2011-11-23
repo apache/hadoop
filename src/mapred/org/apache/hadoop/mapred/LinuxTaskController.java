@@ -127,9 +127,10 @@ class LinuxTaskController extends TaskController {
   public void setup(LocalDirAllocator allocator, LocalStorage localStorage)
       throws IOException {
 
-    // Check the permissions of the task-controller binary by running it plainly.
-    // If permissions are correct, it returns an error code 1, else it returns
-    // 24 or something else if some other bugs are also present.
+    // Check the permissions of the task-controller binary by running
+    // it plainly.  If permissions are correct, it returns an error
+    // code 1, else it returns 24 or something else if some other bugs
+    // are also present.
     String[] taskControllerCmd =
         new String[] { taskControllerExe };
     ShellCommandExecutor shExec = new ShellCommandExecutor(taskControllerCmd);
@@ -256,6 +257,12 @@ class LinuxTaskController extends TaskController {
       logOutput(shExec.getOutput());
     }
     return 0;
+  }
+
+  @Override
+  public void createLogDir(TaskAttemptID taskID,
+                           boolean isCleanup) throws IOException {
+    // Log dirs are created during attempt dir creation when running the task
   }
 
   @Override

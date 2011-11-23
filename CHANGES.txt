@@ -93,6 +93,8 @@ Release 0.20.206.0 - unreleased
     HDFS-2246. Shortcut a local client reads to a Datanodes files directly. 
     (Andrew Purtell, Suresh, Jitendra)
 
+    MAPREDUCE-3424. Some LinuxTaskController cleanup (eli)
+
 Release 0.20.205.1 - unreleased
 
   NEW FEATURES

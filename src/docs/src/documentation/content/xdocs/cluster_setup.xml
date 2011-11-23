@@ -627,13 +627,6 @@
             </p>
             <table><tr><th>Name</th><th>Description</th></tr>
             <tr>
-            <td>mapred.local.dir</td>
-            <td>Path to mapred local directories. Should be same as the value 
-            which was provided to key in mapred-site.xml. This is required to
-            validate paths passed to the setuid executable in order to prevent
-            arbitrary paths being passed to it.</td>
-            </tr>
-            <tr>
             <td>hadoop.log.dir</td>
             <td>Path to hadoop log directory. Should be same as the value which
             the TaskTracker is started with. This is required to set proper

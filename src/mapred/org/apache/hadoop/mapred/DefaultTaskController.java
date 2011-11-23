@@ -238,23 +238,22 @@ public class DefaultTaskController extends TaskController {
   public void deleteLogAsUser(String user, 
                               String subDir) throws IOException {
     Path dir = new Path(TaskLog.getUserLogDir().getAbsolutePath(), subDir);
-    //Delete the subDir in <hadoop.log.dir>/userlogs
+    // Delete the subDir in <hadoop.log.dir>/userlogs
     File subDirPath = new File(dir.toString());
-    FileUtil.fullyDelete( subDirPath );
-    
-    //Delete the subDir in all good <mapred.local.dirs>/userlogs 
-    String [] localDirs = localStorage.getDirs();
-    for(String localdir : localDirs) {
-    	String dirPath = localdir + File.separatorChar + 
-    					TaskLog.USERLOGS_DIR_NAME + File.separatorChar +
-    					subDir;
-    	try {
-    		FileUtil.fullyDelete( new File(dirPath) );
-        } catch(Exception e){
-        	//Skip bad dir for later deletion
-            LOG.warn("Could not delete dir: " + dirPath + 
-                " , Reason : " + e.getMessage());
-        }
+    FileUtil.fullyDelete(subDirPath);
+
+    // Delete the subDir in all good <mapred.local.dirs>/userlogs
+    for (String localdir : localStorage.getDirs()) {
+      String dirPath = localdir + File.separatorChar +
+        TaskLog.USERLOGS_DIR_NAME + File.separatorChar + subDir;
+
+      try {
+        FileUtil.fullyDelete(new File(dirPath));
+      } catch(Exception e){
+        // Skip bad dir for later deletion
+        LOG.warn("Could not delete dir: " + dirPath +
+                 " , Reason : " + e.getMessage());
+      }
     }
   }
   

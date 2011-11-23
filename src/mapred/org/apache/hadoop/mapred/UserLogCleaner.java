@@ -131,27 +131,28 @@ public class UserLogCleaner extends Thread {
    * @throws IOException
    */
   public void addOldUserLogsForDeletion(File loc, Configuration conf)  
-  			throws IOException  {
-    if (loc.exists()) {
-        long now = clock.getTime();
-        for(String logDir: loc.list()) {
-          // add all the log dirs to taskLogsMnonitor.
-          JobID jobid = null;
-          try {
-            jobid = JobID.forName(logDir);
-          } catch (IllegalArgumentException ie) {
-            deleteLogPath(logDir);
-            continue;
-          }
-          // add the job log directory for deletion with 
-          // default retain hours, if it is not already added
-          if (!completedJobs.containsKey(jobid)) {
-            JobCompletedEvent jce = 
-              new JobCompletedEvent(jobid, now,getUserlogRetainHours(conf));
-            userLogManager.addLogEvent(jce);
-          }
-        }
+      throws IOException  {
+    if (!loc.exists()) {
+      return;
+    }
+    long now = clock.getTime();
+    for (String logDir : loc.list()) {
+      // add all the log dirs to taskLogsMnonitor.
+      JobID jobid = null;
+      try {
+        jobid = JobID.forName(logDir);
+      } catch (IllegalArgumentException ie) {
+        deleteLogPath(logDir);
+        continue;
       }
+      // add the job log directory for deletion with 
+      // default retain hours, if it is not already added
+      if (!completedJobs.containsKey(jobid)) {
+        JobCompletedEvent jce = 
+          new JobCompletedEvent(jobid, now,getUserlogRetainHours(conf));
+        userLogManager.addLogEvent(jce);
+      }
+    }
   }
   
   /**
@@ -165,10 +166,10 @@ public class UserLogCleaner extends Thread {
     File userLogDir = TaskLog.getUserLogDir();
     addOldUserLogsForDeletion(userLogDir, conf);
     String[] localDirs = conf.getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY);
-    for(String localDir : localDirs) {
-    	File mapredLocalUserLogDir = new File(localDir + 
-    			File.separatorChar + TaskLog.USERLOGS_DIR_NAME);
-    	addOldUserLogsForDeletion(mapredLocalUserLogDir, conf);
+    for (String localDir : localDirs) {
+      File mapredLocalUserLogDir = new File(localDir + 
+        File.separatorChar + TaskLog.USERLOGS_DIR_NAME);
+      addOldUserLogsForDeletion(mapredLocalUserLogDir, conf);
     }
   }
 
@@ -218,39 +219,41 @@ public class UserLogCleaner extends Thread {
    * @throws IOException
    */
   private String getLogUser(String logPath) throws IOException{
-	//Get user from <hadoop.log.dir>/userlogs/jobid path
-	String logRoot = TaskLog.getUserLogDir().toString();
-	String user = null;
-	try{
-		user = localFs.getFileStatus(new Path(logRoot, logPath)).getOwner();
-	}catch(Exception e){
-		//Ignore this exception since this path might have been deleted.
-	}
+    // Get user from <hadoop.log.dir>/userlogs/jobid path
+    String logRoot = TaskLog.getUserLogDir().toString();
+    String user = null;
+    try {
+      user = localFs.getFileStatus(new Path(logRoot, logPath)).getOwner();
+    } catch (Exception e) {
+      // Ignore this exception since this path might have been deleted.
+    }
 	
-	//If we found the user for this logPath, then return this user
-	if(user != null) return user; 
+    // If we found the user for this logPath, then return this user
+    if (user != null) {
+      return user;
+    }
 
-	//If <hadoop.log.dir>/userlogs/jobid not found, then get user from 
-	//any one of existing <mapred.local.dir>/userlogs/jobid path(s)
-	String[] localDirs = 
-	   userLogManager.getTaskController().getLocalDirs();
-	for(String localDir : localDirs) {
-		try{
-		   logRoot = localDir + File.separator + TaskLog.USERLOGS_DIR_NAME;
-		   user = localFs.getFileStatus(new Path(logRoot, logPath)).getOwner();
-		   //If we found the user for this logPath, then break this loop
-		   if(user != null) break; 
-			
-		}catch(Exception e){
-			//Ignore this exception since this path might have been deleted.
-		}
-	}
+    // If <hadoop.log.dir>/userlogs/jobid not found, then get user from 
+    // any one of existing <mapred.local.dir>/userlogs/jobid path(s)
+    String[] localDirs =
+      userLogManager.getTaskController().getLocalDirs();
+    for (String localDir : localDirs) {
+      try {
+        logRoot = localDir + File.separator + TaskLog.USERLOGS_DIR_NAME;
+        user = localFs.getFileStatus(new Path(logRoot, logPath)).getOwner();
+        // If we found the user for this logPath, then break this loop
+        if (user != null) {
+          break;
+        }
+      } catch (Exception e) {
+        // Ignore this exception since this path might have been deleted.
+      }
+    }
 	
-	if(user == null) {
-		throw new IOException("Userlog path not found for " + logPath);
-	}
-	
-	return user;
+    if (user == null) {
+      throw new IOException("Userlog path not found for " + logPath);
+    }
+    return user;
   }
   
   /**

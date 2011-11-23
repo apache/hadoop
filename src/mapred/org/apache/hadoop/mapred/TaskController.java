@@ -150,10 +150,8 @@ public abstract class TaskController implements Configurable {
    * @param isCleanup If the task is cleanup task or not
    * @throws IOException
    */
-  public void createLogDir(TaskAttemptID taskID, 
-			boolean isCleanup) throws IOException {
-	  
-  }
+  public abstract void createLogDir(TaskAttemptID taskID, 
+                                    boolean isCleanup) throws IOException;
   
   /**
    * Delete the user's files under the userlogs directory.
