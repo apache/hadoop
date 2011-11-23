@@ -90,6 +90,9 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-3419. Don't mark exited TT threads as dead in MiniMRCluster (eli)
 
+    HDFS-2246. Shortcut a local client reads to a Datanodes files directly. 
+    (Andrew Purtell, Suresh, Jitendra)
+
 Release 0.20.205.1 - unreleased
 
   NEW FEATURES

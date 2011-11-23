@@ -49,6 +49,8 @@ public class DataNodeInstrumentation implements MetricsSource {
       registry.newCounter("blocks_verified", "", 0);
   final MetricMutableCounterInt blockVerificationFailures =
       registry.newCounter("block_verification_failures", "", 0);
+  final MetricMutableCounterInt blocksGetLocalPathInfo = 
+      registry.newCounter("blocks_get_local_pathinfo", "", 0);
 
   final MetricMutableCounterInt readsFromLocalClient =
       registry.newCounter("reads_from_local_client", "", 0);
@@ -128,6 +130,11 @@ public class DataNodeInstrumentation implements MetricsSource {
   //@Override
   public void incrBlocksVerified() {
     blocksVerified.incr();
+  }
+
+  //@Override
+  public void incrBlocksGetLocalPathInfo() {
+    blocksGetLocalPathInfo.incr();
   }
 
   //@Override

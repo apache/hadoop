@@ -110,6 +110,7 @@
 **/TestFileAppend.java
 **/TestFileCorruption.java
 **/TestFileLimit.java
+**/TestShortCircuitLocalRead.java
 **/TestFileStatus.java
 **/TestFSInputChecker.java
 **/TestFSOutputSummer.java
