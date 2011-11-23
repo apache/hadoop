@@ -143,7 +143,7 @@ public class ClientServiceDelegate {
         || YarnApplicationState.RUNNING == application
             .getYarnApplicationState()) {
       if (application == null) {
-        LOG.info("Could not get Job info from RM for job " + jobId
+        LOG.debug("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
         return checkAndGetHSProxy(null, JobState.NEW);
       }
@@ -169,8 +169,8 @@ public class ClientServiceDelegate {
               + ":" + addr.getPort()));
           UserGroupInformation.getCurrentUser().addToken(clientToken);
         }
-        LOG.info("Tracking Url of JOB is " + application.getTrackingUrl());
-        LOG.info("Connecting to " + serviceAddr);
+        LOG.info("The url to track the job: " + application.getTrackingUrl());
+        LOG.debug("Connecting to " + serviceAddr);
         realProxy = instantiateAMProxy(serviceAddr);
         return realProxy;
       } catch (IOException e) {
@@ -187,7 +187,7 @@ public class ClientServiceDelegate {
         }
         application = rm.getApplicationReport(appId);
         if (application == null) {
-          LOG.info("Could not get Job info from RM for job " + jobId
+          LOG.debug("Could not get Job info from RM for job " + jobId
               + ". Redirecting to job history server.");
           return checkAndGetHSProxy(null, JobState.RUNNING);
         }
@@ -281,16 +281,13 @@ public class ClientServiceDelegate {
           LOG.debug("Tracing remote error ", e.getTargetException());
           throw (YarnRemoteException) e.getTargetException();
         }
-        LOG.info("Failed to contact AM/History for job " + jobId + 
-            " retrying..");
-        LOG.debug("Failed exception on AM/History contact", 
-            e.getTargetException());
+        LOG.debug("Failed to contact AM/History for job " + jobId + 
+            " retrying..", e.getTargetException());
         // Force reconnection by setting the proxy to null.
         realProxy = null;
       } catch (Exception e) {
-        LOG.info("Failed to contact AM/History for job " + jobId
-            + "  Will retry..");
-        LOG.debug("Failing to contact application master", e);
+        LOG.debug("Failed to contact AM/History for job " + jobId
+            + "  Will retry..", e);
         // Force reconnection by setting the proxy to null.
         realProxy = null;
       }

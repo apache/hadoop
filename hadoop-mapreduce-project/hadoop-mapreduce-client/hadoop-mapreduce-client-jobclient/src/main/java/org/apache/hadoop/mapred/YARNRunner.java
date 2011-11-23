@@ -276,7 +276,7 @@ public class YARNRunner implements ClientProtocol {
     Resource capability = recordFactory.newRecordInstance(Resource.class);
     capability.setMemory(conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
         MRJobConfig.DEFAULT_MR_AM_VMEM_MB));
-    LOG.info("AppMaster capability = " + capability);
+    LOG.debug("AppMaster capability = " + capability);
 
     // Setup LocalResources
     Map<String, LocalResource> localResources =
@@ -352,7 +352,7 @@ public class YARNRunner implements ClientProtocol {
     }
     vargsFinal.add(mergedCommand.toString());
 
-    LOG.info("Command to launch container for ApplicationMaster is : "
+    LOG.debug("Command to launch container for ApplicationMaster is : "
         + mergedCommand);
 
     // Setup the CLASSPATH in environment

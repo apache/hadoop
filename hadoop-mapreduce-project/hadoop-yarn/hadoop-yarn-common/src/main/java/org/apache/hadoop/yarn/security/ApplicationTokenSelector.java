@@ -39,9 +39,9 @@ public class ApplicationTokenSelector implements
     if (service == null) {
       return null;
     }
-    LOG.info("Looking for a token with service " + service.toString());
+    LOG.debug("Looking for a token with service " + service.toString());
     for (Token<? extends TokenIdentifier> token : tokens) {
-      LOG.info("Token kind is " + token.getKind().toString()
+      LOG.debug("Token kind is " + token.getKind().toString()
           + " and the token's service name is " + token.getService());
       if (ApplicationTokenIdentifier.KIND_NAME.equals(token.getKind())
           && service.equals(token.getService())) {

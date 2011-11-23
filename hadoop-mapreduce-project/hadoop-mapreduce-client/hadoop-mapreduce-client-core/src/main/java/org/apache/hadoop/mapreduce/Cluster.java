@@ -108,7 +108,7 @@ public class Cluster {
             break;
           }
           else {
-            LOG.info("Cannot pick " + provider.getClass().getName()
+            LOG.debug("Cannot pick " + provider.getClass().getName()
                 + " as the ClientProtocolProvider - returned null protocol");
           }
         } 
