@@ -46,6 +46,8 @@ Release 0.20.205.1 - unreleased
 
   BUG FIXES
 
+    HADOOP-7827. jsp pages missing DOCTYPE. (Dave Vronay via mattf)
+
     HADOOP-7815. Fixed configuring map memory mb in hadoop-setup-conf.sh. 
     (Ramya Sunil)
  

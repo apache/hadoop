@@ -22,6 +22,7 @@ private static final long serialVersionUID = 526456771152222127L;
   Collection<JobInProgress> jobs = scheduler.getJobs(queueName);
   JobQueueInfo schedInfo = tracker.getQueueInfo(queueName);
 %>
+<!DOCTYPE html>
 <html>
 <head>
 <title>Queue details for
