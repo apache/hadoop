@@ -95,6 +95,8 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-3424. Some LinuxTaskController cleanup (eli)
 
+    MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
+
 Release 0.20.205.1 - unreleased
 
   NEW FEATURES

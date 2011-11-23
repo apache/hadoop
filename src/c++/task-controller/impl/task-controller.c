@@ -103,7 +103,7 @@ char* get_executable() {
  * promisable. For this, we need task-controller binary to
  *    * be user-owned by root
  *    * be group-owned by a configured special group.
- *    * others do not have any permissions
+ *    * others do not have write/execute permissions
  *    * be setuid
  */
 int check_taskcontroller_permissions(char *executable_file) {
@@ -141,12 +141,11 @@ int check_taskcontroller_permissions(char *executable_file) {
     return -1;
   }
 
-  // check others do not have read/write/execute permissions
-  if ((filestat.st_mode & S_IROTH) == S_IROTH ||
-      (filestat.st_mode & S_IWOTH) == S_IWOTH ||
+  // check others do not have write/execute permissions
+  if ((filestat.st_mode & S_IWOTH) == S_IWOTH ||
       (filestat.st_mode & S_IXOTH) == S_IXOTH) {
     fprintf(LOGFILE,
-            "The task-controller binary should not have read or write or"
+            "The task-controller binary should not have write or"
             " execute for others.\n");
     return -1;
   }
