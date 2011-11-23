@@ -219,6 +219,9 @@ if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; the
   CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
 fi
 
+# adding TOOL_PATH to CLASSPATH. TOOL_PATH is added after HADOOP_CLASSPATH.
+CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+
 # default log directory & file
 if [ "$HADOOP_LOG_DIR" = "" ]; then
   HADOOP_LOG_DIR="$HADOOP_HOME/logs"
@@ -301,14 +304,12 @@ elif [ "$COMMAND" = "jar" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "distcp" ] ; then
   CLASS=org.apache.hadoop.tools.DistCp
-  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "daemonlog" ] ; then
   CLASS=org.apache.hadoop.log.LogLevel
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "archive" ] ; then
   CLASS=org.apache.hadoop.tools.HadoopArchives
-  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "sampler" ] ; then
   CLASS=org.apache.hadoop.mapred.lib.InputSampler

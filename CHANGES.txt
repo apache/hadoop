@@ -138,6 +138,8 @@ Release 0.20.205.1 - unreleased
 
     HDFS-2552. Add Forrest doc for WebHDFS REST API.  (szetszwo)
 
+    HADOOP-7810. Add tools jar to the end of classpath. (John George via omalley)
+
   BUG FIXES
 
     HADOOP-7827. jsp pages missing DOCTYPE. (Dave Vronay via mattf)
