@@ -1099,6 +1099,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7358. Improve log levels when exceptions caught in RPC handler
     (Todd Lipcon via shv)
 
+    HADOOP-7861. changes2html.pl generates links to HADOOP, HDFS, and MAPREDUCE
+    jiras. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
