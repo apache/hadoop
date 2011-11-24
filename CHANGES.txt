@@ -126,6 +126,9 @@ Release 0.20.205.1 - unreleased
     HDFS-611. Heartbeats times from Datanodes increase when there are plenty of
     blocks to delete. (Zheng Shao via jitendra)
 
+    HADOOP-7853. multiple javax security configurations cause conflicts. 
+    (Daryn via jitendra)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
