@@ -46,6 +46,9 @@ Release 0.20.205.1 - unreleased
 
     HADOOP-7810. Add tools jar to the end of classpath. (John George via omalley)
 
+    HDFS-2246. Shortcut a local client reads to a Datanodes files directly. 
+    (Andrew Purtell, Suresh, Jitendra)
+
   BUG FIXES
 
     HADOOP-7827. jsp pages missing DOCTYPE. (Dave Vronay via mattf)
