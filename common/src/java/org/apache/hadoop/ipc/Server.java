@@ -1487,7 +1487,16 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
-            LOG.info(getName()+", call "+call+": error: " + e, e);
+            String logMsg = getName()+", call "+call+": error: " + e;
+            if (e instanceof RuntimeException ||
+                e instanceof Error) {
+              // These exception types indicate something is probably wrong
+              // on the server side, as opposed to just a normal exceptional
+              // result.
+              LOG.warn(logMsg, e);
+            } else {
+              LOG.info(logMsg, e);
+            }
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
             // Remove redundant error class name from the beginning of the stack trace

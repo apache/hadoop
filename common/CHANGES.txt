@@ -268,6 +268,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7786. Remove HDFS-specific config keys defined in FsConfig. (eli)
 
+    HADOOP-7358. Improve log levels when exceptions caught in RPC handler
+    (Todd Lipcon via shv)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
