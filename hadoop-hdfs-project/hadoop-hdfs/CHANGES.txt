@@ -46,6 +46,10 @@ Release 0.23.1 - UNRELEASED
     HDFS-2129. Simplify BlockReader to not inherit from FSInputChecker.
     (todd)
 
+    HDFS-2246. Enable reading a block directly from local file system
+    for a client on the same node as the block file.  (Andrew Purtell,
+    Suresh Srinivas and Jitendra Nath Pandey via szetszwo)
+
   BUG FIXES
 
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 

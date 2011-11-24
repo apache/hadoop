@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -2654,5 +2655,15 @@ public class FSDataset implements FSDatasetInterface {
     for (FSVolume volume : volumes.volumes) {
       volume.deleteBPDirectories(bpid, force);
     }
+  }
+  
+  @Override // FSDatasetInterface
+  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block)
+      throws IOException {
+    File datafile = getBlockFile(block);
+    File metafile = getMetaFile(datafile, block.getGenerationStamp());
+    BlockLocalPathInfo info = new BlockLocalPathInfo(block,
+        datafile.getAbsolutePath(), metafile.getAbsolutePath());
+    return info;
   }
 }

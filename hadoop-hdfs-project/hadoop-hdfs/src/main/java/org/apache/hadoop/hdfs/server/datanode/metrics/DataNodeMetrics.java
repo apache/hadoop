@@ -60,6 +60,7 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong readsFromRemoteClient;
   @Metric MutableCounterLong writesFromLocalClient;
   @Metric MutableCounterLong writesFromRemoteClient;
+  @Metric MutableCounterLong blocksGetLocalPathInfo;
   
   @Metric MutableCounterLong volumeFailures;
 
@@ -164,5 +165,10 @@ public class DataNodeMetrics {
   
   public void incrVolumeFailures() {
     volumeFailures.incr();
+  }
+
+  /** Increment for getBlockLocalPathInfo calls */
+  public void incrBlocksGetLocalPathInfo() {
+    blocksGetLocalPathInfo.incr();
   }
 }
