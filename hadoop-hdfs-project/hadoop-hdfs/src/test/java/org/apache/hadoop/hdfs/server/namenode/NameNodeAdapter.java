@@ -78,7 +78,7 @@ public class NameNodeAdapter {
   /** Set the softLimit and hardLimit of client lease periods. */
   public static void setLeasePeriod(final FSNamesystem namesystem, long soft, long hard) {
     getLeaseManager(namesystem).setLeasePeriod(soft, hard);
-    namesystem.lmthread.interrupt();
+    namesystem.leaseManager.triggerMonitorCheckNow();
   }
 
   public static String getLeaseHolderForPath(NameNode namenode, String path) {

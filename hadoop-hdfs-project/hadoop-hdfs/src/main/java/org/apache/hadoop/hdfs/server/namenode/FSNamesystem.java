@@ -258,7 +258,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   LeaseManager leaseManager = new LeaseManager(this); 
 
-  Daemon lmthread = null;   // LeaseMonitor thread
   Daemon smmthread = null;  // SafeModeMonitor thread
   
   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
@@ -450,9 +449,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("Starting services required for active state");
     writeLock();
     try {
-      startSecretManager();
-      lmthread = new Daemon(leaseManager.new Monitor());
-      lmthread.start();
+      if (UserGroupInformation.isSecurityEnabled()) {
+        startSecretManager();
+      }
+      leaseManager.startMonitor();
     } finally {
       writeUnlock();
     }
@@ -467,14 +467,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       stopSecretManager();
-      if (lmthread != null) {
-        try {
-          lmthread.interrupt();
-          lmthread.join(3000);
-        } catch (InterruptedException ie) {
-          LOG.warn("Encountered exception ", ie);
-        }
-        lmthread = null;
+      if (leaseManager != null) {
+        leaseManager.stopMonitor();
       }
     } finally {
       writeUnlock();
@@ -540,6 +534,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public void writeLock() {
     this.fsLock.writeLock().lock();
+  }
+  @Override
+  public void writeLockInterruptibly() throws InterruptedException {
+    this.fsLock.writeLock().lockInterruptibly();
   }
   @Override
   public void writeUnlock() {

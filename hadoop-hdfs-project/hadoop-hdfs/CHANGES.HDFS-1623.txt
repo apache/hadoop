@@ -21,3 +21,5 @@ HDFS-2418. Change ConfiguredFailoverProxyProvider to take advantage of HDFS-2231
 HDFS-2393. Mark appropriate methods of ClientProtocol with the idempotent annotation. (atm)
 
 HDFS-2523. Small NN fixes to include HAServiceProtocol and prevent NPE on shutdown. (todd)
+
+HDFS-2577. NN fails to start since it tries to start secret manager in safemode. (todd)
