@@ -129,6 +129,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3265. Removed debug logs during job submission to LOG.debug to
     cut down noise. (acmurthy) 
 
+    MAPREDUCE-3468. Changed ant based infrastructure to use 0.23.1 version.
+    (sseth via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -32,7 +32,7 @@
   <property name="Name" value="Hadoop-Mapred"/>
   <property name="name" value="hadoop-${module}"/>
   <!-- Need to change aop.xml project.version prop. synchronously -->
-  <property name="_version" value="0.23.0"/>
+  <property name="_version" value="0.23.1"/>
   <property name="version" value="${_version}-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
