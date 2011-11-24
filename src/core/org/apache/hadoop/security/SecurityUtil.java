@@ -92,7 +92,7 @@ public class SecurityUtil {
       if (isOriginalTGT(t.getServer().getName()))
         return t;
     }
-    throw new IOException("Failed to find TGT from current Subject");
+    throw new IOException("Failed to find TGT from current Subject:"+current);
   }
   
   // Original TGT must be of form "krbtgt/FOO@FOO". Verify this

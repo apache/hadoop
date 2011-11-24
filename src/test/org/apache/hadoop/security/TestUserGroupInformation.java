@@ -31,6 +31,9 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import javax.security.auth.login.AppConfigurationEntry;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,7 +52,22 @@ public class TestUserGroupInformation {
   final private static String[] GROUP_NAMES = 
     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
 
+  // UGI should not use the default security conf, else it will collide
+  // with other classes that may change the default conf.  Using this dummy
+  // class that simply throws an exception will ensure that the tests fail
+  // if UGI uses the static default config instead of its own config
+  private static class DummyLoginConfiguration extends
+    javax.security.auth.login.Configuration
+  {
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      throw new RuntimeException("UGI is not using its own security conf!");
+    } 
+  }
+  
   static {
+    javax.security.auth.login.Configuration.setConfiguration(
+    		new DummyLoginConfiguration());
     Configuration conf = new Configuration();
     conf.set("hadoop.security.auth_to_local",
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
