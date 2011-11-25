@@ -140,6 +140,9 @@ Release 0.20.205.1 - unreleased
 
     HADOOP-7810. Add tools jar to the end of classpath. (John George via omalley)
 
+    HADOOP-7804. Enable hadoop config generator to set configurations to enable 
+    short circuit read. (Arpit Gupta via jitendra)
+
   BUG FIXES
 
     HADOOP-7827. jsp pages missing DOCTYPE. (Dave Vronay via mattf)
