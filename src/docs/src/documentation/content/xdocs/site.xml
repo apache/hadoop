@@ -60,7 +60,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs_perm        label="Permissions" href="hdfs_permissions_guide.html" />
     <hdfs_quotas      label="Quotas" href="hdfs_quota_admin_guide.html" />
     <hdfs_SLG         label="Synthetic Load Generator"  href="SLG_user_guide.html" />
-    <webhdfs label="WebHdfs" href="webhdfs.html" />
+    <webhdfs label="WebHDFS REST API" href="webhdfs.html" />
     <hdfs_libhdfs       label="C API libhdfs" href="libhdfs.html" />
   </docs>
   
@@ -142,38 +142,30 @@ See http://forrest.apache.org/docs/linking.html for more info.
               </distributedcache>  
             </filecache>
             <fs href="fs/">
-              <filesystem href="FileSystem.html" />
               <FileStatus href="FileStatus.html" />
               <Path href="Path.html" />
-            </fs>
 
-
-
-
-            <hdfs href="hdfs/">
-              <DistributedFileSystem href="DistributedFileSystem.html">
+              <filesystem href="FileSystem.html">
                 <open href="#open(org.apache.hadoop.fs.Path,%20int)" />
                 <getFileStatus href="#getFileStatus(org.apache.hadoop.fs.Path)" />
                 <listStatus href="#listStatus(org.apache.hadoop.fs.Path)" />
                 <getContentSummary href="#getContentSummary(org.apache.hadoop.fs.Path)" />
                 <getFileChecksum href="#getFileChecksum(org.apache.hadoop.fs.Path)" />
                 <getHomeDirectory href="#getHomeDirectory()" />
-                <getDelegationToken href="#getDelegationToken(org.apache.hadoop.io.Text)" />
+                <getDelegationToken href="#getDelegationToken(java.lang.String)" />
 
                 <create href="#create(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.permission.FsPermission,%20boolean,%20int,%20short,%20long,%20org.apache.hadoop.util.Progressable)" />
                 <mkdirs href="#mkdirs(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.permission.FsPermission)" />
-                <rename href="#rename(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.Options.Rename...)" />
+                <rename href="#rename(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.Path)" />
                 <setReplication href="#setReplication(org.apache.hadoop.fs.Path,%20short)" />
                 <setOwner href="#setOwner(org.apache.hadoop.fs.Path,%20java.lang.String,%20java.lang.String)" />
                 <setPermission href="#setPermission(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.permission.FsPermission)" />
                 <setTimes href="#setTimes(org.apache.hadoop.fs.Path,%20long,%20long)" />
-                <renewDelegationToken href="#renewDelegationToken(org.apache.hadoop.security.token.Token)" />
-                <cancelDelegationToken href="#cancelDelegationToken(org.apache.hadoop.security.token.Token)" />
 
                 <append href="#append(org.apache.hadoop.fs.Path,%20int,%20org.apache.hadoop.util.Progressable)" />
                 <delete href="#delete(org.apache.hadoop.fs.Path,%20boolean)" />
-              </DistributedFileSystem>
-            </hdfs>
+              </filesystem>
+            </fs>
 
 
 
