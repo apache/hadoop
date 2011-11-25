@@ -44,74 +44,71 @@
 </p>
       <section id="Operations">
         <title>Operations</title>
-<!--
-<p><em>* Note that operation names are case insensitive.</em></p>
--->
 <ul>
   <li>HTTP GET
   <ul>
     <li><a href="#OPEN"><code>OPEN</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/open">DistributedFileSystem.open</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/open">FileSystem.open</a>)
     </li>
     <li><a href="#GETFILESTATUS"><code>GETFILESTATUS</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getFileStatus">DistributedFileSystem.getFileStatus</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileStatus">FileSystem.getFileStatus</a>)
     </li>
     <li><a href="#LISTSTATUS"><code>LISTSTATUS</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/listStatus">DistributedFileSystem.listStatus</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/listStatus">FileSystem.listStatus</a>)
     </li>
     <li><a href="#GETCONTENTSUMMARY"><code>GETCONTENTSUMMARY</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getContentSummary">DistributedFileSystem.getContentSummary</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getContentSummary">FileSystem.getContentSummary</a>)
     </li>
     <li><a href="#GETFILECHECKSUM"><code>GETFILECHECKSUM</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getFileChecksum">DistributedFileSystem.getFileChecksum</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileChecksum">FileSystem.getFileChecksum</a>)
     </li>
     <li><a href="#GETHOMEDIRECTORY"><code>GETHOMEDIRECTORY</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getHomeDirectory">DistributedFileSystem.getHomeDirectory</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getHomeDirectory">FileSystem.getHomeDirectory</a>)
     </li>
     <li><a href="#GETDELEGATIONTOKEN"><code>GETDELEGATIONTOKEN</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getDelegationToken">DistributedFileSystem.getDelegationToken</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/getDelegationToken">FileSystem.getDelegationToken</a>)
     </li>
   </ul></li>
   <li>HTTP PUT
   <ul>
     <li><a href="#CREATE"><code>CREATE</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/create">DistributedFileSystem.create</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/create">FileSystem.create</a>)
     </li>
     <li><a href="#MKDIRS"><code>MKDIRS</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/mkdirs">DistributedFileSystem.mkdirs</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/mkdirs">FileSystem.mkdirs</a>)
     </li>
     <li><a href="#RENAME"><code>RENAME</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/rename">DistributedFileSystem.rename</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/rename">FileSystem.rename</a>)
     </li>
     <li><a href="#SETREPLICATION"><code>SETREPLICATION</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setReplication">DistributedFileSystem.setReplication</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setReplication">FileSystem.setReplication</a>)
     </li>
     <li><a href="#SETOWNER"><code>SETOWNER</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setOwner">DistributedFileSystem.setOwner</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setOwner">FileSystem.setOwner</a>)
     </li>
     <li><a href="#SETPERMISSION"><code>SETPERMISSION</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setPermission">DistributedFileSystem.setPermission</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setPermission">FileSystem.setPermission</a>)
     </li>
     <li><a href="#SETTIMES"><code>SETTIMES</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setTimes">DistributedFileSystem.setTimes</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/setTimes">FileSystem.setTimes</a>)
     </li>
     <li><a href="#RENEWDELEGATIONTOKEN"><code>RENEWDELEGATIONTOKEN</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/renewDelegationToken">DistributedFileSystem.renewDelegationToken</a>)
+        (see DistributedFileSystem.renewDelegationToken)
     </li>
     <li><a href="#CANCELDELEGATIONTOKEN"><code>CANCELDELEGATIONTOKEN</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/cancelDelegationToken">DistributedFileSystem.cancelDelegationToken</a>)
+        (see DistributedFileSystem.cancelDelegationToken)
     </li>
   </ul></li>
   <li>HTTP POST
   <ul>
     <li><a href="#APPEND"><code>APPEND</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/append">DistributedFileSystem.append</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/append">FileSystem.append</a>)
     </li>
   </ul></li>
   <li>HTTP DELETE
   <ul>
     <li><a href="#DELETE"><code>DELETE</code></a>
-        (see <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/delete">DistributedFileSystem.delete</a>)
+        (see <a href="ext:api/org/apache/hadoop/fs/filesystem/delete">FileSystem.delete</a>)
     </li>
   </ul></li>
 </ul>
@@ -148,7 +145,7 @@
 <p>
   When security is <em>off</em>, the authenticated user is the username specified in the <code>user.name</code> query parameter.
   If the <code>user.name</code> parameter is not set,
-  the server may either set the authenticated user to a default web user, if there is any, or return error response.
+  the server may either set the authenticated user to a default web user, if there is any, or return an error response.
 </p>
 <p>
   When security is <em>on</em>, authentication is performed by either Hadoop delegation token or Kerberos SPNEGO.
@@ -237,15 +234,15 @@ Content-Length: 0
     </source>
   </li>
 </ul>
-<p><em>
-  Note that the reason of having two-step create/append is
+<p>
+  <strong>Note</strong> that the reason of having two-step create/append is
   for preventing clients to send out data before the redirect.
   This issue is addressed by the "<code>Expect: 100-continue</code>" header in HTTP/1.1;
   see <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.2.3">RFC 2616, Section 8.2.3</a>.
   Unfortunately, there are software library bugs (e.g. Jetty 6 HTTP server and Java 6 HTTP client),
   which do not correctly implement "<code>Expect: 100-continue</code>".
   The two-step create/append is a temporary workaround for the software library bugs.
-</em></p>
+</p>
 <p>
   See also:
   <a href="#overwrite"><code>overwrite</code></a>,
@@ -253,7 +250,7 @@ Content-Length: 0
   <a href="#replication"><code>replication</code></a>,
   <a href="#permission"><code>permission</code></a>,
   <a href="#buffersize"><code>buffersize</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/create">DistributedFileSystem.create</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/create">FileSystem.create</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -288,7 +285,7 @@ Content-Length: 0
 <p>
   See also:
   <a href="#buffersize"><code>buffersize</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/append">DistributedFileSystem.append</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/append">FileSystem.append</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -321,7 +318,7 @@ Hello, webhdfs user!
   <a href="#offset"><code>offset</code></a>,
   <a href="#length"><code>length</code></a>,
   <a href="#buffersize"><code>buffersize</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/open">DistributedFileSystem.open</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/open">FileSystem.open</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -345,7 +342,7 @@ Transfer-Encoding: chunked
 <p>
   See also:
   <a href="#permission"><code>permission</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/mkdirs">DistributedFileSystem.mkdirs</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/mkdirs">FileSystem.mkdirs</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -369,7 +366,7 @@ Transfer-Encoding: chunked
 <p>
   See also:
   <a href="#destination"><code>destination</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/rename">DistributedFileSystem.rename</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/rename">FileSystem.rename</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -394,7 +391,7 @@ Transfer-Encoding: chunked
 <p>
   See also:
   <a href="#recursive"><code>recursive</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/delete">DistributedFileSystem.delete</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/delete">FileSystem.delete</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -431,7 +428,7 @@ Transfer-Encoding: chunked
 </ul>
 <p>
   See also:
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getFileStatus">DistributedFileSystem.getFileStatus</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileStatus">FileSystem.getFileStatus</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -486,7 +483,7 @@ Content-Length: 427
 </ul>
 <p>
   See also:
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/listStatus">DistributedFileSystem.listStatus</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/listStatus">FileSystem.listStatus</a>
 </p>
       </section>
     </section>
@@ -523,7 +520,7 @@ Transfer-Encoding: chunked
 </ul>
 <p>
   See also:
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getContentSummary">DistributedFileSystem.getContentSummary</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getContentSummary">FileSystem.getContentSummary</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -559,7 +556,7 @@ Transfer-Encoding: chunked
 </ul>
 <p>
   See also:
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getFileChecksum">DistributedFileSystem.getFileChecksum</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getFileChecksum">FileSystem.getFileChecksum</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -582,7 +579,7 @@ Transfer-Encoding: chunked
 </ul>
 <p>
   See also:
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getHomeDirectory">DistributedFileSystem.getHomeDirectory</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getHomeDirectory">FileSystem.getHomeDirectory</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -604,7 +601,7 @@ Content-Length: 0
 <p>
   See also:
   <a href="#permission"><code>permission</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setPermission">DistributedFileSystem.setPermission</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setPermission">FileSystem.setPermission</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -627,7 +624,7 @@ Content-Length: 0
   See also:
   <a href="#owner"><code>owner</code></a>,
   <a href="#group"><code>group</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setOwner">DistributedFileSystem.setOwner</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setOwner">FileSystem.setOwner</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -652,7 +649,7 @@ Transfer-Encoding: chunked
 <p>
   See also:
   <a href="#replication"><code>replication</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setReplication">DistributedFileSystem.setReplication</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setReplication">FileSystem.setReplication</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -675,7 +672,7 @@ Content-Length: 0
   See also:
   <a href="#modificationtime"><code>modificationtime</code></a>,
   <a href="#accesstime"><code>accesstime</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/setTimes">DistributedFileSystem.setTimes</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/setTimes">FileSystem.setTimes</a>
 </p>
       </section>
     </section>
@@ -708,7 +705,7 @@ Transfer-Encoding: chunked
 <p>
   See also:
   <a href="#renewer"><code>renewer</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/getDelegationToken">DistributedFileSystem.getDelegationToken</a>
+  <a href="ext:api/org/apache/hadoop/fs/filesystem/getDelegationToken">FileSystem.getDelegationToken</a>
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -732,7 +729,7 @@ Transfer-Encoding: chunked
 <p>
   See also:
   <a href="#token"><code>token</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/renewDelegationToken">DistributedFileSystem.renewDelegationToken</a>
+  DistributedFileSystem.renewDelegationToken
 </p>
       </section>
 <!-- ***************************************************************************** -->
@@ -753,7 +750,7 @@ Content-Length: 0
 <p>
   See also:
   <a href="#token"><code>token</code></a>,
-  <a href="ext:api/org/apache/hadoop/hdfs/DistributedFileSystem/cancelDelegationToken">DistributedFileSystem.cancelDelegationToken</a>
+  DistributedFileSystem.cancelDelegationToken
 </p>
       </section>
     </section>
@@ -778,7 +775,7 @@ Content-Length: 0
 <tr><td><code>RumtimeException             </code></td><td><code>500 Internal Server Error</code></td></tr>
 </table>
 <p>
-  Below are examples of exception response.
+  Below are examples of exception responses.
 </p>
 <!-- ***************************************************************************** -->
         <section>
@@ -859,9 +856,9 @@ Transfer-Encoding: chunked
     <section>
       <title>JSON Schemas</title>
 <p>
-All operations, except for <a href="#OPEN">OPEN</a>,
+All operations, except for <a href="#OPEN"><code>OPEN</code></a>,
 either return a zero-length response or a JSON response .
-For <a href="#OPEN">OPEN</a>, the response is an octet-stream.
+For <a href="#OPEN"><code>OPEN</code></a>, the response is an octet-stream.
 The JSON schemas are shown below.
 See <a href="http://tools.ietf.org/id/draft-zyp-json-schema-03.html">draft-zyp-json-schema-03</a>
 for the syntax definitions of the JSON schemas.
@@ -1294,7 +1291,7 @@ var fileStatusProperties =
   <tr><td>Syntax</td><td>See the note below.</td></tr>
 </table>
 <p>
-  Note that delegation tokens are encoded as a URL safe string;
+  <strong>Note</strong> that delegation tokens are encoded as a URL safe string;
   see <code>encodeToUrlString()</code>
   and <code>decodeFromUrlString(String)</code>
   in <code>org.apache.hadoop.security.token.Token</code> for the details of the encoding.
