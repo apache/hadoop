@@ -49,6 +49,9 @@ Release 0.20.205.1 - unreleased
     HDFS-2246. Shortcut a local client reads to a Datanodes files directly. 
     (Andrew Purtell, Suresh, Jitendra)
 
+    HADOOP-7804. Enable hadoop config generator to set configurations to enable 
+    short circuit read. (Arpit Gupta via jitendra)
+
   BUG FIXES
 
     HADOOP-7827. jsp pages missing DOCTYPE. (Dave Vronay via mattf)
