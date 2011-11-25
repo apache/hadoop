@@ -43,7 +43,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <hdfs_SLG        		label="Synthetic Load Generator"  href="SLG_user_guide.html" />
       <hdfs_imageviewer	label="Offline Image Viewer"	href="hdfs_imageviewer.html" />
       <hdfs_editsviewer	label="Offline Edits Viewer"	href="hdfs_editsviewer.html" />
-      <webhdfs label="WebHdfs" href="webhdfs.html" />
+      <webhdfs label="WebHDFS REST API" href="webhdfs.html" />
       <hftp 			    label="HFTP" href="hftp.html"/>
       <faultinject_framework label="Fault Injection"  href="faultinject_framework.html" /> 
       <hdfs_libhdfs   		label="C API libhdfs" href="libhdfs.html" /> 
@@ -120,16 +120,10 @@ See http://forrest.apache.org/docs/linking.html for more info.
               </distributedcache>  
             </filecache>
             <fs href="fs/">
-              <filesystem href="FileSystem.html" />
               <FileStatus href="FileStatus.html" />
               <Path href="Path.html" />
-            </fs>
 
-
-
-
-            <hdfs href="hdfs/">
-              <DistributedFileSystem href="DistributedFileSystem.html">
+              <filesystem href="FileSystem.html">
                 <open href="#open(org.apache.hadoop.fs.Path,%20int)" />
                 <getFileStatus href="#getFileStatus(org.apache.hadoop.fs.Path)" />
                 <listStatus href="#listStatus(org.apache.hadoop.fs.Path)" />
@@ -145,13 +139,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setOwner href="#setOwner(org.apache.hadoop.fs.Path,%20java.lang.String,%20java.lang.String)" />
                 <setPermission href="#setPermission(org.apache.hadoop.fs.Path,%20org.apache.hadoop.fs.permission.FsPermission)" />
                 <setTimes href="#setTimes(org.apache.hadoop.fs.Path,%20long,%20long)" />
-                <renewDelegationToken href="#renewDelegationToken(org.apache.hadoop.security.token.Token)" />
-                <cancelDelegationToken href="#cancelDelegationToken(org.apache.hadoop.security.token.Token)" />
 
                 <append href="#append(org.apache.hadoop.fs.Path,%20int,%20org.apache.hadoop.util.Progressable)" />
                 <delete href="#delete(org.apache.hadoop.fs.Path,%20boolean)" />
-              </DistributedFileSystem>
-            </hdfs>
+              </filesystem>
+            </fs>
 
 
 
