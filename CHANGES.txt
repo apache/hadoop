@@ -134,6 +134,8 @@ Release 0.20.205.1 - unreleased
 
     HDFS-2590. Fix the missing links in the WebHDFS forrest doc.  (szetszwo)
 
+    HDFS-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
