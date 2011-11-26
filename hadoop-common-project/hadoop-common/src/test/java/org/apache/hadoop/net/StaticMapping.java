@@ -17,34 +17,80 @@
  */
 package org.apache.hadoop.net;
 
-import java.util.*;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Implements the {@link DNSToSwitchMapping} via static mappings. Used
- * in testcases that simulate racks.
+ * in testcases that simulate racks, and in the
+ * {@link org.apache.hadoop.hdfs.MiniDFSCluster}
  *
+ * A shared, static mapping is used; to reset it call {@link #resetMap()}.
+ *
+ * When an instance of the class has its {@link #setConf(Configuration)}
+ * method called, nodes listed in the configuration will be added to the map.
+ * These do not get removed when the instance is garbage collected.
  */
-public class StaticMapping extends Configured implements DNSToSwitchMapping {
-  public void setconf(Configuration conf) {
-    String[] mappings = conf.getStrings("hadoop.configured.node.mapping");
-    if (mappings != null) {
-      for (int i = 0; i < mappings.length; i++) {
-        String str = mappings[i];
-        String host = str.substring(0, str.indexOf('='));
-        String rack = str.substring(str.indexOf('=') + 1);
-        addNodeToRack(host, rack);
+public class StaticMapping extends AbstractDNSToSwitchMapping  {
+
+  /**
+   * key to define the node mapping as a comma-delimited list of host=rack
+   * mappings, e.g. <code>host1=r1,host2=r1,host3=r2</code>.
+   * </p>
+   * <b>Important: </b>spaces not trimmed and are considered significant.
+   */
+  public static final String KEY_HADOOP_CONFIGURED_NODE_MAPPING =
+      "hadoop.configured.node.mapping";
+
+  /**
+   * Configure the mapping by extracting any mappings defined in the
+   * {@link #KEY_HADOOP_CONFIGURED_NODE_MAPPING} field
+   * @param conf new configuration
+   */
+  @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    if (conf != null) {
+      String[] mappings = conf.getStrings(KEY_HADOOP_CONFIGURED_NODE_MAPPING);
+      if (mappings != null) {
+        for (String str : mappings) {
+          String host = str.substring(0, str.indexOf('='));
+          String rack = str.substring(str.indexOf('=') + 1);
+          addNodeToRack(host, rack);
+        }
       }
     }
   }
-  /* Only one instance per JVM */
-  private static Map<String, String> nameToRackMap = new HashMap<String, String>();
-  
-  static synchronized public void addNodeToRack(String name, String rackId) {
-    nameToRackMap.put(name, rackId);
+
+  /**
+   * retained lower case setter for compatibility reasons; relays to
+   * {@link #setConf(Configuration)}
+   * @param conf new configuration
+   */
+  public void setconf(Configuration conf) {
+    setConf(conf);
   }
+
+  /* Only one instance per JVM */
+  private static final Map<String, String> nameToRackMap = new HashMap<String, String>();
+
+  /**
+   * Add a node to the static map. The moment any entry is added to the map,
+   * the map goes multi-rack.
+   * @param name node name
+   * @param rackId rack ID
+   */
+  public static void addNodeToRack(String name, String rackId) {
+    synchronized (nameToRackMap) {
+      nameToRackMap.put(name, rackId);
+    }
+  }
+
+  @Override
   public List<String> resolve(List<String> names) {
     List<String> m = new ArrayList<String>();
     synchronized (nameToRackMap) {
@@ -57,6 +103,26 @@ public class StaticMapping extends Configured implements DNSToSwitchMapping {
         }
       }
       return m;
+    }
+  }
+
+  /**
+   * This mapping is only single switch if the map is empty
+   * @return the current switching status
+   */
+  @Override
+  public boolean isSingleSwitch() {
+    synchronized (nameToRackMap) {
+      return nameToRackMap.isEmpty();
+    }
+  }
+
+  /**
+   * Clear the map and revert to being a single switch
+   */
+  public static void resetMap() {
+    synchronized (nameToRackMap) {
+      nameToRackMap.clear();
     }
   }
 }
