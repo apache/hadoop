@@ -58,6 +58,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3238. Small cleanup in SchedulerApp. (Todd Lipcon via mahadev)
 
+    MAPREDUCE-3413. RM web ui applications not sorted in any order by default.
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
