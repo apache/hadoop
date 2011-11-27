@@ -114,6 +114,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3371. Review and improve the yarn-api javadocs. (Ravi Prakash
     via mahadev)
 
+    MAPREDUCE-3238. Small cleanup in SchedulerApp. (Todd Lipcon via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
