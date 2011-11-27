@@ -49,6 +49,9 @@ Release 0.20.206.0 - unreleased
     MAPREDUCE-2905. Fix fair scheduler to prevent clumping of tasks when
     assignmultiple is enabled. (todd)
 
+    MAPREDUCE-2376. test-task-controller fails if run as a userid < 1000.
+    (todd via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for 

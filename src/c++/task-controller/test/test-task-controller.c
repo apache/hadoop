@@ -795,7 +795,7 @@ int main(int argc, char **argv) {
 
   if (getuid() == 0 && argc == 2) {
     username = argv[1];
-  } else {
+  } else if ((username = getenv("TC_TEST_USERNAME")) == NULL) {
     username = strdup(getpwuid(getuid())->pw_name);
     my_username = 1;
   }
