@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.yarn.api.ContainerManager;
 
 /**
- * <p><code>ContainerLaunchContext</code> represents the all of the information
+ * <p><code>ContainerLaunchContext</code> represents all of the information
  * needed by the <code>NodeManager</code> to launch a container.</p>
  * 
  * <p>It includes details such as:
@@ -127,7 +127,8 @@ public interface ContainerLaunchContext {
   Map<String, LocalResource> getLocalResources();
   
   /**
-   * Set <code>LocalResource</code> required by the container.
+   * Set <code>LocalResource</code> required by the container. All pre-existing
+   * Map entries are cleared before adding the new Map
    * @param localResources <code>LocalResource</code> required by the container
    */
   @Public
@@ -143,7 +144,8 @@ public interface ContainerLaunchContext {
   Map<String, ByteBuffer> getServiceData();
   
   /**
-   * Set application-specific binary <em>service data</em>.
+   * Set application-specific binary <em>service data</em>. All pre-existing Map
+   * entries are preserved.
    * @param serviceData application-specific binary <em>service data</em>
    */
   @Public
@@ -159,7 +161,8 @@ public interface ContainerLaunchContext {
   Map<String, String> getEnvironment();
     
   /**
-   * Add <em>environment variables</em> for the container.
+   * Add <em>environment variables</em> for the container. All pre-existing Map
+   * entries are cleared before adding the new Map
    * @param environment <em>environment variables</em> for the container
    */
   @Public
@@ -175,7 +178,8 @@ public interface ContainerLaunchContext {
   List<String> getCommands();
   
   /**
-   * Add the list of <em>commands</em> for launching the container.
+   * Add the list of <em>commands</em> for launching the container. All
+   * pre-existing List entries are cleared before adding the new List
    * @param commands the list of <em>commands</em> for launching the container
    */
   @Public
@@ -191,8 +195,9 @@ public interface ContainerLaunchContext {
   public Map<ApplicationAccessType, String> getApplicationACLs();
 
   /**
-   * Set the <code>ApplicationACL</code>s for the application. 
-   * @param acls
+   * Set the <code>ApplicationACL</code>s for the application. All pre-existing
+   * Map entries are cleared before adding the new Map
+   * @param acls <code>ApplicationACL</code>s for the application
    */
   @Public
   @Stable

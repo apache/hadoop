@@ -35,8 +35,6 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  *     </li>
  *     <li>The previous time at which the health status was reported.</li>
  *     <li>A diagnostic report on the health status.</li>
- *     <li></li>
- *     <li></li>
  *   </ul>
  * </p>
  * 

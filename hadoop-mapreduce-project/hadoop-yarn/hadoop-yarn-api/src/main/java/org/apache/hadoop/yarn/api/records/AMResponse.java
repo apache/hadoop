@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
  *   <ul>
  *     <li>Response ID to track duplicate responses.</li>
  *     <li>
- *       A reboot flag to let the <code>ApplicationMaster</code> that its 
+ *       A reboot flag to let the <code>ApplicationMaster</code> know that its 
  *       horribly out of sync and needs to reboot.</li>
  *     <li>A list of newly allocated {@link Container}.</li>
  *     <li>A list of completed {@link Container}.</li>
@@ -100,7 +100,7 @@ public interface AMResponse {
   /**
    * Get the <em>available headroom</em> for resources in the cluster for the 
    * application.
-   * @return limit available headroom for resources in the cluster for the 
+   * @return limit of available headroom for resources in the cluster for the 
    * application
    */
   @Public

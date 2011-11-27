@@ -91,8 +91,8 @@ public interface AMRMProtocol {
    * 
    * <p>This also doubles up as a <em>heartbeat</em> to let the 
    * <code>ResourceManager</code> know that the <code>ApplicationMaster</code>
-   * is alive. Thus, applications should use periodically make this call to 
-   * be kept alive.</p>
+   * is alive. Thus, applications should periodically make this call to be kept
+   * alive. The frequency depends on ??</p>
    * 
    * <p>The <code>ResourceManager</code> responds with list of allocated 
    * {@link Container}, status of completed containers and headroom information 

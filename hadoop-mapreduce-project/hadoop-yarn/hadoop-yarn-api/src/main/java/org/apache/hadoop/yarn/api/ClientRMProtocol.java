@@ -68,7 +68,8 @@ public interface ClientRMProtocol {
    * {@link GetNewApplicationResponse}.</p>
    *
    * @param request request to get a new <code>ApplicationId</code>
-   * @return new <code>ApplicationId</code> to be used to submit an application
+   * @return response containing the new <code>ApplicationId</code> to be used
+   * to submit an application
    * @throws YarnRemoteException
    * @see #submitApplication(SubmitApplicationRequest)
    */
@@ -216,7 +217,7 @@ public interface ClientRMProtocol {
   
   /**
    * <p>The interface used by clients to get information about <em>queue 
-   * acls</em> for <em>current users</em> from the <code>ResourceManager</code>.
+   * acls</em> for <em>current user</em> from the <code>ResourceManager</code>.
    * </p>
    * 
    * <p>The <code>ResourceManager</code> responds with queue acls for all

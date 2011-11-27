@@ -33,22 +33,43 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @Public
 @Stable
 public interface ApplicationResourceUsageReport {
+
+  /**
+   * Get the number of used containers
+   * @return the number of used containers
+   */
   @Public
   @Stable
   int getNumUsedContainers();
 
+  /**
+   * Set the number of used containers
+   * @param num_containers the number of used containers
+   */
   @Private
   @Unstable
   void setNumUsedContainers(int num_containers);
 
+  /**
+   * Get the number of reserved containers
+   * @return the number of reserved containers
+   */
   @Public
   @Stable
   int getNumReservedContainers();
 
+  /**
+   * Set the number of reserved containers
+   * @param num_reserved_containers the number of reserved containers
+   */
   @Private
   @Unstable
   void setNumReservedContainers(int num_reserved_containers);
 
+  /**
+   * Get the used <code>Resource</code>
+   * @return the used <code>Resource</code>
+   */
   @Public
   @Stable
   Resource getUsedResources();
@@ -57,6 +78,10 @@ public interface ApplicationResourceUsageReport {
   @Unstable
   void setUsedResources(Resource resources);
 
+  /**
+   * Get the reserved <code>Resource</code>
+   * @return the reserved <code>Resource</code>
+   */
   @Public
   @Stable
   Resource getReservedResources();
@@ -65,6 +90,10 @@ public interface ApplicationResourceUsageReport {
   @Unstable
   void setReservedResources(Resource reserved_resources);
 
+  /**
+   * Get the needed <code>Resource</code>
+   * @return the needed <code>Resource</code>
+   */
   @Public
   @Stable
   Resource getNeededResources();

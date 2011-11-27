@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 
 /**
- * <p>QueueInfo</p> is a report of the runtime information of the queue.</p>
+ * <p>QueueInfo is a report of the runtime information of the queue.</p>
  * 
  * <p>It includes information such as:
  *   <ul>
