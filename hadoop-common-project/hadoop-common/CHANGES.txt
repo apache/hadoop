@@ -31,6 +31,8 @@ Release 0.23.1 - Unreleased
    HADOOP-7843. compilation failing because workDir not initialized in 
    RunJar.java (John George via mahadev)
 
+   HADOOP-7859. TestViewFsHdfs.testgetFileLinkStatus is failing an assert. (eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
