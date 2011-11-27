@@ -241,7 +241,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
           injectedTags, period, config.subset(SOURCE_KEY));
     sources.put(name, sa);
     sa.start();
-    LOG.info("Registered source "+ name);
+    LOG.debug("Registered source "+ name);
   }
 
   @Override public synchronized <T extends MetricsSink>
@@ -405,8 +405,8 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   private synchronized void stopSources() {
     for (Entry<String, MetricsSourceAdapter> entry : sources.entrySet()) {
       MetricsSourceAdapter sa = entry.getValue();
-      LOG.info("Stopping metrics source "+ entry.getKey());
-      LOG.debug(sa.source().getClass());
+      LOG.debug("Stopping metrics source "+ entry.getKey() +
+          ": class=" + sa.source().getClass());
       sa.stop();
     }
     sysSource.stop();
@@ -416,8 +416,8 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   private synchronized void stopSinks() {
     for (Entry<String, MetricsSinkAdapter> entry : sinks.entrySet()) {
       MetricsSinkAdapter sa = entry.getValue();
-      LOG.info("Stopping metrics sink "+ entry.getKey());
-      LOG.debug(sa.sink().getClass());
+      LOG.debug("Stopping metrics sink "+ entry.getKey() +
+          ": class=" + sa.sink().getClass());
       sa.stop();
     }
     sinks.clear();
