@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  * <p>The request sent by clients to the <code>ResourceManager</code> to 
  * get queue acls for the <em>current user</em>.</p>
  *
+ * <p>Currently, this is empty.</p>
+ * 
  * @see ClientRMProtocol#getQueueUserAcls(GetQueueUserAclsInfoRequest)
  */
 @Public

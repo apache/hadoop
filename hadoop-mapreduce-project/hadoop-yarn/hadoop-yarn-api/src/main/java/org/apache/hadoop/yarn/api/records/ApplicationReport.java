@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  *     <li>Applications user.</li>
  *     <li>Application queue.</li>
  *     <li>Application name.</li>
- *     <li>Host on which the <code>ApplicationMaster</code>is running.</li>
+ *     <li>Host on which the <code>ApplicationMaster</code> is running.</li>
  *     <li>RPC port of the <code>ApplicationMaster</code>.</li>
  *     <li>Tracking URL.</li>
  *     <li>{@link YarnApplicationState} of the application.</li>
@@ -215,6 +215,7 @@ public interface ApplicationReport {
 
   /**
    * Get the <em>final finish status</em> of the application.
+   * @return <em>final finish status</em> of the application
    */
   @Public
   @Stable

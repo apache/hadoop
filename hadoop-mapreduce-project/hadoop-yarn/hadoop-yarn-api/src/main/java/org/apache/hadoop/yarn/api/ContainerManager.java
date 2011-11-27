@@ -79,7 +79,7 @@ public interface ContainerManager {
    * to <em>stop</em> a {@link Container} allocated to it using this interface.
    * </p>
    * 
-   * <p>The <code>ApplicationMaster</code></p> sends a 
+   * <p>The <code>ApplicationMaster</code> sends a
    * {@link StopContainerRequest} which includes the {@link ContainerId} of the
    * container to be stopped.</p>
    * 
@@ -105,8 +105,8 @@ public interface ContainerManager {
    * current status of a <code>Container</code> from the 
    * <code>NodeManager</code>.</p>
    * 
-   * <p>The <code>ApplicationMaster</code></p> sends a 
-   * {@link GetContainerStatusRequest} which includes the {@link ContainerId} of 
+   * <p>The <code>ApplicationMaster</code> sends a
+   * {@link GetContainerStatusRequest} which includes the {@link ContainerId} of
    * the container whose status is needed.</p>
    *
    *<p>The <code>NodeManager</code> responds with 
@@ -115,7 +115,8 @@ public interface ContainerManager {
    *
    * @param request request to get <code>ContainerStatus</code> of a container
    *                with the specified <code>ContainerId</code>
-   * @return <code>ContainerStatus</code> of the container
+   * @return response containing the <code>ContainerStatus</code> of the
+   * container
    * @throws YarnRemoteException
    */
   @Public

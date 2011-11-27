@@ -111,6 +111,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3411. Performance Upgrade for jQuery (Jonathan Eagles via 
     mahadev)
 
+    MAPREDUCE-3371. Review and improve the yarn-api javadocs. (Ravi Prakash
+    via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES

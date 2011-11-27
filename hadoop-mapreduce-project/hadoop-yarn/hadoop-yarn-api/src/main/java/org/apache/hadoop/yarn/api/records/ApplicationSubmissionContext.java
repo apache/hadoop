@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 
 /**
- * <p><code>ApplicationSubmissionContext</code> represents the all of the 
+ * <p><code>ApplicationSubmissionContext</code> represents all of the
  * information needed by the <code>ResourceManager</code> to launch 
  * the <code>ApplicationMaster</code> for an application.</p>
  * 

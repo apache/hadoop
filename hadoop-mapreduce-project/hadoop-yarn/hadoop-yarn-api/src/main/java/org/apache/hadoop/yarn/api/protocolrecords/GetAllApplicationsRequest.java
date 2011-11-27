@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  * <p>The request from clients to get a report of all Applications
  * in the cluster from the <code>ResourceManager</code>.</p>
  *
+ * <p>Currently, this is empty.</p>
+ * 
  * @see ClientRMProtocol#getAllApplications(GetAllApplicationsRequest)
  */
 @Public

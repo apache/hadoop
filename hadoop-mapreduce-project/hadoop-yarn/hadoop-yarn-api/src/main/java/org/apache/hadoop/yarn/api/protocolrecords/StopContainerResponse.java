@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  * <code>ApplicationMaster</code> when asked to <em>stop</em> an
  * allocated container.</p>
  * 
+ * <p>Currently, this is empty.</p>
+ * 
  * @see ContainerManager#stopContainer(StopContainerRequest)
  */
 @Public

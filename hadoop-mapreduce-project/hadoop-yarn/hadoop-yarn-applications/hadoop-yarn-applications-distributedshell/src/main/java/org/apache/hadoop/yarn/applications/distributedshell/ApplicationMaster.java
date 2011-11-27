@@ -93,7 +93,7 @@ import org.apache.hadoop.yarn.util.Records;
  * to inform the <code>ResourceManager</code> that it is up and alive. The {@link AMRMProtocol#allocate} to the 
  * <code>ResourceManager</code> from the <code>ApplicationMaster</code> acts as a heartbeat.
  * 
- * <p> For the actual handling of the job, the <code>ApplicationMaster</code> has to request for the 
+ * <p> For the actual handling of the job, the <code>ApplicationMaster</code> has to request the 
  * <code>ResourceManager</code> via {@link AllocateRequest} for the required no. of containers using {@link ResourceRequest}
  * with the necessary resource specifications such as node location, computational (memory/disk/cpu) resource requirements.
  * The <code>ResourceManager</code> responds with an {@link AllocateResponse} that informs the <code>ApplicationMaster</code> 

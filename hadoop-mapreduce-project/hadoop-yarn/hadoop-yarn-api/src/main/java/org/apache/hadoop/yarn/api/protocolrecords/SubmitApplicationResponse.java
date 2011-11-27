@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.api.ClientRMProtocol;
  * <p>The response sent by the <code>ResourceManager</code> to a client on
  * application submission.</p>
  * 
+ * <p>Currently, this is empty.</p>
+ * 
  * @see ClientRMProtocol#submitApplication(SubmitApplicationRequest)
  */
 @Public
