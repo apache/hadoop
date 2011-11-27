@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.206.0 - unreleased
+Release 1.1.0 - unreleased
 
   NEW FEATURES
 
@@ -100,7 +100,7 @@ Release 0.20.206.0 - unreleased
 
     MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
 
-Release 0.20.205.1 - unreleased
+Release 1.0.0 - unreleased
 
   NEW FEATURES
 
