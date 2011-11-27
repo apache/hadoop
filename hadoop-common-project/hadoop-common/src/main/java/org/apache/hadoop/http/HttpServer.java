@@ -644,12 +644,12 @@ public class HttpServer implements FilterContainer {
         while (true) {
           try {
             port = webServer.getConnectors()[0].getLocalPort();
-            LOG.info("Port returned by webServer.getConnectors()[0]." +
+            LOG.debug("Port returned by webServer.getConnectors()[0]." +
             		"getLocalPort() before open() is "+ port + 
             		". Opening the listener on " + oriPort);
             listener.open();
             port = listener.getLocalPort();
-            LOG.info("listener.getLocalPort() returned " + listener.getLocalPort() + 
+            LOG.debug("listener.getLocalPort() returned " + listener.getLocalPort() + 
                   " webServer.getConnectors()[0].getLocalPort() returned " +
                   webServer.getConnectors()[0].getLocalPort());
             //Workaround to handle the problem reported in HADOOP-4744

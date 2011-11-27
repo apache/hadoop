@@ -1498,7 +1498,7 @@ public abstract class Server {
 
     @Override
     public void run() {
-      LOG.info(getName() + ": starting");
+      LOG.debug(getName() + ": starting");
       SERVER.set(Server.this);
       ByteArrayOutputStream buf = 
         new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
@@ -1580,7 +1580,7 @@ public abstract class Server {
           LOG.info(getName() + " caught an exception", e);
         }
       }
-      LOG.info(getName() + ": exiting");
+      LOG.debug(getName() + ": exiting");
     }
 
   }
