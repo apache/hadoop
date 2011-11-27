@@ -51,6 +51,8 @@ public class AppView extends TwoColumnLayout {
 
   private String jobsTableInit() {
     return tableInit().
+        // Sort by id upon page load
+        append(", aaSorting: [[0, 'asc']]").
         append(",aoColumns:[{sType:'title-numeric'},").
         append("null,null,{sType:'title-numeric', bSearchable:false},null,").
         append("null,{sType:'title-numeric',bSearchable:false}, null, null]}").

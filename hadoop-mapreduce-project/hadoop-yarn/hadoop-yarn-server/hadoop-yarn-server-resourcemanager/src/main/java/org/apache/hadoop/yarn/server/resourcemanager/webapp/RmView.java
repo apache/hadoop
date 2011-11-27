@@ -61,6 +61,10 @@ public class RmView extends TwoColumnLayout {
     StringBuilder init = tableInit().
         append(", aoColumns:[{sType:'title-numeric'}, null, null, null, null,").
         append("null,{sType:'title-numeric', bSearchable:false}, null, null]");
+
+    // Sort by id upon page load
+    init.append(", aaSorting: [[0, 'asc']]");
+
     String rows = $("rowlimit");
     int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);
     if (list.apps.size() < rowLimit) {

@@ -51,6 +51,8 @@ public class AllApplicationsPage extends NMView {
 
   private String appsTableInit() {
     return tableInit().
+        // Sort by id upon page load
+        append(", aaSorting: [[0, 'asc']]").
         // applicationid, applicationstate
         append(", aoColumns:[null, null]} ").toString();
   }

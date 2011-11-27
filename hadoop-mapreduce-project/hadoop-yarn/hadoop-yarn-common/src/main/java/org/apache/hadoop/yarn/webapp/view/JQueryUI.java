@@ -224,7 +224,7 @@ public class JQueryUI extends HtmlBlock {
   }
 
   public static StringBuilder tableInit() {
-    return new StringBuilder("{bJQueryUI:true, aaSorting:[], ").
+    return new StringBuilder("{bJQueryUI:true, ").
         append("sPaginationType: 'full_numbers', iDisplayLength:20, ").
         append("aLengthMenu:[20, 40, 60, 80, 100]");
   }
