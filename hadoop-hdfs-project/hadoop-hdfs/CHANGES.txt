@@ -124,6 +124,9 @@ Release 0.23.1 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-2316. [umbrella] webhdfs: a complete FileSystem implementation for 
+    accessing HDFS over HTTP (szetszwo)
+
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 
