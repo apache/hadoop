@@ -54,9 +54,6 @@ Trunk (unreleased changes)
     HADOOP-7728. Enable task memory management to be configurable in hadoop
     config setup script. (ramya)
 
-    HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
-    (Uma Maheswara Rao G via eli)
-
     HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
     (jitendra)
 
@@ -125,6 +122,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7858. Drop some info logging to DEBUG level in IPC,
     metrics, and HTTP. (todd via eli)
+
+    HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
+    (Uma Maheswara Rao G via eli)
 
   OPTIMIZATIONS
 
