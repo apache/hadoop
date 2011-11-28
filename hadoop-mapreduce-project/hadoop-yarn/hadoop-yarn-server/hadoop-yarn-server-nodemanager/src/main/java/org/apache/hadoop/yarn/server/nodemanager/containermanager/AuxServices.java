@@ -68,7 +68,7 @@ public class AuxServices extends AbstractService
   /**
    * @return the meta data for all registered services, that have been started.
    * If a service has not been started no metadata will be available. The key
-   * the the name of the service as defined in the configuration.
+   * is the name of the service as defined in the configuration.
    */
   public Map<String, ByteBuffer> getMeta() {
     Map<String, ByteBuffer> metaClone = new HashMap<String, ByteBuffer>(

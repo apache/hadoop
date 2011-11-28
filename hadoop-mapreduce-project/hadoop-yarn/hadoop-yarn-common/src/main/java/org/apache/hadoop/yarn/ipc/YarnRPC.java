@@ -46,7 +46,8 @@ public abstract class YarnRPC {
       int numHandlers);
 
   public static YarnRPC create(Configuration conf) {
-    LOG.info("Creating YarnRPC for " + conf.get(YarnConfiguration.IPC_RPC_IMPL));
+    LOG.debug("Creating YarnRPC for " + 
+        conf.get(YarnConfiguration.IPC_RPC_IMPL));
     String clazzName = conf.get(YarnConfiguration.IPC_RPC_IMPL);
     if (clazzName == null) {
       clazzName = YarnConfiguration.DEFAULT_IPC_RPC_IMPL;

@@ -296,8 +296,12 @@ public class HsTaskPage extends HsView {
     } else { //MAP
       b.append(", 5");
     }
-    b.append(" ] }");
-    b.append("]}");
+    b.append(" ] }]");
+
+    // Sort by id upon page load
+    b.append(", aaSorting: [[0, 'asc']]");
+
+    b.append("}");
     return b.toString();
   }
   

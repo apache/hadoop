@@ -389,7 +389,7 @@ public class WritableRpcEngine implements RpcEngine {
       }
       protocolImplMap.put(new ProtoNameVer(protocolName, version),
           new ProtoClassProtoImpl(protocolClass, protocolImpl)); 
-      LOG.info("Protocol Name = " + protocolName +  " version=" + version +
+      LOG.debug("Protocol Name = " + protocolName +  " version=" + version +
           " ProtocolImpl=" + protocolImpl.getClass().getName() + 
           " protocolClass=" + protocolClass.getName());
     }

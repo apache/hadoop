@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -40,11 +39,9 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -56,6 +53,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -67,13 +65,13 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.client.ClientRMSecurityInfo;
 
 
 // TODO: This should be part of something like yarn-client.
 public class ResourceMgrDelegate {
   private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
       
+  private final String rmAddress;
   private YarnConfiguration conf;
   ClientRMProtocol applicationsManager;
   private ApplicationId applicationId;
@@ -92,21 +90,25 @@ public class ResourceMgrDelegate {
             YarnConfiguration.DEFAULT_RM_ADDRESS),
             YarnConfiguration.DEFAULT_RM_PORT,
             YarnConfiguration.RM_ADDRESS);
-    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    this.rmAddress = rmAddress.toString();
+    LOG.debug("Connecting to ResourceManager at " + rmAddress);
     applicationsManager =
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
             rmAddress, this.conf);
-    LOG.info("Connected to ResourceManager at " + rmAddress);
+    LOG.debug("Connected to ResourceManager at " + rmAddress);
   }
   
   /**
    * Used for injecting applicationsManager, mostly for testing.
    * @param conf the configuration object
-   * @param applicationsManager the handle to talk the resource managers {@link ClientRMProtocol}.
+   * @param applicationsManager the handle to talk the resource managers 
+   *                            {@link ClientRMProtocol}.
    */
-  public ResourceMgrDelegate(YarnConfiguration conf, ClientRMProtocol applicationsManager) {
+  public ResourceMgrDelegate(YarnConfiguration conf, 
+      ClientRMProtocol applicationsManager) {
     this.conf = conf;
     this.applicationsManager = applicationsManager;
+    this.rmAddress = applicationsManager.toString();
   }
   
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
@@ -295,18 +297,22 @@ public class ResourceMgrDelegate {
   }
   
   
-  public ApplicationId submitApplication(ApplicationSubmissionContext appContext) 
+  public ApplicationId submitApplication(
+      ApplicationSubmissionContext appContext) 
   throws IOException {
     appContext.setApplicationId(applicationId);
-    SubmitApplicationRequest request = recordFactory.newRecordInstance(SubmitApplicationRequest.class);
+    SubmitApplicationRequest request = 
+        recordFactory.newRecordInstance(SubmitApplicationRequest.class);
     request.setApplicationSubmissionContext(appContext);
     applicationsManager.submitApplication(request);
-    LOG.info("Submitted application " + applicationId + " to ResourceManager");
+    LOG.info("Submitted application " + applicationId + " to ResourceManager" +
+    		" at " + rmAddress);
     return applicationId;
   }
   
   public void killApplication(ApplicationId applicationId) throws IOException {
-    KillApplicationRequest request = recordFactory.newRecordInstance(KillApplicationRequest.class);
+    KillApplicationRequest request = 
+        recordFactory.newRecordInstance(KillApplicationRequest.class);
     request.setApplicationId(applicationId);
     applicationsManager.forceKillApplication(request);
     LOG.info("Killing application " + applicationId);

@@ -1099,18 +1099,10 @@ public final class FileContext {
    */
   private Path qualifySymlinkTarget(final AbstractFileSystem pathFS,
     Path pathWithLink, Path target) {
-    /* NB: makeQualified uses the target's scheme and authority, if
-     * specified, and the scheme and authority of pathFS, if not. If
-     * the path does have a scheme and authority we assert they match
-     * those of pathFS since resolve updates the file system of a path
-     * that contains links each time a link is encountered.
-     */
+    // NB: makeQualified uses the target's scheme and authority, if
+    // specified, and the scheme and authority of pathFS, if not.
     final String scheme = target.toUri().getScheme();
     final String auth   = target.toUri().getAuthority();
-    if (scheme != null && auth != null) {
-      assert scheme.equals(pathFS.getUri().getScheme());
-      assert auth.equals(pathFS.getUri().getAuthority());
-    }
     return (scheme == null && auth == null)
       ? target.makeQualified(pathFS.getUri(), pathWithLink.getParent())
       : target;

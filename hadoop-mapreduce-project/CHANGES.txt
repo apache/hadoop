@@ -41,6 +41,8 @@ Trunk (unreleased changes)
     (tucu)
 
   BUG FIXES
+    MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
+
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
                     (amarrk)
 
@@ -106,6 +108,17 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3372. HADOOP_PREFIX cannot be overridden.
     (Bruno Mahé via tomwhite)
 
+    MAPREDUCE-3411. Performance Upgrade for jQuery (Jonathan Eagles via 
+    mahadev)
+
+    MAPREDUCE-3371. Review and improve the yarn-api javadocs. (Ravi Prakash
+    via mahadev)
+
+    MAPREDUCE-3238. Small cleanup in SchedulerApp. (Todd Lipcon via mahadev)
+
+    MAPREDUCE-3413. RM web ui applications not sorted in any order by default.
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -158,6 +171,20 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3447. mapreduce examples not working (mahadev)
 
     MAPREDUCE-3444. trunk/0.23 builds broken (Hitesh Shah via mahadev)
+
+    MAPREDUCE-3454. [Gridmix] TestDistCacheEmulation is broken (Hitesh Shah
+    via mahadev)
+
+    MAPREDUCE-3408. yarn-daemon.sh unconditionnaly sets yarn.root.logger 
+    (Bruno Mahe via mahadev)
+
+    MAPREDUCE-3329. Fixed CapacityScheduler to ensure maximum-capacity cannot
+    be lesser than capacity for any queue. (acmurthy)
+
+    MAPREDUCE-3464. mapreduce jsp pages missing DOCTYPE. (Dave Vronay via mattf)
+
+    MAPREDUCE-3265. Removed debug logs during job submission to LOG.debug to
+    cut down noise. (acmurthy) 
 
 Release 0.23.0 - 2011-11-01 
 

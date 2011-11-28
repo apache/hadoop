@@ -30,12 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
-import org.apache.hadoop.mapreduce.v2.security.client.ClientHSSecurityInfo;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
 public class ClientCache {
@@ -79,9 +76,9 @@ public class ClientCache {
     if (StringUtils.isEmpty(serviceAddr)) {
       return null;
     }
-    LOG.info("Connecting to HistoryServer at: " + serviceAddr);
+    LOG.debug("Connecting to HistoryServer at: " + serviceAddr);
     final YarnRPC rpc = YarnRPC.create(conf);
-    LOG.info("Connected to HistoryServer at: " + serviceAddr);
+    LOG.debug("Connected to HistoryServer at: " + serviceAddr);
     UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
     return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
       @Override

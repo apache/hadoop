@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
  *     <li>
  *       A list of unused {@link Container} which are being returned. 
  *     </li>
- *     <li></li>
  *   </ul>
  * </p>
  * 
@@ -81,7 +80,7 @@ public interface AllocateRequest {
   void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
-   * Get the <em>response id</em>.
+   * Get the <em>response id</em> used to track duplicate responses.
    * @return <em>response id</em>
    */
   @Public
@@ -89,7 +88,7 @@ public interface AllocateRequest {
   int getResponseId();
 
   /**
-   * Set the <em>response id</em>
+   * Set the <em>response id</em> used to track duplicate responses.
    * @param id <em>response id</em>
    */
   @Public
@@ -113,7 +112,7 @@ public interface AllocateRequest {
   void setProgress(float progress);
 
   /**
-   * Get the list of <code>ResourceRequest</code> to upate the 
+   * Get the list of <code>ResourceRequest</code> to update the 
    * <code>ResourceManager</code> about the application's resource requirements.
    * @return the list of <code>ResourceRequest</code>
    */
@@ -130,9 +129,9 @@ public interface AllocateRequest {
   int getAskCount();
   
   /**
-   * Add list of <code>ResourceRequest</code> to upate the 
+   * Add list of <code>ResourceRequest</code> to update the 
    * <code>ResourceManager</code> about the application's resource requirements.
-   * @param resourceRequest list of <code>ResourceRequest</code> to upate the 
+   * @param resourceRequest list of <code>ResourceRequest</code> to update the 
    *                        <code>ResourceManager</code> about the application's 
    *                        resource requirements
    */

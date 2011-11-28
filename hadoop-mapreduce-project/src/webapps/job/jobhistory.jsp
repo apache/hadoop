@@ -44,6 +44,7 @@
   private static SimpleDateFormat dateFormat = 
                                     new SimpleDateFormat("d/MM HH:mm:ss");
 %>
+<!DOCTYPE html>
 <html>
 <head>
 <script type="text/JavaScript">

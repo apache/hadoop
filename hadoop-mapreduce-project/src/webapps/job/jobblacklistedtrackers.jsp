@@ -74,6 +74,7 @@
     }
 %>
 
+<!DOCTYPE html>
 <html>
 <title>Hadoop <%=jobId%>'s black-listed tasktrackers</title>
 <body>

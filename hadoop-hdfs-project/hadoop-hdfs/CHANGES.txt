@@ -11,6 +11,8 @@ Trunk (unreleased changes)
 
     HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
 
+    HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
@@ -122,6 +124,9 @@ Release 0.23.1 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-2316. [umbrella] webhdfs: a complete FileSystem implementation for 
+    accessing HDFS over HTTP (szetszwo)
+
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 
@@ -151,6 +156,10 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2566. Move BPOfferService to be a non-inner class. (todd)
 
+    HDFS-2552. Add Forrest doc for WebHDFS REST API.  (szetszwo)
+
+    HDFS-2587. Add apt doc for WebHDFS REST API.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -177,6 +186,10 @@ Release 0.23.1 - UNRELEASED
     trying to browse DFS via web UI. (harsh via eli)
 
     HDFS-2575. DFSTestUtil may create empty files (todd)
+
+    HDFS-2588. hdfs jsp pages missing DOCTYPE. (Dave Vronay via mattf)
+
+    HDFS-2590. Fix the missing links in the WebHDFS forrest doc.  (szetszwo)
     
 Release 0.23.0 - 2011-11-01 
 

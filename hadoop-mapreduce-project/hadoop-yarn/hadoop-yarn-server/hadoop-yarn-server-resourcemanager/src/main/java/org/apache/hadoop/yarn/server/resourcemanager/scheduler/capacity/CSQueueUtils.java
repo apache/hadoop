@@ -15,24 +15,20 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-package org.apache.hadoop.yarn.api.protocolrecords;
-
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.yarn.api.ContainerManager;
-
-/**
- * <p>The response sent by the <code>NodeManager</code> to the 
- * <code>ApplicationMaster</code> when asked to <em>stop</em> an
- * allocated container.</p>
- * 
- * <p>Currently, this is empty.</p>
- * 
- * @see ContainerManager#stopContainer(StopContainerRequest)
- */
-@Public
-@Stable
-public interface StopContainerResponse {
-
+class CSQueueUtils {
+  
+  public static void checkMaxCapacity(String queueName, 
+      float capacity, float maximumCapacity) {
+    if (maximumCapacity != CapacitySchedulerConfiguration.UNDEFINED && 
+        maximumCapacity < capacity) {
+      throw new IllegalArgumentException(
+          "Illegal call to setMaxCapacity. " +
+          "Queue '" + queueName + "' has " +
+          "capacity (" + capacity + ") greater than " + 
+          "maximumCapacity (" + maximumCapacity + ")" );
+    }
+  }
+  
 }

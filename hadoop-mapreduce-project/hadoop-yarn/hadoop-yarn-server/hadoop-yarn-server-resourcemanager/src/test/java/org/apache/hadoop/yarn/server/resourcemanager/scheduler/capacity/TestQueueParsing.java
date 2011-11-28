@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -35,7 +37,6 @@ public class TestQueueParsing {
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.reinitialize(conf, null, null);
-    //capacityScheduler.g
   }
   
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
@@ -104,4 +105,48 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.reinitialize(conf, null, null);
   }
+  
+  public void testMaxCapacity() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+
+    conf.setQueues(CapacityScheduler.ROOT, new String[] {"a", "b", "c"});
+    conf.setCapacity(CapacityScheduler.ROOT, 100);
+
+    final String A = CapacityScheduler.ROOT + ".a";
+    conf.setCapacity(A, 50);
+    conf.setMaximumCapacity(A, 60);
+
+    final String B = CapacityScheduler.ROOT + ".b";
+    conf.setCapacity(B, 50);
+    conf.setMaximumCapacity(B, 45);  // Should throw an exception
+
+
+    boolean fail = false;
+    CapacityScheduler capacityScheduler;
+    try {
+      capacityScheduler = new CapacityScheduler();
+      capacityScheduler.reinitialize(conf, null, null);
+    } catch (IllegalArgumentException iae) {
+      fail = true;
+    }
+    Assert.assertTrue("Didn't throw IllegalArgumentException for wrong maxCap", 
+        fail);
+
+    conf.setMaximumCapacity(B, 60);
+    
+    // Now this should work
+    capacityScheduler = new CapacityScheduler();
+    capacityScheduler.reinitialize(conf, null, null);
+    
+    fail = false;
+    try {
+    LeafQueue a = (LeafQueue)capacityScheduler.getQueue(A);
+    a.setMaxCapacity(45);
+    } catch  (IllegalArgumentException iae) {
+      fail = true;
+    }
+    Assert.assertTrue("Didn't throw IllegalArgumentException for wrong " +
+    		"setMaxCap", fail);
+  }
+  
 }

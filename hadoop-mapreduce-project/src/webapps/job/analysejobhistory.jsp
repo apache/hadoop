@@ -35,6 +35,7 @@
 %>
 <%!	private static final long serialVersionUID = 1L;
 %>
+<!DOCTYPE html>
 <html><body>
 <%
   String logFile = request.getParameter("logFile");

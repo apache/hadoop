@@ -18,10 +18,23 @@
 
 package org.apache.hadoop.yarn.api.records;
 
+/**
+ * The priority assigned to a ResourceRequest or Application or Container 
+ * allocation 
+ *
+ */
 public interface Priority extends Comparable<Priority> {
   
+  /**
+   * Get the assigned priority
+   * @return the assigned priority
+   */
   public abstract int getPriority();
   
+  /**
+   * Set the assigned priority
+   * @param priority the assigned priority
+   */
   public abstract void setPriority(int priority);
   
 }

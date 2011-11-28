@@ -1498,7 +1498,7 @@ public abstract class Server {
 
     @Override
     public void run() {
-      LOG.info(getName() + ": starting");
+      LOG.debug(getName() + ": starting");
       SERVER.set(Server.this);
       ByteArrayOutputStream buf = 
         new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
@@ -1536,7 +1536,16 @@ public abstract class Server {
                   );
             }
           } catch (Throwable e) {
-            LOG.info(getName() + ", call: " + call + ", error: ", e);
+            String logMsg = getName() + ", call " + call + ": error: " + e;
+            if (e instanceof RuntimeException || e instanceof Error) {
+              // These exception types indicate something is probably wrong
+              // on the server side, as opposed to just a normal exceptional
+              // result.
+              LOG.warn(logMsg, e);
+            } else {
+              LOG.info(logMsg, e);
+            }
+
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
             // Remove redundant error class name from the beginning of the stack trace
@@ -1571,7 +1580,7 @@ public abstract class Server {
           LOG.info(getName() + " caught an exception", e);
         }
       }
-      LOG.info(getName() + ": exiting");
+      LOG.debug(getName() + ": exiting");
     }
 
   }

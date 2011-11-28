@@ -35,6 +35,7 @@
   TaskScheduler scheduler = tracker.getTaskScheduler();
   JobQueueInfo schedInfo = tracker.getQueueInfo(queueName);
 %>
+<!DOCTYPE html>
 <html>
 <head>
 <title>Queue details for <%=queueName != null ? queueName : ""%> </title>

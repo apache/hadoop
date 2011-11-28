@@ -119,6 +119,9 @@ public class TaskPage extends AppView {
   }
 
   private String attemptsTableInit() {
-    return tableInit().append("}").toString();
+    return tableInit().
+        // Sort by id upon page load
+        append(", aaSorting: [[0, 'asc']]").
+        append("}").toString();
   }
 }

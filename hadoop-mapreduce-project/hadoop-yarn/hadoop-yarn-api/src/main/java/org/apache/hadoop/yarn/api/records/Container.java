@@ -38,8 +38,7 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  *   <ul>
  *     <li>{@link ContainerId} for the container, which is globally unique.</li>
  *     <li>
- *       {@link NodeId} of the node on which identifies the node on which it
- *       is allocated.
+ *       {@link NodeId} of the node on which it is allocated.
  *     </li>
  *     <li>HTTP uri of the node.</li>
  *     <li>{@link Resource} allocated to the container.</li>

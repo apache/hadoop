@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
  * <p>The request sent by clients to get a new {@link ApplicationId} for
  * submitting an application.</p>
  * 
+ * <p>Currently, this is empty.</p>
+ * 
  * @see ClientRMProtocol#getNewApplication(GetNewApplicationRequest)
  */
 @Public

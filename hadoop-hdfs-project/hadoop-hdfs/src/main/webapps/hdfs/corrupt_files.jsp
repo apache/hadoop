@@ -38,6 +38,7 @@
   int corruptFileCount = corruptFileBlocks.size();
 %>
 
+<!DOCTYPE html>
 <html>
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 <title>Hadoop <%=namenodeRole%> <%=namenodeLabel%></title>

@@ -38,6 +38,8 @@ public class TasksPage extends AppView {
 
   private String tasksTableInit() {
     return tableInit().
+        // Sort by id upon page load
+        append(", aaSorting: [[0, 'asc']]").
         append(",aoColumns:[{sType:'title-numeric'},{sType:'title-numeric',").
         append("bSearchable:false},null,{sType:'title-numeric'},").
         append("{sType:'title-numeric'},{sType:'title-numeric'}]}").toString();

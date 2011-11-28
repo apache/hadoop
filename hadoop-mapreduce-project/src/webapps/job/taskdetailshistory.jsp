@@ -51,6 +51,7 @@
   JobHistoryParser.TaskInfo task = job.getAllTasks().get(TaskID.forName(tipid)); 
   TaskType type = task.getTaskType();
 %>
+<!DOCTYPE html>
 <html>
 <body>
 <h2><%=tipid %> attempts for <a href="jobdetailshistory.jsp?logFile=<%=logFile%>"> <%=job.getJobId() %> </a></h2>
