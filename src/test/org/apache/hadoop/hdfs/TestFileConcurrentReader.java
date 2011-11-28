@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.apache.commons.logging.impl.Log4JLogger;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ChecksumException;
@@ -25,16 +28,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.Before;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.*;
 
 
 /**
@@ -52,12 +48,6 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
   
   private static final Logger LOG = 
     Logger.getLogger(TestFileConcurrentReader.class);
-  
-  {
-    ((Log4JLogger) LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger) DFSClient.LOG).getLogger().setLevel(Level.ALL);
-  }
 
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
@@ -67,16 +57,6 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
   private MiniDFSCluster cluster;
   private FileSystem fileSystem;
 
-  // creates a file but does not close it
-  private FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
-    throws IOException {
-    System.out.println("createFile: Created " + name + " with " + repl + " replica.");
-    FSDataOutputStream stm = fileSys.create(name, true,
-      fileSys.getConf().getInt("io.file.buffer.size", 4096),
-      (short) repl, (long) blockSize);
-    return stm;
-  }
-  
   @Before
   protected void setUp() throws IOException {
     conf = new Configuration();

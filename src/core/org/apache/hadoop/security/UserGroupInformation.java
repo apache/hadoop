@@ -998,10 +998,11 @@ public class UserGroupInformation {
    */
   @Override
   public String toString() {
-    String me = (getRealUser() != null)
-      ? getUserName() + " via " +  getRealUser().toString()
-      : getUserName();
-    return me + " (auth:"+getAuthenticationMethod()+")";
+    if (getRealUser() != null) {
+      return getUserName() + " via " + getRealUser().toString();
+    } else {
+      return getUserName();
+    }
   }
 
   /**
