@@ -101,6 +101,9 @@ Release 1.0.0 - unreleased
 
   NEW FEATURES
 
+    HDFS-2316. [umbrella] webhdfs: a complete FileSystem implementation for 
+    accessing HDFS over HTTP (szetszwo)
+
     HDFS-2539. Support doAs and GETHOMEDIRECTORY in webhdfs.
     (szetszwo)
 
