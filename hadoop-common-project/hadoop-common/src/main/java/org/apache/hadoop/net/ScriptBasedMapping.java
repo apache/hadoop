@@ -32,16 +32,21 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /**
  * This class implements the {@link DNSToSwitchMapping} interface using a 
- * script configured via the {@link CommonConfigurationKeys#NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY}
+ * script configured via the
+ * {@link CommonConfigurationKeys#NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY} option.
+ * <p/>
+ * It contains a static class <code>RawScriptBasedMapping</code> that performs
+ * the work: reading the configuration parameters, executing any defined
+ * script, handling errors and such like. The outer
+ * class extends {@link CachedDNSToSwitchMapping} to cache the delegated
+ * queries.
+ * <p/>
+ * This DNS mapper's {@link #isSingleSwitch()} predicate returns
+ * true if and only if a script is defined.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class ScriptBasedMapping extends CachedDNSToSwitchMapping 
-implements Configurable
-{
-  public ScriptBasedMapping() {
-    super(new RawScriptBasedMapping());
-  }
+public final class ScriptBasedMapping extends CachedDNSToSwitchMapping {
 
   /**
    * Minimum number of arguments: {@value}
@@ -66,6 +71,18 @@ implements Configurable
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY ;
 
   /**
+   * Create an instance with the default configuration.
+   * </p>
+   * Calling {@link #setConf(Configuration)} will trigger a
+   * re-evaluation of the configuration settings and so be used to
+   * set up the mapping script.
+   *
+   */
+  public ScriptBasedMapping() {
+    super(new RawScriptBasedMapping());
+  }
+
+  /**
    * Create an instance from the given configuration
    * @param conf configuration
    */
@@ -74,14 +91,31 @@ implements Configurable
     setConf(conf);
   }
 
-  @Override
-  public Configuration getConf() {
-    return ((RawScriptBasedMapping)rawMapping).getConf();
+  /**
+   * Get the cached mapping and convert it to its real type
+   * @return the inner raw script mapping.
+   */
+  private RawScriptBasedMapping getRawMapping() {
+    return (RawScriptBasedMapping)rawMapping;
   }
 
   @Override
+  public Configuration getConf() {
+    return getRawMapping().getConf();
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p/>
+   * This will get called in the superclass constructor, so a check is needed
+   * to ensure that the raw mapping is defined before trying to relaying a null
+   * configuration.
+   * @param conf
+   */
+  @Override
   public void setConf(Configuration conf) {
-    ((RawScriptBasedMapping)rawMapping).setConf(conf);
+    super.setConf(conf);
+    getRawMapping().setConf(conf);
   }
 
   /**
@@ -89,29 +123,26 @@ implements Configurable
    * by the superclass {@link CachedDNSToSwitchMapping}
    */
   private static final class RawScriptBasedMapping
-      implements DNSToSwitchMapping {
+      extends AbstractDNSToSwitchMapping {
     private String scriptName;
-    private Configuration conf;
     private int maxArgs; //max hostnames per call of the script
-    private static Log LOG =
+    private static final Log LOG =
         LogFactory.getLog(ScriptBasedMapping.class);
 
     /**
-     * Set the configuration and
-     * @param conf extract the configuration parameters of interest
+     * Set the configuration and extract the configuration parameters of interest
+     * @param conf the new configuration
      */
+    @Override
     public void setConf (Configuration conf) {
-      this.scriptName = conf.get(SCRIPT_FILENAME_KEY);
-      this.maxArgs = conf.getInt(SCRIPT_ARG_COUNT_KEY, DEFAULT_ARG_COUNT);
-      this.conf = conf;
-    }
-
-    /**
-     * Get the configuration
-     * @return the configuration
-     */
-    public Configuration getConf () {
-      return conf;
+      super.setConf(conf);
+      if (conf != null) {
+        scriptName = conf.get(SCRIPT_FILENAME_KEY);
+        maxArgs = conf.getInt(SCRIPT_ARG_COUNT_KEY, DEFAULT_ARG_COUNT);
+      } else {
+        scriptName = null;
+        maxArgs = 0;
+      }
     }
 
     /**
@@ -122,42 +153,42 @@ implements Configurable
 
     @Override
     public List<String> resolve(List<String> names) {
-    List <String> m = new ArrayList<String>(names.size());
-    
-    if (names.isEmpty()) {
-      return m;
-    }
+      List<String> m = new ArrayList<String>(names.size());
 
-    if (scriptName == null) {
-      for (int i = 0; i < names.size(); i++) {
-        m.add(NetworkTopology.DEFAULT_RACK);
+      if (names.isEmpty()) {
+        return m;
       }
-      return m;
-    }
-    
-    String output = runResolveCommand(names);
-    if (output != null) {
-      StringTokenizer allSwitchInfo = new StringTokenizer(output);
-      while (allSwitchInfo.hasMoreTokens()) {
-        String switchInfo = allSwitchInfo.nextToken();
-        m.add(switchInfo);
+
+      if (scriptName == null) {
+        for (String name : names) {
+          m.add(NetworkTopology.DEFAULT_RACK);
+        }
+        return m;
       }
-      
-      if (m.size() != names.size()) {
-        // invalid number of entries returned by the script
-        LOG.error("Script " + scriptName + " returned "
-            + Integer.toString(m.size()) + " values when "
-            + Integer.toString(names.size()) + " were expected.");
+
+      String output = runResolveCommand(names);
+      if (output != null) {
+        StringTokenizer allSwitchInfo = new StringTokenizer(output);
+        while (allSwitchInfo.hasMoreTokens()) {
+          String switchInfo = allSwitchInfo.nextToken();
+          m.add(switchInfo);
+        }
+
+        if (m.size() != names.size()) {
+          // invalid number of entries returned by the script
+          LOG.error("Script " + scriptName + " returned "
+              + Integer.toString(m.size()) + " values when "
+              + Integer.toString(names.size()) + " were expected.");
+          return null;
+        }
+      } else {
+        // an error occurred. return null to signify this.
+        // (exn was already logged in runResolveCommand)
         return null;
       }
-    } else {
-      // an error occurred. return null to signify this.
-      // (exn was already logged in runResolveCommand)
-      return null;
+
+      return m;
     }
-    
-    return m;
-  }
 
     /**
      * Build and execute the resolution command. The command is
@@ -195,10 +226,10 @@ implements Configurable
           dir = new File(userDir);
         }
         ShellCommandExecutor s = new ShellCommandExecutor(
-            cmdList.toArray(new String[0]), dir);
+            cmdList.toArray(new String[cmdList.size()]), dir);
         try {
           s.execute();
-          allOutput.append(s.getOutput() + " ");
+          allOutput.append(s.getOutput()).append(" ");
         } catch (Exception e) {
           LOG.warn("Exception: ", e);
           return null;
@@ -206,6 +237,16 @@ implements Configurable
         loopCount++;
       }
       return allOutput.toString();
+    }
+
+    /**
+     * Declare that the mapper is single-switched if a script was not named
+     * in the configuration.
+     * @return true iff there is no script
+     */
+    @Override
+    public boolean isSingleSwitch() {
+      return scriptName == null;
     }
   }
 }

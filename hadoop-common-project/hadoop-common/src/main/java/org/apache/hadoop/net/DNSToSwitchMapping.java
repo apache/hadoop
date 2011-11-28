@@ -40,6 +40,12 @@ public interface DNSToSwitchMapping {
    * Note the hostname/ip-address is not part of the returned path.
    * The network topology of the cluster would determine the number of
    * components in the network path.
+   * <p/>
+   *
+   * If a name cannot be resolved to a rack, the implementation
+   * should return {@link NetworkTopology#DEFAULT_RACK}. This
+   * is what the bundled implementations do, though it is not a formal requirement
+   *
    * @param names the list of hosts to resolve (can be empty)
    * @return list of resolved network paths.
    * If <i>names</i> is empty, the returned list is also empty

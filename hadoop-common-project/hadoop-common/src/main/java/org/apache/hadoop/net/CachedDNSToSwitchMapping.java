@@ -34,9 +34,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class CachedDNSToSwitchMapping implements DNSToSwitchMapping {
+public class CachedDNSToSwitchMapping extends AbstractDNSToSwitchMapping {
   private Map<String, String> cache = new ConcurrentHashMap<String, String>();
-  protected DNSToSwitchMapping rawMapping;
+
+  /**
+   * The uncached mapping
+   */
+  protected final DNSToSwitchMapping rawMapping;
 
   /**
    * cache a raw DNS mapping
@@ -117,5 +121,15 @@ public class CachedDNSToSwitchMapping implements DNSToSwitchMapping {
     //now look up the entire list in the cache
     return getCachedHosts(names);
 
+  }
+
+  /**
+   * Delegate the switch topology query to the raw mapping, via
+   * {@link AbstractDNSToSwitchMapping#isMappingSingleSwitch(DNSToSwitchMapping)}
+   * @return true iff the raw mapper is considered single-switch.
+   */
+  @Override
+  public boolean isSingleSwitch() {
+    return isMappingSingleSwitch(rawMapping);
   }
 }
