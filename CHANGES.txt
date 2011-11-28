@@ -101,18 +101,18 @@ Release 1.0.0 - unreleased
 
   NEW FEATURES
 
-    HDFS-2316. [umbrella] webhdfs: a complete FileSystem implementation for 
+    HDFS-2316. [umbrella] WebHDFS: a complete FileSystem implementation for 
     accessing HDFS over HTTP (szetszwo)
 
-    HDFS-2539. Support doAs and GETHOMEDIRECTORY in webhdfs.
+    HDFS-2539. Support doAs and GETHOMEDIRECTORY in WebHDFS.
     (szetszwo)
 
   IMPROVEMENTS
 
-    HDFS-2427. Change the default permission in webhdfs to 755 and add range
+    HDFS-2427. Change the default permission in WebHDFS to 755 and add range
     check/validation for all parameters.  (szetszwo)
 
-    HDFS-2501. Add version prefix and root methods to webhdfs.  (szetszwo)
+    HDFS-2501. Add version prefix and root methods to WebHDFS.  (szetszwo)
 
     HADOOP-7728. Enable task memory management to be configurable in hadoop
     config setup script. (ramya)
@@ -178,29 +178,29 @@ Release 1.0.0 - unreleased
     (Eric Yang)
 
     HDFS-2441. Remove the Content-Type set by HttpServer.QuotingInputFilter in
-    webhdfs responses.  (szetszwo)
+    WebHDFS responses.  (szetszwo)
 
     HDFS-2428. Convert com.sun.jersey.api.ParamException$QueryParamException
-    to IllegalArgumentException and response it as http BAD_REQUEST in webhdfs.
+    to IllegalArgumentException and response it as http BAD_REQUEST in WebHDFS.
     (szetszwo)
 
     HDFS-2424. Added a root element "HdfsFileStatuses" for the response
-    of webhdfs listStatus.  (szetszwo)
+    of WebHDFS listStatus.  (szetszwo)
 
-    HDFS-2439. Fix NullPointerException in webhdfs when opening a non-existing
+    HDFS-2439. Fix NullPointerException in WebHDFS when opening a non-existing
     file or creating a file without specifying the replication parameter.
     (szetszwo)
 
-    HDFS-2453. Fix http response code for partial content in webhdfs, added
+    HDFS-2453. Fix http response code for partial content in WebHDFS, added
     getDefaultBlockSize() and getDefaultReplication() in WebHdfsFileSystem
     and cleared content type in ExceptionHandler. (szetszwo)
 
-    HDFS-2416. Distcp with a webhdfs uri on a secure cluster fails. (jitendra)
+    HDFS-2416. Distcp with a WebHDFS uri on a secure cluster fails. (jitendra)
 
     HDFS-2494. Close the streams and DFSClient in DatanodeWebHdfsMethods.
     (Uma Maheswara Rao G via szetszwo)
 
-    HDFS-2432. Webhdfs: response FORBIDDEN when setReplication on non-files;
+    HDFS-2432. WebHDFS: response FORBIDDEN when setReplication on non-files;
     clear umask before creating a flie; throw IllegalArgumentException if
     setOwner with both owner and group empty; throw FileNotFoundException if
     getFileStatus on non-existing files; fix bugs in getBlockLocations; and
@@ -209,17 +209,17 @@ Release 1.0.0 - unreleased
     HDFS-2065. Add null checks in DFSClient.getFileChecksum(..).  (Uma
     Maheswara Rao G via szetszwo)
 
-    HDFS-2527. WebHdfs: remove the use of "Range" header in Open; use ugi
+    HDFS-2527. WebHDFS: remove the use of "Range" header in Open; use ugi
     username if renewer parameter is null in GetDelegationToken; response OK
     when setting replication for non-files; rename GETFILEBLOCKLOCATIONS to
     GET_BLOCK_LOCATIONS and state that it is a private unstable API; replace
     isDirectory and isSymlink with enum {FILE, DIRECTORY, SYMLINK} in
     HdfsFileStatus JSON object.  (szetszwo)
 
-    HDFS-2528. Webhdfs: set delegation kind to WEBHDFS and add a HDFS token
+    HDFS-2528. WebHDFS: set delegation kind to WEBHDFS and add a HDFS token
     when http requests are redirected to datanode.  (szetszwo)
 
-    HDFS-2540. Webhdfs: change "Expect: 100-continue" to two-step write; change 
+    HDFS-2540. WebHDFS: change "Expect: 100-continue" to two-step write; change 
     "HdfsFileStatus" and "localName" respectively to "FileStatus" and
     "pathSuffix" in JSON response.  (szetszwo)
 
@@ -270,21 +270,21 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2284. Add a new FileSystem, webhdfs://, for supporting write Http
     access to HDFS.  (szetszwo)
 
-    HDFS-2317. Support read access to HDFS in webhdfs.  (szetszwo)
+    HDFS-2317. Support read access to HDFS in WebHDFS.  (szetszwo)
 
-    HDFS-2338. Add configuration option to enable/disable webhdfs.
+    HDFS-2338. Add configuration option to enable/disable WebHDFS.
     (jitendra via szetszwo)
 
-    HDFS-2318. Provide authentication to webhdfs using SPNEGO and delegation
+    HDFS-2318. Provide authentication to WebHDFS using SPNEGO and delegation
     tokens.  (szetszwo)
 
-    HDFS-2340. Support getFileBlockLocations and getDelegationToken in webhdfs.
+    HDFS-2340. Support getFileBlockLocations and getDelegationToken in WebHDFS.
     (szetszwo)
 
-    HDFS-2348. Support getContentSummary and getFileChecksum in webhdfs.
+    HDFS-2348. Support getContentSummary and getFileChecksum in WebHDFS.
     (szetszwo)
 
-    HDFS-2385. Support renew and cancel delegation tokens in webhdfs.
+    HDFS-2385. Support renew and cancel delegation tokens in WebHDFS.
     (szetszwo)
 
     MAPREDUCE-2777. Backport of MAPREDUCE-220 and MAPREDUCE-2469. Includes adding 
@@ -292,7 +292,7 @@ Release 0.20.205.0 - 2011.10.06
 
   BUG FIXES
 
-    HDFS-2404. Webhdfs liststatus json response is not correct. 
+    HDFS-2404. WebHDFS liststatus json response is not correct. 
     (Suresh Srinivas via mattf)
 
     HDFS-2358. NPE when the default filesystem's uri has no authority.
@@ -493,7 +493,7 @@ Release 0.20.205.0 - 2011.10.06
 
     HDFS-2375. Fix TestFileAppend4 failure. (suresh)
 
-    HDFS-2373. Commands using webhdfs and hftp print unnecessary debug 
+    HDFS-2373. Commands using WebHDFS and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
 
     HADOOP-7610. Fix for hadoop debian package (Eric Yang via gkesavan)
@@ -517,7 +517,7 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7724. Fixed hadoop-setup-conf.sh to put proxy user in
     core-site.xml.  (Arpit Gupta via Eric Yang)
 
-    HDFS-2411. With webhdfs enabled in secure mode the auth to local mappings 
+    HDFS-2411. With WebHDFS enabled in secure mode the auth to local mappings 
     are not being respected. (jitendra)
 
     HADOOP-7676. Enable hbase to run as hdfs user (gkesavan)
@@ -601,7 +601,7 @@ Release 0.20.205.0 - 2011.10.06
     MAPREDUCE-1734. Undeprecate old API in branch-0.20-security. (Todd Lipcon
     via acmurthy)
 
-    HDFS-2356.  Support case insensitive query parameter names in webhdfs.
+    HDFS-2356.  Support case insensitive query parameter names in WebHDFS.
     (szetszwo)
 
     HADOOP-7510. Add configurable option to use original hostname in token
@@ -616,13 +616,13 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7708. Fixed hadoop-setup-conf.sh to handle config file
     consistently.  (Eric Yang)
 
-    HADOOP-7707. Added toggle for dfs.support.append, webhdfs and hadoop proxy
+    HADOOP-7707. Added toggle for dfs.support.append, WebHDFS and hadoop proxy
     user to setup config script. (Arpit Gupta via Eric Yang)
 
     HADOOP-7720. Added parameter for HBase user to setup config script.
     (Arpit Gupta via Eric Yang)
 
-    HDFS-2395. Add a root element in the JSON responses of webhdfs.
+    HDFS-2395. Add a root element in the JSON responses of WebHDFS.
     (szetszwo)
 
 Release 0.20.204.0 - 2011-8-25
