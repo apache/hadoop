@@ -18,6 +18,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7858. Drop some info logging to DEBUG level in IPC,
     metrics, and HTTP. (todd via eli)
 
+    HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
+    (Uma Maheswara Rao G via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
