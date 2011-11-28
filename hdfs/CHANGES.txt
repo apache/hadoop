@@ -666,6 +666,15 @@ Release 0.22.0 - Unreleased
     HDFS-2514. Link resolution bug for intermediate symlinks with
     relative targets. (eli)
 
+    HDFS-1786. Some cli test cases expect a "null" message
+    (Uma Maheswara Rao G via todd)
+
+    HDFS-1855. TestDatanodeBlockScanner.testBlockCorruptionRecoveryPolicy()
+    part 2 fails in two different ways. (Matt Foley via eli)
+
+    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
+    execution order of test methods (Laxman, Uma Maheswara Rao G via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
@@ -717,15 +726,6 @@ Release 0.21.1 - Unreleased
 
     HDFS-1596. Replace fs.checkpoint.* with dfs.namenode.checkpoint.*
     in documentations.  (Harsh J Chouraria via szetszwo)
-
-    HDFS-1786. Some cli test cases expect a "null" message
-    (Uma Maheswara Rao G via todd)
-
-    HDFS-1855. TestDatanodeBlockScanner.testBlockCorruptionRecoveryPolicy()
-    part 2 fails in two different ways. (Matt Foley via eli)
-
-    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
-    execution order of test methods (Laxman, Uma Maheswara Rao G via shv)
 
 Release 0.21.0 - 2010-08-13
 
