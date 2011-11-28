@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 0.20.205.0 Release Notes</title>
+<title>Hadoop 1.0.0 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,260 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 0.20.205.0 Release Notes</h1>
+<h1>Hadoop 1.0.0 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+<h2>Changes since Hadoop 0.20.205.0</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7728">HADOOP-7728</a>.
+     Major bug reported by rramya and fixed by rramya (conf)<br>
+     <b>hadoop-setup-conf.sh should be modified to enable task memory manager</b><br>
+     <blockquote>                                              Enable task memory management to be configurable via hadoop config setup script.
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7740">HADOOP-7740</a>.
+     Minor bug reported by arpitgupta and fixed by arpitgupta (conf)<br>
+     <b>security audit logger is not on by default, fix the log4j properties to enable the logger</b><br>
+     <blockquote>                                              Fixed security audit logger configuration. (Arpit Gupta via Eric Yang)
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-617">HDFS-617</a>.
+     Major improvement reported by kzhang and fixed by kzhang (hdfs client, name-node)<br>
+     <b>Support for non-recursive create() in HDFS</b><br>
+     <blockquote>                                              New DFSClient.create(...) allows option of not creating missing parent(s).
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2246">HDFS-2246</a>.
+     Major improvement reported by sanjay.radia and fixed by jnp <br>
+     <b>Shortcut a local client reads to a Datanodes files directly</b><br>
+     <blockquote>                    1. New configurations<br/>
+
+a. dfs.block.local-path-access.user is the key in datanode configuration to specify the user allowed to do short circuit read.<br/>
+
+b. dfs.client.read.shortcircuit is the key to enable short circuit read at the client side configuration.<br/>
+
+c. dfs.client.read.shortcircuit.skip.checksum is the key to bypass checksum check at the client side.<br/>
+
+2. By default none of the above are enabled and short circuit read will not kick in.<br/>
+
+3. If security is on, the feature can be used only for user that has kerberos credentials at the client, therefore map reduce tasks cannot benefit from it in general.<br/>
+
+
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2316">HDFS-2316</a>.
+     Major new feature reported by szetszwo and fixed by szetszwo <br>
+     <b>[umbrella] webhdfs: a complete FileSystem implementation for accessing HDFS over HTTP</b><br>
+     <blockquote>                    Provide webhdfs as a complete FileSystem implementation for accessing HDFS over HTTP.<br/>
+
+Previous hftp feature was a read-only FileSystem and does not provide &quot;write&quot; accesses.
+</blockquote></li>
+
+</ul>
+
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5124">HADOOP-5124</a>.
+     Major improvement reported by hairong and fixed by hairong <br>
+     <b>A few optimizations to FsNamesystem#RecentInvalidateSets</b><br>
+     <blockquote>This jira proposes a few optimization to FsNamesystem#RecentInvalidateSets:<br>1. when removing all replicas of a block, it does not traverse all nodes in the map. Instead it traverse only the nodes that the block is located.<br>2. When dispatching blocks to datanodes in ReplicationMonitor. It randomly chooses a predefined number of datanodes and dispatches blocks to those datanodes. This strategy provides fairness to all datanodes. The current strategy always starts from the first datanode.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6840">HADOOP-6840</a>.
+     Minor improvement reported by nspiegelberg and fixed by jnp (fs, io)<br>
+     <b>Support non-recursive create() in FileSystem &amp; SequenceFile.Writer</b><br>
+     <blockquote>The proposed solution for HBASE-2312 requires the sequence file to handle a non-recursive create.  This is already supported by HDFS, but needs to have an equivalent FileSystem &amp; SequenceFile.Writer API.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6886">HADOOP-6886</a>.
+     Minor improvement reported by nspiegelberg and fixed by  (fs)<br>
+     <b>LocalFileSystem Needs createNonRecursive API</b><br>
+     <blockquote>While running sanity check tests for HBASE-2312, I noticed that HDFS-617 did not include createNonRecursive() support for the LocalFileSystem.  This is a problem for HBase, which allows the user to run over the LocalFS instead of HDFS for local cluster testing.  I think this only affects 0.20-append, but may affect the trunk based upon how exactly FileContext handles non-recursive creates.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7664">HADOOP-7664</a>.
+     Minor improvement reported by raviprak and fixed by raviprak (conf)<br>
+     <b>o.a.h.conf.Configuration complains of overriding final parameter even if the value with which its attempting to override is the same. </b><br>
+     <blockquote>o.a.h.conf.Configuration complains of overriding final parameter even if the value with which its attempting to override is the same. </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7765">HADOOP-7765</a>.
+     Major bug reported by eyang and fixed by eyang (build)<br>
+     <b>Debian package contain both system and tar ball layout</b><br>
+     <blockquote>When packaging is invoked as &quot;ant clean tar deb&quot;.  The system creates both system layout and tarball layout in the same build directory.  Debian packaging target would pick up files for both layouts.  The end result of using produced debian package built this way, would end up README.txt LICENSE.txt, and jar files in /usr.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7784">HADOOP-7784</a>.
+     Major bug reported by arpitgupta and fixed by eyang <br>
+     <b>secure datanodes fail to come up stating jsvc not found </b><br>
+     <blockquote>building 205.1 and trying to startup a secure dn leads to the following<br><br>/usr/libexec/../bin/hadoop: line 386: /usr/libexec/../libexec/jsvc.amd64: No such file or directory<br>/usr/libexec/../bin/hadoop: line 386: exec: /usr/libexec/../libexec/jsvc.amd64: cannot execute: No such file or directory</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7804">HADOOP-7804</a>.
+     Major improvement reported by arpitgupta and fixed by arpitgupta (conf)<br>
+     <b>enable hadoop config generator to set dfs.block.local-path-access.user to enable short circuit read</b><br>
+     <blockquote>we have a new config that allows to select which user can have access for short circuit read. We should make that configurable through the config generator scripts.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7810">HADOOP-7810</a>.
+     Blocker bug reported by johnvijoe and fixed by johnvijoe <br>
+     <b>move hadoop archive to core from tools</b><br>
+     <blockquote>&quot;The HadoopArchieves classes are included in the $HADOOP_HOME/hadoop_tools.jar, but this file is not found in `hadoop classpath`.<br><br>A Pig script using HCatalog&apos;s dynamic partitioning with HAR enabled will therefore fail if a jar with HAR is not included in the pig call&apos;s &apos;-cp&apos; and &apos;-Dpig.additional.jars&apos; arguments.&quot;<br><br>I am not aware of any reason to not include hadoop-tools.jar in &apos;hadoop classpath&apos;. Will attach a patch soon.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7815">HADOOP-7815</a>.
+     Minor bug reported by rramya and fixed by rramya (conf)<br>
+     <b>Map memory mb is being incorrectly set by hadoop-setup-conf.sh</b><br>
+     <blockquote>HADOOP-7728 enabled task memory management to be configurable in the hadoop-setup-conf.sh. However, the default value for mapred.job.map.memory.mb is being set incorrectly.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7816">HADOOP-7816</a>.
+     Major bug reported by davet and fixed by davet <br>
+     <b>Allow HADOOP_HOME deprecated warning suppression based on config specified in hadoop-env.sh</b><br>
+     <blockquote>Move suppression check for &quot;Warning: $HADOOP_HOME is deprecated&quot;  to after sourcing of hadoop-env.sh so that people can set HADOOP_HOME_WARN_SUPPRESS inside the config.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7827">HADOOP-7827</a>.
+     Trivial bug reported by davevr and fixed by davevr <br>
+     <b>jsp pages missing DOCTYPE</b><br>
+     <blockquote>The various jsp pages in the UI are all missing a DOCTYPE declaration.  This causes the pages to render incorrectly on some browsers, such as IE9.  Every UI page should have a valid tag, such as &lt;!DOCTYPE HTML&gt;, as their first line.  There are 31 files that need to be changed, all in the core\src\webapps tree.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7853">HADOOP-7853</a>.
+     Blocker bug reported by daryn and fixed by daryn (security)<br>
+     <b>multiple javax security configurations cause conflicts</b><br>
+     <blockquote>Both UGI and the SPNEGO KerberosAuthenticator set the global javax security configuration.  SPNEGO stomps on UGI&apos;s security config which leads to kerberos/SASL authentication errors.<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7854">HADOOP-7854</a>.
+     Critical bug reported by daryn and fixed by daryn (security)<br>
+     <b>UGI getCurrentUser is not synchronized</b><br>
+     <blockquote>Sporadic {{ConcurrentModificationExceptions}} are originating from {{UGI.getCurrentUser}} when it needs to create a new instance.  The problem was specifically observed in a JT under heavy load when a post-job cleanup is accessing the UGI while a new job is being processed.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-611">HDFS-611</a>.
+     Major bug reported by dhruba and fixed by zshao (data-node)<br>
+     <b>Heartbeats times from Datanodes increase when there are plenty of blocks to delete</b><br>
+     <blockquote>I am seeing that when we delete a large directory that has plenty of blocks, the heartbeat times from datanodes increase significantly from the normal value of 3 seconds to as large as 50 seconds or so. The heartbeat thread in the Datanode deletes a bunch of blocks sequentially, this causes the heartbeat times to increase.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1257">HDFS-1257</a>.
+     Major bug reported by rvadali and fixed by eepayne (name-node)<br>
+     <b>Race condition on FSNamesystem#recentInvalidateSets introduced by HADOOP-5124</b><br>
+     <blockquote>HADOOP-5124 provided some improvements to FSNamesystem#recentInvalidateSets. But it introduced unprotected access to the data structure recentInvalidateSets. Specifically, FSNamesystem.computeInvalidateWork accesses recentInvalidateSets without read-lock protection. If there is concurrent activity (like reducing replication on a file) that adds to recentInvalidateSets, the name-node crashes with a ConcurrentModificationException.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1943">HDFS-1943</a>.
+     Blocker bug reported by weiyj and fixed by mattf (scripts)<br>
+     <b>fail to start datanode while start-dfs.sh is executed by root user</b><br>
+     <blockquote>When start-dfs.sh is run by root user, we got the following error message:<br># start-dfs.sh<br>Starting namenodes on [localhost ]<br>localhost: namenode running as process 2556. Stop it first.<br>localhost: starting datanode, logging to /usr/hadoop/hadoop-common-0.23.0-SNAPSHOT/bin/../logs/hadoop-root-datanode-cspf01.out<br>localhost: Unrecognized option: -jvm<br>localhost: Could not create the Java virtual machine.<br><br>The -jvm options should be passed to jsvc when we starting a secure<br>datanode, but it still pa...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2065">HDFS-2065</a>.
+     Major bug reported by bharathm and fixed by umamaheswararao <br>
+     <b>Fix NPE in DFSClient.getFileChecksum</b><br>
+     <blockquote>The following code can throw NPE if callGetBlockLocations returns null.<br><br>If server returns null <br><br>{code}<br>    List&lt;LocatedBlock&gt; locatedblocks<br>        = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE).getLocatedBlocks();<br>{code}<br><br>The right fix for this is server should throw right exception.<br><br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2346">HDFS-2346</a>.
+     Blocker bug reported by umamaheswararao and fixed by lakshman (test)<br>
+     <b>TestHost2NodesMap &amp; TestReplicasMap will fail depending upon execution order of test methods</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2416">HDFS-2416</a>.
+     Major sub-task reported by arpitgupta and fixed by jnp <br>
+     <b>distcp with a webhdfs uri on a secure cluster fails</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2424">HDFS-2424</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs liststatus json does not convert to a valid xml document</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2427">HDFS-2427</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs mkdirs api call creates path with 777 permission, we should default it to 755</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2428">HDFS-2428</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs api parameter validation should be better</b><br>
+     <blockquote>PUT Request: http://localhost:50070/webhdfs/some_path?op=MKDIRS&amp;permission=955<br><br>Exception returned<br><br><br>HTTP/1.1 500 Internal Server Error<br>{&quot;RemoteException&quot;:{&quot;className&quot;:&quot;com.sun.jersey.api.ParamException$QueryParamException&quot;,&quot;message&quot;:&quot;java.lang.NumberFormatException: For input string: \&quot;955\&quot;&quot;}} <br><br><br>We should return a 400 with appropriate error message</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2432">HDFS-2432</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs setreplication api should return a 403 when called on a directory</b><br>
+     <blockquote>Currently the set replication api on a directory leads to a 200.<br><br>Request URI http://NN:50070/webhdfs/tmp/webhdfs_data/dir_replication_tests?op=SETREPLICATION&amp;replication=5<br>Request Method: PUT<br>Status Line: HTTP/1.1 200 OK<br>Response Content: {&quot;boolean&quot;:false}<br><br>Since we can determine that this call did not succeed (boolean=false) we should rather just return a 403</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2439">HDFS-2439</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs open an invalid path leads to a 500 which states a npe, we should return a 404 with appropriate error message</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2441">HDFS-2441</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs returns two content-type headers</b><br>
+     <blockquote>$ curl -i &quot;http://localhost:50070/webhdfs/path?op=GETFILESTATUS&quot;<br>HTTP/1.1 200 OK<br>Content-Type: text/html; charset=utf-8<br>Expires: Thu, 01-Jan-1970 00:00:00 GMT<br>........<br>Content-Type: application/json<br>Transfer-Encoding: chunked<br>Server: Jetty(6.1.26)<br><br><br>It should only return one content type header = application/json</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2450">HDFS-2450</a>.
+     Major bug reported by rajsaha and fixed by daryn <br>
+     <b>Only complete hostname is supported to access data via hdfs://</b><br>
+     <blockquote>If my complete hostname is  host1.abc.xyz.com, only complete hostname must be used to access data via hdfs://<br><br>I am running following in .20.205 Client to get data from .20.205 NN (host1)<br>$hadoop dfs -copyFromLocal /etc/passwd  hdfs://host1/tmp<br>copyFromLocal: Wrong FS: hdfs://host1/tmp, expected: hdfs://host1.abc.xyz.com<br>Usage: java FsShell [-copyFromLocal &lt;localsrc&gt; ... &lt;dst&gt;]<br><br>$hadoop dfs -copyFromLocal /etc/passwd  hdfs://host1.abc/tmp/<br>copyFromLocal: Wrong FS: hdfs://host1.blue/tmp/1, exp...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2453">HDFS-2453</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>tail using a webhdfs uri throws an error</b><br>
+     <blockquote>/usr//bin/hadoop --config /etc/hadoop dfs -tail webhdfs://NN:50070/file <br>tail: HTTP_PARTIAL expected, received 200<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2494">HDFS-2494</a>.
+     Major sub-task reported by umamaheswararao and fixed by umamaheswararao (data-node)<br>
+     <b>[webhdfs] When Getting the file using OP=OPEN with DN http address, ESTABLISHED sockets are growing.</b><br>
+     <blockquote>As part of the reliable test,<br>Scenario:<br>Initially check the socket count. ---there are aroud 42 sockets are there.<br>open the file with DataNode http address using op=OPEN request parameter about 500 times in loop.<br>Wait for some time and check the socket count. --- There are thousands of ESTABLISHED sockets are growing. ~2052<br><br>Here is the netstat result:<br><br>C:\Users\uma&gt;netstat | grep 127.0.0.1 | grep ESTABLISHED |wc -l<br>2042<br>C:\Users\uma&gt;netstat | grep 127.0.0.1 | grep ESTABLISHED |wc -l<br>2042<br>C:\...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2501">HDFS-2501</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>add version prefix and root methods to webhdfs</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2527">HDFS-2527</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Remove the use of Range header from webhdfs</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2528">HDFS-2528</a>.
+     Major sub-task reported by arpitgupta and fixed by szetszwo <br>
+     <b>webhdfs rest call to a secure dn fails when a token is sent</b><br>
+     <blockquote>curl -L -u : --negotiate -i &quot;http://NN:50070/webhdfs/v1/tmp/webhdfs_data/file_small_data.txt?op=OPEN&quot;<br><br>the following exception is thrown by the datanode when the redirect happens.<br>{&quot;RemoteException&quot;:{&quot;exception&quot;:&quot;IOException&quot;,&quot;javaClassName&quot;:&quot;java.io.IOException&quot;,&quot;message&quot;:&quot;Call to  failed on local exception: java.io.IOException: javax.security.sasl.SaslException: GSS initiate failed [Caused by GSSException: No valid credentials provided (Mechanism level: Failed to find any Kerberos tgt)]&quot;}}<br>...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2539">HDFS-2539</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Support doAs and GETHOMEDIRECTORY in webhdfs</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2540">HDFS-2540</a>.
+     Major sub-task reported by szetszwo and fixed by szetszwo <br>
+     <b>Change WebHdfsFileSystem to two-step create/append</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2552">HDFS-2552</a>.
+     Major task reported by szetszwo and fixed by szetszwo (documentation)<br>
+     <b>Add WebHdfs Forrest doc</b><br>
+     <blockquote></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2590">HDFS-2590</a>.
+     Major bug reported by szetszwo and fixed by szetszwo (documentation)<br>
+     <b>Some links in WebHDFS forrest doc do not work</b><br>
+     <blockquote>Some links are pointing to DistributedFileSystem javadoc but the javadoc of DistributedFileSystem is not generated by default.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3169">MAPREDUCE-3169</a>.
+     Major improvement reported by tlipcon and fixed by ahmed.radwan (mrv1, mrv2, test)<br>
+     <b>Create a new MiniMRCluster equivalent which only provides client APIs cross MR1 and MR2</b><br>
+     <blockquote>Many dependent projects like HBase, Hive, Pig, etc, depend on MiniMRCluster for writing tests. Many users do as well. MiniMRCluster, however, exposes MR implementation details like the existence of TaskTrackers, JobTrackers, etc, since it was used by MR1 for testing the server implementations as well.<br><br>This JIRA is to create a new interface which could be implemented either by MR1 or MR2 that exposes only the client-side portions of the MR framework. Ideally it would be &quot;recompile-compatible&quot;...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3374">MAPREDUCE-3374</a>.
+     Major bug reported by rvs and fixed by  (task-controller)<br>
+     <b>src/c++/task-controller/configure is not set executable in the tarball and that prevents task-controller from rebuilding</b><br>
+     <blockquote>ant task-controller fails because src/c++/task-controller/configure is not set executable</blockquote></li>
+
+
+</ul>
+
+
 <h2>Changes since Hadoop 0.20.204.0</h2>
 
 <ul>
