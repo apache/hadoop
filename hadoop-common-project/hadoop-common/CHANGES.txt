@@ -6,9 +6,6 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
-    HADOOP-7777 Implement a base class for DNSToSwitchMapping implementations 
-    that can offer extra topology information. (stevel)
-
   IMPROVEMENTS
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
@@ -111,7 +108,10 @@ Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
 
-  NEW FEATURES                                                                    
+  NEW FEATURES
+
+    HADOOP-7777 Implement a base class for DNSToSwitchMapping implementations 
+    that can offer extra topology information. (stevel)
 
   IMPROVEMENTS
 
