@@ -231,7 +231,7 @@ Release 1.0.0 - unreleased
 
     HDFS-2590. Fix the missing links in the WebHDFS forrest doc.  (szetszwo)
 
-    HDFS-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
+    HADOOP-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
 
 Release 0.20.205.0 - 2011.10.06
 
