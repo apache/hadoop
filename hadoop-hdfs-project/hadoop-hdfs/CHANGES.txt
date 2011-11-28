@@ -69,6 +69,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2588. hdfs jsp pages missing DOCTYPE. (Dave Vronay via mattf)
 
     HDFS-2590. Fix the missing links in the WebHDFS forrest doc.  (szetszwo)
+
+    HDFS-2596. TestDirectoryScanner doesn't test parallel scans. (eli)
     
 Release 0.23.0 - 2011-11-01 
 

@@ -218,7 +218,7 @@ public class TestDirectoryScanner extends TestCase {
 
   public void testDirectoryScanner() throws Exception {
     // Run the test with and without parallel scanning
-    for (int parallelism = 1; parallelism < 2; parallelism++) {
+    for (int parallelism = 1; parallelism < 3; parallelism++) {
       runTest(parallelism);
     }
   }
