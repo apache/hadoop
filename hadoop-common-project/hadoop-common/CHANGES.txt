@@ -24,6 +24,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
     (Uma Maheswara Rao G via eli)
 
+    HADOOP-7804. Enable hadoop config generator to set configurations to enable
+    short circuit read. (Arpit Gupta via jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
