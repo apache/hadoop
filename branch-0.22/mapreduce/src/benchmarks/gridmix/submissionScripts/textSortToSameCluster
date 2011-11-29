@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+GRID_DIR=`dirname "$0"`
+GRID_DIR=`cd "$GRID_DIR"; pwd`
+source $GRID_DIR/../gridmix-env
+PROCESSES=""
+
+for ((i=0; i < $NUM_OF_SMALL_JOBS_PER_CLASS; i++))
+do
+    echo $i
+    $GRID_MIX_HOME/pipesort/text-sort.small  2>&1 > pipesort.small.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+    $GRID_MIX_HOME/streamsort/text-sort.small  2>&1 > streamsort.small.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+    $GRID_MIX_HOME/javasort/text-sort.small  2>&1 > javasort.small.$i.out & 
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+done
+    
+for ((i=0; i < $NUM_OF_MEDIUM_JOBS_PER_CLASS; i++))
+do
+    echo $i
+    $GRID_MIX_HOME/pipesort/text-sort.medium  2>&1 > pipesort.medium.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+    $GRID_MIX_HOME/streamsort/text-sort.medium  2>&1 > streamsort.medium.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+    $GRID_MIX_HOME/javasort/text-sort.medium  2>&1 > javasort.medium.$i.out & 
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+done
+
+for ((i=0; i < $NUM_OF_LARGE_JOBS_PER_CLASS; i++))
+do
+    echo $i
+    $GRID_MIX_HOME/pipesort/text-sort.large  2>&1 > pipesort.large.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+    $GRID_MIX_HOME/streamsort/text-sort.large  2>&1 > pipesort.large.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+    $GRID_MIX_HOME/javasort/text-sort.large  2>&1 > pipesort.large.$i.out &
+    PROCESSES="${PROCESSES} $!"
+    $GRID_MIX_HOME/submissionScripts/sleep_if_too_busy
+done
+
+for APROC in ${PROCESSES}; do
+  wait ${APROC}
+done
+    

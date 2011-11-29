@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+. $bin/mapred-config.sh
+
+function print_usage(){
+  echo "Usage: mapred [--config confdir] COMMAND"
+  echo "       where COMMAND is one of:"
+  echo "  mradmin              run a Map-Reduce admin client"
+  echo "  jobtracker           run the MapReduce job Tracker node" 
+  echo "  tasktracker          run a MapReduce task Tracker node" 
+  echo "  pipes                run a Pipes job"
+  echo "  job                  manipulate MapReduce jobs"
+  echo "  queue                get information regarding JobQueues"
+  echo ""
+  echo "Most commands print help when invoked w/o parameters."
+}
+
+if [ $# = 0 ]; then
+  print_usage
+  exit
+fi
+
+COMMAND=$1
+shift
+
+if [ "$COMMAND" = "mradmin" ] ; then
+  CLASS=org.apache.hadoop.mapred.tools.MRAdmin
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "jobtracker" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobTracker
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOBTRACKER_OPTS"
+elif [ "$COMMAND" = "tasktracker" ] ; then
+  CLASS=org.apache.hadoop.mapred.TaskTracker
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_TASKTRACKER_OPTS"
+elif [ "$COMMAND" = "job" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobClient
+elif [ "$COMMAND" = "queue" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobQueueClient
+elif [ "$COMMAND" = "pipes" ] ; then
+  CLASS=org.apache.hadoop.mapred.pipes.Submitter
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "sampler" ] ; then
+  CLASS=org.apache.hadoop.mapred.lib.InputSampler
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+else
+  echo $COMMAND - invalid command
+  print_usage
+  exit
+fi
+
+# for developers, add mapred classes to CLASSPATH
+if [ -d "$HADOOP_MAPRED_HOME/build/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/classes
+fi
+if [ -d "$HADOOP_MAPRED_HOME/build/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build
+fi
+if [ -d "$HADOOP_MAPRED_HOME/build/test/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/test/classes
+fi
+if [ -d "$HADOOP_MAPRED_HOME/build/tools" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/build/tools
+fi
+
+# for releases, add core mapred jar & webapps to CLASSPATH
+if [ -d "$HADOOP_MAPRED_HOME/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME
+fi
+for f in $HADOOP_MAPRED_HOME/hadoop-mapred-*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+# add libs to CLASSPATH
+for f in $HADOOP_MAPRED_HOME/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+fi
+export CLASSPATH
+exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"

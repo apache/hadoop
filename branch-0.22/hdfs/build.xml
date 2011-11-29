@@ -1,0 +1,1914 @@
+<?xml version="1.0"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project name="Hadoop-Hdfs" default="compile" 
+   xmlns:artifact="urn:maven-artifact-ant"
+   xmlns:ivy="antlib:org.apache.ivy.ant"> 
+
+  <!-- Load all the default properties, and any the user wants    -->
+  <!-- to contribute (without having to type -D or edit this file -->
+  <property file="${user.home}/build.properties" />
+  <property file="${basedir}/build.properties" />
+ 
+  <property name="Name" value="Hadoop-Hdfs"/>
+  <property name="name" value="hadoop-hdfs"/>
+  <!-- Need to change aop.xml project.version prop. synchronously
+   -->
+  <property name="version" value="0.22.0"/>
+  <property name="final.name" value="${name}-${version}"/>
+  <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
+  <property name="ant.final.name" value="${name}-ant-${version}"/>
+  <property name="year" value="2009"/>
+
+  <property name="src.dir" value="${basedir}/src"/>  	
+  <property name="java.src.dir" value="${src.dir}/java"/>
+  <property name="anttasks.dir" value="${basedir}/src/ant"/>
+  <property name="lib.dir" value="${basedir}/lib"/>
+  <property name="conf.dir" value="${basedir}/conf"/>
+  <property name="contrib.dir" value="${basedir}/src/contrib"/>
+  <property name="docs.src" value="${basedir}/src/docs"/>
+  <property name="changes.src" value="${docs.src}/changes"/>
+  <property name="c++.src" value="${basedir}/src/c++"/>
+  <property name="c++.libhdfs.src" value="${c++.src}/libhdfs"/>
+
+  <property name="build.dir" value="${basedir}/build"/>
+  <property name="build-fi.dir" value="${basedir}/build-fi"/>
+  <property name="build.classes" value="${build.dir}/classes"/>
+  <property name="build.src" value="${build.dir}/src"/>
+  <property name="build.webapps.root.dir" value="${build.dir}/web"/>
+  <property name="build.webapps" value="${build.webapps.root.dir}/webapps"/>
+  <property name="build.anttasks" value="${build.dir}/ant"/>
+
+  <!-- convert spaces to _ so that mac os doesn't break things -->
+  <exec executable="tr" inputstring="${os.name}" 
+        outputproperty="nonspace.os">
+     <arg value="[:space:]"/>
+     <arg value="_"/>
+  </exec>
+  <property name="build.platform" 
+            value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
+  <property name="jvm.arch" 
+            value="${sun.arch.data.model}"/>
+  <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
+  <property name="build.c++.libhdfs" value="${build.c++}/libhdfs"/>
+
+  <property name="build.docs" value="${build.dir}/docs"/>
+  <property name="build.javadoc" value="${build.docs}/api"/>
+  <property name="build.javadoc.timestamp" value="${build.javadoc}/index.html" />
+  <property name="build.javadoc.dev" value="${build.docs}/dev-api"/>
+  <property name="build.encoding" value="ISO-8859-1"/>
+  <property name="install.c++" value="${build.dir}/c++/${build.platform}"/>
+
+  <property name="test.src.dir" value="${basedir}/src/test"/>
+  <property name="test.lib.dir" value="${basedir}/src/test/lib"/>
+  <property name="test.build.dir" value="${build.dir}/test"/>
+  <property name="test.generated.dir" value="${test.build.dir}/src"/>
+  <property name="test.build.data" value="${test.build.dir}/data"/>
+  <property name="test.cache.data" value="${test.build.dir}/cache"/>
+  <property name="test.debug.data" value="${test.build.dir}/debug"/>
+  <property name="test.log.dir" value="${test.build.dir}/logs"/>
+  <property name="test.build.extraconf" value="${test.build.dir}/extraconf"/>
+  <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
+  <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
+  <property name="test.include" value="Test*"/>
+  <property name="test.classpath.id" value="test.classpath"/>
+  <property name="test.output" value="no"/>
+  <property name="test.timeout" value="900000"/>
+  <property name="test.junit.output.format" value="plain"/>
+  <property name="test.junit.fork.mode" value="perTest" />
+  <property name="test.junit.printsummary" value="yes" />
+  <property name="test.junit.haltonfailure" value="no" />
+  <property name="test.junit.maxmemory" value="512m" />
+  <property name="test.conf.dir" value="${build.dir}/test/conf" />
+
+  <property name="test.hdfs.build.classes" value="${test.build.dir}/hdfs/classes"/>
+
+  <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.hdfs.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
+  <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
+
+  <property name="test.hdfs.rpc.engine" value=""/>
+  <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
+  <property name="test.junit.jvmargs" value="-ea" />
+
+  <property name="web.src.dir" value="${basedir}/src/web"/>
+  <property name="src.webapps" value="${basedir}/src/webapps"/>
+
+  <property name="javadoc.link.java"
+	    value="http://java.sun.com/javase/6/docs/api/"/>
+  <property name="javadoc.packages" value="org.apache.hadoop.*"/>
+  <property name="javadoc.maxmemory" value="512m" />
+
+  <property name="dist.dir" value="${build.dir}/${final.name}"/>
+
+  <property name="javac.debug" value="on"/>
+  <property name="javac.optimize" value="on"/>
+  <property name="javac.deprecation" value="off"/>
+  <property name="javac.version" value="1.6"/>
+  <property name="javac.args" value=""/>
+  <property name="javac.args.warnings" value="-Xlint:unchecked"/>
+
+  <property name="clover.db.dir" location="${build.dir}/test/clover/db"/>
+  <property name="clover.report.dir" location="${build.dir}/test/clover/reports"/>
+
+  <property name="rat.reporting.classname" value="rat.Report"/>
+
+  <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
+  <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
+  <property name="jdiff.stable" value="0.20.0"/>
+  <property name="jdiff.stable.javadoc" 
+            value="http://hadoop.apache.org/hdfs/docs/r${jdiff.stable}/api/"/>
+
+  <property name="scratch.dir" value="${user.home}/tmp"/>
+  <property name="svn.cmd" value="svn"/>
+  <property name="grep.cmd" value="grep"/>
+  <property name="patch.cmd" value="patch"/>
+  <property name="make.cmd" value="make"/>
+	
+	<!-- jsvc properties set here -->
+  <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
+  <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
+  <property name="jsvc.dest.name" value="jsvc.tar.gz" />
+	
+  <!-- IVY properties set here -->
+  <property name="ivy.dir" location="ivy" />
+  <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+  <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
+  <property name="mvn.repo" value="http://repo2.maven.org/maven2"/>
+  <property name="asfrepo" value="https://repository.apache.org"/>
+  <property name="asfsnapshotrepo" value="${asfrepo}/content/repositories/snapshots"/>
+  <property name="asfstagingrepo"
+  value="${asfrepo}/service/local/staging/deploy/maven2"/>
+  <property name="ivy_repo_url" value="${mvn.repo}/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
+  <property name="ant_task.jar" location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="ant_task_repo_url" value="${mvn.repo}/org/apache/maven/maven-ant-tasks/${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
+  <property name="ivy.org" value="org.apache.hadoop"/>
+  <property name="build.dir" location="build" />
+  <property name="dist.dir" value="${build.dir}/${final.name}"/>
+  <property name="build.ivy.dir" location="${build.dir}/ivy" />
+  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
+  <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
+  <property name="test.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/test"/>
+  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
+  <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
+  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-hdfs-${version}.pom" />
+  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-hdfs-${version}.jar" />
+  <property name="hadoop-hdfs.pom" location="${ivy.dir}/hadoop-hdfs.xml"/>
+  <property name="hadoop-hdfs-test.pom" location="${ivy.dir}/hadoop-hdfs-test.xml"/>
+
+  <!--this is the naming policy for artifacts we want pulled down-->
+  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+
+  <!--this is how artifacts that get built are named-->
+  <property name="ivy.publish.pattern" value="hadoop-hdfs-[revision].[ext]"/>
+  <property name="hadoop-hdfs.jar" location="${build.dir}/${final.name}.jar" />
+  <property name="hadoop-hdfs-test.jar" location="${build.dir}/${test.hdfs.final.name}.jar" />
+  <property name="hadoop-hdfs-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
+  <property name="hadoop-hdfs-test-sources.jar" location="${build.dir}/${test.hdfs.final.name}-sources.jar" />
+  <property name="hadoop-hdfs-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
+
+  <!-- jdiff.home property set -->
+  <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
+  <property name="jdiff.jar" value="${jdiff.home}/jdiff-${jdiff.version}.jar"/>
+  <property name="xerces.jar" value="${jdiff.home}/xerces-${xerces.version}.jar"/>
+
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value="${build.dir}/eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-main-generated-classes" value="${build.dir.eclipse}/classes-main-generated"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+  <property name="build.dir.eclipse-contrib-classes" value="${build.dir.eclipse}/classes-contrib"/>
+	
+  <!-- These args are passed along to FindBugs -->
+  <property name="findbugs.jvmargs" value="-Xmx512M" />
+
+  <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
+  <available property="clover.present" file="${clover.jar}" />
+
+  <!-- check if clover reports should be generated -->
+  <condition property="clover.enabled">
+    <and>
+        <isset property="run.clover"/>
+        <isset property="clover.present"/>
+    </and>
+  </condition>
+
+  <condition property="staging">
+     <equals arg1="${repo}" arg2="staging"/>
+  </condition>
+
+  <!-- the normal classpath -->
+  <path id="classpath">
+    <pathelement location="${build.classes}"/>
+    <pathelement location="${conf.dir}"/>
+    <path refid="ivy-common.classpath"/>
+  </path>
+
+  <path id="test.classpath">
+    <pathelement location="${test.build.extraconf}"/>
+    <pathelement location="${test.hdfs.build.classes}" />
+    <pathelement location="${test.src.dir}"/>
+    <pathelement location="${build.webapps.root.dir}"/>
+    <pathelement location="${build.tools}"/>
+    <pathelement path="${clover.jar}"/>
+    <path refid="ivy-test.classpath"/>
+    <fileset dir="${lib.dir}">
+      <include name="hadoop-common-test-${hadoop-common.version}.jar" />
+      <exclude name="**/excluded/" />
+    </fileset>
+    <pathelement location="${build.classes}"/>
+    <pathelement location="${test.conf.dir}"/>
+    <path refid="ivy-common.classpath"/>
+  </path>
+
+  <!-- the cluster test classpath: uses conf.dir for configuration -->
+  <path id="test.cluster.classpath">
+    <path refid="classpath"/>
+    <pathelement location="${test.hdfs.build.classes}" />
+    <pathelement location="${test.src.dir}"/>
+    <pathelement location="${build.webapps.root.dir}"/>
+  </path>
+
+
+  <!-- ====================================================== -->
+  <!-- Macro definitions                                      -->
+  <!-- ====================================================== -->
+  <macrodef name="macro_tar" description="Worker Macro for tar">
+    <attribute name="param.destfile"/>
+    <element name="param.listofitems"/>
+    <sequential>
+      <tar compression="gzip" longfile="gnu"
+      destfile="@{param.destfile}">
+      <param.listofitems/>
+      </tar>
+    </sequential>
+  </macrodef>
+
+  <!-- ====================================================== -->
+  <!-- Stuff needed by all targets                            -->
+  <!-- ====================================================== -->
+  <target name="init" depends="ivy-retrieve-common">
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.classes}"/>
+    <mkdir dir="${build.src}"/>
+    <mkdir dir="${build.webapps}/hdfs/WEB-INF"/>
+    <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
+    <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
+    <mkdir dir="${build.anttasks}"/>
+    <mkdir dir="${build.dir}/c++"/>
+    
+    <mkdir dir="${test.build.dir}"/>
+    <mkdir dir="${test.hdfs.build.classes}"/>
+    <mkdir dir="${test.build.extraconf}"/>
+    <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
+    <touch millis="0" file="${touch.temp.file}">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
+    </touch>
+    <delete file="${touch.temp.file}"/>
+    <!-- copy all of the jsp and static files -->
+    <copy todir="${build.webapps}">
+      <fileset dir="${src.webapps}">
+        <exclude name="**/*.jsp" />
+      </fileset>
+    </copy>
+
+    <copy todir="${conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+    <mkdir dir="${test.conf.dir}"/>
+    <copy todir="${test.conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+    <copy todir="${contrib.dir}" verbose="true">
+      <fileset dir="${contrib.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+  </target>
+
+  <import file="${test.src.dir}/aop/build/aop.xml"/>
+
+  <target name="compile-hdfs-classes" depends="init">
+    <taskdef classname="org.apache.jasper.JspC" name="jsp-compile" >
+       <classpath refid="classpath"/>
+    </taskdef>
+    <jsp-compile
+     uriroot="${src.webapps}/hdfs"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.hdfs.server.namenode"
+     webxml="${build.webapps}/hdfs/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/datanode"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.hdfs.server.datanode"
+     webxml="${build.webapps}/datanode/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/secondary"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.hdfs.server.namenode"
+     webxml="${build.webapps}/secondary/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <!-- Compile Java files (excluding JSPs) checking warnings -->
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${java.src.dir};${build.src}" 
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${build.classes}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
+      <classpath refid="classpath"/>
+    </javac>   
+
+    <taskdef
+       name="paranamer" 
+       classname="com.thoughtworks.paranamer.ant.ParanamerGeneratorTask">
+      <classpath refid="classpath" />
+    </taskdef>
+    <paranamer
+       sourceDirectory="${java.src.dir}/org/apache/hadoop/hdfs/protocol"
+       outputDirectory="${build.classes}"/>
+    <paranamer
+       sourceDirectory="${java.src.dir}/org/apache/hadoop/hdfs/server/protocol"
+       outputDirectory="${build.classes}"/>
+
+    <copy todir="${build.classes}">
+     <fileset dir="${java.src.dir}" includes="**/*.properties"/>
+     <fileset dir="${java.src.dir}" includes="hdfs-default.xml"/>
+    </copy>
+  </target>
+
+  <target name="compile-core" depends="clover, compile-hdfs-classes" description="Compile"/> 
+
+  <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
+     <subant target="compile">
+        <property name="version" value="${version}"/>
+        <!-- Need to pass along properties so that ivy in contrib build resolves correctly. -->
+     	<property name="hadoop-version" value="${hadoop-common.version}"/>
+        <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+        <property name="clover.jar" value="${clover.jar}"/>
+        <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+        <property name="offline" value="${offline}"/>
+        <property name="resolvers" value="${resolvers}"/>
+        <fileset file="${contrib.dir}/build.xml"/>
+     </subant>  	
+  </target>
+  
+  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks" description="Compile core, contrib"/>
+
+  <!-- ================================================================== -->
+  <!-- Make hadoop.jar                                                     -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="jar" depends="compile-core" description="Make hadoop.jar">
+    <jar jarfile="${hadoop-hdfs.jar}"
+         basedir="${build.classes}">
+      <manifest>
+        <section name="org/apache/hadoop">
+          <attribute name="Implementation-Title" value="${ant.project.name}"/>
+          <attribute name="Implementation-Version" value="${version}"/>
+          <attribute name="Implementation-Vendor" value="Apache"/>
+        </section>
+      </manifest>
+      <fileset file="${conf.dir}/commons-logging.properties"/>
+      <fileset file="${conf.dir}/log4j.properties"/>
+      <fileset file="${conf.dir}/hadoop-metrics.properties"/>
+      <zipfileset dir="${build.webapps}" prefix="webapps"/>
+      <fileset file="${jar.extra.properties.list}" />
+    </jar>
+
+    <jar jarfile="${hadoop-hdfs-sources.jar}">
+      <fileset dir="${java.src.dir}" includes="org/apache/hadoop/**/*.java" />
+      <fileset dir="${build.src}" includes="org/apache/hadoop/**/*.java" />
+    </jar>
+  </target>
+
+  <target name="compile-hdfs-test" depends="compile-hdfs-classes, ivy-retrieve-test">
+    <macro-compile-hdfs-test
+      target.dir="${test.hdfs.build.classes}"
+      source.dir="${test.src.dir}/hdfs;${test.src.dir}/unit"
+      dest.dir="${test.hdfs.build.classes}"
+      classpath="test.classpath"/>
+
+    <delete dir="${test.cache.data}"/>
+    <mkdir dir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/hadoop-14-dfs-dir.tgz" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/hadoop-dfs-dir.txt" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/testHDFSConf.xml" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data15bytes" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data30bytes" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data60bytes" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data120bytes" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data1k" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV18" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
+  </target>
+
+  <macrodef name="macro-compile-hdfs-test">
+    <attribute name="target.dir"/>
+    <attribute name="source.dir"/>
+    <attribute name="dest.dir"/>
+    <attribute name="classpath"/>
+    <sequential>
+      <mkdir dir="@{target.dir}"/>
+      <javac
+        encoding="${build.encoding}"
+        srcdir="@{source.dir}"
+        includes="org/apache/hadoop/**/*.java"
+        destdir="@{dest.dir}"
+        debug="${javac.debug}"
+        optimize="${javac.optimize}"
+        target="${javac.version}"
+        source="${javac.version}"
+        deprecation="${javac.deprecation}">
+        <compilerarg line="${javac.args} ${javac.args.warnings}"/>
+        <classpath refid="@{classpath}"/>
+      </javac>
+    </sequential>
+  </macrodef>
+
+  <!-- ================================================================== -->
+  <!-- Make hadoop-test.jar                                               -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="jar-test" depends="jar-hdfs-test" description="Make hadoop-test.jar"/> 
+
+  <target name="jar-hdfs-test" depends="compile-hdfs-test" description="Make hadoop-hdfs-test.jar">
+    <subant buildpath="build.xml" target="-do-jar-test">
+    </subant>
+    <jar jarfile="${hadoop-hdfs-test-sources.jar}">
+      <fileset dir="${test.src.dir}/hdfs" includes="org/apache/hadoop/**/*.java" />
+      <fileset dir="${test.src.dir}/unit" includes="org/apache/hadoop/**/*.java" />
+    </jar>
+  </target>
+
+  <target name="-do-jar-test">
+    <jar jarfile="${build.dir}/${test.hdfs.final.name}.jar"
+         basedir="${test.hdfs.build.classes}">
+         <manifest>
+           <attribute name="Main-Class"
+                      value="org/apache/hadoop/test/HdfsTestDriver"/>
+          <section name="org/apache/hadoop">
+            <attribute name="Implementation-Title" value="${ant.project.name}"/>
+            <attribute name="Implementation-Version" value="${version}"/>
+            <attribute name="Implementation-Vendor" value="Apache"/>
+          </section>
+         </manifest>
+    </jar>
+
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Fault injection customization section.
+       These targets ought to be copied over to other projects and modified
+       as needed -->
+  <!-- ================================================================== -->
+  <!-- "Implementing" a target dependecy from aop.xml -->
+  <target name="-classes-compilation"
+    depends="compile-hdfs-classes, compile-hdfs-test"/>
+
+  <target name="jar-test-fault-inject" depends="jar-hdfs-test-fault-inject"
+          description="Make hadoop-test.jar files"/>
+
+  <target name="run-test-hdfs-fault-inject" depends="injectfaults,
+    -run-test-hdfs-fault-inject-all,
+    -run-test-hdfs-fault-inject-withtestcaseonly"
+	  description="Run full set of the unit tests with fault injection">
+  </target>
+  <target name="-run-test-hdfs-fault-inject-all" unless="testcase">
+    <macro-run-tests-fault-inject
+      target.name="run-test-hdfs-excluding-commit-and-smoke"
+      testcasesonly="false"/>
+  </target>
+  <target name="-run-test-hdfs-fault-inject-withtestcaseonly" if="testcase">
+    <macro-run-tests-fault-inject
+      target.name="run-test-hdfs-all-withtestcaseonly"
+      testcasesonly="false"/>
+  </target>
+
+  <target name="jar-hdfs-test-fault-inject" depends="injectfaults" 
+    description="Make hadoop-hdfs-test-fi.jar">
+    <macro-jar-test-fault-inject
+      target.name="jar-hdfs-test"
+      jar.final.name="test.hdfs.final.name"
+      jar.final.value="${name}-test-${version}-fi" />
+  </target>
+
+  <target name="jar-fault-inject" depends="injectfaults" 
+    description="Make hadoop-fi.jar">
+    <macro-jar-fault-inject
+      target.name="jar"
+      build.dir="${build-fi.dir}"
+      jar.final.name="final.name"
+      jar.final.value="${final.name}-fi" />
+  </target>
+
+  <!--This target is not included into the the top level list of target
+  for it serves a special "regression" testing purpose of non-FI tests in
+  FI environment -->
+  <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
+    <fail unless="testcase">Can't run this target without -Dtestcase setting!
+    </fail>
+    <macro-run-tests-fault-inject
+      target.name="run-test-hdfs-all-withtestcaseonly"
+      testcasesonly="true"/>
+  </target>
+  <!-- ================================================================== -->
+  <!-- End of Fault injection customization section                       -->
+  <!-- ================================================================== -->
+
+  <condition property="tests.notestcase">
+    <and>
+      <isfalse value="${test.fault.inject}"/>
+      <not>
+        <isset property="testcase"/>
+      </not>
+    </and>
+  </condition>
+  <condition property="tests.notestcase.fi">
+    <and>
+      <not>
+        <isset property="testcase" />
+      </not>
+      <istrue value="${test.fault.inject}" />
+    </and>
+  </condition>
+  <condition property="tests.testcase">
+    <and>
+      <isfalse value="${test.fault.inject}" />
+      <isset property="testcase" />
+    </and>
+  </condition>
+  <condition property="tests.testcaseonly.fi">
+    <istrue value="${special.fi.testcasesonly}" />
+  </condition>
+  <condition property="tests.testcase.fi">
+    <and>
+      <istrue value="${test.fault.inject}" />
+      <isset property="testcase" />
+      <isfalse value="${special.fi.testcasesonly}" />
+    </and>
+  </condition>
+
+  <!-- ================================================================== -->
+  <!-- Define exclude lists for different kinds of testing                -->
+  <!-- ================================================================== -->
+  <patternset id="empty.exclude.list.id" />
+  <patternset id="commit.smoke.exclude.list.id">
+    <excludesfile name="${test.hdfs.commit.tests.file}"/>
+    <excludesfile name="${test.hdfs.smoke.tests.file}"/>
+  </patternset>
+
+  <!-- ================================================================== -->
+  <!-- Run unit tests                                                     --> 
+  <!-- ================================================================== -->
+  <macrodef name="macro-test-runner">
+    <attribute name="test.file" />
+    <attribute name="suite.type" />
+    <attribute name="classpath" />
+    <attribute name="test.dir" />
+    <attribute name="fileset.dir" />
+    <attribute name="hadoop.conf.dir.deployed" default="" />
+    <attribute name="exclude.list.id" default="empty.exclude.list.id" />
+    <sequential>
+      <delete dir="@{test.dir}/data"/>
+      <mkdir dir="@{test.dir}/data"/>
+      <delete dir="@{test.dir}/logs"/>
+      <mkdir dir="@{test.dir}/logs"/>
+      <copy file="${test.src.dir}/hadoop-policy.xml" 
+        todir="@{test.dir}/extraconf" />
+      <copy file="${test.src.dir}/fi-site.xml"
+        todir="@{test.dir}/extraconf" />
+      <junit showoutput="${test.output}"
+        printsummary="${test.junit.printsummary}"
+        haltonfailure="${test.junit.haltonfailure}"
+        fork="yes"
+        forkmode="${test.junit.fork.mode}"
+        maxmemory="${test.junit.maxmemory}"
+        dir="${basedir}" timeout="${test.timeout}"
+        errorProperty="tests.failed" failureProperty="tests.failed">
+        <jvmarg value="${test.junit.jvmargs}" />
+        <sysproperty key="java.net.preferIPv4Stack" value="true"/>
+        <sysproperty key="test.build.data" value="@{test.dir}/data"/>
+        <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
+        <sysproperty key="test.debug.data" value="${test.debug.data}"/>
+        <sysproperty key="hadoop.log.dir" value="@{test.dir}/logs"/>
+        <sysproperty key="test.src.dir" value="@{fileset.dir}"/>
+        <sysproperty key="test.build.extraconf" value="@{test.dir}/extraconf" />
+        <sysproperty key="java.security.krb5.conf" value="${test.src.dir}/krb5.conf"/>
+        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
+        <sysproperty key="hdfs.rpc.engine" value="${test.hdfs.rpc.engine}"/>
+        <classpath refid="@{classpath}"/>
+        <!-- Pass probability specifications to the spawn JVM -->
+        <syspropertyset id="FaultProbabilityProperties">
+          <propertyref regex="fi.*"/>
+        </syspropertyset>
+        <syspropertyset id="TestCLIProperties">
+          <propertyref regex="test.cli.*" />
+        </syspropertyset>
+        <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
+                     value="@{hadoop.conf.dir.deployed}" />
+        <formatter type="${test.junit.output.format}" />
+        <batchtest todir="@{test.dir}" if="tests.notestcase">
+          <fileset dir="@{fileset.dir}/@{suite.type}"
+            excludes="**/${test.exclude}.java **/${test.exclude}.java
+              aop/** system/**">
+             <patternset>
+               <includesfile name="@{test.file}"/>
+             </patternset>
+             <patternset refid="@{exclude.list.id}"/>
+         </fileset>
+        </batchtest>
+        <batchtest todir="@{test.dir}" if="tests.notestcase.fi">
+          <fileset dir="@{fileset.dir}/aop"
+            includes="**/${test.include}.java"
+            excludes="**/${test.exclude}.java" />
+        </batchtest>
+        <batchtest todir="@{test.dir}" if="tests.testcase">
+          <fileset dir="@{fileset.dir}/@{suite.type}" includes="**/${testcase}.java"
+            excludes="aop/** system/**"/>
+        </batchtest>
+        <batchtest todir="@{test.dir}" if="tests.testcase.fi">
+          <fileset dir="@{fileset.dir}/aop" includes="**/${testcase}.java"/>
+        </batchtest>
+        <!--The following batch is for very special occasions only when
+        a non-FI tests are needed to be executed against FI-environment -->
+        <batchtest todir="@{test.dir}" if="tests.testcaseonly.fi">
+          <fileset dir="@{fileset.dir}/hdfs" includes="**/${testcase}.java"/>
+        </batchtest>
+      </junit>
+      <antcall target="checkfailure"/>
+    </sequential>
+  </macrodef>
+
+  <target name="run-test-hdfs" depends="run-commit-test, run-smoke-test,
+    run-test-hdfs-excluding-commit-and-smoke, run-test-hdfs-all-withtestcaseonly"
+    description="Run full set of hdfs unit tests">
+  </target>
+
+  <target name="run-test-hdfs-all-withtestcaseonly" depends="compile-hdfs-test" if="testcase">
+    <macro-test-runner
+      test.file="${test.hdfs.all.tests.file}"
+      suite.type="hdfs"
+      classpath="${test.classpath.id}"
+      test.dir="${test.build.dir}"
+      fileset.dir="${test.src.dir}"/>
+  </target>
+
+  <target name="run-test-hdfs-excluding-commit-and-smoke"
+  depends="compile-hdfs-test" unless="testcase">
+    <macro-test-runner
+      test.file="${test.hdfs.all.tests.file}"
+      suite.type="hdfs"
+      classpath="${test.classpath.id}"
+      test.dir="${test.build.dir}"
+      fileset.dir="${test.src.dir}"
+      exclude.list.id="commit.smoke.exclude.list.id"/>
+  </target>
+
+  <target name="run-commit-test" depends="compile-hdfs-test"
+    description="Run approximate 10-minute set of unit tests prior to commiting"
+    unless="testcase">
+     <macro-test-runner
+       test.file="${test.hdfs.all.tests.file}"
+       suite.type="unit"
+       classpath="${test.classpath.id}"
+       test.dir="${test.build.dir}"
+       fileset.dir="${test.src.dir}"/>
+     <macro-test-runner
+       test.file="${test.hdfs.commit.tests.file}"
+       suite.type="hdfs"
+       classpath="${test.classpath.id}"
+       test.dir="${test.build.dir}"
+       fileset.dir="${test.src.dir}"/>
+  </target>
+
+  <target name="run-smoke-test" depends="compile-hdfs-test"
+    description="Run approximate 30-minute set of functional tests to guarantee HDFS viability"
+    unless="testcase">
+     <macro-test-runner
+       test.file="${test.hdfs.smoke.tests.file}"
+       suite.type="hdfs"
+       classpath="${test.classpath.id}"
+       test.dir="${test.build.dir}"
+       fileset.dir="${test.src.dir}"/>
+  </target>
+
+  <target name="run-test-unit" depends="compile-hdfs-test" description="Run unit tests">
+    <macro-test-runner
+      test.file="${test.hdfs.all.tests.file}"
+      suite.type="unit"
+      classpath="${test.classpath.id}"
+      test.dir="${test.build.dir}"
+      fileset.dir="${test.src.dir}"/>
+  </target>
+
+  <target name="checkfailure" if="tests.failed">
+    <touch file="${test.build.dir}/testsfailed"/>
+    <fail unless="continueOnFailure">Tests failed!</fail>
+  </target>
+
+  <target name="test-contrib" depends="compile-hdfs-test" description="Run contrib unit tests">
+    <subant target="test">
+       <property name="version" value="${version}"/>
+       <property name="hadoop-version" value="${hadoop-common.version}"/>
+       <property name="clover.jar" value="${clover.jar}"/>
+       <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+       <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+       <property name="offline" value="${offline}"/>
+       <property name="resolvers" value="${resolvers}"/>
+       <fileset file="${contrib.dir}/build.xml"/>
+    </subant> 
+  </target>
+
+  <target name="test-core" description="Run hdfs unit tests">
+    <delete file="${test.build.dir}/testsfailed"/>
+    <property name="continueOnFailure" value="true"/>
+    <antcall target="run-test-hdfs"/>
+    <antcall target="run-test-unit"/>
+    <antcall target="run-test-hdfs-fault-inject"/>
+    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
+    <fail if="testsfailed">Tests failed!</fail>
+  </target>
+
+  <target name="test" depends="test-c++-libhdfs, jar-test, test-core" description="Run all unit tests">
+    <subant target="test-contrib">
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
+      <fileset file="${basedir}/build.xml"/>
+     </subant>
+  </target>
+
+  <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
+  <target name="test-cluster" description="Run all unit tests, not just Test*, and use non-test configuration.">
+    <antcall target="test">
+      <param name="test.include" value="*"/>
+      <param name="test.classpath.id" value="test.cluster.classpath"/>
+    </antcall>
+  </target>
+
+  <target name="nightly" depends="test, tar">
+  </target>
+	
+  <!-- ================================================================== -->
+  <!-- Run optional third-party tool targets                              --> 
+  <!-- ================================================================== -->
+  <target name="checkstyle" depends="ivy-retrieve-checkstyle,check-for-checkstyle" if="checkstyle.present" description="Run optional third-party tool targets">
+       <taskdef resource="checkstyletask.properties">
+         <classpath refid="checkstyle-classpath"/>
+       </taskdef>
+  
+	<mkdir dir="${test.build.dir}"/>
+  	
+  	<checkstyle config="${test.src.dir}/checkstyle.xml"
+  		failOnViolation="false">
+      <fileset dir="${java.src.dir}" includes="**/*.java" excludes="**/generated/**"/>  		
+      <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
+  	</checkstyle>
+  	
+  	<xslt style="${test.src.dir}/checkstyle-noframes-sorted.xsl"
+        in="${test.build.dir}/checkstyle-errors.xml"
+        out="${test.build.dir}/checkstyle-errors.html"/>
+  </target>
+	
+  <target name="check-for-checkstyle">
+    <available property="checkstyle.present" resource="checkstyletask.properties">
+       <classpath refid="checkstyle-classpath"/>
+    </available>  	
+  </target>
+
+ <property name="findbugs.home" value=""/>
+  <target name="findbugs" depends="check-for-findbugs, jar" if="findbugs.present" description="Run findbugs if present">
+    <property name="findbugs.out.dir" value="${test.build.dir}/findbugs"/>
+    <property name="findbugs.exclude.file" value="${test.src.dir}/findbugsExcludeFile.xml"/>
+    <property name="findbugs.report.htmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.html"/>
+    <property name="findbugs.report.xmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.xml"/>
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
+        classpath="${findbugs.home}/lib/findbugs-ant.jar" />
+
+        <mkdir dir="${findbugs.out.dir}"/>
+
+    <findbugs home="${findbugs.home}" output="xml:withMessages"
+        outputFile="${findbugs.report.xmlfile}" effort="max"
+        excludeFilter="${findbugs.exclude.file}" jvmargs="${findbugs.jvmargs}">
+      <auxClasspath>
+        <fileset dir="${lib.dir}">
+          <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${build.ivy.lib.dir}/${ant.project.name}/common">
+          <include name="**/*.jar"/>
+        </fileset>
+      </auxClasspath>
+      <sourcePath path="${java.src.dir}"/>
+      <class location="${basedir}/build/${final.name}.jar" />
+    </findbugs>
+
+        <xslt style="${findbugs.home}/src/xsl/default.xsl"
+        in="${findbugs.report.xmlfile}"
+        out="${findbugs.report.htmlfile}"/>
+  </target>
+	
+  <target name="check-for-findbugs">
+    <available property="findbugs.present"
+        file="${findbugs.home}/lib/findbugs.jar" />
+  </target>
+
+
+  <!-- ================================================================== -->
+  <!-- Documentation                                                      -->
+  <!-- ================================================================== -->
+  
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
+	  failonerror="true">
+    </exec>
+    <copy todir="${build.docs}">
+      <fileset dir="${docs.src}/build/site/" />
+    </copy>
+    <copy file="${docs.src}/releasenotes.html" todir="${build.docs}"/>
+    <style basedir="${java.src.dir}" destdir="${build.docs}"
+           includes="hdfs-default.xml" style="conf/configuration.xsl"/>
+    <antcall target="changes-to-html"/>
+  </target>
+
+  <target name="forrest.check" unless="forrest.home">
+    <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
+  </target>
+
+  <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
+    <mkdir dir="${build.javadoc.dev}"/>
+    <javadoc
+      overview="${java.src.dir}/overview.html"
+      packagenames="org.apache.hadoop.*"
+      destdir="${build.javadoc.dev}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${Name} ${version} API"
+      doctitle="${Name} ${version} Developer API"
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      maxmemory="${javadoc.maxmemory}">
+        <packageset dir="${java.src.dir}"/>        	
+        <link href="${javadoc.link.java}"/>
+        <classpath >
+          <path refid="classpath" />
+          <path refid="javadoc-classpath"/>
+          <pathelement path="${java.class.path}"/>
+        </classpath>
+    	<group title="${ant.project.name}" packages="org.apache.*"/>
+    </javadoc>
+  </target>	
+
+  <target name="javadoc-uptodate" depends="compile, ivy-retrieve-javadoc">
+    <uptodate property="javadoc.is.uptodate">
+      <srcfiles dir="${src.dir}">
+        <include name="**/*.java" />
+        <include name="**/*.html" />
+      </srcfiles>
+      <mapper type="merge" to="${build.javadoc.timestamp}" />
+    </uptodate>
+  </target>
+ 
+  <target name="javadoc" description="Generate javadoc" depends="javadoc-uptodate"
+       unless="javadoc.is.uptodate">
+    <mkdir dir="${build.javadoc}"/>
+    <javadoc
+      overview="${java.src.dir}/overview.html"
+      packagenames="org.apache.hadoop.*"
+      destdir="${build.javadoc}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${Name} ${version} API"
+      doctitle="${Name} ${version} API"
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      maxmemory="${javadoc.maxmemory}">
+
+        <packageset dir="${java.src.dir}"/>
+        <link href="${javadoc.link.java}"/>
+        <classpath >
+          <path refid="classpath" />
+          <path refid="javadoc-classpath"/>
+          <pathelement path="${java.class.path}"/>
+          <pathelement location="${build.tools}"/>
+        </classpath>
+
+    	<group title="${ant.project.name}" packages="org.apache.*"/>
+    </javadoc>
+  </target>	
+
+  <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
+    <javadoc maxmemory="${javadoc.maxmemory}">
+       <doclet name="jdiff.JDiff"
+               path="${jdiff.jar}:${xerces.jar}">
+         <param name="-apidir" value="${jdiff.xml.dir}"/>
+         <param name="-apiname" value="hadoop-hdfs ${version}"/>
+       </doclet>
+       <packageset dir="src/java"/>
+       <classpath >
+         <path refid="classpath" />
+         <path refid="jdiff-classpath" />
+         <pathelement path="${java.class.path}"/>
+       </classpath>
+    </javadoc>
+  </target>
+	
+  <target name="write-null">
+	<exec executable="touch">
+	   <arg value="${jdiff.home}/Null.java"/>
+        </exec>
+  </target> 
+
+  <target name="api-report" depends="ivy-retrieve-jdiff,api-xml">
+    <mkdir dir="${jdiff.build.dir}"/>
+    <javadoc sourcepath="src/java"
+             destdir="${jdiff.build.dir}"
+	     sourceFiles="${jdiff.home}/Null.java"
+	     maxmemory="${javadoc.maxmemory}">
+       <doclet name="jdiff.JDiff"
+               path="${jdiff.jar}:${xerces.jar}">
+         <param name="-oldapi" value="hadoop-hdfs ${jdiff.stable}"/>
+         <param name="-newapi" value="hadoop-hdfs ${version}"/>
+         <param name="-oldapidir" value="${jdiff.xml.dir}"/>
+         <param name="-newapidir" value="${jdiff.xml.dir}"/>
+         <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
+         <param name="-javadocnew" value="../../api/"/>
+         <param name="-stats"/>
+       </doclet>
+       <classpath >
+         <path refid="classpath" />
+         <path refid="jdiff-classpath"/>
+         <pathelement path="${java.class.path}"/>
+       </classpath>
+    </javadoc>
+  </target>
+	
+  <target name="changes-to-html" description="Convert CHANGES.txt into an html file">
+    <mkdir dir="${build.docs}"/>
+    <exec executable="perl" input="CHANGES.txt" output="${build.docs}/changes.html" failonerror="true">
+      <arg value="${changes.src}/changes2html.pl"/>
+    </exec>
+    <copy todir="${build.docs}">
+      <fileset dir="${changes.src}" includes="*.css"/>
+    </copy>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- D I S T R I B U T I O N                                            -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="package" depends="compile, jar, javadoc, docs, api-report, create-libhdfs-configure, jar-test, ant-tasks, jsvc"
+	  description="Build distribution">
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/contrib"/>
+    <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/docs"/>
+    <mkdir dir="${dist.dir}/docs/api"/>
+    <mkdir dir="${dist.dir}/docs/jdiff"/>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${common.ivy.lib.dir}"/>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="lib">
+        <exclude name="**/native/**"/>
+      </fileset>
+    </copy>
+
+    <subant target="package">
+      <!--Pass down the version in case its needed again and the target
+      distribution directory so contribs know where to install to.-->
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
+      <fileset file="${contrib.dir}/build.xml"/>
+    </subant>  	
+
+    <copy todir="${dist.dir}/webapps">
+      <fileset dir="${build.webapps}"/>
+    </copy>
+
+    <copy todir="${dist.dir}"> 
+      <fileset file="${build.dir}/${name}-*.jar"/>
+    </copy>
+  	
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
+
+    <copy todir="${dist.dir}/conf">
+      <fileset dir="${conf.dir}" excludes="**/*.template"/>
+    </copy>
+
+    <copy todir="${dist.dir}/docs">
+      <fileset dir="${build.docs}"/>
+    </copy>
+
+    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
+
+    <copy todir="${dist.dir}/ivy">
+      <fileset dir="ivy"/>
+    </copy>
+
+    <copy todir="${dist.dir}">
+      <fileset dir=".">
+        <include name="*.txt" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/src" includeEmptyDirs="true">
+      <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
+    </copy>
+
+    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
+      <fileset dir="${build.dir}/c++"/>
+    </copy>
+
+    <copy todir="${dist.dir}/" file="build.xml"/>
+
+    <chmod perm="ugo+x" file="${dist.dir}/src/c++/libhdfs/configure" />
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/src/contrib/">
+          <include name="*/bin/*" />
+        </fileset>
+    </chmod>
+
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Make release tarball                                               -->
+  <!-- ================================================================== -->
+  <target name="tar" depends="package" description="Make release tarball">
+    <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
+          <exclude name="${final.name}/src/c++/libhdfs/configure" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+          <include name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/src/c++/libhdfs/configure" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
+  </target>
+
+  <target name="bin-package" depends="compile, jar, jar-test, ant-tasks, jsvc" 
+		description="assembles artifacts for binary target">
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/contrib"/>
+  	<mkdir dir="${dist.dir}/bin"/>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${common.ivy.lib.dir}"/>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="lib">
+        <exclude name="**/native/**"/>
+      </fileset>
+    </copy>
+
+    <subant target="package">
+      <!--Pass down the version in case its needed again and the target
+      distribution directory so contribs know where to install to.-->
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <property name="version" value="${version}"/>
+      <property name="hadoop-version" value="${hadoop-common.version}"/>
+      <property name="clover.jar" value="${clover.jar}"/>
+      <property name="hadoop-common.version" value="${hadoop-common.version}"/>
+      <property name="ivy_repo_url" value="${ivy_repo_url}"/>
+      <property name="offline" value="${offline}"/>
+      <property name="resolvers" value="${resolvers}"/>
+      <fileset file="${contrib.dir}/build.xml"/>
+    </subant>  	
+
+    <copy todir="${dist.dir}/webapps">
+      <fileset dir="${build.webapps}"/>
+    </copy>
+
+    <copy todir="${dist.dir}"> 
+      <fileset file="${build.dir}/${name}-*.jar"/>
+    </copy>
+  	
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
+    
+    <copy todir="${dist.dir}/conf">
+      <fileset dir="${conf.dir}" excludes="**/*.template"/>
+    </copy>
+
+    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
+
+    <copy todir="${dist.dir}/ivy">
+      <fileset dir="ivy"/>
+    </copy>
+
+    <copy todir="${dist.dir}">
+      <fileset dir=".">
+        <include name="*.txt" />
+      </fileset>
+    </copy>
+  	
+    <copy todir="${dist.dir}/" file="build.xml"/>
+
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
+    </chmod>
+  </target>
+
+  <target name="binary-system" depends="bin-package, jar-system, jar-test-system"
+     description="make system test package for deployment">
+    <copy todir="${system-test-build-dir}/${final.name}">
+      <fileset dir="${dist.dir}">
+      </fileset>
+    </copy>
+    <copy todir="${system-test-build-dir}/${final.name}/conf">
+      <fileset dir="${test.src.dir}/system/conf/"/>
+    </copy>
+    <copy tofile="${system-test-build-dir}/${final.name}/lib/hadoop-common-${hadoop-common.version}.jar"
+      file="${system-test-build-dir}/ivy/lib/${ant.project.name}/system/hadoop-common-${herriot.suffix}-${hadoop-common.version}.jar"
+      overwrite="true"/>
+    <copy tofile="${system-test-build-dir}/${final.name}/${final.name}.jar"
+      file="${system-test-build-dir}/${instrumented.final.name}.jar" overwrite="true"/>
+    <copy tofile="${system-test-build-dir}/${final.name}/${final.name}-sources.jar"
+      file="${system-test-build-dir}/${instrumented.final.name}-sources.jar" overwrite="true"/>
+    <copy todir="${system-test-build-dir}/${final.name}"
+      file="${system-test-build-dir}/${name}-${herriot.suffix}-test-${version}.jar"/>
+    <copy todir="${system-test-build-dir}/${final.name}"
+      file="${system-test-build-dir}/${name}-${herriot.suffix}-test-${version}-sources.jar"/>
+    <macro_tar 
+      param.destfile="${system-test-build-dir}/${final.name}-bin.tar.gz">
+        <param.listofitems>
+          <tarfileset dir="${system-test-build-dir}" mode="664">
+            <exclude name="${final.name}/bin/*" />
+            <exclude name="${final.name}/src/**" />
+            <exclude name="${final.name}/docs/**" />
+            <include name="${final.name}/**" />
+          </tarfileset>
+          <tarfileset dir="${build.dir}" mode="755">
+            <include name="${final.name}/bin/*" />
+          </tarfileset>
+        </param.listofitems>
+      </macro_tar>
+  </target>
+  
+  <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
+    <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/src/**" />
+          <exclude name="${final.name}/docs/**" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Perform audit activities for the release                           -->
+  <!-- ================================================================== -->
+  <target name="rats-taskdef" depends="ivy-retrieve-releaseaudit">
+     <typedef format="xml" resource="org/apache/rat/anttasks/antlib.xml" uri="antlib:org.apache.rat.anttasks"
+      classpathref="releaseaudit-classpath"/>
+  </target>
+
+  <target name="releaseaudit" depends="package, rats-taskdef" description="Release Audit activities">
+   <rat:report xmlns:rat="antlib:org.apache.rat.anttasks">
+      <fileset dir="${dist.dir}">
+        <exclude name="CHANGES.txt"/>
+        <exclude name="docs/"/>
+        <exclude name="lib/jdiff/"/>
+        <exclude name="**/conf/*" />
+        <exclude name="webapps/**/WEB-INF/web.xml"/>
+        <exclude name="src/docs/releasenotes.html" />
+        <exclude name="src/test/hdfs/org/apache/hadoop/cli/clitest_data/" />
+        <exclude name="**/*/robots.txt" />
+        <exclude name="src/c++/libhdfs/m4/libtool.m4" />
+        <exclude name="src/c++/libhdfs/m4/lt~obsolete.m4" />
+        <exclude name="src/c++/libhdfs/m4/ltoptions.m4" />
+        <exclude name="src/c++/libhdfs/m4/ltsugar.m4" />
+        <exclude name="src/c++/libhdfs/m4/ltversion.m4" />
+        <exclude name="src/test/commit-tests" />
+        <exclude name="src/test/smoke-tests" />
+        <exclude name="src/test/all-tests" />
+        <exclude name="**/*/*.properties" />
+        <exclude name="src/c++/libhdfs/config.guess" />
+        <exclude name="src/c++/libhdfs/config.sub" />
+        <exclude name="src/c++/libhdfs/configure" />
+        <exclude name="src/c++/libhdfs/depcomp" />
+        <exclude name="src/c++/libhdfs/install-sh" />
+        <exclude name="src/c++/libhdfs/ltmain.sh" />
+        <exclude name="src/c++/libhdfs/missing" />
+        <exclude name="src/contrib/hdfsproxy/src/test/resources/" />
+        <exclude name="src/test/checkstyle-noframes-sorted.xsl" />
+        <exclude name="src/test/checkstyle.xml" />
+        <exclude name="src/test/findbugsExcludeFile.xml" />
+        <exclude name="src/docs/**/*.odg" />
+        <exclude name="**/*.tgz" />
+        <exclude name="**/*.tar" />
+      </fileset>
+    </rat:report>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Clean.  Delete the build files, and their directories              -->
+  <!-- ================================================================== -->
+  <target name="clean" depends="clean-contrib, clean-fi, clean-sign" description="Clean.  Delete the build files, and their directories">
+    <delete dir="${build.dir}"/>
+    <delete dir="${build-fi.dir}"/>
+    <delete dir="${docs.src}/build"/>
+    <delete file="${hadoop-hdfs.pom}"/>
+    <delete file="${hadoop-hdfs-test.pom}"/>
+    <delete file="${hadoop-hdfs-instrumented.pom}"/>
+    <delete file="${hadoop-hdfs-instrumented-test.pom}"/>
+  </target>
+
+  <target name="clean-sign" description="Clean.  Delete .asc files">
+    <delete>
+      <fileset dir="." includes="**/**/*.asc"/>
+    </delete>
+  </target>
+
+  <target name="veryclean" depends="clean-cache,clean" 
+          description="veryclean.  Delete ant maven task and ivy jars">
+    <delete file="${ant_task.jar}"/>
+    <delete file="${ivy.jar}"/>
+  </target>
+
+  <target name="clean-cache" depends="clean" description="Clean. Delete ivy cache">
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Clean contrib target. For now, must be called explicitly           -->
+  <!-- Using subant instead of ant as a workaround for 30569              -->
+  <!-- ================================================================== -->
+  <target name="clean-contrib">
+     <subant target="clean">
+     	<property name="version" value="${version}"/>
+        <property name="hadoop-version" value="${hadoop-common.version}"/>
+     	<property name="clover.jar" value="${clover.jar}"/>
+     	<property name="hadoop-common.version" value="${hadoop-common.version}"/>
+     	<property name="ivy_repo_url" value="${ivy_repo_url}"/>
+     	<property name="offline" value="${offline}"/>
+     	<property name="resolvers" value="${resolvers}"/>
+        <fileset file="src/contrib/build.xml"/>
+     </subant>  	
+  </target>
+
+ <target name="test-c++-libhdfs" depends="compile-c++-libhdfs, compile-core" if="islibhdfs" unless="clover.enabled">
+    <delete dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}"/>
+    <mkdir dir="${test.libhdfs.dir}/conf"/>
+    <mkdir dir="${test.libhdfs.dir}/logs"/>
+    <mkdir dir="${test.libhdfs.dir}/hdfs/name"/>
+
+    <exec dir="${build.c++.libhdfs}" executable="${make.cmd}" failonerror="true">
+        <env key="OS_NAME" value="${os.name}"/>
+        <env key="OS_ARCH" value="${os.arch}"/>
+        <env key="JVM_ARCH" value="${jvm.arch}"/>
+        <env key="LIBHDFS_BUILD_DIR" value="${build.c++.libhdfs}"/>
+        <env key="HADOOP_HOME" value="${basedir}"/>
+        <env key="HADOOP_CONF_DIR" value="${test.libhdfs.dir}/conf"/>
+        <env key="HADOOP_LOG_DIR" value="${test.libhdfs.dir}/logs"/>
+        <env key="LIBHDFS_TEST_DIR" value="${test.libhdfs.dir}"/>
+        <env key="LIBHDFS_SRC_DIR" value="${c++.libhdfs.src}"/>
+        <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
+        <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>
+        <env key="CLOVER_JAR" value="${clover.jar}"/>
+		<arg value="test"/>
+    </exec>
+  </target>
+
+  <target name="check-c++-libhdfs">
+    <condition property="islibhdfs">
+      <and>
+        <isset property="compile.c++"/>
+        <isset property="libhdfs"/>
+      </and>
+    </condition>
+  </target>
+
+  <target name="check-libhdfs-configure" depends="init,check-c++-libhdfs" if="islibhdfs">
+    <condition property="need.libhdfs.configure">
+       <not> <available file="${c++.libhdfs.src}/configure"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-libhdfs-configure" depends="check-libhdfs-configure" if="need.libhdfs.configure">
+    <mkdir dir="${c++.libhdfs.src}/config"/>
+    <exec executable="autoreconf" dir="${c++.libhdfs.src}" 
+          searchpath="yes" failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+  </target>
+
+  <target name="check-libhdfs-makefile" depends="init,check-c++-libhdfs" if="islibhdfs">
+    <condition property="need.libhdfs.makefile">
+       <not> <available file="${c++.libhdfs.src}/Makefile"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-libhdfs-makefile" depends="check-libhdfs-makefile" 
+                                           if="need.libhdfs.makefile">
+    <antcall target="create-libhdfs-configure"/>
+    <mkdir dir="${build.c++.libhdfs}"/>
+    <exec executable="${c++.libhdfs.src}/configure" dir="${build.c++.libhdfs}"
+          failonerror="yes">
+      <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
+      <env key="JVM_ARCH" value="${jvm.arch}"/>
+      <arg value="--prefix=${install.c++}"/>
+      <env key="base_dir" value="${basedir}"/>
+    </exec>
+  </target>
+
+  <target name="compile-c++-libhdfs" depends="create-libhdfs-makefile" if="islibhdfs">
+    <exec executable="${make.cmd}" dir="${build.c++.libhdfs}" searchpath="yes"
+          failonerror="yes">
+      <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
+      <env key="JVM_ARCH" value="${jvm.arch}"/>
+      <arg value="install"/>
+    </exec>
+    <!-- Create a build platform-agnostic link to c++ libs -->
+    <symlink overwrite="true" link="${build.dir}/c++/lib" resource="${install.c++}/lib"/>
+  </target>
+
+  <target name="compile-ant-tasks" depends="compile-core">
+    <javac
+        encoding="${build.encoding}"
+        srcdir="${anttasks.dir}"
+        includes="org/apache/hadoop/ant/**/*.java"
+        destdir="${build.anttasks}"
+        debug="${javac.debug}"
+        optimize="${javac.optimize}"
+        target="${javac.version}"
+        source="${javac.version}"
+        deprecation="${javac.deprecation}">
+        <compilerarg line="${javac.args}"/>
+        <classpath refid="classpath"/>
+    </javac>
+  </target>
+
+  <target name="ant-tasks" depends="jar, compile-ant-tasks">
+    <copy file="${anttasks.dir}/org/apache/hadoop/ant/antlib.xml"
+          todir="${build.anttasks}/org/apache/hadoop/ant"/>
+    <jar destfile="${build.dir}/${ant.final.name}.jar">
+      <fileset dir="${build.anttasks}"/>
+    </jar>
+  </target>
+
+ <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  To use, specify -Dclover.home=&lt;base of clover installation&gt; -Drun.clover=true on the command line."/>
+
+<target name="clover.setup" if="clover.enabled">
+   <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
+   <mkdir dir="${clover.db.dir}"/>
+   <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
+     <fileset dir="${src.dir}" includes="java/**/*"/>
+     <testsources dir="${test.src.dir}" />
+   </clover-setup>
+   <echo message="HDFS-783: test-libhdfs is disabled for Clover'ed builds" />
+</target>
+
+<target name="clover.info" unless="clover.present">
+  <echo>
+     Clover not found. Code coverage reports disabled.
+  </echo>
+</target>
+
+<target name="clover.check">
+  <fail unless="clover.present">
+  ##################################################################
+   Clover not found.
+   Please specify -Dclover.home=&lt;base of clover installation&gt;
+   on the command line.
+  ##################################################################
+  </fail>
+</target>
+
+<target name="generate-clover-reports" depends="clover.check, clover">
+  <mkdir dir="${clover.report.dir}"/>
+  <clover-report>
+     <current outfile="${clover.report.dir}" title="${final.name}">
+     <format type="html"/>
+     </current>
+  </clover-report>
+  <clover-report>
+     <current outfile="${clover.report.dir}/clover.xml" title="${final.name}">
+     <format type="xml"/>
+     </current>
+  </clover-report>
+</target>
+
+<target name="findbugs.check" depends="check-for-findbugs" unless="findbugs.present">
+  <fail message="'findbugs.home' is not defined. Please pass -Dfindbugs.home=&lt;base of Findbugs installation&gt; to Ant on the command-line." />
+</target>
+
+<target name="patch.check" unless="patch.file">
+  <fail message="'patch.file' is not defined. Please pass -Dpatch.file=&lt;location of patch file&gt; to Ant on the command-line." />
+</target>
+
+<target name="test-patch" depends="patch.check,findbugs.check,forrest.check">
+  <exec executable="bash" failonerror="true">
+    <arg value="${basedir}/src/test/bin/test-patch.sh"/>
+    <arg value="DEVELOPER"/>
+    <arg value="${patch.file}"/>
+    <arg value="${scratch.dir}"/>
+    <arg value="${svn.cmd}"/>
+    <arg value="${grep.cmd}"/>
+    <arg value="${patch.cmd}"/>
+    <arg value="${findbugs.home}"/>
+    <arg value="${forrest.home}"/>
+    <arg value="${basedir}"/>
+  </exec>
+</target>
+
+<target name="hudson-test-patch" depends="findbugs.check,forrest.check">
+  <exec executable="bash" failonerror="true">
+    <arg value="${basedir}/src/test/bin/test-patch.sh"/>
+    <arg value="HUDSON"/>
+    <arg value="${scratch.dir}"/>
+    <arg value="${support.dir}"/>
+    <arg value="${ps.cmd}"/>
+    <arg value="${wget.cmd}"/>
+    <arg value="${jiracli.cmd}"/>
+    <arg value="${svn.cmd}"/>
+    <arg value="${grep.cmd}"/>
+    <arg value="${patch.cmd}"/>
+    <arg value="${findbugs.home}"/>
+    <arg value="${forrest.home}"/>
+    <arg value="${eclipse.home}"/>
+    <arg value="${basedir}"/>
+    <arg value="${jira.passwd}"/>
+    <arg value="${curl.cmd}"/>
+    <arg value="${defect}"/>
+  </exec>
+</target>
+	
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
+
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${build.dir}/java/ant-eclipse-1.0.bin.tar.bz2" />
+  </target>
+  
+  <target name="eclipse" 
+          depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test"
+          description="Create eclipse project files">
+       <pathconvert property="eclipse.project">
+         <path path="${basedir}"/>
+         <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+       </pathconvert>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse updatealways="true">
+      <project name="${eclipse.project}" />
+      <classpath>
+        <source path="${java.src.dir}"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${build.src}"
+                output="${build.dir.eclipse-main-generated-classes}" />
+        <source path="${test.src.dir}/hdfs"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.src.dir}/unit"
+                output="${build.dir.eclipse-test-classes}" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <library pathref="ivy-common.classpath" exported="true" />
+        <library pathref="ivy-test.classpath" exported="false" />
+        <library path="${build.webapps.root.dir}" exported="false" />
+        <library path="${conf.dir}" exported="false" />
+      </classpath>
+    </eclipse>
+	<copy todir="." overwrite="true">
+      <fileset dir=".eclipse.templates">
+      	<exclude name="**/README.txt"/>
+      </fileset>
+      <filterset>
+        <filter token="PROJECT" value="${eclipse.project}"/>
+      </filterset>
+    </copy>
+  </target>
+
+  <target name="ivy-init-dirs">
+    <mkdir dir="${build.ivy.dir}" />
+    <mkdir dir="${build.ivy.lib.dir}" />
+    <mkdir dir="${build.ivy.report.dir}" />
+    <mkdir dir="${build.ivy.maven.dir}" />
+  </target>
+
+  <target name="ivy-probe-antlib" >
+    <condition property="ivy.found">
+      <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+    </condition>
+  </target>
+
+  <target name="ivy-download" description="To download ivy" unless="offline">
+    <get src="${ivy_repo_url}" dest="${ivy.jar}" usetimestamp="true"/>
+  </target>
+
+  <target name="ant-task-download" description="To download mvn-ant-task" unless="offline">
+    <get src="${ant_task_repo_url}" dest="${ant_task.jar}" usetimestamp="true"/>
+  </target>
+
+  <target name="mvn-taskdef" depends="ant-task-download">
+     <path id="mvn-ant-task.classpath" path="${ant_task.jar}"/> 
+     <typedef resource="org/apache/maven/artifact/ant/antlib.xml" 
+         uri="urn:maven-artifact-ant" classpathref="mvn-ant-task.classpath"/>
+  </target>   
+
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+     description="To install hadoop hdfs and test jars to local filesystem's m2 cache">
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+     <artifact:install file="${hadoop-hdfs.jar}">
+        <pom refid="hadoop.hdfs"/>
+        <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
+     </artifact:install>
+     <artifact:install file="${hadoop-hdfs-test.jar}">
+        <pom refid="hadoop.hdfs.test"/>
+        <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
+     </artifact:install>
+   </target>
+  
+   <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
+     jar-system, jar-test-system, set-version, signanddeploy, simpledeploy"
+     description="To deploy hadoop hdfs and test jar's to apache
+     snapshot's repository"/>
+
+   <target name="signanddeploy" if="staging" depends="sign">
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+     <artifact:pom file="${hadoop-hdfs-instrumented.pom}" 
+       id="hadoop.hdfs.${herriot.suffix}"/>
+     <artifact:pom file="${hadoop-hdfs-instrumented-test.pom}" 
+       id="hadoop.hdfs.${herriot.suffix}.test"/>
+     <artifact:install-provider artifactId="wagon-http"
+     version="${wagon-http.version}"/>
+
+     <artifact:deploy file="${hadoop-hdfs.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs"/>
+       <attach file="${hadoop-hdfs.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-sources.jar}.asc" type="jar.asc"
+         classifier="sources" />
+       <attach file="${hadoop-hdfs-sources.jar}" classifier="sources"/>
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-hdfs-test.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs.test"/>
+       <attach file="${hadoop-hdfs-test.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs-test.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-test-sources.jar}.asc" type="jar.asc"
+         classifier="sources"/>
+       <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources"/>
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-hdfs-instrumented.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs.${herriot.suffix}"/>
+       <attach file="${hadoop-hdfs-instrumented.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs-instrumented.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-instrumented-sources.jar}.asc" 
+         type="jar.asc" classifier="sources"/>
+       <attach file="${hadoop-hdfs-instrumented-sources.jar}"
+         classifier="sources"/>
+     </artifact:deploy>
+
+      <artifact:deploy file="${hadoop-hdfs-instrumented-test.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs.${herriot.suffix}.test"/>
+       <attach file="${hadoop-hdfs-instrumented-test.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs-instrumented-test.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-instrumented-test-sources.jar}.asc" 
+         type="jar.asc" classifier="sources"/>
+       <attach file="${hadoop-hdfs-instrumented-test-sources.jar}"
+         classifier="sources"/>
+     </artifact:deploy>
+   </target>
+
+   <target name="sign" depends="clean-sign" if="staging">
+    <input message="password:>" addproperty="gpg.passphrase">
+     <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+    </input>
+    <macrodef name="sign-artifact" description="Signs the artifact">
+      <attribute name="input.file"/>
+      <attribute name="output.file" default="@{input.file}.asc"/>
+      <attribute name="gpg.passphrase"/>
+      <sequential>
+        <echo>Signing @{input.file} Sig File: @{output.file}</echo>
+        <exec executable="gpg" >
+          <arg value="--armor"/>
+          <arg value="--output"/>
+          <arg value="@{output.file}"/>
+          <arg value="--passphrase"/>
+          <arg value="@{gpg.passphrase}"/>
+          <arg value="--detach-sig"/>
+          <arg value="@{input.file}"/>
+        </exec>
+      </sequential>
+    </macrodef>
+    <sign-artifact input.file="${hadoop-hdfs.jar}" 
+     output.file="${hadoop-hdfs.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-test.jar}" 
+     output.file="${hadoop-hdfs-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-sources.jar}" 
+     output.file="${hadoop-hdfs-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-test-sources.jar}" 
+     output.file="${hadoop-hdfs-test-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs.pom}" 
+     output.file="${hadoop-hdfs.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-test.pom}" 
+     output.file="${hadoop-hdfs-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented.jar}" 
+     output.file="${hadoop-hdfs-instrumented.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented.pom}" 
+     output.file="${hadoop-hdfs-instrumented.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-sources.jar}" 
+     output.file="${hadoop-hdfs-instrumented-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-test.jar}" 
+     output.file="${hadoop-hdfs-instrumented-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-test.pom}" 
+     output.file="${hadoop-hdfs-instrumented-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-test-sources.jar}" 
+     output.file="${hadoop-hdfs-instrumented-test-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+  </target>
+
+  <target name="simpledeploy" unless="staging">
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+     <artifact:pom file="${hadoop-hdfs-instrumented.pom}" 
+       id="hadoop.hdfs.${herriot.suffix}"/>
+
+     <artifact:install-provider artifactId="wagon-http" version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-hdfs.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.hdfs"/>
+         <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-hdfs-test.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.hdfs.test"/>
+         <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
+     </artifact:deploy> 
+
+     <artifact:deploy file="${hadoop-hdfs-instrumented.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.hdfs.${herriot.suffix}"/>
+         <attach file="${hadoop-hdfs-instrumented-sources.jar}" classifier="sources" />
+     </artifact:deploy>
+  </target>
+
+  <target name="set-version">
+    <delete file="${basedir}/ivy/hadoop-hdfs.xml"/>
+    <delete file="${basedir}/ivy/hadoop-hdfs-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}.xml"/>
+    <delete file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-template.xml" tofile="${basedir}/ivy/hadoop-hdfs.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-test-template.xml" tofile="${basedir}/ivy/hadoop-hdfs-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-template.xml"
+      tofile="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}.xml"/>
+    <copy file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test-template.xml"
+      tofile="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test.xml"/>
+    <replaceregexp byline="true">
+      <regexp pattern="@version"/>
+      <substitution expression="${version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-hdfs.xml"/>
+        <include name="hadoop-hdfs-test.xml"/>
+        <include name="hadoop-hdfs-${herriot.suffix}.xml"/>
+        <include name="hadoop-hdfs-${herriot.suffix}-test.xml"/>
+      </fileset>
+    </replaceregexp>
+    <replaceregexp byline="true">
+      <regexp pattern="@hadoop-common.version"/>
+      <substitution expression="${hadoop-common.version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-hdfs.xml"/>
+        <include name="hadoop-hdfs-${herriot.suffix}.xml"/>
+      </fileset>
+    </replaceregexp>
+  </target>
+
+  <!--
+  To avoid Ivy leaking things across big projects, always load Ivy in the same classloader.
+  Also note how we skip loading Ivy if it is already there, just to make sure all is well.
+  -->
+  <target name="ivy-init-antlib" depends="ivy-download,ivy-init-dirs,ivy-probe-antlib" unless="ivy.found">
+    <typedef uri="antlib:org.apache.ivy.ant" onerror="fail"
+      loaderRef="ivyLoader">
+      <classpath>
+        <pathelement location="${ivy.jar}"/>
+      </classpath>
+    </typedef>
+    <fail >
+      <condition >
+        <not>
+          <typefound uri="antlib:org.apache.ivy.ant" name="cleancache"/>
+        </not>
+      </condition>
+      You need Apache Ivy 2.0 or later from http://ant.apache.org/
+      It could not be loaded from ${ivy_repo_url}
+    </fail>
+  </target>
+
+  <property name="ivyresolvelog" value="download-only"/>
+  <property name="ivyretrievelog" value="quiet"/>
+
+  <target name="ivy-init" depends="ivy-init-antlib" >
+
+    <!--Configure Ivy by reading in the settings file
+        If anyone has already read in a settings file into this settings ID, it gets priority
+    -->
+    <ivy:configure settingsid="${ant.project.name}.ivy.settings" file="${ivysettings.xml}" override='false'/>
+  </target>
+
+  <target name="ivy-resolve" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-javadoc" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="javadoc"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-releaseaudit" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="releaseaudit"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-test" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="test"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-common" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="common"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-jdiff" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="jdiff"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-checkstyle" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="checkstyle"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-resolve-system" depends="ivy-init">
+    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="system"
+      log="${ivyresolvelog}"/>
+  </target>
+
+  <target name="ivy-retrieve" depends="ivy-resolve"
+    description="Retrieve Ivy-managed artifacts">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+  </target>
+
+  <target name="ivy-retrieve-checkstyle" depends="ivy-resolve-checkstyle"
+    description="Retrieve Ivy-managed artifacts for the checkstyle configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="checkstyle-classpath" conf="checkstyle"/>
+  </target>
+
+  <target name="ivy-retrieve-jdiff" depends="ivy-resolve-jdiff"
+    description="Retrieve Ivy-managed artifacts for the javadoc configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="jdiff-classpath" conf="jdiff"/>
+  </target>
+
+  <target name="ivy-retrieve-javadoc" depends="ivy-resolve-javadoc"
+    description="Retrieve Ivy-managed artifacts for the javadoc configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="javadoc-classpath" conf="javadoc"/>
+  </target>
+
+  <target name="ivy-retrieve-test" depends="ivy-resolve-test"
+    description="Retrieve Ivy-managed artifacts for the test configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="ivy-test.classpath" conf="test"/>
+  </target>
+
+  <target name="ivy-retrieve-common" depends="ivy-resolve-common"
+    description="Retrieve Ivy-managed artifacts for the compile configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="ivy-common.classpath" conf="common"/>
+  </target>
+
+  <target name="ivy-retrieve-releaseaudit" depends="ivy-resolve-releaseaudit"
+    description="Retrieve Ivy-managed artifacts for the compile configurations">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}" 
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
+  </target>
+
+  <target name="ivy-retrieve-system" depends="ivy-resolve-system"
+    description="Retrieve Ivy-managed artifacts for the system tests">
+    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
+      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
+        log="${ivyretrievelog}"/>
+    <ivy:cachepath pathid="ivy-test.classpath" conf="system"/>
+  </target>
+
+  <target name="ivy-report" depends="ivy-resolve-releaseaudit"
+    description="Generate">
+    <ivy:report todir="${build.ivy.report.dir}" settingsRef="${ant.project.name}.ivy.settings"/>
+    <echo>
+      Reports generated:${build.ivy.report.dir}
+    </echo>
+  </target>
+
+	<target name="jsvc" >
+    <mkdir dir="${jsvc.build.dir}" />
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
+
+    <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
+
+    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
+    <chmod perm="ugo+x" type="file">
+      <fileset file="${jsvc.install.dir}/jsvc"/>
+    </chmod>
+ </target>
+</project>

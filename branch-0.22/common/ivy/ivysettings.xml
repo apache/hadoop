@@ -1,0 +1,50 @@
+<ivysettings>
+ <!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+  <property name="repo.maven.org" value="http://repo1.maven.org/maven2/" override="false"/>
+
+  <property name="maven2.pattern" value="[organisation]/[module]/[revision]/[module]-[revision]"/>
+  <property name="repo.dir" value="${user.home}/.m2/repository"/>
+      <!-- pull in the local repository -->
+ <include url="${ivy.default.conf.dir}/ivyconf-local.xml"/> 
+
+ <property name="resolvers" value="default" override="false"/>
+  <property name="force-resolve" value="false" override="false"/>
+ <settings defaultResolver="${resolvers}"/>
+
+ <resolvers>
+   <!--ibiblio resolvers-->
+    <ibiblio name="maven2" root="${repo.maven.org}" m2compatible="true"/>
+
+    <filesystem name="fs" m2compatible="true" force="${force-resolve}">
+       <artifact pattern="${repo.dir}/${maven2.pattern}.[ext]"/>
+       <ivy pattern="${repo.dir}/${maven2.pattern}.pom"/>
+    </filesystem>
+
+    <chain name="default" dual="true">
+      <resolver ref="maven2"/>
+    </chain>
+
+    <chain name="internal" dual="true">
+      <resolver ref="fs"/>
+      <resolver ref="maven2"/>
+    </chain>
+
+  </resolvers>
+
+</ivysettings>
