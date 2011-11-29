@@ -464,8 +464,7 @@ public class DataNode extends Configured
     this.infoServer.addServlet(null, "/blockScannerReport", 
                                DataBlockScanner.Servlet.class);
 
-    if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
-        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+    if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
       infoServer.addJerseyResourcePackage(DatanodeWebHdfsMethods.class
           .getPackage().getName() + ";" + Param.class.getPackage().getName(),
           WebHdfsFileSystem.PATH_PREFIX + "/*");

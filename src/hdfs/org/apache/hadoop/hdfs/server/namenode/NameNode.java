@@ -359,8 +359,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
               infoPort == 0, conf, 
               SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN)) {
             {
-              if (conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
-                  DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT)) {
+              if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
                 //add SPNEGO authentication filter for webhdfs
                 final String name = "SPNEGO";
                 final String classname =  AuthFilter.class.getName();

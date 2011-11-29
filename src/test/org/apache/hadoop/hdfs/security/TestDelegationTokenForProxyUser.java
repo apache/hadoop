@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.ExceptionHandler;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
+import org.apache.hadoop.hdfs.web.resources.PostOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.TestDoAsEffectiveUser;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -105,6 +106,7 @@ public class TestDelegationTokenForProxyUser {
   public void setUp() throws Exception {
     config = new Configuration();
     config.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
+    config.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
     config.setLong(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(
@@ -197,9 +199,9 @@ public class TestDelegationTokenForProxyUser {
       Assert.assertEquals("/user/" + PROXY_USER, responsePath);
     }
 
+    final Path f = new Path("/testWebHdfsDoAs/a.txt");
     {
       //test create file with doAs
-      final Path f = new Path("/testWebHdfsDoAs/a.txt");
       final PutOpParam.Op op = PutOpParam.Op.CREATE;
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       WebHdfsTestUtil.LOG.info("url=" + url);
@@ -211,6 +213,22 @@ public class TestDelegationTokenForProxyUser {
   
       final FileStatus status = webhdfs.getFileStatus(f);
       WebHdfsTestUtil.LOG.info("status.getOwner()=" + status.getOwner());
+      Assert.assertEquals(PROXY_USER, status.getOwner());
+    }
+
+    {
+      //test append file with doAs
+      final PostOpParam.Op op = PostOpParam.Op.APPEND;
+      final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
+      out.write("\nHello again!".getBytes());
+      out.close();
+  
+      final FileStatus status = webhdfs.getFileStatus(f);
+      WebHdfsTestUtil.LOG.info("status.getOwner()=" + status.getOwner());
+      WebHdfsTestUtil.LOG.info("status.getLen()  =" + status.getLen());
       Assert.assertEquals(PROXY_USER, status.getOwner());
     }
   }
