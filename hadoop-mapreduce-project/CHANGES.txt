@@ -61,6 +61,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3413. RM web ui applications not sorted in any order by default.
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3045. Fixed UI filters to not filter on hidden title-numeric
+    sort fields. (Jonathan Eagles via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
