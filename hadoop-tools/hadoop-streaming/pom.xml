@@ -29,7 +29,7 @@
 
   <properties>
     <hadoop.log.dir>${project.build.directory}/log</hadoop.log.dir>
-    <test.exclude.pattern>%regex[.*(TestStreamingBadRecords|TestStreamingCombiner|TestStreamingStatus|TestUlimit).*]</test.exclude.pattern>
+    <test.exclude.pattern>%regex[.*(TestStreamingBadRecords|TestStreamingStatus|TestUlimit).*]</test.exclude.pattern>
   </properties>
 
   <dependencies>
