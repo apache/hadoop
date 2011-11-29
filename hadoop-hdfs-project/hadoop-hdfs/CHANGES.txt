@@ -1978,6 +1978,8 @@ Release 0.22.0 - Unreleased
     HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
     execution order of test methods (Laxman, Uma Maheswara Rao G via shv)
 
+    HDFS-2287. TestParallelRead has a small off-by-one bug. (todd)
+
 Release 0.21.1 - Unreleased
 
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
