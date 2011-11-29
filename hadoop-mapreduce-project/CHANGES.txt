@@ -6,6 +6,8 @@ Release 0.23.1 - Unreleased
 
   NEW FEATURES                                                                    
 
+    MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
+
   IMPROVEMENTS
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.
                     (Vinay Thota via amarrk)

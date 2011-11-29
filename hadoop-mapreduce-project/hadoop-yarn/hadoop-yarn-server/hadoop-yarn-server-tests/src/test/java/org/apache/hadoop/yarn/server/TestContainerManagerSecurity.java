@@ -117,7 +117,7 @@ public class TestContainerManagerSecurity {
     conf.setLong(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 100000L);
     UserGroupInformation.setConfiguration(conf);
     yarnCluster = new MiniYARNCluster(TestContainerManagerSecurity.class
-        .getName());
+        .getName(), 1, 1, 1);
     yarnCluster.init(conf);
     yarnCluster.start();
   }

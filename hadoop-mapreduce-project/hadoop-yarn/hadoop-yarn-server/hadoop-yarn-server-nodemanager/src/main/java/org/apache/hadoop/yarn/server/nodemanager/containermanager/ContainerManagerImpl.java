@@ -68,6 +68,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerManagerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
@@ -120,7 +121,8 @@ public class ContainerManagerImpl extends CompositeService implements
   private ContainerTokenSecretManager containerTokenSecretManager;
 
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  
+
+  protected LocalDirsHandlerService dirsHandler;
   protected final AsyncDispatcher dispatcher;
   private final ApplicationACLsManager aclsManager;
 
@@ -129,9 +131,12 @@ public class ContainerManagerImpl extends CompositeService implements
   public ContainerManagerImpl(Context context, ContainerExecutor exec,
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
       NodeManagerMetrics metrics, ContainerTokenSecretManager 
-      containerTokenSecretManager, ApplicationACLsManager aclsManager) {
+      containerTokenSecretManager, ApplicationACLsManager aclsManager,
+      LocalDirsHandlerService dirsHandler) {
     super(ContainerManagerImpl.class.getName());
     this.context = context;
+    this.dirsHandler = dirsHandler;
+
     dispatcher = new AsyncDispatcher();
     this.deletionService = deletionContext;
     this.metrics = metrics;
@@ -190,9 +195,10 @@ public class ContainerManagerImpl extends CompositeService implements
     if (conf.getBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED,
         YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_ENABLED)) {
       return new LogAggregationService(this.dispatcher, context,
-          deletionService);
+          deletionService, dirsHandler);
     } else {
-      return new NonAggregatingLogHandler(this.dispatcher, deletionService);
+      return new NonAggregatingLogHandler(this.dispatcher, deletionService,
+                                          dirsHandler);
     }
   }
 
@@ -203,12 +209,12 @@ public class ContainerManagerImpl extends CompositeService implements
   protected ResourceLocalizationService createResourceLocalizationService(
       ContainerExecutor exec, DeletionService deletionContext) {
     return new ResourceLocalizationService(this.dispatcher, exec,
-        deletionContext);
+        deletionContext, dirsHandler);
   }
 
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
-    return new ContainersLauncher(context, this.dispatcher, exec);
+    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler);
   }
 
   @Override

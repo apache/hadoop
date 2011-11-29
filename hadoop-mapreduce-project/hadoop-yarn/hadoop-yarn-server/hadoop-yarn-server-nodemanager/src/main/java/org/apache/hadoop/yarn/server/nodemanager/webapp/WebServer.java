@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -42,10 +43,11 @@ public class WebServer extends AbstractService {
   private WebApp webApp;
 
   public WebServer(Context nmContext, ResourceView resourceView,
-      ApplicationACLsManager aclsManager) {
+      ApplicationACLsManager aclsManager,
+      LocalDirsHandlerService dirsHandler) {
     super(WebServer.class.getName());
     this.nmContext = nmContext;
-    this.nmWebApp = new NMWebApp(resourceView, aclsManager);
+    this.nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
   }
 
   @Override
@@ -81,17 +83,21 @@ public class WebServer extends AbstractService {
 
     private final ResourceView resourceView;
     private final ApplicationACLsManager aclsManager;
+    private final LocalDirsHandlerService dirsHandler;
 
     public NMWebApp(ResourceView resourceView,
-        ApplicationACLsManager aclsManager) {
+        ApplicationACLsManager aclsManager,
+        LocalDirsHandlerService dirsHandler) {
       this.resourceView = resourceView;
       this.aclsManager = aclsManager;
+      this.dirsHandler = dirsHandler;
     }
 
     @Override
     public void setup() {
       bind(ResourceView.class).toInstance(this.resourceView);
       bind(ApplicationACLsManager.class).toInstance(this.aclsManager);
+      bind(LocalDirsHandlerService.class).toInstance(dirsHandler);
       route("/", NMController.class, "info");
       route("/node", NMController.class, "node");
       route("/allApplications", NMController.class, "allApplications");

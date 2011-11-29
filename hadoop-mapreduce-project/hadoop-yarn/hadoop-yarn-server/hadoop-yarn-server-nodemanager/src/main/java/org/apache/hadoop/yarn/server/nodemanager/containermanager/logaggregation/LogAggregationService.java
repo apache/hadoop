@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.LogHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
@@ -85,7 +86,7 @@ public class LogAggregationService extends AbstractService implements
   private final DeletionService deletionService;
   private final Dispatcher dispatcher;
 
-  private String[] localRootLogDirs;
+  private LocalDirsHandlerService dirsHandler;
   Path remoteRootLogDir;
   String remoteRootLogDirSuffix;
   private NodeId nodeId;
@@ -95,11 +96,12 @@ public class LogAggregationService extends AbstractService implements
   private final ExecutorService threadPool;
 
   public LogAggregationService(Dispatcher dispatcher, Context context,
-      DeletionService deletionService) {
+      DeletionService deletionService, LocalDirsHandlerService dirsHandler) {
     super(LogAggregationService.class.getName());
     this.dispatcher = dispatcher;
     this.context = context;
     this.deletionService = deletionService;
+    this.dirsHandler = dirsHandler;
     this.appLogAggregators =
         new ConcurrentHashMap<ApplicationId, AppLogAggregator>();
     this.threadPool = Executors.newCachedThreadPool(
@@ -109,9 +111,6 @@ public class LogAggregationService extends AbstractService implements
   }
 
   public synchronized void init(Configuration conf) {
-    this.localRootLogDirs =
-        conf.getStrings(YarnConfiguration.NM_LOG_DIRS,
-            YarnConfiguration.DEFAULT_NM_LOG_DIRS);
     this.remoteRootLogDir =
         new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
@@ -291,9 +290,10 @@ public class LogAggregationService extends AbstractService implements
 
     // New application
     AppLogAggregator appLogAggregator =
-        new AppLogAggregatorImpl(this.dispatcher, this.deletionService, getConfig(), appId,
-            userUgi, this.localRootLogDirs, 
-            getRemoteNodeLogFileForApp(appId, user), logRetentionPolicy, appAcls);
+        new AppLogAggregatorImpl(this.dispatcher, this.deletionService,
+            getConfig(), appId, userUgi, dirsHandler,
+            getRemoteNodeLogFileForApp(appId, user), logRetentionPolicy,
+            appAcls);
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
       throw new YarnException("Duplicate initApp for " + appId);
     }

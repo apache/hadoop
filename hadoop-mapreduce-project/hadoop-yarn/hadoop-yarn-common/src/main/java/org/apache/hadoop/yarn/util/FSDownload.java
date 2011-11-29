@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -56,7 +55,10 @@ public class FSDownload implements Callable<Path> {
   private final UserGroupInformation userUgi;
   private Configuration conf;
   private LocalResource resource;
-  private LocalDirAllocator dirs;
+  
+  /** The local FS dir path under which this resource is to be localized to */
+  private Path destDirPath;
+
   private static final FsPermission cachePerms = new FsPermission(
       (short) 0755);
   static final FsPermission PUBLIC_FILE_PERMS = new FsPermission((short) 0555);
@@ -65,10 +67,11 @@ public class FSDownload implements Callable<Path> {
   static final FsPermission PUBLIC_DIR_PERMS = new FsPermission((short) 0755);
   static final FsPermission PRIVATE_DIR_PERMS = new FsPermission((short) 0700);
 
+
   public FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
-      LocalDirAllocator dirs, LocalResource resource, Random rand) {
+      Path destDirPath, LocalResource resource, Random rand) {
     this.conf = conf;
-    this.dirs = dirs;
+    this.destDirPath = destDirPath;
     this.files = files;
     this.userUgi = ugi;
     this.resource = resource;
@@ -136,15 +139,13 @@ public class FSDownload implements Callable<Path> {
     }
 
     Path tmp;
-    Path dst =
-        dirs.getLocalPathForWrite(".", getEstimatedSize(resource),
-            conf);
     do {
-      tmp = new Path(dst, String.valueOf(rand.nextLong()));
+      tmp = new Path(destDirPath, String.valueOf(rand.nextLong()));
     } while (files.util().exists(tmp));
-    dst = tmp;
-    files.mkdir(dst, cachePerms, false);
-    final Path dst_work = new Path(dst + "_tmp");
+    destDirPath = tmp;
+
+    files.mkdir(destDirPath, cachePerms, false);
+    final Path dst_work = new Path(destDirPath + "_tmp");
     files.mkdir(dst_work, cachePerms, false);
 
     Path dFinal = files.makeQualified(new Path(dst_work, sCopy.getName()));
@@ -158,9 +159,9 @@ public class FSDownload implements Callable<Path> {
       });
       unpack(new File(dTmp.toUri()), new File(dFinal.toUri()));
       changePermissions(dFinal.getFileSystem(conf), dFinal);
-      files.rename(dst_work, dst, Rename.OVERWRITE);
+      files.rename(dst_work, destDirPath, Rename.OVERWRITE);
     } catch (Exception e) {
-      try { files.delete(dst, true); } catch (IOException ignore) { }
+      try { files.delete(destDirPath, true); } catch (IOException ignore) { }
       throw e;
     } finally {
       try {
@@ -170,9 +171,8 @@ public class FSDownload implements Callable<Path> {
       rand = null;
       conf = null;
       resource = null;
-      dirs = null;
     }
-    return files.makeQualified(new Path(dst, sCopy.getName()));
+    return files.makeQualified(new Path(destDirPath, sCopy.getName()));
   }
 
   /**
@@ -218,19 +218,6 @@ public class FSDownload implements Callable<Path> {
       for (FileStatus status : statuses) {
         changePermissions(fs, status.getPath());
       }
-    }
-  }
-
-  private static long getEstimatedSize(LocalResource rsrc) {
-    if (rsrc.getSize() < 0) {
-      return -1;
-    }
-    switch (rsrc.getType()) {
-      case ARCHIVE:
-        return 5 * rsrc.getSize();
-      case FILE:
-      default:
-        return rsrc.getSize();
     }
   }
 

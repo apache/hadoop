@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
@@ -53,15 +55,16 @@ public class NonAggregatingLogHandler extends AbstractService implements
   private final DeletionService delService;
   private final Map<ApplicationId, String> appOwners;
 
-  private String[] rootLogDirs;
+  private final LocalDirsHandlerService dirsHandler;
   private long deleteDelaySeconds;
   private ScheduledThreadPoolExecutor sched;
 
   public NonAggregatingLogHandler(Dispatcher dispatcher,
-      DeletionService delService) {
+      DeletionService delService, LocalDirsHandlerService dirsHandler) {
     super(NonAggregatingLogHandler.class.getName());
     this.dispatcher = dispatcher;
     this.delService = delService;
+    this.dirsHandler = dirsHandler;
     this.appOwners = new ConcurrentHashMap<ApplicationId, String>();
   }
 
@@ -70,9 +73,6 @@ public class NonAggregatingLogHandler extends AbstractService implements
     // Default 3 hours.
     this.deleteDelaySeconds =
         conf.getLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 3 * 60 * 60);
-    this.rootLogDirs =
-        conf.getStrings(YarnConfiguration.NM_LOG_DIRS,
-            YarnConfiguration.DEFAULT_NM_LOG_DIRS);
     sched = createScheduledThreadPoolExecutor(conf);
     super.init(conf);
   }
@@ -145,10 +145,11 @@ public class NonAggregatingLogHandler extends AbstractService implements
     @Override
     @SuppressWarnings("unchecked")
     public void run() {
-      Path[] localAppLogDirs =
-          new Path[NonAggregatingLogHandler.this.rootLogDirs.length];
+      List<String> rootLogDirs =
+          NonAggregatingLogHandler.this.dirsHandler.getLogDirs();
+      Path[] localAppLogDirs = new Path[rootLogDirs.size()];
       int index = 0;
-      for (String rootLogDir : NonAggregatingLogHandler.this.rootLogDirs) {
+      for (String rootLogDir : rootLogDirs) {
         localAppLogDirs[index] = new Path(rootLogDir, applicationId.toString());
         index++;
       }

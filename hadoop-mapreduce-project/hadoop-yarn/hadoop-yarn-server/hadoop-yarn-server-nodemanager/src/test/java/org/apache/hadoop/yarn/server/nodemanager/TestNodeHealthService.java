@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop;
+package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -88,24 +88,31 @@ public class TestNodeHealthService {
   public void testNodeHealthScriptShouldRun() throws IOException {
     // Node health script should not start if there is no property called
     // node health script path.
-    Assert.assertFalse("By default Health checker should not have started",
-        NodeHealthCheckerService.shouldRun(new Configuration()));
+    Assert.assertFalse("By default Health script should not have started",
+        NodeHealthScriptRunner.shouldRun(new Configuration()));
     Configuration conf = getConfForNodeHealthScript();
     // Node health script should not start if the node health script does not
     // exists
-    Assert.assertFalse("Node health script should start", NodeHealthCheckerService
-        .shouldRun(conf));
+    Assert.assertFalse("Node health script should start",
+        NodeHealthScriptRunner.shouldRun(conf));
     // Create script path.
     conf.writeXml(new FileOutputStream(nodeHealthConfigFile));
     conf.addResource(nodeHealthConfigFile.getName());
     writeNodeHealthScriptFile("", false);
     // Node health script should not start if the node health script is not
     // executable.
-    Assert.assertFalse("Node health script should start", NodeHealthCheckerService
-        .shouldRun(conf));
+    Assert.assertFalse("Node health script should start",
+        NodeHealthScriptRunner.shouldRun(conf));
     writeNodeHealthScriptFile("", true);
-    Assert.assertTrue("Node health script should start", NodeHealthCheckerService
-        .shouldRun(conf));
+    Assert.assertTrue("Node health script should start",
+        NodeHealthScriptRunner.shouldRun(conf));
+  }
+
+  private void setHealthStatus(NodeHealthStatus healthStatus, boolean isHealthy,
+      String healthReport, long lastHealthReportTime) {
+    healthStatus.setHealthReport(healthReport);
+    healthStatus.setIsNodeHealthy(isHealthy);
+    healthStatus.setLastHealthReportTime(lastHealthReportTime);
   }
 
   @Test
@@ -120,54 +127,67 @@ public class TestNodeHealthService {
     conf.writeXml(new FileOutputStream(nodeHealthConfigFile));
     conf.addResource(nodeHealthConfigFile.getName());
 
-    NodeHealthCheckerService nodeHealthChecker = new NodeHealthCheckerService(
-        conf);
-    TimerTask timer = nodeHealthChecker.getTimer();
     writeNodeHealthScriptFile(normalScript, true);
-    timer.run();
+    NodeHealthCheckerService nodeHealthChecker = new NodeHealthCheckerService();
+    nodeHealthChecker.init(conf);
+    NodeHealthScriptRunner nodeHealthScriptRunner =
+        nodeHealthChecker.getNodeHealthScriptRunner();
+    TimerTask timerTask = nodeHealthScriptRunner.getTimerTask();
 
-    nodeHealthChecker.setHealthStatus(healthStatus);
+    timerTask.run();
+
+    setHealthStatus(healthStatus, nodeHealthChecker.isHealthy(),
+        nodeHealthChecker.getHealthReport(),
+        nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking initial healthy condition");
     // Check proper report conditions.
     Assert.assertTrue("Node health status reported unhealthy", healthStatus
         .getIsNodeHealthy());
     Assert.assertTrue("Node health status reported unhealthy", healthStatus
-        .getHealthReport().isEmpty());
+        .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
 
     // write out error file.
     // Healthy to unhealthy transition
     writeNodeHealthScriptFile(errorScript, true);
     // Run timer
-    timer.run();
+    timerTask.run();
     // update health status
-    nodeHealthChecker.setHealthStatus(healthStatus);
+    setHealthStatus(healthStatus, nodeHealthChecker.isHealthy(),
+        nodeHealthChecker.getHealthReport(),
+        nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking Healthy--->Unhealthy");
     Assert.assertFalse("Node health status reported healthy", healthStatus
         .getIsNodeHealthy());
-    Assert.assertFalse("Node health status reported healthy", healthStatus
-        .getHealthReport().isEmpty());
+    Assert.assertTrue("Node health status reported healthy", healthStatus
+        .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
     
     // Check unhealthy to healthy transitions.
     writeNodeHealthScriptFile(normalScript, true);
-    timer.run();
-    nodeHealthChecker.setHealthStatus(healthStatus);
+    timerTask.run();
+    setHealthStatus(healthStatus, nodeHealthChecker.isHealthy(),
+        nodeHealthChecker.getHealthReport(),
+        nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking UnHealthy--->healthy");
     // Check proper report conditions.
     Assert.assertTrue("Node health status reported unhealthy", healthStatus
         .getIsNodeHealthy());
     Assert.assertTrue("Node health status reported unhealthy", healthStatus
-        .getHealthReport().isEmpty());
+        .getHealthReport().equals(nodeHealthChecker.getHealthReport()));
 
     // Healthy to timeout transition.
     writeNodeHealthScriptFile(timeOutScript, true);
-    timer.run();
-    nodeHealthChecker.setHealthStatus(healthStatus);
+    timerTask.run();
+    setHealthStatus(healthStatus, nodeHealthChecker.isHealthy(),
+        nodeHealthChecker.getHealthReport(),
+        nodeHealthChecker.getLastHealthReportTime());
     LOG.info("Checking Healthy--->timeout");
     Assert.assertFalse("Node health status reported healthy even after timeout",
         healthStatus.getIsNodeHealthy());
-    Assert.assertEquals("Node time out message not propogated", healthStatus
-        .getHealthReport(),
-        NodeHealthCheckerService.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG);
+    Assert.assertTrue("Node script time out message not propogated",
+        healthStatus.getHealthReport().equals(
+            NodeHealthScriptRunner.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG
+            + NodeHealthCheckerService.SEPARATOR
+            + nodeHealthChecker.getDiskHandler().getDisksHealthReport()));
   }
 
 }

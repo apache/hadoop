@@ -25,6 +25,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap.SimpleEntry;
@@ -649,7 +650,8 @@ public class TestContainer {
 
     public void containerFailed(int exitCode) {
       c.handle(new ContainerExitEvent(cId,
-          ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, exitCode));
+          ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, exitCode,
+          "Container completed with exit code " + exitCode));
       drainDispatcherEvents();
     }
 
@@ -659,9 +661,10 @@ public class TestContainer {
     }
 
     public void containerKilledOnRequest() {
+      int exitCode = ExitCode.FORCE_KILLED.getExitCode();
       c.handle(new ContainerExitEvent(cId,
-          ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ExitCode.FORCE_KILLED
-              .getExitCode()));
+          ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
+          "Container completed with exit code " + exitCode));
       drainDispatcherEvents();
     }
     

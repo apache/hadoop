@@ -45,12 +45,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -61,7 +59,6 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResour
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.ResourceStatusType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerSecurityInfo;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.security.LocalizerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -186,16 +183,30 @@ public class ContainerLocalizer {
   }
 
   Callable<Path> download(LocalDirAllocator lda, LocalResource rsrc,
-      UserGroupInformation ugi) {
-    return new FSDownload(lfs, ugi, conf, lda, rsrc, new Random());
+      UserGroupInformation ugi) throws IOException {
+    Path destPath = lda.getLocalPathForWrite(".", getEstimatedSize(rsrc), conf);
+    return new FSDownload(lfs, ugi, conf, destPath, rsrc, new Random());
+  }
+
+  static long getEstimatedSize(LocalResource rsrc) {
+    if (rsrc.getSize() < 0) {
+      return -1;
+    }
+    switch (rsrc.getType()) {
+      case ARCHIVE:
+        return 5 * rsrc.getSize();
+      case FILE:
+      default:
+        return rsrc.getSize();
+    }
   }
 
   void sleep(int duration) throws InterruptedException {
     TimeUnit.SECONDS.sleep(duration);
   }
 
-  private void localizeFiles(LocalizationProtocol nodemanager, ExecutorService exec,
-      UserGroupInformation ugi) {
+  private void localizeFiles(LocalizationProtocol nodemanager,
+      ExecutorService exec, UserGroupInformation ugi) throws IOException {
     while (true) {
       try {
         LocalizerStatus status = createStatus();

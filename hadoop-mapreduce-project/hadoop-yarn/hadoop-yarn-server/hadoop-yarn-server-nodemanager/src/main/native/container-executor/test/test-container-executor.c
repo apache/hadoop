@@ -28,10 +28,17 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#define TEST_ROOT "/tmp/test-container-controller"
+#define TEST_ROOT "/tmp/test-container-executor"
 #define DONT_TOUCH_FILE "dont-touch-me"
+#define NM_LOCAL_DIRS       TEST_ROOT "/local-1," TEST_ROOT "/local-2," \
+               TEST_ROOT "/local-3," TEST_ROOT "/local-4," TEST_ROOT "/local-5"
+#define NM_LOG_DIRS         TEST_ROOT "/logdir_1," TEST_ROOT "/logdir_2," \
+                            TEST_ROOT "/logdir_3," TEST_ROOT "/logdir_4"
+#define ARRAY_SIZE 1000
 
 static char* username = NULL;
+static char* local_dirs = NULL;
+static char* log_dirs = NULL;
 
 /**
  * Run the command using the effective user id.
@@ -84,40 +91,33 @@ void run(const char *cmd) {
 
 int write_config_file(char *file_name) {
   FILE *file;
-  int i = 0;
   file = fopen(file_name, "w");
   if (file == NULL) {
     printf("Failed to open %s.\n", file_name);
     return EXIT_FAILURE;
   }
-  fprintf(file, "yarn.nodemanager.local-dirs=" TEST_ROOT "/local-1");
-  for(i=2; i < 5; ++i) {
-    fprintf(file, "," TEST_ROOT "/local-%d", i);
-  }
-  fprintf(file, "\n");
-  fprintf(file, "yarn.nodemanager.log-dirs=" TEST_ROOT "/logs\n");
+  fprintf(file, "banned.users=bannedUser\n");
+  fprintf(file, "min.user.id=1000\n");
   fclose(file);
   return 0;
 }
 
-void create_nm_roots() {
-  char** nm_roots = get_values(NM_SYS_DIR_KEY);
+void create_nm_roots(char ** nm_roots) {
   char** nm_root;
   for(nm_root=nm_roots; *nm_root != NULL; ++nm_root) {
     if (mkdir(*nm_root, 0755) != 0) {
       printf("FAIL: Can't create directory %s - %s\n", *nm_root,
-	     strerror(errno));
+             strerror(errno));
       exit(1);
     }
     char buffer[100000];
     sprintf(buffer, "%s/usercache", *nm_root);
     if (mkdir(buffer, 0755) != 0) {
       printf("FAIL: Can't create directory %s - %s\n", buffer,
-	     strerror(errno));
+             strerror(errno));
       exit(1);
     }
   }
-  free_values(nm_roots);
 }
 
 void test_get_user_directory() {
@@ -209,7 +209,7 @@ void test_check_configuration_permissions() {
 }
 
 void test_delete_container() {
-  if (initialize_user(username)) {
+  if (initialize_user(username, extract_values(local_dirs))) {
     printf("FAIL: failed to initialize user %s\n", username);
     exit(1);
   }
@@ -504,7 +504,8 @@ void test_init_app() {
     exit(1);
   } else if (child == 0) {
     char *final_pgm[] = {"touch", "my-touch-file", 0};
-    if (initialize_app(username, "app_4", TEST_ROOT "/creds.txt", final_pgm) != 0) {
+    if (initialize_app(username, "app_4", TEST_ROOT "/creds.txt", final_pgm,
+        extract_values(local_dirs), extract_values(log_dirs)) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -598,7 +599,8 @@ void test_run_container() {
     exit(1);
   } else if (child == 0) {
     if (launch_container_as_user(username, "app_4", "container_1", 
-                         container_dir, script_name, TEST_ROOT "/creds.txt", pid_file) != 0) {
+          container_dir, script_name, TEST_ROOT "/creds.txt", pid_file,
+          extract_values(local_dirs), extract_values(log_dirs)) != 0) {
       printf("FAIL: failed in child\n");
       exit(42);
     }
@@ -677,7 +679,12 @@ int main(int argc, char **argv) {
   }
   read_config(TEST_ROOT "/test.cfg");
 
-  create_nm_roots();
+  local_dirs = (char *) malloc (sizeof(char) * ARRAY_SIZE);
+  strcpy(local_dirs, NM_LOCAL_DIRS);
+  log_dirs = (char *) malloc (sizeof(char) * ARRAY_SIZE);
+  strcpy(log_dirs, NM_LOG_DIRS);
+
+  create_nm_roots(extract_values(local_dirs));
 
   if (getuid() == 0 && argc == 2) {
     username = argv[1];

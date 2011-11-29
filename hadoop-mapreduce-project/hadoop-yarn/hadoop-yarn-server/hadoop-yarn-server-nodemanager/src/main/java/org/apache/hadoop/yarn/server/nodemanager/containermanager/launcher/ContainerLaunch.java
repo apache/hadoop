@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.DelayedProcessKiller;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
@@ -78,7 +79,6 @@ public class ContainerLaunch implements Callable<Integer> {
   private final Application app;
   private final Container container;
   private final Configuration conf;
-  private final LocalDirAllocator logDirsSelector;
   
   private volatile AtomicBoolean shouldLaunchContainer = new AtomicBoolean(false);
   private volatile AtomicBoolean completed = new AtomicBoolean(false);
@@ -88,14 +88,17 @@ public class ContainerLaunch implements Callable<Integer> {
 
   private Path pidFilePath = null;
 
+  private final LocalDirsHandlerService dirsHandler;
+
   public ContainerLaunch(Configuration configuration, Dispatcher dispatcher,
-      ContainerExecutor exec, Application app, Container container) {
+      ContainerExecutor exec, Application app, Container container,
+      LocalDirsHandlerService dirsHandler) {
     this.conf = configuration;
     this.app = app;
     this.exec = exec;
     this.container = container;
     this.dispatcher = dispatcher;
-    this.logDirsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
+    this.dirsHandler = dirsHandler;
     this.sleepDelayBeforeSigKill =
         conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
             YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS);
@@ -121,9 +124,8 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> newCmds = new ArrayList<String>(command.size());
       String appIdStr = app.getAppId().toString();
       Path containerLogDir =
-          this.logDirsSelector.getLocalPathForWrite(ContainerLaunch
-              .getRelativeContainerLogDir(appIdStr, containerIdStr),
-              LocalDirAllocator.SIZE_UNKNOWN, this.conf, false);
+          dirsHandler.getLogPathForWrite(ContainerLaunch
+              .getRelativeContainerLogDir(appIdStr, containerIdStr), false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
         newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
@@ -144,47 +146,49 @@ public class ContainerLaunch implements Callable<Integer> {
       // /////////////////////////// End of variable expansion
 
       FileContext lfs = FileContext.getLocalFSFileContext();
-      LocalDirAllocator lDirAllocator =
-          new LocalDirAllocator(YarnConfiguration.NM_LOCAL_DIRS); // TODO
 
       Path nmPrivateContainerScriptPath =
-          lDirAllocator.getLocalPathForWrite(
+          dirsHandler.getLocalPathForWrite(
               getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-                  + CONTAINER_SCRIPT, this.conf);
+                  + CONTAINER_SCRIPT);
       Path nmPrivateTokensPath =
-          lDirAllocator.getLocalPathForWrite(
+          dirsHandler.getLocalPathForWrite(
               getContainerPrivateDir(appIdStr, containerIdStr)
                   + Path.SEPARATOR
                   + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-                      containerIdStr), this.conf);
+                      containerIdStr));
 
       DataOutputStream containerScriptOutStream = null;
       DataOutputStream tokensOutStream = null;
 
       // Select the working directory for the container
       Path containerWorkDir =
-          lDirAllocator.getLocalPathForWrite(ContainerLocalizer.USERCACHE
+          dirsHandler.getLocalPathForWrite(ContainerLocalizer.USERCACHE
               + Path.SEPARATOR + user + Path.SEPARATOR
               + ContainerLocalizer.APPCACHE + Path.SEPARATOR + appIdStr
               + Path.SEPARATOR + containerIdStr,
-              LocalDirAllocator.SIZE_UNKNOWN, this.conf, false);
+              LocalDirAllocator.SIZE_UNKNOWN, false);
 
       String pidFileSuffix = String.format(ContainerLaunch.PID_FILE_NAME_FMT,
           containerIdStr);
 
       // pid file should be in nm private dir so that it is not 
       // accessible by users
-      pidFilePath = lDirAllocator.getLocalPathForWrite(
+      pidFilePath = dirsHandler.getLocalPathForWrite(
           ResourceLocalizationService.NM_PRIVATE_DIR + Path.SEPARATOR 
-          + pidFileSuffix,
-          this.conf);
+          + pidFileSuffix);
+      List<String> localDirs = dirsHandler.getLocalDirs();
+      List<String> logDirs = dirsHandler.getLogDirs();
+
+      if (!dirsHandler.areDisksHealthy()) {
+        ret = ExitCode.DISKS_FAILED.getExitCode();
+        throw new IOException("Most of the disks failed. "
+            + dirsHandler.getDisksHealthReport());
+      }
 
       try {
         // /////////// Write out the container-script in the nmPrivate space.
-        String[] localDirs =
-            this.conf.getStrings(YarnConfiguration.NM_LOCAL_DIRS,
-                YarnConfiguration.DEFAULT_NM_LOCAL_DIRS);
-        List<Path> appDirs = new ArrayList<Path>(localDirs.length);
+        List<Path> appDirs = new ArrayList<Path>(localDirs.size());
         for (String localDir : localDirs) {
           Path usersdir = new Path(localDir, ContainerLocalizer.USERCACHE);
           Path userdir = new Path(usersdir, user);
@@ -234,30 +238,34 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       else {
         exec.activateContainer(containerID, pidFilePath);
-        ret =
-            exec.launchContainer(container, nmPrivateContainerScriptPath,
-                nmPrivateTokensPath, user, appIdStr, containerWorkDir);
+        ret = exec.launchContainer(container, nmPrivateContainerScriptPath,
+                nmPrivateTokensPath, user, appIdStr, containerWorkDir,
+                localDirs, logDirs);
       }
     } catch (Throwable e) {
-      LOG.warn("Failed to launch container", e);
+      LOG.warn("Failed to launch container.", e);
       dispatcher.getEventHandler().handle(new ContainerExitEvent(
             launchContext.getContainerId(),
-            ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret));
+            ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+            e.getMessage()));
       return ret;
     } finally {
       completed.set(true);
       exec.deactivateContainer(containerID);
     }
 
-    LOG.debug("Container " + containerIdStr + " completed with exit code "
-        + ret);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Container " + containerIdStr + " completed with exit code "
+                + ret);
+    }
     if (ret == ExitCode.FORCE_KILLED.getExitCode()
         || ret == ExitCode.TERMINATED.getExitCode()) {
       // If the process was killed, Send container_cleanedup_after_kill and
       // just break out of this method.
       dispatcher.getEventHandler().handle(
             new ContainerExitEvent(launchContext.getContainerId(),
-                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret));
+                ContainerEventType.CONTAINER_KILLED_ON_REQUEST, ret,
+                "Container exited with a non-zero exit code " + ret));
       return ret;
     }
 
@@ -265,7 +273,8 @@ public class ContainerLaunch implements Callable<Integer> {
       LOG.warn("Container exited with a non-zero exit code " + ret);
       this.dispatcher.getEventHandler().handle(new ContainerExitEvent(
               launchContext.getContainerId(),
-              ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret));
+              ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, ret,
+              "Container exited with a non-zero exit code " + ret));
       return ret;
     }
 

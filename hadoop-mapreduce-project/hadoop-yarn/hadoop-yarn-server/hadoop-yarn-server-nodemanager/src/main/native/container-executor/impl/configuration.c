@@ -261,8 +261,15 @@ char * get_value(const char* key) {
  * Value delimiter is assumed to be a comma.
  */
 char ** get_values(const char * key) {
-  char ** toPass = NULL;
   char *value = get_value(key);
+  return extract_values(value);
+}
+
+/**
+ * Extracts array of values from the comma separated list of values.
+ */
+char ** extract_values(char *value) {
+  char ** toPass = NULL;
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
@@ -276,8 +283,7 @@ char ** get_values(const char * key) {
       toPass[size++] = tempTok;
       if(size == toPassSize) {
         toPassSize += MAX_SIZE;
-        toPass = (char **) realloc(toPass,(sizeof(char *) *
-                                           (MAX_SIZE * toPassSize)));
+        toPass = (char **) realloc(toPass,(sizeof(char *) * toPassSize));
       }
       tempTok = strtok_r(NULL, ",", &tempstr);
     }

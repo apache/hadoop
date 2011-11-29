@@ -34,15 +34,14 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
@@ -87,17 +86,18 @@ public class ContainerLogsPage extends NMView {
   public static class ContainersLogsBlock extends HtmlBlock implements
       YarnWebParams {    
     private final Configuration conf;
-    private final LocalDirAllocator logsSelector;
     private final Context nmContext;
     private final ApplicationACLsManager aclsManager;
+    private final LocalDirsHandlerService dirsHandler;
 
     @Inject
     public ContainersLogsBlock(Configuration conf, Context context,
-        ApplicationACLsManager aclsManager) {
+        ApplicationACLsManager aclsManager,
+        LocalDirsHandlerService dirsHandler) {
       this.conf = conf;
-      this.logsSelector = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);
       this.nmContext = context;
       this.aclsManager = aclsManager;
+      this.dirsHandler = dirsHandler;
     }
 
     @Override
@@ -198,11 +198,10 @@ public class ContainerLogsPage extends NMView {
         File logFile = null;
         try {
           logFile =
-              new File(this.logsSelector
-                  .getLocalPathToRead(
-                      ContainerLaunch.getRelativeContainerLogDir(
-                          applicationId.toString(), containerId.toString())
-                          + Path.SEPARATOR + $(CONTAINER_LOG_TYPE), this.conf)
+              new File(this.dirsHandler.getLogPathToRead(
+                  ContainerLaunch.getRelativeContainerLogDir(
+                  applicationId.toString(), containerId.toString())
+                  + Path.SEPARATOR + $(CONTAINER_LOG_TYPE))
                   .toUri().getPath());
         } catch (Exception e) {
           html.h1("Cannot find this log on the local disk.");
@@ -272,8 +271,8 @@ public class ContainerLogsPage extends NMView {
         }
       } else {
         // Just print out the log-types
-        List<File> containerLogsDirs =
-            getContainerLogDirs(this.conf, containerId);
+        List<File> containerLogsDirs = getContainerLogDirs(containerId,
+            dirsHandler);
         boolean foundLogFile = false;
         for (File containerLogsDir : containerLogsDirs) {
           for (File logFile : containerLogsDir.listFiles()) {
@@ -293,11 +292,10 @@ public class ContainerLogsPage extends NMView {
       return;
     }
 
-    static List<File>
-        getContainerLogDirs(Configuration conf, ContainerId containerId) {
-      String[] logDirs = conf.getStrings(YarnConfiguration.NM_LOG_DIRS,
-          YarnConfiguration.DEFAULT_NM_LOG_DIRS);
-      List<File> containerLogDirs = new ArrayList<File>(logDirs.length);
+    static List<File> getContainerLogDirs(ContainerId containerId,
+            LocalDirsHandlerService dirsHandler) {
+      List<String> logDirs = dirsHandler.getLogDirs();
+      List<File> containerLogDirs = new ArrayList<File>(logDirs.size());
       for (String logDir : logDirs) {
         String appIdStr = 
             ConverterUtils.toString(
