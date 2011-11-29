@@ -21,12 +21,15 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -155,7 +158,7 @@ public class GetConf extends Configured implements Tool {
   static class NameNodesCommandHandler extends CommandHandler {
     @Override
     int doWorkInternal(GetConf tool) throws IOException {
-      tool.printList(DFSUtil.getNNServiceRpcAddresses(tool.getConf()));
+      tool.printMap(DFSUtil.getNNServiceRpcAddresses(tool.getConf()));
       return 0;
     }
   }
@@ -166,7 +169,7 @@ public class GetConf extends Configured implements Tool {
   static class BackupNodesCommandHandler extends CommandHandler {
     @Override
     public int doWorkInternal(GetConf tool) throws IOException {
-      tool.printList(DFSUtil.getBackupNodeAddresses(tool.getConf()));
+      tool.printMap(DFSUtil.getBackupNodeAddresses(tool.getConf()));
       return 0;
     }
   }
@@ -177,7 +180,7 @@ public class GetConf extends Configured implements Tool {
   static class SecondaryNameNodesCommandHandler extends CommandHandler {
     @Override
     public int doWorkInternal(GetConf tool) throws IOException {
-      tool.printList(DFSUtil.getSecondaryNameNodeAddresses(tool.getConf()));
+      tool.printMap(DFSUtil.getSecondaryNameNodeAddresses(tool.getConf()));
       return 0;
     }
   }
@@ -191,9 +194,11 @@ public class GetConf extends Configured implements Tool {
     @Override
     public int doWorkInternal(GetConf tool) throws IOException {
       Configuration config = tool.getConf();
-      List<InetSocketAddress> rpclist = DFSUtil.getNNServiceRpcAddresses(config);
-      if (rpclist != null) {
-        for (InetSocketAddress rpc : rpclist) {
+      List<ConfiguredNNAddress> cnnlist = DFSUtil.flattenAddressMap(
+          DFSUtil.getNNServiceRpcAddresses(config));
+      if (!cnnlist.isEmpty()) {
+        for (ConfiguredNNAddress cnn : cnnlist) {
+          InetSocketAddress rpc = cnn.getAddress();
           tool.printOut(rpc.getHostName()+":"+rpc.getPort());
         }
         return 0;
@@ -223,10 +228,13 @@ public class GetConf extends Configured implements Tool {
   void printOut(String message) {
     out.println(message);
   }
-
-  void printList(List<InetSocketAddress> list) {
+  
+  void printMap(Map<String, Map<String, InetSocketAddress>> map) {
     StringBuilder buffer = new StringBuilder();
-    for (InetSocketAddress address : list) {
+
+    List<ConfiguredNNAddress> cnns = DFSUtil.flattenAddressMap(map);
+    for (ConfiguredNNAddress cnn : cnns) {
+      InetSocketAddress address = cnn.getAddress();
       if (buffer.length() > 0) {
         buffer.append(" ");
       }

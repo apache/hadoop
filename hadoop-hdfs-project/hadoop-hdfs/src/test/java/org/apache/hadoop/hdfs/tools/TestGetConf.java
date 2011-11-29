@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 import static org.junit.Assert.*;
@@ -32,6 +33,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.GetConf;
@@ -80,13 +82,13 @@ public class TestGetConf {
   }
 
   /*
-   * Convert list of InetSocketAddress to string array with each address
-   * represented as "host:port"
+   * Convert the map returned from DFSUtil functions to an array of
+   * addresses represented as "host:port"
    */
-  private String[] toStringArray(List<InetSocketAddress> list) {
+  private String[] toStringArray(List<ConfiguredNNAddress> list) {
     String[] ret = new String[list.size()];
     for (int i = 0; i < list.size(); i++) {
-      ret[i] = NameNode.getHostPortString(list.get(i));
+      ret[i] = NameNode.getHostPortString(list.get(i).getAddress());
     }
     return ret;
   }
@@ -94,8 +96,8 @@ public class TestGetConf {
   /**
    * Using DFSUtil methods get the list of given {@code type} of address
    */
-  private List<InetSocketAddress> getAddressListFromConf(TestType type,
-      HdfsConfiguration conf) throws IOException {
+  private Map<String, Map<String, InetSocketAddress>> getAddressListFromConf(
+      TestType type, HdfsConfiguration conf) throws IOException {
     switch (type) {
     case NAMENODE:
       return DFSUtil.getNNServiceRpcAddresses(conf);
@@ -161,7 +163,7 @@ public class TestGetConf {
    * @param expected, expected addresses
    */
   private void getAddressListFromTool(TestType type, HdfsConfiguration conf,
-      boolean checkPort, List<InetSocketAddress> expected) throws Exception {
+      boolean checkPort, List<ConfiguredNNAddress> expected) throws Exception {
     String out = getAddressListFromTool(type, conf, expected.size() != 0);
     List<String> values = new ArrayList<String>();
     
@@ -176,7 +178,8 @@ public class TestGetConf {
     // Convert expected list to String[] of hosts
     int i = 0;
     String[] expectedHosts = new String[expected.size()];
-    for (InetSocketAddress addr : expected) {
+    for (ConfiguredNNAddress cnn : expected) {
+      InetSocketAddress addr = cnn.getAddress();
       if (!checkPort) {
         expectedHosts[i++] = addr.getHostName();
       }else {
@@ -191,7 +194,9 @@ public class TestGetConf {
   private void verifyAddresses(HdfsConfiguration conf, TestType type,
       boolean checkPort, String... expected) throws Exception {
     // Ensure DFSUtil returned the right set of addresses
-    List<InetSocketAddress> list = getAddressListFromConf(type, conf);
+    Map<String, Map<String, InetSocketAddress>> map =
+      getAddressListFromConf(type, conf);
+    List<ConfiguredNNAddress> list = DFSUtil.flattenAddressMap(map);
     String[] actual = toStringArray(list);
     Arrays.sort(actual);
     Arrays.sort(expected);

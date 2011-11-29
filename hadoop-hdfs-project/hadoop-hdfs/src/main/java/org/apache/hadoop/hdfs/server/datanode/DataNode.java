@@ -77,6 +77,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -92,6 +93,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -168,6 +170,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 
 /**********************************************************
@@ -251,8 +255,14 @@ public class DataNode extends Configured
       bpMapping = new HashMap<String, BPOfferService>();
       nameNodeThreads = new HashMap<InetSocketAddress, BPOfferService>();
   
-      List<InetSocketAddress> isas = DFSUtil.getNNServiceRpcAddresses(conf);
-      for(InetSocketAddress isa : isas) {
+      Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtil.getNNServiceRpcAddresses(conf);
+      for (Entry<String, Map<String, InetSocketAddress>> entry :
+           map.entrySet()) {
+        List<InetSocketAddress> nnList = Lists.newArrayList(entry.getValue().values());
+        // TODO(HA) when HDFS-1971 (dual BRs) is done, pass all of the NNs
+        // to BPOS
+        InetSocketAddress isa = nnList.get(0);
         BPOfferService bpos = new BPOfferService(isa, DataNode.this);
         nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
       }
@@ -333,8 +343,16 @@ public class DataNode extends Configured
         throws IOException {
       LOG.info("Refresh request received for nameservices: "
           + conf.get(DFS_FEDERATION_NAMESERVICES));
-      List<InetSocketAddress> newAddresses = 
+      
+      // TODO(HA): need to update this for multiple NNs per nameservice
+      // For now, just list all of the NNs into this set
+      Map<String, Map<String, InetSocketAddress>> newAddressMap = 
         DFSUtil.getNNServiceRpcAddresses(conf);
+      Set<InetSocketAddress> newAddresses = Sets.newHashSet();
+      for (ConfiguredNNAddress cnn : DFSUtil.flattenAddressMap(newAddressMap)) {
+        newAddresses.add(cnn.getAddress());
+      }
+      
       List<BPOfferService> toShutdown = new ArrayList<BPOfferService>();
       List<InetSocketAddress> toStart = new ArrayList<InetSocketAddress>();
       synchronized (refreshNamenodesLock) {

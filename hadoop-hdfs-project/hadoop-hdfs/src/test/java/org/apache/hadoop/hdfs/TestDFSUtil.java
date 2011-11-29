@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -183,14 +184,19 @@ public class TestDFSUtil {
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY, "nn2"),
         NN2_ADDRESS);
 
-    Collection<InetSocketAddress> nnAddresses = DFSUtil
+    Map<String, Map<String, InetSocketAddress>> nnMap = DFSUtil
         .getNNServiceRpcAddresses(conf);
-    assertEquals(2, nnAddresses.size());
-    Iterator<InetSocketAddress> iterator = nnAddresses.iterator();
-    InetSocketAddress addr = iterator.next();
+    assertEquals(2, nnMap.size());
+    
+    Map<String, InetSocketAddress> nn1Map = nnMap.get("nn1");
+    assertEquals(1, nn1Map.size());
+    InetSocketAddress addr = nn1Map.get(null);
     assertEquals("localhost", addr.getHostName());
     assertEquals(9000, addr.getPort());
-    addr = iterator.next();
+    
+    Map<String, InetSocketAddress> nn2Map = nnMap.get("nn2");
+    assertEquals(1, nn2Map.size());
+    addr = nn2Map.get(null);
     assertEquals("localhost", addr.getHostName());
     assertEquals(9001, addr.getPort());
 
@@ -237,9 +243,14 @@ public class TestDFSUtil {
     conf.set(FS_DEFAULT_NAME_KEY, hdfs_default);
     // If DFS_FEDERATION_NAMESERVICES is not set, verify that
     // default namenode address is returned.
-    List<InetSocketAddress> addrList = DFSUtil.getNNServiceRpcAddresses(conf);
-    assertEquals(1, addrList.size());
-    assertEquals(9999, addrList.get(0).getPort());
+    Map<String, Map<String, InetSocketAddress>> addrMap =
+      DFSUtil.getNNServiceRpcAddresses(conf);
+    assertEquals(1, addrMap.size());
+    
+    Map<String, InetSocketAddress> defaultNsMap = addrMap.get(null);
+    assertEquals(1, defaultNsMap.size());
+    
+    assertEquals(9999, defaultNsMap.get(null).getPort());
   }
   
   /**
@@ -279,22 +290,28 @@ public class TestDFSUtil {
   public void testEmptyConf() {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     try {
-      DFSUtil.getNNServiceRpcAddresses(conf);
-      fail("Expected IOException is not thrown");
+      Map<String, Map<String, InetSocketAddress>> map =
+          DFSUtil.getNNServiceRpcAddresses(conf);
+      fail("Expected IOException is not thrown, result was: " +
+          DFSUtil.addressMapToString(map));
     } catch (IOException expected) {
       /** Expected */
     }
 
     try {
-      DFSUtil.getBackupNodeAddresses(conf);
-      fail("Expected IOException is not thrown");
+      Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtil.getBackupNodeAddresses(conf);
+      fail("Expected IOException is not thrown, result was: " +
+          DFSUtil.addressMapToString(map));
     } catch (IOException expected) {
       /** Expected */
     }
 
     try {
-      DFSUtil.getSecondaryNameNodeAddresses(conf);
-      fail("Expected IOException is not thrown");
+      Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtil.getSecondaryNameNodeAddresses(conf);
+      fail("Expected IOException is not thrown, result was: " +
+          DFSUtil.addressMapToString(map));
     } catch (IOException expected) {
       /** Expected */
     }
@@ -309,6 +326,45 @@ public class TestDFSUtil {
     assertEquals("0.0.0.0:50470", httpsport);
     String httpport = DFSUtil.getInfoServer(null, conf, false);
     assertEquals("0.0.0.0:50070", httpport);
+  }
+  
+  @Test
+  public void testHANameNodesWithFederation() {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    
+    final String NS1_NN1_HOST = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_HOST = "ns1-nn2.example.com:8020";
+    final String NS2_NN1_HOST = "ns2-nn1.example.com:8020";
+    final String NS2_NN2_HOST = "ns2-nn2.example.com:8020";
+    
+    // Two nameservices, each with two NNs.
+    conf.set(DFS_FEDERATION_NAMESERVICES, "ns1,ns2");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, "ns1"),
+        "ns1-nn1,ns1-nn2");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, "ns2"),
+        "ns2-nn1,ns2-nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+          DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "ns1-nn1"),
+        NS1_NN1_HOST);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "ns1-nn2"),
+        NS1_NN2_HOST);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "ns2-nn1"),
+        NS2_NN1_HOST);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "ns2-nn2"),
+        NS2_NN2_HOST);
+    
+    Map<String, Map<String, InetSocketAddress>> map =
+      DFSUtil.getHaNnRpcAddresses(conf);
+    System.err.println("TestHANameNodesWithFederation:\n" +
+        DFSUtil.addressMapToString(map));
+    
+    assertEquals(NS1_NN1_HOST, map.get("ns1").get("ns1-nn1").toString());
+    assertEquals(NS1_NN2_HOST, map.get("ns1").get("ns1-nn2").toString());
+    assertEquals(NS2_NN1_HOST, map.get("ns2").get("ns2-nn1").toString());
+    assertEquals(NS2_NN2_HOST, map.get("ns2").get("ns2-nn2").toString());
   }
 
 }

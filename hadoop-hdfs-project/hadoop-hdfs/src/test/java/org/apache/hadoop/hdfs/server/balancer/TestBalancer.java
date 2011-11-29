@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -330,8 +331,8 @@ public class TestBalancer extends TestCase {
     waitForHeartBeat(totalUsedSpace, totalCapacity);
 
     // start rebalancing
-    final List<InetSocketAddress> namenodes =new ArrayList<InetSocketAddress>();
-    namenodes.add(NameNode.getServiceAddress(conf, true));
+    Map<String, Map<String, InetSocketAddress>> namenodes =
+      DFSUtil.getNNServiceRpcAddresses(conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
     assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 

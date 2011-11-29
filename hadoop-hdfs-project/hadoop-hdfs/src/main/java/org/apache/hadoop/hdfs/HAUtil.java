@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -29,14 +30,18 @@ public class HAUtil {
   private HAUtil() { /* Hidden constructor */ }
 
   /**
-   * Returns true if HA for namenode is configured.
+   * Returns true if HA for namenode is configured for the given nameservice
    * 
    * @param conf Configuration
+   * @param nsId nameservice, or null if no federated NS is configured
    * @return true if HA is configured in the configuration; else false.
    */
-  public static boolean isHAEnabled(Configuration conf) {
-    Collection<String> collection = DFSUtil.getNameNodeIds(conf);
-    return collection != null && !collection.isEmpty();
+  public static boolean isHAEnabled(Configuration conf, String nsId) {
+    Map<String, Map<String, InetSocketAddress>> addresses =
+      DFSUtil.getHaNnRpcAddresses(conf);
+    if (addresses == null) return false;
+    Map<String, InetSocketAddress> nnMap = addresses.get(nsId);
+    return nnMap != null && nnMap.size() > 1;
   }
 
   /**
@@ -52,22 +57,21 @@ public class HAUtil {
    * @return namenode Id on success, null on failure.
    * @throws HadoopIllegalArgumentException on error
    */
-  public static String getNameNodeId(Configuration conf) {
-    String namenodeId = conf.get(DFS_HA_NAMENODE_ID_KEY);
+  public static String getNameNodeId(Configuration conf, String nsId) {
+    String namenodeId = conf.getTrimmed(DFS_HA_NAMENODE_ID_KEY);
     if (namenodeId != null) {
       return namenodeId;
     }
-    if (!isHAEnabled(conf)) {
-      return null;
-    }
-    namenodeId = DFSUtil.getSuffixIDs(conf, DFS_NAMENODE_RPC_ADDRESS_KEY,
-        DFSUtil.LOCAL_ADDRESS_MATCHER)[1];
-    if (namenodeId == null) {
+    
+    String suffixes[] = DFSUtil.getSuffixIDs(conf, DFS_NAMENODE_RPC_ADDRESS_KEY,
+        nsId, null, DFSUtil.LOCAL_ADDRESS_MATCHER);
+    if (suffixes == null) {
       String msg = "Configuration " + DFS_NAMENODE_RPC_ADDRESS_KEY + 
           " must be suffixed with" + namenodeId + " for HA configuration.";
       throw new HadoopIllegalArgumentException(msg);
     }
-    return namenodeId;
+    
+    return suffixes[1];
   }
 
   /**
@@ -78,14 +82,11 @@ public class HAUtil {
   public static String getNameNodeIdFromAddress(final Configuration conf, 
       final InetSocketAddress address, String... keys) {
     // Configuration with a single namenode and no nameserviceId
-    if (!isHAEnabled(conf)) {
-      return null;
-    }
-    
     String[] ids = DFSUtil.getSuffixIDs(conf, address, keys);
     if (ids != null && ids.length > 1) {
       return ids[1];
     }
     return null;
   }
+
 }

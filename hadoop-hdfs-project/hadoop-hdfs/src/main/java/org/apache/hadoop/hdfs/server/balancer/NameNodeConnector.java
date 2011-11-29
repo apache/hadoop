@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,6 +55,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+
 /**
  * The class provides utilities for {@link Balancer} to access a NameNode
  */
@@ -75,12 +80,14 @@ class NameNodeConnector {
   private BlockTokenSecretManager blockTokenSecretManager;
   private Daemon keyupdaterthread; // AccessKeyUpdater thread
 
-  NameNodeConnector(InetSocketAddress namenodeAddress, Configuration conf
-      ) throws IOException {
-    this.namenodeAddress = namenodeAddress;
-    this.namenode = createNamenode(namenodeAddress, conf);
+  NameNodeConnector(Collection<InetSocketAddress> haNNs,
+      Configuration conf) throws IOException {
+    InetSocketAddress nn = Lists.newArrayList(haNNs).get(0);
+    // TODO(HA): need to deal with connecting to HA NN pair here
+    this.namenodeAddress = nn;
+    this.namenode = createNamenode(nn, conf);
     this.client = DFSUtil.createNamenode(conf);
-    this.fs = FileSystem.get(NameNode.getUri(namenodeAddress), conf);
+    this.fs = FileSystem.get(NameNode.getUri(nn), conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();

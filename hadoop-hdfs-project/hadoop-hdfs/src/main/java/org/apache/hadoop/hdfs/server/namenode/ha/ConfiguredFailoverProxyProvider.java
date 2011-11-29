@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -89,9 +90,14 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
     try {
       ugi = UserGroupInformation.getCurrentUser();
       
-      Collection<InetSocketAddress> addresses = DFSUtil.getHaNnRpcAddresses(
+      Map<String, Map<String, InetSocketAddress>> map = DFSUtil.getHaNnRpcAddresses(
           conf);
-      for (InetSocketAddress address : addresses) {
+      // TODO(HA): currently hardcoding the nameservice used by MiniDFSCluster.
+      // We need to somehow communicate this into the proxy provider.
+      String nsId = "nameserviceId1";
+      Map<String, InetSocketAddress> addressesInNN = map.get(nsId);
+      
+      for (InetSocketAddress address : addressesInNN.values()) {
         proxies.add(new AddressRpcProxyPair(address));
       }
     } catch (IOException e) {

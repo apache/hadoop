@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonNode;
@@ -66,9 +67,10 @@ class ClusterJspHelper {
   ClusterStatus generateClusterHealthReport() {
     ClusterStatus cs = new ClusterStatus();
     Configuration conf = new Configuration();
-    List<InetSocketAddress> isas = null;
+    List<ConfiguredNNAddress> nns = null;
     try {
-      isas = DFSUtil.getNNServiceRpcAddresses(conf);
+      nns = DFSUtil.flattenAddressMap(
+          DFSUtil.getNNServiceRpcAddresses(conf));
     } catch (Exception e) {
       // Could not build cluster status
       cs.setError(e);
@@ -76,7 +78,8 @@ class ClusterJspHelper {
     }
     
     // Process each namenode and add it to ClusterStatus
-    for (InetSocketAddress isa : isas) {
+    for (ConfiguredNNAddress cnn : nns) {
+      InetSocketAddress isa = cnn.getAddress();
       NamenodeMXBeanHelper nnHelper = null;
       try {
         nnHelper = new NamenodeMXBeanHelper(isa, conf);
@@ -102,9 +105,10 @@ class ClusterJspHelper {
   DecommissionStatus generateDecommissioningReport() {
     String clusterid = "";
     Configuration conf = new Configuration();
-    List<InetSocketAddress> isas = null;
+    List<ConfiguredNNAddress> cnns = null;
     try {
-      isas = DFSUtil.getNNServiceRpcAddresses(conf);
+      cnns = DFSUtil.flattenAddressMap(
+          DFSUtil.getNNServiceRpcAddresses(conf));
     } catch (Exception e) {
       // catch any exception encountered other than connecting to namenodes
       DecommissionStatus dInfo = new DecommissionStatus(clusterid, e);
@@ -122,7 +126,8 @@ class ClusterJspHelper {
       new HashMap<String, Exception>();
     
     List<String> unreportedNamenode = new ArrayList<String>();
-    for (InetSocketAddress isa : isas) {
+    for (ConfiguredNNAddress cnn : cnns) {
+      InetSocketAddress isa = cnn.getAddress();
       NamenodeMXBeanHelper nnHelper = null;
       try {
         nnHelper = new NamenodeMXBeanHelper(isa, conf);

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -157,7 +158,8 @@ public class TestBalancerWithMultipleNameNodes {
     LOG.info("BALANCER 1");
 
     // start rebalancing
-    final List<InetSocketAddress> namenodes = DFSUtil.getNNServiceRpcAddresses(s.conf);
+    final Map<String, Map<String, InetSocketAddress>> namenodes =
+      DFSUtil.getNNServiceRpcAddresses(s.conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, s.conf);
     Assert.assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 

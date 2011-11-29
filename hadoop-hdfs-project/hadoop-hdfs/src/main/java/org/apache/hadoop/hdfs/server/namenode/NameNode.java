@@ -527,10 +527,11 @@ public class NameNode {
       throws IOException { 
     this.conf = conf;
     this.role = role;
-    this.haEnabled = HAUtil.isHAEnabled(conf);
+    String nsId = getNameServiceId(conf);
+    this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
     this.haContext = new NameNodeHAContext();
     try {
-      initializeGenericKeys(conf, getNameServiceId(conf));
+      initializeGenericKeys(conf, nsId);
       initialize(conf);
       if (!haEnabled) {
         state = ACTIVE_STATE;
@@ -848,7 +849,7 @@ public class NameNode {
    */
   public static void initializeGenericKeys(Configuration conf, String
       nameserviceId) {
-    String namenodeId = HAUtil.getNameNodeId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nameserviceId);
     if ((nameserviceId == null || nameserviceId.isEmpty()) && 
         (namenodeId == null || namenodeId.isEmpty())) {
       return;
