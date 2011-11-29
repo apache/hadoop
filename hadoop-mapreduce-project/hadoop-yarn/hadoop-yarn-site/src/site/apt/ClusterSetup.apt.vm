@@ -398,6 +398,15 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | | Timeout for health script execution. |
 *-------------------------+-------------------------+------------------------+
 
+    The health checker script is not supposed to give ERROR if only some of the
+    local disks become bad. NodeManager has the ability to periodically check
+    the health of the local disks (specifically checks nodemanager-local-dirs
+    and nodemanager-log-dirs) and after reaching the threshold of number of
+    bad directories based on the value set for the config property
+    yarn.nodemanager.disk-health-checker.min-healthy-disks. The boot disk is
+    either raided or a failure in the boot disk is identified by the health
+    checker script.
+
     * {Slaves file}
       
     Typically you choose one machine in the cluster to act as the NameNode and 
@@ -874,27 +883,12 @@ KVNO Timestamp         Principal
 *-------------------------+-------------------------+------------------------+
 || Parameter              || Value                  || Notes                 |
 *-------------------------+-------------------------+------------------------+
-| <<<yarn.nodemanager.local-dirs>>> | |
-| | Comma-separated list of NodeManager local directories. | |
-| | | Paths to NodeManager local directories. Should be same as the value |
-| | | which was provided to key in <<<conf/yarn-site.xml>>>. This is |
-| | | required to validate paths passed to the setuid executable in order |
-| | to prevent arbitrary paths being passed to it. |
-*-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.linux-container-executor.group>>> | <hadoop> | |
 | | | Unix group of the NodeManager. The group owner of the |
 | | |<container-executor> binary should be this group. Should be same as the |
 | | | value with which the NodeManager is configured. This configuration is |
 | | | required for validating the secure access of the <container-executor> |
 | | | binary. |        
-*-------------------------+-------------------------+------------------------+
-| <<<yarn.nodemanager.log-dirs>>> | |
-| | Comma-separated list of NodeManager log directories. | |
-| | | Paths to NodeManager log directories. Should be same as the value |
-| | | which was provided to key in <<<conf/yarn-site.xml>>>. This is |
-| | | required to set proper permissions on the log files so that they can |
-| | | be written to by the user's containers and read by the NodeManager for |
-| | | <log aggregation>. |
 *-------------------------+-------------------------+------------------------+
 | <<<banned.users>>> | hfds,yarn,mapred,bin | Banned users. |
 *-------------------------+-------------------------+------------------------+

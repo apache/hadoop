@@ -43,7 +43,8 @@ public class TestDistributedShell {
   public static void setup() throws InterruptedException, IOException {
     LOG.info("Starting up YARN cluster");
     if (yarnCluster == null) {
-      yarnCluster = new MiniYARNCluster(TestDistributedShell.class.getName());
+      yarnCluster = new MiniYARNCluster(TestDistributedShell.class.getName(),
+          1, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
     }

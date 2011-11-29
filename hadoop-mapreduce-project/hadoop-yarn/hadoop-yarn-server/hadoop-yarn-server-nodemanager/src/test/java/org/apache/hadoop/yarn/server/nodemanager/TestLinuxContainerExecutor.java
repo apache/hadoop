@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -63,8 +64,6 @@ import org.junit.Test;
  * config values.
  * <br><pre><code>
  * > cat /etc/hadoop/container-executor.cfg
- * yarn.nodemanager.local-dirs=/tmp/hadoop/nm-local/
- * yarn.nodemanager.log-dirs=/tmp/hadoop/nm-log
  * yarn.nodemanager.linux-container-executor.group=mapred
  * #depending on the user id of the application.submitter option
  * min.user.id=1
@@ -72,7 +71,7 @@ import org.junit.Test;
  * > sudo chmod 444 /etc/hadoop/container-executor.cfg
  * </code></pre>
  * 
- * <li>iMove the binary and set proper permissions on it. It needs to be owned 
+ * <li>Move the binary and set proper permissions on it. It needs to be owned 
  * by root, the group needs to be the group configured in container-executor.cfg, 
  * and it needs the setuid bit set. (The build will also overwrite it so you
  * need to move it to a place that you can support it. 
@@ -98,14 +97,22 @@ public class TestLinuxContainerExecutor {
   
   private LinuxContainerExecutor exec = null;
   private String appSubmitter = null;
+  private LocalDirsHandlerService dirsHandler;
 
   @Before
   public void setup() throws Exception {
-    FileContext.getLocalFSFileContext().mkdir(
-        new Path(workSpace.getAbsolutePath()), null, true);
+    FileContext files = FileContext.getLocalFSFileContext();
+    Path workSpacePath = new Path(workSpace.getAbsolutePath());
+    files.mkdir(workSpacePath, null, true);
     workSpace.setReadable(true, false);
     workSpace.setExecutable(true, false);
     workSpace.setWritable(true, false);
+    File localDir = new File(workSpace.getAbsoluteFile(), "localDir");
+    files.mkdir(new Path(localDir.getAbsolutePath()),
+        new FsPermission("777"), false);
+    File logDir = new File(workSpace.getAbsoluteFile(), "logDir");
+    files.mkdir(new Path(logDir.getAbsolutePath()),
+        new FsPermission("777"), false);
     String exec_path = System.getProperty("container-executor.path");
     if(exec_path != null && !exec_path.isEmpty()) {
       Configuration conf = new Configuration(false);
@@ -114,6 +121,10 @@ public class TestLinuxContainerExecutor {
       conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, exec_path);
       exec = new LinuxContainerExecutor();
       exec.setConf(conf);
+      conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+      conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
+      dirsHandler = new LocalDirsHandlerService();
+      dirsHandler.init(conf);
     }
     appSubmitter = System.getProperty("application.submitter");
     if(appSubmitter == null || appSubmitter.isEmpty()) {
@@ -189,7 +200,8 @@ public class TestLinuxContainerExecutor {
 
     exec.activateContainer(cId, pidFile);
     return exec.launchContainer(container, scriptPath, tokensPath,
-        appSubmitter, appId, workDir);
+        appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
+        dirsHandler.getLogDirs());
   }
   
   

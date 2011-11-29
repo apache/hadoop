@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +40,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
-import org.apache.hadoop.yarn.service.Service.STATE;
 
 public class MiniYARNCluster extends CompositeService {
 
@@ -69,13 +68,23 @@ public class MiniYARNCluster extends CompositeService {
   
   private File testWorkDir;
 
-  public MiniYARNCluster(String testName) {
-    //default number of nodeManagers = 1
-    this(testName, 1);
-  }
+  // Number of nm-local-dirs per nodemanager
+  private int numLocalDirs;
+  // Number of nm-log-dirs per nodemanager
+  private int numLogDirs;
 
-  public MiniYARNCluster(String testName, int noOfNodeManagers) {
+  /**
+   * @param testName name of the test
+   * @param noOfNodeManagers the number of node managers in the cluster
+   * @param numLocalDirs the number of nm-local-dirs per nodemanager
+   * @param numLogDirs the number of nm-log-dirs per nodemanager
+   */
+  public MiniYARNCluster(String testName, int noOfNodeManagers,
+                         int numLocalDirs, int numLogDirs) {
+
     super(testName);
+    this.numLocalDirs = numLocalDirs;
+    this.numLogDirs = numLogDirs;
     this.testWorkDir = new File("target", testName);
     try {
       FileContext.getLocalFSFileContext().delete(
@@ -166,25 +175,39 @@ public class MiniYARNCluster extends CompositeService {
       super.init(config);                                                        
     }                                                                            
 
+    /**
+     * Create local/log directories
+     * @param dirType type of directories i.e. local dirs or log dirs 
+     * @param numDirs number of directories
+     * @return the created directories as a comma delimited String
+     */
+    private String prepareDirs(String dirType, int numDirs) {
+      File []dirs = new File[numDirs];
+      String dirsString = "";
+      for (int i = 0; i < numDirs; i++) {
+        dirs[i]= new File(testWorkDir, MiniYARNCluster.this.getName()
+            + "-" + dirType + "Dir-nm-" + index + "_" + i);
+        dirs[i].mkdir();
+        LOG.info("Created " + dirType + "Dir in " + dirs[i].getAbsolutePath());
+        String delimiter = (i > 0) ? "," : "";
+        dirsString = dirsString.concat(delimiter + dirs[i].getAbsolutePath());
+      }
+      return dirsString;
+    }
+
     public synchronized void start() {
       try {
-        File localDir = new File(testWorkDir, MiniYARNCluster.this.getName()
-            + "-localDir-nm-" + index);
-        localDir.mkdir();
-        LOG.info("Created localDir in " + localDir.getAbsolutePath());
-        getConfig().set(YarnConfiguration.NM_LOCAL_DIRS,
-            localDir.getAbsolutePath());
-        File logDir =
-            new File(testWorkDir, MiniYARNCluster.this.getName()
-                + "-logDir-nm-" + index);
+        // create nm-local-dirs and configure them for the nodemanager
+        String localDirsString = prepareDirs("local", numLocalDirs);
+        getConfig().set(YarnConfiguration.NM_LOCAL_DIRS, localDirsString);
+        // create nm-log-dirs and configure them for the nodemanager
+        String logDirsString = prepareDirs("log", numLogDirs);
+        getConfig().set(YarnConfiguration.NM_LOG_DIRS, logDirsString);
+
         File remoteLogDir =
             new File(testWorkDir, MiniYARNCluster.this.getName()
                 + "-remoteLogDir-nm-" + index);
-        logDir.mkdir();
         remoteLogDir.mkdir();
-        LOG.info("Created logDir in " + logDir.getAbsolutePath());
-        getConfig().set(YarnConfiguration.NM_LOG_DIRS,
-            logDir.getAbsolutePath());
         getConfig().set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             	remoteLogDir.getAbsolutePath());
         // By default AM + 2 containers

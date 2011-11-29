@@ -33,10 +33,10 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -59,6 +59,8 @@ public class ContainersLauncher extends AbstractService
   private final Context context;
   private final ContainerExecutor exec;
   private final Dispatcher dispatcher;
+
+  private LocalDirsHandlerService dirsHandler;
   private final ExecutorService containerLauncher =
     Executors.newCachedThreadPool(
         new ThreadFactoryBuilder()
@@ -80,11 +82,12 @@ public class ContainersLauncher extends AbstractService
 
 
   public ContainersLauncher(Context context, Dispatcher dispatcher,
-      ContainerExecutor exec) {
+      ContainerExecutor exec, LocalDirsHandlerService dirsHandler) {
     super("containers-launcher");
     this.exec = exec;
     this.context = context;
     this.dispatcher = dispatcher;
+    this.dirsHandler = dirsHandler;
   }
 
   @Override
@@ -114,15 +117,19 @@ public class ContainersLauncher extends AbstractService
         Application app =
           context.getApplications().get(
               containerId.getApplicationAttemptId().getApplicationId());
-      ContainerLaunch launch =
-          new ContainerLaunch(getConfig(), dispatcher, exec, app,
-              event.getContainer());
+
+        ContainerLaunch launch = new ContainerLaunch(getConfig(), dispatcher,
+            exec, app, event.getContainer(), dirsHandler);
         running.put(containerId,
             new RunningContainer(containerLauncher.submit(launch), 
                 launch));
         break;
       case CLEANUP_CONTAINER:
         RunningContainer rContainerDatum = running.remove(containerId);
+        if (rContainerDatum == null) {
+          // Container not launched. So nothing needs to be done.
+          return;
+        }
         Future<Integer> rContainer = rContainerDatum.runningcontainer;
         if (rContainer != null 
             && !rContainer.isDone()) {

@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -80,9 +79,12 @@ public class TestEventFlow {
 
     ContainerExecutor exec = new DefaultContainerExecutor();
     exec.setConf(conf);
+
     DeletionService del = new DeletionService(exec);
     Dispatcher dispatcher = new AsyncDispatcher();
-    NodeHealthCheckerService healthChecker = null;
+    NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+    healthChecker.init(conf);
+    LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
     ContainerTokenSecretManager containerTokenSecretManager =  new ContainerTokenSecretManager();
     NodeStatusUpdater nodeStatusUpdater =
@@ -100,7 +102,8 @@ public class TestEventFlow {
 
     DummyContainerManager containerManager = new DummyContainerManager(
         context, exec, del, nodeStatusUpdater, metrics,
-        containerTokenSecretManager, new ApplicationACLsManager(conf));
+        containerTokenSecretManager, new ApplicationACLsManager(conf),
+        dirsHandler);
     containerManager.init(conf);
     containerManager.start();
 

@@ -56,7 +56,7 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   }
 
   public MiniMRYarnCluster(String testName, int noOfNMs) {
-    super(testName, noOfNMs);
+    super(testName, noOfNMs, 4, 4);
     //TODO: add the history server
     historyServerWrapper = new JobHistoryServerWrapper();
     addService(historyServerWrapper);

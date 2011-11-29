@@ -389,6 +389,22 @@
   </property>
 
   <property>
+    <description>Frequency of running disk health checker code.</description>
+    <name>yarn.nodemanager.disk-health-checker.interval-ms</name>
+    <value>120000</value>
+  </property>
+
+  <property>
+    <description>The minimum fraction of number of disks to be healthy for the
+    nodemanager to launch new containers. This correspond to both
+    yarn-nodemanager.local-dirs and yarn.nodemanager.log-dirs. i.e. If there
+    are less number of healthy local-dirs (or log-dirs) available, then
+    new containers will not be launched on this node.</description>
+    <name>yarn.nodemanager.disk-health-checker.min-healthy-disks</name>
+    <value>0.25</value>
+  </property>
+
+  <property>
     <description>The path to the Linux container executor.</description>
     <name>yarn.nodemanager.linux-container-executor.path</name>
   </property>

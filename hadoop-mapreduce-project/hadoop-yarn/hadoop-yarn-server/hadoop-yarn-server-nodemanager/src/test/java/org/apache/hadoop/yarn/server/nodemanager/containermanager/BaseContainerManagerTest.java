@@ -45,7 +45,9 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalRMInterface;
+import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
@@ -94,6 +96,8 @@ public abstract class BaseContainerManagerTest {
   protected ContainerExecutor exec;
   protected DeletionService delSrvc;
   protected String user = "nobody";
+  protected NodeHealthCheckerService nodeHealthChecker;
+  protected LocalDirsHandlerService dirsHandler;
 
   protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
       context, new AsyncDispatcher(), null, metrics, this.containerTokenSecretManager) {
@@ -147,9 +151,12 @@ public abstract class BaseContainerManagerTest {
     delSrvc.init(conf);
 
     exec = createContainerExecutor();
+    nodeHealthChecker = new NodeHealthCheckerService();
+    nodeHealthChecker.init(conf);
+    dirsHandler = nodeHealthChecker.getDiskHandler();
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
         nodeStatusUpdater, metrics, this.containerTokenSecretManager,
-        new ApplicationACLsManager(conf));
+        new ApplicationACLsManager(conf), dirsHandler);
     containerManager.init(conf);
   }
 

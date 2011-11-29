@@ -122,7 +122,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     dispatcher.register(ApplicationEventType.class, appEventHandler);
     
     LogAggregationService logAggregationService =
-        new LogAggregationService(dispatcher, this.context, this.delSrvc);
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -189,7 +190,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     dispatcher.register(ApplicationEventType.class, appEventHandler);
     
     LogAggregationService logAggregationService =
-        new LogAggregationService(dispatcher, this.context, this.delSrvc);
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -237,7 +239,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     dispatcher.register(ApplicationEventType.class, appEventHandler);
     
     LogAggregationService logAggregationService =
-        new LogAggregationService(dispatcher, this.context, this.delSrvc);
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler);
     logAggregationService.init(this.conf);
     logAggregationService.start();
 

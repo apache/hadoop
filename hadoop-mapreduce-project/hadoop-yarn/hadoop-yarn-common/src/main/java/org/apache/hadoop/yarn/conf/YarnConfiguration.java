@@ -351,13 +351,39 @@ public class YarnConfiguration extends Configuration {
   /** Class that calculates containers current resource utilization.*/
   public static final String NM_CONTAINER_MON_RESOURCE_CALCULATOR =
     NM_PREFIX + "container-monitor.resource-calculator.class";
-  
+
+  /**
+   * Enable/Disable disks' health checker. Default is true.
+   * An expert level configuration property.
+   */
+  public static final String NM_DISK_HEALTH_CHECK_ENABLE =
+    NM_PREFIX + "disk-health-checker.enable";
+  /** Frequency of running disks' health checker.*/
+  public static final String NM_DISK_HEALTH_CHECK_INTERVAL_MS =
+    NM_PREFIX + "disk-health-checker.interval-ms";
+  /** By default, disks' health is checked every 2 minutes. */
+  public static final long DEFAULT_NM_DISK_HEALTH_CHECK_INTERVAL_MS =
+    2 * 60 * 1000;
+
+  /**
+   * The minimum fraction of number of disks to be healthy for the nodemanager
+   * to launch new containers. This applies to nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_MIN_HEALTHY_DISKS_FRACTION =
+    NM_PREFIX + "disk-health-checker.min-healthy-disks";
+  /**
+   * By default, at least 5% of disks are to be healthy to say that the node
+   * is healthy in terms of disks.
+   */
+  public static final float DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION
+    = 0.25F;
+
   /** Frequency of running node health script.*/
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 
     NM_PREFIX + "health-checker.interval-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
-  
-  /** Script time out period.*/
+
+  /** Health check script time out period.*/  
   public static final String NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 
     NM_PREFIX + "health-checker.script.timeout-ms";
   public static final long DEFAULT_NM_HEALTH_CHECK_SCRIPT_TIMEOUT_MS = 

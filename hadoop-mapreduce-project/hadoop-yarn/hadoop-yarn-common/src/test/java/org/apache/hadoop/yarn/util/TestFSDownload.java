@@ -146,13 +146,14 @@ public class TestFSDownload {
         vis = LocalResourceVisibility.APPLICATION;
         break;       
       }
-      
-      LocalResource rsrc = createFile(files, new Path(basedir, "" + i),
-          sizes[i], rand, vis);
+      Path p = new Path(basedir, "" + i);
+      LocalResource rsrc = createFile(files, p, sizes[i], rand, vis);
       rsrcVis.put(rsrc, vis);
+      Path destPath = dirs.getLocalPathForWrite(
+          basedir.toString(), sizes[i], conf);
       FSDownload fsd =
           new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
-              dirs, rsrc, new Random(sharedSeed));
+              destPath, rsrc, new Random(sharedSeed));
       pending.put(rsrc, exec.submit(fsd));
     }
 
@@ -249,13 +250,15 @@ public class TestFSDownload {
         vis = LocalResourceVisibility.APPLICATION;
         break;       
       }
-      
-      LocalResource rsrc = createJar(files, new Path(basedir, "dir" + i
-          + ".jar"), vis);
+
+      Path p = new Path(basedir, "dir" + i + ".jar");
+      LocalResource rsrc = createJar(files, p, vis);
       rsrcVis.put(rsrc, vis);
+      Path destPath = dirs.getLocalPathForWrite(
+          basedir.toString(), conf);
       FSDownload fsd =
           new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
-              dirs, rsrc, new Random(sharedSeed));
+              destPath, rsrc, new Random(sharedSeed));
       pending.put(rsrc, exec.submit(fsd));
     }
     

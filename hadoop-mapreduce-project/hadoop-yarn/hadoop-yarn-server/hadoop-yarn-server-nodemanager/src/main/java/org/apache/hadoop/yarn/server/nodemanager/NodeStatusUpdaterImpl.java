@@ -27,7 +27,6 @@ import java.util.Map.Entry;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -222,11 +221,14 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         + numActiveContainers + " containers");
 
     NodeHealthStatus nodeHealthStatus = this.context.getNodeHealthStatus();
-    if (this.healthChecker != null) {
-      this.healthChecker.setHealthStatus(nodeHealthStatus);
+    nodeHealthStatus.setHealthReport(healthChecker.getHealthReport());
+    nodeHealthStatus.setIsNodeHealthy(healthChecker.isHealthy());
+    nodeHealthStatus.setLastHealthReportTime(
+        healthChecker.getLastHealthReportTime());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node's health-status : " + nodeHealthStatus.getIsNodeHealthy()
+                + ", " + nodeHealthStatus.getHealthReport());
     }
-    LOG.debug("Node's health-status : " + nodeHealthStatus.getIsNodeHealthy()
-        + ", " + nodeHealthStatus.getHealthReport());
     nodeStatus.setNodeHealthStatus(nodeHealthStatus);
 
     return nodeStatus;

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop;
+package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,19 +31,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
  * 
- * The class which provides functionality of checking the health of the node and
- * reporting back to the service for which the health checker has been asked to
- * report.
+ * The class which provides functionality of checking the health of the node
+ * using the configured node health script and reporting back to the service
+ * for which the health checker has been asked to report.
  */
-public class NodeHealthCheckerService extends AbstractService {
+public class NodeHealthScriptRunner extends AbstractService {
 
-  private static Log LOG = LogFactory.getLog(NodeHealthCheckerService.class);
+  private static Log LOG = LogFactory.getLog(NodeHealthScriptRunner.class);
 
   /** Absolute path to the health script. */
   private String nodeHealthScript;
@@ -73,7 +72,6 @@ public class NodeHealthCheckerService extends AbstractService {
   private long lastReportedTime;
 
   private TimerTask timer;
-  
   
   private enum HealthCheckerExitStatus {
     SUCCESS,
@@ -187,16 +185,11 @@ public class NodeHealthCheckerService extends AbstractService {
     }
   }
 
-  public NodeHealthCheckerService() {
-    super(NodeHealthCheckerService.class.getName());
+  public NodeHealthScriptRunner() {
+    super(NodeHealthScriptRunner.class.getName());
     this.lastReportedTime = System.currentTimeMillis();
     this.isHealthy = true;
     this.healthReport = "";    
-  }
-
-  public NodeHealthCheckerService(Configuration conf) {
-    this();
-    init(conf);
   }
 
   /*
@@ -257,12 +250,12 @@ public class NodeHealthCheckerService extends AbstractService {
    * 
    * @return true if node is healthy
    */
-  private boolean isHealthy() {
+  public boolean isHealthy() {
     return isHealthy;
   }
 
   /**
-   * Sets if the node is healhty or not.
+   * Sets if the node is healhty or not considering disks' health also.
    * 
    * @param isHealthy
    *          if or not node is healthy
@@ -277,13 +270,14 @@ public class NodeHealthCheckerService extends AbstractService {
    * 
    * @return output from health script
    */
-  private String getHealthReport() {
+  public String getHealthReport() {
     return healthReport;
   }
 
   /**
-   * Sets the health report from the node health script.
-   * 
+   * Sets the health report from the node health script. Also set the disks'
+   * health info obtained from DiskHealthCheckerService.
+   *
    * @param healthReport
    */
   private synchronized void setHealthReport(String healthReport) {
@@ -295,7 +289,7 @@ public class NodeHealthCheckerService extends AbstractService {
    * 
    * @return timestamp when node health script was last run
    */
-  private long getLastReportedTime() {
+  public long getLastReportedTime() {
     return lastReportedTime;
   }
 
@@ -340,27 +334,12 @@ public class NodeHealthCheckerService extends AbstractService {
     this.setHealthStatus(isHealthy, output);
     this.setLastReportedTime(time);
   }
-  
+
   /**
-   * Method to populate the fields for the {@link NodeHealthStatus}
-   * 
-   * @param healthStatus
+   * Used only by tests to access the timer task directly
+   * @return the timer task
    */
-  public synchronized void setHealthStatus(NodeHealthStatus healthStatus) {
-    healthStatus.setIsNodeHealthy(this.isHealthy());
-    healthStatus.setHealthReport(this.getHealthReport());
-    healthStatus.setLastHealthReportTime(this.getLastReportedTime());
-  }
-  
-  /**
-   * Test method to directly access the timer which node 
-   * health checker would use.
-   * 
-   *
-   * @return Timer task
-   */
-  //XXX:Not to be used directly.
-  TimerTask getTimer() {
+  TimerTask getTimerTask() {
     return timer;
   }
 }

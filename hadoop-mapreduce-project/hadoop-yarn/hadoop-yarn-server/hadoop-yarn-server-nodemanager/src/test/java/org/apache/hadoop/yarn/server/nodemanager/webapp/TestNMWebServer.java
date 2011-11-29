@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -37,6 +38,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -47,6 +50,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,10 +58,19 @@ public class TestNMWebServer {
 
   private static final File testRootDir = new File("target",
       TestNMWebServer.class.getSimpleName());
+  private static File testLogDir = new File("target",
+      TestNMWebServer.class.getSimpleName() + "LogDir");
 
   @Before
   public void setup() {
     testRootDir.mkdirs();
+    testLogDir.mkdir(); 
+  }
+
+  @After
+  public void tearDown() {
+    FileUtil.fullyDelete(testRootDir);
+    FileUtil.fullyDelete(testLogDir);
   }
 
   @Test
@@ -74,9 +87,14 @@ public class TestNMWebServer {
       }
     };
     Configuration conf = new Configuration();
-    WebServer server = new WebServer(nmContext, resourceView,
-        new ApplicationACLsManager(conf));
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
+    NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+    healthChecker.init(conf);
+    LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
+
+    WebServer server = new WebServer(nmContext, resourceView,
+        new ApplicationACLsManager(conf), dirsHandler);
     server.init(conf);
     server.start();
 
@@ -119,20 +137,20 @@ public class TestNMWebServer {
           containerId.getApplicationAttemptId().getApplicationId();
       nmContext.getApplications().get(applicationId).getContainers()
           .put(containerId, container);
-      writeContainerLogs(conf, nmContext, containerId);
+      writeContainerLogs(nmContext, containerId, dirsHandler);
 
     }
     // TODO: Pull logs and test contents.
 //    Thread.sleep(1000000);
   }
 
-  private void writeContainerLogs(Configuration conf, Context nmContext,
-      ContainerId containerId)
+  private void writeContainerLogs(Context nmContext,
+      ContainerId containerId, LocalDirsHandlerService dirsHandler)
         throws IOException {
     // ContainerLogDir should be created
     File containerLogDir =
-        ContainerLogsPage.ContainersLogsBlock.getContainerLogDirs(conf,
-            containerId).get(0);
+        ContainerLogsPage.ContainersLogsBlock.getContainerLogDirs(containerId,
+            dirsHandler).get(0);
     containerLogDir.mkdirs();
     for (String fileType : new String[] { "stdout", "stderr", "syslog" }) {
       Writer writer = new FileWriter(new File(containerLogDir, fileType));

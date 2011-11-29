@@ -383,11 +383,12 @@ public class TestContainerManager extends BaseContainerManagerTest {
     // Real del service
     delSrvc = new DeletionService(exec);
     delSrvc.init(conf);
+
     ContainerTokenSecretManager containerTokenSecretManager = new 
         ContainerTokenSecretManager();
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
         nodeStatusUpdater, metrics, containerTokenSecretManager,
-        new ApplicationACLsManager(conf));
+        new ApplicationACLsManager(conf), dirsHandler);
     containerManager.init(conf);
     containerManager.start();
 

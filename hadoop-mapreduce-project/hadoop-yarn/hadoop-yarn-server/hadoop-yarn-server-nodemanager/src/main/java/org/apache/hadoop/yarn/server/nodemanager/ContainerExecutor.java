@@ -45,6 +45,7 @@ public abstract class ContainerExecutor implements Configurable {
     FsPermission.createImmutable((short) 0700);
 
   private Configuration conf;
+
   private ConcurrentMap<ContainerId, Path> pidFiles =
       new ConcurrentHashMap<ContainerId, Path>();
 
@@ -68,7 +69,7 @@ public abstract class ContainerExecutor implements Configurable {
    * @throws IOException
    */
   public abstract void init() throws IOException;
-  
+
   /**
    * Prepare the environment for containers in this application to execute.
    * For $x in local.dirs
@@ -82,12 +83,14 @@ public abstract class ContainerExecutor implements Configurable {
    * @param appId id of the application
    * @param nmPrivateContainerTokens path to localized credentials, rsrc by NM
    * @param nmAddr RPC address to contact NM
+   * @param localDirs nm-local-dirs
+   * @param logDirs nm-log-dirs
    * @throws IOException For most application init failures
    * @throws InterruptedException If application init thread is halted by NM
    */
   public abstract void startLocalizer(Path nmPrivateContainerTokens,
       InetSocketAddress nmAddr, String user, String appId, String locId,
-      List<Path> localDirs)
+      List<String> localDirs, List<String> logDirs)
     throws IOException, InterruptedException;
 
 
@@ -100,12 +103,15 @@ public abstract class ContainerExecutor implements Configurable {
    * @param user the user of the container
    * @param appId the appId of the container
    * @param containerWorkDir the work dir for the container
+   * @param localDirs nm-local-dirs to be used for this container
+   * @param logDirs nm-log-dirs to be used for this container
    * @return the return status of the launch
    * @throws IOException
    */
   public abstract int launchContainer(Container container,
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
-      String user, String appId, Path containerWorkDir) throws IOException;
+      String user, String appId, Path containerWorkDir, List<String> localDirs,
+      List<String> logDirs) throws IOException;
 
   public abstract boolean signalContainer(String user, String pid,
       Signal signal)
@@ -116,7 +122,8 @@ public abstract class ContainerExecutor implements Configurable {
 
   public enum ExitCode {
     FORCE_KILLED(137),
-    TERMINATED(143);
+    TERMINATED(143),
+    DISKS_FAILED(-101);
     private final int code;
 
     private ExitCode(int exitCode) {

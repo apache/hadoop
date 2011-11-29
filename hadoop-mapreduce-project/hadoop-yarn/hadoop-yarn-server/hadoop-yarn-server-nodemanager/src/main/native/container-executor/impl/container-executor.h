@@ -61,8 +61,6 @@ enum errorcodes {
 #define NM_APP_DIR_PATTERN USER_DIR_PATTERN "/appcache/%s"
 #define CONTAINER_DIR_PATTERN NM_APP_DIR_PATTERN "/%s"
 #define CONTAINER_SCRIPT "launch_container.sh"
-#define NM_SYS_DIR_KEY "yarn.nodemanager.local-dirs"
-#define NM_LOG_DIR_KEY "yarn.nodemanager.log-dirs"
 #define CREDENTIALS_FILENAME "container_tokens"
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
@@ -92,12 +90,13 @@ int check_executor_permissions(char *executable_file);
 
 // initialize the application directory
 int initialize_app(const char *user, const char *app_id,
-                   const char *credentials, char* const* args);
+                   const char *credentials, char* const* local_dirs,
+                   char* const* log_dirs, char* const* args);
 
 /*
  * Function used to launch a container as the provided user. It does the following :
  * 1) Creates container work dir and log dir to be accessible by the child
- * 2) Copies the script file from the TT to the work directory
+ * 2) Copies the script file from the NM to the work directory
  * 3) Sets up the environment
  * 4) Does an execlp on the same in order to replace the current image with
  *    container image.
@@ -109,12 +108,15 @@ int initialize_app(const char *user, const char *app_id,
  * @param cred_file the credentials file that needs to be compied to the
  * working directory.
  * @param pid_file file where pid of process should be written to
+ * @param local_dirs nodemanager-local-directories to be used
+ * @param log_dirs nodemanager-log-directories to be used
  * @return -1 or errorcode enum value on error (should never return on success).
  */
 int launch_container_as_user(const char * user, const char *app_id,
                      const char *container_id, const char *work_dir,
                      const char *script_name, const char *cred_file,
-                     const char *pid_file);
+                     const char *pid_file, char* const* local_dirs,
+                     char* const* log_dirs);
 
 /**
  * Function used to signal a container launched by the user.
@@ -181,7 +183,7 @@ int mkdirs(const char* path, mode_t perm);
 /**
  * Function to initialize the user directories of a user.
  */
-int initialize_user(const char *user);
+int initialize_user(const char *user, char* const* local_dirs);
 
 /**
  * Create a top level directory for the user.
