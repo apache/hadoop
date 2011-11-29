@@ -158,6 +158,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2587. Add apt doc for WebHDFS REST API.  (szetszwo)
 
+    HDFS-2604. Add a log message to show if WebHDFS is enabled and a
+    configuration section in the forrest doc.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
