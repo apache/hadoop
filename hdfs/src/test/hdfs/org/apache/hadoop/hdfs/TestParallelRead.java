@@ -109,11 +109,11 @@ public class TestParallelRead {
             pRead(startOff, len);
             bytesRead += len;
           }
-        } catch (Exception ex) {
+        } catch (Throwable t) {
           LOG.error(getName() + ": Error while testing read at " + startOff +
                     " length " + len);
           error = true;
-          fail(ex.getMessage());
+          fail(t.getMessage());
         }
       }
     }
@@ -135,8 +135,8 @@ public class TestParallelRead {
      */
     private void read(int start, int len) throws Exception {
       assertTrue(
-          "Bad args: " + start + " + " + len + " should be < " + fileSize,
-          start + len < fileSize);
+          "Bad args: " + start + " + " + len + " should be <= " + fileSize,
+          start + len <= fileSize);
       DFSInputStream dis = testInfo.dis;
 
       synchronized (dis) {
@@ -156,8 +156,8 @@ public class TestParallelRead {
      */
     private void pRead(int start, int len) throws Exception {
       assertTrue(
-          "Bad args: " + start + " + " + len + " should be < " + fileSize,
-          start + len < fileSize);
+          "Bad args: " + start + " + " + len + " should be <= " + fileSize,
+          start + len <= fileSize);
       DFSInputStream dis = testInfo.dis;
 
       byte buf[] = new byte[len];
