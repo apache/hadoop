@@ -42,6 +42,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7859. TestViewFsHdfs.testgetFileLinkStatus is failing an assert. (eli)
 
+   MAPREDUCE-3465. Fixed project pom to create test dirs (and fix failing tests).
+   (Hitesh Shah via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
