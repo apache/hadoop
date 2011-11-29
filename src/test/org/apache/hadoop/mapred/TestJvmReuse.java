@@ -28,7 +28,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.junit.Ignore;
 
+@Ignore
 public class TestJvmReuse extends TestCase {
   private static Path rootDir = new Path(System.getProperty("test.build.data",
       "/tmp"), TestJvmReuse.class.getName());

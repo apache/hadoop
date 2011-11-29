@@ -238,6 +238,8 @@ Release 1.0.0 - unreleased
 
     HADOOP-7865. Test Failures in 1.0 hdfs/common. (jitendra)
 
+    MAPREDUCE-3480. Disable TestJvmReuse in branch-1. (jitendra)
+
 Release 0.20.205.0 - 2011.10.06
 
   NEW FEATURES
