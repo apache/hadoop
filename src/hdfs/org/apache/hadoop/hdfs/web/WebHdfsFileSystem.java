@@ -125,6 +125,14 @@ public class WebHdfsFileSystem extends FileSystem
     DT_RENEWER.addRenewAction(webhdfs);
   }
 
+  /** Is WebHDFS enabled in conf? */
+  public static boolean isEnabled(final Configuration conf, final Log log) {
+    final boolean b = conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);
+    log.info(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY + " = " + b);
+    return b;
+  }
+
   private final UserGroupInformation ugi;
   private InetSocketAddress nnAddr;
   private Token<?> delegationToken;

@@ -152,6 +152,9 @@ Release 1.0.0 - unreleased
     HADOOP-7804. Enable hadoop config generator to set configurations to enable 
     short circuit read. (Arpit Gupta via jitendra)
 
+    HDFS-2604. Add a log message to show if WebHDFS is enabled and a
+    configuration section in the forrest doc.  (szetszwo)
+
   BUG FIXES
 
     HADOOP-7827. jsp pages missing DOCTYPE. (Dave Vronay via mattf)
