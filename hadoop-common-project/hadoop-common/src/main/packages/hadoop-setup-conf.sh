@@ -67,6 +67,10 @@ usage: $0 <parameters>
                                                                      This value should be <= mapred.cluster.max.map.memory.mb
      --mapreduce-reduce-memory-mb=memory                             Virtual memory, of a single reduce slot for a job. Defaults to -1
                                                                      This value should be <= mapred.cluster.max.reduce.memory.mb
+     --dfs-datanode-dir-perm=700                                     Set the permission for the datanode data directories. Defaults to 700
+     --dfs-block-local-path-access-user=user                         User for which you want to enable shortcircuit read.
+     --dfs-client-read-shortcircuit=true/false                       Enable shortcircuit read for the client. Will default to true if the shortcircuit user is set.
+     --dfs-client-read-shortcircuit-skip-checksum=false/true         Disable checking of checksum when shortcircuit read is taking place. Defaults to false.
   "
   exit 1
 }
@@ -124,7 +128,7 @@ function addPropertyToXMLConf
   local finalVal=$5
 
   #create the property text, make sure the / are escaped
-  propText="<property>\n<name>$property<\/name>\n<value>$propValue<\/value>"
+  propText="<property>\n<name>$property<\/name>\n<value>$propValue<\/value>\n"
   #if description is not empty add it
   if [ ! -z $desc ]
   then
@@ -144,6 +148,28 @@ function addPropertyToXMLConf
   endText="<\/configuration>"
   #add the text using sed at the end of the file
   sed -i "s|$endText|$propText$endText|" $file
+}
+
+##########################################
+# Function to setup up the short circuit read settings
+#########################################
+function setupShortCircuitRead
+{
+  local conf_file="${HADOOP_CONF_DIR}/hdfs-site.xml"
+  #if the shortcircuit user is not set then return
+  if [ -z $DFS_BLOCK_LOCAL_PATH_ACCESS_USER ]
+  then
+    return
+  fi
+  
+  #set the defaults if values not present
+  DFS_CLIENT_READ_SHORTCIRCUIT=${DFS_CLIENT_READ_SHORTCIRCUIT:-false}
+  DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM=${DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM:-false}
+
+  #add the user to the conf file
+  addPropertyToXMLConf "$conf_file" "dfs.block.local-path-access.user" "$DFS_BLOCK_LOCAL_PATH_ACCESS_USER"
+  addPropertyToXMLConf "$conf_file" "dfs.client.read.shortcircuit" "$DFS_CLIENT_READ_SHORTCIRCUIT"
+  addPropertyToXMLConf "$conf_file" "dfs.client.read.shortcircuit.skip.checksum" "$DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM"
 }
 
 ##########################################
@@ -217,6 +243,10 @@ OPTS=$(getopt \
   -l 'mapreduce-jobtracker-maxreducememory-mb:' \
   -l 'mapreduce-map-memory-mb:' \
   -l 'mapreduce-reduce-memory-mb:' \
+  -l 'dfs-datanode-dir-perm:' \
+  -l 'dfs-block-local-path-access-user:' \
+  -l 'dfs-client-read-shortcircuit:' \
+  -l 'dfs-client-read-shortcircuit-skip-checksum:' \   
   -o 'h' \
   -- "$@") 
   
@@ -376,6 +406,22 @@ while true ; do
       MAPREDUCE_REDUCE_MEMORY_MB=$2; shift 2
       AUTOMATED=1
       ;;
+    --dfs-datanode-dir-perm)
+      DFS_DATANODE_DIR_PERM=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --dfs-block-local-path-access-user)
+      DFS_BLOCK_LOCAL_PATH_ACCESS_USER=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --dfs-client-read-shortcircuit)
+      DFS_CLIENT_READ_SHORTCIRCUIT=$2; shift 2
+      AUTOMATED=1
+      ;;
+    --dfs-client-read-shortcircuit-skip-checksum)
+      DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM=$2; shift 2
+      AUTOMATED=1
+      ;;
     --)
       shift ; break
       ;;
@@ -421,6 +467,8 @@ DFS_SUPPORT_APPEND=${DFS_SUPPORT_APPEND:-false}
 KERBEROS_REALM=${KERBEROS_REALM:-KERBEROS.EXAMPLE.COM}
 SECURITY_TYPE=${SECURITY_TYPE:-simple}
 KINIT=${KINIT:-/usr/kerberos/bin/kinit}
+#deault the data dir perm to 700
+DFS_DATANODE_DIR_PERM=${DFS_DATANODE_DIR_PERM:-700}
 if [ "${SECURITY_TYPE}" = "kerberos" ]; then
   TASK_CONTROLLER="org.apache.hadoop.mapred.LinuxTaskController"
   HADOOP_DN_ADDR="0.0.0.0:1019"
@@ -561,7 +609,10 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
 
   #setup up the proxy users
   setupProxyUsers
-  
+ 
+  #setup short circuit read
+  setupShortCircuitRead
+
   #set the owner of the hadoop dir to root
   chown root ${HADOOP_PREFIX}
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
@@ -611,6 +662,9 @@ else
   #setup up the proxy users
   setupProxyUsers
   
+  #setup short circuit read
+  setupShortCircuitRead
+
   chown root:${HADOOP_GROUP} ${HADOOP_CONF_DIR}/hadoop-env.sh
   chmod 755 ${HADOOP_CONF_DIR}/hadoop-env.sh
   #set taskcontroller

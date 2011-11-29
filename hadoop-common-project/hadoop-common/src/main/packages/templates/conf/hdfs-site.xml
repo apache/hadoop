@@ -202,7 +202,7 @@
 
   <property>
     <name>dfs.datanode.data.dir.perm</name>
-    <value>700</value>
+    <value>${DFS_DATANODE_DIR_PERM}</value>
     <description>The permissions that should be there on dfs.data.dir
       directories. The datanode will not come up if the permissions are
       different on existing dfs.data.dir directories. If the directories
