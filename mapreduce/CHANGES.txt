@@ -644,6 +644,9 @@ Release 0.22.0 - Unreleased
     MAPREDUCE-2059. RecoveryManager excludes jobtracker.info from the list of
     jobs to be recovered. (Subroto Sanyal via shv)
 
+    MAPREDUCE-3438. TestRaidNode fails because of "Too many open files".
+    (Ramkumar Vadali via shv)
+
 Release 0.21.1 - Unreleased
 
   NEW FEATURES

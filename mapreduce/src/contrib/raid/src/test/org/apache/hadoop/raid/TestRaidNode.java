@@ -250,15 +250,20 @@ public class TestRaidNode extends TestCase {
     int  numBlock          = 11;
     int  iter = 0;
 
-    createClusters(true);
-    try {
-      for (long blockSize : blockSizes) {
-        for (long stripeLength : stripeLengths) {
+    for (long blockSize : blockSizes) {
+      for (long stripeLength : stripeLengths) {
+        createClusters(true);
+        try {
            doTestPathFilter(iter, targetReplication, metaReplication,
                                               stripeLength, blockSize, numBlock);
            iter++;
+        } finally {
+          stopClusters();
         }
       }
+    }
+    createClusters(true);
+    try {
       doCheckPolicy();
     } finally {
       stopClusters();
