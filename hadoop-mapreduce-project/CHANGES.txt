@@ -119,6 +119,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3413. RM web ui applications not sorted in any order by default.
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3045. Fixed UI filters to not filter on hidden title-numeric
+    sort fields. (Jonathan Eagles via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -185,6 +188,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3265. Removed debug logs during job submission to LOG.debug to
     cut down noise. (acmurthy) 
+
+    MAPREDUCE-3433. Finding counters by legacy group name returns empty
+    counters. (tomwhite)
 
 Release 0.23.0 - 2011-11-01 
 

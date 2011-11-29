@@ -156,8 +156,8 @@ public class TestParallelRead {
      */
     private void pRead(int start, int len) throws Exception {
       assertTrue(
-          "Bad args: " + start + " + " + len + " should be < " + fileSize,
-          start + len < fileSize);
+          "Bad args: " + start + " + " + len + " should be <= " + fileSize,
+          start + len <= fileSize);
       DFSInputStream dis = testInfo.dis;
 
       byte buf[] = new byte[len];

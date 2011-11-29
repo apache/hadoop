@@ -194,15 +194,16 @@ public abstract class AbstractCounters<C extends Counter,
    * @return the group
    */
   public synchronized G getGroup(String groupName) {
-    boolean isFGroup = isFrameworkGroup(groupName);
-    G group = isFGroup ? fgroups.get(groupName) : groups.get(groupName);
+    String newGroupName = filterGroupName(groupName);
+    boolean isFGroup = isFrameworkGroup(newGroupName);
+    G group = isFGroup ? fgroups.get(newGroupName) : groups.get(newGroupName);
     if (group == null) {
-      group = groupFactory.newGroup(filterGroupName(groupName), limits);
+      group = groupFactory.newGroup(newGroupName, limits);
       if (isFGroup) {
-        fgroups.put(groupName, group);
+        fgroups.put(newGroupName, group);
       } else {
         limits.checkGroups(groups.size() + 1);
-        groups.put(groupName, group);
+        groups.put(newGroupName, group);
       }
     }
     return group;

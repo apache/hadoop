@@ -2,6 +2,11 @@ if (!jQuery.fn.dataTableExt.fnVersionCheck("1.7.5")) {
   alert("These plugins requires dataTables 1.7.5+");
 }
 
+// don't filter on hidden html elements for an sType of title-numeric
+$.fn.dataTableExt.ofnSearch['title-numeric'] = function ( sData ) {
+   return sData.replace(/\n/g," ").replace( /<.*?>/g, "" );
+}
+
 // 'title-numeric' sort type
 jQuery.fn.dataTableExt.oSort['title-numeric-asc']  = function(a,b) {
   var x = a.match(/title=["']?(-?\d+\.?\d*)/)[1];
