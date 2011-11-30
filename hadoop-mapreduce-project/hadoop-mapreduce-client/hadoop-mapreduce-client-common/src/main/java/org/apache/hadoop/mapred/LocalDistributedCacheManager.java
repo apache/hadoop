@@ -113,9 +113,10 @@ class LocalDistributedCacheManager {
     
     Map<LocalResource, Future<Path>> resourcesToPaths = Maps.newHashMap();
     ExecutorService exec = Executors.newCachedThreadPool();
+    Path destPath = localDirAllocator.getLocalPathForWrite(".", conf);
     for (LocalResource resource : localResources.values()) {
       Callable<Path> download = new FSDownload(localFSFileContext, ugi, conf,
-          localDirAllocator, resource, new Random());
+          destPath, resource, new Random());
       Future<Path> future = exec.submit(download);
       resourcesToPaths.put(resource, future);
     }

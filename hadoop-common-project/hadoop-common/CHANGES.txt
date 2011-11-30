@@ -126,6 +126,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7424. Log an error if the topology script doesn't handle multiple args.
     (Uma Maheswara Rao G via eli)
 
+    HADOOP-7804. Enable hadoop config generator to set configurations to enable
+    short circuit read. (Arpit Gupta via jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -140,6 +143,9 @@ Release 0.23.1 - Unreleased
    a temp file. (Jonathan Hsieh via eli)
 
    HADOOP-7859. TestViewFsHdfs.testgetFileLinkStatus is failing an assert. (eli)
+
+   HADOOP-7864. Building mvn site with Maven < 3.0.2 causes OOM errors.
+   (Andrew Bayer via eli)
 
 Release 0.23.0 - 2011-11-01 
 

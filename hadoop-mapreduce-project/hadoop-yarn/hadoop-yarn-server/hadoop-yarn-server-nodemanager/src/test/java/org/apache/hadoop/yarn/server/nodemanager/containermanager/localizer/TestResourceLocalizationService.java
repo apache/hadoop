@@ -59,6 +59,8 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAction;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
@@ -109,19 +111,23 @@ public class TestResourceLocalizationService {
     doNothing().when(spylfs).mkdir(
         isA(Path.class), isA(FsPermission.class), anyBoolean());
 
+    List<Path> localDirs = new ArrayList<Path>();
+    String[] sDirs = new String[4];
+    for (int i = 0; i < 4; ++i) {
+      localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
+      sDirs[i] = localDirs.get(i).toString();
+    }
+    conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
+    LocalDirsHandlerService diskhandler = new LocalDirsHandlerService();
+    diskhandler.init(conf);
+
     ResourceLocalizationService locService =
-      spy(new ResourceLocalizationService(dispatcher, exec, delService));
+      spy(new ResourceLocalizationService(dispatcher, exec, delService,
+                                          diskhandler));
     doReturn(lfs)
       .when(locService).getLocalFileContext(isA(Configuration.class));
     try {
       dispatcher.start();
-      List<Path> localDirs = new ArrayList<Path>();
-      String[] sDirs = new String[4];
-      for (int i = 0; i < 4; ++i) {
-        localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
-        sDirs[i] = localDirs.get(i).toString();
-      }
-      conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
 
       // initialize ResourceLocalizationService
       locService.init(conf);
@@ -176,12 +182,16 @@ public class TestResourceLocalizationService {
     dispatcher.register(LocalizerEventType.class, localizerBus);
 
     ContainerExecutor exec = mock(ContainerExecutor.class);
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
+
     DeletionService delService = new DeletionService(exec);
     delService.init(null);
     delService.start();
 
     ResourceLocalizationService rawService =
-      new ResourceLocalizationService(dispatcher, exec, delService);
+      new ResourceLocalizationService(dispatcher, exec, delService,
+                                      dirsHandler);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(ignore).when(spyService).createServer();
     doReturn(mockLocallilzerTracker).when(spyService).createLocalizerTracker(
@@ -356,13 +366,17 @@ public class TestResourceLocalizationService {
     dispatcher.register(ContainerEventType.class, containerBus);
 
     ContainerExecutor exec = mock(ContainerExecutor.class);
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
+
     DeletionService delServiceReal = new DeletionService(exec);
     DeletionService delService = spy(delServiceReal);
     delService.init(null);
     delService.start();
 
     ResourceLocalizationService rawService =
-      new ResourceLocalizationService(dispatcher, exec, delService);
+      new ResourceLocalizationService(dispatcher, exec, delService,
+                                      dirsHandler);
     ResourceLocalizationService spyService = spy(rawService);
     doReturn(ignore).when(spyService).createServer();
     doReturn(lfs).when(spyService).getLocalFileContext(isA(Configuration.class));
@@ -414,8 +428,9 @@ public class TestResourceLocalizationService {
       String appStr = ConverterUtils.toString(appId);
       String ctnrStr = c.getContainerID().toString();
       ArgumentCaptor<Path> tokenPathCaptor = ArgumentCaptor.forClass(Path.class);
-      verify(exec).startLocalizer(tokenPathCaptor.capture(), isA(InetSocketAddress.class),
-        eq("user0"), eq(appStr), eq(ctnrStr), isA(List.class));
+      verify(exec).startLocalizer(tokenPathCaptor.capture(),
+          isA(InetSocketAddress.class), eq("user0"), eq(appStr), eq(ctnrStr),
+          isA(List.class), isA(List.class));
       Path localizationTokenPath = tokenPathCaptor.getValue();
 
       // heartbeat from localizer

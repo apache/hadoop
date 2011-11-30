@@ -126,13 +126,18 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   @Override
   public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
-      List<Path> localDirs) throws IOException, InterruptedException {
+      List<String> localDirs, List<String> logDirs)
+      throws IOException, InterruptedException {
+
     List<String> command = new ArrayList<String>(
       Arrays.asList(containerExecutorExe, 
                     user, 
                     Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
                     appId,
-                    nmPrivateContainerTokensPath.toUri().getPath().toString()));
+                    nmPrivateContainerTokensPath.toUri().getPath().toString(),
+                    StringUtils.join(",", localDirs),
+                    StringUtils.join(",", logDirs)));
+
     File jvm =                                  // use same jvm as parent
       new File(new File(System.getProperty("java.home"), "bin"), "java");
     command.add(jvm.toString());
@@ -148,8 +153,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     command.add(locId);
     command.add(nmAddr.getHostName());
     command.add(Integer.toString(nmAddr.getPort()));
-    for (Path p : localDirs) {
-      command.add(p.toUri().getPath().toString());
+    for (String dir : localDirs) {
+      command.add(dir);
     }
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
@@ -174,7 +179,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   @Override
   public int launchContainer(Container container,
       Path nmPrivateCotainerScriptPath, Path nmPrivateTokensPath,
-      String user, String appId, Path containerWorkDir) throws IOException {
+      String user, String appId, Path containerWorkDir,
+      List<String> localDirs, List<String> logDirs) throws IOException {
 
     ContainerId containerId = container.getContainerID();
     String containerIdStr = ConverterUtils.toString(containerId);
@@ -189,8 +195,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                 .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
             containerIdStr, containerWorkDir.toString(),
             nmPrivateCotainerScriptPath.toUri().getPath().toString(),
-            nmPrivateTokensPath.toUri().getPath().toString(), pidFilePath
-                .toString()));
+            nmPrivateTokensPath.toUri().getPath().toString(),
+            pidFilePath.toString(),
+            StringUtils.join(",", localDirs),
+            StringUtils.join(",", logDirs)));
         String[] commandArray = command.toArray(new String[command.size()]);
         shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env

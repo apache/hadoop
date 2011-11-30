@@ -60,16 +60,18 @@ public class DummyContainerManager extends ContainerManagerImpl {
       DeletionService deletionContext, NodeStatusUpdater nodeStatusUpdater,
       NodeManagerMetrics metrics,
       ContainerTokenSecretManager containerTokenSecretManager,
-      ApplicationACLsManager applicationACLsManager) {
+      ApplicationACLsManager applicationACLsManager,
+      LocalDirsHandlerService dirsHandler) {
     super(context, exec, deletionContext, nodeStatusUpdater, metrics,
-        containerTokenSecretManager, applicationACLsManager);
+        containerTokenSecretManager, applicationACLsManager, dirsHandler);
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  protected ResourceLocalizationService createResourceLocalizationService(ContainerExecutor exec,
-      DeletionService deletionContext) {
-    return new ResourceLocalizationService(super.dispatcher, exec, deletionContext) {
+  protected ResourceLocalizationService createResourceLocalizationService(
+      ContainerExecutor exec, DeletionService deletionContext) {
+    return new ResourceLocalizationService(super.dispatcher, exec,
+        deletionContext, super.dirsHandler) {
       @Override
       public void handle(LocalizationEvent event) {
         switch (event.getType()) {
@@ -125,7 +127,8 @@ public class DummyContainerManager extends ContainerManagerImpl {
   @SuppressWarnings("unchecked")
   protected ContainersLauncher createContainersLauncher(Context context,
       ContainerExecutor exec) {
-    return new ContainersLauncher(context, super.dispatcher, exec) {
+    return new ContainersLauncher(context, super.dispatcher, exec,
+                                  super.dirsHandler) {
       @Override
       public void handle(ContainersLauncherEvent event) {
         Container container = event.getContainer();
@@ -139,7 +142,8 @@ public class DummyContainerManager extends ContainerManagerImpl {
         case CLEANUP_CONTAINER:
           dispatcher.getEventHandler().handle(
               new ContainerExitEvent(containerId,
-                  ContainerEventType.CONTAINER_KILLED_ON_REQUEST, 0));
+                  ContainerEventType.CONTAINER_KILLED_ON_REQUEST, 0,
+                  "Container exited with exit code 0."));
           break;
         }
       }

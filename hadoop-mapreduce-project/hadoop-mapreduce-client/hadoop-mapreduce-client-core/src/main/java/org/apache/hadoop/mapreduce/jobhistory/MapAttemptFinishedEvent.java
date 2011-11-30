@@ -44,6 +44,7 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
    * @param mapFinishTime Finish time of the map phase
    * @param finishTime Finish time of the attempt
    * @param hostname Name of the host where the map executed
+   * @param port RPC port for the tracker host.
    * @param rackName Name of the rack where the map executed
    * @param state State string for the attempt
    * @param counters Counters for the attempt
@@ -57,9 +58,8 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
    */
   public MapAttemptFinishedEvent
       (TaskAttemptID id, TaskType taskType, String taskStatus, 
-       long mapFinishTime, long finishTime, String hostname, String rackName,
-       String state, Counters counters,
-       int[][] allSplits) {
+       long mapFinishTime, long finishTime, String hostname, int port, 
+       String rackName, String state, Counters counters, int[][] allSplits) {
     datum.taskid = new Utf8(id.getTaskID().toString());
     datum.attemptId = new Utf8(id.toString());
     datum.taskType = new Utf8(taskType.name());
@@ -67,6 +67,7 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
     datum.mapFinishTime = mapFinishTime;
     datum.finishTime = finishTime;
     datum.hostname = new Utf8(hostname);
+    datum.port = port;
     datum.rackname = new Utf8(rackName);
     datum.state = new Utf8(state);
     datum.counters = EventWriter.toAvro(counters);
@@ -106,7 +107,7 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
       (TaskAttemptID id, TaskType taskType, String taskStatus, 
        long mapFinishTime, long finishTime, String hostname,
        String state, Counters counters) {
-    this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, "",
+    this(id, taskType, taskStatus, mapFinishTime, finishTime, hostname, -1, "",
         state, counters, null);
   }
   
@@ -136,6 +137,8 @@ public class MapAttemptFinishedEvent  implements HistoryEvent {
   public long getFinishTime() { return datum.finishTime; }
   /** Get the host name */
   public String getHostname() { return datum.hostname.toString(); }
+  /** Get the tracker rpc port */
+  public int getPort() { return datum.port; }
   /** Get the rack name */
   public String getRackname() { return datum.rackname.toString(); }
   /** Get the state string */

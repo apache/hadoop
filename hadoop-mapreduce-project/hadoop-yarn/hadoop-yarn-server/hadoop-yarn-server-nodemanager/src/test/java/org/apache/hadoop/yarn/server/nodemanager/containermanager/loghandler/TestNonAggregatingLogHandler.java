@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.logaggregation.ContainerLogsRetentionPolicy;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
@@ -74,13 +75,16 @@ public class TestNonAggregatingLogHandler {
     EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
     dispatcher.register(ApplicationEventType.class, appEventHandler);
 
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
+
     ApplicationId appId1 = BuilderUtils.newApplicationId(1234, 1);
     ApplicationAttemptId appAttemptId1 =
         BuilderUtils.newApplicationAttemptId(appId1, 1);
     ContainerId container11 = BuilderUtils.newContainerId(appAttemptId1, 1);
 
     NonAggregatingLogHandler logHandler =
-        new NonAggregatingLogHandler(dispatcher, delService);
+        new NonAggregatingLogHandler(dispatcher, delService, dirsHandler);
     logHandler.init(conf);
     logHandler.start();
 
@@ -146,13 +150,17 @@ public class TestNonAggregatingLogHandler {
     EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
     dispatcher.register(ApplicationEventType.class, appEventHandler);
 
+    LocalDirsHandlerService dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
+
     ApplicationId appId1 = BuilderUtils.newApplicationId(1234, 1);
     ApplicationAttemptId appAttemptId1 =
         BuilderUtils.newApplicationAttemptId(appId1, 1);
     ContainerId container11 = BuilderUtils.newContainerId(appAttemptId1, 1);
 
     NonAggregatingLogHandler logHandler =
-        new NonAggregatingLogHandlerWithMockExecutor(dispatcher, delService);
+        new NonAggregatingLogHandlerWithMockExecutor(dispatcher, delService,
+                                                     dirsHandler);
     logHandler.init(conf);
     logHandler.start();
 
@@ -182,8 +190,8 @@ public class TestNonAggregatingLogHandler {
     private ScheduledThreadPoolExecutor mockSched;
 
     public NonAggregatingLogHandlerWithMockExecutor(Dispatcher dispatcher,
-        DeletionService delService) {
-      super(dispatcher, delService);
+        DeletionService delService, LocalDirsHandlerService dirsHandler) {
+      super(dispatcher, delService, dirsHandler);
     }
 
     @Override

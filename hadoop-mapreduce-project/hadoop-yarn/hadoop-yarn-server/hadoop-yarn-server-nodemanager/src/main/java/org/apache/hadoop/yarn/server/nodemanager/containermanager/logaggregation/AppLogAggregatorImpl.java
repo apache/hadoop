@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -40,9 +42,11 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogValue;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogWriter;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+
 
 public class AppLogAggregatorImpl implements AppLogAggregator {
 
@@ -51,6 +55,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private static final int THREAD_SLEEP_TIME = 1000;
   private static final String TMP_FILE_SUFFIX = ".tmp";
 
+  private final LocalDirsHandlerService dirsHandler;
   private final Dispatcher dispatcher;
   private final ApplicationId appId;
   private final String applicationId;
@@ -58,7 +63,6 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final Configuration conf;
   private final DeletionService delService;
   private final UserGroupInformation userUgi;
-  private final String[] rootLogDirs;
   private final Path remoteNodeLogFileForApp;
   private final Path remoteNodeTmpLogFileForApp;
   private final ContainerLogsRetentionPolicy retentionPolicy;
@@ -72,7 +76,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   public AppLogAggregatorImpl(Dispatcher dispatcher,
       DeletionService deletionService, Configuration conf, ApplicationId appId,
-      UserGroupInformation userUgi, String[] localRootLogDirs,
+      UserGroupInformation userUgi, LocalDirsHandlerService dirsHandler,
       Path remoteNodeLogFileForApp,
       ContainerLogsRetentionPolicy retentionPolicy,
       Map<ApplicationAccessType, String> appAcls) {
@@ -82,7 +86,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.appId = appId;
     this.applicationId = ConverterUtils.toString(appId);
     this.userUgi = userUgi;
-    this.rootLogDirs = localRootLogDirs;
+    this.dirsHandler = dirsHandler;
     this.remoteNodeLogFileForApp = remoteNodeLogFileForApp;
     this.remoteNodeTmpLogFileForApp = getRemoteNodeTmpLogFileForApp();
     this.retentionPolicy = retentionPolicy;
@@ -115,9 +119,11 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       }
     }
 
-    LOG.info("Uploading logs for container " + containerId);
+    LOG.info("Uploading logs for container " + containerId
+        + ". Current good log dirs are "
+        + StringUtils.join(",", dirsHandler.getLogDirs()));
     LogKey logKey = new LogKey(containerId);
-    LogValue logValue = new LogValue(this.rootLogDirs, containerId);
+    LogValue logValue = new LogValue(dirsHandler.getLogDirs(), containerId);
     try {
       this.writer.append(logKey, logValue);
     } catch (IOException e) {
@@ -150,9 +156,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     // Remove the local app-log-dirs
-    Path[] localAppLogDirs = new Path[this.rootLogDirs.length];
+    List<String> rootLogDirs = dirsHandler.getLogDirs();
+    Path[] localAppLogDirs = new Path[rootLogDirs.size()];
     int index = 0;
-    for (String rootLogDir : this.rootLogDirs) {
+    for (String rootLogDir : rootLogDirs) {
       localAppLogDirs[index] = new Path(rootLogDir, this.applicationId);
       index++;
     }

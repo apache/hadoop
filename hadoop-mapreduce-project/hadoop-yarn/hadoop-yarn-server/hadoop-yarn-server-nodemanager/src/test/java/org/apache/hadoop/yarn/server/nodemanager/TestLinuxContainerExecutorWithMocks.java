@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -51,6 +52,7 @@ public class TestLinuxContainerExecutorWithMocks {
 
   private LinuxContainerExecutor mockExec = null;
   private final File mockParamFile = new File("./params.txt");
+  private LocalDirsHandlerService dirsHandler;
   
   private void deleteMockParamFile() {
     if(mockParamFile.exists()) {
@@ -80,6 +82,8 @@ public class TestLinuxContainerExecutorWithMocks {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, executorPath);
     mockExec = new LinuxContainerExecutor();
+    dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
     mockExec.setConf(conf);
   }
 
@@ -114,10 +118,13 @@ public class TestLinuxContainerExecutorWithMocks {
 
     mockExec.activateContainer(cId, pidFile);
     int ret = mockExec.launchContainer(container, scriptPath, tokensPath,
-        appSubmitter, appId, workDir);
+        appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
+        dirsHandler.getLogDirs());
     assertEquals(0, ret);
     assertEquals(Arrays.asList(appSubmitter, cmd, appId, containerId,
-        workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString()),
+        workDir.toString(), "/bin/echo", "/dev/null", pidFile.toString(),
+        StringUtils.join(",", dirsHandler.getLocalDirs()),
+        StringUtils.join(",", dirsHandler.getLogDirs())),
         readMockParams());
   }
 

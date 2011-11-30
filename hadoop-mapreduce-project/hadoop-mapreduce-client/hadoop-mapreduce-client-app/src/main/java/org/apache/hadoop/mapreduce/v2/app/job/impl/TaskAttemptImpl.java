@@ -922,8 +922,11 @@ public abstract class TaskAttemptImpl implements
             TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId()
                 .getTaskType()), attemptState.toString(),
             taskAttempt.finishTime,
-            taskAttempt.containerMgrAddress == null ? "UNKNOWN"
-                : taskAttempt.containerMgrAddress, StringUtils.join(
+            taskAttempt.containerNodeId == null ? "UNKNOWN"
+                : taskAttempt.containerNodeId.getHost(),
+            taskAttempt.containerNodeId == null ? -1 
+                : taskAttempt.containerNodeId.getPort(),    
+            StringUtils.join(
                 LINE_SEPARATOR, taskAttempt.getDiagnostics()), taskAttempt
                 .getProgressSplitBlock().burst());
     return tauce;
@@ -1273,6 +1276,7 @@ public abstract class TaskAttemptImpl implements
          finishTime,
          this.containerNodeId == null ? "UNKNOWN"
              : this.containerNodeId.getHost(),
+         this.containerNodeId == null ? -1 : this.containerNodeId.getPort(),
          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),
@@ -1288,7 +1292,8 @@ public abstract class TaskAttemptImpl implements
          this.reportedStatus.sortFinishTime,
          finishTime,
          this.containerNodeId == null ? "UNKNOWN"
-                                         : this.containerNodeId.getHost(),
+             : this.containerNodeId.getHost(),
+         this.containerNodeId == null ? -1 : this.containerNodeId.getPort(),
          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
          this.reportedStatus.stateString,
          TypeConverter.fromYarn(getCounters()),

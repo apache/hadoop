@@ -2685,7 +2685,7 @@ public class JobInProgress {
       MapAttemptFinishedEvent mfe = new MapAttemptFinishedEvent(
           statusAttemptID, taskType, TaskStatus.State.SUCCEEDED.toString(),
           status.getMapFinishTime(),
-          status.getFinishTime(),  trackerHostname, "",
+          status.getFinishTime(),  trackerHostname, -1, "",
           status.getStateString(), 
           new org.apache.hadoop.mapreduce.Counters(status.getCounters()),
           tip.getSplits(statusAttemptID).burst()
@@ -2698,7 +2698,7 @@ public class JobInProgress {
           statusAttemptID, taskType, TaskStatus.State.SUCCEEDED.toString(), 
           status.getShuffleFinishTime(),
           status.getSortFinishTime(), status.getFinishTime(),
-          trackerHostname, "", status.getStateString(),
+          trackerHostname, -1, "", status.getStateString(),
           new org.apache.hadoop.mapreduce.Counters(status.getCounters()),
           tip.getSplits(statusAttemptID).burst()
           );
@@ -3208,7 +3208,7 @@ public class JobInProgress {
             (taskid, 
              taskType, taskStatus.getRunState().toString(),
              finishTime, 
-             taskTrackerHostName, diagInfo,
+             taskTrackerHostName, -1, diagInfo,
              splits.burst());
     jobHistory.logEvent(tue, taskid.getJobID());
         

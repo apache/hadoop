@@ -357,7 +357,7 @@ int mkdirs(const char* path, mode_t perm) {
  * It creates the container work and log directories.
  */
 static int create_container_directories(const char* user, const char *app_id, 
-					const char *container_id) {
+    const char *container_id, char* const* local_dir, char* const* log_dir) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
   if (app_id == NULL || container_id == NULL || user == NULL) {
@@ -367,20 +367,11 @@ static int create_container_directories(const char* user, const char *app_id,
   }
 
   int result = -1;
-
-  char **local_dir = get_values(NM_SYS_DIR_KEY);
-
-  if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", NM_SYS_DIR_KEY);
-    return -1;
-  }
-
-  char **local_dir_ptr;
+  char* const* local_dir_ptr;
   for(local_dir_ptr = local_dir; *local_dir_ptr != NULL; ++local_dir_ptr) {
     char *container_dir = get_container_work_directory(*local_dir_ptr, user, app_id, 
                                                 container_id);
     if (container_dir == NULL) {
-      free_values(local_dir);
       return -1;
     }
     if (mkdirs(container_dir, perms) == 0) {
@@ -390,7 +381,6 @@ static int create_container_directories(const char* user, const char *app_id,
     free(container_dir);
 
   }
-  free_values(local_dir);
   if (result != 0) {
     return result;
   }
@@ -404,19 +394,11 @@ static int create_container_directories(const char* user, const char *app_id,
   } else {
     sprintf(combined_name, "%s/%s", app_id, container_id);
 
-    char **log_dir = get_values(NM_LOG_DIR_KEY);
-    if (log_dir == NULL) {
-      free(combined_name);
-      fprintf(LOGFILE, "%s is not configured.\n", NM_LOG_DIR_KEY);
-      return -1;
-    }
-
-    char **log_dir_ptr;
+    char* const* log_dir_ptr;
     for(log_dir_ptr = log_dir; *log_dir_ptr != NULL; ++log_dir_ptr) {
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
       if (container_log_dir == NULL) {
         free(combined_name);
-        free_values(log_dir);
         return -1;
       } else if (mkdirs(container_log_dir, perms) != 0) {
     	free(container_log_dir);
@@ -426,7 +408,6 @@ static int create_container_directories(const char* user, const char *app_id,
       }
     }
     free(combined_name);
-    free_values(log_dir);
   }
   return result;
 }
@@ -660,17 +641,12 @@ static int copy_file(int input, const char* in_filename,
 /**
  * Function to initialize the user directories of a user.
  */
-int initialize_user(const char *user) {
-  char **local_dir = get_values(NM_SYS_DIR_KEY);
-  if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", NM_SYS_DIR_KEY);
-    return INVALID_NM_ROOT_DIRS;
-  }
+int initialize_user(const char *user, char* const* local_dirs) {
 
   char *user_dir;
-  char **local_dir_ptr = local_dir;
+  char* const* local_dir_ptr;
   int failed = 0;
-  for(local_dir_ptr = local_dir; *local_dir_ptr != 0; ++local_dir_ptr) {
+  for(local_dir_ptr = local_dirs; *local_dir_ptr != 0; ++local_dir_ptr) {
     user_dir = get_user_directory(*local_dir_ptr, user);
     if (user_dir == NULL) {
       fprintf(LOGFILE, "Couldn't get userdir directory for %s.\n", user);
@@ -682,32 +658,29 @@ int initialize_user(const char *user) {
     }
     free(user_dir);
   }
-  free_values(local_dir);
   return failed ? INITIALIZE_USER_FAILED : 0;
 }
 
 /**
  * Function to prepare the application directories for the container.
  */
-int initialize_app(const char *user, const char *app_id, 
-		   const char* nmPrivate_credentials_file, char* const* args) {
+int initialize_app(const char *user, const char *app_id,
+                   const char* nmPrivate_credentials_file,
+                   char* const* local_dirs, char* const* log_roots,
+                   char* const* args) {
   if (app_id == NULL || user == NULL) {
     fprintf(LOGFILE, "Either app_id is null or the user passed is null.\n");
     return INVALID_ARGUMENT_NUMBER;
   }
 
   // create the user directory on all disks
-  int result = initialize_user(user);
+  int result = initialize_user(user, local_dirs);
   if (result != 0) {
     return result;
   }
 
   ////////////// create the log directories for the app on all disks
-  char **log_roots = get_values(NM_LOG_DIR_KEY);
-  if (log_roots == NULL) {
-    return INVALID_CONFIG_FILE;
-  }
-  char **log_root;
+  char* const* log_root;
   char *any_one_app_log_dir = NULL;
   for(log_root=log_roots; *log_root != NULL; ++log_root) {
     char *app_log_dir = get_app_log_directory(*log_root, app_id);
@@ -722,7 +695,7 @@ int initialize_app(const char *user, const char *app_id,
       free(app_log_dir);
     }
   }
-  free_values(log_roots);
+
   if (any_one_app_log_dir == NULL) {
     fprintf(LOGFILE, "Did not create any app-log directories\n");
     return -1;
@@ -743,15 +716,9 @@ int initialize_app(const char *user, const char *app_id,
 
   // 750
   mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP;
-  char **nm_roots = get_values(NM_SYS_DIR_KEY);
-
-  if (nm_roots == NULL) {
-    return INVALID_CONFIG_FILE;
-  }
-
-  char **nm_root;
+  char* const* nm_root;
   char *primary_app_dir = NULL;
-  for(nm_root=nm_roots; *nm_root != NULL; ++nm_root) {
+  for(nm_root=local_dirs; *nm_root != NULL; ++nm_root) {
     char *app_dir = get_app_directory(*nm_root, user, app_id);
     if (app_dir == NULL) {
       // try the next one
@@ -763,7 +730,7 @@ int initialize_app(const char *user, const char *app_id,
       free(app_dir);
     }
   }
-  free_values(nm_roots);
+
   if (primary_app_dir == NULL) {
     fprintf(LOGFILE, "Did not create any app directories\n");
     return -1;
@@ -805,9 +772,10 @@ int initialize_app(const char *user, const char *app_id,
 }
 
 int launch_container_as_user(const char *user, const char *app_id, 
-                     const char *container_id, const char *work_dir,
-                     const char *script_name, const char *cred_file,
-                     const char* pid_file) {
+                   const char *container_id, const char *work_dir,
+                   const char *script_name, const char *cred_file,
+                   const char* pid_file, char* const* local_dirs,
+                   char* const* log_dirs) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -854,7 +822,8 @@ int launch_container_as_user(const char *user, const char *app_id,
     goto cleanup;
   }
 
-  if (create_container_directories(user, app_id, container_id) != 0) {
+  if (create_container_directories(user, app_id, container_id, local_dirs,
+                                   log_dirs) != 0) {
     fprintf(LOGFILE, "Could not create container dirs");
     goto cleanup;
   }

@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.NodeHealthCheckerService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
@@ -59,6 +58,8 @@ public class NodeManager extends CompositeService implements
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
   protected ContainerTokenSecretManager containerTokenSecretManager;
   private ApplicationACLsManager aclsManager;
+  private NodeHealthCheckerService nodeHealthChecker;
+  private LocalDirsHandlerService dirsHandler;
 
   public NodeManager() {
     super(NodeManager.class.getName());
@@ -78,14 +79,16 @@ public class NodeManager extends CompositeService implements
   protected ContainerManagerImpl createContainerManager(Context context,
       ContainerExecutor exec, DeletionService del,
       NodeStatusUpdater nodeStatusUpdater, ContainerTokenSecretManager 
-      containerTokenSecretManager, ApplicationACLsManager aclsManager) {
+      containerTokenSecretManager, ApplicationACLsManager aclsManager,
+      LocalDirsHandlerService dirsHandler) {
     return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
-        metrics, containerTokenSecretManager, aclsManager);
+        metrics, containerTokenSecretManager, aclsManager, dirsHandler);
   }
 
   protected WebServer createWebServer(Context nmContext,
-      ResourceView resourceView, ApplicationACLsManager aclsManager) {
-    return new WebServer(nmContext, resourceView, aclsManager);
+      ResourceView resourceView, ApplicationACLsManager aclsManager,
+      LocalDirsHandlerService dirsHandler) {
+    return new WebServer(nmContext, resourceView, aclsManager, dirsHandler);
   }
 
   protected void doSecureLogin() throws IOException {
@@ -121,16 +124,12 @@ public class NodeManager extends CompositeService implements
     // NodeManager level dispatcher
     AsyncDispatcher dispatcher = new AsyncDispatcher();
 
-    NodeHealthCheckerService healthChecker = null;
-    if (NodeHealthCheckerService.shouldRun(conf)) {
-      healthChecker = new NodeHealthCheckerService();
-      addService(healthChecker);
-    }
+    nodeHealthChecker = new NodeHealthCheckerService();
+    addService(nodeHealthChecker);
+    dirsHandler = nodeHealthChecker.getDiskHandler();
 
-    NodeStatusUpdater nodeStatusUpdater =
-        createNodeStatusUpdater(context, dispatcher, healthChecker, 
-        this.containerTokenSecretManager);
-    
+    NodeStatusUpdater nodeStatusUpdater = createNodeStatusUpdater(context,
+        dispatcher, nodeHealthChecker, this.containerTokenSecretManager);
     nodeStatusUpdater.register(this);
 
     NodeResourceMonitor nodeResourceMonitor = createNodeResourceMonitor();
@@ -138,11 +137,11 @@ public class NodeManager extends CompositeService implements
 
     ContainerManagerImpl containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,
-        this.containerTokenSecretManager, this.aclsManager);
+        this.containerTokenSecretManager, this.aclsManager, dirsHandler);
     addService(containerManager);
 
     Service webServer = createWebServer(context, containerManager
-        .getContainersMonitor(), this.aclsManager);
+        .getContainersMonitor(), this.aclsManager, dirsHandler);
     addService(webServer);
 
     dispatcher.register(ContainerManagerEventType.class, containerManager);
@@ -215,7 +214,14 @@ public class NodeManager extends CompositeService implements
     }
   }
 
-  
+
+  /**
+   * @return the node health checker
+   */
+  public NodeHealthCheckerService getNodeHealthChecker() {
+    return nodeHealthChecker;
+  }
+
   @Override
   public void stateChanged(Service service) {
     // Shutdown the Nodemanager when the NodeStatusUpdater is stopped.

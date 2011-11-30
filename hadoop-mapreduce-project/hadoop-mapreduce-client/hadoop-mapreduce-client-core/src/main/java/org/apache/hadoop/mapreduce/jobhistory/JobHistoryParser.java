@@ -209,6 +209,7 @@ public class JobHistoryParser {
     attemptInfo.sortFinishTime = event.getSortFinishTime();
     attemptInfo.counters = event.getCounters();
     attemptInfo.hostname = event.getHostname();
+    attemptInfo.port = event.getPort();
     attemptInfo.rackname = event.getRackName();
   }
 
@@ -222,6 +223,7 @@ public class JobHistoryParser {
     attemptInfo.mapFinishTime = event.getMapFinishTime();
     attemptInfo.counters = event.getCounters();
     attemptInfo.hostname = event.getHostname();
+    attemptInfo.port = event.getPort();
     attemptInfo.rackname = event.getRackname();
   }
 
@@ -234,6 +236,7 @@ public class JobHistoryParser {
     attemptInfo.error = event.getError();
     attemptInfo.status = event.getTaskStatus();
     attemptInfo.hostname = event.getHostname();
+    attemptInfo.port = event.getPort();
     attemptInfo.shuffleFinishTime = event.getFinishTime();
     attemptInfo.sortFinishTime = event.getFinishTime();
     attemptInfo.mapFinishTime = event.getFinishTime();
@@ -542,6 +545,7 @@ public class JobHistoryParser {
     int httpPort;
     int shufflePort;
     String hostname;
+    int port;
     String rackname;
     ContainerId containerId;
 
@@ -552,6 +556,7 @@ public class JobHistoryParser {
       startTime = finishTime = shuffleFinishTime = sortFinishTime = 
         mapFinishTime = -1;
       error =  state =  trackerName = hostname = rackname = "";
+      port = -1;
       httpPort = -1;
       shufflePort = -1;
     }
@@ -599,6 +604,8 @@ public class JobHistoryParser {
     public String getTrackerName() { return trackerName; }
     /** @return the host name */
     public String getHostname() { return hostname; }
+    /** @return the port */
+    public int getPort() { return port; }
     /** @return the rack name */
     public String getRackname() { return rackname; }
     /** @return the counters for the attempt */

@@ -71,6 +71,8 @@ Release 0.23.1 - Unreleased
   INCOMPATIBLE CHANGES
 
   NEW FEATURES                                                                    
+   
+   MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
 
   IMPROVEMENTS
 
@@ -121,6 +123,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3045. Fixed UI filters to not filter on hidden title-numeric
     sort fields. (Jonathan Eagles via sseth)
+
+    MAPREDUCE-3448. TestCombineOutputCollector javac unchecked warning on mocked
+    generics (Jonathan Eagles via mahadev)
 
   OPTIMIZATIONS
 
@@ -191,6 +196,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3433. Finding counters by legacy group name returns empty
     counters. (tomwhite)
+
+    MAPREDUCE-3450. NM port info no longer available in JobHistory.
+    (Siddharth Seth via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

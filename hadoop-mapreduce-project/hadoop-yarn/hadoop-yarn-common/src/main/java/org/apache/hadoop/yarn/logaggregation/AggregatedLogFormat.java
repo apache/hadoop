@@ -31,6 +31,7 @@ import java.io.Writer;
 import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -105,12 +106,12 @@ public class AggregatedLogFormat {
 
   public static class LogValue {
 
-    private final String[] rootLogDirs;
+    private final List<String> rootLogDirs;
     private final ContainerId containerId;
     // TODO Maybe add a version string here. Instead of changing the version of
     // the entire k-v format
 
-    public LogValue(String[] rootLogDirs, ContainerId containerId) {
+    public LogValue(List<String> rootLogDirs, ContainerId containerId) {
       this.rootLogDirs = rootLogDirs;
       this.containerId = containerId;
     }

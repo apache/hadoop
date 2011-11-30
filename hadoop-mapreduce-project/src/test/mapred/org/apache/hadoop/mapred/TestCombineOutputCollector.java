@@ -102,6 +102,8 @@ public class TestCombineOutputCollector {
   public void testCustomCollect() throws Throwable {
     //mock creation
     TaskReporter mockTaskReporter = mock(TaskReporter.class);
+
+    @SuppressWarnings("unchecked")
     Writer<String, Integer> mockWriter = mock(Writer.class);
 
     Configuration conf = new Configuration();
@@ -122,6 +124,8 @@ public class TestCombineOutputCollector {
   public void testDefaultCollect() throws Throwable {
     //mock creation
     TaskReporter mockTaskReporter = mock(TaskReporter.class);
+
+    @SuppressWarnings("unchecked")
     Writer<String, Integer> mockWriter = mock(Writer.class);
 
     Configuration conf = new Configuration();
