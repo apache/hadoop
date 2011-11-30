@@ -83,7 +83,7 @@ public class TestJobHistoryEvents extends TestCase {
     for (TaskType t : types) {
       TaskAttemptUnsuccessfulCompletionEvent tauce = 
         new TaskAttemptUnsuccessfulCompletionEvent
-           (id, t, state, 0L, "", "", NULL_SPLITS_ARRAY);
+           (id, t, state, 0L, "", -1, "", NULL_SPLITS_ARRAY);
       assertEquals(expected, tauce.getEventType());
     }
   }

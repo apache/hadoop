@@ -80,12 +80,11 @@ public class CompletedTaskAttempt implements TaskAttempt {
     report.setStateString(attemptInfo.getState());
     report.setCounters(getCounters());
     report.setContainerId(attemptInfo.getContainerId());
-    String []hostSplits = attemptInfo.getHostname().split(":");
-    if (hostSplits.length != 2) {
+    if (attemptInfo.getHostname() == null) {
       report.setNodeManagerHost("UNKNOWN");
     } else {
-      report.setNodeManagerHost(hostSplits[0]);
-      report.setNodeManagerPort(Integer.parseInt(hostSplits[1]));
+      report.setNodeManagerHost(attemptInfo.getHostname());
+      report.setNodeManagerPort(attemptInfo.getPort());
     }
     report.setNodeManagerHttpPort(attemptInfo.getHttpPort());
   }
@@ -97,7 +96,7 @@ public class CompletedTaskAttempt implements TaskAttempt {
 
   @Override
   public String getAssignedContainerMgrAddress() {
-    return attemptInfo.getHostname();
+    return attemptInfo.getHostname() + ":" + attemptInfo.getPort();
   }
 
   @Override

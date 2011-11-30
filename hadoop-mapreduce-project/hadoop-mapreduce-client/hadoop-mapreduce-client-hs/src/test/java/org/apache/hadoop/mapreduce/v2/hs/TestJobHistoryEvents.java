@@ -165,6 +165,9 @@ public class TestJobHistoryEvents {
   //Verify the wrong ctor is not being used. Remove after mrv1 is removed.
     ContainerId fakeCid = BuilderUtils.newContainerId(-1, -1, -1, -1);
     Assert.assertFalse(attempt.getAssignedContainerID().equals(fakeCid));
+    //Verify complete contianerManagerAddress
+    Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
+        attempt.getAssignedContainerMgrAddress());
   }
 
   static class MRAppWithHistory extends MRApp {

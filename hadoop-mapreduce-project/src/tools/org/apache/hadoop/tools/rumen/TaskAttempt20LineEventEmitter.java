@@ -141,7 +141,7 @@ public abstract class TaskAttempt20LineEventEmitter extends HistoryEventEmitter 
         return new TaskAttemptUnsuccessfulCompletionEvent
           (taskAttemptID,
            that.originalTaskType, status, Long.parseLong(finishTime),
-           hostName, error, null);
+           hostName, -1, error, null);
       }
 
       return null;

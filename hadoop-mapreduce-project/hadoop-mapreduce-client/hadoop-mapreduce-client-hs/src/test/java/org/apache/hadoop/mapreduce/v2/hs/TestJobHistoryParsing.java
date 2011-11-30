@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
@@ -64,13 +65,14 @@ public class TestJobHistoryParsing {
   public static class MyResolver implements DNSToSwitchMapping {
     @Override
     public List<String> resolve(List<String> names) {
-      return Arrays.asList(new String[]{"MyRackName"});
+      return Arrays.asList(new String[]{"/MyRackName"});
     }
   }
 
   @Test
   public void testHistoryParsing() throws Exception {
     Configuration conf = new Configuration();
+    conf.set(MRJobConfig.USER_NAME, System.getProperty("user.name"));
     long amStartTimeEst = System.currentTimeMillis();
     conf.setClass(
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
@@ -165,10 +167,12 @@ public class TestJobHistoryParsing {
         Assert.assertNotNull("TaskAttemptInfo not found", taskAttemptInfo);
         Assert.assertEquals("Incorrect shuffle port for task attempt",
             taskAttempt.getShufflePort(), taskAttemptInfo.getShufflePort());
+        Assert.assertEquals(MRApp.NM_HOST, taskAttemptInfo.getHostname());
+        Assert.assertEquals(MRApp.NM_PORT, taskAttemptInfo.getPort());
 
         // Verify rack-name
         Assert.assertEquals("rack-name is incorrect", taskAttemptInfo
-            .getRackname(), "MyRackName");
+            .getRackname(), "/MyRackName");
       }
     }
 

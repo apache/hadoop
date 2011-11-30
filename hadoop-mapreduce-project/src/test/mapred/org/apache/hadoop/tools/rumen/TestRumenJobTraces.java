@@ -938,12 +938,12 @@ public class TestRumenJobTraces {
                     (TaskAttemptID.forName("attempt_200904211745_0003_m_000004_1"),
                      TaskType.valueOf("MAP"), "STATUS", 1234567890L,
                      "/194\\.6\\.134\\.80/cluster50262\\.secondleveldomain\\.com",
-                     "MACHINE_EXPLODED", splits));
+                     -1, "MACHINE_EXPLODED", splits));
     subject.process(new TaskAttemptUnsuccessfulCompletionEvent
                     (TaskAttemptID.forName("attempt_200904211745_0003_m_000004_2"),
                      TaskType.valueOf("MAP"), "STATUS", 1234567890L,
                      "/194\\.6\\.134\\.80/cluster50263\\.secondleveldomain\\.com",
-                     "MACHINE_EXPLODED", splits));
+                     -1, "MACHINE_EXPLODED", splits));
     subject.process(new TaskStartedEvent(TaskID
         .forName("task_200904211745_0003_m_000004"), 1234567890L, TaskType
         .valueOf("MAP"),

@@ -197,6 +197,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3433. Finding counters by legacy group name returns empty
     counters. (tomwhite)
 
+    MAPREDUCE-3450. NM port info no longer available in JobHistory.
+    (Siddharth Seth via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
