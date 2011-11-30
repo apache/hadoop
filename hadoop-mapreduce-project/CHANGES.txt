@@ -66,6 +66,8 @@ Trunk (unreleased changes)
     MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
     by default. (tucu)
 
+    MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
