@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
     (John Lee via suresh)
 
+    HADOOP-7853. multiple javax security configurations cause conflicts. 
+    (daryn via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
