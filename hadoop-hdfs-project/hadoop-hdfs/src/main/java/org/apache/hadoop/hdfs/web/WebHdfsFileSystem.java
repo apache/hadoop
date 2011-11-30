@@ -357,6 +357,7 @@ public class WebHdfsFileSystem extends FileSystem
       conn.setRequestMethod(op.getType().toString());
       if (op.getDoOutput()) {
         conn = twoStepWrite(conn, op);
+        conn.setRequestProperty("Content-Type", "application/octet-stream");
       }
       conn.setDoOutput(op.getDoOutput());
       conn.connect();

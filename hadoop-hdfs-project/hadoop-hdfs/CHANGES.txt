@@ -116,6 +116,9 @@ Trunk (unreleased changes)
     HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
                via todd)
 
+    HDFS-2606. webhdfs client filesystem impl must set the content-type 
+    header for create/append. (tucu)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
