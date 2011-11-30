@@ -46,6 +46,7 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
    * @param sortFinishTime Finish time of the sort phase
    * @param finishTime Finish time of the attempt
    * @param hostname Name of the host where the attempt executed
+   * @param port RPC port for the tracker host.
    * @param rackName Name of the rack where the attempt executed
    * @param state State of the attempt
    * @param counters Counters for the attempt
@@ -57,8 +58,8 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
   public ReduceAttemptFinishedEvent
     (TaskAttemptID id, TaskType taskType, String taskStatus, 
      long shuffleFinishTime, long sortFinishTime, long finishTime,
-     String hostname, String rackName, String state, Counters counters,
-     int[][] allSplits) {
+     String hostname, int port,  String rackName, String state, 
+     Counters counters, int[][] allSplits) {
     datum.taskid = new Utf8(id.getTaskID().toString());
     datum.attemptId = new Utf8(id.toString());
     datum.taskType = new Utf8(taskType.name());
@@ -67,6 +68,7 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
     datum.sortFinishTime = sortFinishTime;
     datum.finishTime = finishTime;
     datum.hostname = new Utf8(hostname);
+    datum.port = port;
     datum.rackname = new Utf8(rackName);
     datum.state = new Utf8(state);
     datum.counters = EventWriter.toAvro(counters);
@@ -108,7 +110,7 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
      String hostname, String state, Counters counters) {
     this(id, taskType, taskStatus,
          shuffleFinishTime, sortFinishTime, finishTime,
-         hostname, "", state, counters, null);
+         hostname, -1, "", state, counters, null);
   }
 
   ReduceAttemptFinishedEvent() {}
@@ -138,6 +140,8 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
   public long getFinishTime() { return datum.finishTime; }
   /** Get the name of the host where the attempt ran */
   public String getHostname() { return datum.hostname.toString(); }
+  /** Get the tracker rpc port */
+  public int getPort() { return datum.port; }
   /** Get the rack name of the node where the attempt ran */
   public String getRackName() { return datum.rackname.toString(); }
   /** Get the state string */
