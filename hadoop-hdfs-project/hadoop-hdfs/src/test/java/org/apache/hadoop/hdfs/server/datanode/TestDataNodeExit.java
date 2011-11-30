@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,7 +37,6 @@ import org.junit.Test;
  * Tests if DataNode process exits if all Block Pool services exit. 
  */
 public class TestDataNodeExit {
-  private static int BASEPORT = 9923;
   private static long WAIT_TIME_IN_MILLIS = 10;
   Configuration conf;
   MiniDFSCluster cluster = null;
@@ -46,8 +46,9 @@ public class TestDataNodeExit {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 100);
-    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(3)
-        .nameNodePort(BASEPORT).build();
+    cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
+      .build();
     for (int i = 0; i < 3; i++) {
       cluster.waitActive(i);
     }

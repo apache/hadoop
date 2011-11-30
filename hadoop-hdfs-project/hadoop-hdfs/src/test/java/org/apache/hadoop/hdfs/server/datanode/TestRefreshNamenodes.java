@@ -26,6 +26,9 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology.NSConf;
 import org.junit.Test;
 
 /**
@@ -43,9 +46,13 @@ public class TestRefreshNamenodes {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
-      cluster = new MiniDFSCluster.Builder(conf).federation(true).
-          numNameNodes(1).nameNodePort(nnPort1).build();
+      MiniDFSNNTopology topology = new MiniDFSNNTopology()
+        .addNameservice(new NSConf("ns1").addNN(
+            new NNConf(null).setIpcPort(nnPort1)))
+        .setFederation(true);
+      cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(topology)
+        .build();
 
       DataNode dn = cluster.getDataNodes().get(0);
       assertEquals(1, dn.getAllBpOs().length);

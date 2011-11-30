@@ -514,11 +514,10 @@ public class TestStartup extends TestCase {
     InetAddress inetAddress = InetAddress.getByAddress(b);
     list.add(inetAddress.getHostName());
     writeConfigFile(localFileSys, hostsFile, list);
-    int numNameNodes = 1;
     int numDatanodes = 1;
     
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
+      cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(numDatanodes).setupHostsFile(true).build();
       cluster.waitActive();
   

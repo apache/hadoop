@@ -279,7 +279,8 @@ public class TestDecommission {
    * @throws IOException */
   private void startCluster(int numNameNodes, int numDatanodes,
       Configuration conf) throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
+    cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(numNameNodes))
         .numDataNodes(numDatanodes).build();
     cluster.waitActive();
     for (int i = 0; i < numNameNodes; i++) {
@@ -507,7 +508,8 @@ public class TestDecommission {
       InterruptedException {
     conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     int numDatanodes = 1;
-    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(numNameNodes))
         .numDataNodes(numDatanodes).setupHostsFile(true).build();
     cluster.waitActive();
     

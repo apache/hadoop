@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -254,7 +255,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 1");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numNameNodes(nNameNodes)
+          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -275,7 +276,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 10");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numNameNodes(nNameNodes)
+          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -329,7 +330,7 @@ public class TestBalancerWithMultipleNameNodes {
 
     LOG.info("RUN_TEST -1");
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numNameNodes(nNameNodes)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
         .numDataNodes(nDataNodes)
         .racks(racks)
         .simulatedCapacities(capacities)

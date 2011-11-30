@@ -97,4 +97,11 @@ public class NameNodeAdapter {
       ns.readUnlock();
     }
   }
+  
+  /**
+   * Return the FSNamesystem stats
+   */
+  public static long[] getStats(final FSNamesystem fsn) {
+    return fsn.getStats();
+  }
 }

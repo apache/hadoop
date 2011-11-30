@@ -41,7 +41,8 @@ public class TestMiniDFSCluster {
   protected File testDataDir;
   @Before
   public void setUp() {
-    testDataPath = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
+    testDataPath = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA,
+        "build/test/data");
     testDataDir = new File(new File(testDataPath).getParentFile(),
                            "miniclusters");
 

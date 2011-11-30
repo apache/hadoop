@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -1072,8 +1073,9 @@ public class TestCheckpoint extends TestCase {
     String nameserviceId2 = "ns2";
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceId1
         + "," + nameserviceId2);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2)
-        .nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .build();
     Configuration snConf1 = new HdfsConfiguration(cluster.getConfiguration(0));
     Configuration snConf2 = new HdfsConfiguration(cluster.getConfiguration(1));
     InetSocketAddress nn1RpcAddress =

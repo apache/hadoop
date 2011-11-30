@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -56,8 +57,9 @@ public class TestDataNodeMultipleRegistrations {
    */
   @Test
   public void test2NNRegistration() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2)
-        .nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .build();
     try {
       cluster.waitActive();
       NameNode nn1 = cluster.getNameNode(0);
@@ -180,8 +182,9 @@ public class TestDataNodeMultipleRegistrations {
   
   @Test
   public void testClusterIdMismatch() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
-    nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .build();
     try {
       cluster.waitActive();
 
@@ -216,25 +219,27 @@ public class TestDataNodeMultipleRegistrations {
 
     Configuration conf = new HdfsConfiguration();
     // start Federated cluster and add a node.
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
-    nameNodePort(9928).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+      .build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
     
     // add a node
-    cluster.addNameNode(conf, 9929);
+    cluster.addNameNode(conf, 0);
     Assert.assertEquals("(1)Should be 3 namenodes", 3, cluster.getNumNameNodes());
     cluster.shutdown();
         
     // 2. start with Federation flag set
     conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).federation(true).
-    nameNodePort(9928).build();
+    cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(1))
+      .build();
     Assert.assertNotNull(cluster);
     Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
     
     // add a node
-    cluster.addNameNode(conf, 9929);   
+    cluster.addNameNode(conf, 0);
     Assert.assertEquals("(2)Should be 2 namenodes", 2, cluster.getNumNameNodes());
     cluster.shutdown();
 

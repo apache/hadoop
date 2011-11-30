@@ -571,6 +571,12 @@ public class DFSUtil {
     public InetSocketAddress getAddress() {
       return addr;
     }
+    
+    @Override
+    public String toString() {
+      return "ConfiguredNNAddress[nsId=" + nameserviceId + ";" +
+        "nnId=" + namenodeId + ";addr=" + addr + "]";
+    }
   }
 
   /**
