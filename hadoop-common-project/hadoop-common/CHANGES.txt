@@ -48,6 +48,9 @@ Release 0.23.1 - Unreleased
    MAPREDUCE-3465. Fixed project pom to create test dirs (and fix failing tests).
    (Hitesh Shah via sseth)
 
+   HADOOP-7864. Building mvn site with Maven < 3.0.2 causes OOM errors.
+   (Andrew Bayer via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
