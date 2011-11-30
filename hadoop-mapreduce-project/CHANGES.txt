@@ -154,6 +154,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3450. NM port info no longer available in JobHistory.
     (Siddharth Seth via mahadev)
 
+    MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. 
+    (jeagles via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
