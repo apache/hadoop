@@ -118,18 +118,30 @@ public class UserGroupInformation {
 
     @Override
     public boolean commit() throws LoginException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("hadoop login commit");
+      }
       // if we already have a user, we are done.
       if (!subject.getPrincipals(User.class).isEmpty()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("using existing subject:"+subject.getPrincipals());
+        }
         return true;
       }
       Principal user = null;
       // if we are using kerberos, try it out
       if (useKerberos) {
         user = getCanonicalUser(KerberosPrincipal.class);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("using kerberos user:"+user);
+        }
       }
       // if we don't have a kerberos user, use the OS user
       if (user == null) {
         user = getCanonicalUser(OS_PRINCIPAL_CLASS);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("using local user:"+user);
+        }
       }
       // if we found the user, add our principal
       if (user != null) {
@@ -148,11 +160,17 @@ public class UserGroupInformation {
 
     @Override
     public boolean login() throws LoginException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("hadoop login");
+      }
       return true;
     }
 
     @Override
     public boolean logout() throws LoginException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("hadoop logout");
+      }
       return true;
     }
   }
@@ -220,26 +238,6 @@ public class UserGroupInformation {
     if (!(groups instanceof TestingGroups)) {
       groups = Groups.getUserToGroupsMappingService(conf);
     }
-    // Set the configuration for JAAS to be the Hadoop configuration. 
-    // This is done here rather than a static initializer to avoid a
-    // circular dependence.
-    javax.security.auth.login.Configuration existingConfig = null;
-    try {
-      existingConfig =
-        javax.security.auth.login.Configuration.getConfiguration();
-    } catch (SecurityException se) {
-      // If no security configuration is on the classpath, then
-      // we catch this exception, and we don't need to delegate
-      // to anyone
-    }
-
-    if (existingConfig instanceof HadoopConfiguration) {
-      LOG.info("JAAS Configuration already set up for Hadoop, not re-installing.");
-    } else {
-      javax.security.auth.login.Configuration.setConfiguration(
-        new HadoopConfiguration(existingConfig));
-    }
-
     isInitialized = true;
     UserGroupInformation.conf = conf;
   }
@@ -398,12 +396,6 @@ public class UserGroupInformation {
     private static final AppConfigurationEntry[] KEYTAB_KERBEROS_CONF =
       new AppConfigurationEntry[]{KEYTAB_KERBEROS_LOGIN, HADOOP_LOGIN};
 
-    private final javax.security.auth.login.Configuration parent;
-
-    HadoopConfiguration(javax.security.auth.login.Configuration parent) {
-      this.parent = parent;
-    }
-
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
       if (SIMPLE_CONFIG_NAME.equals(appName)) {
@@ -414,11 +406,14 @@ public class UserGroupInformation {
         KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
         KEYTAB_KERBEROS_OPTIONS.put("principal", keytabPrincipal);
         return KEYTAB_KERBEROS_CONF;
-      } else if (parent != null) {
-        return parent.getAppConfigurationEntry(appName);
       }
       return null;
     }
+  }
+  
+  private static LoginContext
+  newLoginContext(String appName, Subject subject) throws LoginException {
+    return new LoginContext(appName, subject, null, new HadoopConfiguration());
   }
   
   private LoginContext getLogin() {
@@ -476,10 +471,10 @@ public class UserGroupInformation {
         Subject subject = new Subject();
         LoginContext login;
         if (isSecurityEnabled()) {
-          login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
+          login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
               subject);
         } else {
-          login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
+          login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
               subject);
         }
         login.login();
@@ -502,6 +497,9 @@ public class UserGroupInformation {
         loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
         throw new IOException("failure to login", le);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("UGI loginUser:"+loginUser);
       }
     }
     return loginUser;
@@ -616,7 +614,7 @@ public class UserGroupInformation {
     long start = 0;
     try {
       login = 
-        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
+        newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
       start = System.currentTimeMillis();
       login.login();
       metrics.loginSuccess.add(System.currentTimeMillis() - start);
@@ -695,7 +693,7 @@ public class UserGroupInformation {
         login.logout();
         // login and also update the subject field of this instance to
         // have the new credentials (pass it to the LoginContext constructor)
-        login = new LoginContext(
+        login = newLoginContext(
             HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject());
         LOG.info("Initiating re-login for " + keytabPrincipal);
         start = System.currentTimeMillis();
@@ -744,7 +742,7 @@ public class UserGroupInformation {
       //login and also update the subject field of this instance to 
       //have the new credentials (pass it to the LoginContext constructor)
       login = 
-        new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, 
+        newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, 
             getSubject());
       LOG.info("Initiating re-login for " + getUserName());
       login.login();
@@ -781,7 +779,7 @@ public class UserGroupInformation {
       Subject subject = new Subject();
       
       LoginContext login = 
-        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject); 
+        newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject); 
        
       start = System.currentTimeMillis();
       login.login();
@@ -1053,11 +1051,12 @@ public class UserGroupInformation {
    */
   @Override
   public String toString() {
+    StringBuilder sb = new StringBuilder(getUserName());
+    sb.append(" (auth:"+getAuthenticationMethod()+")");
     if (getRealUser() != null) {
-      return getUserName() + " via " +  getRealUser().toString();
-    } else {
-      return getUserName();
+      sb.append(" via ").append(getRealUser().toString());
     }
+    return sb.toString();
   }
 
   /**
@@ -1132,6 +1131,7 @@ public class UserGroupInformation {
    * @return the value from the run method
    */
   public <T> T doAs(PrivilegedAction<T> action) {
+    logPrivilegedAction(subject, action);
     return Subject.doAs(subject, action);
   }
   
@@ -1149,9 +1149,11 @@ public class UserGroupInformation {
   public <T> T doAs(PrivilegedExceptionAction<T> action
                     ) throws IOException, InterruptedException {
     try {
+      logPrivilegedAction(subject, action);
       return Subject.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
+      LOG.error("PriviledgedActionException as:"+this+" cause:"+cause);
       if (cause instanceof IOException) {
         throw (IOException) cause;
       } else if (cause instanceof Error) {
@@ -1163,6 +1165,14 @@ public class UserGroupInformation {
       } else {
         throw new UndeclaredThrowableException(pae,"Unknown exception in doAs");
       }
+    }
+  }
+
+  private void logPrivilegedAction(Subject subject, Object action) {
+    if (LOG.isDebugEnabled()) {
+      // would be nice if action included a descriptive toString()
+      String where = new Throwable().getStackTrace()[2].toString();
+      LOG.debug("PrivilegedAction as:"+this+" from:"+where);
     }
   }
 

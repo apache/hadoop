@@ -70,7 +70,7 @@ public class SecurityUtil {
       if (isOriginalTGT(t))
         return t;
     }
-    throw new IOException("Failed to find TGT from current Subject");
+    throw new IOException("Failed to find TGT from current Subject:"+current);
   }
   
   /**
