@@ -179,6 +179,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
         RefreshAuthorizationPolicyProtocol.class, this);
     this.clientRpcServer.addProtocol(RefreshUserMappingsProtocol.class, this);
     this.clientRpcServer.addProtocol(GetUserMappingsProtocol.class, this);
+    this.clientRpcServer.addProtocol(HAServiceProtocol.class, this);
     
 
     // set service-level authorization security policy
@@ -538,6 +539,17 @@ class NameNodeRpcServer implements NamenodeProtocols {
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
       throws IOException {
     nn.checkOperation(OperationCategory.WRITE);
+    if (nn.isStandbyState()) {
+      if (namesystem.isGenStampInFuture(newgenerationstamp)) {
+        LOG.info("Required GS=" + newgenerationstamp
+            + ", Queuing commitBlockSynchronization message");
+        namesystem.getPendingDataNodeMessages().queueMessage(
+            new PendingDataNodeMessages.CommitBlockSynchronizationMessage(
+                block, newgenerationstamp, newlength, closeFile, deleteblock,
+                newtargets, newgenerationstamp));
+        return;
+      }
+    }
     namesystem.commitBlockSynchronization(block,
         newgenerationstamp, newlength, closeFile, deleteblock, newtargets);
   }
@@ -670,7 +682,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
-    nn.checkOperation(OperationCategory.READ);
+    // TODO(HA): decide on OperationCategory for this
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
       throw new IOException("Cannot find datanode report");
@@ -859,6 +871,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
       String poolId, long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
+    if (nn.isStandbyState()) {
+      long maxGs = blist.getMaxGsInBlockList();
+      if (namesystem.isGenStampInFuture(maxGs)) {
+        LOG.info("Required GS="+maxGs+", Queuing blockReport message");
+        namesystem.getPendingDataNodeMessages().queueMessage(
+            new PendingDataNodeMessages.BlockReportMessage(nodeReg, poolId,
+                blist, maxGs));
+        return null;
+      }
+    }
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
            + "from " + nodeReg.getName() + " " + blist.getNumberOfBlocks()
@@ -866,7 +888,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     }
 
     namesystem.getBlockManager().processReport(nodeReg, poolId, blist);
-    if (nn.getFSImage().isUpgradeFinalized())
+    if (nn.getFSImage().isUpgradeFinalized() && !nn.isStandbyState())
       return new FinalizeCommand(poolId);
     return null;
   }
@@ -875,6 +897,25 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
       ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks) throws IOException {
     verifyRequest(nodeReg);
+    if (nn.isStandbyState()) {
+      if (receivedAndDeletedBlocks.length > 0) {
+        long maxGs = receivedAndDeletedBlocks[0].getBlock()
+            .getGenerationStamp();
+        for (ReceivedDeletedBlockInfo binfo : receivedAndDeletedBlocks) {
+          if (binfo.getBlock().getGenerationStamp() > maxGs) {
+            maxGs = binfo.getBlock().getGenerationStamp();
+          }
+        }
+        if (namesystem.isGenStampInFuture(maxGs)) {
+          LOG.info("Required GS=" + maxGs
+              + ", Queuing blockReceivedAndDeleted message");
+          namesystem.getPendingDataNodeMessages().queueMessage(
+              new PendingDataNodeMessages.BlockReceivedDeleteMessage(nodeReg,
+                  poolId, receivedAndDeletedBlocks, maxGs));
+          return;
+        }
+      }
+    }
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
           +"from "+nodeReg.getName()+" "+receivedAndDeletedBlocks.length

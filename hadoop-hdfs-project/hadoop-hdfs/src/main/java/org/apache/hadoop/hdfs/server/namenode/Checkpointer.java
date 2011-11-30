@@ -286,7 +286,7 @@ class Checkpointer extends Daemon {
           log.getStartTxId(), log.getEndTxId());
       if (log.getStartTxId() > dstImage.getLastAppliedTxId()) {
         editsStreams.add(new EditLogFileInputStream(f, log.getStartTxId(), 
-                                                    log.getEndTxId()));
+                                                    log.getEndTxId(), true));
        }
     }
     LOG.info("Checkpointer about to load edits from " +

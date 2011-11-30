@@ -123,7 +123,8 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @param registration
    * @param poolId - the block pool ID for the blocks
    * @param blocks - the block list as an array of longs.
-   *     Each block is represented as 2 longs.
+   *     Each finalized block is represented as 3 longs. Each under-
+   *     construction replica is represented as 4 longs.
    *     This is done instead of Block[] to reduce memory used by block reports.
    *     
    * @return - the next command for DN to process.

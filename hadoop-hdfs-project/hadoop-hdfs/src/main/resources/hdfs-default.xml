@@ -226,6 +226,18 @@ creations/deletions), or "all".</description>
       directories, for redundancy. Default value is same as dfs.name.dir
   </description>
 </property>
+
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+  <value></value>
+  <description>A directory on shared storage between the multiple namenodes
+  in an HA cluster. This directory will be written by the active and read
+  by the standby in order to keep the namespaces synchronized. This directory
+  does not need to be listed in dfs.namenode.edits.dir above. It should be
+  left empty in a non-HA cluster.
+  </description>
+</property>
+  
 <property>
   <name>dfs.web.ugi</name>
   <value>webuser,webgroup</value>

@@ -51,6 +51,17 @@ public class MiniDFSNNTopology {
           .setIpcPort(nameNodePort)));
   }
   
+
+  /**
+   * Set up an HA topology with a single HA nameservice.
+   */
+  public static MiniDFSNNTopology simpleHATopology() {
+    return new MiniDFSNNTopology()
+      .addNameservice(new MiniDFSNNTopology.NSConf(null)
+        .addNN(new MiniDFSNNTopology.NNConf("nn1"))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2")));
+  }
+
   /**
    * Set up federated cluster with the given number of nameservices, each
    * of which has only a single NameNode.

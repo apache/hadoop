@@ -27,3 +27,5 @@ HDFS-2577. NN fails to start since it tries to start secret manager in safemode.
 HDFS-2582. Scope dfs.ha.namenodes config by nameservice (todd)
 
 HDFS-2591. MiniDFSCluster support to mix and match federation with HA (todd)
+
+HDFS-1975. Support for sharing the namenode state from active to standby. (jitendra, atm, todd)

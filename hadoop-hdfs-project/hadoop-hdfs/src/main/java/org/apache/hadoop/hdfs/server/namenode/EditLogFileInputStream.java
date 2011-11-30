@@ -41,6 +41,7 @@ class EditLogFileInputStream extends EditLogInputStream {
   private final int logVersion;
   private final FSEditLogOp.Reader reader;
   private final FSEditLogLoader.PositionTrackingInputStream tracker;
+  private final boolean isInProgress;
   
   /**
    * Open an EditLogInputStream for the given file.
@@ -53,7 +54,7 @@ class EditLogFileInputStream extends EditLogInputStream {
    */
   EditLogFileInputStream(File name)
       throws LogHeaderCorruptException, IOException {
-    this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID);
+    this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, false);
   }
 
   /**
@@ -66,8 +67,8 @@ class EditLogFileInputStream extends EditLogInputStream {
    * @throws IOException if an actual IO error occurs while reading the
    *         header
    */
-  EditLogFileInputStream(File name, long firstTxId, long lastTxId)
-      throws LogHeaderCorruptException, IOException {
+  EditLogFileInputStream(File name, long firstTxId, long lastTxId,
+      boolean isInProgress) throws LogHeaderCorruptException, IOException {
     file = name;
     fStream = new FileInputStream(name);
 
@@ -84,6 +85,7 @@ class EditLogFileInputStream extends EditLogInputStream {
     reader = new FSEditLogOp.Reader(in, logVersion);
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
+    this.isInProgress = isInProgress;
   }
 
   @Override
@@ -130,6 +132,11 @@ class EditLogFileInputStream extends EditLogInputStream {
   long length() throws IOException {
     // file size + size of both buffers
     return file.length();
+  }
+  
+  @Override
+  boolean isInProgress() {
+    return isInProgress;
   }
   
   @Override

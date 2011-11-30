@@ -19,13 +19,17 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.AccessControlException;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
@@ -45,6 +49,32 @@ public class NameNodeAdapter {
       String src, long offset, long length) throws IOException {
     return namenode.getNamesystem().getBlockLocations(
         src, offset, length, false, true);
+  }
+  
+  public static HdfsFileStatus getFileInfo(NameNode namenode, String src,
+      boolean resolveLink) throws AccessControlException, UnresolvedLinkException {
+    return namenode.getNamesystem().getFileInfo(src, resolveLink);
+  }
+  
+  public static boolean mkdirs(NameNode namenode, String src,
+      PermissionStatus permissions, boolean createParent)
+      throws UnresolvedLinkException, IOException {
+    return namenode.getNamesystem().mkdirs(src, permissions, createParent);
+  }
+  
+  public static void saveNamespace(NameNode namenode)
+      throws AccessControlException, IOException {
+    namenode.getNamesystem().saveNamespace();
+  }
+  
+  public static void enterSafeMode(NameNode namenode, boolean resourcesLow)
+      throws IOException {
+    namenode.getNamesystem().enterSafeMode(resourcesLow);
+  }
+  
+  public static void leaveSafeMode(NameNode namenode, boolean checkForUpgrades)
+      throws SafeModeException {
+    namenode.getNamesystem().leaveSafeMode(checkForUpgrades);
   }
   
   /**

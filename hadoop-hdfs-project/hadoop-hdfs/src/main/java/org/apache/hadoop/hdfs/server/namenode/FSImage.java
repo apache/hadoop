@@ -56,6 +56,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -68,7 +70,7 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FSImage implements Closeable {
-  protected static final Log LOG = LogFactory.getLog(FSImage.class.getName());
+  public static final Log LOG = LogFactory.getLog(FSImage.class.getName());
 
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
@@ -112,7 +114,8 @@ public class FSImage implements Closeable {
    * @throws IOException if directories are invalid.
    */
   protected FSImage(Configuration conf,
-                    Collection<URI> imageDirs, Collection<URI> editsDirs)
+                    Collection<URI> imageDirs,
+                    Collection<URI> editsDirs)
       throws IOException {
     this.conf = conf;
 
@@ -123,6 +126,12 @@ public class FSImage implements Closeable {
     }
 
     this.editLog = new FSEditLog(conf, storage, editsDirs);
+    String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
+    if (!HAUtil.isHAEnabled(conf, nameserviceId)) {
+      editLog.initJournalsForWrite();
+    } else {
+      editLog.initSharedJournalsForRead();
+    }
     
     archivalManager = new NNStorageRetentionManager(conf, storage, editLog);
   }
@@ -217,6 +226,7 @@ public class FSImage implements Closeable {
       }
     }
 
+    // TODO(HA): Have to figure out a story for the first 3 of these.
     // 3. Do transitions
     switch(startOpt) {
     case UPGRADE:
@@ -251,6 +261,12 @@ public class FSImage implements Closeable {
       StorageState curState;
       try {
         curState = sd.analyzeStorage(startOpt, storage);
+        // TODO(HA): Fix this.
+        String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
+        if (curState != StorageState.NORMAL && HAUtil.isHAEnabled(conf, nameserviceId)) {
+          throw new IOException("Cannot start an HA namenode with name dirs " +
+              "that need recovery. Dir: " + sd + " state: " + curState);
+        }
         // sd is locked but not opened
         switch(curState) {
         case NON_EXISTENT:
@@ -326,7 +342,7 @@ public class FSImage implements Closeable {
         assert curDir.exists() : "Current directory must exist.";
         assert !prevDir.exists() : "prvious directory must not exist.";
         assert !tmpDir.exists() : "prvious.tmp directory must not exist.";
-        assert !editLog.isOpen() : "Edits log must not be open.";
+        assert !editLog.isOpenForWrite() : "Edits log must not be open.";
 
         // rename current to tmp
         NNStorage.rename(curDir, tmpDir);
@@ -519,11 +535,11 @@ public class FSImage implements Closeable {
     return editLog;
   }
 
-  void openEditLog() throws IOException {
+  void openEditLogForWrite() throws IOException {
     assert editLog != null : "editLog must be initialized";
-    Preconditions.checkState(!editLog.isOpen(),
+    Preconditions.checkState(!editLog.isOpenForWrite(),
         "edit log should not yet be open");
-    editLog.open();
+    editLog.openForWrite();
     storage.writeTransactionIdFileToStorage(editLog.getCurSegmentTxId());
   };
   
@@ -564,6 +580,7 @@ public class FSImage implements Closeable {
 
     Iterable<EditLogInputStream> editStreams = null;
 
+    // TODO(HA): We shouldn't run this when coming up in standby state
     editLog.recoverUnclosedStreams();
 
     if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, 
@@ -616,6 +633,8 @@ public class FSImage implements Closeable {
     
     // update the txid for the edit log
     editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
+    // TODO(HA): This should probably always return false when HA is enabled and
+    // we're coming up in standby state.
     return needToSave;
   }
 
@@ -644,7 +663,7 @@ public class FSImage implements Closeable {
    * Load the specified list of edit files into the image.
    * @return the number of transactions loaded
    */
-  protected long loadEdits(Iterable<EditLogInputStream> editStreams,
+  public long loadEdits(Iterable<EditLogInputStream> editStreams,
                            FSNamesystem target) throws IOException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
 
@@ -663,10 +682,13 @@ public class FSImage implements Closeable {
         lastAppliedTxId += thisNumLoaded;
       }
     } finally {
+      // TODO(HA): Should this happen when called by the tailer?
       FSEditLog.closeAllStreams(editStreams);
     }
 
     // update the counts
+    // TODO(HA): this may be very slow -- we probably want to
+    // update them as we go for HA.
     target.dir.updateCountForINodeWithQuota();    
     return numLoaded;
   }
@@ -688,8 +710,7 @@ public class FSImage implements Closeable {
   
   /**
    * Load in the filesystem image from file. It's a big list of
-   * filenames and blocks.  Return whether we should
-   * "re-save" and consolidate the edit-logs
+   * filenames and blocks.
    */
   private void loadFSImage(File curFile, MD5Hash expectedMd5,
       FSNamesystem target) throws IOException {
@@ -790,7 +811,7 @@ public class FSImage implements Closeable {
     assert editLog != null : "editLog must be initialized";
     storage.attemptRestoreRemovedStorage();
 
-    boolean editLogWasOpen = editLog.isOpen();
+    boolean editLogWasOpen = editLog.isOpenForWrite();
     
     if (editLogWasOpen) {
       editLog.endCurrentLogSegment(true);

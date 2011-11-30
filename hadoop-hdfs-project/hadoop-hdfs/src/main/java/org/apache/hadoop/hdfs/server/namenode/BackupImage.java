@@ -345,7 +345,7 @@ public class BackupImage extends FSImage {
   synchronized void namenodeStartedLogSegment(long txid)
       throws IOException {
     LOG.info("NameNode started a new log segment at txid " + txid);
-    if (editLog.isOpen()) {
+    if (editLog.isOpenForWrite()) {
       if (editLog.getLastWrittenTxId() == txid - 1) {
         // We are in sync with the NN, so end and finalize the current segment
         editLog.endCurrentLogSegment(false);

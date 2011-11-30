@@ -580,7 +580,6 @@ public class TestEditLog extends TestCase {
             currentDir.getAbsolutePath());
         assertNotNull("No image found in " + nameDir, imageFile);
         assertEquals(NNStorage.getImageFileName(0), imageFile.getName());
-        
         // Try to start a new cluster
         LOG.info("\n===========================================\n" +
         "Starting same cluster after simulated crash");
@@ -772,6 +771,11 @@ public class TestEditLog extends TestCase {
     public JournalType getType() {
       return JournalType.FILE;
     }
+
+    @Override
+    boolean isInProgress() {
+      return true;
+    }
   }
 
   public void testFailedOpen() throws Exception {
@@ -780,7 +784,7 @@ public class TestEditLog extends TestCase {
     FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
     try {
       logDir.setWritable(false);
-      log.open();
+      log.openForWrite();
       fail("Did no throw exception on only having a bad dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -805,6 +809,7 @@ public class TestEditLog extends TestCase {
         "[1,100]|[101,200]|[201,]",
         "[1,100]|[101,200]|[201,]");
     log = new FSEditLog(storage);
+    log.initJournalsForWrite();
     assertEquals("[[1,100], [101,200]]",
         log.getEditLogManifest(1).toString());
     assertEquals("[[101,200]]",
@@ -816,6 +821,7 @@ public class TestEditLog extends TestCase {
         "[1,100]|[101,200]",
         "[1,100]|[201,300]|[301,400]"); // nothing starting at 101
     log = new FSEditLog(storage);
+    log.initJournalsForWrite();
     assertEquals("[[1,100], [101,200], [201,300], [301,400]]",
         log.getEditLogManifest(1).toString());
     
@@ -825,6 +831,7 @@ public class TestEditLog extends TestCase {
         "[1,100]|[301,400]", // gap from 101 to 300
         "[301,400]|[401,500]");
     log = new FSEditLog(storage);
+    log.initJournalsForWrite();
     assertEquals("[[301,400], [401,500]]",
         log.getEditLogManifest(1).toString());
     
@@ -834,6 +841,7 @@ public class TestEditLog extends TestCase {
         "[1,100]|[101,150]", // short log at 101
         "[1,50]|[101,200]"); // short log at 1
     log = new FSEditLog(storage);
+    log.initJournalsForWrite();
     assertEquals("[[1,100], [101,200]]",
         log.getEditLogManifest(1).toString());
     assertEquals("[[101,200]]",
@@ -846,6 +854,7 @@ public class TestEditLog extends TestCase {
         "[1,100]|[101,]", 
         "[1,100]|[101,200]"); 
     log = new FSEditLog(storage);
+    log.initJournalsForWrite();
     assertEquals("[[1,100], [101,200]]",
         log.getEditLogManifest(1).toString());
     assertEquals("[[101,200]]",
@@ -938,7 +947,8 @@ public class TestEditLog extends TestCase {
     // open the edit log and add two transactions
     // logGenerationStamp is used, simply because it doesn't 
     // require complex arguments.
-    editlog.open();
+    editlog.initJournalsForWrite();
+    editlog.openForWrite();
     for (int i = 2; i < TXNS_PER_ROLL; i++) {
       editlog.logGenerationStamp((long)0);
     }
@@ -998,6 +1008,7 @@ public class TestEditLog extends TestCase {
                                    new AbortSpec(10, 1));
     long totaltxnread = 0;
     FSEditLog editlog = new FSEditLog(storage);
+    editlog.initJournalsForWrite();
     long startTxId = 1;
     Iterable<EditLogInputStream> editStreams = editlog.selectInputStreams(startTxId, 
                                                                           TXNS_PER_ROLL*11);
@@ -1047,6 +1058,7 @@ public class TestEditLog extends TestCase {
     assertTrue(files[0].delete());
     
     FSEditLog editlog = new FSEditLog(storage);
+    editlog.initJournalsForWrite();
     long startTxId = 1;
     try {
       Iterable<EditLogInputStream> editStreams 

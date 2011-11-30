@@ -133,4 +133,9 @@ class EditLogBackupInputStream extends EditLogInputStream {
   public long getLastTxId() throws IOException {
     return HdfsConstants.INVALID_TXID;
   }
+
+  @Override
+  boolean isInProgress() {
+    return true;
+  }
 }

@@ -182,9 +182,11 @@ public abstract class FSImageTestUtil {
     Mockito.doReturn(sd).when(storage)
       .getStorageDirectory(Matchers.<URI>anyObject());
 
-    return new FSEditLog(new Configuration(), 
+    FSEditLog editLog = new FSEditLog(new Configuration(), 
                          storage,
                          ImmutableList.of(logDir.toURI()));
+    editLog.initJournalsForWrite();
+    return editLog;
   }
   
   /**

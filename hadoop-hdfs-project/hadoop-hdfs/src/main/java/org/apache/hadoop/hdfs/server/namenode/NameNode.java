@@ -947,12 +947,17 @@ public class NameNode {
 
     @Override
     public void startStandbyServices() throws IOException {
-      // TODO:HA Start reading editlog from active
+      namesystem.startStandbyServices();
     }
 
     @Override
     public void stopStandbyServices() throws IOException {
-      // TODO:HA Stop reading editlog from active
+      // TODO(HA): Are we guaranteed to be the only active here?
+      namesystem.stopStandbyServices();
     }
+  }
+  
+  public boolean isStandbyState() {
+    return (state.equals(STANDBY_STATE));
   }
 }

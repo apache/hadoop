@@ -60,22 +60,36 @@ public class FSEditLog  {
 
   /**
    * State machine for edit log.
+   * 
+   * In a non-HA setup:
+   * 
    * The log starts in UNITIALIZED state upon construction. Once it's
-   * initialized, it is usually in IN_SEGMENT state, indicating that edits
-   * may be written. In the middle of a roll, or while saving the namespace,
-   * it briefly enters the BETWEEN_LOG_SEGMENTS state, indicating that the
-   * previous segment has been closed, but the new one has not yet been opened.
+   * initialized, it is usually in IN_SEGMENT state, indicating that edits may
+   * be written. In the middle of a roll, or while saving the namespace, it
+   * briefly enters the BETWEEN_LOG_SEGMENTS state, indicating that the previous
+   * segment has been closed, but the new one has not yet been opened.
+   * 
+   * In an HA setup:
+   * 
+   * The log starts in UNINITIALIZED state upon construction. Once it's
+   * initialized, it sits in the OPEN_FOR_READING state the entire time that the
+   * NN is in standby. Upon the NN transition to active, the log will be CLOSED,
+   * and then move to being BETWEEN_LOG_SEGMENTS, much as if the NN had just
+   * started up, and then will move to IN_SEGMENT so it can begin writing to the
+   * log. The log states will then revert to behaving as they do in a non-HA
+   * setup.
    */
   private enum State {
     UNINITIALIZED,
     BETWEEN_LOG_SEGMENTS,
     IN_SEGMENT,
+    OPEN_FOR_READING,
     CLOSED;
   }  
   private State state = State.UNINITIALIZED;
   
   //initialize
-  final private JournalSet journalSet;
+  private JournalSet journalSet = null;
   private EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
@@ -125,6 +139,11 @@ public class FSEditLog  {
   };
 
   final private Collection<URI> editsDirs;
+  
+  /**
+   * The edit directories that are shared between primary and secondary.
+   */
+  final private Collection<URI> sharedEditsDirs;
 
   /**
    * Construct FSEditLog with default configuration, taking editDirs from NNStorage
@@ -163,9 +182,34 @@ public class FSEditLog  {
     } else {
       this.editsDirs = Lists.newArrayList(editsDirs);
     }
-
+    
+    this.sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
+  }
+  
+  public void initJournalsForWrite() {
+    Preconditions.checkState(state == State.UNINITIALIZED ||
+        state == State.CLOSED, "Unexpected state: %s", state);
+    
+    initJournals(this.editsDirs);
+    state = State.BETWEEN_LOG_SEGMENTS;
+  }
+  
+  public void initSharedJournalsForRead() {
+    if (state == State.OPEN_FOR_READING) {
+      LOG.warn("Initializing shared journals for READ, already open for READ",
+          new Exception());
+      return;
+    }
+    Preconditions.checkState(state == State.UNINITIALIZED ||
+        state == State.CLOSED);
+    
+    initJournals(this.sharedEditsDirs);
+    state = State.OPEN_FOR_READING;
+  }
+  
+  private void initJournals(Collection<URI> dirs) {
     this.journalSet = new JournalSet();
-    for (URI u : this.editsDirs) {
+    for (URI u : dirs) {
       StorageDirectory sd = storage.getStorageDirectory(u);
       if (sd != null) {
         journalSet.add(new FileJournalManager(sd));
@@ -175,7 +219,6 @@ public class FSEditLog  {
     if (journalSet.isEmpty()) {
       LOG.error("No edits directories configured!");
     } 
-    state = State.BETWEEN_LOG_SEGMENTS;
   }
 
   /**
@@ -190,15 +233,20 @@ public class FSEditLog  {
    * Initialize the output stream for logging, opening the first
    * log segment.
    */
-  synchronized void open() throws IOException {
-    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS);
+  synchronized void openForWrite() throws IOException {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
 
     startLogSegment(getLastWrittenTxId() + 1, true);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
   
-  synchronized boolean isOpen() {
+  synchronized boolean isOpenForWrite() {
     return state == State.IN_SEGMENT;
+  }
+
+  synchronized boolean isOpenForRead() {
+    return state == State.OPEN_FOR_READING;
   }
 
   /**
@@ -230,7 +278,8 @@ public class FSEditLog  {
    */
   void logEdit(final FSEditLogOp op) {
     synchronized (this) {
-      assert state != State.CLOSED;
+      assert state != State.CLOSED && state != State.OPEN_FOR_READING :
+        "bad state: " + state;
       
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
@@ -317,7 +366,7 @@ public class FSEditLog  {
   /**
    * Return the transaction ID of the last transaction written to the log.
    */
-  synchronized long getLastWrittenTxId() {
+  public synchronized long getLastWrittenTxId() {
     return txid;
   }
   
@@ -962,19 +1011,29 @@ public class FSEditLog  {
       // All journals have failed, it is handled in logSync.
     }
   }
+  
+  Collection<EditLogInputStream> selectInputStreams(long fromTxId,
+      long toAtLeastTxId) throws IOException {
+    return selectInputStreams(fromTxId, toAtLeastTxId, true);
+  }
 
   /**
    * Select a list of input streams to load.
+   * 
    * @param fromTxId first transaction in the selected streams
    * @param toAtLeast the selected streams must contain this transaction
+   * @param inProgessOk set to true if in-progress streams are OK
    */
-  Collection<EditLogInputStream> selectInputStreams(long fromTxId,
-      long toAtLeastTxId) throws IOException {
+  public Collection<EditLogInputStream> selectInputStreams(long fromTxId,
+      long toAtLeastTxId, boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
     EditLogInputStream stream = journalSet.getInputStream(fromTxId);
     while (stream != null) {
+      if (inProgressOk || !stream.isInProgress()) {
+        streams.add(stream);
+      }
+      // We're now looking for a higher range, so reset the fromTxId
       fromTxId = stream.getLastTxId() + 1;
-      streams.add(stream);
       stream = journalSet.getInputStream(fromTxId);
     }
     if (fromTxId <= toAtLeastTxId) {

@@ -90,7 +90,7 @@ class FileJournalManager implements JournalManager {
 
     File dstFile = NNStorage.getFinalizedEditsFile(
         sd, firstTxId, lastTxId);
-    LOG.debug("Finalizing edits file " + inprogressFile + " -> " + dstFile);
+    LOG.info("Finalizing edits file " + inprogressFile + " -> " + dstFile);
     
     Preconditions.checkState(!dstFile.exists(),
         "Can't finalize edits file " + inprogressFile + " since finalized file " +
@@ -116,6 +116,7 @@ class FileJournalManager implements JournalManager {
   @Override
   public void purgeLogsOlderThan(long minTxIdToKeep)
       throws IOException {
+    LOG.info("Purging logs older than " + minTxIdToKeep);
     File[] files = FileUtil.listFiles(sd.getCurrentDir());
     List<EditLogFile> editLogs = 
       FileJournalManager.matchEditLogs(files);
@@ -169,7 +170,7 @@ class FileJournalManager implements JournalManager {
           LOG.error("Edits file " + f + " has improperly formatted " +
                     "transaction ID");
           // skip
-        }          
+        }
       }
       
       // Check for in-progress edits
@@ -190,7 +191,7 @@ class FileJournalManager implements JournalManager {
   }
 
   @Override
-  synchronized public EditLogInputStream getInputStream(long fromTxId) 
+  synchronized public EditLogInputStream getInputStream(long fromTxId)
       throws IOException {
     for (EditLogFile elf : getLogFiles(fromTxId)) {
       if (elf.getFirstTxId() == fromTxId) {
@@ -201,7 +202,7 @@ class FileJournalManager implements JournalManager {
           LOG.trace("Returning edit stream reading from " + elf);
         }
         return new EditLogFileInputStream(elf.getFile(), 
-            elf.getFirstTxId(), elf.getLastTxId());
+            elf.getFirstTxId(), elf.getLastTxId(), elf.isInProgress());
       }
     }
 
@@ -245,6 +246,7 @@ class FileJournalManager implements JournalManager {
     }
 
     long max = findMaxTransaction();
+    
     // fromTxId should be greater than max, as it points to the next 
     // transaction we should expect to find. If it is less than or equal
     // to max, it means that a transaction with txid == max has not been found

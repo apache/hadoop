@@ -606,7 +606,7 @@ public class MiniDFSCluster {
         if (manageNameDfsDirs) {
           URI sharedEditsUri = fileAsURI(new File(base_dir, "shared-edits-" +
               nnCounter + "-through-" + (nnCounter+nnIds.size()-1)));
-          // TODO in HDFS-1971: conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY, sharedEditsUri.toString());
+          conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY, sharedEditsUri.toString());
         }
       }
 
@@ -667,7 +667,10 @@ public class MiniDFSCluster {
     FileSystem dstFS = FileSystem.getLocal(dstConf).getRaw();
     for (URI dstDir : dstDirs) {
       Preconditions.checkArgument(!dstDir.equals(srcDir));
-      Files.deleteRecursively(new File(dstDir));
+      File dstDirF = new File(dstDir);
+      if (dstDirF.exists()) {
+        Files.deleteRecursively(dstDirF);
+      }
       LOG.info("Copying namedir from primary node dir "
           + srcDir + " to " + dstDir);
       FileUtil.copy(
