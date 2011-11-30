@@ -144,6 +144,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7859. TestViewFsHdfs.testgetFileLinkStatus is failing an assert. (eli)
 
+   HADOOP-7864. Building mvn site with Maven < 3.0.2 causes OOM errors.
+   (Andrew Bayer via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
