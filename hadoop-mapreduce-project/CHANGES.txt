@@ -202,6 +202,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3450. NM port info no longer available in JobHistory.
     (Siddharth Seth via mahadev)
 
+    MAPREDUCE-3488. Streaming jobs are failing because the main class
+    isnt set in the pom files. (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
