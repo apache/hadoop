@@ -100,6 +100,8 @@ Trunk (unreleased changes)
     HADOOP-7853. multiple javax security configurations cause conflicts. 
     (daryn via tucu)
 
+    HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
