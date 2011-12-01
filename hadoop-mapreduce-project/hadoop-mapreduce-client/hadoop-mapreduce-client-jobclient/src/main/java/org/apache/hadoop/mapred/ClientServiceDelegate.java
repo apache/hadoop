@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -156,6 +156,8 @@ public class ClientServiceDelegate {
           application = rm.getApplicationReport(appId);
           continue;
         }
+        UserGroupInformation newUgi = UserGroupInformation.createRemoteUser(
+            UserGroupInformation.getCurrentUser().getUserName());
         serviceAddr = application.getHost() + ":" + application.getRpcPort();
         if (UserGroupInformation.isSecurityEnabled()) {
           String clientTokenEncoded = application.getClientToken();
@@ -167,11 +169,17 @@ public class ClientServiceDelegate {
               .getHost(), application.getRpcPort());
           clientToken.setService(new Text(addr.getAddress().getHostAddress()
               + ":" + addr.getPort()));
-          UserGroupInformation.getCurrentUser().addToken(clientToken);
+          newUgi.addToken(clientToken);
         }
         LOG.info("The url to track the job: " + application.getTrackingUrl());
         LOG.debug("Connecting to " + serviceAddr);
-        realProxy = instantiateAMProxy(serviceAddr);
+        final String tempStr = serviceAddr;
+        realProxy = newUgi.doAs(new PrivilegedExceptionAction<MRClientProtocol>() {
+          @Override
+          public MRClientProtocol run() throws IOException {
+            return instantiateAMProxy(tempStr);
+          }
+        });
         return realProxy;
       } catch (IOException e) {
         //possibly the AM has crashed
@@ -243,17 +251,11 @@ public class ClientServiceDelegate {
 
   MRClientProtocol instantiateAMProxy(final String serviceAddr)
       throws IOException {
-    UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
     LOG.trace("Connecting to ApplicationMaster at: " + serviceAddr);
-    MRClientProtocol proxy = currentUser
-        .doAs(new PrivilegedAction<MRClientProtocol>() {
-      @Override
-      public MRClientProtocol run() {
-        YarnRPC rpc = YarnRPC.create(conf);
-        return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
+    YarnRPC rpc = YarnRPC.create(conf);
+    MRClientProtocol proxy = 
+         (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
             NetUtils.createSocketAddr(serviceAddr), conf);
-      }
-    });
     LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);
     return proxy;
   }

@@ -211,6 +211,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3452. fifoscheduler web ui page always shows 0% used for the queue.
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3443. JobClient and Job should function in the context of the
+    UGI which created them. (Mahadev Konar via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

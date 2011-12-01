@@ -30,6 +30,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -315,7 +316,12 @@ public class Job extends JobContextImpl implements JobContext {
    * @throws IOException
    */
   synchronized void updateStatus() throws IOException, InterruptedException {
-    this.status = cluster.getClient().getJobStatus(status.getJobID());
+    this.status = ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
+      @Override
+      public JobStatus run() throws IOException, InterruptedException {
+        return cluster.getClient().getJobStatus(status.getJobID());
+      }
+    });
     if (this.status == null) {
       throw new IOException("Job status not available ");
     }
@@ -476,8 +482,16 @@ public class Job extends JobContextImpl implements JobContext {
       InterruptedException {
     int failCount = 1;
     TaskCompletionEvent lastEvent = null;
-    for (TaskCompletionEvent event : cluster.getClient().getTaskCompletionEvents(
-        status.getJobID(), 0, 10)) {
+    TaskCompletionEvent[] events = ugi.doAs(new 
+        PrivilegedExceptionAction<TaskCompletionEvent[]>() {
+          @Override
+          public TaskCompletionEvent[] run() throws IOException,
+          InterruptedException {
+            return cluster.getClient().getTaskCompletionEvents(
+                status.getJobID(), 0, 10);
+          }
+        });
+    for (TaskCompletionEvent event : events) {
       if (event.getStatus().equals(TaskCompletionEvent.Status.FAILED)) {
         failCount++;
         lastEvent = event;
@@ -500,7 +514,12 @@ public class Job extends JobContextImpl implements JobContext {
   public TaskReport[] getTaskReports(TaskType type) 
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return cluster.getClient().getTaskReports(getJobID(), type);
+    final TaskType tmpType = type;
+    return ugi.doAs(new PrivilegedExceptionAction<TaskReport[]>() {
+      public TaskReport[] run() throws IOException, InterruptedException {
+        return cluster.getClient().getTaskReports(getJobID(), tmpType);
+      }
+    });
   }
 
   /**
@@ -603,7 +622,14 @@ public class Job extends JobContextImpl implements JobContext {
         org.apache.hadoop.mapred.JobPriority.valueOf(priority.name()));
     } else {
       ensureState(JobState.RUNNING);
-      cluster.getClient().setJobPriority(getJobID(), priority.toString());
+      final JobPriority tmpPriority = priority;
+      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws IOException, InterruptedException {
+          cluster.getClient().setJobPriority(getJobID(), tmpPriority.toString());
+          return null;
+        }
+      });
     }
   }
 
@@ -615,12 +641,17 @@ public class Job extends JobContextImpl implements JobContext {
    * @return an array of {@link TaskCompletionEvent}s
    * @throws IOException
    */
-  public TaskCompletionEvent[] getTaskCompletionEvents(int startFrom,
-      int numEvents) throws IOException, InterruptedException {
+  public TaskCompletionEvent[] getTaskCompletionEvents(final int startFrom,
+      final int numEvents) throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return cluster.getClient().getTaskCompletionEvents(getJobID(),
-      startFrom, numEvents); 
-  }
+    return ugi.doAs(new PrivilegedExceptionAction<TaskCompletionEvent[]>() {
+      @Override
+      public TaskCompletionEvent[] run() throws IOException, InterruptedException {
+        return cluster.getClient().getTaskCompletionEvents(getJobID(),
+            startFrom, numEvents); 
+      }
+    });
+    }
   
   /**
    * Kill indicated task attempt.
@@ -628,10 +659,14 @@ public class Job extends JobContextImpl implements JobContext {
    * @param taskId the id of the task to be terminated.
    * @throws IOException
    */
-  public boolean killTask(TaskAttemptID taskId) 
+  public boolean killTask(final TaskAttemptID taskId) 
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return cluster.getClient().killTask(taskId, false);
+    return ugi.doAs(new PrivilegedExceptionAction<Boolean>() {
+      public Boolean run() throws IOException, InterruptedException {
+        return cluster.getClient().killTask(taskId, false);
+      }
+    });
   }
 
   /**
@@ -640,10 +675,15 @@ public class Job extends JobContextImpl implements JobContext {
    * @param taskId the id of the task to be terminated.
    * @throws IOException
    */
-  public boolean failTask(TaskAttemptID taskId) 
+  public boolean failTask(final TaskAttemptID taskId) 
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return cluster.getClient().killTask(taskId, true);
+    return ugi.doAs(new PrivilegedExceptionAction<Boolean>() {
+      @Override
+      public Boolean run() throws IOException, InterruptedException {
+        return cluster.getClient().killTask(taskId, true);
+      }
+    });
   }
 
   /**
@@ -656,7 +696,12 @@ public class Job extends JobContextImpl implements JobContext {
   public Counters getCounters() 
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return cluster.getClient().getJobCounters(getJobID());
+    return ugi.doAs(new PrivilegedExceptionAction<Counters>() {
+      @Override
+      public Counters run() throws IOException, InterruptedException {
+        return cluster.getClient().getJobCounters(getJobID());
+      }
+    });
   }
 
   /**
@@ -665,10 +710,15 @@ public class Job extends JobContextImpl implements JobContext {
    * @return the list of diagnostic messages for the task
    * @throws IOException
    */
-  public String[] getTaskDiagnostics(TaskAttemptID taskid) 
+  public String[] getTaskDiagnostics(final TaskAttemptID taskid) 
       throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
-    return cluster.getClient().getTaskDiagnostics(taskid);
+    return ugi.doAs(new PrivilegedExceptionAction<String[]>() {
+      @Override
+      public String[] run() throws IOException, InterruptedException {
+        return cluster.getClient().getTaskDiagnostics(taskid);
+      }
+    });
   }
 
   /**
