@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestEditLogTailer {
@@ -99,12 +100,13 @@ public class TestEditLogTailer {
     return DIR_PREFIX + suffix;
   }
   
-  private static void waitForStandbyToCatchUp(NameNode active,
+  static void waitForStandbyToCatchUp(NameNode active,
       NameNode standby) throws InterruptedException, IOException {
     
     long activeTxId = active.getNamesystem().getFSImage().getEditLog()
       .getLastWrittenTxId();
     
+    // TODO: we should really just ask for a log roll here
     doSaveNamespace(active);
     
     long start = System.currentTimeMillis();
@@ -112,10 +114,13 @@ public class TestEditLogTailer {
       long nn2HighestTxId = standby.getNamesystem().getFSImage()
         .getLastAppliedTxId();
       if (nn2HighestTxId >= activeTxId) {
-        break;
+        return;
       }
       Thread.sleep(SLEEP_TIME);
     }
+    Assert.fail("Standby did not catch up to txid " + activeTxId +
+        " (currently at " +
+        standby.getNamesystem().getFSImage().getLastAppliedTxId() + ")");
   }
   
   private static void doSaveNamespace(NameNode nn)

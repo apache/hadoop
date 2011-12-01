@@ -82,13 +82,28 @@ public class TestDFSClientFailover {
     AppendTestUtil.write(out2, 0, FILE_LENGTH_TO_VERIFY);
     out1.close();
     out2.close();
+        
+    FileSystem fs = configureFailoverFs(cluster, conf);
     
+    AppendTestUtil.check(fs, TEST_FILE, FILE_LENGTH_TO_VERIFY);
+    cluster.getNameNode(0).stop();
+    AppendTestUtil.check(fs, TEST_FILE, FILE_LENGTH_TO_VERIFY);
+    
+    fs.close();
+  }
+
+  public static FileSystem configureFailoverFs(MiniDFSCluster cluster, Configuration conf)
+  throws IOException, URISyntaxException {
+    InetSocketAddress nnAddr1 = cluster.getNameNode(0).getNameNodeAddress();
+    InetSocketAddress nnAddr2 = cluster.getNameNode(1).getNameNodeAddress();
+
     String nsId = "nameserviceId1";
     
     final String logicalNameNodeId = "ha-nn-uri";
     String nameNodeId1 = "nn1";
     String nameNodeId2 = "nn2";
     
+    conf = new Configuration(conf);
     String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();
     String address2 = "hdfs://" + nnAddr2.getHostName() + ":" + nnAddr2.getPort();
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
@@ -103,12 +118,7 @@ public class TestDFSClientFailover {
         ConfiguredFailoverProxyProvider.class.getName());
     
     FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalNameNodeId), conf);
-    
-    AppendTestUtil.check(fs, TEST_FILE, FILE_LENGTH_TO_VERIFY);
-    cluster.getNameNode(0).stop();
-    AppendTestUtil.check(fs, TEST_FILE, FILE_LENGTH_TO_VERIFY);
-    
-    fs.close();
+    return fs;
   }
 
 }

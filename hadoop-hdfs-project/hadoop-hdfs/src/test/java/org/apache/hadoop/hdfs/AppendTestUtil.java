@@ -109,7 +109,7 @@ public class AppendTestUtil {
     out.write(bytes);
   }
   
-  static void check(FileSystem fs, Path p, long length) throws IOException {
+  public static void check(FileSystem fs, Path p, long length) throws IOException {
     int i = -1;
     try {
       final FileStatus status = fs.getFileStatus(p);
