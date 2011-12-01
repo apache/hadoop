@@ -110,10 +110,6 @@ public class KerberosAuthenticator implements Authenticator {
     }
   }
 
-  static {
-    javax.security.auth.login.Configuration.setConfiguration(new KerberosConfiguration());
-  }
-
   private URL url;
   private HttpURLConnection conn;
   private Base64 base64;
@@ -187,7 +183,8 @@ public class KerberosAuthenticator implements Authenticator {
       Subject subject = Subject.getSubject(context);
       if (subject == null) {
         subject = new Subject();
-        LoginContext login = new LoginContext("", subject);
+        LoginContext login = new LoginContext("", subject,
+            null, new KerberosConfiguration());
         login.login();
       }
       Subject.doAs(subject, new PrivilegedExceptionAction<Void>() {

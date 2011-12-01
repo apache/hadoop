@@ -17,6 +17,8 @@
 package org.apache.hadoop.security;
 
 import static org.junit.Assert.*;
+import org.junit.*;
+
 import org.mockito.Mockito;
 import static org.mockito.Mockito.mock;
 
@@ -31,9 +33,6 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
-
-import junit.framework.Assert;
-import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -50,17 +49,32 @@ public class TestUserGroupInformation {
   final private static String[] GROUP_NAMES = 
     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
   
-  private static javax.security.auth.login.Configuration mockJaasConf;
-
-  static {
-    setupMockJaasParent();
-
+  /**
+   * UGI should not use the default security conf, else it will collide
+   * with other classes that may change the default conf.  Using this dummy
+   * class that simply throws an exception will ensure that the tests fail
+   * if UGI uses the static default config instead of its own config
+   */
+  private static class DummyLoginConfiguration extends
+    javax.security.auth.login.Configuration
+  {
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      throw new RuntimeException("UGI is not using its own security conf!");
+    } 
+  }
+  
+  /** configure ugi */
+  @BeforeClass
+  public static void setup() {
     Configuration conf = new Configuration();
     conf.set("hadoop.security.auth_to_local",
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
         + "DEFAULT");
     UserGroupInformation.setConfiguration(conf);
+    javax.security.auth.login.Configuration.setConfiguration(
+        new DummyLoginConfiguration());
   }
   
   /** Test login method */
@@ -349,37 +363,6 @@ public class TestUserGroupInformation {
       assertCounter("LoginFailureNumPos", failure, rb);
       assertGaugeGt("LoginFailureAvgTime", 0, rb);
     }
-  }
-
-  /**
-   * Setup a JAAS Configuration that handles a fake app.
-   * This runs before UserGroupInformation has been initialized,
-   * so UGI picks up this Configuration as the parent.
-   */
-  private static void setupMockJaasParent() {
-    javax.security.auth.login.Configuration existing = null;
-    try {
-      existing =javax.security.auth.login.Configuration.getConfiguration();
-      assertFalse("setupMockJaasParent should run before the Hadoop " +
-                  "configuration provider is installed.",
-                  existing.getClass().getCanonicalName()
-                  .startsWith("org.apache.hadoop"));
-    } catch (SecurityException se) {
-      // We get this if no configuration has been set. So it's OK.
-    }
-
-    mockJaasConf = mock(javax.security.auth.login.Configuration.class);
-    Mockito.doReturn(new AppConfigurationEntry[] {})
-      .when(mockJaasConf)
-      .getAppConfigurationEntry("foobar-app");
-    javax.security.auth.login.Configuration.setConfiguration(mockJaasConf);
-  }
-
-  @Test
-  public void testDelegateJaasConfiguration() throws Exception {
-    // This will throw if the Configuration doesn't have any entries
-    // for "foobar"
-    LoginContext login = new LoginContext("foobar-app");
   }
 
   /**

@@ -217,8 +217,7 @@ public class MRAppMaster extends CompositeService {
         && appAttemptID.getAttemptId() > 1) {
       LOG.info("Recovery is enabled. "
           + "Will try to recover from previous life on best effort basis.");
-      recoveryServ = new RecoveryService(appAttemptID, clock, 
-          committer);
+      recoveryServ = createRecoveryService(context);
       addIfService(recoveryServ);
       dispatcher = recoveryServ.getDispatcher();
       clock = recoveryServ.getClock();
@@ -423,6 +422,15 @@ public class MRAppMaster extends CompositeService {
    */
   protected EventHandler<JobFinishEvent> createJobFinishEventHandler() {
     return new JobFinishEventHandler();
+  }
+
+  /**
+   * Create the recovery service.
+   * @return an instance of the recovery service.
+   */
+  protected Recovery createRecoveryService(AppContext appContext) {
+    return new RecoveryService(appContext.getApplicationAttemptId(),
+        appContext.getClock(), getCommitter());
   }
 
   /** Create and initialize (but don't start) a single job. */

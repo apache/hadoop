@@ -36,7 +36,7 @@ public class DrainDispatcher extends AsyncDispatcher {
   }
 
   private DrainDispatcher(BlockingQueue<Event> eventQueue) {
-    super(new HashMap<Class<? extends Enum>, EventHandler>(), eventQueue);
+    super(new HashMap<Class<? extends Enum>, EventHandler>(), eventQueue, true);
     this.queue = eventQueue;
   }
 

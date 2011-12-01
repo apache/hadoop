@@ -45,18 +45,25 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
 
   private Thread eventHandlingThread;
   protected final Map<Class<? extends Enum>, EventHandler> eventDispatchers;
+  private boolean exitOnDispatchException;
 
   public AsyncDispatcher() {
     this(new HashMap<Class<? extends Enum>, EventHandler>(),
-         new LinkedBlockingQueue<Event>());
+         new LinkedBlockingQueue<Event>(), true);
+  }
+  
+  public AsyncDispatcher(boolean exitOnException) {
+    this(new HashMap<Class<? extends Enum>, EventHandler>(),
+         new LinkedBlockingQueue<Event>(), exitOnException);
   }
 
   AsyncDispatcher(
       Map<Class<? extends Enum>, EventHandler> eventDispatchers,
-      BlockingQueue<Event> eventQueue) {
+      BlockingQueue<Event> eventQueue, boolean exitOnException) {
     super("Dispatcher");
     this.eventQueue = eventQueue;
     this.eventDispatchers = eventDispatchers;
+    this.exitOnDispatchException = exitOnException;
   }
 
   Runnable createThread() {
@@ -118,7 +125,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     catch (Throwable t) {
       //TODO Maybe log the state of the queue
       LOG.fatal("Error in dispatcher thread. Exiting..", t);
-      System.exit(-1);
+      if (exitOnDispatchException) {
+        System.exit(-1);
+      }
     }
   }
 

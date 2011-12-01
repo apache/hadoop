@@ -145,7 +145,7 @@ Add the following configs to your <<<yarn-site.xml>>>
   </property>
 +---+
 
-** Setting up <<<capacity-scheduler.xml>>>
+* Setting up <<<capacity-scheduler.xml>>>
 
    Make sure you populate the root queues in <<<capacity-scheduler.xml>>>.
 

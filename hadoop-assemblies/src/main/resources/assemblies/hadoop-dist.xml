@@ -107,6 +107,13 @@
       <directory>${project.build.directory}/site</directory>
       <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
     </fileSet>
+    <fileSet>
+      <directory>${basedir}/src/main/native</directory>
+      <includes>
+        <include>*.h</include>
+      </includes>
+      <outputDirectory>/include</outputDirectory>
+    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
