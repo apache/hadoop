@@ -51,8 +51,10 @@ Release 0.23.1 - Unreleased
    HADOOP-7864. Building mvn site with Maven < 3.0.2 causes OOM errors.
    (Andrew Bayer via eli)
 
-    HADOOP-7853. multiple javax security configurations cause conflicts.
-    (daryn via tucu)
+   HADOOP-7853. multiple javax security configurations cause conflicts.
+   (daryn via tucu)
+
+   HADOOP-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
 
 Release 0.23.0 - 2011-11-01 
 
