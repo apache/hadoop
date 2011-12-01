@@ -27,6 +27,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7804. Enable hadoop config generator to set configurations to enable
     short circuit read. (Arpit Gupta via jitendra)
 
+    HADOOP-7877. Update balancer CLI usage documentation to include the new
+    -policy option.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
