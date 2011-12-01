@@ -449,7 +449,8 @@ public class UserGroupInformation {
    * @return the current user
    * @throws IOException if login fails
    */
-  public static UserGroupInformation getCurrentUser() throws IOException {
+  public synchronized
+  static UserGroupInformation getCurrentUser() throws IOException {
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
