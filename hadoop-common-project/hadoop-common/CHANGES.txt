@@ -59,6 +59,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
 
+   HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
