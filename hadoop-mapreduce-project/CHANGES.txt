@@ -204,6 +204,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3488. Streaming jobs are failing because the main class
     isnt set in the pom files. (mahadev)
+ 
+    MAPREDUCE-3463. Second AM fails to recover properly when first AM is killed with
+    java.lang.IllegalArgumentException causing lost job. (Siddharth Seth via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 
