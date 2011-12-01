@@ -160,6 +160,9 @@ Release 1.0.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-7869. HADOOP_HOME warning happens all of the time (Owen O'Malley 
+    via mattf)
+
     HADOOP-7815. Fixed configuring map memory mb in hadoop-setup-conf.sh. 
     (Ramya Sunil)
 

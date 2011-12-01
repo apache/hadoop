@@ -32,7 +32,6 @@ this="$config_bin/$script"
 
 # the root of the Hadoop installation
 export HADOOP_PREFIX=`dirname "$this"`/..
-export HADOOP_HOME=${HADOOP_PREFIX}
 
 #check to see if the conf dir is given as an optional argument
 if [ $# -gt 1 ]
@@ -66,3 +65,16 @@ then
         export HADOOP_SLAVES="${HADOOP_CONF_DIR}/$slavesfile"
     fi
 fi
+
+if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
+  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
+fi
+
+if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
+  echo "Warning: \$HADOOP_HOME is deprecated." 1>&2
+  echo 1>&2
+fi
+
+export HADOOP_HOME=${HADOOP_PREFIX}
+export HADOOP_HOME_WARN_SUPPRESS=1
+
