@@ -145,8 +145,9 @@ public class FifoScheduler implements ResourceScheduler {
         boolean includeChildQueues, boolean recursive) {
       QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
       queueInfo.setQueueName(DEFAULT_QUEUE.getQueueName());
-      queueInfo.setCapacity(100.0f);
-      queueInfo.setMaximumCapacity(100.0f);
+      queueInfo.setCapacity(1.0f);
+      queueInfo.setCurrentCapacity((float)usedResource.getMemory() / clusterResource.getMemory());
+      queueInfo.setMaximumCapacity(1.0f);
       queueInfo.setChildQueues(new ArrayList<QueueInfo>());
       queueInfo.setQueueState(QueueState.RUNNING);
       return queueInfo;

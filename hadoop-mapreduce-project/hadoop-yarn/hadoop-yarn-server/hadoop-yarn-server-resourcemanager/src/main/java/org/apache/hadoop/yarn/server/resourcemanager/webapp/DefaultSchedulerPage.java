@@ -123,8 +123,8 @@ class DefaultSchedulerPage extends RmView {
               span().$style(Q_END)._("100% ")._().
               span(".q", "default")._()._();
       } else {
-        float used = qInfo.getCurrentCapacity() / 100.0f;
-        float set = qInfo.getCapacity() / 100.0f;
+        float used = qInfo.getCurrentCapacity();
+        float set = qInfo.getCapacity();
         float delta = Math.abs(set - used) + 0.001f;
         ul.
           li().
