@@ -56,11 +56,6 @@ else
   . "$bin"/hadoop-config.sh
 fi
 
-if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
-  echo "Warning: \$HADOOP_HOME is deprecated." 1>&2
-  echo 1>&2
-fi
-
 cygwin=false
 case "`uname`" in
 CYGWIN*) cygwin=true;;
@@ -102,10 +97,6 @@ fi
 # get arguments
 COMMAND=$1
 shift
-
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
-fi
 
 # Determine if we're starting a secure datanode, and if so, redefine appropriate variables
 if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
