@@ -52,7 +52,6 @@
   }
 %>
 
-<!DOCTYPE html>
 <html>
   <head>
     <title>Counters for <%=attemptid%></title>

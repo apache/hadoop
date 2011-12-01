@@ -35,7 +35,6 @@
   	String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
 %>
 
-<!DOCTYPE html>
 <html>
 <head>
 <title>Hadoop Job <%=jobid%> on History Viewer</title>

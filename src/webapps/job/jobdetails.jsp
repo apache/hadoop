@@ -246,7 +246,6 @@
 %>
 
 <%@page import="org.apache.hadoop.mapred.TaskGraphServlet"%>
-<!DOCTYPE html>
 <html>
 <head>
   <% 
