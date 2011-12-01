@@ -437,19 +437,24 @@ public class SequenceFile {
                                          "GzipCodec without native-hadoop code!");
     }
 
+
+    FSDataOutputStream fsos;
+    if (createParent) {
+      fsos = fs.create(name, true, bufferSize, replication, blockSize);
+    } else {
+      fsos = fs.createNonRecursive(name, true, bufferSize, replication,
+          blockSize, null);
+    }
+
     switch (compressionType) {
     case NONE:
-      return new Writer(conf, 
-          fs.createNonRecursive(name, true, bufferSize, replication, blockSize, null),
-          keyClass, valClass, metadata).ownStream();
+      return new Writer(conf, fsos, keyClass, valClass, metadata).ownStream();
     case RECORD:
-      return new RecordCompressWriter(conf, 
-          fs.createNonRecursive(name, true, bufferSize, replication, blockSize, null),
-          keyClass, valClass, codec, metadata).ownStream();
+      return new RecordCompressWriter(conf, fsos, keyClass, valClass, codec,
+          metadata).ownStream();
     case BLOCK:
-      return new BlockCompressWriter(conf,
-          fs.createNonRecursive(name, true, bufferSize, replication, blockSize, null),
-          keyClass, valClass, codec, metadata).ownStream();
+      return new BlockCompressWriter(conf, fsos, keyClass, valClass, codec,
+          metadata).ownStream();
     default:
       return null;
     }

@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -440,6 +441,31 @@ public class TestSequenceFile extends TestCase {
     assertFalse(reader2.next(text));
   }
 
+
+  public void testRecursiveSeqFileCreate() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path name = new Path(new Path(System.getProperty("test.build.data","."),
+        "recursiveCreateDir") , "file");
+    boolean createParent = false;
+
+    try {
+      SequenceFile.createWriter(fs, conf, name, RandomDatum.class,
+          RandomDatum.class, 512, (short) 1, 4096, createParent,
+          CompressionType.NONE, null, new Metadata());
+      fail("Expected an IOException due to missing parent");
+    } catch (IOException ioe) {
+      // Expected
+    }
+
+    createParent = true;
+    SequenceFile.createWriter(fs, conf, name, RandomDatum.class,
+        RandomDatum.class, 512, (short) 1, 4096, createParent,
+        CompressionType.NONE, null, new Metadata());
+
+    // should succeed, fails if exception thrown
+  }
+  
   /** For debugging and testing. */
   public static void main(String[] args) throws Exception {
     int count = 1024 * 1024;
