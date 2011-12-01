@@ -25,8 +25,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -78,7 +76,7 @@ import org.apache.log4j.LogManager;
  * <li>-logLevel L specifies the logging level when the benchmark runs.
  * The default logging level is {@link Level#ERROR}.</li>
  * <li>-UGCacheRefreshCount G will cause the benchmark to call
- * {@link NameNode#refreshUserToGroupsMappings()} after
+ * {@link NameNodeRpcServer#refreshUserToGroupsMappings} after
  * every G operations, which purges the name-node's user group cache.
  * By default the refresh is never called.</li>
  * <li>-keepResults do not clean up the name-space after execution.</li>
@@ -104,7 +102,7 @@ public class NNThroughputBenchmark {
   static NameNode nameNode;
   static NamenodeProtocols nameNodeProto;
 
-  NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
+  NNThroughputBenchmark(Configuration conf) throws IOException {
     config = conf;
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
@@ -125,7 +123,7 @@ public class NNThroughputBenchmark {
     nameNodeProto = nameNode.getRpcServer();
   }
 
-  void close() throws IOException {
+  void close() {
     nameNode.stop();
   }
 
@@ -806,7 +804,8 @@ public class NNThroughputBenchmark {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0);
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0)
+          .getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -851,7 +850,8 @@ public class NNThroughputBenchmark {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0);
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0)
+          .getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
@@ -916,7 +916,7 @@ public class NNThroughputBenchmark {
       config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
       parseArguments(args);
       // adjust replication to the number of data-nodes
-      this.replication = (short)Math.min((int)replication, getNumDatanodes());
+      this.replication = (short)Math.min(replication, getNumDatanodes());
     }
 
     /**

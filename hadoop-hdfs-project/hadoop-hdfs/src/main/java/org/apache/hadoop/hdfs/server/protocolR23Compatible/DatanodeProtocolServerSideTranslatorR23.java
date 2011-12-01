@@ -110,11 +110,11 @@ public class DatanodeProtocolServerSideTranslatorR23 implements
   }
 
   @Override
-  public DatanodeCommandWritable[] sendHeartbeat(
+  public HeartbeatResponseWritable sendHeartbeat(
       DatanodeRegistrationWritable registration, long capacity, long dfsUsed,
       long remaining, long blockPoolUsed, int xmitsInProgress,
       int xceiverCount, int failedVolumes) throws IOException {
-    return DatanodeCommandWritable.convert(server.sendHeartbeat(
+    return HeartbeatResponseWritable.convert(server.sendHeartbeat(
         registration.convert(), capacity, dfsUsed, remaining, blockPoolUsed,
         xmitsInProgress, xceiverCount, failedVolumes));
   }

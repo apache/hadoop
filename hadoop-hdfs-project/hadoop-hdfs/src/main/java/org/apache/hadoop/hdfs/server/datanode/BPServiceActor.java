@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.ipc.RPC;
@@ -333,7 +334,7 @@ class BPServiceActor implements Runnable {
   }
   
   
-  DatanodeCommand [] sendHeartBeat() throws IOException {
+  HeartbeatResponse sendHeartBeat() throws IOException {
     LOG.info("heartbeat: " + this);
     // TODO: saw an NPE here - maybe if the two BPOS register at
     // same time, this one won't block on the other one?
@@ -420,16 +421,17 @@ class BPServiceActor implements Runnable {
           //
           lastHeartbeat = startTime;
           if (!dn.areHeartbeatsDisabledForTests()) {
-            DatanodeCommand[] cmds = sendHeartBeat();
+            HeartbeatResponse resp = sendHeartBeat();
             dn.getMetrics().addHeartbeat(now() - startTime);
 
             long startProcessCommands = now();
-            if (!processCommand(cmds))
+            if (!processCommand(resp.getCommands()))
               continue;
             long endProcessCommands = now();
             if (endProcessCommands - startProcessCommands > 2000) {
-              LOG.info("Took " + (endProcessCommands - startProcessCommands) +
-                  "ms to process " + cmds.length + " commands from NN");
+              LOG.info("Took " + (endProcessCommands - startProcessCommands)
+                  + "ms to process " + resp.getCommands().length
+                  + " commands from NN");
             }
           }
         }

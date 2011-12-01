@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -130,14 +131,14 @@ public class DatanodeProtocolTranslatorR23 implements
   }
 
   @Override
-  public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
+  public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       int xmitsInProgress, int xceiverCount, int failedVolumes)
       throws IOException {
-    return DatanodeCommandWritable.convert(rpcProxy.sendHeartbeat(
-            DatanodeRegistrationWritable.convert(registration), capacity,
-            dfsUsed, remaining, blockPoolUsed, xmitsInProgress, xceiverCount,
-            failedVolumes));
+    return rpcProxy.sendHeartbeat(
+        DatanodeRegistrationWritable.convert(registration), capacity, dfsUsed,
+        remaining, blockPoolUsed, xmitsInProgress, xceiverCount, failedVolumes)
+        .convert();
   }
 
   @Override

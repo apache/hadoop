@@ -154,6 +154,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -2688,7 +2689,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return an array of datanode commands 
    * @throws IOException
    */
-  DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
+  HeartbeatResponse handleHeartbeat(DatanodeRegistration nodeReg,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       int xceiverCount, int xmitsInProgress, int failedVolumes) 
         throws IOException {
@@ -2699,16 +2700,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, blockPoolId, capacity, dfsUsed, remaining, blockPoolUsed,
           xceiverCount, maxTransfer, failedVolumes);
-      if (cmds != null) {
-        return cmds;
+      if (cmds == null) {
+        DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
+        if (cmd != null) {
+          cmds = new DatanodeCommand[] {cmd};
+        }
       }
-
-      //check distributed upgrade
-      DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
-      if (cmd != null) {
-        return new DatanodeCommand[] {cmd};
-      }
-      return null;
+      return new HeartbeatResponse(cmds);
     } finally {
       readUnlock();
     }

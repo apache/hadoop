@@ -99,7 +99,7 @@ public interface DatanodeWireProtocol extends VersionedProtocol {
    * @throws IOException on error
    */
   @Nullable
-  public DatanodeCommandWritable[] sendHeartbeat(
+  public HeartbeatResponseWritable sendHeartbeat(
       DatanodeRegistrationWritable registration, long capacity, long dfsUsed,
       long remaining, long blockPoolUsed, int xmitsInProgress,
       int xceiverCount, int failedVolumes) throws IOException;
