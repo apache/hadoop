@@ -16,7 +16,6 @@
   String trackerName = tracker.getName();
 %>
 
-<!DOCTYPE html>
 <html>
 
 <title><%= trackerName %> Task Tracker Status</title>

@@ -313,7 +313,6 @@ FSNamesystem fsn = nn.getNamesystem();
 String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
 %>
 
-<!DOCTYPE html>
 <html>
 
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">

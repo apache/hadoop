@@ -35,7 +35,6 @@
   JobHistory.Task task = job.getAllTasks().get(tipid); 
   String type = task.get(Keys.TASK_TYPE);
 %>
-<!DOCTYPE html>
 <html>
 <body>
 <h2><%=tipid %> attempts for <a href="jobdetailshistory.jsp?logFile=<%=encodedLogFileName%>"> <%=jobid %> </a></h2>
