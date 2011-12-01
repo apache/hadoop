@@ -35,7 +35,7 @@ Trunk (unreleased changes)
     uri with no authority. (John George via jitendra)
 
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
-    client APIs cross MR1 and MR2. (Ahmed via tucu)
+    client APIs cross MR1 and MR2 (Ahmed via tucu)
 
     MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
     (tucu)
@@ -128,6 +128,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3448. TestCombineOutputCollector javac unchecked warning on mocked
     generics (Jonathan Eagles via mahadev)
+
+    MAPREDUCE-3169 amendment. Deprecate MiniMRCluster. (Ahmed Radwan via
+    sseth)
 
   OPTIMIZATIONS
 
