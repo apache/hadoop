@@ -33,3 +33,5 @@ HDFS-1975. Support for sharing the namenode state from active to standby. (jiten
 HDFS-1971. Send block report from datanode to both active and standby namenodes. (sanjay, todd via suresh)
 
 HDFS-2616. Change DatanodeProtocol#sendHeartbeat() to return HeartbeatResponse. (suresh)
+
+HDFS-2622. Fix TestDFSUpgrade in HA branch. (todd)

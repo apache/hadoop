@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
+import static org.apache.hadoop.test.GenericTestUtils.assertExists;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -51,7 +52,7 @@ import static org.junit.Assert.*;
 */
 public class TestDFSUpgrade {
  
-  private static final int EXPECTED_TXID = 17;
+  private static final int EXPECTED_TXID = 33;
   private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;
@@ -80,16 +81,16 @@ public class TestDFSUpgrade {
           Joiner.on("  \n").join(new File(baseDir, "current").list()));
       LOG.info("==================");
       
-      assertTrue(new File(baseDir,"current").isDirectory());
-      assertTrue(new File(baseDir,"current/VERSION").isFile());
-      assertTrue(new File(baseDir,"current/" 
-                          + getInProgressEditsFileName(imageTxId + 1)).isFile());
-      assertTrue(new File(baseDir,"current/" 
-                          + getImageFileName(imageTxId)).isFile());
-      assertTrue(new File(baseDir,"current/seen_txid").isFile());
+      assertExists(new File(baseDir,"current"));
+      assertExists(new File(baseDir,"current/VERSION"));
+      assertExists(new File(baseDir,"current/" 
+                          + getInProgressEditsFileName(imageTxId + 1)));
+      assertExists(new File(baseDir,"current/" 
+                          + getImageFileName(imageTxId)));
+      assertExists(new File(baseDir,"current/seen_txid"));
       
       File previous = new File(baseDir, "previous");
-      assertTrue(previous.isDirectory());
+      assertExists(previous);
       assertEquals(UpgradeUtilities.checksumContents(NAME_NODE, previous),
           UpgradeUtilities.checksumMasterNameNodeContents());
     }
