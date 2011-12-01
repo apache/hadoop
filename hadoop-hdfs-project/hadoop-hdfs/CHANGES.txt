@@ -77,7 +77,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2606. webhdfs client filesystem impl must set the content-type
     header for create/append. (tucu)
-    
+
+    HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
+ 
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
