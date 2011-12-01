@@ -102,6 +102,8 @@ Trunk (unreleased changes)
 
     HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
 
+    HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
