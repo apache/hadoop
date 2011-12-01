@@ -42,17 +42,19 @@ public class TestDatanodeRegister {
     DataNode mockDN = mock(DataNode.class);
     Mockito.doReturn(true).when(mockDN).shouldRun();
     
-    BPOfferService bpos = new BPOfferService(INVALID_ADDR, mockDN);
+    BPOfferService mockBPOS = Mockito.mock(BPOfferService.class);
+    Mockito.doReturn(mockDN).when(mockBPOS).getDataNode();
+    
+    BPServiceActor actor = new BPServiceActor(INVALID_ADDR, mockBPOS);
 
     NamespaceInfo fakeNSInfo = mock(NamespaceInfo.class);
     when(fakeNSInfo.getBuildVersion()).thenReturn("NSBuildVersion");
     DatanodeProtocol fakeDNProt = mock(DatanodeProtocol.class);
     when(fakeDNProt.versionRequest()).thenReturn(fakeNSInfo);
 
-    bpos.setNameNode( fakeDNProt );
-    bpos.bpNSInfo = fakeNSInfo;
+    actor.setNameNode( fakeDNProt );
     try {   
-      bpos.retrieveNamespaceInfo();
+      actor.retrieveNamespaceInfo();
       fail("register() did not throw exception! " +
            "Expected: IncorrectVersionException");
     } catch (IncorrectVersionException ie) {

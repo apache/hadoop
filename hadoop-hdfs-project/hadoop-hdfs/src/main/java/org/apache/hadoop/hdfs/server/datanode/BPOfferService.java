@@ -17,61 +17,42 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import java.net.URI;
-import java.util.Collection;
-import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
-import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
- * A thread per namenode to perform:
- * <ul>
- * <li> Pre-registration handshake with namenode</li>
- * <li> Registration with namenode</li>
- * <li> Send periodic heartbeats to the namenode</li>
- * <li> Handle commands received from the namenode</li>
- * </ul>
+ * One instance per block-pool/namespace on the DN, which handles the
+ * heartbeats to the active and standby NNs for that namespace.
+ * This class manages an instance of {@link BPServiceActor} for each NN,
+ * and delegates calls to both NNs. 
+ * It also maintains the state about which of the NNs is considered active.
  */
 @InterfaceAudience.Private
-class BPOfferService implements Runnable {
+class BPOfferService {
   static final Log LOG = DataNode.LOG;
-  
-  final InetSocketAddress nnAddr;
   
   /**
    * Information about the namespace that this service
@@ -87,27 +68,25 @@ class BPOfferService implements Runnable {
    */
   DatanodeRegistration bpRegistration;
   
-  long lastBlockReport = 0;
-  long lastDeletedReport = 0;
-
-  boolean resetBlockReportTime = true;
-
-  Thread bpThread;
-  DatanodeProtocol bpNamenode;
-  private long lastHeartbeat = 0;
-  private volatile boolean initialized = false;
-  private final LinkedList<ReceivedDeletedBlockInfo> receivedAndDeletedBlockList 
-    = new LinkedList<ReceivedDeletedBlockInfo>();
-  private volatile int pendingReceivedRequests = 0;
-  private volatile boolean shouldServiceRun = true;
   UpgradeManagerDatanode upgradeManager = null;
   private final DataNode dn;
-  private final DNConf dnConf;
 
-  BPOfferService(InetSocketAddress nnAddr, DataNode dn) {
+  private BPServiceActor bpServiceToActive;
+  private List<BPServiceActor> bpServices =
+    new CopyOnWriteArrayList<BPServiceActor>();
+
+  BPOfferService(List<InetSocketAddress> nnAddrs, DataNode dn) {
+    Preconditions.checkArgument(!nnAddrs.isEmpty(),
+        "Must pass at least one NN.");
     this.dn = dn;
-    this.nnAddr = nnAddr;
-    this.dnConf = dn.getDnConf();
+
+    for (InetSocketAddress addr : nnAddrs) {
+      this.bpServices.add(new BPServiceActor(addr, this));
+    }
+    // TODO(HA): currently we just make the first one the initial
+    // active. In reality it should start in an unknown state and then
+    // as we figure out which is active, designate one as such.
+    this.bpServiceToActive = this.bpServices.get(0);
   }
 
   /**
@@ -115,15 +94,18 @@ class BPOfferService implements Runnable {
    * and has registered with the corresponding namenode
    * @return true if initialized
    */
-  public boolean isInitialized() {
-    return initialized;
+  boolean isInitialized() {
+    // TODO(HA) is this right?
+    return bpServiceToActive != null && bpServiceToActive.isInitialized();
   }
   
-  public boolean isAlive() {
-    return shouldServiceRun && bpThread.isAlive();
+  boolean isAlive() {
+    // TODO: should || all the bp actors probably?
+    return bpServiceToActive != null &&
+      bpServiceToActive.isAlive();
   }
   
-  public String getBlockPoolId() {
+  String getBlockPoolId() {
     if (bpNSInfo != null) {
       return bpNSInfo.getBlockPoolID();
     } else {
@@ -133,10 +115,11 @@ class BPOfferService implements Runnable {
     }
   }
   
-  public NamespaceInfo getNamespaceInfo() {
+  NamespaceInfo getNamespaceInfo() {
     return bpNSInfo;
   }
   
+  @Override
   public String toString() {
     if (bpNSInfo == null) {
       // If we haven't yet connected to our NN, we don't yet know our
@@ -148,519 +131,279 @@ class BPOfferService implements Runnable {
         storageId = "unknown";
       }
       return "Block pool <registering> (storage id " + storageId +
-        ") connecting to " + nnAddr;
+        ")";
     } else {
       return "Block pool " + getBlockPoolId() +
         " (storage id " + dn.getStorageId() +
-        ") registered with " + nnAddr;
+        ")";
     }
   }
   
-  InetSocketAddress getNNSocketAddress() {
-    return nnAddr;
-  }
-
-  /**
-   * Used to inject a spy NN in the unit tests.
-   */
-  @VisibleForTesting
-  void setNameNode(DatanodeProtocol dnProtocol) {
-    bpNamenode = dnProtocol;
-  }
-
-  /**
-   * Perform the first part of the handshake with the NameNode.
-   * This calls <code>versionRequest</code> to determine the NN's
-   * namespace and version info. It automatically retries until
-   * the NN responds or the DN is shutting down.
-   * 
-   * @return the NamespaceInfo
-   * @throws IncorrectVersionException if the remote NN does not match
-   * this DN's version
-   */
-  NamespaceInfo retrieveNamespaceInfo() throws IncorrectVersionException {
-    NamespaceInfo nsInfo = null;
-    while (shouldRun()) {
-      try {
-        nsInfo = bpNamenode.versionRequest();
-        LOG.debug(this + " received versionRequest response: " + nsInfo);
-        break;
-      } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.warn("Problem connecting to server: " + nnAddr);
-      } catch(IOException e ) {  // namenode is not available
-        LOG.warn("Problem connecting to server: " + nnAddr);
-      }
-      
-      // try again in a second
-      sleepAndLogInterrupts(5000, "requesting version info from NN");
-    }
-    
-    if (nsInfo != null) {
-      checkNNVersion(nsInfo);        
-    }
-    return nsInfo;
-  }
-
-  private void checkNNVersion(NamespaceInfo nsInfo)
-      throws IncorrectVersionException {
-    // build and layout versions should match
-    String nsBuildVer = nsInfo.getBuildVersion();
-    String stBuildVer = Storage.getBuildVersion();
-    if (!nsBuildVer.equals(stBuildVer)) {
-      LOG.warn("Data-node and name-node Build versions must be the same. " +
-        "Namenode build version: " + nsBuildVer + "Datanode " +
-        "build version: " + stBuildVer);
-      throw new IncorrectVersionException(nsBuildVer, "namenode", stBuildVer);
-    }
-
-    if (HdfsConstants.LAYOUT_VERSION != nsInfo.getLayoutVersion()) {
-      LOG.warn("Data-node and name-node layout versions must be the same." +
-        " Expected: "+ HdfsConstants.LAYOUT_VERSION +
-        " actual "+ bpNSInfo.getLayoutVersion());
-      throw new IncorrectVersionException(
-          bpNSInfo.getLayoutVersion(), "namenode");
-    }
-  }
-
-  private void connectToNNAndHandshake() throws IOException {
-    // get NN proxy
-    bpNamenode = (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
-          DatanodeProtocol.versionID, nnAddr, dn.getConf());
-
-    // First phase of the handshake with NN - get the namespace
-    // info.
-    bpNSInfo = retrieveNamespaceInfo();
-    
-    // Now that we know the namespace ID, etc, we can pass this to the DN.
-    // The DN can now initialize its local storage if we are the
-    // first BP to handshake, etc.
-    dn.initBlockPool(this);
-    
-    // Second phase of the handshake with the NN.
-    register();
-  }
-  
-  /**
-   * This methods  arranges for the data node to send the block report at 
-   * the next heartbeat.
-   */
-  void scheduleBlockReport(long delay) {
-    if (delay > 0) { // send BR after random delay
-      lastBlockReport = System.currentTimeMillis()
-      - ( dnConf.blockReportInterval - DFSUtil.getRandom().nextInt((int)(delay)));
-    } else { // send at next heartbeat
-      lastBlockReport = lastHeartbeat - dnConf.blockReportInterval;
-    }
-    resetBlockReportTime = true; // reset future BRs for randomness
-  }
-
   void reportBadBlocks(ExtendedBlock block) {
-    DatanodeInfo[] dnArr = { new DatanodeInfo(bpRegistration) };
-    LocatedBlock[] blocks = { new LocatedBlock(block, dnArr) }; 
-    
-    try {
-      bpNamenode.reportBadBlocks(blocks);  
-    } catch (IOException e){
-      /* One common reason is that NameNode could be in safe mode.
-       * Should we keep on retrying in that case?
-       */
-      LOG.warn("Failed to report bad block " + block + " to namenode : "
-          + " Exception", e);
+    checkBlock(block);
+    for (BPServiceActor actor : bpServices) {
+      actor.reportBadBlocks(block);
     }
-    
   }
   
-  /**
-   * Report received blocks and delete hints to the Namenode
-   * 
-   * @throws IOException
-   */
-  private void reportReceivedDeletedBlocks() throws IOException {
-
-    // check if there are newly received blocks
-    ReceivedDeletedBlockInfo[] receivedAndDeletedBlockArray = null;
-    int currentReceivedRequestsCounter;
-    synchronized (receivedAndDeletedBlockList) {
-      currentReceivedRequestsCounter = pendingReceivedRequests;
-      int numBlocks = receivedAndDeletedBlockList.size();
-      if (numBlocks > 0) {
-        //
-        // Send newly-received and deleted blockids to namenode
-        //
-        receivedAndDeletedBlockArray = receivedAndDeletedBlockList
-            .toArray(new ReceivedDeletedBlockInfo[numBlocks]);
-      }
-    }
-    if (receivedAndDeletedBlockArray != null) {
-      bpNamenode.blockReceivedAndDeleted(bpRegistration, getBlockPoolId(),
-          receivedAndDeletedBlockArray);
-      synchronized (receivedAndDeletedBlockList) {
-        for (int i = 0; i < receivedAndDeletedBlockArray.length; i++) {
-          receivedAndDeletedBlockList.remove(receivedAndDeletedBlockArray[i]);
-        }
-        pendingReceivedRequests -= currentReceivedRequestsCounter;
-      }
-    }
-  }
-
   /*
    * Informing the name node could take a long long time! Should we wait
    * till namenode is informed before responding with success to the
    * client? For now we don't.
    */
   void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint) {
-    if (block == null || delHint == null) {
-      throw new IllegalArgumentException(block == null ? "Block is null"
-          : "delHint is null");
+    checkBlock(block);
+    checkDelHint(delHint);
+    ReceivedDeletedBlockInfo bInfo = 
+               new ReceivedDeletedBlockInfo(block.getLocalBlock(), delHint);
+    for (BPServiceActor actor : bpServices) {
+      actor.notifyNamenodeReceivedBlock(bInfo);
     }
+  }
 
-    if (!block.getBlockPoolId().equals(getBlockPoolId())) {
-      LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
-          + getBlockPoolId());
-      return;
-    }
-
-    synchronized (receivedAndDeletedBlockList) {
-      receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block
-          .getLocalBlock(), delHint));
-      pendingReceivedRequests++;
-      receivedAndDeletedBlockList.notifyAll();
-    }
+  private void checkBlock(ExtendedBlock block) {
+    Preconditions.checkArgument(block != null,
+        "block is null");
+    Preconditions.checkArgument(block.getBlockPoolId().equals(getBlockPoolId()),
+        "block belongs to BP %s instead of BP %s",
+        block.getBlockPoolId(), getBlockPoolId());
+  }
+  
+  private void checkDelHint(String delHint) {
+    Preconditions.checkArgument(delHint != null,
+        "delHint is null");
   }
 
   void notifyNamenodeDeletedBlock(ExtendedBlock block) {
-    if (block == null) {
-      throw new IllegalArgumentException("Block is null");
-    }
-
-    if (!block.getBlockPoolId().equals(getBlockPoolId())) {
-      LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
-          + getBlockPoolId());
-      return;
-    }
-
-    synchronized (receivedAndDeletedBlockList) {
-      receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block
-          .getLocalBlock(), ReceivedDeletedBlockInfo.TODELETE_HINT));
+    checkBlock(block);
+    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(block
+          .getLocalBlock(), ReceivedDeletedBlockInfo.TODELETE_HINT);
+    
+    for (BPServiceActor actor : bpServices) {
+      actor.notifyNamenodeDeletedBlock(bInfo);
     }
   }
 
-
-  /**
-   * Report the list blocks to the Namenode
-   * @throws IOException
-   */
-  DatanodeCommand blockReport() throws IOException {
-    // send block report if timer has expired.
-    DatanodeCommand cmd = null;
-    long startTime = now();
-    if (startTime - lastBlockReport > dnConf.blockReportInterval) {
-
-      // Create block report
-      long brCreateStartTime = now();
-      BlockListAsLongs bReport = dn.data.getBlockReport(getBlockPoolId());
-
-      // Send block report
-      long brSendStartTime = now();
-      cmd = bpNamenode.blockReport(bpRegistration, getBlockPoolId(), bReport
-          .getBlockListAsLongs());
-
-      // Log the block report processing stats from Datanode perspective
-      long brSendCost = now() - brSendStartTime;
-      long brCreateCost = brSendStartTime - brCreateStartTime;
-      dn.metrics.addBlockReport(brSendCost);
-      LOG.info("BlockReport of " + bReport.getNumberOfBlocks()
-          + " blocks took " + brCreateCost + " msec to generate and "
-          + brSendCost + " msecs for RPC and NN processing");
-
-      // If we have sent the first block report, then wait a random
-      // time before we start the periodic block reports.
-      if (resetBlockReportTime) {
-        lastBlockReport = startTime - DFSUtil.getRandom().nextInt((int)(dnConf.blockReportInterval));
-        resetBlockReportTime = false;
-      } else {
-        /* say the last block report was at 8:20:14. The current report
-         * should have started around 9:20:14 (default 1 hour interval).
-         * If current time is :
-         *   1) normal like 9:20:18, next report should be at 10:20:14
-         *   2) unexpected like 11:35:43, next report should be at 12:20:14
-         */
-        lastBlockReport += (now() - lastBlockReport) /
-        dnConf.blockReportInterval * dnConf.blockReportInterval;
-      }
-      LOG.info("sent block report, processed command:" + cmd);
-    }
-    return cmd;
-  }
-  
-  
-  DatanodeCommand [] sendHeartBeat() throws IOException {
-    return bpNamenode.sendHeartbeat(bpRegistration,
-        dn.data.getCapacity(),
-        dn.data.getDfsUsed(),
-        dn.data.getRemaining(),
-        dn.data.getBlockPoolUsed(getBlockPoolId()),
-        dn.xmitsInProgress.get(),
-        dn.getXceiverCount(), dn.data.getNumFailedVolumes());
-  }
-  
   //This must be called only by blockPoolManager
   void start() {
-    if ((bpThread != null) && (bpThread.isAlive())) {
-      //Thread is started already
-      return;
+    for (BPServiceActor actor : bpServices) {
+      actor.start();
     }
-    bpThread = new Thread(this, formatThreadName());
-    bpThread.setDaemon(true); // needed for JUnit testing
-    bpThread.start();
-  }
-  
-  private String formatThreadName() {
-    Collection<URI> dataDirs = DataNode.getStorageDirs(dn.getConf());
-    return "DataNode: [" +
-      StringUtils.uriToString(dataDirs.toArray(new URI[0])) + "] " +
-      " heartbeating to " + nnAddr;
   }
   
   //This must be called only by blockPoolManager.
   void stop() {
-    shouldServiceRun = false;
-    if (bpThread != null) {
-        bpThread.interrupt();
+    for (BPServiceActor actor : bpServices) {
+      actor.stop();
     }
   }
   
   //This must be called only by blockPoolManager
   void join() {
-    try {
-      if (bpThread != null) {
-        bpThread.join();
-      }
-    } catch (InterruptedException ie) { }
+    for (BPServiceActor actor : bpServices) {
+      actor.join();
+    }
+  }
+
+  synchronized UpgradeManagerDatanode getUpgradeManager() {
+    if(upgradeManager == null)
+      upgradeManager = 
+        new UpgradeManagerDatanode(dn, getBlockPoolId());
+    
+    return upgradeManager;
   }
   
-  //Cleanup method to be called by current thread before exiting.
-  private synchronized void cleanUp() {
-    
-    if(upgradeManager != null)
-      upgradeManager.shutdownUpgrade();
-    shouldServiceRun = false;
-    RPC.stopProxy(bpNamenode);
-    dn.shutdownBlockPool(this);
+  void processDistributedUpgradeCommand(UpgradeCommand comm)
+  throws IOException {
+    UpgradeManagerDatanode upgradeManager = getUpgradeManager();
+    upgradeManager.processUpgradeCommand(comm);
   }
 
   /**
-   * Main loop for each BP thread. Run until shutdown,
-   * forever calling remote NameNode functions.
+   * Start distributed upgrade if it should be initiated by the data-node.
    */
-  private void offerService() throws Exception {
-    LOG.info("For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
-        + dnConf.deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
-        + dnConf.blockReportInterval + "msec" + " Initial delay: "
-        + dnConf.initialBlockReportDelay + "msec" + "; heartBeatInterval="
-        + dnConf.heartBeatInterval);
-
-    //
-    // Now loop for a long time....
-    //
-    while (shouldRun()) {
-      try {
-        long startTime = now();
-
-        //
-        // Every so often, send heartbeat or block-report
-        //
-        if (startTime - lastHeartbeat > dnConf.heartBeatInterval) {
-          //
-          // All heartbeat messages include following info:
-          // -- Datanode name
-          // -- data transfer port
-          // -- Total capacity
-          // -- Bytes remaining
-          //
-          lastHeartbeat = startTime;
-          if (!dn.areHeartbeatsDisabledForTests()) {
-            DatanodeCommand[] cmds = sendHeartBeat();
-            dn.metrics.addHeartbeat(now() - startTime);
-
-            long startProcessCommands = now();
-            if (!processCommand(cmds))
-              continue;
-            long endProcessCommands = now();
-            if (endProcessCommands - startProcessCommands > 2000) {
-              LOG.info("Took " + (endProcessCommands - startProcessCommands) +
-                  "ms to process " + cmds.length + " commands from NN");
-            }
-          }
-        }
-        if (pendingReceivedRequests > 0
-            || (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
-          reportReceivedDeletedBlocks();
-          lastDeletedReport = startTime;
-        }
-
-        DatanodeCommand cmd = blockReport();
-        processCommand(cmd);
-
-        // Now safe to start scanning the block pool
-        if (dn.blockScanner != null) {
-          dn.blockScanner.addBlockPool(this.getBlockPoolId());
-        }
-
-        //
-        // There is no work to do;  sleep until hearbeat timer elapses, 
-        // or work arrives, and then iterate again.
-        //
-        long waitTime = dnConf.heartBeatInterval - 
-        (System.currentTimeMillis() - lastHeartbeat);
-        synchronized(receivedAndDeletedBlockList) {
-          if (waitTime > 0 && pendingReceivedRequests == 0) {
-            try {
-              receivedAndDeletedBlockList.wait(waitTime);
-            } catch (InterruptedException ie) {
-              LOG.warn("BPOfferService for " + this + " interrupted");
-            }
-          }
-        } // synchronized
-      } catch(RemoteException re) {
-        String reClass = re.getClassName();
-        if (UnregisteredNodeException.class.getName().equals(reClass) ||
-            DisallowedDatanodeException.class.getName().equals(reClass) ||
-            IncorrectVersionException.class.getName().equals(reClass)) {
-          LOG.warn(this + " is shutting down", re);
-          shouldServiceRun = false;
-          return;
-        }
-        LOG.warn("RemoteException in offerService", re);
-        try {
-          long sleepTime = Math.min(1000, dnConf.heartBeatInterval);
-          Thread.sleep(sleepTime);
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-        }
-      } catch (IOException e) {
-        LOG.warn("IOException in offerService", e);
-      }
-    } // while (shouldRun())
-  } // offerService
-
-  /**
-   * Register one bp with the corresponding NameNode
-   * <p>
-   * The bpDatanode needs to register with the namenode on startup in order
-   * 1) to report which storage it is serving now and 
-   * 2) to receive a registrationID
-   *  
-   * issued by the namenode to recognize registered datanodes.
-   * 
-   * @see FSNamesystem#registerDatanode(DatanodeRegistration)
-   * @throws IOException
-   */
-  void register() throws IOException {
-    Preconditions.checkState(bpNSInfo != null,
-        "register() should be called after handshake()");
+  synchronized void startDistributedUpgradeIfNeeded() throws IOException {
+    UpgradeManagerDatanode um = getUpgradeManager();
     
-    // The handshake() phase loaded the block pool storage
-    // off disk - so update the bpRegistration object from that info
-    bpRegistration = dn.createBPRegistration(bpNSInfo);
-
-    LOG.info(this + " beginning handshake with NN");
-
-    while (shouldRun()) {
-      try {
-        // Use returned registration from namenode with updated machine name.
-        bpRegistration = bpNamenode.registerDatanode(bpRegistration);
-        break;
-      } catch(SocketTimeoutException e) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + nnAddr);
-        sleepAndLogInterrupts(1000, "connecting to server");
-      }
-    }
-    
-    LOG.info("Block pool " + this + " successfully registered with NN");
-    dn.bpRegistrationSucceeded(bpRegistration, getBlockPoolId());
-
-    // random short delay - helps scatter the BR from all DNs
-    scheduleBlockReport(dnConf.initialBlockReportDelay);
+    if(!um.getUpgradeState())
+      return;
+    um.setUpgradeState(false, um.getUpgradeVersion());
+    um.startUpgrade();
+    return;
   }
-
-
-  private void sleepAndLogInterrupts(int millis,
-      String stateString) {
-    try {
-      Thread.sleep(millis);
-    } catch (InterruptedException ie) {
-      LOG.info("BPOfferService " + this +
-          " interrupted while " + stateString);
-    }
+  
+  DataNode getDataNode() {
+    return dn;
   }
 
   /**
-   * No matter what kind of exception we get, keep retrying to offerService().
-   * That's the loop that connects to the NameNode and provides basic DataNode
-   * functionality.
-   *
-   * Only stop when "shouldRun" or "shouldServiceRun" is turned off, which can
-   * happen either at shutdown or due to refreshNamenodes.
+   * Called by the BPServiceActors when they handshake to a NN.
+   * If this is the first NN connection, this sets the namespace info
+   * for this BPOfferService. If it's a connection to a new NN, it
+   * verifies that this namespace matches (eg to prevent a misconfiguration
+   * where a StandbyNode from a different cluster is specified)
    */
-  @Override
-  public void run() {
-    LOG.info(this + " starting to offer service");
-
-    try {
-      // init stuff
-      try {
-        // setup storage
-        connectToNNAndHandshake();
-      } catch (IOException ioe) {
-        // Initial handshake, storage recovery or registration failed
-        // End BPOfferService thread
-        LOG.fatal("Initialization failed for block pool " + this, ioe);
-        return;
-      }
-
-      initialized = true; // bp is initialized;
+  void verifyAndSetNamespaceInfo(NamespaceInfo nsInfo) throws IOException {
+    if (this.bpNSInfo == null) {
+      this.bpNSInfo = nsInfo;
       
-      while (shouldRun()) {
-        try {
-          startDistributedUpgradeIfNeeded();
-          offerService();
-        } catch (Exception ex) {
-          LOG.error("Exception in BPOfferService for " + this, ex);
-          sleepAndLogInterrupts(5000, "offering service");
-        }
-      }
-    } catch (Throwable ex) {
-      LOG.warn("Unexpected exception in block pool " + this, ex);
-    } finally {
-      LOG.warn("Ending block pool service for: " + this);
-      cleanUp();
+      // Now that we know the namespace ID, etc, we can pass this to the DN.
+      // The DN can now initialize its local storage if we are the
+      // first BP to handshake, etc.
+      dn.initBlockPool(this);
+      return;
+    } else {
+      checkNSEquality(bpNSInfo.getBlockPoolID(), nsInfo.getBlockPoolID(),
+          "Blockpool ID");
+      checkNSEquality(bpNSInfo.getNamespaceID(), nsInfo.getNamespaceID(),
+          "Namespace ID");
+      checkNSEquality(bpNSInfo.getClusterID(), nsInfo.getClusterID(),
+          "Cluster ID");
     }
-  }
-
-  private boolean shouldRun() {
-    return shouldServiceRun && dn.shouldRun();
   }
 
   /**
-   * Process an array of datanode commands
-   * 
-   * @param cmds an array of datanode commands
-   * @return true if further processing may be required or false otherwise. 
+   * After one of the BPServiceActors registers successfully with the
+   * NN, it calls this function to verify that the NN it connected to
+   * is consistent with other NNs serving the block-pool.
    */
-  private boolean processCommand(DatanodeCommand[] cmds) {
-    if (cmds != null) {
-      for (DatanodeCommand cmd : cmds) {
-        try {
-          if (processCommand(cmd) == false) {
-            return false;
-          }
-        } catch (IOException ioe) {
-          LOG.warn("Error processing datanode Command", ioe);
-        }
+  void registrationSucceeded(BPServiceActor bpServiceActor,
+      DatanodeRegistration reg) throws IOException {
+    if (bpRegistration != null) {
+      checkNSEquality(bpRegistration.storageInfo.getNamespaceID(),
+          reg.storageInfo.getNamespaceID(), "namespace ID");
+      checkNSEquality(bpRegistration.storageInfo.getClusterID(),
+          reg.storageInfo.getClusterID(), "cluster ID");
+    } else {
+      bpRegistration = reg;
+    }
+  }
+
+  /**
+   * Verify equality of two namespace-related fields, throwing
+   * an exception if they are unequal.
+   */
+  private static void checkNSEquality(
+      Object ourID, Object theirID,
+      String idHelpText) throws IOException {
+    if (!ourID.equals(theirID)) {
+      throw new IOException(idHelpText + " mismatch: " +
+          "previously connected to " + idHelpText + " " + ourID + 
+          " but now connected to " + idHelpText + " " + theirID);
+    }
+  }
+
+  DatanodeRegistration createRegistration() {
+    Preconditions.checkState(bpNSInfo != null,
+        "getRegistration() can only be called after initial handshake");
+    return dn.createBPRegistration(bpNSInfo);
+  }
+
+  /**
+   * Called when an actor shuts down. If this is the last actor
+   * to shut down, shuts down the whole blockpool in the DN.
+   */
+  void shutdownActor(BPServiceActor actor) {
+    if (bpServiceToActive == actor) {
+      bpServiceToActive = null;
+    }
+
+    bpServices.remove(actor);
+
+    // TODO: synchronization should be a little better here
+    if (bpServices.isEmpty()) {
+      dn.shutdownBlockPool(this);
+      
+      if(upgradeManager != null)
+        upgradeManager.shutdownUpgrade();
+    }
+  }
+
+  @Deprecated
+  InetSocketAddress getNNSocketAddress() {
+    // TODO(HA) this doesn't make sense anymore
+    return bpServiceToActive.getNNSocketAddress();
+  }
+
+  /**
+   * Called by the DN to report an error to the NNs.
+   */
+  void trySendErrorReport(int errCode, String errMsg) {
+    for (BPServiceActor actor : bpServices) {
+      actor.trySendErrorReport(errCode, errMsg);
+    }
+  }
+
+  /**
+   * Ask each of the actors to schedule a block report after
+   * the specified delay.
+   */
+  void scheduleBlockReport(long delay) {
+    for (BPServiceActor actor : bpServices) {
+      actor.scheduleBlockReport(delay);
+    }
+  }
+
+  /**
+   * Ask each of the actors to report a bad block hosted on another DN.
+   */
+  void reportRemoteBadBlock(DatanodeInfo dnInfo, ExtendedBlock block) {
+    for (BPServiceActor actor : bpServices) {
+      try {
+        actor.reportRemoteBadBlock(dnInfo, block);
+      } catch (IOException e) {
+        LOG.warn("Couldn't report bad block " + block + " to " + actor,
+            e);
       }
     }
-    return true;
+  }
+
+  /**
+   * TODO: this is still used in a few places where we need to sort out
+   * what to do in HA!
+   * @return a proxy to the active NN
+   */
+  @Deprecated
+  DatanodeProtocol getActiveNN() {
+    return bpServiceToActive.bpNamenode;
+  }
+
+  /**
+   * @return true if the given NN address is one of the NNs for this
+   * block pool
+   */
+  boolean containsNN(InetSocketAddress addr) {
+    for (BPServiceActor actor : bpServices) {
+      if (actor.getNNSocketAddress().equals(addr)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  @VisibleForTesting
+  int countNameNodes() {
+    return bpServices.size();
+  }
+
+  /**
+   * Run an immediate block report on this thread. Used by tests.
+   */
+  @VisibleForTesting
+  void triggerBlockReportForTests() throws IOException {
+    for (BPServiceActor actor : bpServices) {
+      actor.triggerBlockReportForTests();
+    }
+  }
+
+  boolean processCommandFromActor(DatanodeCommand cmd,
+      BPServiceActor actor) throws IOException {
+    assert bpServices.contains(actor);
+    if (actor == bpServiceToActive) {
+      return processCommandFromActive(cmd, actor);
+    } else {
+      return processCommandFromStandby(cmd, actor);
+    }
   }
 
   /**
@@ -669,7 +412,8 @@ class BPOfferService implements Runnable {
    * @return true if further processing may be required or false otherwise. 
    * @throws IOException
    */
-  private boolean processCommand(DatanodeCommand cmd) throws IOException {
+  private boolean processCommandFromActive(DatanodeCommand cmd,
+      BPServiceActor actor) throws IOException {
     if (cmd == null)
       return true;
     final BlockCommand bcmd = 
@@ -700,19 +444,12 @@ class BPOfferService implements Runnable {
       dn.metrics.incrBlocksRemoved(toDelete.length);
       break;
     case DatanodeProtocol.DNA_SHUTDOWN:
-      // shut down the data node
-      shouldServiceRun = false;
-      return false;
+      // TODO: DNA_SHUTDOWN appears to be unused - the NN never sends this command
+      throw new UnsupportedOperationException("Received unimplemented DNA_SHUTDOWN");
     case DatanodeProtocol.DNA_REGISTER:
       // namenode requested a registration - at start or if NN lost contact
       LOG.info("DatanodeCommand action: DNA_REGISTER");
-      if (shouldRun()) {
-        // re-retrieve namespace info to make sure that, if the NN
-        // was restarted, we still match its version (HDFS-2120)
-        retrieveNamespaceInfo();
-        // and re-register
-        register();
-      }
+      actor.reRegister();
       break;
     case DatanodeProtocol.DNA_FINALIZE:
       String bp = ((FinalizeCommand) cmd).getBlockPoolId(); 
@@ -732,7 +469,8 @@ class BPOfferService implements Runnable {
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
       LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
       if (dn.isBlockTokenEnabled) {
-        dn.blockPoolTokenSecretManager.setKeys(getBlockPoolId(), 
+        dn.blockPoolTokenSecretManager.setKeys(
+            getBlockPoolId(), 
             ((KeyUpdateCommand) cmd).getExportedKeys());
       }
       break;
@@ -751,32 +489,39 @@ class BPOfferService implements Runnable {
     }
     return true;
   }
-  
-  private void processDistributedUpgradeCommand(UpgradeCommand comm)
-  throws IOException {
-    UpgradeManagerDatanode upgradeManager = getUpgradeManager();
-    upgradeManager.processUpgradeCommand(comm);
+ 
+  private boolean processCommandFromStandby(DatanodeCommand cmd,
+      BPServiceActor actor) throws IOException {
+    if (cmd == null)
+      return true;
+    switch(cmd.getAction()) {
+    case DatanodeProtocol.DNA_REGISTER:
+      // namenode requested a registration - at start or if NN lost contact
+      LOG.info("DatanodeCommand action: DNA_REGISTER");
+      actor.reRegister();
+      return true;
+    case DatanodeProtocol.DNA_TRANSFER:
+    case DatanodeProtocol.DNA_INVALIDATE:
+    case DatanodeProtocol.DNA_SHUTDOWN:
+    case DatanodeProtocol.DNA_RECOVERBLOCK:
+    case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
+    case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
+      LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
+      return true;   
+    default:
+      LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
+    }
+    return true;
   }
 
-  synchronized UpgradeManagerDatanode getUpgradeManager() {
-    if(upgradeManager == null)
-      upgradeManager = 
-        new UpgradeManagerDatanode(dn, getBlockPoolId());
-    
-    return upgradeManager;
-  }
-  
   /**
-   * Start distributed upgrade if it should be initiated by the data-node.
+   * Connect to the NN at the given address. This is separated out for ease
+   * of testing.
    */
-  private void startDistributedUpgradeIfNeeded() throws IOException {
-    UpgradeManagerDatanode um = getUpgradeManager();
-    
-    if(!um.getUpgradeState())
-      return;
-    um.setUpgradeState(false, um.getUpgradeVersion());
-    um.startUpgrade();
-    return;
+  DatanodeProtocol connectToNN(InetSocketAddress nnAddr)
+      throws IOException {
+    return (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
+        DatanodeProtocol.versionID, nnAddr, dn.getConf());
   }
 
 }

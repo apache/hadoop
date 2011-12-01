@@ -72,7 +72,7 @@ public class TestRefreshNamenodes {
         InetSocketAddress addr = cluster.getNameNode(i).getNameNodeAddress();
         boolean found = false;
         for (int j = 0; j < bpoList.length; j++) {
-          if (bpoList[j] != null && addr.equals(bpoList[j].nnAddr)) {
+          if (bpoList[j] != null && addr.equals(bpoList[j].getNNSocketAddress())) {
             found = true;
             bpoList[j] = null; // Erase the address that matched
             break;

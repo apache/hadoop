@@ -320,7 +320,6 @@ class BlockReceiver implements Closeable {
   private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
                              byte[] checksumBuf, int checksumOff ) 
                              throws IOException {
-    DatanodeProtocol nn = datanode.getBPNamenode(block.getBlockPoolId());
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       
@@ -331,9 +330,7 @@ class BlockReceiver implements Closeable {
           try {
             LOG.info("report corrupt block " + block + " from datanode " +
                       srcDataNode + " to namenode");
-            LocatedBlock lb = new LocatedBlock(block, 
-                                            new DatanodeInfo[] {srcDataNode});
-            nn.reportBadBlocks(new LocatedBlock[] {lb});
+            datanode.reportRemoteBadBlock(srcDataNode, block);
           } catch (IOException e) {
             LOG.warn("Failed to report bad block " + block + 
                       " from datanode " + srcDataNode + " to namenode");

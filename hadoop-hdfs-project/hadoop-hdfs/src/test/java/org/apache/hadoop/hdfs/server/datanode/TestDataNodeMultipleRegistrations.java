@@ -93,23 +93,22 @@ public class TestDataNodeMultipleRegistrations {
       assertEquals("number of volumes is wrong", 2, volInfos.size());
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
-        LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name + "; sid="
-            + bpos.bpRegistration.storageID + "; nna=" + bpos.nnAddr);
+        LOG.info("BP: " + bpos);
       }
 
       BPOfferService bpos1 = dn.getAllBpOs()[0];
       BPOfferService bpos2 = dn.getAllBpOs()[1];
 
       // The order of bpos is not guaranteed, so fix the order
-      if (bpos1.nnAddr.equals(nn2.getNameNodeAddress())) {
+      if (bpos1.getNNSocketAddress().equals(nn2.getNameNodeAddress())) {
         BPOfferService tmp = bpos1;
         bpos1 = bpos2;
         bpos2 = tmp;
       }
 
-      assertEquals("wrong nn address", bpos1.nnAddr,
+      assertEquals("wrong nn address", bpos1.getNNSocketAddress(),
           nn1.getNameNodeAddress());
-      assertEquals("wrong nn address", bpos2.nnAddr,
+      assertEquals("wrong nn address", bpos2.getNNSocketAddress(),
           nn2.getNameNodeAddress());
       assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
       assertEquals("wrong bpid", bpos2.getBlockPoolId(), bpid2);
@@ -156,15 +155,14 @@ public class TestDataNodeMultipleRegistrations {
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
         LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name + "; sid="
-            + bpos.bpRegistration.storageID + "; nna=" + bpos.nnAddr);
+            + bpos.bpRegistration.storageID + "; nna=" + bpos.getNNSocketAddress());
       }
 
       // try block report
       BPOfferService bpos1 = dn.getAllBpOs()[0];
-      bpos1.lastBlockReport = 0;
-      bpos1.blockReport();
+      bpos1.triggerBlockReportForTests();
 
-      assertEquals("wrong nn address", bpos1.nnAddr,
+      assertEquals("wrong nn address", bpos1.getNNSocketAddress(),
           nn1.getNameNodeAddress());
       assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
       assertEquals("wrong cid", dn.getClusterId(), cid1);
