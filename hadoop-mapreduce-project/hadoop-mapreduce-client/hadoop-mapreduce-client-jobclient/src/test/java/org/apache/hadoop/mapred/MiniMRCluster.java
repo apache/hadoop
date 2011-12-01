@@ -34,7 +34,11 @@ import org.apache.hadoop.security.UserGroupInformation;
  * Due to major differences between MR1 and MR2, a number of methods are either
  * unimplemented/unsupported or were re-implemented to provide wrappers around
  * MR2 functionality.
+ *
+ * @deprecated Use {@link org.apache.hadoop.mapred.MiniMRClientClusterFactory}
+ * instead
  */
+@Deprecated
 public class MiniMRCluster {
   private static final Log LOG = LogFactory.getLog(MiniMRCluster.class);
 

@@ -69,6 +69,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3448. TestCombineOutputCollector javac unchecked warning on mocked
     generics (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3169 amendment. Deprecate MiniMRCluster. (Ahmed Radwan via
+    sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
