@@ -35,3 +35,5 @@ HDFS-1971. Send block report from datanode to both active and standby namenodes.
 HDFS-2616. Change DatanodeProtocol#sendHeartbeat() to return HeartbeatResponse. (suresh)
 
 HDFS-2622. Fix TestDFSUpgrade in HA branch. (todd)
+
+HDFS-2612. Handle refreshNameNodes in federated HA clusters (todd)

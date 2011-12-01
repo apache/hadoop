@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
@@ -42,6 +44,8 @@ import org.apache.hadoop.ipc.RPC;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * One instance per block-pool/namespace on the DN, which handles the
@@ -87,6 +91,21 @@ class BPOfferService {
     // active. In reality it should start in an unknown state and then
     // as we figure out which is active, designate one as such.
     this.bpServiceToActive = this.bpServices.get(0);
+  }
+
+  void refreshNNList(ArrayList<InetSocketAddress> addrs) throws IOException {
+    Set<InetSocketAddress> oldAddrs = Sets.newHashSet();
+    for (BPServiceActor actor : bpServices) {
+      oldAddrs.add(actor.getNNSocketAddress());
+    }
+    Set<InetSocketAddress> newAddrs = Sets.newHashSet(addrs);
+    
+    if (!Sets.symmetricDifference(oldAddrs, newAddrs).isEmpty()) {
+      // Keep things simple for now -- we can implement this at a later date.
+      throw new IOException(
+          "HA does not currently support adding a new standby to a running DN. " +
+          "Please do a rolling restart of DNs to reconfigure the list of NNs.");
+    }
   }
 
   /**
