@@ -59,19 +59,6 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
 
     JobConf conf = new JobConf(false);
 
-    //seeding JT and NN info into non-defaults (empty jobconf)
-    String jobTrackerAddress = createJobConf().get(JTConfig.JT_IPC_ADDRESS);
-    if (jobTrackerAddress == null) {
-      jobTrackerAddress = "local";
-    }
-    conf.set(JTConfig.JT_IPC_ADDRESS, jobTrackerAddress);
-    if (jobTrackerAddress == "local") {
-      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
-    }
-    else {
-      conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);      
-    }
-    
     conf.set("fs.default.name", createJobConf().get("fs.default.name"));
 
     conf.setJobName("mr");

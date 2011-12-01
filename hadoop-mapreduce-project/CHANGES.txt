@@ -72,6 +72,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3169 amendment. Deprecate MiniMRCluster. (Ahmed Radwan via
     sseth)
 
+    MAPREDUCE-3369. Migrate MR1 tests to run on MR2 using the new interfaces
+    introduced in MAPREDUCE-3169. (Ahmed Radwan via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

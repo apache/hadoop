@@ -48,7 +48,6 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
   private static final String OUTPUT_FILENAME = "result[0]";
   
   public static boolean launchJob(URI fileSys,
-                                  String jobTracker,
                                   JobConf conf,
                                   int numMaps,
                                   int numReduces) throws IOException {
@@ -68,8 +67,6 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
 
     // use WordCount example
     FileSystem.setDefaultUri(conf, fileSys);
-    conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.CLASSIC_FRAMEWORK_NAME);
-    conf.set(JTConfig.JT_IPC_ADDRESS, jobTracker);
     conf.setJobName("foo");
 
     conf.setInputFormat(TextInputFormat.class);
@@ -113,11 +110,9 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 2);
-      final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       JobConf jobConf = new JobConf();
       boolean result;
-      result = launchJob(fileSys.getUri(), jobTrackerName, jobConf, 
-                              3, 1);
+      result = launchJob(fileSys.getUri(), jobConf, 3, 1);
       assertTrue(result);
           
     } finally {
