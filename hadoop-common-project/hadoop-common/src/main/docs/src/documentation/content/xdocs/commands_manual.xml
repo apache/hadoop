@@ -445,14 +445,22 @@
 					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Rebalancer">Rebalancer</a>.
 				</p>
 				<p>
-					<code>Usage: hadoop balancer [-threshold &lt;threshold&gt;]</code>
+					<code>Usage: hadoop balancer [-policy &lt;blockpool|datanode&gt;] [-threshold &lt;threshold&gt;]</code>
 				</p>
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
-			
+			           <tr>
+					<td><code>-policy &lt;blockpool|datanode&gt;</code></td>
+					<td>The balancing policy.
+					    <br /><code>datanode</code>: Cluster is balance if the disk usage of each datanode is balance.
+					    <br /><code>blockpool</code>: Cluster is balance if the disk usage of each block pool in each datanode is balance.
+					    <br />Note that <code>blockpool</code> is a condition stronger than <code>datanode</code>.
+					    The default policy is <code>datanode</code>.
+					</td>
+			           </tr>
 			           <tr>
 			          	<td><code>-threshold &lt;threshold&gt;</code></td>
-			            <td>Percentage of disk capacity. This overwrites the default threshold.</td>
+			            <td>Percentage of disk capacity. This default threshold is 10%.</td>
 			           </tr>
 			     </table>
 			</section>
