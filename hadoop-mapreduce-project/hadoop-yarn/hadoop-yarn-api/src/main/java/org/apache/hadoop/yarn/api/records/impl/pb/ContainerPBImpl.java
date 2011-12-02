@@ -340,6 +340,21 @@ public class ContainerPBImpl extends ProtoBase<ContainerProto> implements Contai
     return ((ContainerStatusPBImpl)t).getProto();
   }
 
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Container: [");
+    sb.append("ContainerId: ").append(getId()).append(", ");
+    sb.append("NodeId: ").append(getNodeId()).append(", ");
+    sb.append("NodeHttpAddress: ").append(getNodeHttpAddress()).append(", ");
+    sb.append("Resource: ").append(getResource()).append(", ");
+    sb.append("Priority: ").append(getPriority()).append(", ");
+    sb.append("State: ").append(getState()).append(", ");
+    sb.append("Token: ").append(getContainerToken()).append(", ");
+    sb.append("Status: ").append(getContainerStatus());
+    sb.append("]");
+    return sb.toString();
+  }
+
   //TODO Comparator
   @Override
   public int compareTo(Container other) {
