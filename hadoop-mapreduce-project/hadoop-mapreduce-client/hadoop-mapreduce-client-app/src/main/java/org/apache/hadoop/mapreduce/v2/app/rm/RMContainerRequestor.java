@@ -105,6 +105,13 @@ public abstract class RMContainerRequestor extends RMCommunicator {
       this.priority = priority;
     }
     
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("AttemptId[").append(attemptID).append("]");
+      sb.append("Capability[").append(capability).append("]");
+      sb.append("Priority[").append(priority).append("]");
+      return sb.toString();
+    }
   }
 
   @Override

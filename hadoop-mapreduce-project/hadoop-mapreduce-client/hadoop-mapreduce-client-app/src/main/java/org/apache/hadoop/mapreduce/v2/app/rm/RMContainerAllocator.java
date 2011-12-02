@@ -87,7 +87,7 @@ public class RMContainerAllocator extends RMContainerRequestor
   }
   
   /*
-  Vocabulory Used: 
+  Vocabulary Used: 
   pending -> requests which are NOT yet sent to RM
   scheduled -> requests which are sent to RM but not yet assigned
   assigned -> requests which are assigned to a container
@@ -565,6 +565,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       if (event.getEarlierAttemptFailed()) {
         earlierFailedMaps.add(event.getAttemptID());
         request = new ContainerRequest(event, PRIORITY_FAST_FAIL_MAP);
+        LOG.info("Added "+event.getAttemptID()+" to list of failed maps");
       } else {
         for (String host : event.getHosts()) {
           LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
@@ -603,7 +604,9 @@ public class RMContainerAllocator extends RMContainerRequestor
       containersAllocated += allocatedContainers.size();
       while (it.hasNext()) {
         Container allocated = it.next();
-        LOG.info("Assigning container " + allocated);
+        LOG.info("Assigning container " + allocated.getId() +
+            " with priority " + allocated.getPriority() +
+            " to NM " + allocated.getNodeId());
         
         // check if allocated container meets memory requirements 
         // and whether we have any scheduled tasks that need 
@@ -645,7 +648,8 @@ public class RMContainerAllocator extends RMContainerRequestor
             // we need to request for a new container 
             // and release the current one
             LOG.info("Got allocated container on a blacklisted "
-                + " host. Releasing container " + allocated);
+                + " host "+allocated.getNodeId().getHost()
+                +". Releasing container " + allocated);
 
             // find the request matching this allocated container 
             // and replace it with a new one 
@@ -727,10 +731,20 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
     
     private ContainerRequest getContainerReqToReplace(Container allocated) {
+      LOG.info("Finding containerReq for allocated container: " + allocated);
       Priority priority = allocated.getPriority();
       ContainerRequest toBeReplaced = null;
-      if (PRIORITY_FAST_FAIL_MAP.equals(priority) 
-          || PRIORITY_MAP.equals(priority)) {
+      if (PRIORITY_FAST_FAIL_MAP.equals(priority)) {
+        LOG.info("Replacing FAST_FAIL_MAP container " + allocated.getId());
+        Iterator<TaskAttemptId> iter = earlierFailedMaps.iterator();
+        while (toBeReplaced == null && iter.hasNext()) {
+          toBeReplaced = maps.get(iter.next());
+        }
+        LOG.info("Found replacement: " + toBeReplaced);
+        return toBeReplaced;
+      }
+      else if (PRIORITY_MAP.equals(priority)) {
+        LOG.info("Replacing MAP container " + allocated.getId());
         // allocated container was for a map
         String host = allocated.getNodeId().getHost();
         LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
@@ -749,6 +763,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         TaskAttemptId tId = reduces.keySet().iterator().next();
         toBeReplaced = reduces.remove(tId);    
       }
+      LOG.info("Found replacement: " + toBeReplaced);
       return toBeReplaced;
     }
     
@@ -758,7 +773,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       //try to assign to earlierFailedMaps if present
       ContainerRequest assigned = null;
       while (assigned == null && earlierFailedMaps.size() > 0) {
-        TaskAttemptId tId = earlierFailedMaps.removeFirst();
+        TaskAttemptId tId = earlierFailedMaps.removeFirst();      
         if (maps.containsKey(tId)) {
           assigned = maps.remove(tId);
           JobCounterUpdateEvent jce =

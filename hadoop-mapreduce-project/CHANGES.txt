@@ -175,6 +175,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3443. JobClient and Job should function in the context of the
     UGI which created them. (Mahadev Konar via sseth)
 
+    MAPREDUCE-3460. MR AM can hang if containers are allocated on a node
+    blacklisted by the AM. (Hitesh Shah and Robert Joseph Evans via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
