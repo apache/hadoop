@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -97,6 +98,18 @@ public class TestBPOfferService {
         new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID,
             0, HdfsConstants.LAYOUT_VERSION))
       .when(mock).versionRequest();
+    
+    Mockito.doReturn(new HeartbeatResponse(null))
+      .when(mock).sendHeartbeat(
+          Mockito.any(DatanodeRegistration.class),
+          Mockito.anyLong(),
+          Mockito.anyLong(),
+          Mockito.anyLong(),
+          Mockito.anyLong(),
+          Mockito.anyInt(),
+          Mockito.anyInt(),
+          Mockito.anyInt());
+
     return mock;
   }
   
