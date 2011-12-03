@@ -68,6 +68,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
 
+    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
