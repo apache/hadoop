@@ -230,6 +230,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3479. JobClient#getJob cannot find local jobs. (tomwhite)
 
+    MAPREDUCE-3456. $HADOOP_PREFIX/bin/yarn should set defaults for 
+    $HADOOP_*_HOME (Eric Payne via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
