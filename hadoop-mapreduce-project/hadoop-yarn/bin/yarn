@@ -148,9 +148,13 @@ IFS=
 
 # add hadoop-common libs to CLASSPATH
 if [ ! -d "$HADOOP_COMMON_HOME" ]; then
-  echo No HADOOP_COMMON_HOME set. 
-  echo Please specify it either in yarn-env.sh or in the environment.
-  exit 1
+  if [ -d "$HADOOP_PREFIX" ]; then
+    export HADOOP_COMMON_HOME=$HADOOP_PREFIX
+  else
+    echo No HADOOP_COMMON_HOME set. 
+    echo Please specify it either in yarn-env.sh or in the environment.
+    exit 1
+  fi
 fi
 
 CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common'/*'
@@ -158,9 +162,13 @@ CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common/lib'/*'
 
 # add hadoop-hdfs libs to CLASSPATH
 if [ ! -d "$HADOOP_HDFS_HOME" ]; then
-  echo No HADOOP_HDFS_HOME set. 
-  echo Please specify it either in yarn-env.sh or in the environment.
-  exit 1
+  if [ -d "$HADOOP_PREFIX" ]; then
+    export HADOOP_HDFS_HOME=$HADOOP_PREFIX
+  else
+    echo No HADOOP_HDFS_HOME set. 
+    echo Please specify it either in yarn-env.sh or in the environment.
+    exit 1
+  fi
 fi
 CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs'/*'
 CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib'/*'
