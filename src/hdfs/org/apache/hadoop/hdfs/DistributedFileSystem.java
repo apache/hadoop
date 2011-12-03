@@ -194,7 +194,7 @@ public class DistributedFileSystem extends FileSystem {
       boolean overwrite,
       int bufferSize, short replication, long blockSize, 
       Progressable progress) throws IOException {
-
+    statistics.incrementWriteOps(1);
     return new FSDataOutputStream
         (dfs.create(getPathName(f), permission, 
                     overwrite, false, replication, blockSize, progress, bufferSize), 

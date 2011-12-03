@@ -55,6 +55,9 @@ Release 1.1.0 - unreleased
     HADOOP-7870. fix SequenceFile#createWriter with boolean
     createParent arg to respect createParent. (Jon Hsieh via eli)
 
+    HADOOP-7879. DistributedFileSystem#createNonRecursive should also
+    incrementWriteOps statistics. (Jon Hsieh via todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for 
