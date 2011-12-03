@@ -183,6 +183,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3479. JobClient#getJob cannot find local jobs. (tomwhite)
 
+    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
