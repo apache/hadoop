@@ -436,6 +436,11 @@ public class Job extends JobContextImpl implements JobContext {
     updateStatus();
     return status.isRetired();
   }
+  
+  @Private
+  public Cluster getCluster() {
+    return cluster;
+  }
 
   /** Only for mocks in unit tests. */
   @Private

@@ -584,6 +584,10 @@ public class JobClient extends CLI {
           return job;
         }
       });
+      // update our Cluster instance with the one created by Job for submission
+      // (we can't pass our Cluster instance to Job, since Job wraps the config
+      // instance, and the two configs would then diverge)
+      cluster = job.getCluster();
       return new NetworkedJob(job);
     } catch (InterruptedException ie) {
       throw new IOException("interrupted", ie);
