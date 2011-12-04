@@ -19,7 +19,9 @@
 package org.apache.hadoop.examples;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -29,9 +31,14 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapreduce.*;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.OutputFormat;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.join.*;
+import org.apache.hadoop.mapreduce.lib.join.CompositeInputFormat;
+import org.apache.hadoop.mapreduce.lib.join.TupleWritable;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.Tool;
@@ -52,7 +59,7 @@ import org.apache.hadoop.util.ToolRunner;
  *            [<i>in-dir</i>]* <i>in-dir</i> <i>out-dir</i> 
  */
 public class Join extends Configured implements Tool {
-  public static String REDUCES_PER_HOST = "mapreduce.join.reduces_per_host";
+  public static final String REDUCES_PER_HOST = "mapreduce.join.reduces_per_host";
   static int printUsage() {
     System.out.println("join [-r <reduces>] " +
                        "[-inFormat <input format class>] " +

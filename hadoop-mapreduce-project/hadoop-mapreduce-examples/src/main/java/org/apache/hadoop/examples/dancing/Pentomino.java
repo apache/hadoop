@@ -69,7 +69,7 @@ public class Pentomino {
     }
     
     public int[] getRotations() {
-      return rotations;
+      return rotations.clone();
     }
     
     public boolean getFlippable() {
