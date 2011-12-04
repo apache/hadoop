@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -300,7 +299,12 @@ public class TeraSort extends Configured implements Tool {
                                     TeraInputFormat.PARTITION_FILENAME);
       URI partitionUri = new URI(partitionFile.toString() +
                                  "#" + TeraInputFormat.PARTITION_FILENAME);
-      TeraInputFormat.writePartitionFile(job, partitionFile);
+      try {
+        TeraInputFormat.writePartitionFile(job, partitionFile);
+      } catch (Throwable e) {
+        LOG.error(e.getMessage());
+        return -1;
+      }
       job.addCacheFile(partitionUri);
       job.createSymlink();    
       long end = System.currentTimeMillis();

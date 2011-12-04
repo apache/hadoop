@@ -188,6 +188,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3456. $HADOOP_PREFIX/bin/yarn should set defaults for 
     $HADOOP_*_HOME (Eric Payne via mahadev)
 
+    MAPREDUCE-3458. Fix findbugs warnings in hadoop-examples. (Devaraj K
+    via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
