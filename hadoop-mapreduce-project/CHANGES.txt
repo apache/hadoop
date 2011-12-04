@@ -191,6 +191,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3458. Fix findbugs warnings in hadoop-examples. (Devaraj K
     via mahadev)
 
+    MAPREDUCE-3485. DISKS_FAILED -101 error code should be defined in same location as 
+    ABORTED_CONTAINER_EXIT_STATUS. (Ravi Gummadi via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

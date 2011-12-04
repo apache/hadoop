@@ -181,7 +181,7 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> logDirs = dirsHandler.getLogDirs();
 
       if (!dirsHandler.areDisksHealthy()) {
-        ret = ExitCode.DISKS_FAILED.getExitCode();
+        ret = YarnConfiguration.DISKS_FAILED;
         throw new IOException("Most of the disks failed. "
             + dirsHandler.getDisksHealthReport());
       }
