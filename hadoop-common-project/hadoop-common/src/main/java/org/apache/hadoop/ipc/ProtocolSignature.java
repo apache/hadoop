@@ -29,6 +29,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class ProtocolSignature implements Writable {
   static {               // register a ctor
     WritableFactories.setFactory
@@ -164,9 +166,14 @@ public class ProtocolSignature implements Writable {
   /**
    * A cache that maps a protocol's name to its signature & finger print
    */
-  final private static HashMap<String, ProtocolSigFingerprint> 
+  private final static HashMap<String, ProtocolSigFingerprint> 
      PROTOCOL_FINGERPRINT_CACHE = 
        new HashMap<String, ProtocolSigFingerprint>();
+  
+  @VisibleForTesting
+  public static void resetCache() {
+    PROTOCOL_FINGERPRINT_CACHE.clear();
+  }
   
   /**
    * Return a protocol's signature and finger print from cache
@@ -177,7 +184,7 @@ public class ProtocolSignature implements Writable {
    */
   private static ProtocolSigFingerprint getSigFingerprint(
       Class <? extends VersionedProtocol> protocol, long serverVersion) {
-    String protocolName = protocol.getName();
+    String protocolName = RPC.getProtocolName(protocol);
     synchronized (PROTOCOL_FINGERPRINT_CACHE) {
       ProtocolSigFingerprint sig = PROTOCOL_FINGERPRINT_CACHE.get(protocolName);
       if (sig == null) {

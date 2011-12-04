@@ -21,14 +21,18 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
-import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
+import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpc2Proto;
+import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.Before;
+import org.junit.After;
 
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
@@ -42,8 +46,21 @@ import com.google.protobuf.ServiceException;
 public class TestProtoBufRpc {
   public final static String ADDRESS = "0.0.0.0";
   public final static int PORT = 0;
+  private static InetSocketAddress addr;
+  private static Configuration conf;
+  private static RPC.Server server;
+  
+  @ProtocolInfo(protocolName = "testProto", protocolVersion = 1)
+  public interface TestRpcService
+      extends TestProtobufRpcProto.BlockingInterface {
+  }
 
-  public static class ServerImpl implements BlockingInterface {
+  @ProtocolInfo(protocolName = "testProto2", protocolVersion = 1)
+  public interface TestRpcService2 extends
+      TestProtobufRpc2Proto.BlockingInterface {
+  }
+
+  public static class PBServerImpl implements TestRpcService {
 
     @Override
     public EmptyResponseProto ping(RpcController unused,
@@ -64,40 +81,78 @@ public class TestProtoBufRpc {
       throw new ServiceException("error", new RpcServerException("error"));
     }
   }
+  
+  public static class PBServer2Impl implements TestRpcService2 {
 
-  private static RPC.Server startRPCServer(Configuration conf)
-      throws IOException {
+    @Override
+    public EmptyResponseProto ping2(RpcController unused,
+        EmptyRequestProto request) throws ServiceException {
+      return EmptyResponseProto.newBuilder().build();
+    }
+
+    @Override
+    public EchoResponseProto echo2(RpcController unused, EchoRequestProto request)
+        throws ServiceException {
+      return EchoResponseProto.newBuilder().setMessage(request.getMessage())
+          .build();
+    }
+  }
+
+  @Before
+  public  void setUp() throws IOException { // Setup server for both protocols
+    conf = new Configuration();
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, BlockingService.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(conf, TestRpcService.class, ProtobufRpcEngine.class);
 
     // Create server side implementation
-    ServerImpl serverImpl = new ServerImpl();
+    PBServerImpl serverImpl = new PBServerImpl();
     BlockingService service = TestProtobufRpcProto
         .newReflectiveBlockingService(serverImpl);
 
-    // Get RPC server for serer side implementation
-    RPC.Server server = RPC.getServer(BlockingService.class, service, ADDRESS,
-        PORT, conf);
+    // Get RPC server for server side implementation
+    server = RPC.getServer(TestRpcService.class, service, ADDRESS, PORT, conf);
+    addr = NetUtils.getConnectAddress(server);
+    
+    // now the second protocol
+    PBServer2Impl server2Impl = new PBServer2Impl();
+    BlockingService service2 = TestProtobufRpc2Proto
+        .newReflectiveBlockingService(server2Impl);
+    
+    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, TestRpcService2.class,
+        service2);
     server.start();
-    return server;
+  }
+  
+  
+  @After
+  public void tearDown() throws Exception {
+    server.stop();
   }
 
-  private static BlockingInterface getClient(Configuration conf,
-      InetSocketAddress addr) throws IOException {
+  private static TestRpcService getClient() throws IOException {
     // Set RPC engine to protobuf RPC engine
-    RPC.setProtocolEngine(conf, BlockingInterface.class,
+    RPC.setProtocolEngine(conf, TestRpcService.class,
         ProtobufRpcEngine.class);
-    BlockingInterface client = RPC.getProxy(BlockingInterface.class, 0, addr,
+        return RPC.getProxy(TestRpcService.class, 0, addr,
         conf);
-    return client;
+  }
+  
+  private static TestRpcService2 getClient2() throws IOException {
+    // Set RPC engine to protobuf RPC engine
+    RPC.setProtocolEngine(conf, TestRpcService2.class,
+        ProtobufRpcEngine.class);
+        return RPC.getProxy(TestRpcService2.class, 0, addr,
+        conf);
   }
 
   @Test
   public void testProtoBufRpc() throws Exception {
-    Configuration conf = new Configuration();
-    RPC.Server server = startRPCServer(conf);
-    BlockingInterface client = getClient(conf, server.getListenerAddress());
-    
+    TestRpcService client = getClient();
+    testProtoBufRpc(client);
+  }
+  
+  // separated test out so that other tests can call it.
+  public static void testProtoBufRpc(TestRpcService client) throws Exception {  
     // Test ping method
     EmptyRequestProto emptyRequest = EmptyRequestProto.newBuilder().build();
     client.ping(null, emptyRequest);
@@ -108,16 +163,29 @@ public class TestProtoBufRpc {
     EchoResponseProto echoResponse = client.echo(null, echoRequest);
     Assert.assertEquals(echoResponse.getMessage(), "hello");
     
-    // Test error method - it should be thrown as RemoteException
+    // Test error method - error should be thrown as RemoteException
     try {
       client.error(null, emptyRequest);
       Assert.fail("Expected exception is not thrown");
     } catch (ServiceException e) {
       RemoteException re = (RemoteException)e.getCause();
-      re.printStackTrace();
       RpcServerException rse = (RpcServerException) re
           .unwrapRemoteException(RpcServerException.class);
-      rse.printStackTrace();
     }
+  }
+  
+  @Test
+  public void testProtoBufRpc2() throws Exception {
+    TestRpcService2 client = getClient2();
+    
+    // Test ping method
+    EmptyRequestProto emptyRequest = EmptyRequestProto.newBuilder().build();
+    client.ping2(null, emptyRequest);
+    
+    // Test echo method
+    EchoRequestProto echoRequest = EchoRequestProto.newBuilder()
+        .setMessage("hello").build();
+    EchoResponseProto echoResponse = client.echo2(null, echoRequest);
+    Assert.assertEquals(echoResponse.getMessage(), "hello");
   }
 }

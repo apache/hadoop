@@ -28,6 +28,7 @@ import java.net.SocketTimeoutException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 
@@ -81,7 +82,7 @@ public class TestInterDatanodeProtocol {
     }
 
     @Override
-    public Writable call(String protocol, Writable param, long receiveTime)
+    public Writable call(RpcKind rpcKind, String protocol, Writable param, long receiveTime)
         throws IOException {
       if (sleep) {
         // sleep a bit

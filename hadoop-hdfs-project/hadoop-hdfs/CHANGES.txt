@@ -68,6 +68,10 @@ Trunk (unreleased changes)
     HDFS-2410. Further cleanup of hardcoded configuration keys and values.
     (suresh)
 
+		HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
+									Move the support for multiple protocols to lower layer so that Writable,
+								  PB and Avro can all use it (Sanjay)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)

@@ -40,6 +40,10 @@ Trunk (unreleased changes)
     MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
     (tucu)
 
+		HADOOP-7862   MR changes to work with HADOOP 7862: 
+									Move the support for multiple protocols to lower layer so that Writable,
+								  PB and Avro can all use it (Sanjay)
+
   BUG FIXES
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
 

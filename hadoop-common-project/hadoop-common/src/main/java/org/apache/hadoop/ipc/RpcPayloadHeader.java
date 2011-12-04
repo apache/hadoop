@@ -54,13 +54,14 @@ public class RpcPayloadHeader implements Writable {
   }
   
   public enum RpcKind {
-    RPC_BUILTIN ((short ) 1),  // Used for built in calls
-    RPC_WRITABLE ((short ) 2),
-    RPC_PROTOCOL_BUFFER ((short)3), 
-    RPC_AVRO ((short)4);
-    
+    RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
+    RPC_WRITABLE ((short) 2),        // Use WritableRpcEngine 
+    RPC_PROTOCOL_BUFFER ((short) 3), // Use ProtobufRpcEngine
+    RPC_AVRO ((short) 4);            // Use AvroRpcEngine 
+    static final short MAX_INDEX = RPC_AVRO.value; // used for array size
+    private static final short FIRST_INDEX = RPC_BUILTIN.value;    
     private final short value;
-    private static final short FIRST_INDEX = RPC_BUILTIN.value;
+
     RpcKind(short val) {
       this.value = val;
     }
