@@ -5,6 +5,11 @@ Trunk (unreleased changes)
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HADOOP-7773. Add support for protocol buffer based RPC engine.
+    (suresh)
+
+    HADOOP-7875. Add helper class to unwrap protobuf ServiceException.
+    (suresh)
 
   IMPROVEMENTS
 
@@ -110,9 +115,6 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
-
-    HADOOP-7773. Add support for protocol buffer based RPC engine.
-    (suresh)
 
 Release 0.23.1 - Unreleased
 
