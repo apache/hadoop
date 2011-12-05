@@ -163,7 +163,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
           RefreshUserMappingsProtocol.class, this);
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE, 
           GetUserMappingsProtocol.class, this);
-      this.serviceRpcServer.addProtocol(HAServiceProtocol.class, this);
+      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+          HAServiceProtocol.class, this);
       
       this.serviceRPCAddress = this.serviceRpcServer.getListenerAddress();
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
@@ -188,7 +189,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         RefreshUserMappingsProtocol.class, this);
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         GetUserMappingsProtocol.class, this);
-    this.clientRpcServer.addProtocol(HAServiceProtocol.class, this);
+    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+        HAServiceProtocol.class, this);
     
 
     // set service-level authorization security policy
