@@ -72,6 +72,9 @@ Trunk (unreleased changes)
 									Move the support for multiple protocols to lower layer so that Writable,
 								  PB and Avro can all use it (Sanjay)
 
+    HDFS-1580. Add interface for generic Write Ahead Logging mechanisms.
+    (Ivan Kelly via jitendra)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)

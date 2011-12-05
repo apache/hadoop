@@ -113,6 +113,10 @@ public abstract class FSEditLogOp {
     this.txid = 0;
   }
 
+  public long getTransactionId() {
+    return txid;
+  }
+
   public void setTransactionId(long txid) {
     this.txid = txid;
   }

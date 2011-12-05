@@ -33,6 +33,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.Util;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Collections2;
+import com.google.common.base.Predicate;
 
 /**
  * 
@@ -69,7 +71,18 @@ public class NameNodeResourceChecker {
         .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY));
 
     addDirsToCheck(FSNamesystem.getNamespaceDirs(conf));
-    addDirsToCheck(FSNamesystem.getNamespaceEditsDirs(conf));
+    
+    Collection<URI> localEditDirs = Collections2.filter(
+        FSNamesystem.getNamespaceEditsDirs(conf),
+        new Predicate<URI>() {
+          public boolean apply(URI input) {
+            if (input.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
+              return true;
+            }
+            return false;
+          }
+        });
+    addDirsToCheck(localEditDirs);
     addDirsToCheck(extraCheckedVolumes);
   }
 
