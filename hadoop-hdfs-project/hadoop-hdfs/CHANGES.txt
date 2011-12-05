@@ -3,7 +3,7 @@ Hadoop HDFS Change Log
 Trunk (unreleased changes)
   NEW FEATURES
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
-               via hairong)
+    via hairong)
 
     HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
 
@@ -12,6 +12,8 @@ Trunk (unreleased changes)
     HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
 
     HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
+    HDFS-2581. Implement protobuf service for JournalProtocol. (suresh)
 
   IMPROVEMENTS
 
