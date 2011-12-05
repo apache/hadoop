@@ -439,8 +439,9 @@ public class DFSClient implements java.io.Closeable {
         // fall through - lets try the stopProxy
         LOG.warn("Exception closing namenode, stopping the proxy");
       }     
+    } else {
+      RPC.stopProxy(namenode);
     }
-    RPC.stopProxy(namenode);
   }
   
   /** Abort and release resources held.  Ignore all errors. */

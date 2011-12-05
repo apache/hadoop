@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -126,7 +127,11 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
   public synchronized void close() throws IOException {
     for (AddressRpcProxyPair proxy : proxies) {
       if (proxy.namenode != null) {
-        RPC.stopProxy(proxy.namenode);
+        if (proxy.namenode instanceof Closeable) {
+          ((Closeable)proxy.namenode).close();
+        } else {
+          RPC.stopProxy(proxy.namenode);
+        }
       }
     }
   }
