@@ -921,7 +921,7 @@ public class DatanodeManager {
       }
     }
 
-    return null;
+    return new DatanodeCommand[0];
   }
 
   /**
