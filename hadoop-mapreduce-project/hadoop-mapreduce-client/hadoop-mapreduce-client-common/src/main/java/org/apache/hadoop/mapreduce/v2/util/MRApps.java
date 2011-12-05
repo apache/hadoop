@@ -22,6 +22,7 @@ import static org.apache.hadoop.yarn.util.StringHelper._join;
 import static org.apache.hadoop.yarn.util.StringHelper._split;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -180,18 +181,23 @@ public class MRApps extends Apps {
       String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
       classpathFileStream =
           thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
+      // Put the file itself on classpath for tasks.
+      String classpathElement = thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile();
+      if (classpathElement.contains("!")) {
+        classpathElement = classpathElement.substring(0, classpathElement.indexOf("!"));
+      }
+      else {
+        classpathElement = new File(classpathElement).getParent();
+      }
+      Apps.addToEnvironment(
+          environment,
+          Environment.CLASSPATH.name(), classpathElement);
+
       reader = new BufferedReader(new InputStreamReader(classpathFileStream));
       String cp = reader.readLine();
       if (cp != null) {
         Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), cp.trim());
-      }
-      // Put the file itself on classpath for tasks.
-      Apps.addToEnvironment(
-          environment,
-          Environment.CLASSPATH.name(),
-          thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile()
-            .split("!")[0]);
-
+      }      
       // Add standard Hadoop classes
       for (String c : ApplicationConstants.APPLICATION_CLASSPATH) {
         Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c);
