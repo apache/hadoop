@@ -773,7 +773,7 @@ public class TestEditLog extends TestCase {
     }
 
     @Override
-    boolean isInProgress() {
+    public boolean isInProgress() {
       return true;
     }
   }

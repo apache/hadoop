@@ -129,13 +129,13 @@ class EditLogFileInputStream extends EditLogInputStream {
   }
 
   @Override
-  long length() throws IOException {
+  public long length() throws IOException {
     // file size + size of both buffers
     return file.length();
   }
   
   @Override
-  boolean isInProgress() {
+  public boolean isInProgress() {
     return isInProgress;
   }
   

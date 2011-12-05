@@ -3,7 +3,7 @@ Hadoop HDFS Change Log
 Trunk (unreleased changes)
   NEW FEATURES
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
-               via hairong)
+    via hairong)
 
     HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
 
@@ -12,6 +12,8 @@ Trunk (unreleased changes)
     HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
 
     HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
+    HDFS-2581. Implement protobuf service for JournalProtocol. (suresh)
 
   IMPROVEMENTS
 
@@ -71,6 +73,9 @@ Trunk (unreleased changes)
 		HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
 									Move the support for multiple protocols to lower layer so that Writable,
 								  PB and Avro can all use it (Sanjay)
+
+    HDFS-1580. Add interface for generic Write Ahead Logging mechanisms.
+    (Ivan Kelly via jitendra)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the

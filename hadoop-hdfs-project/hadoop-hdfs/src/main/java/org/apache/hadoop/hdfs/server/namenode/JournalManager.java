@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A JournalManager is responsible for managing a single place of storing
@@ -28,7 +30,9 @@ import java.io.IOException;
  * each conceptual place of storage corresponds to exactly one instance of
  * this class, which is created when the EditLog is first opened.
  */
-interface JournalManager extends Closeable {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public interface JournalManager extends Closeable {
   /**
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.
@@ -71,7 +75,6 @@ interface JournalManager extends Closeable {
    *
    * @param minTxIdToKeep the earliest txid that must be retained after purging
    *                      old logs
-   * @param purger the purging implementation to use
    * @throws IOException if purging fails
    */
   void purgeLogsOlderThan(long minTxIdToKeep)

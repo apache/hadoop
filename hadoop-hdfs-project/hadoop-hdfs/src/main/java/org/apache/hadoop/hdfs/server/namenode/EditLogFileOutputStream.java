@@ -73,7 +73,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
 
   /** {@inheritDoc} */
   @Override
-  void write(FSEditLogOp op) throws IOException {
+  public void write(FSEditLogOp op) throws IOException {
     doubleBuf.writeOp(op);
   }
 
@@ -86,7 +86,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    * </ul>
    * */
   @Override
-  void writeRaw(byte[] bytes, int offset, int length) throws IOException {
+  public void writeRaw(byte[] bytes, int offset, int length) throws IOException {
     doubleBuf.writeRaw(bytes, offset, length);
   }
 
@@ -94,7 +94,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    * Create empty edits logs file.
    */
   @Override
-  void create() throws IOException {
+  public void create() throws IOException {
     fc.truncate(0);
     fc.position(0);
     doubleBuf.getCurrentBuf().writeInt(HdfsConstants.LAYOUT_VERSION);
@@ -150,7 +150,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    * data can be still written to the stream while flushing is performed.
    */
   @Override
-  void setReadyToFlush() throws IOException {
+  public void setReadyToFlush() throws IOException {
     doubleBuf.getCurrentBuf().write(FSEditLogOpCodes.OP_INVALID.getOpCode()); // insert eof marker
     doubleBuf.setReadyToFlush();
   }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -79,7 +81,7 @@ public abstract class EditLogInputStream implements JournalStream, Closeable {
   /**
    * Return the size of the current edits log.
    */
-  abstract long length() throws IOException;
+  public abstract long length() throws IOException;
   
   /**
    * Return true if this stream is in progress, false if it is finalized.
