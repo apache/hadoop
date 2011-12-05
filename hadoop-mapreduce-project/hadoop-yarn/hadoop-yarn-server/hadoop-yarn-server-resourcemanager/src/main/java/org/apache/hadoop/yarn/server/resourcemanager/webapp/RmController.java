@@ -125,7 +125,7 @@ public class RmController extends Controller {
     } else {
       info._("AM container logs:", "AM not yet registered with RM");
     }
-    render(AboutPage.class);
+    render(AppPage.class);
   }
 
   public void nodes() {

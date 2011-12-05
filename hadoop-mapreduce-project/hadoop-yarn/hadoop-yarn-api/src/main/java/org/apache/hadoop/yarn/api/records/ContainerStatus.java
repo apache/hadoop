@@ -73,6 +73,11 @@ public interface ContainerStatus {
    * <p>Container killed by the framework, either due to being released by
    * the application or being 'lost' due to node failures etc. have a special
    * exit code of {@literal -100}.</p>
+   * 
+   * <p>When threshold number of the nodemanager-local-directories or
+   * threshold number of the nodemanager-log-directories become bad, then
+   * container is not launched and is exited with exit status of
+   * {@literal -101}.</p>
    *  
    * @return <em>exit status</em> for the container
    */

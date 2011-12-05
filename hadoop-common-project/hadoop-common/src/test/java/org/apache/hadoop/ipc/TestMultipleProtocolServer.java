@@ -23,10 +23,15 @@ import java.net.InetSocketAddress;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
+import org.apache.hadoop.ipc.TestProtoBufRpc.PBServerImpl;
+import org.apache.hadoop.ipc.TestProtoBufRpc.TestRpcService;
+import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
+import com.google.protobuf.BlockingService;
 
 public class TestMultipleProtocolServer {
   private static final String ADDRESS = "0.0.0.0";
@@ -173,9 +178,19 @@ public class TestMultipleProtocolServer {
     // create a server with two handlers
     server = RPC.getServer(Foo0.class,
                               new Foo0Impl(), ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(Foo1.class, new Foo1Impl());
-    server.addProtocol(Bar.class, new BarImpl());
-    server.addProtocol(Mixin.class, new BarImpl());
+    server.addProtocol(RpcKind.RPC_WRITABLE, Foo1.class, new Foo1Impl());
+    server.addProtocol(RpcKind.RPC_WRITABLE, Bar.class, new BarImpl());
+    server.addProtocol(RpcKind.RPC_WRITABLE, Mixin.class, new BarImpl());
+    
+    
+    // Add Protobuf server
+    // Create server side implementation
+    PBServerImpl pbServerImpl = 
+        new PBServerImpl();
+    BlockingService service = TestProtobufRpcProto
+        .newReflectiveBlockingService(pbServerImpl);
+    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, TestRpcService.class,
+        service);
     server.start();
     addr = NetUtils.getConnectAddress(server);
   }
@@ -251,5 +266,16 @@ public class TestMultipleProtocolServer {
   public void testIncorrectServerCreation() throws IOException {
     RPC.getServer(Foo1.class,
         new Foo0Impl(), ADDRESS, 0, 2, false, conf, null);
+  } 
+  
+  // Now test a PB service - a server  hosts both PB and Writable Rpcs.
+  @Test
+  public void testPBService() throws Exception {
+    // Set RPC engine to protobuf RPC engine
+    Configuration conf2 = new Configuration();
+    RPC.setProtocolEngine(conf2, TestRpcService.class,
+        ProtobufRpcEngine.class);
+    TestRpcService client = RPC.getProxy(TestRpcService.class, 0, addr, conf2);
+    TestProtoBufRpc.testProtoBufRpc(client);
   }
 }

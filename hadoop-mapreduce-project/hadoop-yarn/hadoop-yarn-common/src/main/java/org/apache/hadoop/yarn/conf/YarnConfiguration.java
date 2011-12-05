@@ -431,6 +431,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final int INVALID_CONTAINER_EXIT_STATUS = -1000;
   public static final int ABORTED_CONTAINER_EXIT_STATUS = -100;
+  public static final int DISKS_FAILED = -101;
 
   ////////////////////////////////
   // Web Proxy Configs

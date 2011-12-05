@@ -35,10 +35,14 @@ Trunk (unreleased changes)
     uri with no authority. (John George via jitendra)
 
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
-    client APIs cross MR1 and MR2. (Ahmed via tucu)
+    client APIs cross MR1 and MR2 (Ahmed via tucu)
 
     MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
     (tucu)
+
+		HADOOP-7862   MR changes to work with HADOOP 7862: 
+									Move the support for multiple protocols to lower layer so that Writable,
+								  PB and Avro can all use it (Sanjay)
 
   BUG FIXES
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
@@ -67,6 +71,8 @@ Trunk (unreleased changes)
     by default. (tucu)
 
     MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
+
+    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
 
 Release 0.23.1 - Unreleased
 
@@ -128,6 +134,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3448. TestCombineOutputCollector javac unchecked warning on mocked
     generics (Jonathan Eagles via mahadev)
+
+    MAPREDUCE-3169 amendment. Deprecate MiniMRCluster. (Ahmed Radwan via
+    sseth)
+
+    MAPREDUCE-3369. Migrate MR1 tests to run on MR2 using the new interfaces
+    introduced in MAPREDUCE-3169. (Ahmed Radwan via tomwhite)
 
   OPTIMIZATIONS
 
@@ -210,6 +222,26 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3452. fifoscheduler web ui page always shows 0% used for the queue.
     (Jonathan Eagles via mahadev)
+
+    MAPREDUCE-3443. JobClient and Job should function in the context of the
+    UGI which created them. (Mahadev Konar via sseth)
+
+    MAPREDUCE-3460. MR AM can hang if containers are allocated on a node
+    blacklisted by the AM. (Hitesh Shah and Robert Joseph Evans via sseth)
+
+    MAPREDUCE-3453. RM web ui application details page shows RM cluster about
+    information. (Jonathan Eagles via sseth)
+
+    MAPREDUCE-3479. JobClient#getJob cannot find local jobs. (tomwhite)
+
+    MAPREDUCE-3456. $HADOOP_PREFIX/bin/yarn should set defaults for 
+    $HADOOP_*_HOME (Eric Payne via mahadev)
+
+    MAPREDUCE-3458. Fix findbugs warnings in hadoop-examples. (Devaraj K
+    via mahadev)
+
+    MAPREDUCE-3485. DISKS_FAILED -101 error code should be defined in same location as 
+    ABORTED_CONTAINER_EXIT_STATUS. (Ravi Gummadi via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

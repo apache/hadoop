@@ -359,6 +359,292 @@ public final class TestRpcServiceProtos {
     }
   }
   
+  public static abstract class TestProtobufRpc2Proto
+      implements com.google.protobuf.Service {
+    protected TestProtobufRpc2Proto() {}
+    
+    public interface Interface {
+      public abstract void ping2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto> done);
+      
+      public abstract void echo2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto> done);
+      
+    }
+    
+    public static com.google.protobuf.Service newReflectiveService(
+        final Interface impl) {
+      return new TestProtobufRpc2Proto() {
+        @java.lang.Override
+        public  void ping2(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto> done) {
+          impl.ping2(controller, request, done);
+        }
+        
+        @java.lang.Override
+        public  void echo2(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto> done) {
+          impl.echo2(controller, request, done);
+        }
+        
+      };
+    }
+    
+    public static com.google.protobuf.BlockingService
+        newReflectiveBlockingService(final BlockingInterface impl) {
+      return new com.google.protobuf.BlockingService() {
+        public final com.google.protobuf.Descriptors.ServiceDescriptor
+            getDescriptorForType() {
+          return getDescriptor();
+        }
+        
+        public final com.google.protobuf.Message callBlockingMethod(
+            com.google.protobuf.Descriptors.MethodDescriptor method,
+            com.google.protobuf.RpcController controller,
+            com.google.protobuf.Message request)
+            throws com.google.protobuf.ServiceException {
+          if (method.getService() != getDescriptor()) {
+            throw new java.lang.IllegalArgumentException(
+              "Service.callBlockingMethod() given method descriptor for " +
+              "wrong service type.");
+          }
+          switch(method.getIndex()) {
+            case 0:
+              return impl.ping2(controller, (org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto)request);
+            case 1:
+              return impl.echo2(controller, (org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto)request);
+            default:
+              throw new java.lang.AssertionError("Can't get here.");
+          }
+        }
+        
+        public final com.google.protobuf.Message
+            getRequestPrototype(
+            com.google.protobuf.Descriptors.MethodDescriptor method) {
+          if (method.getService() != getDescriptor()) {
+            throw new java.lang.IllegalArgumentException(
+              "Service.getRequestPrototype() given method " +
+              "descriptor for wrong service type.");
+          }
+          switch(method.getIndex()) {
+            case 0:
+              return org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto.getDefaultInstance();
+            case 1:
+              return org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto.getDefaultInstance();
+            default:
+              throw new java.lang.AssertionError("Can't get here.");
+          }
+        }
+        
+        public final com.google.protobuf.Message
+            getResponsePrototype(
+            com.google.protobuf.Descriptors.MethodDescriptor method) {
+          if (method.getService() != getDescriptor()) {
+            throw new java.lang.IllegalArgumentException(
+              "Service.getResponsePrototype() given method " +
+              "descriptor for wrong service type.");
+          }
+          switch(method.getIndex()) {
+            case 0:
+              return org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto.getDefaultInstance();
+            case 1:
+              return org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto.getDefaultInstance();
+            default:
+              throw new java.lang.AssertionError("Can't get here.");
+          }
+        }
+        
+      };
+    }
+    
+    public abstract void ping2(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto> done);
+    
+    public abstract void echo2(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto> done);
+    
+    public static final
+        com.google.protobuf.Descriptors.ServiceDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.getDescriptor().getServices().get(1);
+    }
+    public final com.google.protobuf.Descriptors.ServiceDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    
+    public final void callMethod(
+        com.google.protobuf.Descriptors.MethodDescriptor method,
+        com.google.protobuf.RpcController controller,
+        com.google.protobuf.Message request,
+        com.google.protobuf.RpcCallback<
+          com.google.protobuf.Message> done) {
+      if (method.getService() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "Service.callMethod() given method descriptor for wrong " +
+          "service type.");
+      }
+      switch(method.getIndex()) {
+        case 0:
+          this.ping2(controller, (org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto>specializeCallback(
+              done));
+          return;
+        case 1:
+          this.echo2(controller, (org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto>specializeCallback(
+              done));
+          return;
+        default:
+          throw new java.lang.AssertionError("Can't get here.");
+      }
+    }
+    
+    public final com.google.protobuf.Message
+        getRequestPrototype(
+        com.google.protobuf.Descriptors.MethodDescriptor method) {
+      if (method.getService() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "Service.getRequestPrototype() given method " +
+          "descriptor for wrong service type.");
+      }
+      switch(method.getIndex()) {
+        case 0:
+          return org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto.getDefaultInstance();
+        case 1:
+          return org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto.getDefaultInstance();
+        default:
+          throw new java.lang.AssertionError("Can't get here.");
+      }
+    }
+    
+    public final com.google.protobuf.Message
+        getResponsePrototype(
+        com.google.protobuf.Descriptors.MethodDescriptor method) {
+      if (method.getService() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "Service.getResponsePrototype() given method " +
+          "descriptor for wrong service type.");
+      }
+      switch(method.getIndex()) {
+        case 0:
+          return org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto.getDefaultInstance();
+        case 1:
+          return org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto.getDefaultInstance();
+        default:
+          throw new java.lang.AssertionError("Can't get here.");
+      }
+    }
+    
+    public static Stub newStub(
+        com.google.protobuf.RpcChannel channel) {
+      return new Stub(channel);
+    }
+    
+    public static final class Stub extends org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpc2Proto implements Interface {
+      private Stub(com.google.protobuf.RpcChannel channel) {
+        this.channel = channel;
+      }
+      
+      private final com.google.protobuf.RpcChannel channel;
+      
+      public com.google.protobuf.RpcChannel getChannel() {
+        return channel;
+      }
+      
+      public  void ping2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(0),
+          controller,
+          request,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto.class,
+            org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto.getDefaultInstance()));
+      }
+      
+      public  void echo2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(1),
+          controller,
+          request,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto.class,
+            org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto.getDefaultInstance()));
+      }
+    }
+    
+    public static BlockingInterface newBlockingStub(
+        com.google.protobuf.BlockingRpcChannel channel) {
+      return new BlockingStub(channel);
+    }
+    
+    public interface BlockingInterface {
+      public org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto ping2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto echo2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto request)
+          throws com.google.protobuf.ServiceException;
+    }
+    
+    private static final class BlockingStub implements BlockingInterface {
+      private BlockingStub(com.google.protobuf.BlockingRpcChannel channel) {
+        this.channel = channel;
+      }
+      
+      private final com.google.protobuf.BlockingRpcChannel channel;
+      
+      public org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto ping2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(0),
+          controller,
+          request,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto.getDefaultInstance());
+      }
+      
+      
+      public org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto echo2(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EchoRequestProto request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(1),
+          controller,
+          request,
+          org.apache.hadoop.ipc.protobuf.TestProtos.EchoResponseProto.getDefaultInstance());
+      }
+      
+    }
+  }
+  
   
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -373,8 +659,11 @@ public final class TestRpcServiceProtos {
       "uestProto\032\023.EmptyResponseProto\022-\n\004echo\022\021" +
       ".EchoRequestProto\032\022.EchoResponseProto\0220\n" +
       "\005error\022\022.EmptyRequestProto\032\023.EmptyRespon" +
-      "seProtoB<\n\036org.apache.hadoop.ipc.protobu" +
-      "fB\024TestRpcServiceProtos\210\001\001\240\001\001"
+      "seProto2y\n\025TestProtobufRpc2Proto\0220\n\005ping" +
+      "2\022\022.EmptyRequestProto\032\023.EmptyResponsePro" +
+      "to\022.\n\005echo2\022\021.EchoRequestProto\032\022.EchoRes" +
+      "ponseProtoB<\n\036org.apache.hadoop.ipc.prot" +
+      "obufB\024TestRpcServiceProtos\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -122,8 +122,7 @@ public abstract class ContainerExecutor implements Configurable {
 
   public enum ExitCode {
     FORCE_KILLED(137),
-    TERMINATED(143),
-    DISKS_FAILED(-101);
+    TERMINATED(143);
     private final int code;
 
     private ExitCode(int exitCode) {

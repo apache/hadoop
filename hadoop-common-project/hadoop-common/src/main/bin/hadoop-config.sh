@@ -186,27 +186,14 @@ fi
 # setup 'java.library.path' for native-hadoop code if necessary
 
 if [ -d "${HADOOP_PREFIX}/build/native" -o -d "${HADOOP_PREFIX}/lib/native" ]; then
-  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
-  
-  if [ -d "$HADOOP_PREFIX/build/native" ]; then
-    if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-        JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_PREFIX}/build/native/${JAVA_PLATFORM}/lib
-    else
-        JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/build/native/${JAVA_PLATFORM}/lib
-    fi
-  fi
-  
+    
   if [ -d "${HADOOP_PREFIX}/lib/native" ]; then
     if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_PREFIX}/lib/native/${JAVA_PLATFORM}
+      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_PREFIX}/lib/native
     else
-      JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib/native/${JAVA_PLATFORM}
+      JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib/native
     fi
   fi
-fi
-
-if [ -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
-  JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib
 fi
 
 # cygwin path translation

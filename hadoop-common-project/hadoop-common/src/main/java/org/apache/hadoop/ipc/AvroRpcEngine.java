@@ -44,6 +44,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -237,14 +238,15 @@ public class AvroRpcEngine implements RpcEngine {
       super((Class)null, new Object(), conf,
             bindAddress, port, numHandlers, numReaders,
             queueSizePerHandler, verbose, secretManager);
-      super.addProtocol(TunnelProtocol.class, responder);
+      // RpcKind is WRITABLE since Avro is tunneled through WRITABLE
+      super.addProtocol(RpcKind.RPC_WRITABLE, TunnelProtocol.class, responder);
       responder.addProtocol(iface, impl);
     }
 
 
     @Override
-    public <PROTO, IMPL extends PROTO> Server
-      addProtocol(Class<PROTO> protocolClass, IMPL protocolImpl)
+    public Server
+      addProtocol(RpcKind rpcKind, Class<?> protocolClass, Object protocolImpl)
         throws IOException {
       responder.addProtocol(protocolClass, protocolImpl);
       return this;

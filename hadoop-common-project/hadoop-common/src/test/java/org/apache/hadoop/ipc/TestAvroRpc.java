@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.TestSaslRPC.CustomSecurityInfo;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenIdentifier;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSecretManager;
@@ -101,7 +102,8 @@ public class TestAvroRpc extends TestCase {
     RPC.setProtocolEngine(conf, AvroTestProtocol.class, AvroRpcEngine.class);
     RPC.Server server = RPC.getServer(EmptyProtocol.class, new EmptyImpl(),
                                       ADDRESS, 0, 5, true, conf, sm);
-    server.addProtocol(AvroTestProtocol.class, new TestImpl());
+    server.addProtocol(RpcKind.RPC_WRITABLE, 
+        AvroTestProtocol.class, new TestImpl());
 
     try {
       server.start();

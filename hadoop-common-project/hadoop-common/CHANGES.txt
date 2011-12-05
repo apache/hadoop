@@ -5,6 +5,11 @@ Trunk (unreleased changes)
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HADOOP-7773. Add support for protocol buffer based RPC engine.
+    (suresh)
+
+    HADOOP-7875. Add helper class to unwrap protobuf ServiceException.
+    (suresh)
 
   IMPROVEMENTS
 
@@ -61,6 +66,12 @@ Trunk (unreleased changes)
 
     HADOOP-7590. Mavenize streaming and MR examples. (tucu)
 
+		HADOOP-7862. Move the support for multiple protocols to lower layer so 
+    that Writable, PB and Avro can all use it (Sanjay)
+
+    HADOOP-7876. Provided access to encoded key in DelegationKey for
+    use in protobuf based RPCs. (suresh)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
@@ -102,12 +113,11 @@ Trunk (unreleased changes)
 
     HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
 
+    HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
-
-    HADOOP-7773. Add support for protocol buffer based RPC engine.
-    (suresh)
 
 Release 0.23.1 - Unreleased
 
@@ -133,6 +143,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7804. Enable hadoop config generator to set configurations to enable
     short circuit read. (Arpit Gupta via jitendra)
+
+    HADOOP-7877. Update balancer CLI usage documentation to include the new
+    -policy option.  (szetszwo)
 
   OPTIMIZATIONS
 
