@@ -336,8 +336,6 @@ class BPServiceActor implements Runnable {
   
   HeartbeatResponse sendHeartBeat() throws IOException {
     LOG.info("heartbeat: " + this);
-    // TODO: saw an NPE here - maybe if the two BPOS register at
-    // same time, this one won't block on the other one?
     return bpNamenode.sendHeartbeat(bpRegistration,
         dn.getFSDataset().getCapacity(),
         dn.getFSDataset().getDfsUsed(),
