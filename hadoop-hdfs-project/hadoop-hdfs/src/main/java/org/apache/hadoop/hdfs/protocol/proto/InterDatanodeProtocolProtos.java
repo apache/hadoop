@@ -484,9 +484,9 @@ public final class InterDatanodeProtocolProtos {
   public interface InitReplicaRecoveryResponseProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required .ReplicaState state = 1;
+    // required .ReplicaStateProto state = 1;
     boolean hasState();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState getState();
+    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto getState();
     
     // required .BlockProto block = 2;
     boolean hasBlock();
@@ -522,13 +522,13 @@ public final class InterDatanodeProtocolProtos {
     }
     
     private int bitField0_;
-    // required .ReplicaState state = 1;
+    // required .ReplicaStateProto state = 1;
     public static final int STATE_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState state_;
+    private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto state_;
     public boolean hasState() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState getState() {
+    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto getState() {
       return state_;
     }
     
@@ -546,7 +546,7 @@ public final class InterDatanodeProtocolProtos {
     }
     
     private void initFields() {
-      state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState.FINALIZED;
+      state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto.FINALIZED;
       block_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -763,7 +763,7 @@ public final class InterDatanodeProtocolProtos {
       
       public Builder clear() {
         super.clear();
-        state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState.FINALIZED;
+        state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto.FINALIZED;
         bitField0_ = (bitField0_ & ~0x00000001);
         if (blockBuilder_ == null) {
           block_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto.getDefaultInstance();
@@ -888,7 +888,7 @@ public final class InterDatanodeProtocolProtos {
             }
             case 8: {
               int rawValue = input.readEnum();
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState value = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState.valueOf(rawValue);
+              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto value = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(1, rawValue);
               } else {
@@ -912,15 +912,15 @@ public final class InterDatanodeProtocolProtos {
       
       private int bitField0_;
       
-      // required .ReplicaState state = 1;
-      private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState.FINALIZED;
+      // required .ReplicaStateProto state = 1;
+      private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto.FINALIZED;
       public boolean hasState() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState getState() {
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto getState() {
         return state_;
       }
-      public Builder setState(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState value) {
+      public Builder setState(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto value) {
         if (value == null) {
           throw new NullPointerException();
         }
@@ -931,7 +931,7 @@ public final class InterDatanodeProtocolProtos {
       }
       public Builder clearState() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaState.FINALIZED;
+        state_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto.FINALIZED;
         onChanged();
         return this;
       }
@@ -2448,22 +2448,23 @@ public final class InterDatanodeProtocolProtos {
     java.lang.String[] descriptorData = {
       "\n\033InterDatanodeProtocol.proto\032\nhdfs.prot" +
       "o\"G\n\037InitReplicaRecoveryRequestProto\022$\n\005" +
-      "block\030\001 \002(\0132\025.RecoveringBlockProto\"\\\n In" +
-      "itReplicaRecoveryResponseProto\022\034\n\005state\030" +
-      "\001 \002(\0162\r.ReplicaState\022\032\n\005block\030\002 \002(\0132\013.Bl" +
-      "ockProto\"s\n&UpdateReplicaUnderRecoveryRe" +
-      "questProto\022\"\n\005block\030\001 \002(\0132\023.ExtendedBloc" +
-      "kProto\022\022\n\nrecoveryId\030\002 \002(\004\022\021\n\tnewLength\030" +
-      "\003 \002(\004\"M\n\'UpdateReplicaUnderRecoveryRespo" +
-      "nseProto\022\"\n\005block\030\001 \002(\0132\023.ExtendedBlockP",
-      "roto2\353\001\n\034InterDatanodeProtocolService\022Z\n" +
-      "\023initReplicaRecovery\022 .InitReplicaRecove" +
-      "ryRequestProto\032!.InitReplicaRecoveryResp" +
-      "onseProto\022o\n\032updateReplicaUnderRecovery\022" +
-      "\'.UpdateReplicaUnderRecoveryRequestProto" +
-      "\032(.UpdateReplicaUnderRecoveryResponsePro" +
-      "toBJ\n%org.apache.hadoop.hdfs.protocol.pr" +
-      "otoB\033InterDatanodeProtocolProtos\210\001\001\240\001\001"
+      "block\030\001 \002(\0132\025.RecoveringBlockProto\"a\n In" +
+      "itReplicaRecoveryResponseProto\022!\n\005state\030" +
+      "\001 \002(\0162\022.ReplicaStateProto\022\032\n\005block\030\002 \002(\013" +
+      "2\013.BlockProto\"s\n&UpdateReplicaUnderRecov" +
+      "eryRequestProto\022\"\n\005block\030\001 \002(\0132\023.Extende" +
+      "dBlockProto\022\022\n\nrecoveryId\030\002 \002(\004\022\021\n\tnewLe" +
+      "ngth\030\003 \002(\004\"M\n\'UpdateReplicaUnderRecovery" +
+      "ResponseProto\022\"\n\005block\030\001 \002(\0132\023.ExtendedB",
+      "lockProto2\353\001\n\034InterDatanodeProtocolServi" +
+      "ce\022Z\n\023initReplicaRecovery\022 .InitReplicaR" +
+      "ecoveryRequestProto\032!.InitReplicaRecover" +
+      "yResponseProto\022o\n\032updateReplicaUnderReco" +
+      "very\022\'.UpdateReplicaUnderRecoveryRequest" +
+      "Proto\032(.UpdateReplicaUnderRecoveryRespon" +
+      "seProtoBJ\n%org.apache.hadoop.hdfs.protoc" +
+      "ol.protoB\033InterDatanodeProtocolProtos\210\001\001" +
+      "\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

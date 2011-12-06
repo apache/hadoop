@@ -8,7 +8,7 @@ public final class HdfsProtos {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public enum ReplicaState
+  public enum ReplicaStateProto
       implements com.google.protobuf.ProtocolMessageEnum {
     FINALIZED(0, 0),
     RBW(1, 1),
@@ -26,7 +26,7 @@ public final class HdfsProtos {
     
     public final int getNumber() { return value; }
     
-    public static ReplicaState valueOf(int value) {
+    public static ReplicaStateProto valueOf(int value) {
       switch (value) {
         case 0: return FINALIZED;
         case 1: return RBW;
@@ -37,15 +37,15 @@ public final class HdfsProtos {
       }
     }
     
-    public static com.google.protobuf.Internal.EnumLiteMap<ReplicaState>
+    public static com.google.protobuf.Internal.EnumLiteMap<ReplicaStateProto>
         internalGetValueMap() {
       return internalValueMap;
     }
-    private static com.google.protobuf.Internal.EnumLiteMap<ReplicaState>
+    private static com.google.protobuf.Internal.EnumLiteMap<ReplicaStateProto>
         internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<ReplicaState>() {
-            public ReplicaState findValueByNumber(int number) {
-              return ReplicaState.valueOf(number);
+          new com.google.protobuf.Internal.EnumLiteMap<ReplicaStateProto>() {
+            public ReplicaStateProto findValueByNumber(int number) {
+              return ReplicaStateProto.valueOf(number);
             }
           };
     
@@ -62,11 +62,11 @@ public final class HdfsProtos {
       return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.getDescriptor().getEnumTypes().get(0);
     }
     
-    private static final ReplicaState[] VALUES = {
+    private static final ReplicaStateProto[] VALUES = {
       FINALIZED, RBW, RWR, RUR, TEMPORARY, 
     };
     
-    public static ReplicaState valueOf(
+    public static ReplicaStateProto valueOf(
         com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
       if (desc.getType() != getDescriptor()) {
         throw new java.lang.IllegalArgumentException(
@@ -78,12 +78,12 @@ public final class HdfsProtos {
     private final int index;
     private final int value;
     
-    private ReplicaState(int index, int value) {
+    private ReplicaStateProto(int index, int value) {
       this.index = index;
       this.value = value;
     }
     
-    // @@protoc_insertion_point(enum_scope:ReplicaState)
+    // @@protoc_insertion_point(enum_scope:ReplicaStateProto)
   }
   
   public interface ExtendedBlockProtoOrBuilder
@@ -20192,10 +20192,10 @@ public final class HdfsProtos {
       "ntKey\030\004 \002(\0132\016.BlockKeyProto\022\037\n\007allKeys\030\005" +
       " \003(\0132\016.BlockKeyProto\"N\n\024RecoveringBlockP" +
       "roto\022\023\n\013newGenStamp\030\001 \002(\004\022!\n\005block\030\002 \002(\013" +
-      "2\022.LocatedBlockProto*G\n\014ReplicaState\022\r\n\t" +
-      "FINALIZED\020\000\022\007\n\003RBW\020\001\022\007\n\003RWR\020\002\022\007\n\003RUR\020\003\022\r" +
-      "\n\tTEMPORARY\020\004B6\n%org.apache.hadoop.hdfs.",
-      "protocol.protoB\nHdfsProtos\240\001\001"
+      "2\022.LocatedBlockProto*L\n\021ReplicaStateProt" +
+      "o\022\r\n\tFINALIZED\020\000\022\007\n\003RBW\020\001\022\007\n\003RWR\020\002\022\007\n\003RU" +
+      "R\020\003\022\r\n\tTEMPORARY\020\004B6\n%org.apache.hadoop.",
+      "hdfs.protocol.protoB\nHdfsProtos\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
