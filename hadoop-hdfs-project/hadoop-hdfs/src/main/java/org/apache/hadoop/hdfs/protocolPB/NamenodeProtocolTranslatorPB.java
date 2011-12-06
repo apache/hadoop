@@ -206,7 +206,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       String msg) throws IOException {
     ErrorReportRequestProto req = ErrorReportRequestProto.newBuilder()
         .setErrorCode(errorCode).setMsg(msg)
-        .setRegistartion(PBHelper.convert(registration)).build();
+        .setRegistration(PBHelper.convert(registration)).build();
     try {
       rpcProxy.errorReport(NULL_CONTROLLER, req);
     } catch (ServiceException e) {
