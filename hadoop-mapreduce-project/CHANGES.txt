@@ -197,6 +197,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
     classpath from the build machine. (tucu)
 
+    MAPREDUCE-3496. Fixed client to print queue acls in consistent order.
+    (Jonathan Eagles via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

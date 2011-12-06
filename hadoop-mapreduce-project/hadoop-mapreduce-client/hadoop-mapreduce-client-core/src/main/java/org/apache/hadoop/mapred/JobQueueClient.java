@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -200,6 +201,7 @@ class JobQueueClient extends Configured implements Tool {
       for (QueueAclsInfo queueInfo : queueAclsInfoList) {
         System.out.print(queueInfo.getQueueName() + "  ");
         String[] ops = queueInfo.getOperations();
+        Arrays.sort(ops);
         int max = ops.length - 1;
         for (int j = 0; j < ops.length; j++) {
           System.out.print(ops[j].replaceFirst("acl-", ""));
