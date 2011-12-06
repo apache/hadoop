@@ -53,7 +53,7 @@ public class JournalProtocolTranslatorPB implements JournalProtocol, Closeable {
       Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, JournalProtocolPB.class, ProtobufRpcEngine.class);
     rpcProxy = RPC.getProxy(JournalProtocolPB.class,
-        JournalProtocol.versionID, nameNodeAddr, conf);
+        RPC.getProtocolVersion(JournalProtocolPB.class), nameNodeAddr, conf);
   }
 
   @Override
@@ -64,7 +64,7 @@ public class JournalProtocolTranslatorPB implements JournalProtocol, Closeable {
   @Override
   public long getProtocolVersion(String protocolName, long clientVersion)
       throws IOException {
-    return 0;
+    return rpcProxy.getProtocolVersion(protocolName, clientVersion);
   }
 
   @Override

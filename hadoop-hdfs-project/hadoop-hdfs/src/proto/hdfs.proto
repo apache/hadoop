@@ -270,8 +270,8 @@ message BlockProto {
  * Block and datanodes where is it located
  */
 message BlockWithLocationsProto {
-  required BlockProto block = 1;            // Block
-  repeated DatanodeIDProto datanodeIDs = 2; // Datanodes with replicas of the block
+  required BlockProto block = 1;   // Block
+  repeated string datanodeIDs = 2; // Datanodes with replicas of the block
 }
 
 /**

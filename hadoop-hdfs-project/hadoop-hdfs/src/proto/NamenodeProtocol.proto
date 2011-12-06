@@ -42,7 +42,7 @@ message GetBlocksRequestProto {
  * blocks - List of returned blocks
  */
 message GetBlocksResponseProto {
-  required BlockWithLocationsProto blocks = 1; // List of blocks
+  required BlocksWithLocationsProto blocks = 1; // List of blocks
 }
 
 /**
@@ -85,12 +85,25 @@ message RollEditLogResponseProto {
 }
 
 /**
- * registartion - Namenode reporting the error
+ * void request
+ */
+message VersionRequestProto {
+}
+
+/**
+ * void request
+ */
+message VersionResponseProto {
+  required NamespaceInfoProto info = 1;
+}
+
+/**
+ * registration - Namenode reporting the error
  * errorCode - error code indicating the error
  * msg - Free text description of the error
  */
 message ErrorReportRequestProto {
-  required NamenodeRegistrationProto registartion = 1; // Registartion info
+  required NamenodeRegistrationProto registration = 1; // Registration info
   required uint32 errorCode = 2;  // Error code
   required string msg = 3;        // Error message
 }
@@ -192,6 +205,11 @@ service NamenodeProtocolService {
    * Close the current editlog and open a new one for checkpointing purposes
    */
   rpc rollEditLog(RollEditLogRequestProto) returns(RollEditLogResponseProto);
+
+  /**
+   * Close the current editlog and open a new one for checkpointing purposes
+   */
+  rpc versionRequest(VersionRequestProto) returns(VersionResponseProto);
 
   /**
    * Report from a sub-ordinate namenode of an error to the active namenode.

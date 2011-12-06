@@ -14903,15 +14903,10 @@ public final class HdfsProtos {
     org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto getBlock();
     org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProtoOrBuilder getBlockOrBuilder();
     
-    // repeated .DatanodeIDProto datanodeIDs = 2;
-    java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto> 
-        getDatanodeIDsList();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto getDatanodeIDs(int index);
+    // repeated string datanodeIDs = 2;
+    java.util.List<String> getDatanodeIDsList();
     int getDatanodeIDsCount();
-    java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder> 
-        getDatanodeIDsOrBuilderList();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder getDatanodeIDsOrBuilder(
-        int index);
+    String getDatanodeIDs(int index);
   }
   public static final class BlockWithLocationsProto extends
       com.google.protobuf.GeneratedMessage
@@ -14955,30 +14950,23 @@ public final class HdfsProtos {
       return block_;
     }
     
-    // repeated .DatanodeIDProto datanodeIDs = 2;
+    // repeated string datanodeIDs = 2;
     public static final int DATANODEIDS_FIELD_NUMBER = 2;
-    private java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto> datanodeIDs_;
-    public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto> getDatanodeIDsList() {
-      return datanodeIDs_;
-    }
-    public java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder> 
-        getDatanodeIDsOrBuilderList() {
+    private com.google.protobuf.LazyStringList datanodeIDs_;
+    public java.util.List<String>
+        getDatanodeIDsList() {
       return datanodeIDs_;
     }
     public int getDatanodeIDsCount() {
       return datanodeIDs_.size();
     }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto getDatanodeIDs(int index) {
-      return datanodeIDs_.get(index);
-    }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder getDatanodeIDsOrBuilder(
-        int index) {
+    public String getDatanodeIDs(int index) {
       return datanodeIDs_.get(index);
     }
     
     private void initFields() {
       block_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto.getDefaultInstance();
-      datanodeIDs_ = java.util.Collections.emptyList();
+      datanodeIDs_ = com.google.protobuf.LazyStringArrayList.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -14993,12 +14981,6 @@ public final class HdfsProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      for (int i = 0; i < getDatanodeIDsCount(); i++) {
-        if (!getDatanodeIDs(i).isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -15010,7 +14992,7 @@ public final class HdfsProtos {
         output.writeMessage(1, block_);
       }
       for (int i = 0; i < datanodeIDs_.size(); i++) {
-        output.writeMessage(2, datanodeIDs_.get(i));
+        output.writeBytes(2, datanodeIDs_.getByteString(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -15025,9 +15007,14 @@ public final class HdfsProtos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, block_);
       }
-      for (int i = 0; i < datanodeIDs_.size(); i++) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, datanodeIDs_.get(i));
+      {
+        int dataSize = 0;
+        for (int i = 0; i < datanodeIDs_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(datanodeIDs_.getByteString(i));
+        }
+        size += dataSize;
+        size += 1 * getDatanodeIDsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -15185,7 +15172,6 @@ public final class HdfsProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getBlockFieldBuilder();
-          getDatanodeIDsFieldBuilder();
         }
       }
       private static Builder create() {
@@ -15200,12 +15186,8 @@ public final class HdfsProtos {
           blockBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (datanodeIDsBuilder_ == null) {
-          datanodeIDs_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
-        } else {
-          datanodeIDsBuilder_.clear();
-        }
+        datanodeIDs_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
       
@@ -15252,15 +15234,12 @@ public final class HdfsProtos {
         } else {
           result.block_ = blockBuilder_.build();
         }
-        if (datanodeIDsBuilder_ == null) {
-          if (((bitField0_ & 0x00000002) == 0x00000002)) {
-            datanodeIDs_ = java.util.Collections.unmodifiableList(datanodeIDs_);
-            bitField0_ = (bitField0_ & ~0x00000002);
-          }
-          result.datanodeIDs_ = datanodeIDs_;
-        } else {
-          result.datanodeIDs_ = datanodeIDsBuilder_.build();
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          datanodeIDs_ = new com.google.protobuf.UnmodifiableLazyStringList(
+              datanodeIDs_);
+          bitField0_ = (bitField0_ & ~0x00000002);
         }
+        result.datanodeIDs_ = datanodeIDs_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -15280,31 +15259,15 @@ public final class HdfsProtos {
         if (other.hasBlock()) {
           mergeBlock(other.getBlock());
         }
-        if (datanodeIDsBuilder_ == null) {
-          if (!other.datanodeIDs_.isEmpty()) {
-            if (datanodeIDs_.isEmpty()) {
-              datanodeIDs_ = other.datanodeIDs_;
-              bitField0_ = (bitField0_ & ~0x00000002);
-            } else {
-              ensureDatanodeIDsIsMutable();
-              datanodeIDs_.addAll(other.datanodeIDs_);
-            }
-            onChanged();
+        if (!other.datanodeIDs_.isEmpty()) {
+          if (datanodeIDs_.isEmpty()) {
+            datanodeIDs_ = other.datanodeIDs_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureDatanodeIDsIsMutable();
+            datanodeIDs_.addAll(other.datanodeIDs_);
           }
-        } else {
-          if (!other.datanodeIDs_.isEmpty()) {
-            if (datanodeIDsBuilder_.isEmpty()) {
-              datanodeIDsBuilder_.dispose();
-              datanodeIDsBuilder_ = null;
-              datanodeIDs_ = other.datanodeIDs_;
-              bitField0_ = (bitField0_ & ~0x00000002);
-              datanodeIDsBuilder_ = 
-                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getDatanodeIDsFieldBuilder() : null;
-            } else {
-              datanodeIDsBuilder_.addAllMessages(other.datanodeIDs_);
-            }
-          }
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -15318,12 +15281,6 @@ public final class HdfsProtos {
         if (!getBlock().isInitialized()) {
           
           return false;
-        }
-        for (int i = 0; i < getDatanodeIDsCount(); i++) {
-          if (!getDatanodeIDs(i).isInitialized()) {
-            
-            return false;
-          }
         }
         return true;
       }
@@ -15361,9 +15318,8 @@ public final class HdfsProtos {
               break;
             }
             case 18: {
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addDatanodeIDs(subBuilder.buildPartial());
+              ensureDatanodeIDsIsMutable();
+              datanodeIDs_.add(input.readBytes());
               break;
             }
           }
@@ -15462,190 +15418,60 @@ public final class HdfsProtos {
         return blockBuilder_;
       }
       
-      // repeated .DatanodeIDProto datanodeIDs = 2;
-      private java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto> datanodeIDs_ =
-        java.util.Collections.emptyList();
+      // repeated string datanodeIDs = 2;
+      private com.google.protobuf.LazyStringList datanodeIDs_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       private void ensureDatanodeIDsIsMutable() {
         if (!((bitField0_ & 0x00000002) == 0x00000002)) {
-          datanodeIDs_ = new java.util.ArrayList<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto>(datanodeIDs_);
+          datanodeIDs_ = new com.google.protobuf.LazyStringArrayList(datanodeIDs_);
           bitField0_ |= 0x00000002;
          }
       }
-      
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder> datanodeIDsBuilder_;
-      
-      public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto> getDatanodeIDsList() {
-        if (datanodeIDsBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(datanodeIDs_);
-        } else {
-          return datanodeIDsBuilder_.getMessageList();
-        }
+      public java.util.List<String>
+          getDatanodeIDsList() {
+        return java.util.Collections.unmodifiableList(datanodeIDs_);
       }
       public int getDatanodeIDsCount() {
-        if (datanodeIDsBuilder_ == null) {
-          return datanodeIDs_.size();
-        } else {
-          return datanodeIDsBuilder_.getCount();
-        }
+        return datanodeIDs_.size();
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto getDatanodeIDs(int index) {
-        if (datanodeIDsBuilder_ == null) {
-          return datanodeIDs_.get(index);
-        } else {
-          return datanodeIDsBuilder_.getMessage(index);
-        }
+      public String getDatanodeIDs(int index) {
+        return datanodeIDs_.get(index);
       }
       public Builder setDatanodeIDs(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto value) {
-        if (datanodeIDsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.set(index, value);
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.setMessage(index, value);
-        }
+          int index, String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDatanodeIDsIsMutable();
+        datanodeIDs_.set(index, value);
+        onChanged();
         return this;
       }
-      public Builder setDatanodeIDs(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder builderForValue) {
-        if (datanodeIDsBuilder_ == null) {
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.set(index, builderForValue.build());
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.setMessage(index, builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addDatanodeIDs(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto value) {
-        if (datanodeIDsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.add(value);
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.addMessage(value);
-        }
-        return this;
-      }
-      public Builder addDatanodeIDs(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto value) {
-        if (datanodeIDsBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.add(index, value);
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.addMessage(index, value);
-        }
-        return this;
-      }
-      public Builder addDatanodeIDs(
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder builderForValue) {
-        if (datanodeIDsBuilder_ == null) {
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.add(builderForValue.build());
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.addMessage(builderForValue.build());
-        }
-        return this;
-      }
-      public Builder addDatanodeIDs(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder builderForValue) {
-        if (datanodeIDsBuilder_ == null) {
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.add(index, builderForValue.build());
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.addMessage(index, builderForValue.build());
-        }
+      public Builder addDatanodeIDs(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureDatanodeIDsIsMutable();
+        datanodeIDs_.add(value);
+        onChanged();
         return this;
       }
       public Builder addAllDatanodeIDs(
-          java.lang.Iterable<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto> values) {
-        if (datanodeIDsBuilder_ == null) {
-          ensureDatanodeIDsIsMutable();
-          super.addAll(values, datanodeIDs_);
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.addAllMessages(values);
-        }
+          java.lang.Iterable<String> values) {
+        ensureDatanodeIDsIsMutable();
+        super.addAll(values, datanodeIDs_);
+        onChanged();
         return this;
       }
       public Builder clearDatanodeIDs() {
-        if (datanodeIDsBuilder_ == null) {
-          datanodeIDs_ = java.util.Collections.emptyList();
-          bitField0_ = (bitField0_ & ~0x00000002);
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.clear();
-        }
+        datanodeIDs_ = com.google.protobuf.LazyStringArrayList.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
         return this;
       }
-      public Builder removeDatanodeIDs(int index) {
-        if (datanodeIDsBuilder_ == null) {
-          ensureDatanodeIDsIsMutable();
-          datanodeIDs_.remove(index);
-          onChanged();
-        } else {
-          datanodeIDsBuilder_.remove(index);
-        }
-        return this;
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder getDatanodeIDsBuilder(
-          int index) {
-        return getDatanodeIDsFieldBuilder().getBuilder(index);
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder getDatanodeIDsOrBuilder(
-          int index) {
-        if (datanodeIDsBuilder_ == null) {
-          return datanodeIDs_.get(index);  } else {
-          return datanodeIDsBuilder_.getMessageOrBuilder(index);
-        }
-      }
-      public java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder> 
-           getDatanodeIDsOrBuilderList() {
-        if (datanodeIDsBuilder_ != null) {
-          return datanodeIDsBuilder_.getMessageOrBuilderList();
-        } else {
-          return java.util.Collections.unmodifiableList(datanodeIDs_);
-        }
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder addDatanodeIDsBuilder() {
-        return getDatanodeIDsFieldBuilder().addBuilder(
-            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.getDefaultInstance());
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder addDatanodeIDsBuilder(
-          int index) {
-        return getDatanodeIDsFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.getDefaultInstance());
-      }
-      public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder> 
-           getDatanodeIDsBuilderList() {
-        return getDatanodeIDsFieldBuilder().getBuilderList();
-      }
-      private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder> 
-          getDatanodeIDsFieldBuilder() {
-        if (datanodeIDsBuilder_ == null) {
-          datanodeIDsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder>(
-                  datanodeIDs_,
-                  ((bitField0_ & 0x00000002) == 0x00000002),
-                  getParentForChildren(),
-                  isClean());
-          datanodeIDs_ = null;
-        }
-        return datanodeIDsBuilder_;
+      void addDatanodeIDs(com.google.protobuf.ByteString value) {
+        ensureDatanodeIDsIsMutable();
+        datanodeIDs_.add(value);
+        onChanged();
       }
       
       // @@protoc_insertion_point(builder_scope:BlockWithLocationsProto)
@@ -20348,29 +20174,28 @@ public final class HdfsProtos {
       "ature\030\001 \002(\0132\031.CheckpointSignatureProto\022\031" +
       "\n\021needToReturnImage\030\002 \002(\010\"A\n\nBlockProto\022" +
       "\017\n\007blockId\030\001 \002(\004\022\020\n\010genStamp\030\002 \002(\004\022\020\n\010nu" +
-      "mBytes\030\003 \001(\004\"\\\n\027BlockWithLocationsProto\022",
-      "\032\n\005block\030\001 \002(\0132\013.BlockProto\022%\n\013datanodeI" +
-      "Ds\030\002 \003(\0132\020.DatanodeIDProto\"D\n\030BlocksWith" +
-      "LocationsProto\022(\n\006blocks\030\001 \003(\0132\030.BlockWi" +
-      "thLocationsProto\"8\n\022RemoteEditLogProto\022\021" +
-      "\n\tstartTxId\030\001 \002(\004\022\017\n\007endTxId\030\002 \002(\004\"?\n\032Re" +
-      "moteEditLogManifestProto\022!\n\004logs\030\001 \003(\0132\023" +
-      ".RemoteEditLogProto\"\203\001\n\022NamespaceInfoPro" +
-      "to\022\024\n\014buildVersion\030\001 \002(\t\022\032\n\022distUpgradeV" +
-      "ersion\030\002 \002(\r\022\023\n\013blockPoolID\030\003 \002(\t\022&\n\013sto" +
-      "rageInfo\030\004 \002(\0132\021.StorageInfoProto\"D\n\rBlo",
-      "ckKeyProto\022\r\n\005keyId\030\001 \002(\r\022\022\n\nexpiryDate\030" +
-      "\002 \002(\004\022\020\n\010keyBytes\030\003 \002(\014\"\254\001\n\026ExportedBloc" +
-      "kKeysProto\022\033\n\023isBlockTokenEnabled\030\001 \002(\010\022" +
-      "\031\n\021keyUpdateInterval\030\002 \002(\004\022\025\n\rtokenLifeT" +
-      "ime\030\003 \002(\004\022\"\n\ncurrentKey\030\004 \002(\0132\016.BlockKey" +
-      "Proto\022\037\n\007allKeys\030\005 \003(\0132\016.BlockKeyProto\"N" +
-      "\n\024RecoveringBlockProto\022\023\n\013newGenStamp\030\001 " +
-      "\002(\004\022!\n\005block\030\002 \002(\0132\022.LocatedBlockProto*G" +
-      "\n\014ReplicaState\022\r\n\tFINALIZED\020\000\022\007\n\003RBW\020\001\022\007" +
-      "\n\003RWR\020\002\022\007\n\003RUR\020\003\022\r\n\tTEMPORARY\020\004B6\n%org.a",
-      "pache.hadoop.hdfs.protocol.protoB\nHdfsPr" +
-      "otos\240\001\001"
+      "mBytes\030\003 \001(\004\"J\n\027BlockWithLocationsProto\022",
+      "\032\n\005block\030\001 \002(\0132\013.BlockProto\022\023\n\013datanodeI" +
+      "Ds\030\002 \003(\t\"D\n\030BlocksWithLocationsProto\022(\n\006" +
+      "blocks\030\001 \003(\0132\030.BlockWithLocationsProto\"8" +
+      "\n\022RemoteEditLogProto\022\021\n\tstartTxId\030\001 \002(\004\022" +
+      "\017\n\007endTxId\030\002 \002(\004\"?\n\032RemoteEditLogManifes" +
+      "tProto\022!\n\004logs\030\001 \003(\0132\023.RemoteEditLogProt" +
+      "o\"\203\001\n\022NamespaceInfoProto\022\024\n\014buildVersion" +
+      "\030\001 \002(\t\022\032\n\022distUpgradeVersion\030\002 \002(\r\022\023\n\013bl" +
+      "ockPoolID\030\003 \002(\t\022&\n\013storageInfo\030\004 \002(\0132\021.S" +
+      "torageInfoProto\"D\n\rBlockKeyProto\022\r\n\005keyI",
+      "d\030\001 \002(\r\022\022\n\nexpiryDate\030\002 \002(\004\022\020\n\010keyBytes\030" +
+      "\003 \002(\014\"\254\001\n\026ExportedBlockKeysProto\022\033\n\023isBl" +
+      "ockTokenEnabled\030\001 \002(\010\022\031\n\021keyUpdateInterv" +
+      "al\030\002 \002(\004\022\025\n\rtokenLifeTime\030\003 \002(\004\022\"\n\ncurre" +
+      "ntKey\030\004 \002(\0132\016.BlockKeyProto\022\037\n\007allKeys\030\005" +
+      " \003(\0132\016.BlockKeyProto\"N\n\024RecoveringBlockP" +
+      "roto\022\023\n\013newGenStamp\030\001 \002(\004\022!\n\005block\030\002 \002(\013" +
+      "2\022.LocatedBlockProto*G\n\014ReplicaState\022\r\n\t" +
+      "FINALIZED\020\000\022\007\n\003RBW\020\001\022\007\n\003RWR\020\002\022\007\n\003RUR\020\003\022\r" +
+      "\n\tTEMPORARY\020\004B6\n%org.apache.hadoop.hdfs.",
+      "protocol.protoB\nHdfsProtos\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
