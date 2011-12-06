@@ -246,6 +246,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3485. DISKS_FAILED -101 error code should be defined in same location as 
     ABORTED_CONTAINER_EXIT_STATUS. (Ravi Gummadi via mahadev)
 
+    MAPREDUCE-3496. Fixed client to print queue acls in consistent order.
+    (Jonathan Eagles via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
