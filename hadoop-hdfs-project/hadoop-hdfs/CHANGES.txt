@@ -19,6 +19,8 @@ Trunk (unreleased changes)
 
     HDFS-2629. Implement protobuf service for InterDatanodeProtocol. (suresh)
 
+    HDFS-2636. Implement protobuf service for ClientDatanodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 

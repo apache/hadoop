@@ -113,7 +113,7 @@ public class InterDatanodeProtocolServerSideTranslatorPB implements
 
     return ProtocolSignature.getProtocolSignature(clientMethodsHash,
         RPC.getProtocolVersion(InterDatanodeProtocolPB.class),
-        InterDatanodeProtocol.class);
+        InterDatanodeProtocolPB.class);
   }
 
 
