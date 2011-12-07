@@ -105,6 +105,8 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
 
+    HDFS-2638. Improve a block recovery log. (eli)
+
 Release 1.0.0 - unreleased
 
   NEW FEATURES

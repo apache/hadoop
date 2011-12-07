@@ -2252,8 +2252,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     if (deleteblock) {
       pendingFile.removeBlock(lastblock);
-    }
-    else {
+    } else {
       // update last block, construct newblockinfo and add it to the blocks map
       lastblock.set(lastblock.getBlockId(), newlength, newgenerationstamp);
       final BlockInfo newblockinfo = blocksMap.addINode(lastblock, pendingFile);
@@ -5381,7 +5380,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     BlockInfo storedBlock = blocksMap.getStoredBlock(block);
     if (storedBlock == null) {
-      String msg = block + " is already commited, storedBlock == null.";
+      BlockInfo match =
+        blocksMap.getStoredBlock(block.getWithWildcardGS());
+      String msg = (match == null)
+        ? block + " is missing"
+        : block + " has out of date GS " + block.getGenerationStamp() +
+                  " found " + match.getGenerationStamp() +
+                  ", may already be committed";
       LOG.info(msg);
       throw new IOException(msg);
     }

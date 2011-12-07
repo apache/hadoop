@@ -116,6 +116,10 @@ public class Block implements Writable, Comparable<Block> {
     generationStamp = stamp;
   }
 
+  public Block getWithWildcardGS() {
+    return new Block(blockId, numBytes, GenerationStamp.WILDCARD_STAMP);
+  }
+
   /**
    */
   public String toString() {

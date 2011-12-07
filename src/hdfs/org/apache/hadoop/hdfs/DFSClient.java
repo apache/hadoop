@@ -2823,7 +2823,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               // get new block from namenode.
               if (blockStream == null) {
                 LOG.debug("Allocating new block");
-                nodes = nextBlockOutputStream(src); 
+                nodes = nextBlockOutputStream();
                 this.setName("DataStreamer for file " + src +
                              " block " + block);
                 response = new ResponseProcessor(nodes);
@@ -3354,7 +3354,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * Must get block ID and the IDs of the destinations from the namenode.
      * Returns the list of target datanodes.
      */
-    private DatanodeInfo[] nextBlockOutputStream(String client) throws IOException {
+    private DatanodeInfo[] nextBlockOutputStream() throws IOException {
       LocatedBlock lb = null;
       boolean retry = false;
       DatanodeInfo[] nodes;
