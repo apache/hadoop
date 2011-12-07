@@ -18,6 +18,7 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import junit.framework.TestCase;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
@@ -59,6 +60,35 @@ public class TestKerberosAuthenticationHandler extends TestCase {
     super.tearDown();
   }
 
+  public void testNameRules() throws Exception {
+    KerberosName kn = new KerberosName(KerberosTestUtils.getServerPrincipal());
+    assertEquals(KerberosTestUtils.getRealm(), kn.getRealm());
+
+    //destroy handler created in setUp()
+    handler.destroy();
+
+    KerberosName.setRules("RULE:[1:$1@$0](.*@FOO)s/@.*//\nDEFAULT");
+    
+    handler = new KerberosAuthenticationHandler();
+    Properties props = new Properties();
+    props.setProperty(KerberosAuthenticationHandler.PRINCIPAL, KerberosTestUtils.getServerPrincipal());
+    props.setProperty(KerberosAuthenticationHandler.KEYTAB, KerberosTestUtils.getKeytabFile());
+    props.setProperty(KerberosAuthenticationHandler.NAME_RULES, "RULE:[1:$1@$0](.*@BAR)s/@.*//\nDEFAULT");
+    try {
+      handler.init(props);
+    } catch (Exception ex) {
+    }
+    kn = new KerberosName("bar@BAR");
+    assertEquals("bar", kn.getShortName());
+    kn = new KerberosName("bar@FOO");
+    try {
+      kn.getShortName();
+      fail();
+    }
+    catch (Exception ex) {      
+    }
+  }
+  
   public void testInit() throws Exception {
     assertEquals(KerberosTestUtils.getServerPrincipal(), handler.getPrincipal());
     assertEquals(KerberosTestUtils.getKeytabFile(), handler.getKeytab());

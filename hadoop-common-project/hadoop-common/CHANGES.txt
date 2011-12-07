@@ -117,6 +117,9 @@ Trunk (unreleased changes)
 
     HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
 
+    HADOOP-7887. KerberosAuthenticatorHandler is not setting
+    KerberosName name rules from configuration. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
