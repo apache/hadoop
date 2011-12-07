@@ -240,4 +240,21 @@ public class TestCapacityScheduler {
     node.checkResourceUsage();
   }
 
+  /** Test that parseQueue throws an exception when two leaf queues have the
+   *  same name
+ * @throws IOException
+   */
+  @Test(expected=IOException.class)
+  public void testParseQueue() throws IOException {
+    CapacityScheduler cs = new CapacityScheduler();
+
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    conf.setQueues(CapacityScheduler.ROOT + ".a.a1", new String[] {"b1"} );
+    conf.setCapacity(CapacityScheduler.ROOT + ".a.a1.b1", 100);
+    conf.setUserLimitFactor(CapacityScheduler.ROOT + ".a.a1.b1", 100.0f);
+
+    cs.reinitialize(conf, null, null);
+  }
+
 }
