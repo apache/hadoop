@@ -557,7 +557,6 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
     rm -rf ${HADOOP_NN_DIR}
   fi
   DATANODE_DIR=`echo ${HADOOP_DN_DIR} | sed -e 's/,/ /g'`
-  mkdir -p ${DATANODE_DIR}
   MAPRED_DIR=`echo ${HADOOP_MAPRED_DIR} | sed -e 's/,/ /g'`
   mkdir -p ${MAPRED_DIR}
   mkdir -p ${HADOOP_CONF_DIR}
@@ -574,8 +573,6 @@ if [ "${AUTOSETUP}" == "1" -o "${AUTOSETUP}" == "y" ]; then
 
   mkdir -p ${HADOOP_PID_DIR}
   chown ${HADOOP_HDFS_USER}:${HADOOP_GROUP} ${HDFS_DIR}
-  chown ${HADOOP_HDFS_USER}:${HADOOP_GROUP} ${DATANODE_DIR}
-  chmod 700 -R ${DATANODE_DIR}
   chown ${HADOOP_MR_USER}:${HADOOP_GROUP} ${MAPRED_DIR}
   chown ${HADOOP_HDFS_USER}:${HADOOP_GROUP} ${HADOOP_LOG_DIR}
   chmod 775 ${HADOOP_LOG_DIR}
