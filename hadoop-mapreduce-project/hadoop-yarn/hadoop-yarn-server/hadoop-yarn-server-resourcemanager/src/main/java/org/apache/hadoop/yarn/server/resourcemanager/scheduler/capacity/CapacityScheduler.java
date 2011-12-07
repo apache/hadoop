@@ -214,7 +214,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private static final QueueHook noop = new QueueHook();
   
   @Lock(CapacityScheduler.class)
-  private void initializeQueues(CapacitySchedulerConfiguration conf) {
+  private void initializeQueues(CapacitySchedulerConfiguration conf)
+    throws IOException {
     root = 
         parseQueue(this, conf, null, ROOT, queues, queues, 
             queueComparator, applicationComparator, noop);
@@ -283,7 +284,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
       Map<String, CSQueue> oldQueues, 
       Comparator<CSQueue> queueComparator,
       Comparator<SchedulerApp> applicationComparator,
-      QueueHook hook) {
+      QueueHook hook) throws IOException {
     CSQueue queue;
     String[] childQueueNames = 
       conf.getQueues((parent == null) ? 
@@ -316,6 +317,11 @@ implements ResourceScheduler, CapacitySchedulerContext {
       parentQueue.setChildQueues(childQueues);
     }
 
+    if(queue instanceof LeafQueue == true && queues.containsKey(queueName)
+      && queues.get(queueName) instanceof LeafQueue == true) {
+      throw new IOException("Two leaf queues were named " + queueName
+        + ". Leaf queue names must be distinct");
+    }
     queues.put(queueName, queue);
 
     LOG.info("Initialized queue: " + queue);

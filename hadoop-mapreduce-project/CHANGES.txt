@@ -200,6 +200,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3496. Fixed client to print queue acls in consistent order.
     (Jonathan Eagles via acmurthy) 
 
+    MAPREDUCE-3147. Handle leaf queues with the same name properly.
+    (Ravi Prakash via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
