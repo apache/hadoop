@@ -61,6 +61,10 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
 
+   HADOOP-7887. KerberosAuthenticatorHandler is not setting KerberosName 
+   name rules from configuration. (tucu)
+
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
