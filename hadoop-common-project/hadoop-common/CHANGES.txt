@@ -36,6 +36,8 @@ Release 0.23.1 - Unreleased
     HADOOP-6886. LocalFileSystem Needs createNonRecursive API.
     (Nicolas Spiegelberg and eli via eli)
 
+    HADOOP-7758. Make GlobFilter class public. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
