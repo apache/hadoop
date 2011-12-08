@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 
 /**
  * EditLogTailer represents a thread which periodically reads from edits
@@ -44,8 +45,15 @@ public class EditLogTailer {
   
   private final EditLogTailerThread tailerThread;
   
+  private final FSNamesystem namesystem;
+  private final FSImage image;
+  private final FSEditLog editLog;
+  
   public EditLogTailer(FSNamesystem namesystem) {
-    this.tailerThread = new EditLogTailerThread(namesystem);
+    this.tailerThread = new EditLogTailerThread();
+    this.namesystem = namesystem;
+    this.image = namesystem.getFSImage();
+    this.editLog = namesystem.getEditLog();
   }
   
   public void start() {
@@ -72,25 +80,45 @@ public class EditLogTailer {
   public void interrupt() {
     tailerThread.interrupt();
   }
+  
+  public void catchupDuringFailover() throws IOException {
+    Preconditions.checkState(tailerThread == null ||
+        !tailerThread.isAlive(),
+        "Tailer thread should not be running once failover starts");
+    doTailEdits();
+  }
+  
+  private void doTailEdits() throws IOException {
+    // TODO(HA) in a transition from active to standby,
+    // the following is wrong and ends up causing all of the
+    // last log segment to get re-read
+    long lastTxnId = image.getLastAppliedTxId();
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("lastTxnId: " + lastTxnId);
+    }
+    Collection<EditLogInputStream> streams = editLog
+        .selectInputStreams(lastTxnId + 1, 0, false);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("edit streams to load from: " + streams.size());
+    }
+    
+    long editsLoaded = image.loadEdits(streams, namesystem);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("editsLoaded: " + editsLoaded);
+    }
+  }
 
   /**
    * The thread which does the actual work of tailing edits journals and
    * applying the transactions to the FSNS.
    */
-  private static class EditLogTailerThread extends Thread {
-
-    private FSNamesystem namesystem;
-    private FSImage image;
-    private FSEditLog editLog;
-    
+  private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
     private long sleepTime = 60 * 1000;
     
-    private EditLogTailerThread(FSNamesystem namesystem) {
+    private EditLogTailerThread() {
       super("Edit log tailer");
-      this.namesystem = namesystem;
-      image = namesystem.getFSImage();
-      editLog = namesystem.getEditLog();
     }
     
     private void setShouldRun(boolean shouldRun) {
@@ -105,23 +133,8 @@ public class EditLogTailer {
     public void run() {
       while (shouldRun) {
         try {
-          long lastTxnId = image.getLastAppliedTxId();
-          
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("lastTxnId: " + lastTxnId);
-          }
           try {
-            // At least one record should be available.
-            Collection<EditLogInputStream> streams = editLog
-                .selectInputStreams(lastTxnId + 1, lastTxnId + 1, false);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("edit streams to load from: " + streams.size());
-            }
-            
-            long editsLoaded = image.loadEdits(streams, namesystem);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("editsLoaded: " + editsLoaded);
-            }
+            doTailEdits();
           } catch (IOException e) {
             // Will try again
             LOG.info("Got error, will try again.", e);

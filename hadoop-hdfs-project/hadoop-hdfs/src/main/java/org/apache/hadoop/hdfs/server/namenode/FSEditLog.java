@@ -249,14 +249,42 @@ public class FSEditLog  {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
 
-    startLogSegment(getLastWrittenTxId() + 1, true);
+    long segmentTxId = getLastWrittenTxId() + 1;
+    // Safety check: we should never start a segment if there are
+    // newer txids readable.
+    EditLogInputStream s = journalSet.getInputStream(segmentTxId);
+    try {
+      Preconditions.checkState(s == null,
+          "Cannot start writing at txid %s when there is a stream " +
+          "available for read: %s", segmentTxId, s);
+    } finally {
+      IOUtils.closeStream(s);
+    }
+    
+    startLogSegment(segmentTxId, true);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
   
+  /**
+   * @return true if the log is currently open in write mode, regardless
+   * of whether it actually has an open segment.
+   */
   synchronized boolean isOpenForWrite() {
+    return state == State.IN_SEGMENT ||
+      state == State.BETWEEN_LOG_SEGMENTS;
+  }
+  
+  /**
+   * @return true if the log is open in write mode and has a segment open
+   * ready to take edits.
+   */
+  synchronized boolean isSegmentOpen() {
     return state == State.IN_SEGMENT;
   }
 
+  /**
+   * @return true if the log is open in read mode.
+   */
   synchronized boolean isOpenForRead() {
     return state == State.OPEN_FOR_READING;
   }
@@ -290,7 +318,7 @@ public class FSEditLog  {
    */
   void logEdit(final FSEditLogOp op) {
     synchronized (this) {
-      assert state != State.CLOSED && state != State.OPEN_FOR_READING :
+      assert isOpenForWrite() :
         "bad state: " + state;
       
       // wait if an automatic sync is scheduled
@@ -386,7 +414,7 @@ public class FSEditLog  {
    * @return the first transaction ID in the current log segment
    */
   synchronized long getCurSegmentTxId() {
-    Preconditions.checkState(state == State.IN_SEGMENT,
+    Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     return curSegmentTxId;
   }
@@ -856,7 +884,7 @@ public class FSEditLog  {
    */
   synchronized void endCurrentLogSegment(boolean writeEndTxn) {
     LOG.info("Ending log segment " + curSegmentTxId);
-    Preconditions.checkState(state == State.IN_SEGMENT,
+    Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     
     if (writeEndTxn) {
@@ -1017,6 +1045,9 @@ public class FSEditLog  {
    * Run recovery on all journals to recover any unclosed segments
    */
   void recoverUnclosedStreams() {
+    Preconditions.checkState(
+        state == State.BETWEEN_LOG_SEGMENTS,
+        "May not recover segments - wrong state: %s", state);
     try {
       journalSet.recoverUnfinalizedSegments();
     } catch (IOException ex) {

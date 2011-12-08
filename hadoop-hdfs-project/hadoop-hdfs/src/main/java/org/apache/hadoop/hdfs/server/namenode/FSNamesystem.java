@@ -490,12 +490,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("Starting services required for active state");
     writeLock();
     try {
-      if (!dir.fsImage.editLog.isOpenForWrite()) {
+      FSEditLog editLog = dir.fsImage.getEditLog();
+      
+      if (!editLog.isSegmentOpen()) {
         // During startup, we're already open for write during initialization.
         // TODO(HA): consider adding a startup state?
-        dir.fsImage.editLog.initJournalsForWrite();
+        editLog.initJournalsForWrite();
         // May need to recover
-        dir.fsImage.editLog.recoverUnclosedStreams();
+        editLog.recoverUnclosedStreams();
+        
+        LOG.info("Catching up to latest edits from old active before " +
+            "taking over writer role in edits logs.");
+        editLogTailer.catchupDuringFailover();
+        
+        long nextTxId = dir.fsImage.getLastAppliedTxId() + 1;
+        LOG.info("Will take over writing edit logs at txnid " + 
+            nextTxId);
+        editLog.setNextTxId(nextTxId);
+
         dir.fsImage.editLog.openForWrite();
       }
       if (UserGroupInformation.isSecurityEnabled()) {

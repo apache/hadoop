@@ -96,7 +96,7 @@ class FileJournalManager implements JournalManager {
         "Can't finalize edits file " + inprogressFile + " since finalized file " +
         "already exists");
     if (!inprogressFile.renameTo(dstFile)) {
-      throw new IOException("Unable to finalize edits file " + inprogressFile);
+      throw new IllegalStateException("Unable to finalize edits file " + inprogressFile);
     }
     if (inprogressFile.equals(currentInProgress)) {
       currentInProgress = null;
@@ -147,7 +147,7 @@ class FileJournalManager implements JournalManager {
         ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
       } else if ((firstTxId > elf.getFirstTxId()) &&
                  (firstTxId <= elf.getLastTxId())) {
-        throw new IOException("Asked for firstTxId " + firstTxId
+        throw new IllegalStateException("Asked for firstTxId " + firstTxId
             + " which is in the middle of file " + elf.file);
       }
     }
@@ -237,7 +237,17 @@ class FileJournalManager implements JournalManager {
         if (elf.isInProgress()) {
           break;
         }
-      } // else skip
+      } else if (elf.getFirstTxId() < fromTxId &&
+                 elf.getLastTxId() >= fromTxId) {
+        // Middle of a log segment - this should never happen
+        // since getLogFiles checks for it. But we should be
+        // paranoid about this case since it might result in
+        // overlapping txid ranges, etc, if we had a bug.
+        IOException ioe = new IOException("txid " + fromTxId +
+            " falls in the middle of file " + elf);
+        LOG.error("Broken invariant in edit log file management", ioe);
+        throw ioe;
+      }
     }
 
     if (LOG.isDebugEnabled()) {
@@ -263,6 +273,7 @@ class FileJournalManager implements JournalManager {
   @Override
   synchronized public void recoverUnfinalizedSegments() throws IOException {
     File currentDir = sd.getCurrentDir();
+    LOG.info("Recovering unfinalized segments in " + currentDir);
     List<EditLogFile> allLogFiles = matchEditLogs(currentDir.listFiles());
     
     // make sure journal is aware of max seen transaction before moving corrupt 

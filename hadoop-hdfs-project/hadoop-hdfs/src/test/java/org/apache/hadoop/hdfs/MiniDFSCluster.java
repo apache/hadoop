@@ -604,8 +604,7 @@ public class MiniDFSCluster {
         conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, nameservice.getId()),
             Joiner.on(",").join(nnIds));
         if (manageNameDfsDirs) {
-          URI sharedEditsUri = fileAsURI(new File(base_dir, "shared-edits-" +
-              nnCounter + "-through-" + (nnCounter+nnIds.size()-1)));
+          URI sharedEditsUri = getSharedEditsDir(nnCounter, nnCounter+nnIds.size()-1); 
           conf.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY, sharedEditsUri.toString());
         }
       }
@@ -638,6 +637,11 @@ public class MiniDFSCluster {
     
   }
   
+  public URI getSharedEditsDir(int minNN, int maxNN) throws IOException {
+    return fileAsURI(new File(base_dir, "shared-edits-" +
+        minNN + "-through-" + maxNN));
+  }
+
   private void initNameNodeConf(Configuration conf,
       String nameserviceId, String nnId,
       boolean manageNameDfsDirs, int nnIndex)

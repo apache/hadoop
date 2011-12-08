@@ -204,6 +204,8 @@ public class JournalSet implements JournalManager {
     CorruptionException corruption = null;
 
     for (JournalAndStream jas : journals) {
+      if (jas.isDisabled()) continue;
+      
       JournalManager candidate = jas.getManager();
       long candidateNumTxns = 0;
       try {
@@ -211,6 +213,8 @@ public class JournalSet implements JournalManager {
       } catch (CorruptionException ce) {
         corruption = ce;
       } catch (IOException ioe) {
+        LOG.warn("Unable to read input streams from JournalManager " + candidate,
+            ioe);
         continue; // error reading disk, just skip
       }
       
@@ -235,7 +239,10 @@ public class JournalSet implements JournalManager {
   public long getNumberOfTransactions(long fromTxnId) throws IOException {
     long num = 0;
     for (JournalAndStream jas: journals) {
-      if (jas.isActive()) {
+      if (jas.isDisabled()) {
+        LOG.info("Skipping jas " + jas + " since it's disabled");
+        continue;
+      } else {
         long newNum = jas.getManager().getNumberOfTransactions(fromTxnId);
         if (newNum > num) {
           num = newNum;

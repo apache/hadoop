@@ -342,7 +342,7 @@ public class FSImage implements Closeable {
         assert curDir.exists() : "Current directory must exist.";
         assert !prevDir.exists() : "prvious directory must not exist.";
         assert !tmpDir.exists() : "prvious.tmp directory must not exist.";
-        assert !editLog.isOpenForWrite() : "Edits log must not be open.";
+        assert !editLog.isSegmentOpen() : "Edits log must not be open.";
 
         // rename current to tmp
         NNStorage.rename(curDir, tmpDir);
@@ -537,8 +537,6 @@ public class FSImage implements Closeable {
 
   void openEditLogForWrite() throws IOException {
     assert editLog != null : "editLog must be initialized";
-    Preconditions.checkState(!editLog.isOpenForWrite(),
-        "edit log should not yet be open");
     editLog.openForWrite();
     storage.writeTransactionIdFileToStorage(editLog.getCurSegmentTxId());
   };
@@ -580,13 +578,16 @@ public class FSImage implements Closeable {
 
     Iterable<EditLogInputStream> editStreams = null;
 
-    // TODO(HA): We shouldn't run this when coming up in standby state
-    editLog.recoverUnclosedStreams();
+    if (editLog.isOpenForWrite()) {
+      // We only want to recover streams if we're going into Active mode.
+      editLog.recoverUnclosedStreams();
+    }
 
     if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, 
                                getLayoutVersion())) {
       editStreams = editLog.selectInputStreams(imageFile.getCheckpointTxId() + 1,
-                                               inspector.getMaxSeenTxId());
+                                               inspector.getMaxSeenTxId(),
+                                               false);
     } else {
       editStreams = FSImagePreTransactionalStorageInspector
         .getEditLogStreams(storage);
@@ -811,7 +812,7 @@ public class FSImage implements Closeable {
     assert editLog != null : "editLog must be initialized";
     storage.attemptRestoreRemovedStorage();
 
-    boolean editLogWasOpen = editLog.isOpenForWrite();
+    boolean editLogWasOpen = editLog.isSegmentOpen();
     
     if (editLogWasOpen) {
       editLog.endCurrentLogSegment(true);

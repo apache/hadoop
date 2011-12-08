@@ -34,6 +34,8 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -189,6 +191,26 @@ public abstract class FSImageTestUtil {
     return editLog;
   }
   
+  /**
+   * Create an aborted in-progress log in the given directory, containing
+   * only a specified number of "mkdirs" operations.
+   */
+  public static void createAbortedLogWithMkdirs(File editsLogDir, int numDirs)
+      throws IOException {
+    FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
+    editLog.openForWrite();
+    
+    PermissionStatus perms = PermissionStatus.createImmutable("fakeuser", "fakegroup",
+        FsPermission.createImmutable((short)0755));
+    for (int i = 1; i <= numDirs; i++) {
+      String dirName = "dir" + i;
+      INodeDirectory dir = new INodeDirectory(dirName, perms);
+      editLog.logMkDir("/" + dirName, dir);
+    }
+    editLog.logSync();
+    editLog.abortCurrentLogSegment();
+  }
+
   /**
    * Assert that all of the given directories have the same newest filename
    * for fsimage that they hold the same data.
