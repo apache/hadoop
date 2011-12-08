@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -32,9 +33,12 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat.State;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -43,6 +47,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -63,13 +69,15 @@ public class TestBPOfferService {
 
   private DatanodeProtocol mockNN1;
   private DatanodeProtocol mockNN2;
+  private NNHAStatusHeartbeat[] mockHaStatuses = new NNHAStatusHeartbeat[2];
+  private int heartbeatCounts[] = new int[2];
   private DataNode mockDn;
   private FSDatasetInterface mockFSDataset;
   
   @Before
   public void setupMocks() throws Exception {
-    mockNN1 = setupNNMock();
-    mockNN2 = setupNNMock();
+    mockNN1 = setupNNMock(0);
+    mockNN2 = setupNNMock(1);
 
     // Set up a mock DN with the bare-bones configuration
     // objects, etc.
@@ -92,14 +100,17 @@ public class TestBPOfferService {
   /**
    * Set up a mock NN with the bare minimum for a DN to register to it.
    */
-  private DatanodeProtocol setupNNMock() throws Exception {
+  private DatanodeProtocol setupNNMock(int nnIdx) throws Exception {
     DatanodeProtocol mock = Mockito.mock(DatanodeProtocol.class);
     Mockito.doReturn(
         new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID,
             0, HdfsConstants.LAYOUT_VERSION))
       .when(mock).versionRequest();
     
-    Mockito.doReturn(new HeartbeatResponse(null))
+    Mockito.doReturn(new DatanodeRegistration("fake-node"))
+      .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class));
+    
+    Mockito.doAnswer(new HeartbeatAnswer(nnIdx))
       .when(mock).sendHeartbeat(
           Mockito.any(DatanodeRegistration.class),
           Mockito.anyLong(),
@@ -109,10 +120,31 @@ public class TestBPOfferService {
           Mockito.anyInt(),
           Mockito.anyInt(),
           Mockito.anyInt());
-
+    mockHaStatuses[nnIdx] = new NNHAStatusHeartbeat(State.STANDBY, 0);
     return mock;
   }
   
+  /**
+   * Mock answer for heartbeats which returns an empty set of commands
+   * and the HA status for the chosen NN from the
+   * {@link TestBPOfferService#mockHaStatuses} array.
+   */
+  private class HeartbeatAnswer implements Answer<HeartbeatResponse> {
+    private final int nnIdx;
+
+    public HeartbeatAnswer(int nnIdx) {
+      this.nnIdx = nnIdx;
+    }
+
+    @Override
+    public HeartbeatResponse answer(InvocationOnMock invocation) throws Throwable {
+      heartbeatCounts[nnIdx]++;
+      return new HeartbeatResponse(new DatanodeCommand[0],
+          mockHaStatuses[nnIdx]);
+    }
+  }
+
+
   /**
    * Test that the BPOS can register to talk to two different NNs,
    * sends block reports to both, etc.
@@ -204,6 +236,53 @@ public class TestBPOfferService {
       bpos.stop();
     }
   }
+  
+  /**
+   * Test that the DataNode determines the active NameNode correctly
+   * based on the HA-related information in heartbeat responses.
+   * See HDFS-2627.
+   */
+  @Test
+  public void testPickActiveNameNode() throws Exception {
+    BPOfferService bpos = setupBPOSForNNs(mockNN1, mockNN2);
+    bpos.start();
+    try {
+      waitForInitialization(bpos);
+      
+      // Should start with neither NN as active.
+      assertNull(bpos.getActiveNN());
+
+      // Have NN1 claim active at txid 1
+      mockHaStatuses[0] = new NNHAStatusHeartbeat(State.ACTIVE, 1);
+      waitForHeartbeats(bpos);
+      assertSame(mockNN1, bpos.getActiveNN());
+
+      // NN2 claims active at a higher txid
+      mockHaStatuses[1] = new NNHAStatusHeartbeat(State.ACTIVE, 2);
+      waitForHeartbeats(bpos);
+      assertSame(mockNN2, bpos.getActiveNN());
+      
+      // Even after another heartbeat from the first NN, it should
+      // think NN2 is active, since it claimed a higher txid
+      waitForHeartbeats(bpos);
+      assertSame(mockNN2, bpos.getActiveNN());
+      
+      // Even if NN2 goes to standby, DN shouldn't reset to talking to NN1,
+      // because NN1's txid is lower than the last active txid. Instead,
+      // it should consider neither active.
+      mockHaStatuses[1] = new NNHAStatusHeartbeat(State.STANDBY, 2);
+      waitForHeartbeats(bpos);
+      assertNull(bpos.getActiveNN());
+      
+      // Now if NN1 goes back to a higher txid, it should be considered active
+      mockHaStatuses[0] = new NNHAStatusHeartbeat(State.ACTIVE, 3);
+      waitForHeartbeats(bpos);
+      assertSame(mockNN1, bpos.getActiveNN());
+
+    } finally {
+      bpos.stop();
+    }
+  }
 
   private void waitForOneToFail(final BPOfferService bpos)
       throws Exception {
@@ -268,6 +347,30 @@ public class TestBPOfferService {
       }
     }, 500, 10000);
   }
+  
+  private void waitForHeartbeats(BPOfferService bpos)
+    throws Exception {
+    final int countAtStart[];
+    synchronized (heartbeatCounts) {
+      countAtStart = Arrays.copyOf(
+          heartbeatCounts, heartbeatCounts.length);
+    }
+    bpos.triggerHeartbeatForTests();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        synchronized (heartbeatCounts) {
+          for (int i = 0; i < countAtStart.length; i++) {
+            if (heartbeatCounts[i] <= countAtStart[i]) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }
+    }, 200, 10000);
+  }
+
   
   private ReceivedDeletedBlockInfo[] waitForBlockReceived(
       ExtendedBlock fakeBlock,

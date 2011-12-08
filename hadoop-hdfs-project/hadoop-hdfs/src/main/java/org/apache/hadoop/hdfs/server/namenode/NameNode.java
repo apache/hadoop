@@ -426,7 +426,7 @@ public class NameNode {
 
   /** Start the services common to active and standby states */
   private void startCommonServices(Configuration conf) throws IOException {
-    namesystem.startCommonServices(conf);
+    namesystem.startCommonServices(conf, haContext);
     startHttpServer(conf);
     rpcServer.start();
     plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,

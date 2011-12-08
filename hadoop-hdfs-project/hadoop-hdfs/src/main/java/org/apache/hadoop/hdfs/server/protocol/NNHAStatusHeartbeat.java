@@ -23,63 +23,51 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-/**
- * Response to {@link DatanodeProtocol#sendHeartbeat}
- */
-public class HeartbeatResponse implements Writable {
-  /** Commands returned from the namenode to the datanode */
-  private DatanodeCommand[] commands;
+public class NNHAStatusHeartbeat implements Writable {
+
+  private State state;
+  private long txid = HdfsConstants.INVALID_TXID;
   
-  /** Information about the current HA-related state of the NN */
-  private NNHAStatusHeartbeat haStatus;
-  
-  public HeartbeatResponse() {
-    // Empty constructor required for Writable
+  public NNHAStatusHeartbeat() {
   }
   
-  public HeartbeatResponse(DatanodeCommand[] cmds,
-      NNHAStatusHeartbeat haStatus) {
-    commands = cmds;
-    this.haStatus = haStatus;
-  }
-  
-  public DatanodeCommand[] getCommands() {
-    return commands;
-  }
-  
-  public NNHAStatusHeartbeat getNameNodeHaState() {
-    return haStatus;
+  public NNHAStatusHeartbeat(State state, long txid) {
+    this.state = state;
+    this.txid = txid;
   }
 
+  public State getState() {
+    return state;
+  }
+  
+  public long getTxId() {
+    return txid;
+  }
+  
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
   @Override
   public void write(DataOutput out) throws IOException {
-    int length = commands == null ? 0 : commands.length;
-    out.writeInt(length);
-    for (int i = 0; i < length; i++) {
-      ObjectWritable.writeObject(out, commands[i], commands[i].getClass(),
-                                 null, true);
-    }
-    haStatus.write(out);
+    WritableUtils.writeEnum(out, state);
+    out.writeLong(txid);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    int length = in.readInt();
-    commands = new DatanodeCommand[length];
-    ObjectWritable objectWritable = new ObjectWritable();
-    for (int i = 0; i < length; i++) {
-      commands[i] = (DatanodeCommand) ObjectWritable.readObject(in,
-          objectWritable, null);
-    }
-    haStatus = new NNHAStatusHeartbeat();
-    haStatus.readFields(in);
+    state = WritableUtils.readEnum(in, State.class);
+    txid = in.readLong();
+  }
+
+  @InterfaceAudience.Private
+  public enum State {
+    ACTIVE,
+    STANDBY;
   }
 }

@@ -284,6 +284,14 @@ class BPServiceActor implements Runnable {
       lastBlockReport = 0;
       blockReport();
   }
+  
+  @VisibleForTesting
+  void triggerHeartbeatForTests() throws IOException {
+    synchronized (receivedAndDeletedBlockList) {
+      lastHeartbeat = 0;
+      receivedAndDeletedBlockList.notifyAll();
+    }
+  }
 
   /**
    * Report the list blocks to the Namenode
@@ -420,7 +428,17 @@ class BPServiceActor implements Runnable {
           lastHeartbeat = startTime;
           if (!dn.areHeartbeatsDisabledForTests()) {
             HeartbeatResponse resp = sendHeartBeat();
+            assert resp != null;
             dn.getMetrics().addHeartbeat(now() - startTime);
+
+            // If the state of this NN has changed (eg STANDBY->ACTIVE)
+            // then let the BPOfferService update itself.
+            //
+            // Important that this happens before processCommand below,
+            // since the first heartbeat to a new active might have commands
+            // that we should actually process.
+            bpos.updateActorStatesFromHeartbeat(
+                this, resp.getNameNodeHaState());
 
             long startProcessCommands = now();
             if (!processCommand(resp.getCommands()))

@@ -45,3 +45,5 @@ HDFS-2626. BPOfferService.verifyAndSetNamespaceInfo needs to be synchronized (to
 HDFS-2624. ConfiguredFailoverProxyProvider doesn't correctly stop ProtocolTranslators (todd)
 
 HDFS-2625. TestDfsOverAvroRpc failing after introduction of HeartbeatResponse type (todd)
+
+HDFS-2627. Determine DN's view of which NN is active based on heartbeat responses (todd)

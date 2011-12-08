@@ -31,6 +31,7 @@ import org.apache.hadoop.io.Writable;
 @InterfaceStability.Evolving
 public class HeartbeatResponseWritable implements Writable {
   private DatanodeCommandWritable[] commands;
+  private NNHAStatusHeartbeatWritable haStatus;
   
   public HeartbeatResponseWritable() {
     // Empty constructor for Writable
@@ -41,7 +42,8 @@ public class HeartbeatResponseWritable implements Writable {
   }
   
   public HeartbeatResponse convert() {
-    return new HeartbeatResponse(DatanodeCommandWritable.convert(commands));
+    return new HeartbeatResponse(DatanodeCommandWritable.convert(commands),
+        NNHAStatusHeartbeatWritable.convert(haStatus));
   }
   
   ///////////////////////////////////////////
@@ -55,6 +57,7 @@ public class HeartbeatResponseWritable implements Writable {
       ObjectWritable.writeObject(out, commands[i], commands[i].getClass(),
                                  null, true);
     }
+    haStatus.write(out);
   }
 
   @Override
@@ -66,6 +69,8 @@ public class HeartbeatResponseWritable implements Writable {
       commands[i] = (DatanodeCommandWritable) ObjectWritable.readObject(in,
           objectWritable, null);
     }
+    haStatus = new NNHAStatusHeartbeatWritable();
+    haStatus.readFields(in);
   }
 
   public static HeartbeatResponseWritable convert(

@@ -37,14 +37,15 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.ipc.RPC;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -75,9 +76,30 @@ class BPOfferService {
   UpgradeManagerDatanode upgradeManager = null;
   private final DataNode dn;
 
-  private BPServiceActor bpServiceToActive;
+  /**
+   * A reference to the BPServiceActor associated with the currently
+   * ACTIVE NN. In the case that all NameNodes are in STANDBY mode,
+   * this can be null. If non-null, this must always refer to a member
+   * of the {@link #bpServices} list.
+   */
+  private BPServiceActor bpServiceToActive = null;
+  
+  /**
+   * The list of all actors for namenodes in this nameservice, regardless
+   * of their active or standby states.
+   */
   private List<BPServiceActor> bpServices =
     new CopyOnWriteArrayList<BPServiceActor>();
+
+  /**
+   * Each time we receive a heartbeat from a NN claiming to be ACTIVE,
+   * we record that NN's most recent transaction ID here, so long as it
+   * is more recent than the previous value. This allows us to detect
+   * split-brain scenarios in which a prior NN is still asserting its
+   * ACTIVE state but with a too-low transaction ID. See HDFS-2627
+   * for details. 
+   */
+  private long lastActiveClaimTxId = -1;
 
   BPOfferService(List<InetSocketAddress> nnAddrs, DataNode dn) {
     Preconditions.checkArgument(!nnAddrs.isEmpty(),
@@ -87,10 +109,6 @@ class BPOfferService {
     for (InetSocketAddress addr : nnAddrs) {
       this.bpServices.add(new BPServiceActor(addr, this));
     }
-    // TODO(HA): currently we just make the first one the initial
-    // active. In reality it should start in an unknown state and then
-    // as we figure out which is active, designate one as such.
-    this.bpServiceToActive = this.bpServices.get(0);
   }
 
   void refreshNNList(ArrayList<InetSocketAddress> addrs) throws IOException {
@@ -109,19 +127,23 @@ class BPOfferService {
   }
 
   /**
-   * returns true if BP thread has completed initialization of storage
-   * and has registered with the corresponding namenode
-   * @return true if initialized
+   * @return true if the service has registered with at least one NameNode.
    */
   boolean isInitialized() {
-    // TODO(HA) is this right?
-    return bpServiceToActive != null && bpServiceToActive.isInitialized();
+    return bpRegistration != null;
   }
   
+  /**
+   * @return true if there is at least one actor thread running which is
+   * talking to a NameNode.
+   */
   boolean isAlive() {
-    // TODO: should || all the bp actors probably?
-    return bpServiceToActive != null &&
-      bpServiceToActive.isAlive();
+    for (BPServiceActor actor : bpServices) {
+      if (actor.isAlive()) {
+        return true;
+      }
+    }
+    return false;
   }
   
   String getBlockPoolId() {
@@ -322,7 +344,7 @@ class BPOfferService {
    * Called when an actor shuts down. If this is the last actor
    * to shut down, shuts down the whole blockpool in the DN.
    */
-  void shutdownActor(BPServiceActor actor) {
+  synchronized void shutdownActor(BPServiceActor actor) {
     if (bpServiceToActive == actor) {
       bpServiceToActive = null;
     }
@@ -339,7 +361,7 @@ class BPOfferService {
   }
 
   @Deprecated
-  InetSocketAddress getNNSocketAddress() {
+  synchronized InetSocketAddress getNNSocketAddress() {
     // TODO(HA) this doesn't make sense anymore
     return bpServiceToActive.getNNSocketAddress();
   }
@@ -383,8 +405,61 @@ class BPOfferService {
    * @return a proxy to the active NN
    */
   @Deprecated
-  DatanodeProtocol getActiveNN() {
-    return bpServiceToActive.bpNamenode;
+  synchronized DatanodeProtocol getActiveNN() {
+    if (bpServiceToActive != null) {
+      return bpServiceToActive.bpNamenode;
+    } else {
+      return null;
+    }
+  }
+  
+  /**
+   * Update the BPOS's view of which NN is active, based on a heartbeat
+   * response from one of the actors.
+   * 
+   * @param actor the actor which received the heartbeat
+   * @param nnHaState the HA-related heartbeat contents
+   */
+  synchronized void updateActorStatesFromHeartbeat(
+      BPServiceActor actor,
+      NNHAStatusHeartbeat nnHaState) {
+    final long txid = nnHaState.getTxId();
+    
+    final boolean nnClaimsActive =
+      nnHaState.getState() == NNHAStatusHeartbeat.State.ACTIVE;
+    final boolean bposThinksActive = bpServiceToActive == actor;
+    final boolean isMoreRecentClaim = txid > lastActiveClaimTxId; 
+    
+    if (nnClaimsActive && !bposThinksActive) {
+      LOG.info("Namenode " + actor + " trying to claim ACTIVE state with " +
+          "txid=" + txid);
+      if (!isMoreRecentClaim) {
+        // Split-brain scenario - an NN is trying to claim active
+        // state when a different NN has already claimed it with a higher
+        // txid.
+        LOG.warn("NN " + actor + " tried to claim ACTIVE state at txid=" +
+            txid + " but there was already a more recent claim at txid=" +
+            lastActiveClaimTxId);
+        return;
+      } else {
+        if (bpServiceToActive == null) {
+          LOG.info("Acknowledging ACTIVE Namenode " + actor);
+        } else {
+          LOG.info("Namenode " + actor + " taking over ACTIVE state from " +
+              bpServiceToActive + " at higher txid=" + txid);
+        }
+        bpServiceToActive = actor;
+      }
+    } else if (!nnClaimsActive && bposThinksActive) {
+      LOG.info("Namenode " + actor + " relinquishing ACTIVE state with " +
+          "txid=" + nnHaState.getTxId());
+      bpServiceToActive = null;
+    }
+    
+    if (bpServiceToActive == actor) {
+      assert txid >= lastActiveClaimTxId;
+      lastActiveClaimTxId = txid;
+    }
   }
 
   /**
@@ -415,7 +490,17 @@ class BPOfferService {
     }
   }
 
-  boolean processCommandFromActor(DatanodeCommand cmd,
+  /**
+   * Run an immediate heartbeat from all actors. Used by tests.
+   */
+  @VisibleForTesting
+  void triggerHeartbeatForTests() throws IOException {
+    for (BPServiceActor actor : bpServices) {
+      actor.triggerHeartbeatForTests();
+    }
+  }
+
+  synchronized boolean processCommandFromActor(DatanodeCommand cmd,
       BPServiceActor actor) throws IOException {
     assert bpServices.contains(actor);
     if (actor == bpServiceToActive) {

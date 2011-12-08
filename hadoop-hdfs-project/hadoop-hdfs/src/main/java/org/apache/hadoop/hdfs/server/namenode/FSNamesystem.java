@@ -150,11 +150,16 @@ import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.BlockRecei
 import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.BlockReportMessage;
 import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.CommitBlockSynchronizationMessage;
 import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.DataNodeMessage;
+import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
+import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
+import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -308,6 +313,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Used when this NN is in standby state to read from the shared edit log.
    */
   private EditLogTailer editLogTailer = null;
+
+  /**
+   * Reference to the NN's HAContext object. This is only set once
+   * {@link #startCommonServices(Configuration, HAContext)} is called. 
+   */
+  private HAContext haContext;
   
   PendingDataNodeMessages getPendingDataNodeMessages() {
     return pendingDatanodeMessages;
@@ -434,11 +445,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** 
    * Start services common to both active and standby states
+   * @param haContext 
    * @throws IOException
    */
-  void startCommonServices(Configuration conf) throws IOException {
+  void startCommonServices(Configuration conf, HAContext haContext) throws IOException {
     this.registerMBean(); // register the MBean for the FSNamesystemState
     writeLock();
+    this.haContext = haContext;
     try {
       nnResourceChecker = new NameNodeResourceChecker(conf);
       checkAvailableResources();
@@ -2706,10 +2719,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           cmds = new DatanodeCommand[] {cmd};
         }
       }
-      return new HeartbeatResponse(cmds);
+      
+      return new HeartbeatResponse(cmds, createHaStatusHeartbeat());
     } finally {
       readUnlock();
     }
+  }
+
+  private NNHAStatusHeartbeat createHaStatusHeartbeat() {
+    HAState state = haContext.getState();
+    NNHAStatusHeartbeat.State hbState;
+    if (state instanceof ActiveState) {
+      hbState = NNHAStatusHeartbeat.State.ACTIVE;
+    } else if (state instanceof StandbyState) {
+      hbState = NNHAStatusHeartbeat.State.STANDBY;      
+    } else {
+      throw new AssertionError("Invalid state: " + state.getClass());
+    }
+    return new NNHAStatusHeartbeat(hbState,
+        Math.max(getFSImage().getLastAppliedTxId(),
+                 getFSImage().getEditLog().getLastWrittenTxId()));
   }
 
   /**
