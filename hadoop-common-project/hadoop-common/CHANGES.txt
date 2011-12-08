@@ -120,6 +120,9 @@ Trunk (unreleased changes)
     HADOOP-7887. KerberosAuthenticatorHandler is not setting
     KerberosName name rules from configuration. (tucu)
 
+    HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
+                 via atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
