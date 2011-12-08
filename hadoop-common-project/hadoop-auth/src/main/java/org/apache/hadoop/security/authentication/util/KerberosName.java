@@ -385,6 +385,15 @@ public class KerberosName {
     rules = parseRules(ruleString);
   }
 
+  /**
+   * Indicates if the name rules have been set.
+   * 
+   * @return if the name rules have been set.
+   */
+  public static boolean hasRulesBeenSet() {
+    return rules != null;
+  }
+  
   static void printRules() throws IOException {
     int i = 0;
     for(Rule r: rules) {

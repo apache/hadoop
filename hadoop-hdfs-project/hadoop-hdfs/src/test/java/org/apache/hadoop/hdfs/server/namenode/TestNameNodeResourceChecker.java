@@ -19,20 +19,19 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NameNodeResourceMonitor;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeResourceChecker.CheckedVolume;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -49,7 +48,7 @@ public class TestNameNodeResourceChecker {
     baseDir = new File(System.getProperty("test.build.data"));
     nameDir = new File(baseDir, "resource-check-name-dir");
     nameDir.mkdirs();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDir.getAbsolutePath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
   }
 
   /**
@@ -90,7 +89,7 @@ public class TestNameNodeResourceChecker {
       throws IOException, InterruptedException {
     MiniDFSCluster cluster = null;
     try {
-      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDir.getAbsolutePath());
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
       conf.setLong(DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY, 1);
       
       cluster = new MiniDFSCluster.Builder(conf)
@@ -145,7 +144,7 @@ public class TestNameNodeResourceChecker {
     File nameDir2 = new File(System.getProperty("test.build.data"), "name-dir2");
     nameDir1.mkdirs();
     nameDir2.mkdirs();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         nameDir1.getAbsolutePath() + "," + nameDir2.getAbsolutePath());
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY, Long.MAX_VALUE);
 
@@ -164,7 +163,7 @@ public class TestNameNodeResourceChecker {
     Configuration conf = new Configuration();
     File nameDir = new File(System.getProperty("test.build.data"), "name-dir");
     nameDir.mkdirs();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDir.getAbsolutePath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY, nameDir.getAbsolutePath());
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY, Long.MAX_VALUE);
 
@@ -176,38 +175,70 @@ public class TestNameNodeResourceChecker {
 
   /**
    * Test that the NN is considered to be out of resources only once all
-   * configured volumes are low on resources.
+   * redundant configured volumes are low on resources, or when any required
+   * volume is low on resources. 
    */
   @Test
-  public void testLowResourceVolumePolicy() throws IOException {
+  public void testLowResourceVolumePolicy() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
     File nameDir1 = new File(System.getProperty("test.build.data"), "name-dir1");
     File nameDir2 = new File(System.getProperty("test.build.data"), "name-dir2");
     nameDir1.mkdirs();
     nameDir2.mkdirs();
     
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         nameDir1.getAbsolutePath() + "," + nameDir2.getAbsolutePath());
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY, 2);
     
     NameNodeResourceChecker nnrc = new NameNodeResourceChecker(conf);
     
     // For the purpose of this test, we need to force the name dirs to appear to
     // be on different volumes.
-    Map<String, DF> volumes = new HashMap<String, DF>();
-    volumes.put("volume1", new DF(nameDir1, conf));
-    volumes.put("volume2", new DF(nameDir2, conf));
+    Map<String, CheckedVolume> volumes = new HashMap<String, CheckedVolume>();
+    CheckedVolume volume1 = Mockito.mock(CheckedVolume.class);
+    CheckedVolume volume2 = Mockito.mock(CheckedVolume.class);
+    CheckedVolume volume3 = Mockito.mock(CheckedVolume.class);
+    CheckedVolume volume4 = Mockito.mock(CheckedVolume.class);
+    CheckedVolume volume5 = Mockito.mock(CheckedVolume.class);
+    Mockito.when(volume1.isResourceAvailable()).thenReturn(true);
+    Mockito.when(volume2.isResourceAvailable()).thenReturn(true);
+    Mockito.when(volume3.isResourceAvailable()).thenReturn(true);
+    Mockito.when(volume4.isResourceAvailable()).thenReturn(true);
+    Mockito.when(volume5.isResourceAvailable()).thenReturn(true);
+    
+    // Make volumes 4 and 5 required.
+    Mockito.when(volume4.isRequired()).thenReturn(true);
+    Mockito.when(volume5.isRequired()).thenReturn(true);
+    
+    volumes.put("volume1", volume1);
+    volumes.put("volume2", volume2);
+    volumes.put("volume3", volume3);
+    volumes.put("volume4", volume4);
+    volumes.put("volume5", volume5);
     nnrc.setVolumes(volumes);
     
-    NameNodeResourceChecker spyNnrc = Mockito.spy(nnrc);
+    // Initially all dirs have space.
+    assertTrue(nnrc.hasAvailableDiskSpace());
     
-    Mockito.when(spyNnrc.getVolumesLowOnSpace()).thenReturn(
-        Lists.newArrayList("volume1"));
+    // 1/3 redundant dir is low on space.
+    Mockito.when(volume1.isResourceAvailable()).thenReturn(false);
+    assertTrue(nnrc.hasAvailableDiskSpace());
     
-    assertTrue(spyNnrc.hasAvailableDiskSpace());
+    // 2/3 redundant dirs are low on space.
+    Mockito.when(volume2.isResourceAvailable()).thenReturn(false);
+    assertFalse(nnrc.hasAvailableDiskSpace());
     
-    Mockito.when(spyNnrc.getVolumesLowOnSpace()).thenReturn(
-        Lists.newArrayList("volume1", "volume2"));
+    // Lower the minimum number of redundant volumes that must be available.
+    nnrc.setMinimumReduntdantVolumes(1);
+    assertTrue(nnrc.hasAvailableDiskSpace());
     
-    assertFalse(spyNnrc.hasAvailableDiskSpace());
+    // Just one required dir is low on space.
+    Mockito.when(volume3.isResourceAvailable()).thenReturn(false);
+    assertFalse(nnrc.hasAvailableDiskSpace());
+    
+    // Just the other required dir is low on space.
+    Mockito.when(volume3.isResourceAvailable()).thenReturn(true);
+    Mockito.when(volume4.isResourceAvailable()).thenReturn(false);
+    assertFalse(nnrc.hasAvailableDiskSpace());
   }
 }

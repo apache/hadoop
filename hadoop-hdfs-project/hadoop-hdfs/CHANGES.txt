@@ -15,6 +15,15 @@ Trunk (unreleased changes)
 
     HDFS-2581. Implement protobuf service for JournalProtocol. (suresh)
 
+    HDFS-2618. Implement protobuf service for NamenodeProtocol. (suresh)
+
+    HDFS-2629. Implement protobuf service for InterDatanodeProtocol. (suresh)
+
+    HDFS-2636. Implement protobuf service for ClientDatanodeProtocol. (suresh)
+
+    HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
+               should be configurable. (atm)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 

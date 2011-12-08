@@ -56,12 +56,19 @@ public class HadoopKerberosName extends KerberosName {
   }
   /**
    * Set the static configuration to get the rules.
+   * <p/>
+   * IMPORTANT: This method does a NOP if the rules have been set already.
+   * If there is a need to reset the rules, the {@link KerberosName#setRules(String)}
+   * method should be invoked directly.
+   * 
    * @param conf the new configuration
    * @throws IOException
    */
   public static void setConfiguration(Configuration conf) throws IOException {
-    String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
-    setRules(ruleString);
+    if (!hasRulesBeenSet()) {
+      String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
+      setRules(ruleString);
+    }
   }
 
   public static void main(String[] args) throws Exception {

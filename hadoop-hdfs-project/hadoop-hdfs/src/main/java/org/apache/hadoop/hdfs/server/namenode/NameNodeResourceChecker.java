@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -40,37 +41,80 @@ import com.google.common.base.Predicate;
  * 
  * NameNodeResourceChecker provides a method -
  * <code>hasAvailableDiskSpace</code> - which will return true if and only if
- * the NameNode has disk space available on all volumes which are configured to
- * be checked. Volumes containing file system name/edits dirs are added by
- * default, and arbitrary extra volumes may be configured as well.
+ * the NameNode has disk space available on all required volumes, and any volume
+ * which is configured to be redundant. Volumes containing file system edits dirs
+ * are added by default, and arbitrary extra volumes may be configured as well.
  */
-public class NameNodeResourceChecker {
+@InterfaceAudience.Private
+class NameNodeResourceChecker {
   private static final Log LOG = LogFactory.getLog(NameNodeResourceChecker.class.getName());
 
   // Space (in bytes) reserved per volume.
   private long duReserved;
 
   private final Configuration conf;
-  private Map<String, DF> volumes;
+  private Map<String, CheckedVolume> volumes;
+  private int minimumRedundantVolumes;
+  
+  @VisibleForTesting
+  class CheckedVolume implements CheckableNameNodeResource {
+    private DF df;
+    private boolean required;
+    private String volume;
+    
+    public CheckedVolume(File dirToCheck, boolean required)
+        throws IOException {
+      df = new DF(dirToCheck, conf);
+      this.required = required;
+      volume = df.getFilesystem();
+    }
+    
+    public String getVolume() {
+      return volume;
+    }
+    
+    @Override
+    public boolean isRequired() {
+      return required;
+    }
+
+    @Override
+    public boolean isResourceAvailable() {
+      long availableSpace = df.getAvailable();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Space available on volume '" + volume + "' is "
+            + availableSpace);
+      }
+      if (availableSpace < duReserved) {
+        LOG.warn("Space available on volume '" + volume + "' is "
+            + availableSpace +
+            ", which is below the configured reserved amount " + duReserved);
+        return false;
+      } else {
+        return true;
+      }
+    }
+    
+    @Override
+    public String toString() {
+      return "volume: " + volume + " required: " + required +
+          " resource available: " + isResourceAvailable();
+    }
+  }
 
   /**
-   * Create a NameNodeResourceChecker, which will check the name dirs and edits
-   * dirs set in <code>conf</code>.
-   * 
-   * @param conf
-   * @throws IOException
+   * Create a NameNodeResourceChecker, which will check the edits dirs and any
+   * additional dirs to check set in <code>conf</code>.
    */
   public NameNodeResourceChecker(Configuration conf) throws IOException {
     this.conf = conf;
-    volumes = new HashMap<String, DF>();
+    volumes = new HashMap<String, CheckedVolume>();
 
     duReserved = conf.getLong(DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_KEY,
         DFSConfigKeys.DFS_NAMENODE_DU_RESERVED_DEFAULT);
-  
+    
     Collection<URI> extraCheckedVolumes = Util.stringCollectionAsURIs(conf
         .getTrimmedStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_KEY));
-
-    addDirsToCheck(FSNamesystem.getNamespaceDirs(conf));
     
     Collection<URI> localEditDirs = Collections2.filter(
         FSNamesystem.getNamespaceEditsDirs(conf),
@@ -82,70 +126,86 @@ public class NameNodeResourceChecker {
             return false;
           }
         });
-    addDirsToCheck(localEditDirs);
-    addDirsToCheck(extraCheckedVolumes);
+
+    // Add all the local edits dirs, marking some as required if they are
+    // configured as such.
+    for (URI editsDirToCheck : localEditDirs) {
+      addDirToCheck(editsDirToCheck,
+          FSNamesystem.getRequiredNamespaceEditsDirs(conf).contains(
+              editsDirToCheck));
+    }
+
+    // All extra checked volumes are marked "required"
+    for (URI extraDirToCheck : extraCheckedVolumes) {
+      addDirToCheck(extraDirToCheck, true);
+    }
+    
+    minimumRedundantVolumes = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY,
+        DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_DEFAULT);
   }
 
   /**
-   * Add the passed-in directories to the list of volumes to check.
+   * Add the volume of the passed-in directory to the list of volumes to check.
+   * If <code>required</code> is true, and this volume is already present, but
+   * is marked redundant, it will be marked required. If the volume is already
+   * present but marked required then this method is a no-op.
    * 
-   * @param directoriesToCheck
-   *          The directories whose volumes will be checked for available space.
-   * @throws IOException
+   * @param directoryToCheck
+   *          The directory whose volume will be checked for available space.
    */
-  private void addDirsToCheck(Collection<URI> directoriesToCheck)
+  private void addDirToCheck(URI directoryToCheck, boolean required)
       throws IOException {
-    for (URI directoryUri : directoriesToCheck) {
-      File dir = new File(directoryUri.getPath());
-      if (!dir.exists()) {
-        throw new IOException("Missing directory "+dir.getAbsolutePath());
-      }
-      DF df = new DF(dir, conf);
-      volumes.put(df.getFilesystem(), df);
+    File dir = new File(directoryToCheck.getPath());
+    if (!dir.exists()) {
+      throw new IOException("Missing directory "+dir.getAbsolutePath());
+    }
+    
+    CheckedVolume newVolume = new CheckedVolume(dir, required);
+    CheckedVolume volume = volumes.get(newVolume.getVolume());
+    if (volume == null || (volume != null && !volume.isRequired())) {
+      volumes.put(newVolume.getVolume(), newVolume);
     }
   }
 
   /**
    * Return true if disk space is available on at least one of the configured
-   * volumes.
+   * redundant volumes, and all of the configured required volumes.
    * 
    * @return True if the configured amount of disk space is available on at
-   *         least one volume, false otherwise.
-   * @throws IOException
+   *         least one redundant volume and all of the required volumes, false
+   *         otherwise.
    */
   boolean hasAvailableDiskSpace()
       throws IOException {
-    return getVolumesLowOnSpace().size() < volumes.size();
+    return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
+        minimumRedundantVolumes);
   }
 
   /**
    * Return the set of directories which are low on space.
+   * 
    * @return the set of directories whose free space is below the threshold.
-   * @throws IOException 
    */
+  @VisibleForTesting
   Collection<String> getVolumesLowOnSpace() throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Going to check the following volumes disk space: " + volumes);
     }
     Collection<String> lowVolumes = new ArrayList<String>();
-    for (DF volume : volumes.values()) {
-      long availableSpace = volume.getAvailable();
-      String fileSystem = volume.getFilesystem();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Space available on volume '" + fileSystem + "' is " + availableSpace);
-      }
-      if (availableSpace < duReserved) {
-        LOG.warn("Space available on volume '" + fileSystem + "' is "
-            + availableSpace +
-            ", which is below the configured reserved amount " + duReserved);
-        lowVolumes.add(volume.getFilesystem());
-      }
+    for (CheckedVolume volume : volumes.values()) {
+      lowVolumes.add(volume.getVolume());
     }
     return lowVolumes;
   }
   
   @VisibleForTesting
-  void setVolumes(Map<String, DF> volumes) {
+  void setVolumes(Map<String, CheckedVolume> volumes) {
     this.volumes = volumes;
+  }
+  
+  @VisibleForTesting
+  void setMinimumReduntdantVolumes(int minimumRedundantVolumes) {
+    this.minimumRedundantVolumes = minimumRedundantVolumes;
   }
 }

@@ -24,13 +24,17 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentRequestProto;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InitReplicaRecoveryRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InitReplicaRecoveryResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.UpdateReplicaUnderRecoveryRequestProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 
@@ -39,21 +43,24 @@ import com.google.protobuf.ServiceException;
 
 /**
  * This class is the client side translator to translate the requests made on
- * {@link JournalProtocol} interfaces to the RPC server implementing
- * {@link JournalProtocolPB}.
+ * {@link InterDatanodeProtocol} interfaces to the RPC server implementing
+ * {@link InterDatanodeProtocolPB}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class JournalProtocolTranslatorPB implements JournalProtocol, Closeable {
+public class InterDatanodeProtocolTranslatorPB implements
+    InterDatanodeProtocol, Closeable {
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
-  private final JournalProtocolPB rpcProxy;
+  final private InterDatanodeProtocolPB rpcProxy;
 
-  public JournalProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
+  public InterDatanodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
       Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, JournalProtocolPB.class, ProtobufRpcEngine.class);
-    rpcProxy = RPC.getProxy(JournalProtocolPB.class,
-        RPC.getProtocolVersion(JournalProtocolPB.class), nameNodeAddr, conf);
+    RPC.setProtocolEngine(conf, InterDatanodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+    rpcProxy = RPC.getProxy(InterDatanodeProtocolPB.class,
+        RPC.getProtocolVersion(InterDatanodeProtocolPB.class), nameNodeAddr,
+        conf);
   }
 
   @Override
@@ -75,30 +82,31 @@ public class JournalProtocolTranslatorPB implements JournalProtocol, Closeable {
   }
 
   @Override
-  public void journal(NamenodeRegistration reg, long firstTxnId,
-      int numTxns, byte[] records) throws IOException {
-    JournalRequestProto req = JournalRequestProto.newBuilder()
-        .setRegistration(PBHelper.convert(reg))
-        .setFirstTxnId(firstTxnId)
-        .setNumTxns(numTxns)
-        .setRecords(PBHelper.getByteString(records))
-        .build();
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
+      throws IOException {
+    InitReplicaRecoveryRequestProto req = InitReplicaRecoveryRequestProto
+        .newBuilder().setBlock(PBHelper.convert(rBlock)).build();
+    InitReplicaRecoveryResponseProto resp;
     try {
-      rpcProxy.journal(NULL_CONTROLLER, req);
+      resp = rpcProxy.initReplicaRecovery(NULL_CONTROLLER, req);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
+    BlockProto b = resp.getBlock();
+    return new ReplicaRecoveryInfo(b.getBlockId(), b.getNumBytes(),
+        b.getGenStamp(), PBHelper.convert(resp.getState()));
   }
 
   @Override
-  public void startLogSegment(NamenodeRegistration registration, long txid)
-      throws IOException {
-    StartLogSegmentRequestProto req = StartLogSegmentRequestProto.newBuilder()
-        .setRegistration(PBHelper.convert(registration))
-        .setTxid(txid)
-        .build();
+  public ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+      long recoveryId, long newLength) throws IOException {
+    UpdateReplicaUnderRecoveryRequestProto req = 
+        UpdateReplicaUnderRecoveryRequestProto.newBuilder()
+        .setBlock(PBHelper.convert(oldBlock))
+        .setNewLength(newLength).setRecoveryId(recoveryId).build();
     try {
-      rpcProxy.startLogSegment(NULL_CONTROLLER, req);
+      return PBHelper.convert(rpcProxy.updateReplicaUnderRecovery(
+          NULL_CONTROLLER, req).getBlock());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

@@ -15,29 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.hdfs.security.token.block;
-
-import javax.crypto.SecretKey;
+package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 /**
- * Key used for generating and verifying block tokens
+ * Implementers of this class represent a NN resource whose availability can be
+ * checked. A resource can be either "required" or "redundant". All required
+ * resources must be available for the NN to continue operating. The NN will
+ * continue to operate as long as *any* redundant resource is available.
  */
 @InterfaceAudience.Private
-public class BlockKey extends DelegationKey {
-
-  public BlockKey() {
-    super();
-  }
-
-  public BlockKey(int keyId, long expiryDate, SecretKey key) {
-    super(keyId, expiryDate, key);
-  }
+interface CheckableNameNodeResource {
   
-  public BlockKey(int keyId, long expiryDate, byte[] encodedKey) {
-    super(keyId, expiryDate, encodedKey);
-  }
+  /**
+   * Is this resource currently available. 
+   * 
+   * @return true if and only if the resource in question is available.  
+   */
+  public boolean isResourceAvailable();
+  
+  /**
+   * Is this resource required.
+   * 
+   * @return true if and only if the resource in question is required for NN operation.
+   */
+  public boolean isRequired();
+
 }

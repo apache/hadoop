@@ -21,28 +21,32 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.verification.VerificationMode;
 
 public class TestEditLogJournalFailures {
 
   private int editsPerformed = 0;
-  private Configuration conf;
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private Runtime runtime;
@@ -53,8 +57,13 @@ public class TestEditLogJournalFailures {
    */
   @Before
   public void setUpMiniCluster() throws IOException {
-    conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    setUpMiniCluster(new HdfsConfiguration(), true);
+  }
+  
+  public void setUpMiniCluster(Configuration conf, boolean manageNameDfsDirs)
+      throws IOException {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .manageNameDfsDirs(manageNameDfsDirs).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     
@@ -64,11 +73,13 @@ public class TestEditLogJournalFailures {
     
     cluster.getNameNode().getFSImage().getEditLog().setRuntimeForTesting(runtime);
   }
-   
+  
   @After
   public void shutDownMiniCluster() throws IOException {
-    fs.close();
-    cluster.shutdown();
+    if (fs != null)
+      fs.close();
+    if (cluster != null)
+      cluster.shutdown();
   }
    
   @Test
@@ -109,7 +120,7 @@ public class TestEditLogJournalFailures {
     assertTrue(doAnEdit());
     // The previous edit could not be synced to any persistent storage, should
     // have halted the NN.
-    assertExitInvocations(1);
+    assertExitInvocations(atLeast(1));
   }
   
   @Test
@@ -123,6 +134,80 @@ public class TestEditLogJournalFailures {
     // A single journal failure should not result in a call to runtime.exit(...).
     assertExitInvocations(0);
     assertFalse(cluster.getNameNode().isInSafeMode());
+  }
+  
+  @Test
+  public void testSingleRequiredFailedEditsDirOnSetReadyToFlush()
+      throws IOException {
+    // Set one of the edits dirs to be required.
+    String[] editsDirs = cluster.getConfiguration(0).getTrimmedStrings(
+        DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+    shutDownMiniCluster();
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY, editsDirs[1]);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY, 0);
+    setUpMiniCluster(conf, true);
+    
+    assertTrue(doAnEdit());
+    // Invalidated the one required edits journal.
+    invalidateEditsDirAtIndex(1, false, false);
+    // Make sure runtime.exit(...) hasn't been called at all yet.
+    assertExitInvocations(0);
+    
+    // This will actually return true in the tests, since the NN will not in
+    // fact call Runtime.exit();
+    doAnEdit();
+    
+    // A single failure of a required journal should result in a call to
+    // runtime.exit(...).
+    assertExitInvocations(atLeast(1));
+  }
+  
+  @Test
+  public void testMultipleRedundantFailedEditsDirOnSetReadyToFlush()
+      throws IOException {
+    // Set up 4 name/edits dirs.
+    shutDownMiniCluster();
+    Configuration conf = new HdfsConfiguration();
+    String[] nameDirs = new String[4];
+    for (int i = 0; i < nameDirs.length; i++) {
+      File nameDir = new File(System.getProperty("test.build.data"),
+          "name-dir" + i);
+      nameDir.mkdirs();
+      nameDirs[i] = nameDir.getAbsolutePath();
+    }
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        StringUtils.join(nameDirs, ","));
+    
+    // Keep running unless there are less than 2 edits dirs remaining.
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY, 2);
+    setUpMiniCluster(conf, false);
+    
+    // All journals active.
+    assertTrue(doAnEdit());
+    assertExitInvocations(0);
+    
+    // Invalidate 1/4 of the redundant journals.
+    invalidateEditsDirAtIndex(0, false, false);
+    assertTrue(doAnEdit());
+    assertExitInvocations(0);
+
+    // Invalidate 2/4 of the redundant journals.
+    invalidateEditsDirAtIndex(1, false, false);
+    assertTrue(doAnEdit());
+    assertExitInvocations(0);
+    
+    // Invalidate 3/4 of the redundant journals.
+    invalidateEditsDirAtIndex(2, false, false);
+    
+    // This will actually return true in the tests, since the NN will not in
+    // fact call Runtime.exit();
+    doAnEdit();
+    
+    // A failure of more than the minimum number of redundant journals should
+    // result in a call to runtime.exit(...).
+    assertExitInvocations(atLeast(1));
   }
 
   /**
@@ -181,6 +266,17 @@ public class TestEditLogJournalFailures {
   private boolean doAnEdit() throws IOException {
     return fs.mkdirs(new Path("/tmp", Integer.toString(editsPerformed++)));
   }
+  
+  /**
+   * Make sure that Runtime.exit(...) has been called exactly
+   * <code>expectedExits<code> number of times.
+   * 
+   * @param expectedExits the exact number of times Runtime.exit(...) should
+   *                      have been called.
+   */
+  private void assertExitInvocations(int expectedExits) {
+    assertExitInvocations(times(expectedExits));
+  }
 
   /**
    * Make sure that Runtime.exit(...) has been called
@@ -188,7 +284,7 @@ public class TestEditLogJournalFailures {
    * 
    * @param expectedExits the number of times Runtime.exit(...) should have been called.
    */
-  private void assertExitInvocations(int expectedExits) {
-    verify(runtime, times(expectedExits)).exit(anyInt());
+  private void assertExitInvocations(VerificationMode expectedExits) {
+    verify(runtime, expectedExits).exit(anyInt());
   }
 }

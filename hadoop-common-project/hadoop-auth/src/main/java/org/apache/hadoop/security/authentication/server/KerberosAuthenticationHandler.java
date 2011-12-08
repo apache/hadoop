@@ -55,6 +55,8 @@ import java.util.Set;
  * It does not have a default value.</li>
  * <li>kerberos.keytab: the keytab file containing the credentials for the Kerberos principal.
  * It does not have a default value.</li>
+ * <li>kerberos.name.rules: kerberos names rules to resolve principal names, see 
+ * {@link KerberosName#setRules(String)}</li>
  * </ul>
  */
 public class KerberosAuthenticationHandler implements AuthenticationHandler {
@@ -151,6 +153,11 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
         throw new ServletException("Keytab does not exist: " + keytab);
       }
 
+      String nameRules = config.getProperty(NAME_RULES, null);
+      if (nameRules != null) {
+        KerberosName.setRules(nameRules);
+      }
+      
       Set<Principal> principals = new HashSet<Principal>();
       principals.add(new KerberosPrincipal(principal));
       Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());

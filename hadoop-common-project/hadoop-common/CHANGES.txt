@@ -72,6 +72,8 @@ Trunk (unreleased changes)
     HADOOP-7876. Provided access to encoded key in DelegationKey for
     use in protobuf based RPCs. (suresh)
 
+    HADOOP-7886. Add toString to FileStatus. (SreeHari via jghoman)
+
   BUGS
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
@@ -114,6 +116,12 @@ Trunk (unreleased changes)
     HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
 
     HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
+
+    HADOOP-7887. KerberosAuthenticatorHandler is not setting
+    KerberosName name rules from configuration. (tucu)
+
+    HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
+                 via atm)
 
   OPTIMIZATIONS
 

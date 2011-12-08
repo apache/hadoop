@@ -68,14 +68,28 @@ public final class Util {
   }
 
   /**
-   * Converts the passed File to a URI.
-   *
+   * Converts the passed File to a URI. This method trims the trailing slash if
+   * one is appended because the underlying file is in fact a directory that
+   * exists.
+   * 
    * @param f the file to convert
-   * @return the resulting URI 
-   * @throws IOException 
+   * @return the resulting URI
+   * @throws IOException
    */
   public static URI fileAsURI(File f) throws IOException {
-    return f.getCanonicalFile().toURI();
+    URI u = f.getCanonicalFile().toURI();
+    
+    // trim the trailing slash, if it's present
+    if (u.getPath().endsWith("/")) {
+      String uriAsString = u.toString();
+      try {
+        u = new URI(uriAsString.substring(0, uriAsString.length() - 1));
+      } catch (URISyntaxException e) {
+        throw new IOException(e);
+      }
+    }
+    
+    return u;
   }
 
   /**

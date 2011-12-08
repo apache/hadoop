@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +45,7 @@ public class TestApplicationLimits {
   LeafQueue queue;
   
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);

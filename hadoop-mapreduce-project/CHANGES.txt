@@ -40,9 +40,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
     (tucu)
 
-		HADOOP-7862   MR changes to work with HADOOP 7862: 
-									Move the support for multiple protocols to lower layer so that Writable,
-								  PB and Avro can all use it (Sanjay)
+    HADOOP-7862   MR changes to work with HADOOP 7862: 
+    Move the support for multiple protocols to lower layer so that Writable,
+    PB and Avro can all use it (Sanjay)
 
   BUG FIXES
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
@@ -73,6 +73,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
 
     MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
+
+    MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
+    classpath from the build machine. (tucu)
 
 Release 0.23.1 - Unreleased
 
@@ -242,6 +245,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3485. DISKS_FAILED -101 error code should be defined in same location as 
     ABORTED_CONTAINER_EXIT_STATUS. (Ravi Gummadi via mahadev)
+
+    MAPREDUCE-3496. Fixed client to print queue acls in consistent order.
+    (Jonathan Eagles via acmurthy) 
+
+    MAPREDUCE-3147. Handle leaf queues with the same name properly. (Ravi Prakash via
+    mahadev)
 
 Release 0.23.0 - 2011-11-01 
 
