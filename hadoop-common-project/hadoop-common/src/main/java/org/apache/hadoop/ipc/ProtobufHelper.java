@@ -33,14 +33,17 @@ public class ProtobufHelper {
   }
 
   /**
-   * Return the RemoteException wrapped in ServiceException as cause.
-   * @param se ServiceException that wraps RemoteException
-   * @return RemoteException wrapped in ServiceException or
-   *         a new IOException that wraps unexpected ServiceException.
+   * Return the IOException thrown by the remote server wrapped in 
+   * ServiceException as cause.
+   * @param se ServiceException that wraps IO exception thrown by the server
+   * @return Exception wrapped in ServiceException or
+   *         a new IOException that wraps the unexpected ServiceException.
    */
   public static IOException getRemoteException(ServiceException se) {
     Throwable e = se.getCause();
-    return ((e instanceof RemoteException) ? (IOException) e : 
-      new IOException(se));
+    if (e == null) {
+      return new IOException(se);
+    }
+    return e instanceof IOException ? (IOException) e : new IOException(se);
   }
 }

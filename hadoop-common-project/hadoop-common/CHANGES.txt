@@ -16,26 +16,26 @@ Trunk (unreleased changes)
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple
-                 versions of the same protocol (sanjay Radia)
+    versions of the same protocol (sanjay Radia)
 
     HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
     HADOOP-7635. RetryInvocationHandler should release underlying resources on
-                 close (atm)
+    close (atm)
 
     HADOOP-7687 Make getProtocolSignature public  (sanjay)
 
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
-                 interface introduced in HADOOP-7524.  (cutting)
+    interface introduced in HADOOP-7524.  (cutting)
 
     HADOOP-7716. RPC protocol registration on SS does not log the protocol name
-                 (only the class which may be different) (sanjay)
+    (only the class which may be different) (sanjay)
 
     HADOOP-7717. Move handling of concurrent client fail-overs to
-                 RetryInvocationHandler (atm)
+    RetryInvocationHandler (atm)
 
     HADOOP-6490. Use StringUtils over String#replace in Path#normalizePath.
-                 (Uma Maheswara Rao G via harsh)
+    (Uma Maheswara Rao G via harsh)
 
     HADOOP-7736. Remove duplicate Path#normalizePath call. (harsh)
 
@@ -121,7 +121,10 @@ Trunk (unreleased changes)
     KerberosName name rules from configuration. (tucu)
 
     HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
-                 via atm)
+    via atm)
+
+    HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
+    consistent with WritableRpcEngine. (suresh)
 
   OPTIMIZATIONS
 

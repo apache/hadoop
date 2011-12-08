@@ -144,9 +144,10 @@ public class ProtobufRpcEngine implements RpcEngine {
      * 
      * ServiceException has the following causes:
      * <ol>
-     * <li>Exceptions encountered in this methods are thrown as
-     * RpcClientException, wrapped in RemoteException</li>
-     * <li>Remote exceptions are thrown wrapped in RemoteException</li>
+     * <li>Exceptions encountered on the client side in this method are 
+     * set as cause in ServiceException as is.</li>
+     * <li>Exceptions from the server are wrapped in RemoteException and are
+     * set as cause in ServiceException</li>
      * </ol>
      * 
      * Note that the client calling protobuf RPC methods, must handle
@@ -167,9 +168,8 @@ public class ProtobufRpcEngine implements RpcEngine {
       try {
         val = (RpcResponseWritable) client.call(RpcKind.RPC_PROTOCOL_BUFFER,
             new RpcRequestWritable(rpcRequest), remoteId);
-      } catch (Exception e) {
-        RpcClientException ce = new RpcClientException("Client exception", e);
-        throw new ServiceException(getRemoteException(ce));
+      } catch (Throwable e) {
+        throw new ServiceException(e);
       }
 
       HadoopRpcResponseProto response = val.message;
@@ -197,9 +197,8 @@ public class ProtobufRpcEngine implements RpcEngine {
       try {
         returnMessage = prototype.newBuilderForType()
             .mergeFrom(response.getResponse()).build();
-      } catch (InvalidProtocolBufferException e) {
-        RpcClientException ce = new RpcClientException("Client exception", e);
-        throw new ServiceException(getRemoteException(ce));
+      } catch (Throwable e) {
+        throw new ServiceException(e);
       }
       return returnMessage;
     }
@@ -309,11 +308,6 @@ public class ProtobufRpcEngine implements RpcEngine {
         numHandlers, numReaders, queueSizePerHandler, verbose, secretManager);
   }
   
-  private static RemoteException getRemoteException(Exception e) {
-    return new RemoteException(e.getClass().getName(),
-        StringUtils.stringifyException(e));
-  }
-
   public static class Server extends RPC.Server {
     /**
      * Construct an RPC server.
@@ -335,8 +329,8 @@ public class ProtobufRpcEngine implements RpcEngine {
           numReaders, queueSizePerHandler, conf, classNameBase(protocolImpl
               .getClass().getName()), secretManager);
       this.verbose = verbose;  
-      registerProtocolAndImpl(RpcKind.RPC_PROTOCOL_BUFFER, 
-          protocolClass, protocolImpl);
+      registerProtocolAndImpl(RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
+          protocolImpl);
     }
 
     private static RpcResponseWritable handleException(Throwable e) {
