@@ -110,11 +110,6 @@ Previous hftp feature was a read-only FileSystem and does not provide &quot;writ
      <b>enable hadoop config generator to set dfs.block.local-path-access.user to enable short circuit read</b><br>
      <blockquote>we have a new config that allows to select which user can have access for short circuit read. We should make that configurable through the config generator scripts.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7810">HADOOP-7810</a>.
-     Blocker bug reported by johnvijoe and fixed by johnvijoe <br>
-     <b>move hadoop archive to core from tools</b><br>
-     <blockquote>&quot;The HadoopArchieves classes are included in the $HADOOP_HOME/hadoop_tools.jar, but this file is not found in `hadoop classpath`.<br><br>A Pig script using HCatalog&apos;s dynamic partitioning with HAR enabled will therefore fail if a jar with HAR is not included in the pig call&apos;s &apos;-cp&apos; and &apos;-Dpig.additional.jars&apos; arguments.&quot;<br><br>I am not aware of any reason to not include hadoop-tools.jar in &apos;hadoop classpath&apos;. Will attach a patch soon.</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7815">HADOOP-7815</a>.
      Minor bug reported by rramya and fixed by rramya (conf)<br>
      <b>Map memory mb is being incorrectly set by hadoop-setup-conf.sh</b><br>
