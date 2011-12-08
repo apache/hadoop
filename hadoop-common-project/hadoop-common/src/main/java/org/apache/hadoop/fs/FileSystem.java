@@ -871,10 +871,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
    @Deprecated
    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
-       boolean overwrite,
-       int bufferSize, short replication, long blockSize,
+       boolean overwrite, int bufferSize, short replication, long blockSize,
        Progressable progress) throws IOException {
-     throw new IOException("createNonRecursive unsupported for this filesystem");
+     throw new IOException("createNonRecursive unsupported for this filesystem "
+         + this.getClass());
    }
 
   /**
