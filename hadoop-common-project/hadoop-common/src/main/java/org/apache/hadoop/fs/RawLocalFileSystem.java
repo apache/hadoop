@@ -29,7 +29,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -238,9 +237,16 @@ public class RawLocalFileSystem extends FileSystem {
   }
 
   /** {@inheritDoc} */
+  @Override
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
     short replication, long blockSize, Progressable progress)
     throws IOException {
+    return create(f, overwrite, true, bufferSize, replication, blockSize, progress);
+  }
+
+  private FSDataOutputStream create(Path f, boolean overwrite,
+      boolean createParent, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
     if (exists(f) && !overwrite) {
       throw new IOException("File already exists: "+f);
     }
@@ -263,7 +269,19 @@ public class RawLocalFileSystem extends FileSystem {
     setPermission(f, permission);
     return out;
   }
-  
+
+  /** {@inheritDoc} */
+  @Override
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      boolean overwrite,
+      int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    FSDataOutputStream out = create(f,
+        overwrite, false, bufferSize, replication, blockSize, progress);
+    setPermission(f, permission);
+    return out;
+  }
+
   public boolean rename(Path src, Path dst) throws IOException {
     if (pathToFile(src).renameTo(pathToFile(dst))) {
       return true;

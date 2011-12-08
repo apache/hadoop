@@ -33,6 +33,9 @@ Release 0.23.1 - Unreleased
     HADOOP-6840. Support non-recursive create() in FileSystem and 
     SequenceFile.Writer. (jitendra and eli via eli)
 
+    HADOOP-6886. LocalFileSystem Needs createNonRecursive API.
+    (Nicolas Spiegelberg and eli via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
