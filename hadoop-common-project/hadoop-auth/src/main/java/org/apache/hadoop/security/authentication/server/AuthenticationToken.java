@@ -23,12 +23,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
- * The {@link AuthenticationToken} contains information about an authenticated HTTP client and doubles
- * as the {@link Principal} to be returned by authenticated {@link HttpServletRequest}s
+ * The {@link AuthenticationToken} contains information about an authenticated
+ * HTTP client and doubles as the {@link Principal} to be returned by
+ * authenticated {@link HttpServletRequest}s
  * <p/>
- * The token can be serialized/deserialized to and from a string as it is sent and received in HTTP client
- * responses and requests as a HTTP cookie (this is done by the {@link AuthenticationFilter}).
+ * The token can be serialized/deserialized to and from a string as it is sent
+ * and received in HTTP client responses and requests as a HTTP cookie (this is
+ * done by the {@link AuthenticationFilter}).
  */
 public class AuthenticationToken implements Principal {
 

@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
     consistent with WritableRpcEngine. (suresh)
 
+    HADOOP-7898. Fix javadoc warnings in AuthenticationToken.java.
+    (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
