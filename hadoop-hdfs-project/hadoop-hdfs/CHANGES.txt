@@ -24,6 +24,9 @@ Trunk (unreleased changes)
     HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
                should be configurable. (atm)
 
+    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy with 
+    read/write capabilities. (tucu)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 

@@ -264,6 +264,11 @@
       <artifactId>hadoop-auth</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>com.googlecode.json-simple</groupId>
+      <artifactId>json-simple</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>
