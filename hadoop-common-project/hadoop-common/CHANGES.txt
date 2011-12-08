@@ -30,6 +30,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7877. Update balancer CLI usage documentation to include the new
     -policy option.  (szetszwo)
 
+    HADOOP-6840. Support non-recursive create() in FileSystem and 
+    SequenceFile.Writer. (jitendra and eli via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
