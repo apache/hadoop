@@ -42,6 +42,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2604. Add a log message to show if WebHDFS is enabled and a
     configuration section in the forrest doc.  (szetszwo)
 
+    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy
+    with read/write capabilities. (tucu)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
