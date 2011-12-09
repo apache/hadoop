@@ -295,6 +295,52 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
+            <id>compile-proto</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <echo file="${project.build.directory}/compile-proto.sh">
+                  PROTO_DIR=${basedir}/src/main/proto
+                  ls $PROTO_DIR &amp;> /dev/null
+                  if [ $? = 0 ]; then
+                    JAVA_DIR=${project.build.directory}/generated-sources/java
+                    mkdir -p $JAVA_DIR
+                    ls $PROTO_DIR/*.proto | xargs -n 1 protoc -I$PROTO_DIR --java_out=$JAVA_DIR
+                  fi
+                </echo>
+                <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                  <arg line="./compile-proto.sh"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
+            <id>compile-test-proto</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <echo file="${project.build.directory}/compile-test-proto.sh">
+                  PROTO_DIR=${basedir}/src/test/proto
+                  ls $PROTO_DIR &amp;> /dev/null
+                  if [ $? = 0 ]; then
+                    JAVA_DIR=${project.build.directory}/generated-test-sources/java
+                    mkdir -p $JAVA_DIR
+                    ls $PROTO_DIR/*.proto | xargs -n 1 protoc -I$PROTO_DIR --java_out=$JAVA_DIR
+                  fi
+                </echo>
+                <exec executable="sh" dir="${project.build.directory}" failonerror="true">
+                  <arg line="./compile-test-proto.sh"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
+          <execution>
             <id>save-version</id>
             <phase>generate-sources</phase>
             <goals>

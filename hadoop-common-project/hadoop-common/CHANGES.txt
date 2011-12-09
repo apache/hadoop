@@ -74,6 +74,8 @@ Trunk (unreleased changes)
 
     HADOOP-7886. Add toString to FileStatus. (SreeHari via jghoman)
 
+    HADOOP-7899. Generate proto java files as part of the build. (tucu)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
