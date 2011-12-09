@@ -1434,6 +1434,27 @@ public class TestConfiguration extends TestCase {
     assertEquals("value", conf.get("attr"));
   }
 
+  public void testGetClassesShouldReturnDefaultValue() throws Exception {
+    Configuration config = new Configuration();
+    Class<?>[] classes = 
+      config.getClasses("testClassName", Configuration.class);
+    assertEquals(
+        "Not returning expected number of classes. Number of returned classes ="
+            + classes.length, 1, classes.length);
+    assertEquals("Not returning the default class Name", Configuration.class,
+        classes[0]);
+  }
+
+  public void testGetClassesShouldReturnEmptyArray()
+      throws Exception {
+    Configuration config = new Configuration();
+    config.set("testClassName", "");
+    Class<?>[] classes = config.getClasses("testClassName", Configuration.class);
+    assertEquals(
+        "Not returning expected number of classes. Number of returned classes ="
+            + classes.length, 0, classes.length);
+  }
+  
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
