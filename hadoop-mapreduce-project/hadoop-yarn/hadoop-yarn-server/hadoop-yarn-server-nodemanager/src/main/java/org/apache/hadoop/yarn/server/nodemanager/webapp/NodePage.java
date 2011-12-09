@@ -71,7 +71,7 @@ public class NodePage extends NMView {
                 this.context.getNodeHealthStatus().getLastHealthReportTime()))
           ._("NodeHealthReport",
               this.context.getNodeHealthStatus().getHealthReport())
-          ._("Node Manger Version:", YarnVersionInfo.getBuildVersion() +
+          ._("Node Manager Version:", YarnVersionInfo.getBuildVersion() +
               " on " + YarnVersionInfo.getDate())
           ._("Hadoop Version:", VersionInfo.getBuildVersion() +
               " on " + VersionInfo.getDate());

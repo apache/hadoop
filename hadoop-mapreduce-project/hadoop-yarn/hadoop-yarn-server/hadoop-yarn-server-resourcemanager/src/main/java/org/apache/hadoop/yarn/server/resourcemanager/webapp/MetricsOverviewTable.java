@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import java.util.concurrent.ConcurrentMap;
-
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -85,7 +81,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Apps Submitted")._().
         th().$class("ui-state-default")._("Containers Running")._().
         th().$class("ui-state-default")._("Memory Used")._().
-        th().$class("ui-state-default")._("Memopry Total")._().
+        th().$class("ui-state-default")._("Memory Total")._().
         th().$class("ui-state-default")._("Memory Reserved")._().
         th().$class("ui-state-default")._("Total Nodes")._().
         th().$class("ui-state-default")._("Decommissioned Nodes")._().
