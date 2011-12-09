@@ -151,6 +151,9 @@ Release 2.7.4 - UNRELEASED
     HADOOP-14434. Use MoveFileEx to allow renaming a file when the destination
     exists. (Lukas Majercak via cdouglas)
 
+    HADOOP-7851. Configuration.getClasses() never returns the default value. 
+    (Uma Maheswara Rao G via amarrk)
+
 Release 2.7.3 - 2016-08-25
 
   INCOMPATIBLE CHANGES
@@ -5381,9 +5384,6 @@ Release 0.23.1 - 2012-02-17
    javadoc and findbugs warning counts. (Jonathan Eagles via tlipcon)
 
    HADOOP-7841. Run tests with non-secure random. (tlipcon)
-
-    HADOOP-7851. Configuration.getClasses() never returns the default value. 
-                 (Uma Maheswara Rao G via amarrk)
 
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)

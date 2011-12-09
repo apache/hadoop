@@ -2161,9 +2161,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         or <code>defaultValue</code>. 
    */
   public Class<?>[] getClasses(String name, Class<?> ... defaultValue) {
-    String[] classnames = getTrimmedStrings(name);
-    if (classnames == null)
+    String valueString = getRaw(name);
+    if (null == valueString) {
       return defaultValue;
+    }
+    String[] classnames = getTrimmedStrings(name);
     try {
       Class<?>[] classes = new Class<?>[classnames.length];
       for(int i = 0; i < classnames.length; i++) {
