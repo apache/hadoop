@@ -97,6 +97,59 @@ public class JsonUtil {
     return (Token<BlockTokenIdentifier>)toToken(m);
   }
 
+  /** Convert a Token[] to a JSON array. */
+  private static Object[] toJsonArray(final Token<? extends TokenIdentifier>[] array
+      ) throws IOException {
+    if (array == null) {
+      return null;
+    } else if (array.length == 0) {
+      return EMPTY_OBJECT_ARRAY;
+    } else {
+      final Object[] a = new Object[array.length];
+      for(int i = 0; i < array.length; i++) {
+        a[i] = toJsonMap(array[i]);
+      }
+      return a;
+    }
+  }
+
+  /** Convert a token object to a JSON string. */
+  public static String toJsonString(final Token<? extends TokenIdentifier>[] tokens
+      ) throws IOException {
+    if (tokens == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put(Token.class.getSimpleName(), toJsonArray(tokens));
+    return toJsonString(Token.class.getSimpleName() + "s", m);
+  }
+
+  /** Convert an Object[] to a List<Token<?>>.  */
+  private static List<Token<?>> toTokenList(final Object[] objects) throws IOException {
+    if (objects == null) {
+      return null;
+    } else if (objects.length == 0) {
+      return Collections.emptyList();
+    } else {
+      final List<Token<?>> list = new ArrayList<Token<?>>(objects.length);
+      for(int i = 0; i < objects.length; i++) {
+        list.add(toToken((Map<?, ?>)objects[i]));
+      }
+      return list;
+    }
+  }
+
+  /** Convert a JSON map to a List<Token<?>>. */
+  public static List<Token<?>> toTokenList(final Map<?, ?> json) throws IOException {
+    if (json == null) {
+      return null;
+    }
+
+    final Map<?, ?> m = (Map<?, ?>)json.get(Token.class.getSimpleName() + "s");
+    return toTokenList((Object[])m.get(Token.class.getSimpleName()));
+  }
+
   /** Convert an exception object to a Json string. */
   public static String toJsonString(final Exception e) {
     final Map<String, Object> m = new TreeMap<String, Object>();
