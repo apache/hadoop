@@ -60,6 +60,9 @@ Release 1.1.0 - unreleased
 
     HDFS-2637. The rpc timeout for block recovery is too low. (eli)
 
+    MAPREDUCE-3319. Hadoop example "multifilewc" broken in 0.20.205.0.
+    (Subroto Sanyal via mattf)
+
   IMPROVEMENTS
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for 
