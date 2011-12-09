@@ -26,6 +26,7 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     CREATE(true, HttpURLConnection.HTTP_CREATED),
 
     MKDIRS(false, HttpURLConnection.HTTP_OK),
+    CREATESYMLINK(false, HttpURLConnection.HTTP_OK),
     RENAME(false, HttpURLConnection.HTTP_OK),
     SETREPLICATION(false, HttpURLConnection.HTTP_OK),
 

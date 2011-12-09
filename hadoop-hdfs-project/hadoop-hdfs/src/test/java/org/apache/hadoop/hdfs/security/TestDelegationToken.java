@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -184,23 +185,44 @@ public class TestDelegationToken {
       }
     });
 
-    final Token<DelegationTokenIdentifier> token = webhdfs
-        .getDelegationToken("JobTracker");
-    DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
-    byte[] tokenId = token.getIdentifier();
-    identifier
-        .readFields(new DataInputStream(new ByteArrayInputStream(tokenId)));
-    LOG.info("A valid token should have non-null password, and should be renewed successfully");
-    Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
-    dtSecretManager.renewToken(token, "JobTracker");
-    ugi.doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws Exception {
-        token.renew(config);
-        token.cancel(config);
-        return null;
-      }
-    });
+    { //test getDelegationToken(..)
+      final Token<DelegationTokenIdentifier> token = webhdfs
+          .getDelegationToken("JobTracker");
+      DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
+      byte[] tokenId = token.getIdentifier();
+      identifier.readFields(new DataInputStream(new ByteArrayInputStream(tokenId)));
+      LOG.info("A valid token should have non-null password, and should be renewed successfully");
+      Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
+      dtSecretManager.renewToken(token, "JobTracker");
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          token.renew(config);
+          token.cancel(config);
+          return null;
+        }
+      });
+    }
+
+    { //test getDelegationTokens(..)
+      final List<Token<?>> tokenlist = webhdfs.getDelegationTokens("JobTracker");
+      DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
+      @SuppressWarnings("unchecked")
+      final Token<DelegationTokenIdentifier> token = (Token<DelegationTokenIdentifier>)tokenlist.get(0);
+      byte[] tokenId = token.getIdentifier();
+      identifier.readFields(new DataInputStream(new ByteArrayInputStream(tokenId)));
+      LOG.info("A valid token should have non-null password, and should be renewed successfully");
+      Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
+      dtSecretManager.renewToken(token, "JobTracker");
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          token.renew(config);
+          token.cancel(config);
+          return null;
+        }
+      });
+    }
   }
 
   @Test

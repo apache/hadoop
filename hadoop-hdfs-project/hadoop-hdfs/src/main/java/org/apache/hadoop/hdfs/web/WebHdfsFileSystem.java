@@ -29,7 +29,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -64,6 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
+import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -318,8 +318,9 @@ public class WebHdfsFileSystem extends FileSystem
         + '&' + new UserParam(ugi)
         + Param.toSortedString("&", parameters);
     final URL url;
-    if (op.equals(PutOpParam.Op.RENEWDELEGATIONTOKEN)
-        || op.equals(GetOpParam.Op.GETDELEGATIONTOKEN)) {
+    if (op == PutOpParam.Op.RENEWDELEGATIONTOKEN
+        || op == GetOpParam.Op.GETDELEGATIONTOKEN
+        || op == GetOpParam.Op.GETDELEGATIONTOKENS) {
       // Skip adding delegation token for getting or renewing delegation token,
       // because these operations require kerberos authentication.
       url = getNamenodeURL(path, query);
@@ -456,6 +457,18 @@ public class WebHdfsFileSystem extends FileSystem
     final Map<?, ?> json = run(op, f,
         new PermissionParam(applyUMask(permission)));
     return (Boolean)json.get("boolean");
+  }
+
+  /**
+   * Create a symlink pointing to the destination path.
+   * @see org.apache.hadoop.fs.Hdfs#createSymlink(Path, Path, boolean) 
+   */
+  public void createSymlink(Path destination, Path f, boolean createParent
+      ) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.CREATESYMLINK;
+    run(op, f, new DestinationParam(makeQualified(destination).toUri().getPath()),
+        new CreateParentParam(createParent));
   }
 
   @Override
@@ -703,8 +716,13 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public List<Token<?>> getDelegationTokens(final String renewer
       ) throws IOException {
-    final Token<?>[] t = {getDelegationToken(renewer)};
-    return Arrays.asList(t);
+    final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKENS;
+    final Map<?, ?> m = run(op, null, new RenewerParam(renewer));
+    final List<Token<?>> tokens = JsonUtil.toTokenList(m);
+    for(Token<?> t : tokens) {
+      SecurityUtil.setTokenService(t, nnAddr);
+    }
+    return tokens;
   }
 
   @Override

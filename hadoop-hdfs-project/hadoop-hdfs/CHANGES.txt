@@ -9,6 +9,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2316. [umbrella] WebHDFS: a complete FileSystem implementation for 
     accessing HDFS over HTTP (szetszwo)
 
+    HDFS-2594. Support getDelegationTokens and createSymlink in WebHDFS.
+    (szetszwo)
+
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 

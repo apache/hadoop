@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
+import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DeleteOpParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
@@ -245,12 +246,14 @@ public class NamenodeWebHdfsMethods {
           final AccessTimeParam accessTime,
       @QueryParam(RenameOptionSetParam.NAME) @DefaultValue(RenameOptionSetParam.DEFAULT)
           final RenameOptionSetParam renameOptions,
+      @QueryParam(CreateParentParam.NAME) @DefaultValue(CreateParentParam.DEFAULT)
+          final CreateParentParam createParent,
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument
       ) throws IOException, InterruptedException {
     return put(ugi, delegation, username, doAsUser, ROOT, op, destination,
         owner, group, permission, overwrite, bufferSize, replication,
-        blockSize, modificationTime, accessTime, renameOptions,
+        blockSize, modificationTime, accessTime, renameOptions, createParent,
         delegationTokenArgument);
   }
 
@@ -292,6 +295,8 @@ public class NamenodeWebHdfsMethods {
           final AccessTimeParam accessTime,
       @QueryParam(RenameOptionSetParam.NAME) @DefaultValue(RenameOptionSetParam.DEFAULT)
           final RenameOptionSetParam renameOptions,
+      @QueryParam(CreateParentParam.NAME) @DefaultValue(CreateParentParam.DEFAULT)
+          final CreateParentParam createParent,
       @QueryParam(TokenArgumentParam.NAME) @DefaultValue(TokenArgumentParam.DEFAULT)
           final TokenArgumentParam delegationTokenArgument
       ) throws IOException, InterruptedException {
@@ -324,6 +329,12 @@ public class NamenodeWebHdfsMethods {
       final boolean b = np.mkdirs(fullpath, permission.getFsPermission(), true);
       final String js = JsonUtil.toJsonString("boolean", b);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case CREATESYMLINK:
+    {
+      np.createSymlink(destination.getValue(), fullpath,
+          PermissionParam.getDefaultFsPermission(), createParent.getValue());
+      return Response.ok().type(MediaType.APPLICATION_JSON).build();
     }
     case RENAME:
     {
@@ -576,6 +587,17 @@ public class NamenodeWebHdfsMethods {
       final Token<? extends TokenIdentifier> token = generateDelegationToken(
           namenode, ugi, renewer.getValue());
       final String js = JsonUtil.toJsonString(token);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETDELEGATIONTOKENS:
+    {
+      if (delegation.getValue() != null) {
+        throw new IllegalArgumentException(delegation.getName()
+            + " parameter is not null.");
+      }
+      final Token<? extends TokenIdentifier>[] tokens = new Token<?>[1];
+      tokens[0] = generateDelegationToken(namenode, ugi, renewer.getValue());
+      final String js = JsonUtil.toJsonString(tokens);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY:
