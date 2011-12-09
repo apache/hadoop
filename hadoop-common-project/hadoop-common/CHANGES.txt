@@ -71,8 +71,12 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7887. KerberosAuthenticatorHandler is not setting KerberosName 
    name rules from configuration. (tucu)
+
    HADOOP-7870. fix SequenceFile#createWriter with boolean
    createParent arg to respect createParent. (Jon Hsieh via eli)
+
+    HADOOP-7902. skipping name rules setting (if already set) should be done 
+    on UGI initialization only. (tucu)
 
 Release 0.23.0 - 2011-11-01 
 
