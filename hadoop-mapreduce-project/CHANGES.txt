@@ -203,6 +203,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3147. Handle leaf queues with the same name properly.
     (Ravi Prakash via mahadev)
 
+    MAPREDUCE-3327. RM web ui scheduler link doesn't show correct max value 
+    for queues (Anupam Seth via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

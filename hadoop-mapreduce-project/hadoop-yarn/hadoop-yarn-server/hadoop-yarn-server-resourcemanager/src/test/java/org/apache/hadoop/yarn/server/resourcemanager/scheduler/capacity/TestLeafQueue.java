@@ -107,12 +107,15 @@ public class TestLeafQueue {
     // Define top-level queues
     conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B});
     conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setMaximumCapacity(CapacityScheduler.ROOT, 100);
     
     final String Q_A = CapacityScheduler.ROOT + "." + A;
     conf.setCapacity(Q_A, 10);
+    conf.setMaximumCapacity(Q_A, 20);
     
     final String Q_B = CapacityScheduler.ROOT + "." + B;
     conf.setCapacity(Q_B, 90);
+    conf.setMaximumCapacity(Q_B, 99);
     
     LOG.info("Setup top-level queues a and b");
   }
@@ -158,6 +161,23 @@ public class TestLeafQueue {
     return queue;
   }
   
+  @Test
+  public void testInitializeQueue() throws Exception {
+	  final float epsilon = 1e-5f;
+	  //can add more sturdy test with 3-layer queues 
+	  //once MAPREDUCE:3410 is resolved
+	  LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+	  assertEquals(0.1, a.getCapacity(), epsilon);
+	  assertEquals(0.1, a.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.2, a.getMaximumCapacity(), epsilon);
+	  assertEquals(0.2, a.getAbsoluteMaximumCapacity(), epsilon);
+	  
+	  LeafQueue b = stubLeafQueue((LeafQueue)queues.get(B));
+	  assertEquals(0.9, b.getCapacity(), epsilon);
+	  assertEquals(0.9, b.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.99, b.getMaximumCapacity(), epsilon);
+	  assertEquals(0.99, b.getAbsoluteMaximumCapacity(), epsilon);
+  }
  
   @Test
   public void testSingleQueueOneUserMetrics() throws Exception {
@@ -209,6 +229,8 @@ public class TestLeafQueue {
 
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    //unset maxCapacity
+    a.setMaxCapacity(-0.01f);
 
     // Users
     final String user_0 = "user_0";
@@ -329,6 +351,8 @@ public class TestLeafQueue {
     
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    //unset maxCapacity
+    a.setMaxCapacity(-0.01f);
     
     // Users
     final String user_0 = "user_0";
@@ -442,7 +466,7 @@ public class TestLeafQueue {
     
     // Revert max-capacity and user-limit-factor
     // Now, allocations should goto app_3 since it's under user-limit 
-    a.setMaxCapacity(-1);
+    a.setMaxCapacity(-0.01f);
     a.setUserLimitFactor(1);
     a.assignContainers(clusterResource, node_0);
     assertEquals(7*GB, a.getUsedResources().getMemory()); 
@@ -498,6 +522,8 @@ public class TestLeafQueue {
 
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    //unset maxCapacity
+    a.setMaxCapacity(-0.01f);
 
     // Users
     final String user_0 = "user_0";
@@ -594,6 +620,8 @@ public class TestLeafQueue {
 
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    //unset maxCapacity
+    a.setMaxCapacity(-0.01f);
     a.setUserLimitFactor(10);
 
     // Users

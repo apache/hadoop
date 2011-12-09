@@ -162,6 +162,8 @@ public class CapacitySchedulerConfiguration extends Configuration {
   
   public void setMaximumCapacity(String queue, int maxCapacity) {
     setInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
+    LOG.info("CSConf - setMaxCapacity: queuePrefix=" + getQueuePrefix(queue) + 
+        ", maxCapacity=" + maxCapacity);
   }
   
   public int getUserLimit(String queue) {
