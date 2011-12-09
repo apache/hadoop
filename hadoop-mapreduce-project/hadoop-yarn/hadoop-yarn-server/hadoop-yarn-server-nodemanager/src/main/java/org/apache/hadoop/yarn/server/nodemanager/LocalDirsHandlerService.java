@@ -249,49 +249,27 @@ public class LocalDirsHandlerService extends AbstractService {
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS,
                     localDirs.toArray(new String[localDirs.size()]));
     List<String> logDirs = getLogDirs();
-    synchronized(conf) {
-      conf.setStrings(YarnConfiguration.NM_LOG_DIRS,
+    conf.setStrings(YarnConfiguration.NM_LOG_DIRS,
                       logDirs.toArray(new String[logDirs.size()]));
-    }
   }
 
   public Path getLocalPathForWrite(String pathStr) throws IOException {
-    Configuration conf = getConfig();
-    Path path = null;
-    synchronized (conf) {
-      path = localDirsAllocator.getLocalPathForWrite(pathStr, conf);
-    }
-    return path;
+    return localDirsAllocator.getLocalPathForWrite(pathStr, getConfig());
   }
 
   public Path getLocalPathForWrite(String pathStr, long size,
       boolean checkWrite) throws IOException {
-    Configuration conf = getConfig();
-    Path path = null;
-    synchronized (conf) {
-      path = localDirsAllocator.getLocalPathForWrite(pathStr, size, conf,
-                                                     checkWrite);
-    }
-    return path;
+    return localDirsAllocator.getLocalPathForWrite(pathStr, size, getConfig(),
+                                                   checkWrite);
   }
 
   public Path getLogPathForWrite(String pathStr, boolean checkWrite)
       throws IOException {
-    Configuration conf = getConfig();
-    Path path = null;
-    synchronized (conf) {
-      path = logDirsAllocator.getLocalPathForWrite(pathStr,
-        LocalDirAllocator.SIZE_UNKNOWN, conf, checkWrite);
-    }
-    return path;
+    return logDirsAllocator.getLocalPathForWrite(pathStr,
+        LocalDirAllocator.SIZE_UNKNOWN, getConfig(), checkWrite);
   }
 
   public Path getLogPathToRead(String pathStr) throws IOException {
-    Configuration conf = getConfig();
-    Path path = null;
-    synchronized (conf) {
-      path = logDirsAllocator.getLocalPathToRead(pathStr, conf);
-    }
-    return path;
+    return logDirsAllocator.getLocalPathToRead(pathStr, getConfig());
   }
 }

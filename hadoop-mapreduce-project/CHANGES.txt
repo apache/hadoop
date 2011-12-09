@@ -209,6 +209,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3513. Capacity Scheduler web UI has a spelling mistake for Memory.
     (chackaravarthy via mahadev)
 
+    MAPREDUCE-3519. Fixed a deadlock in NodeManager LocalDirectories's handling
+    service. (Ravi Gummadi via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
