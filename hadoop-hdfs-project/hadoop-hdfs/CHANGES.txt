@@ -93,6 +93,8 @@ Trunk (unreleased changes)
 
     HDFS-2597 ClientNameNodeProtocol in Protocol Buffers (sanjay)
 
+    HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)
