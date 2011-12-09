@@ -65,10 +65,8 @@ public class HadoopKerberosName extends KerberosName {
    * @throws IOException
    */
   public static void setConfiguration(Configuration conf) throws IOException {
-    if (!hasRulesBeenSet()) {
-      String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
-      setRules(ruleString);
-    }
+    String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
+    setRules(ruleString);
   }
 
   public static void main(String[] args) throws Exception {
