@@ -31,7 +31,7 @@ import "hdfs.proto";
  */
 message DatanodeRegistrationProto {
   required DatanodeIDProto datanodeID = 1;    // Datanode information
-  required StorageInfoProto storateInfo = 2;  // Node information
+  required StorageInfoProto storageInfo = 2;  // Node information
   required ExportedBlockKeysProto keys = 3;   // Block keys
 }
 
@@ -55,7 +55,7 @@ message DatanodeCommandProto {
   // cmdType is set
   optional BalancerBandwidthCommandProto balancerCmd = 2;
   optional BlockCommandProto blkCmd = 3;
-  optional BlockRecoveryCommndProto recoveryCmd = 4;
+  optional BlockRecoveryCommandProto recoveryCmd = 4;
   optional FinalizeCommandProto finalizeCmd = 5;
   optional KeyUpdateCommandProto keyUpdateCmd = 6;
   optional RegisterCommandProto registerCmd = 7;
@@ -77,22 +77,20 @@ message BalancerBandwidthCommandProto {
  * on the given set of blocks.
  */
 message BlockCommandProto {
-  enum Action {
-    UNKNOWN = 0;    // Unknown action   
+  enum Action {  
     TRANSFER = 1;   // Transfer blocks to another datanode
     INVALIDATE = 2; // Invalidate blocks
-    SHUTDOWN = 3;   // Shutdown node
   }
-  required uint32 action = 1;
+  required Action action = 1;
   required string blockPoolId = 2;
   repeated BlockProto blocks = 3;
-  repeated DatanodeIDsProto targets = 4;
+  repeated DatanodeInfosProto targets = 4;
 }
 
 /**
  * List of blocks to be recovered by the datanode
  */
-message BlockRecoveryCommndProto {
+message BlockRecoveryCommandProto {
   repeated RecoveringBlockProto blocks = 1;
 }
 
@@ -126,7 +124,7 @@ message UpgradeCommandProto {
     REPORT_STATUS = 100;  // Report upgrade status
     START_UPGRADE = 101;  // Start upgrade
   }
-  required uint32 action = 1;  // Upgrade action
+  required Action action = 1;  // Upgrade action
   required uint32 version = 2; // Version of the upgrade
   required uint32 upgradeStatus = 3; // % completed in range 0 & 100
 }
@@ -324,6 +322,11 @@ service DatanodeProtocolService {
    * Used for debugging.
    */
   rpc errorReport(ErrorReportRequestProto) returns(ErrorReportResponseProto);
+  
+  /**
+   * Request the version
+   */
+  rpc versionRequest(VersionRequestProto) returns(VersionResponseProto);
 
   /**
    * Generic way to send commands from datanode to namenode during

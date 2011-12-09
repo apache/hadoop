@@ -54,10 +54,10 @@ message DatanodeIDProto {
 }
 
 /**
- * DatanodeID array
+ * DatanodeInfo array
  */
-message DatanodeIDsProto {
-  repeated DatanodeIDProto datanodes = 1;
+message DatanodeInfosProto {
+  repeated DatanodeInfoProto datanodes = 1;
 }
 
 /**
@@ -343,5 +343,18 @@ enum ReplicaStateProto {
 message RecoveringBlockProto {
   required uint64 newGenStamp = 1;      // New genstamp post recovery
   required LocatedBlockProto block = 2; // Block to be recovered
+}
+
+/**
+ * void request
+ */
+message VersionRequestProto {
+}
+
+/**
+ * Version response from namenode.
+ */
+message VersionResponseProto {
+  required NamespaceInfoProto info = 1;
 }
 

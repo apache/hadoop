@@ -17,29 +17,34 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
-import static junit.framework.Assert.*;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto.NamenodeRoleProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
@@ -47,14 +52,17 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
@@ -120,6 +128,10 @@ public class TestPBHelper {
     DatanodeID dn = new DatanodeID("node", "sid", 1, 2);
     DatanodeIDProto dnProto = PBHelper.convert(dn);
     DatanodeID dn2 = PBHelper.convert(dnProto);
+    compare(dn, dn2);
+  }
+  
+  void compare(DatanodeID dn, DatanodeID dn2) {
     assertEquals(dn.getHost(), dn2.getHost());
     assertEquals(dn.getInfoPort(), dn2.getInfoPort());
     assertEquals(dn.getIpcPort(), dn2.getIpcPort());
@@ -177,7 +189,6 @@ public class TestPBHelper {
     assertEquals(k1.getExpiryDate(), k2.getExpiryDate());
     assertEquals(k1.getKeyId(), k2.getKeyId());
     assertTrue(Arrays.equals(k1.getEncodedKey(), k2.getEncodedKey()));
-
   }
 
   @Test
@@ -195,7 +206,10 @@ public class TestPBHelper {
         getBlockKey(1), keys);
     ExportedBlockKeysProto expKeysProto = PBHelper.convert(expKeys);
     ExportedBlockKeys expKeys1 = PBHelper.convert(expKeysProto);
-
+    compare(expKeys, expKeys1);
+  }
+  
+  void compare(ExportedBlockKeys expKeys, ExportedBlockKeys expKeys1) {
     BlockKey[] allKeys = expKeys.getAllKeys();
     BlockKey[] allKeys1 = expKeys1.getAllKeys();
     assertEquals(allKeys.length, allKeys1.length);
@@ -314,15 +328,108 @@ public class TestPBHelper {
   }
   
   @Test
-  public void testBlockTokenIdentifier() {
+  public void testConvertBlockToken() {
     Token<BlockTokenIdentifier> token = new Token<BlockTokenIdentifier>(
         "identifier".getBytes(), "password".getBytes(), new Text("kind"),
         new Text("service"));
     BlockTokenIdentifierProto tokenProto = PBHelper.convert(token);
     Token<BlockTokenIdentifier> token2 = PBHelper.convert(tokenProto);
-    assertTrue(Arrays.equals(token.getIdentifier(), token2.getIdentifier()));
-    assertTrue(Arrays.equals(token.getPassword(), token2.getPassword()));
-    assertEquals(token.getKind(), token2.getKind());
-    assertEquals(token.getService(), token2.getService());
+    compare(token, token2);
+  }
+  
+  @Test
+  public void testConvertNamespaceInfo() {
+    NamespaceInfo info = new NamespaceInfo(37, "clusterID", "bpID", 2300, 53);
+    NamespaceInfoProto proto = PBHelper.convert(info);
+    NamespaceInfo info2 = PBHelper.convert(proto);
+    compare(info, info2); //Compare the StorageInfo
+    assertEquals(info.getBlockPoolID(), info2.getBlockPoolID());
+    assertEquals(info.getBuildVersion(), info2.getBuildVersion());
+    assertEquals(info.getDistributedUpgradeVersion(),
+        info2.getDistributedUpgradeVersion());
+  }
+
+  private void compare(StorageInfo expected, StorageInfo actual) {
+    assertEquals(expected.clusterID, actual.clusterID);
+    assertEquals(expected.namespaceID, actual.namespaceID);
+    assertEquals(expected.cTime, actual.cTime);
+    assertEquals(expected.layoutVersion, actual.layoutVersion);
+  }
+
+  private void compare(Token<BlockTokenIdentifier> expected,
+      Token<BlockTokenIdentifier> actual) {
+    assertTrue(Arrays.equals(expected.getIdentifier(), actual.getIdentifier()));
+    assertTrue(Arrays.equals(expected.getPassword(), actual.getPassword()));
+    assertEquals(expected.getKind(), actual.getKind());
+    assertEquals(expected.getService(), actual.getService());
+  }
+  
+  @Test
+  public void testConvertLocatedBlock() {
+    DatanodeInfo [] dnInfos = new DatanodeInfo[3];
+    dnInfos[0] = new DatanodeInfo("host0", "0", 5000, 5001, 20000, 10001, 9999,
+        59, 69, 32, "local", "host0", AdminStates.DECOMMISSION_INPROGRESS);
+    dnInfos[1] = new DatanodeInfo("host1", "1", 5000, 5001, 20000, 10001, 9999,
+        59, 69, 32, "local", "host1", AdminStates.DECOMMISSIONED);
+    dnInfos[2] = new DatanodeInfo("host2", "2", 5000, 5001, 20000, 10001, 9999,
+        59, 69, 32, "local", "host1", AdminStates.NORMAL);
+    LocatedBlock lb = new LocatedBlock(
+        new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
+    LocatedBlockProto lbProto = PBHelper.convert(lb);
+    LocatedBlock lb2 = PBHelper.convert(lbProto);
+    assertEquals(lb.getBlock(), lb2.getBlock());
+    compare(lb.getBlockToken(), lb2.getBlockToken());
+    assertEquals(lb.getStartOffset(), lb2.getStartOffset());
+    assertEquals(lb.isCorrupt(), lb2.isCorrupt());
+    DatanodeInfo [] dnInfos2 = lb2.getLocations();
+    assertEquals(dnInfos.length, dnInfos2.length);
+    for (int i = 0; i < dnInfos.length ; i++) {
+      compare(dnInfos[i], dnInfos2[i]);
+    }
+  }
+  
+  @Test
+  public void testConvertDatanodeRegistration() {
+    DatanodeID dnId = new DatanodeID("host", "xyz", 1, 0);
+    BlockKey[] keys = new BlockKey[] { getBlockKey(2), getBlockKey(3) };
+    ExportedBlockKeys expKeys = new ExportedBlockKeys(true, 9, 10,
+        getBlockKey(1), keys);
+    DatanodeRegistration reg = new DatanodeRegistration(dnId,
+        new StorageInfo(), expKeys);
+    DatanodeRegistrationProto proto = PBHelper.convert(reg);
+    DatanodeRegistration reg2 = PBHelper.convert(proto);
+    compare(reg.storageInfo, reg2.storageInfo);
+    compare(reg.exportedKeys, reg2.exportedKeys);
+    compare((DatanodeID)reg, (DatanodeID)reg2);
+  }
+  
+  @Test
+  public void testConvertBlockCommand() {
+    Block[] blocks = new Block[] { new Block(21), new Block(22) };
+    DatanodeInfo[][] dnInfos = new DatanodeInfo[][] { new DatanodeInfo[1],
+        new DatanodeInfo[2] };
+    dnInfos[0][0] = new DatanodeInfo();
+    dnInfos[1][0] = new DatanodeInfo();
+    dnInfos[1][1] = new DatanodeInfo();
+    BlockCommand bc = new BlockCommand(DatanodeProtocol.DNA_TRANSFER, "bp1",
+        blocks, dnInfos);
+    BlockCommandProto bcProto = PBHelper.convert(bc);
+    BlockCommand bc2 = PBHelper.convert(bcProto);
+    assertEquals(bc.getAction(), bc2.getAction());
+    assertEquals(bc.getBlocks().length, bc2.getBlocks().length);
+    Block[] blocks2 = bc2.getBlocks();
+    for (int i = 0; i < blocks.length; i++) {
+      assertEquals(blocks[i], blocks2[i]);
+    }
+    DatanodeInfo[][] dnInfos2 = bc2.getTargets();
+    assertEquals(dnInfos.length, dnInfos2.length);
+    for (int i = 0; i < dnInfos.length; i++) {
+      DatanodeInfo[] d1 = dnInfos[i];
+      DatanodeInfo[] d2 = dnInfos2[i];
+      assertEquals(d1.length, d2.length);
+      for (int j = 0; j < d1.length; j++) {
+        compare(d1[j], d2[j]);
+      }
+    }
   }
 }

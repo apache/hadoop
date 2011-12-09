@@ -3253,779 +3253,6 @@ public final class NamenodeProtocolProtos {
     // @@protoc_insertion_point(class_scope:RollEditLogResponseProto)
   }
   
-  public interface VersionRequestProtoOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-  }
-  public static final class VersionRequestProto extends
-      com.google.protobuf.GeneratedMessage
-      implements VersionRequestProtoOrBuilder {
-    // Use VersionRequestProto.newBuilder() to construct.
-    private VersionRequestProto(Builder builder) {
-      super(builder);
-    }
-    private VersionRequestProto(boolean noInit) {}
-    
-    private static final VersionRequestProto defaultInstance;
-    public static VersionRequestProto getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public VersionRequestProto getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionRequestProto_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionRequestProto_fieldAccessorTable;
-    }
-    
-    private void initFields() {
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-    
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto other = (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto) obj;
-      
-      boolean result = true;
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-    
-    @java.lang.Override
-    public int hashCode() {
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      return hash;
-    }
-    
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProtoOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionRequestProto_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionRequestProto_fieldAccessorTable;
-      }
-      
-      // Construct using org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.getDescriptor();
-      }
-      
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto getDefaultInstanceForType() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.getDefaultInstance();
-      }
-      
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto build() {
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto buildPartial() {
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto result = new org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto(this);
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto) {
-          return mergeFrom((org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto other) {
-        if (other == org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.getDefaultInstance()) return this;
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-          }
-        }
-      }
-      
-      
-      // @@protoc_insertion_point(builder_scope:VersionRequestProto)
-    }
-    
-    static {
-      defaultInstance = new VersionRequestProto(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:VersionRequestProto)
-  }
-  
-  public interface VersionResponseProtoOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-    
-    // required .NamespaceInfoProto info = 1;
-    boolean hasInfo();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto getInfo();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProtoOrBuilder getInfoOrBuilder();
-  }
-  public static final class VersionResponseProto extends
-      com.google.protobuf.GeneratedMessage
-      implements VersionResponseProtoOrBuilder {
-    // Use VersionResponseProto.newBuilder() to construct.
-    private VersionResponseProto(Builder builder) {
-      super(builder);
-    }
-    private VersionResponseProto(boolean noInit) {}
-    
-    private static final VersionResponseProto defaultInstance;
-    public static VersionResponseProto getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public VersionResponseProto getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
-      return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionResponseProto_descriptor;
-    }
-    
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-        internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionResponseProto_fieldAccessorTable;
-    }
-    
-    private int bitField0_;
-    // required .NamespaceInfoProto info = 1;
-    public static final int INFO_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto info_;
-    public boolean hasInfo() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto getInfo() {
-      return info_;
-    }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProtoOrBuilder getInfoOrBuilder() {
-      return info_;
-    }
-    
-    private void initFields() {
-      info_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.getDefaultInstance();
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasInfo()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!getInfo().isInitialized()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeMessage(1, info_);
-      }
-      getUnknownFields().writeTo(output);
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, info_);
-      }
-      size += getUnknownFields().getSerializedSize();
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-    
-    @java.lang.Override
-    public boolean equals(final java.lang.Object obj) {
-      if (obj == this) {
-       return true;
-      }
-      if (!(obj instanceof org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto)) {
-        return super.equals(obj);
-      }
-      org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto other = (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto) obj;
-      
-      boolean result = true;
-      result = result && (hasInfo() == other.hasInfo());
-      if (hasInfo()) {
-        result = result && getInfo()
-            .equals(other.getInfo());
-      }
-      result = result &&
-          getUnknownFields().equals(other.getUnknownFields());
-      return result;
-    }
-    
-    @java.lang.Override
-    public int hashCode() {
-      int hash = 41;
-      hash = (19 * hash) + getDescriptorForType().hashCode();
-      if (hasInfo()) {
-        hash = (37 * hash) + INFO_FIELD_NUMBER;
-        hash = (53 * hash) + getInfo().hashCode();
-      }
-      hash = (29 * hash) + getUnknownFields().hashCode();
-      return hash;
-    }
-    
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProtoOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionResponseProto_descriptor;
-      }
-      
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.internal_static_VersionResponseProto_fieldAccessorTable;
-      }
-      
-      // Construct using org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private Builder(BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-          getInfoFieldBuilder();
-        }
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        if (infoBuilder_ == null) {
-          info_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.getDefaultInstance();
-        } else {
-          infoBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDescriptor();
-      }
-      
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto getDefaultInstanceForType() {
-        return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance();
-      }
-      
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto build() {
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto buildPartial() {
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto result = new org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        if (infoBuilder_ == null) {
-          result.info_ = info_;
-        } else {
-          result.info_ = infoBuilder_.build();
-        }
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
-      }
-      
-      public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto) {
-          return mergeFrom((org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto)other);
-        } else {
-          super.mergeFrom(other);
-          return this;
-        }
-      }
-      
-      public Builder mergeFrom(org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto other) {
-        if (other == org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance()) return this;
-        if (other.hasInfo()) {
-          mergeInfo(other.getInfo());
-        }
-        this.mergeUnknownFields(other.getUnknownFields());
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasInfo()) {
-          
-          return false;
-        }
-        if (!getInfo().isInitialized()) {
-          
-          return false;
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder(
-            this.getUnknownFields());
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              this.setUnknownFields(unknownFields.build());
-              onChanged();
-              return this;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                this.setUnknownFields(unknownFields.build());
-                onChanged();
-                return this;
-              }
-              break;
-            }
-            case 10: {
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.newBuilder();
-              if (hasInfo()) {
-                subBuilder.mergeFrom(getInfo());
-              }
-              input.readMessage(subBuilder, extensionRegistry);
-              setInfo(subBuilder.buildPartial());
-              break;
-            }
-          }
-        }
-      }
-      
-      private int bitField0_;
-      
-      // required .NamespaceInfoProto info = 1;
-      private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto info_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.getDefaultInstance();
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProtoOrBuilder> infoBuilder_;
-      public boolean hasInfo() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto getInfo() {
-        if (infoBuilder_ == null) {
-          return info_;
-        } else {
-          return infoBuilder_.getMessage();
-        }
-      }
-      public Builder setInfo(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto value) {
-        if (infoBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          info_ = value;
-          onChanged();
-        } else {
-          infoBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      public Builder setInfo(
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.Builder builderForValue) {
-        if (infoBuilder_ == null) {
-          info_ = builderForValue.build();
-          onChanged();
-        } else {
-          infoBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      public Builder mergeInfo(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto value) {
-        if (infoBuilder_ == null) {
-          if (((bitField0_ & 0x00000001) == 0x00000001) &&
-              info_ != org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.getDefaultInstance()) {
-            info_ =
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.newBuilder(info_).mergeFrom(value).buildPartial();
-          } else {
-            info_ = value;
-          }
-          onChanged();
-        } else {
-          infoBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000001;
-        return this;
-      }
-      public Builder clearInfo() {
-        if (infoBuilder_ == null) {
-          info_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.getDefaultInstance();
-          onChanged();
-        } else {
-          infoBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000001);
-        return this;
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.Builder getInfoBuilder() {
-        bitField0_ |= 0x00000001;
-        onChanged();
-        return getInfoFieldBuilder().getBuilder();
-      }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProtoOrBuilder getInfoOrBuilder() {
-        if (infoBuilder_ != null) {
-          return infoBuilder_.getMessageOrBuilder();
-        } else {
-          return info_;
-        }
-      }
-      private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProtoOrBuilder> 
-          getInfoFieldBuilder() {
-        if (infoBuilder_ == null) {
-          infoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProtoOrBuilder>(
-                  info_,
-                  getParentForChildren(),
-                  isClean());
-          info_ = null;
-        }
-        return infoBuilder_;
-      }
-      
-      // @@protoc_insertion_point(builder_scope:VersionResponseProto)
-    }
-    
-    static {
-      defaultInstance = new VersionResponseProto(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:VersionResponseProto)
-  }
-  
   public interface ErrorReportRequestProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
@@ -8696,8 +7923,8 @@ public final class NamenodeProtocolProtos {
       
       public abstract void versionRequest(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto> done);
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done);
       
       public abstract void errorReport(
           com.google.protobuf.RpcController controller,
@@ -8764,8 +7991,8 @@ public final class NamenodeProtocolProtos {
         @java.lang.Override
         public  void versionRequest(
             com.google.protobuf.RpcController controller,
-            org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto request,
-            com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto> done) {
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done) {
           impl.versionRequest(controller, request, done);
         }
         
@@ -8840,7 +8067,7 @@ public final class NamenodeProtocolProtos {
             case 3:
               return impl.rollEditLog(controller, (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogRequestProto)request);
             case 4:
-              return impl.versionRequest(controller, (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto)request);
+              return impl.versionRequest(controller, (org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto)request);
             case 5:
               return impl.errorReport(controller, (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto)request);
             case 6:
@@ -8874,7 +8101,7 @@ public final class NamenodeProtocolProtos {
             case 3:
               return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogRequestProto.getDefaultInstance();
             case 4:
-              return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.getDefaultInstance();
+              return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto.getDefaultInstance();
             case 5:
               return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto.getDefaultInstance();
             case 6:
@@ -8908,7 +8135,7 @@ public final class NamenodeProtocolProtos {
             case 3:
               return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogResponseProto.getDefaultInstance();
             case 4:
-              return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance();
+              return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance();
             case 5:
               return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportResponseProto.getDefaultInstance();
             case 6:
@@ -8949,8 +8176,8 @@ public final class NamenodeProtocolProtos {
     
     public abstract void versionRequest(
         com.google.protobuf.RpcController controller,
-        org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto request,
-        com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto> done);
+        org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done);
     
     public abstract void errorReport(
         com.google.protobuf.RpcController controller,
@@ -9020,8 +8247,8 @@ public final class NamenodeProtocolProtos {
               done));
           return;
         case 4:
-          this.versionRequest(controller, (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto)request,
-            com.google.protobuf.RpcUtil.<org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto>specializeCallback(
+          this.versionRequest(controller, (org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto>specializeCallback(
               done));
           return;
         case 5:
@@ -9072,7 +8299,7 @@ public final class NamenodeProtocolProtos {
         case 3:
           return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogRequestProto.getDefaultInstance();
         case 4:
-          return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.getDefaultInstance();
+          return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto.getDefaultInstance();
         case 5:
           return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto.getDefaultInstance();
         case 6:
@@ -9106,7 +8333,7 @@ public final class NamenodeProtocolProtos {
         case 3:
           return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogResponseProto.getDefaultInstance();
         case 4:
-          return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance();
+          return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance();
         case 5:
           return org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportResponseProto.getDefaultInstance();
         case 6:
@@ -9200,17 +8427,17 @@ public final class NamenodeProtocolProtos {
       
       public  void versionRequest(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto request,
-          com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto> done) {
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done) {
         channel.callMethod(
           getDescriptor().getMethods().get(4),
           controller,
           request,
-          org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance(),
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance(),
           com.google.protobuf.RpcUtil.generalizeCallback(
             done,
-            org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.class,
-            org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance()));
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.class,
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance()));
       }
       
       public  void errorReport(
@@ -9315,9 +8542,9 @@ public final class NamenodeProtocolProtos {
           org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogRequestProto request)
           throws com.google.protobuf.ServiceException;
       
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto versionRequest(
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto versionRequest(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto request)
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request)
           throws com.google.protobuf.ServiceException;
       
       public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportResponseProto errorReport(
@@ -9401,15 +8628,15 @@ public final class NamenodeProtocolProtos {
       }
       
       
-      public org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto versionRequest(
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto versionRequest(
           com.google.protobuf.RpcController controller,
-          org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto request)
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request)
           throws com.google.protobuf.ServiceException {
-        return (org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto) channel.callBlockingMethod(
+        return (org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto) channel.callBlockingMethod(
           getDescriptor().getMethods().get(4),
           controller,
           request,
-          org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.getDefaultInstance());
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance());
       }
       
       
@@ -9516,16 +8743,6 @@ public final class NamenodeProtocolProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_RollEditLogResponseProto_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_VersionRequestProto_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_VersionRequestProto_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_VersionResponseProto_descriptor;
-  private static
-    com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_VersionResponseProto_fieldAccessorTable;
-  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_ErrorReportRequestProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -9595,48 +8812,45 @@ public final class NamenodeProtocolProtos {
       "actionIdResponseProto\022\014\n\004txId\030\001 \002(\004\"\031\n\027R" +
       "ollEditLogRequestProto\"H\n\030RollEditLogRes",
       "ponseProto\022,\n\tsignature\030\001 \002(\0132\031.Checkpoi" +
-      "ntSignatureProto\"\025\n\023VersionRequestProto\"" +
-      "9\n\024VersionResponseProto\022!\n\004info\030\001 \002(\0132\023." +
-      "NamespaceInfoProto\"k\n\027ErrorReportRequest" +
-      "Proto\0220\n\014registration\030\001 \002(\0132\032.NamenodeRe" +
-      "gistrationProto\022\021\n\terrorCode\030\002 \002(\r\022\013\n\003ms" +
-      "g\030\003 \002(\t\"\032\n\030ErrorReportResponseProto\"H\n\024R" +
-      "egisterRequestProto\0220\n\014registration\030\001 \002(" +
-      "\0132\032.NamenodeRegistrationProto\"I\n\025Registe" +
-      "rResponseProto\0220\n\014registration\030\001 \002(\0132\032.N",
-      "amenodeRegistrationProto\"O\n\033StartCheckpo" +
-      "intRequestProto\0220\n\014registration\030\001 \002(\0132\032." +
-      "NamenodeRegistrationProto\"F\n\034StartCheckp" +
-      "ointResponseProto\022&\n\007command\030\001 \002(\0132\025.Nam" +
-      "enodeCommandProto\"{\n\031EndCheckpointReques" +
-      "tProto\0220\n\014registration\030\001 \002(\0132\032.NamenodeR" +
-      "egistrationProto\022,\n\tsignature\030\002 \002(\0132\031.Ch" +
-      "eckpointSignatureProto\"\034\n\032EndCheckpointR" +
-      "esponseProto\"3\n\036GetEditLogManifestReques" +
-      "tProto\022\021\n\tsinceTxId\030\001 \002(\004\"P\n\037GetEditLogM",
-      "anifestResponseProto\022-\n\010manifest\030\001 \002(\0132\033" +
-      ".RemoteEditLogManifestProto2\345\005\n\027Namenode" +
-      "ProtocolService\022<\n\tgetBlocks\022\026.GetBlocks" +
-      "RequestProto\032\027.GetBlocksResponseProto\022E\n" +
-      "\014getBlockKeys\022\031.GetBlockKeysRequestProto" +
-      "\032\032.GetBlockKeysResponseProto\022P\n\017getTrans" +
-      "ationId\022\035.GetTransactionIdRequestProto\032\036" +
-      ".GetTransactionIdResponseProto\022B\n\013rollEd" +
-      "itLog\022\030.RollEditLogRequestProto\032\031.RollEd" +
-      "itLogResponseProto\022=\n\016versionRequest\022\024.V",
-      "ersionRequestProto\032\025.VersionResponseProt" +
-      "o\022B\n\013errorReport\022\030.ErrorReportRequestPro" +
-      "to\032\031.ErrorReportResponseProto\0229\n\010registe" +
-      "r\022\025.RegisterRequestProto\032\026.RegisterRespo" +
-      "nseProto\022N\n\017startCheckpoint\022\034.StartCheck" +
-      "pointRequestProto\032\035.StartCheckpointRespo" +
-      "nseProto\022H\n\rendCheckpoint\022\032.EndCheckpoin" +
-      "tRequestProto\032\033.EndCheckpointResponsePro" +
-      "to\022W\n\022getEditLogManifest\022\037.GetEditLogMan" +
-      "ifestRequestProto\032 .GetEditLogManifestRe",
-      "sponseProtoBE\n%org.apache.hadoop.hdfs.pr" +
-      "otocol.protoB\026NamenodeProtocolProtos\210\001\001\240" +
-      "\001\001"
+      "ntSignatureProto\"k\n\027ErrorReportRequestPr" +
+      "oto\0220\n\014registration\030\001 \002(\0132\032.NamenodeRegi" +
+      "strationProto\022\021\n\terrorCode\030\002 \002(\r\022\013\n\003msg\030" +
+      "\003 \002(\t\"\032\n\030ErrorReportResponseProto\"H\n\024Reg" +
+      "isterRequestProto\0220\n\014registration\030\001 \002(\0132" +
+      "\032.NamenodeRegistrationProto\"I\n\025RegisterR" +
+      "esponseProto\0220\n\014registration\030\001 \002(\0132\032.Nam" +
+      "enodeRegistrationProto\"O\n\033StartCheckpoin" +
+      "tRequestProto\0220\n\014registration\030\001 \002(\0132\032.Na",
+      "menodeRegistrationProto\"F\n\034StartCheckpoi" +
+      "ntResponseProto\022&\n\007command\030\001 \002(\0132\025.Namen" +
+      "odeCommandProto\"{\n\031EndCheckpointRequestP" +
+      "roto\0220\n\014registration\030\001 \002(\0132\032.NamenodeReg" +
+      "istrationProto\022,\n\tsignature\030\002 \002(\0132\031.Chec" +
+      "kpointSignatureProto\"\034\n\032EndCheckpointRes" +
+      "ponseProto\"3\n\036GetEditLogManifestRequestP" +
+      "roto\022\021\n\tsinceTxId\030\001 \002(\004\"P\n\037GetEditLogMan" +
+      "ifestResponseProto\022-\n\010manifest\030\001 \002(\0132\033.R" +
+      "emoteEditLogManifestProto2\345\005\n\027NamenodePr",
+      "otocolService\022<\n\tgetBlocks\022\026.GetBlocksRe" +
+      "questProto\032\027.GetBlocksResponseProto\022E\n\014g" +
+      "etBlockKeys\022\031.GetBlockKeysRequestProto\032\032" +
+      ".GetBlockKeysResponseProto\022P\n\017getTransat" +
+      "ionId\022\035.GetTransactionIdRequestProto\032\036.G" +
+      "etTransactionIdResponseProto\022B\n\013rollEdit" +
+      "Log\022\030.RollEditLogRequestProto\032\031.RollEdit" +
+      "LogResponseProto\022=\n\016versionRequest\022\024.Ver" +
+      "sionRequestProto\032\025.VersionResponseProto\022" +
+      "B\n\013errorReport\022\030.ErrorReportRequestProto",
+      "\032\031.ErrorReportResponseProto\0229\n\010register\022" +
+      "\025.RegisterRequestProto\032\026.RegisterRespons" +
+      "eProto\022N\n\017startCheckpoint\022\034.StartCheckpo" +
+      "intRequestProto\032\035.StartCheckpointRespons" +
+      "eProto\022H\n\rendCheckpoint\022\032.EndCheckpointR" +
+      "equestProto\032\033.EndCheckpointResponseProto" +
+      "\022W\n\022getEditLogManifest\022\037.GetEditLogManif" +
+      "estRequestProto\032 .GetEditLogManifestResp" +
+      "onseProtoBE\n%org.apache.hadoop.hdfs.prot" +
+      "ocol.protoB\026NamenodeProtocolProtos\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9707,24 +8921,8 @@ public final class NamenodeProtocolProtos {
               new java.lang.String[] { "Signature", },
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogResponseProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogResponseProto.Builder.class);
-          internal_static_VersionRequestProto_descriptor =
-            getDescriptor().getMessageTypes().get(8);
-          internal_static_VersionRequestProto_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_VersionRequestProto_descriptor,
-              new java.lang.String[] { },
-              org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.class,
-              org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionRequestProto.Builder.class);
-          internal_static_VersionResponseProto_descriptor =
-            getDescriptor().getMessageTypes().get(9);
-          internal_static_VersionResponseProto_fieldAccessorTable = new
-            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_VersionResponseProto_descriptor,
-              new java.lang.String[] { "Info", },
-              org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.class,
-              org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.VersionResponseProto.Builder.class);
           internal_static_ErrorReportRequestProto_descriptor =
-            getDescriptor().getMessageTypes().get(10);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_ErrorReportRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ErrorReportRequestProto_descriptor,
@@ -9732,7 +8930,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportRequestProto.Builder.class);
           internal_static_ErrorReportResponseProto_descriptor =
-            getDescriptor().getMessageTypes().get(11);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_ErrorReportResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ErrorReportResponseProto_descriptor,
@@ -9740,7 +8938,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportResponseProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportResponseProto.Builder.class);
           internal_static_RegisterRequestProto_descriptor =
-            getDescriptor().getMessageTypes().get(12);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_RegisterRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegisterRequestProto_descriptor,
@@ -9748,7 +8946,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterRequestProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterRequestProto.Builder.class);
           internal_static_RegisterResponseProto_descriptor =
-            getDescriptor().getMessageTypes().get(13);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_RegisterResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegisterResponseProto_descriptor,
@@ -9756,7 +8954,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterResponseProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterResponseProto.Builder.class);
           internal_static_StartCheckpointRequestProto_descriptor =
-            getDescriptor().getMessageTypes().get(14);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_StartCheckpointRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_StartCheckpointRequestProto_descriptor,
@@ -9764,7 +8962,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointRequestProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointRequestProto.Builder.class);
           internal_static_StartCheckpointResponseProto_descriptor =
-            getDescriptor().getMessageTypes().get(15);
+            getDescriptor().getMessageTypes().get(13);
           internal_static_StartCheckpointResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_StartCheckpointResponseProto_descriptor,
@@ -9772,7 +8970,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointResponseProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointResponseProto.Builder.class);
           internal_static_EndCheckpointRequestProto_descriptor =
-            getDescriptor().getMessageTypes().get(16);
+            getDescriptor().getMessageTypes().get(14);
           internal_static_EndCheckpointRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EndCheckpointRequestProto_descriptor,
@@ -9780,7 +8978,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointRequestProto.Builder.class);
           internal_static_EndCheckpointResponseProto_descriptor =
-            getDescriptor().getMessageTypes().get(17);
+            getDescriptor().getMessageTypes().get(15);
           internal_static_EndCheckpointResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EndCheckpointResponseProto_descriptor,
@@ -9788,7 +8986,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointResponseProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.EndCheckpointResponseProto.Builder.class);
           internal_static_GetEditLogManifestRequestProto_descriptor =
-            getDescriptor().getMessageTypes().get(18);
+            getDescriptor().getMessageTypes().get(16);
           internal_static_GetEditLogManifestRequestProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetEditLogManifestRequestProto_descriptor,
@@ -9796,7 +8994,7 @@ public final class NamenodeProtocolProtos {
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto.class,
               org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto.Builder.class);
           internal_static_GetEditLogManifestResponseProto_descriptor =
-            getDescriptor().getMessageTypes().get(19);
+            getDescriptor().getMessageTypes().get(17);
           internal_static_GetEditLogManifestResponseProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetEditLogManifestResponseProto_descriptor,

@@ -66,6 +66,13 @@ implements Writable, NodeRegistration {
     this(nodeName, new StorageInfo(), new ExportedBlockKeys());
   }
   
+  public DatanodeRegistration(DatanodeID dn, StorageInfo info,
+      ExportedBlockKeys keys) {
+    super(dn);
+    this.storageInfo = info;
+    this.exportedKeys = keys;
+  }
+  
   public DatanodeRegistration(String nodeName, StorageInfo info,
       ExportedBlockKeys keys) {
     super(nodeName);

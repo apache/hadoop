@@ -16,10 +16,10 @@ public final class DatanodeProtocolProtos {
     org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto getDatanodeID();
     org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProtoOrBuilder getDatanodeIDOrBuilder();
     
-    // required .StorageInfoProto storateInfo = 2;
-    boolean hasStorateInfo();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto getStorateInfo();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder getStorateInfoOrBuilder();
+    // required .StorageInfoProto storageInfo = 2;
+    boolean hasStorageInfo();
+    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto getStorageInfo();
+    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder getStorageInfoOrBuilder();
     
     // required .ExportedBlockKeysProto keys = 3;
     boolean hasKeys();
@@ -68,17 +68,17 @@ public final class DatanodeProtocolProtos {
       return datanodeID_;
     }
     
-    // required .StorageInfoProto storateInfo = 2;
-    public static final int STORATEINFO_FIELD_NUMBER = 2;
-    private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto storateInfo_;
-    public boolean hasStorateInfo() {
+    // required .StorageInfoProto storageInfo = 2;
+    public static final int STORAGEINFO_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto storageInfo_;
+    public boolean hasStorageInfo() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto getStorateInfo() {
-      return storateInfo_;
+    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto getStorageInfo() {
+      return storageInfo_;
     }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder getStorateInfoOrBuilder() {
-      return storateInfo_;
+    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder getStorageInfoOrBuilder() {
+      return storageInfo_;
     }
     
     // required .ExportedBlockKeysProto keys = 3;
@@ -96,7 +96,7 @@ public final class DatanodeProtocolProtos {
     
     private void initFields() {
       datanodeID_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto.getDefaultInstance();
-      storateInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
+      storageInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
       keys_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
@@ -108,7 +108,7 @@ public final class DatanodeProtocolProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!hasStorateInfo()) {
+      if (!hasStorageInfo()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -120,7 +120,7 @@ public final class DatanodeProtocolProtos {
         memoizedIsInitialized = 0;
         return false;
       }
-      if (!getStorateInfo().isInitialized()) {
+      if (!getStorageInfo().isInitialized()) {
         memoizedIsInitialized = 0;
         return false;
       }
@@ -139,7 +139,7 @@ public final class DatanodeProtocolProtos {
         output.writeMessage(1, datanodeID_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeMessage(2, storateInfo_);
+        output.writeMessage(2, storageInfo_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeMessage(3, keys_);
@@ -159,7 +159,7 @@ public final class DatanodeProtocolProtos {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, storateInfo_);
+          .computeMessageSize(2, storageInfo_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -193,10 +193,10 @@ public final class DatanodeProtocolProtos {
         result = result && getDatanodeID()
             .equals(other.getDatanodeID());
       }
-      result = result && (hasStorateInfo() == other.hasStorateInfo());
-      if (hasStorateInfo()) {
-        result = result && getStorateInfo()
-            .equals(other.getStorateInfo());
+      result = result && (hasStorageInfo() == other.hasStorageInfo());
+      if (hasStorageInfo()) {
+        result = result && getStorageInfo()
+            .equals(other.getStorageInfo());
       }
       result = result && (hasKeys() == other.hasKeys());
       if (hasKeys()) {
@@ -216,9 +216,9 @@ public final class DatanodeProtocolProtos {
         hash = (37 * hash) + DATANODEID_FIELD_NUMBER;
         hash = (53 * hash) + getDatanodeID().hashCode();
       }
-      if (hasStorateInfo()) {
-        hash = (37 * hash) + STORATEINFO_FIELD_NUMBER;
-        hash = (53 * hash) + getStorateInfo().hashCode();
+      if (hasStorageInfo()) {
+        hash = (37 * hash) + STORAGEINFO_FIELD_NUMBER;
+        hash = (53 * hash) + getStorageInfo().hashCode();
       }
       if (hasKeys()) {
         hash = (37 * hash) + KEYS_FIELD_NUMBER;
@@ -333,7 +333,7 @@ public final class DatanodeProtocolProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getDatanodeIDFieldBuilder();
-          getStorateInfoFieldBuilder();
+          getStorageInfoFieldBuilder();
           getKeysFieldBuilder();
         }
       }
@@ -349,10 +349,10 @@ public final class DatanodeProtocolProtos {
           datanodeIDBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000001);
-        if (storateInfoBuilder_ == null) {
-          storateInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
+        if (storageInfoBuilder_ == null) {
+          storageInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
         } else {
-          storateInfoBuilder_.clear();
+          storageInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
         if (keysBuilder_ == null) {
@@ -410,10 +410,10 @@ public final class DatanodeProtocolProtos {
         if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
           to_bitField0_ |= 0x00000002;
         }
-        if (storateInfoBuilder_ == null) {
-          result.storateInfo_ = storateInfo_;
+        if (storageInfoBuilder_ == null) {
+          result.storageInfo_ = storageInfo_;
         } else {
-          result.storateInfo_ = storateInfoBuilder_.build();
+          result.storageInfo_ = storageInfoBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
           to_bitField0_ |= 0x00000004;
@@ -442,8 +442,8 @@ public final class DatanodeProtocolProtos {
         if (other.hasDatanodeID()) {
           mergeDatanodeID(other.getDatanodeID());
         }
-        if (other.hasStorateInfo()) {
-          mergeStorateInfo(other.getStorateInfo());
+        if (other.hasStorageInfo()) {
+          mergeStorageInfo(other.getStorageInfo());
         }
         if (other.hasKeys()) {
           mergeKeys(other.getKeys());
@@ -457,7 +457,7 @@ public final class DatanodeProtocolProtos {
           
           return false;
         }
-        if (!hasStorateInfo()) {
+        if (!hasStorageInfo()) {
           
           return false;
         }
@@ -469,7 +469,7 @@ public final class DatanodeProtocolProtos {
           
           return false;
         }
-        if (!getStorateInfo().isInitialized()) {
+        if (!getStorageInfo().isInitialized()) {
           
           return false;
         }
@@ -514,11 +514,11 @@ public final class DatanodeProtocolProtos {
             }
             case 18: {
               org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.newBuilder();
-              if (hasStorateInfo()) {
-                subBuilder.mergeFrom(getStorateInfo());
+              if (hasStorageInfo()) {
+                subBuilder.mergeFrom(getStorageInfo());
               }
               input.readMessage(subBuilder, extensionRegistry);
-              setStorateInfo(subBuilder.buildPartial());
+              setStorageInfo(subBuilder.buildPartial());
               break;
             }
             case 26: {
@@ -626,94 +626,94 @@ public final class DatanodeProtocolProtos {
         return datanodeIDBuilder_;
       }
       
-      // required .StorageInfoProto storateInfo = 2;
-      private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto storateInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
+      // required .StorageInfoProto storageInfo = 2;
+      private org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto storageInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder> storateInfoBuilder_;
-      public boolean hasStorateInfo() {
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder> storageInfoBuilder_;
+      public boolean hasStorageInfo() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto getStorateInfo() {
-        if (storateInfoBuilder_ == null) {
-          return storateInfo_;
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto getStorageInfo() {
+        if (storageInfoBuilder_ == null) {
+          return storageInfo_;
         } else {
-          return storateInfoBuilder_.getMessage();
+          return storageInfoBuilder_.getMessage();
         }
       }
-      public Builder setStorateInfo(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto value) {
-        if (storateInfoBuilder_ == null) {
+      public Builder setStorageInfo(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto value) {
+        if (storageInfoBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          storateInfo_ = value;
+          storageInfo_ = value;
           onChanged();
         } else {
-          storateInfoBuilder_.setMessage(value);
+          storageInfoBuilder_.setMessage(value);
         }
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder setStorateInfo(
+      public Builder setStorageInfo(
           org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder builderForValue) {
-        if (storateInfoBuilder_ == null) {
-          storateInfo_ = builderForValue.build();
+        if (storageInfoBuilder_ == null) {
+          storageInfo_ = builderForValue.build();
           onChanged();
         } else {
-          storateInfoBuilder_.setMessage(builderForValue.build());
+          storageInfoBuilder_.setMessage(builderForValue.build());
         }
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder mergeStorateInfo(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto value) {
-        if (storateInfoBuilder_ == null) {
+      public Builder mergeStorageInfo(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto value) {
+        if (storageInfoBuilder_ == null) {
           if (((bitField0_ & 0x00000002) == 0x00000002) &&
-              storateInfo_ != org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance()) {
-            storateInfo_ =
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.newBuilder(storateInfo_).mergeFrom(value).buildPartial();
+              storageInfo_ != org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance()) {
+            storageInfo_ =
+              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.newBuilder(storageInfo_).mergeFrom(value).buildPartial();
           } else {
-            storateInfo_ = value;
+            storageInfo_ = value;
           }
           onChanged();
         } else {
-          storateInfoBuilder_.mergeFrom(value);
+          storageInfoBuilder_.mergeFrom(value);
         }
         bitField0_ |= 0x00000002;
         return this;
       }
-      public Builder clearStorateInfo() {
-        if (storateInfoBuilder_ == null) {
-          storateInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
+      public Builder clearStorageInfo() {
+        if (storageInfoBuilder_ == null) {
+          storageInfo_ = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.getDefaultInstance();
           onChanged();
         } else {
-          storateInfoBuilder_.clear();
+          storageInfoBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder getStorateInfoBuilder() {
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder getStorageInfoBuilder() {
         bitField0_ |= 0x00000002;
         onChanged();
-        return getStorateInfoFieldBuilder().getBuilder();
+        return getStorageInfoFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder getStorateInfoOrBuilder() {
-        if (storateInfoBuilder_ != null) {
-          return storateInfoBuilder_.getMessageOrBuilder();
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder getStorageInfoOrBuilder() {
+        if (storageInfoBuilder_ != null) {
+          return storageInfoBuilder_.getMessageOrBuilder();
         } else {
-          return storateInfo_;
+          return storageInfo_;
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder> 
-          getStorateInfoFieldBuilder() {
-        if (storateInfoBuilder_ == null) {
-          storateInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+          getStorageInfoFieldBuilder() {
+        if (storageInfoBuilder_ == null) {
+          storageInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
               org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProtoOrBuilder>(
-                  storateInfo_,
+                  storageInfo_,
                   getParentForChildren(),
                   isClean());
-          storateInfo_ = null;
+          storageInfo_ = null;
         }
-        return storateInfoBuilder_;
+        return storageInfoBuilder_;
       }
       
       // required .ExportedBlockKeysProto keys = 3;
@@ -834,10 +834,10 @@ public final class DatanodeProtocolProtos {
     org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto getBlkCmd();
     org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProtoOrBuilder getBlkCmdOrBuilder();
     
-    // optional .BlockRecoveryCommndProto recoveryCmd = 4;
+    // optional .BlockRecoveryCommandProto recoveryCmd = 4;
     boolean hasRecoveryCmd();
-    org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto getRecoveryCmd();
-    org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder getRecoveryCmdOrBuilder();
+    org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto getRecoveryCmd();
+    org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder getRecoveryCmdOrBuilder();
     
     // optional .FinalizeCommandProto finalizeCmd = 5;
     boolean hasFinalizeCmd();
@@ -1008,16 +1008,16 @@ public final class DatanodeProtocolProtos {
       return blkCmd_;
     }
     
-    // optional .BlockRecoveryCommndProto recoveryCmd = 4;
+    // optional .BlockRecoveryCommandProto recoveryCmd = 4;
     public static final int RECOVERYCMD_FIELD_NUMBER = 4;
-    private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto recoveryCmd_;
+    private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto recoveryCmd_;
     public boolean hasRecoveryCmd() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
-    public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto getRecoveryCmd() {
+    public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto getRecoveryCmd() {
       return recoveryCmd_;
     }
-    public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder getRecoveryCmdOrBuilder() {
+    public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder getRecoveryCmdOrBuilder() {
       return recoveryCmd_;
     }
     
@@ -1077,7 +1077,7 @@ public final class DatanodeProtocolProtos {
       cmdType_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto.Type.BalancerBandwidthCommand;
       balancerCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto.getDefaultInstance();
       blkCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.getDefaultInstance();
-      recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance();
+      recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance();
       finalizeCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto.getDefaultInstance();
       keyUpdateCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto.getDefaultInstance();
       registerCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto.getDefaultInstance();
@@ -1442,7 +1442,7 @@ public final class DatanodeProtocolProtos {
         }
         bitField0_ = (bitField0_ & ~0x00000004);
         if (recoveryCmdBuilder_ == null) {
-          recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance();
+          recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance();
         } else {
           recoveryCmdBuilder_.clear();
         }
@@ -1710,7 +1710,7 @@ public final class DatanodeProtocolProtos {
               break;
             }
             case 34: {
-              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.newBuilder();
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.newBuilder();
               if (hasRecoveryCmd()) {
                 subBuilder.mergeFrom(getRecoveryCmd());
               }
@@ -1964,21 +1964,21 @@ public final class DatanodeProtocolProtos {
         return blkCmdBuilder_;
       }
       
-      // optional .BlockRecoveryCommndProto recoveryCmd = 4;
-      private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance();
+      // optional .BlockRecoveryCommandProto recoveryCmd = 4;
+      private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder> recoveryCmdBuilder_;
+          org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder> recoveryCmdBuilder_;
       public boolean hasRecoveryCmd() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto getRecoveryCmd() {
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto getRecoveryCmd() {
         if (recoveryCmdBuilder_ == null) {
           return recoveryCmd_;
         } else {
           return recoveryCmdBuilder_.getMessage();
         }
       }
-      public Builder setRecoveryCmd(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto value) {
+      public Builder setRecoveryCmd(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto value) {
         if (recoveryCmdBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1992,7 +1992,7 @@ public final class DatanodeProtocolProtos {
         return this;
       }
       public Builder setRecoveryCmd(
-          org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder builderForValue) {
+          org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder builderForValue) {
         if (recoveryCmdBuilder_ == null) {
           recoveryCmd_ = builderForValue.build();
           onChanged();
@@ -2002,12 +2002,12 @@ public final class DatanodeProtocolProtos {
         bitField0_ |= 0x00000008;
         return this;
       }
-      public Builder mergeRecoveryCmd(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto value) {
+      public Builder mergeRecoveryCmd(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto value) {
         if (recoveryCmdBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008) &&
-              recoveryCmd_ != org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance()) {
+              recoveryCmd_ != org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance()) {
             recoveryCmd_ =
-              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.newBuilder(recoveryCmd_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.newBuilder(recoveryCmd_).mergeFrom(value).buildPartial();
           } else {
             recoveryCmd_ = value;
           }
@@ -2020,7 +2020,7 @@ public final class DatanodeProtocolProtos {
       }
       public Builder clearRecoveryCmd() {
         if (recoveryCmdBuilder_ == null) {
-          recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance();
+          recoveryCmd_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance();
           onChanged();
         } else {
           recoveryCmdBuilder_.clear();
@@ -2028,12 +2028,12 @@ public final class DatanodeProtocolProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
-      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder getRecoveryCmdBuilder() {
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder getRecoveryCmdBuilder() {
         bitField0_ |= 0x00000008;
         onChanged();
         return getRecoveryCmdFieldBuilder().getBuilder();
       }
-      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder getRecoveryCmdOrBuilder() {
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder getRecoveryCmdOrBuilder() {
         if (recoveryCmdBuilder_ != null) {
           return recoveryCmdBuilder_.getMessageOrBuilder();
         } else {
@@ -2041,11 +2041,11 @@ public final class DatanodeProtocolProtos {
         }
       }
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder> 
+          org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder> 
           getRecoveryCmdFieldBuilder() {
         if (recoveryCmdBuilder_ == null) {
           recoveryCmdBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder>(
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder, org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder>(
                   recoveryCmd_,
                   getParentForChildren(),
                   isClean());
@@ -2807,9 +2807,9 @@ public final class DatanodeProtocolProtos {
   public interface BlockCommandProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint32 action = 1;
+    // required .BlockCommandProto.Action action = 1;
     boolean hasAction();
-    int getAction();
+    org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action getAction();
     
     // required string blockPoolId = 2;
     boolean hasBlockPoolId();
@@ -2825,14 +2825,14 @@ public final class DatanodeProtocolProtos {
     org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProtoOrBuilder getBlocksOrBuilder(
         int index);
     
-    // repeated .DatanodeIDsProto targets = 4;
-    java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto> 
+    // repeated .DatanodeInfosProto targets = 4;
+    java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto> 
         getTargetsList();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto getTargets(int index);
+    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto getTargets(int index);
     int getTargetsCount();
-    java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder> 
+    java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder> 
         getTargetsOrBuilderList();
-    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder getTargetsOrBuilder(
+    org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder getTargetsOrBuilder(
         int index);
   }
   public static final class BlockCommandProto extends
@@ -2865,26 +2865,20 @@ public final class DatanodeProtocolProtos {
     
     public enum Action
         implements com.google.protobuf.ProtocolMessageEnum {
-      UNKNOWN(0, 0),
-      TRANSFER(1, 1),
-      INVALIDATE(2, 2),
-      SHUTDOWN(3, 3),
+      TRANSFER(0, 1),
+      INVALIDATE(1, 2),
       ;
       
-      public static final int UNKNOWN_VALUE = 0;
       public static final int TRANSFER_VALUE = 1;
       public static final int INVALIDATE_VALUE = 2;
-      public static final int SHUTDOWN_VALUE = 3;
       
       
       public final int getNumber() { return value; }
       
       public static Action valueOf(int value) {
         switch (value) {
-          case 0: return UNKNOWN;
           case 1: return TRANSFER;
           case 2: return INVALIDATE;
-          case 3: return SHUTDOWN;
           default: return null;
         }
       }
@@ -2915,7 +2909,7 @@ public final class DatanodeProtocolProtos {
       }
       
       private static final Action[] VALUES = {
-        UNKNOWN, TRANSFER, INVALIDATE, SHUTDOWN, 
+        TRANSFER, INVALIDATE, 
       };
       
       public static Action valueOf(
@@ -2939,13 +2933,13 @@ public final class DatanodeProtocolProtos {
     }
     
     private int bitField0_;
-    // required uint32 action = 1;
+    // required .BlockCommandProto.Action action = 1;
     public static final int ACTION_FIELD_NUMBER = 1;
-    private int action_;
+    private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action action_;
     public boolean hasAction() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public int getAction() {
+    public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action getAction() {
       return action_;
     }
     
@@ -3002,29 +2996,29 @@ public final class DatanodeProtocolProtos {
       return blocks_.get(index);
     }
     
-    // repeated .DatanodeIDsProto targets = 4;
+    // repeated .DatanodeInfosProto targets = 4;
     public static final int TARGETS_FIELD_NUMBER = 4;
-    private java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto> targets_;
-    public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto> getTargetsList() {
+    private java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto> targets_;
+    public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto> getTargetsList() {
       return targets_;
     }
-    public java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder> 
+    public java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder> 
         getTargetsOrBuilderList() {
       return targets_;
     }
     public int getTargetsCount() {
       return targets_.size();
     }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto getTargets(int index) {
+    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto getTargets(int index) {
       return targets_.get(index);
     }
-    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder getTargetsOrBuilder(
+    public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder getTargetsOrBuilder(
         int index) {
       return targets_.get(index);
     }
     
     private void initFields() {
-      action_ = 0;
+      action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action.TRANSFER;
       blockPoolId_ = "";
       blocks_ = java.util.Collections.emptyList();
       targets_ = java.util.Collections.emptyList();
@@ -3062,7 +3056,7 @@ public final class DatanodeProtocolProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt32(1, action_);
+        output.writeEnum(1, action_.getNumber());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBytes(2, getBlockPoolIdBytes());
@@ -3084,7 +3078,7 @@ public final class DatanodeProtocolProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(1, action_);
+          .computeEnumSize(1, action_.getNumber());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
@@ -3123,8 +3117,8 @@ public final class DatanodeProtocolProtos {
       boolean result = true;
       result = result && (hasAction() == other.hasAction());
       if (hasAction()) {
-        result = result && (getAction()
-            == other.getAction());
+        result = result &&
+            (getAction() == other.getAction());
       }
       result = result && (hasBlockPoolId() == other.hasBlockPoolId());
       if (hasBlockPoolId()) {
@@ -3146,7 +3140,7 @@ public final class DatanodeProtocolProtos {
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasAction()) {
         hash = (37 * hash) + ACTION_FIELD_NUMBER;
-        hash = (53 * hash) + getAction();
+        hash = (53 * hash) + hashEnum(getAction());
       }
       if (hasBlockPoolId()) {
         hash = (37 * hash) + BLOCKPOOLID_FIELD_NUMBER;
@@ -3278,7 +3272,7 @@ public final class DatanodeProtocolProtos {
       
       public Builder clear() {
         super.clear();
-        action_ = 0;
+        action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action.TRANSFER;
         bitField0_ = (bitField0_ & ~0x00000001);
         blockPoolId_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -3484,8 +3478,14 @@ public final class DatanodeProtocolProtos {
               break;
             }
             case 8: {
-              bitField0_ |= 0x00000001;
-              action_ = input.readUInt32();
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action value = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                action_ = value;
+              }
               break;
             }
             case 18: {
@@ -3500,7 +3500,7 @@ public final class DatanodeProtocolProtos {
               break;
             }
             case 34: {
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.newBuilder();
+              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder subBuilder = org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addTargets(subBuilder.buildPartial());
               break;
@@ -3511,15 +3511,18 @@ public final class DatanodeProtocolProtos {
       
       private int bitField0_;
       
-      // required uint32 action = 1;
-      private int action_ ;
+      // required .BlockCommandProto.Action action = 1;
+      private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action.TRANSFER;
       public boolean hasAction() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public int getAction() {
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action getAction() {
         return action_;
       }
-      public Builder setAction(int value) {
+      public Builder setAction(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
         bitField0_ |= 0x00000001;
         action_ = value;
         onChanged();
@@ -3527,7 +3530,7 @@ public final class DatanodeProtocolProtos {
       }
       public Builder clearAction() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        action_ = 0;
+        action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Action.TRANSFER;
         onChanged();
         return this;
       }
@@ -3754,20 +3757,20 @@ public final class DatanodeProtocolProtos {
         return blocksBuilder_;
       }
       
-      // repeated .DatanodeIDsProto targets = 4;
-      private java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto> targets_ =
+      // repeated .DatanodeInfosProto targets = 4;
+      private java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto> targets_ =
         java.util.Collections.emptyList();
       private void ensureTargetsIsMutable() {
         if (!((bitField0_ & 0x00000008) == 0x00000008)) {
-          targets_ = new java.util.ArrayList<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto>(targets_);
+          targets_ = new java.util.ArrayList<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto>(targets_);
           bitField0_ |= 0x00000008;
          }
       }
       
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder> targetsBuilder_;
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder> targetsBuilder_;
       
-      public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto> getTargetsList() {
+      public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto> getTargetsList() {
         if (targetsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(targets_);
         } else {
@@ -3781,7 +3784,7 @@ public final class DatanodeProtocolProtos {
           return targetsBuilder_.getCount();
         }
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto getTargets(int index) {
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto getTargets(int index) {
         if (targetsBuilder_ == null) {
           return targets_.get(index);
         } else {
@@ -3789,7 +3792,7 @@ public final class DatanodeProtocolProtos {
         }
       }
       public Builder setTargets(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto value) {
+          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto value) {
         if (targetsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -3803,7 +3806,7 @@ public final class DatanodeProtocolProtos {
         return this;
       }
       public Builder setTargets(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder builderForValue) {
+          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder builderForValue) {
         if (targetsBuilder_ == null) {
           ensureTargetsIsMutable();
           targets_.set(index, builderForValue.build());
@@ -3813,7 +3816,7 @@ public final class DatanodeProtocolProtos {
         }
         return this;
       }
-      public Builder addTargets(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto value) {
+      public Builder addTargets(org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto value) {
         if (targetsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -3827,7 +3830,7 @@ public final class DatanodeProtocolProtos {
         return this;
       }
       public Builder addTargets(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto value) {
+          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto value) {
         if (targetsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -3841,7 +3844,7 @@ public final class DatanodeProtocolProtos {
         return this;
       }
       public Builder addTargets(
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder builderForValue) {
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder builderForValue) {
         if (targetsBuilder_ == null) {
           ensureTargetsIsMutable();
           targets_.add(builderForValue.build());
@@ -3852,7 +3855,7 @@ public final class DatanodeProtocolProtos {
         return this;
       }
       public Builder addTargets(
-          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder builderForValue) {
+          int index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder builderForValue) {
         if (targetsBuilder_ == null) {
           ensureTargetsIsMutable();
           targets_.add(index, builderForValue.build());
@@ -3863,7 +3866,7 @@ public final class DatanodeProtocolProtos {
         return this;
       }
       public Builder addAllTargets(
-          java.lang.Iterable<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto> values) {
+          java.lang.Iterable<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto> values) {
         if (targetsBuilder_ == null) {
           ensureTargetsIsMutable();
           super.addAll(values, targets_);
@@ -3893,18 +3896,18 @@ public final class DatanodeProtocolProtos {
         }
         return this;
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder getTargetsBuilder(
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder getTargetsBuilder(
           int index) {
         return getTargetsFieldBuilder().getBuilder(index);
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder getTargetsOrBuilder(
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder getTargetsOrBuilder(
           int index) {
         if (targetsBuilder_ == null) {
           return targets_.get(index);  } else {
           return targetsBuilder_.getMessageOrBuilder(index);
         }
       }
-      public java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder> 
+      public java.util.List<? extends org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder> 
            getTargetsOrBuilderList() {
         if (targetsBuilder_ != null) {
           return targetsBuilder_.getMessageOrBuilderList();
@@ -3912,25 +3915,25 @@ public final class DatanodeProtocolProtos {
           return java.util.Collections.unmodifiableList(targets_);
         }
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder addTargetsBuilder() {
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder addTargetsBuilder() {
         return getTargetsFieldBuilder().addBuilder(
-            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.getDefaultInstance());
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.getDefaultInstance());
       }
-      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder addTargetsBuilder(
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder addTargetsBuilder(
           int index) {
         return getTargetsFieldBuilder().addBuilder(
-            index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.getDefaultInstance());
+            index, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.getDefaultInstance());
       }
-      public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder> 
+      public java.util.List<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder> 
            getTargetsBuilderList() {
         return getTargetsFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder> 
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder> 
           getTargetsFieldBuilder() {
         if (targetsBuilder_ == null) {
           targetsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDsProtoOrBuilder>(
+              org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto.Builder, org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProtoOrBuilder>(
                   targets_,
                   ((bitField0_ & 0x00000008) == 0x00000008),
                   getParentForChildren(),
@@ -3951,7 +3954,7 @@ public final class DatanodeProtocolProtos {
     // @@protoc_insertion_point(class_scope:BlockCommandProto)
   }
   
-  public interface BlockRecoveryCommndProtoOrBuilder
+  public interface BlockRecoveryCommandProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
     // repeated .RecoveringBlockProto blocks = 1;
@@ -3964,32 +3967,32 @@ public final class DatanodeProtocolProtos {
     org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProtoOrBuilder getBlocksOrBuilder(
         int index);
   }
-  public static final class BlockRecoveryCommndProto extends
+  public static final class BlockRecoveryCommandProto extends
       com.google.protobuf.GeneratedMessage
-      implements BlockRecoveryCommndProtoOrBuilder {
-    // Use BlockRecoveryCommndProto.newBuilder() to construct.
-    private BlockRecoveryCommndProto(Builder builder) {
+      implements BlockRecoveryCommandProtoOrBuilder {
+    // Use BlockRecoveryCommandProto.newBuilder() to construct.
+    private BlockRecoveryCommandProto(Builder builder) {
       super(builder);
     }
-    private BlockRecoveryCommndProto(boolean noInit) {}
+    private BlockRecoveryCommandProto(boolean noInit) {}
     
-    private static final BlockRecoveryCommndProto defaultInstance;
-    public static BlockRecoveryCommndProto getDefaultInstance() {
+    private static final BlockRecoveryCommandProto defaultInstance;
+    public static BlockRecoveryCommandProto getDefaultInstance() {
       return defaultInstance;
     }
     
-    public BlockRecoveryCommndProto getDefaultInstanceForType() {
+    public BlockRecoveryCommandProto getDefaultInstanceForType() {
       return defaultInstance;
     }
     
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommndProto_descriptor;
+      return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommandProto_descriptor;
     }
     
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommndProto_fieldAccessorTable;
+      return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommandProto_fieldAccessorTable;
     }
     
     // repeated .RecoveringBlockProto blocks = 1;
@@ -4067,10 +4070,10 @@ public final class DatanodeProtocolProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto)) {
+      if (!(obj instanceof org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto other = (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto) obj;
+      org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto other = (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto) obj;
       
       boolean result = true;
       result = result && getBlocksList()
@@ -4092,41 +4095,41 @@ public final class DatanodeProtocolProtos {
       return hash;
     }
     
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(byte[] data)
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data).buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return newBuilder().mergeFrom(data, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input, extensionRegistry)
                .buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       Builder builder = newBuilder();
       if (builder.mergeDelimitedFrom(input)) {
@@ -4135,7 +4138,7 @@ public final class DatanodeProtocolProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseDelimitedFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -4146,12 +4149,12 @@ public final class DatanodeProtocolProtos {
         return null;
       }
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return newBuilder().mergeFrom(input).buildParsed();
     }
-    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto parseFrom(
+    public static org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -4161,7 +4164,7 @@ public final class DatanodeProtocolProtos {
     
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -4174,18 +4177,18 @@ public final class DatanodeProtocolProtos {
     }
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProtoOrBuilder {
+       implements org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProtoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommndProto_descriptor;
+        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommandProto_descriptor;
       }
       
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommndProto_fieldAccessorTable;
+        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.internal_static_BlockRecoveryCommandProto_fieldAccessorTable;
       }
       
-      // Construct using org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.newBuilder()
+      // Construct using org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -4220,24 +4223,24 @@ public final class DatanodeProtocolProtos {
       
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDescriptor();
+        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDescriptor();
       }
       
-      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto getDefaultInstanceForType() {
-        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance();
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto getDefaultInstanceForType() {
+        return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance();
       }
       
-      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto build() {
-        org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto result = buildPartial();
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto build() {
+        org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
       
-      private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto buildParsed()
+      private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto buildParsed()
           throws com.google.protobuf.InvalidProtocolBufferException {
-        org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto result = buildPartial();
+        org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(
             result).asInvalidProtocolBufferException();
@@ -4245,8 +4248,8 @@ public final class DatanodeProtocolProtos {
         return result;
       }
       
-      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto buildPartial() {
-        org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto result = new org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto(this);
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto buildPartial() {
+        org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto result = new org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto(this);
         int from_bitField0_ = bitField0_;
         if (blocksBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -4262,16 +4265,16 @@ public final class DatanodeProtocolProtos {
       }
       
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto) {
-          return mergeFrom((org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto)other);
+        if (other instanceof org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto) {
+          return mergeFrom((org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
       
-      public Builder mergeFrom(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto other) {
-        if (other == org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto other) {
+        if (other == org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.getDefaultInstance()) return this;
         if (blocksBuilder_ == null) {
           if (!other.blocks_.isEmpty()) {
             if (blocks_.isEmpty()) {
@@ -4533,15 +4536,15 @@ public final class DatanodeProtocolProtos {
         return blocksBuilder_;
       }
       
-      // @@protoc_insertion_point(builder_scope:BlockRecoveryCommndProto)
+      // @@protoc_insertion_point(builder_scope:BlockRecoveryCommandProto)
     }
     
     static {
-      defaultInstance = new BlockRecoveryCommndProto(true);
+      defaultInstance = new BlockRecoveryCommandProto(true);
       defaultInstance.initFields();
     }
     
-    // @@protoc_insertion_point(class_scope:BlockRecoveryCommndProto)
+    // @@protoc_insertion_point(class_scope:BlockRecoveryCommandProto)
   }
   
   public interface FinalizeCommandProtoOrBuilder
@@ -5736,9 +5739,9 @@ public final class DatanodeProtocolProtos {
   public interface UpgradeCommandProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
-    // required uint32 action = 1;
+    // required .UpgradeCommandProto.Action action = 1;
     boolean hasAction();
-    int getAction();
+    org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action getAction();
     
     // required uint32 version = 2;
     boolean hasVersion();
@@ -5849,13 +5852,13 @@ public final class DatanodeProtocolProtos {
     }
     
     private int bitField0_;
-    // required uint32 action = 1;
+    // required .UpgradeCommandProto.Action action = 1;
     public static final int ACTION_FIELD_NUMBER = 1;
-    private int action_;
+    private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action action_;
     public boolean hasAction() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
-    public int getAction() {
+    public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action getAction() {
       return action_;
     }
     
@@ -5880,7 +5883,7 @@ public final class DatanodeProtocolProtos {
     }
     
     private void initFields() {
-      action_ = 0;
+      action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action.UNKNOWN;
       version_ = 0;
       upgradeStatus_ = 0;
     }
@@ -5909,7 +5912,7 @@ public final class DatanodeProtocolProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt32(1, action_);
+        output.writeEnum(1, action_.getNumber());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt32(2, version_);
@@ -5928,7 +5931,7 @@ public final class DatanodeProtocolProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(1, action_);
+          .computeEnumSize(1, action_.getNumber());
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
@@ -5963,8 +5966,8 @@ public final class DatanodeProtocolProtos {
       boolean result = true;
       result = result && (hasAction() == other.hasAction());
       if (hasAction()) {
-        result = result && (getAction()
-            == other.getAction());
+        result = result &&
+            (getAction() == other.getAction());
       }
       result = result && (hasVersion() == other.hasVersion());
       if (hasVersion()) {
@@ -5987,7 +5990,7 @@ public final class DatanodeProtocolProtos {
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasAction()) {
         hash = (37 * hash) + ACTION_FIELD_NUMBER;
-        hash = (53 * hash) + getAction();
+        hash = (53 * hash) + hashEnum(getAction());
       }
       if (hasVersion()) {
         hash = (37 * hash) + VERSION_FIELD_NUMBER;
@@ -6113,7 +6116,7 @@ public final class DatanodeProtocolProtos {
       
       public Builder clear() {
         super.clear();
-        action_ = 0;
+        action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action.UNKNOWN;
         bitField0_ = (bitField0_ & ~0x00000001);
         version_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -6238,8 +6241,14 @@ public final class DatanodeProtocolProtos {
               break;
             }
             case 8: {
-              bitField0_ |= 0x00000001;
-              action_ = input.readUInt32();
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action value = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                bitField0_ |= 0x00000001;
+                action_ = value;
+              }
               break;
             }
             case 16: {
@@ -6258,15 +6267,18 @@ public final class DatanodeProtocolProtos {
       
       private int bitField0_;
       
-      // required uint32 action = 1;
-      private int action_ ;
+      // required .UpgradeCommandProto.Action action = 1;
+      private org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action.UNKNOWN;
       public boolean hasAction() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public int getAction() {
+      public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action getAction() {
         return action_;
       }
-      public Builder setAction(int value) {
+      public Builder setAction(org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
         bitField0_ |= 0x00000001;
         action_ = value;
         onChanged();
@@ -6274,7 +6286,7 @@ public final class DatanodeProtocolProtos {
       }
       public Builder clearAction() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        action_ = 0;
+        action_ = org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto.Action.UNKNOWN;
         onChanged();
         return this;
       }
@@ -16048,6 +16060,11 @@ public final class DatanodeProtocolProtos {
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto> done);
       
+      public abstract void versionRequest(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done);
+      
       public abstract void processUpgrade(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto request,
@@ -16109,6 +16126,14 @@ public final class DatanodeProtocolProtos {
         }
         
         @java.lang.Override
+        public  void versionRequest(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done) {
+          impl.versionRequest(controller, request, done);
+        }
+        
+        @java.lang.Override
         public  void processUpgrade(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto request,
@@ -16165,10 +16190,12 @@ public final class DatanodeProtocolProtos {
             case 4:
               return impl.errorReport(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto)request);
             case 5:
-              return impl.processUpgrade(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto)request);
+              return impl.versionRequest(controller, (org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto)request);
             case 6:
-              return impl.reportBadBlocks(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto)request);
+              return impl.processUpgrade(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto)request);
             case 7:
+              return impl.reportBadBlocks(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto)request);
+            case 8:
               return impl.commitBlockSynchronization(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -16195,10 +16222,12 @@ public final class DatanodeProtocolProtos {
             case 4:
               return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto.getDefaultInstance();
             case 5:
-              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto.getDefaultInstance();
+              return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto.getDefaultInstance();
             case 6:
-              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto.getDefaultInstance();
+              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto.getDefaultInstance();
             case 7:
+              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto.getDefaultInstance();
+            case 8:
               return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -16225,10 +16254,12 @@ public final class DatanodeProtocolProtos {
             case 4:
               return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto.getDefaultInstance();
             case 5:
-              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto.getDefaultInstance();
+              return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance();
             case 6:
-              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto.getDefaultInstance();
+              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto.getDefaultInstance();
             case 7:
+              return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto.getDefaultInstance();
+            case 8:
               return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -16262,6 +16293,11 @@ public final class DatanodeProtocolProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto> done);
+    
+    public abstract void versionRequest(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done);
     
     public abstract void processUpgrade(
         com.google.protobuf.RpcController controller,
@@ -16326,16 +16362,21 @@ public final class DatanodeProtocolProtos {
               done));
           return;
         case 5:
+          this.versionRequest(controller, (org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto>specializeCallback(
+              done));
+          return;
+        case 6:
           this.processUpgrade(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto>specializeCallback(
               done));
           return;
-        case 6:
+        case 7:
           this.reportBadBlocks(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto>specializeCallback(
               done));
           return;
-        case 7:
+        case 8:
           this.commitBlockSynchronization(controller, (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto>specializeCallback(
               done));
@@ -16365,10 +16406,12 @@ public final class DatanodeProtocolProtos {
         case 4:
           return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto.getDefaultInstance();
         case 5:
-          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto.getDefaultInstance();
+          return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto.getDefaultInstance();
         case 6:
-          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto.getDefaultInstance();
+          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto.getDefaultInstance();
         case 7:
+          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto.getDefaultInstance();
+        case 8:
           return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -16395,10 +16438,12 @@ public final class DatanodeProtocolProtos {
         case 4:
           return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto.getDefaultInstance();
         case 5:
-          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto.getDefaultInstance();
+          return org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance();
         case 6:
-          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto.getDefaultInstance();
+          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto.getDefaultInstance();
         case 7:
+          return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto.getDefaultInstance();
+        case 8:
           return org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -16496,12 +16541,27 @@ public final class DatanodeProtocolProtos {
             org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto.getDefaultInstance()));
       }
       
+      public  void versionRequest(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(5),
+          controller,
+          request,
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.class,
+            org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance()));
+      }
+      
       public  void processUpgrade(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(5),
+          getDescriptor().getMethods().get(6),
           controller,
           request,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto.getDefaultInstance(),
@@ -16516,7 +16576,7 @@ public final class DatanodeProtocolProtos {
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(6),
+          getDescriptor().getMethods().get(7),
           controller,
           request,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto.getDefaultInstance(),
@@ -16531,7 +16591,7 @@ public final class DatanodeProtocolProtos {
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(7),
+          getDescriptor().getMethods().get(8),
           controller,
           request,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto.getDefaultInstance(),
@@ -16571,6 +16631,11 @@ public final class DatanodeProtocolProtos {
       public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto errorReport(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto versionRequest(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request)
           throws com.google.protobuf.ServiceException;
       
       public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto processUpgrade(
@@ -16656,12 +16721,24 @@ public final class DatanodeProtocolProtos {
       }
       
       
+      public org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto versionRequest(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(5),
+          controller,
+          request,
+          org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto.getDefaultInstance());
+      }
+      
+      
       public org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto processUpgrade(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(5),
+          getDescriptor().getMethods().get(6),
           controller,
           request,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto.getDefaultInstance());
@@ -16673,7 +16750,7 @@ public final class DatanodeProtocolProtos {
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(6),
+          getDescriptor().getMethods().get(7),
           controller,
           request,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto.getDefaultInstance());
@@ -16685,7 +16762,7 @@ public final class DatanodeProtocolProtos {
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(7),
+          getDescriptor().getMethods().get(8),
           controller,
           request,
           org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto.getDefaultInstance());
@@ -16715,10 +16792,10 @@ public final class DatanodeProtocolProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_BlockCommandProto_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_BlockRecoveryCommndProto_descriptor;
+    internal_static_BlockRecoveryCommandProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_BlockRecoveryCommndProto_fieldAccessorTable;
+      internal_static_BlockRecoveryCommandProto_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_FinalizeCommandProto_descriptor;
   private static
@@ -16835,96 +16912,99 @@ public final class DatanodeProtocolProtos {
     java.lang.String[] descriptorData = {
       "\n\026DatanodeProtocol.proto\032\nhdfs.proto\"\220\001\n" +
       "\031DatanodeRegistrationProto\022$\n\ndatanodeID" +
-      "\030\001 \002(\0132\020.DatanodeIDProto\022&\n\013storateInfo\030" +
+      "\030\001 \002(\0132\020.DatanodeIDProto\022&\n\013storageInfo\030" +
       "\002 \002(\0132\021.StorageInfoProto\022%\n\004keys\030\003 \002(\0132\027" +
-      ".ExportedBlockKeysProto\"\243\004\n\024DatanodeComm" +
+      ".ExportedBlockKeysProto\"\244\004\n\024DatanodeComm" +
       "andProto\022+\n\007cmdType\030\001 \002(\0162\032.DatanodeComm" +
       "andProto.Type\0223\n\013balancerCmd\030\002 \001(\0132\036.Bal" +
       "ancerBandwidthCommandProto\022\"\n\006blkCmd\030\003 \001" +
-      "(\0132\022.BlockCommandProto\022.\n\013recoveryCmd\030\004 " +
-      "\001(\0132\031.BlockRecoveryCommndProto\022*\n\013finali",
-      "zeCmd\030\005 \001(\0132\025.FinalizeCommandProto\022,\n\014ke" +
-      "yUpdateCmd\030\006 \001(\0132\026.KeyUpdateCommandProto" +
-      "\022*\n\013registerCmd\030\007 \001(\0132\025.RegisterCommandP" +
-      "roto\022(\n\nupgradeCmd\030\010 \001(\0132\024.UpgradeComman" +
-      "dProto\"\244\001\n\004Type\022\034\n\030BalancerBandwidthComm" +
-      "and\020\000\022\020\n\014BlockCommand\020\001\022\030\n\024BlockRecovery" +
-      "Command\020\002\022\023\n\017FinalizeCommand\020\003\022\024\n\020KeyUpd" +
-      "ateCommand\020\004\022\023\n\017RegisterCommand\020\005\022\022\n\016Upg" +
-      "radeCommand\020\006\"2\n\035BalancerBandwidthComman" +
-      "dProto\022\021\n\tbandwidth\030\001 \002(\004\"\274\001\n\021BlockComma",
-      "ndProto\022\016\n\006action\030\001 \002(\r\022\023\n\013blockPoolId\030\002" +
-      " \002(\t\022\033\n\006blocks\030\003 \003(\0132\013.BlockProto\022\"\n\007tar" +
-      "gets\030\004 \003(\0132\021.DatanodeIDsProto\"A\n\006Action\022" +
-      "\013\n\007UNKNOWN\020\000\022\014\n\010TRANSFER\020\001\022\016\n\nINVALIDATE" +
-      "\020\002\022\014\n\010SHUTDOWN\020\003\"A\n\030BlockRecoveryCommndP" +
-      "roto\022%\n\006blocks\030\001 \003(\0132\025.RecoveringBlockPr" +
-      "oto\"+\n\024FinalizeCommandProto\022\023\n\013blockPool" +
-      "Id\030\001 \002(\t\">\n\025KeyUpdateCommandProto\022%\n\004key" +
-      "s\030\001 \002(\0132\027.ExportedBlockKeysProto\"\026\n\024Regi" +
-      "sterCommandProto\"\212\001\n\023UpgradeCommandProto",
-      "\022\016\n\006action\030\001 \002(\r\022\017\n\007version\030\002 \002(\r\022\025\n\rupg" +
-      "radeStatus\030\003 \002(\r\";\n\006Action\022\013\n\007UNKNOWN\020\000\022" +
-      "\021\n\rREPORT_STATUS\020d\022\021\n\rSTART_UPGRADE\020e\"P\n" +
-      "\034RegisterDatanodeRequestProto\0220\n\014registr" +
-      "ation\030\001 \002(\0132\032.DatanodeRegistrationProto\"" +
-      "Q\n\035RegisterDatanodeResponseProto\0220\n\014regi" +
-      "stration\030\001 \002(\0132\032.DatanodeRegistrationPro" +
-      "to\"\334\001\n\025HeartbeatRequestProto\0220\n\014registra" +
-      "tion\030\001 \002(\0132\032.DatanodeRegistrationProto\022\020" +
-      "\n\010capacity\030\002 \002(\004\022\017\n\007dfsUsed\030\003 \002(\004\022\021\n\trem",
-      "aining\030\004 \002(\004\022\025\n\rblockPoolUsed\030\005 \002(\004\022\027\n\017x" +
-      "mitsInProgress\030\006 \002(\r\022\024\n\014xceiverCount\030\007 \002" +
-      "(\r\022\025\n\rfailedVolumes\030\010 \002(\r\"=\n\026HeartbeatRe" +
-      "sponseProto\022#\n\004cmds\030\001 \003(\0132\025.DatanodeComm" +
-      "andProto\"t\n\027BlockReportRequestProto\0220\n\014r" +
-      "egistration\030\001 \002(\0132\032.DatanodeRegistration" +
-      "Proto\022\023\n\013blockPoolId\030\002 \002(\t\022\022\n\006blocks\030\003 \003" +
-      "(\004B\002\020\001\">\n\030BlockReportResponseProto\022\"\n\003cm" +
-      "d\030\001 \002(\0132\025.DatanodeCommandProto\"O\n\035Receiv" +
-      "edDeletedBlockInfoProto\022\032\n\005block\030\001 \002(\0132\013",
-      ".BlockProto\022\022\n\ndeleteHint\030\002 \001(\t\"\234\001\n#Bloc" +
-      "kReceivedAndDeletedRequestProto\0220\n\014regis" +
-      "tration\030\001 \002(\0132\032.DatanodeRegistrationProt" +
-      "o\022\023\n\013blockPoolId\030\002 \002(\t\022.\n\006blocks\030\003 \003(\0132\036" +
-      ".ReceivedDeletedBlockInfoProto\"&\n$BlockR" +
-      "eceivedAndDeletedResponseProto\"\275\001\n\027Error" +
-      "ReportRequestProto\0220\n\014registartion\030\001 \002(\013" +
-      "2\032.DatanodeRegistrationProto\022\021\n\terrorCod" +
-      "e\030\002 \002(\r\022\013\n\003msg\030\003 \002(\t\"P\n\tErrorCode\022\n\n\006NOT" +
-      "IFY\020\000\022\016\n\nDISK_ERROR\020\001\022\021\n\rINVALID_BLOCK\020\002",
-      "\022\024\n\020FATAL_DISK_ERROR\020\003\"\032\n\030ErrorReportRes" +
-      "ponseProto\"?\n\032ProcessUpgradeRequestProto" +
-      "\022!\n\003cmd\030\001 \001(\0132\024.UpgradeCommandProto\"@\n\033P" +
-      "rocessUpgradeResponseProto\022!\n\003cmd\030\001 \001(\0132" +
-      "\024.UpgradeCommandProto\"A\n\033ReportBadBlocks" +
-      "RequestProto\022\"\n\006blocks\030\001 \003(\0132\022.LocatedBl" +
-      "ockProto\"\036\n\034ReportBadBlocksResponseProto" +
-      "\"\303\001\n&CommitBlockSynchronizationRequestPr" +
-      "oto\022\"\n\005block\030\001 \002(\0132\023.ExtendedBlockProto\022" +
-      "\023\n\013newGenStamp\030\002 \002(\004\022\021\n\tnewLength\030\003 \002(\004\022",
-      "\021\n\tcloseFile\030\004 \002(\010\022\023\n\013deleteBlock\030\005 \002(\010\022" +
-      "%\n\013newTaragets\030\006 \003(\0132\020.DatanodeIDProto\")" +
-      "\n\'CommitBlockSynchronizationResponseProt" +
-      "o2\254\005\n\027DatanodeProtocolService\022Q\n\020registe" +
-      "rDatanode\022\035.RegisterDatanodeRequestProto" +
-      "\032\036.RegisterDatanodeResponseProto\022@\n\rsend" +
-      "Heartbeat\022\026.HeartbeatRequestProto\032\027.Hear" +
-      "tbeatResponseProto\022B\n\013blockReport\022\030.Bloc" +
-      "kReportRequestProto\032\031.BlockReportRespons" +
-      "eProto\022f\n\027blockReceivedAndDeleted\022$.Bloc",
-      "kReceivedAndDeletedRequestProto\032%.BlockR" +
-      "eceivedAndDeletedResponseProto\022B\n\013errorR" +
-      "eport\022\030.ErrorReportRequestProto\032\031.ErrorR" +
-      "eportResponseProto\022K\n\016processUpgrade\022\033.P" +
-      "rocessUpgradeRequestProto\032\034.ProcessUpgra" +
-      "deResponseProto\022N\n\017reportBadBlocks\022\034.Rep" +
-      "ortBadBlocksRequestProto\032\035.ReportBadBloc" +
-      "ksResponseProto\022o\n\032commitBlockSynchroniz" +
-      "ation\022\'.CommitBlockSynchronizationReques" +
-      "tProto\032(.CommitBlockSynchronizationRespo",
-      "nseProtoBE\n%org.apache.hadoop.hdfs.proto" +
-      "col.protoB\026DatanodeProtocolProtos\210\001\001\240\001\001"
+      "(\0132\022.BlockCommandProto\022/\n\013recoveryCmd\030\004 " +
+      "\001(\0132\032.BlockRecoveryCommandProto\022*\n\013final",
+      "izeCmd\030\005 \001(\0132\025.FinalizeCommandProto\022,\n\014k" +
+      "eyUpdateCmd\030\006 \001(\0132\026.KeyUpdateCommandProt" +
+      "o\022*\n\013registerCmd\030\007 \001(\0132\025.RegisterCommand" +
+      "Proto\022(\n\nupgradeCmd\030\010 \001(\0132\024.UpgradeComma" +
+      "ndProto\"\244\001\n\004Type\022\034\n\030BalancerBandwidthCom" +
+      "mand\020\000\022\020\n\014BlockCommand\020\001\022\030\n\024BlockRecover" +
+      "yCommand\020\002\022\023\n\017FinalizeCommand\020\003\022\024\n\020KeyUp" +
+      "dateCommand\020\004\022\023\n\017RegisterCommand\020\005\022\022\n\016Up" +
+      "gradeCommand\020\006\"2\n\035BalancerBandwidthComma" +
+      "ndProto\022\021\n\tbandwidth\030\001 \002(\004\"\276\001\n\021BlockComm",
+      "andProto\022)\n\006action\030\001 \002(\0162\031.BlockCommandP" +
+      "roto.Action\022\023\n\013blockPoolId\030\002 \002(\t\022\033\n\006bloc" +
+      "ks\030\003 \003(\0132\013.BlockProto\022$\n\007targets\030\004 \003(\0132\023" +
+      ".DatanodeInfosProto\"&\n\006Action\022\014\n\010TRANSFE" +
+      "R\020\001\022\016\n\nINVALIDATE\020\002\"B\n\031BlockRecoveryComm" +
+      "andProto\022%\n\006blocks\030\001 \003(\0132\025.RecoveringBlo" +
+      "ckProto\"+\n\024FinalizeCommandProto\022\023\n\013block" +
+      "PoolId\030\001 \002(\t\">\n\025KeyUpdateCommandProto\022%\n" +
+      "\004keys\030\001 \002(\0132\027.ExportedBlockKeysProto\"\026\n\024" +
+      "RegisterCommandProto\"\247\001\n\023UpgradeCommandP",
+      "roto\022+\n\006action\030\001 \002(\0162\033.UpgradeCommandPro" +
+      "to.Action\022\017\n\007version\030\002 \002(\r\022\025\n\rupgradeSta" +
+      "tus\030\003 \002(\r\";\n\006Action\022\013\n\007UNKNOWN\020\000\022\021\n\rREPO" +
+      "RT_STATUS\020d\022\021\n\rSTART_UPGRADE\020e\"P\n\034Regist" +
+      "erDatanodeRequestProto\0220\n\014registration\030\001" +
+      " \002(\0132\032.DatanodeRegistrationProto\"Q\n\035Regi" +
+      "sterDatanodeResponseProto\0220\n\014registratio" +
+      "n\030\001 \002(\0132\032.DatanodeRegistrationProto\"\334\001\n\025" +
+      "HeartbeatRequestProto\0220\n\014registration\030\001 " +
+      "\002(\0132\032.DatanodeRegistrationProto\022\020\n\010capac",
+      "ity\030\002 \002(\004\022\017\n\007dfsUsed\030\003 \002(\004\022\021\n\tremaining\030" +
+      "\004 \002(\004\022\025\n\rblockPoolUsed\030\005 \002(\004\022\027\n\017xmitsInP" +
+      "rogress\030\006 \002(\r\022\024\n\014xceiverCount\030\007 \002(\r\022\025\n\rf" +
+      "ailedVolumes\030\010 \002(\r\"=\n\026HeartbeatResponseP" +
+      "roto\022#\n\004cmds\030\001 \003(\0132\025.DatanodeCommandProt" +
+      "o\"t\n\027BlockReportRequestProto\0220\n\014registra" +
+      "tion\030\001 \002(\0132\032.DatanodeRegistrationProto\022\023" +
+      "\n\013blockPoolId\030\002 \002(\t\022\022\n\006blocks\030\003 \003(\004B\002\020\001\"" +
+      ">\n\030BlockReportResponseProto\022\"\n\003cmd\030\001 \002(\013" +
+      "2\025.DatanodeCommandProto\"O\n\035ReceivedDelet",
+      "edBlockInfoProto\022\032\n\005block\030\001 \002(\0132\013.BlockP" +
+      "roto\022\022\n\ndeleteHint\030\002 \001(\t\"\234\001\n#BlockReceiv" +
+      "edAndDeletedRequestProto\0220\n\014registration" +
+      "\030\001 \002(\0132\032.DatanodeRegistrationProto\022\023\n\013bl" +
+      "ockPoolId\030\002 \002(\t\022.\n\006blocks\030\003 \003(\0132\036.Receiv" +
+      "edDeletedBlockInfoProto\"&\n$BlockReceived" +
+      "AndDeletedResponseProto\"\275\001\n\027ErrorReportR" +
+      "equestProto\0220\n\014registartion\030\001 \002(\0132\032.Data" +
+      "nodeRegistrationProto\022\021\n\terrorCode\030\002 \002(\r" +
+      "\022\013\n\003msg\030\003 \002(\t\"P\n\tErrorCode\022\n\n\006NOTIFY\020\000\022\016",
+      "\n\nDISK_ERROR\020\001\022\021\n\rINVALID_BLOCK\020\002\022\024\n\020FAT" +
+      "AL_DISK_ERROR\020\003\"\032\n\030ErrorReportResponsePr" +
+      "oto\"?\n\032ProcessUpgradeRequestProto\022!\n\003cmd" +
+      "\030\001 \001(\0132\024.UpgradeCommandProto\"@\n\033ProcessU" +
+      "pgradeResponseProto\022!\n\003cmd\030\001 \001(\0132\024.Upgra" +
+      "deCommandProto\"A\n\033ReportBadBlocksRequest" +
+      "Proto\022\"\n\006blocks\030\001 \003(\0132\022.LocatedBlockProt" +
+      "o\"\036\n\034ReportBadBlocksResponseProto\"\303\001\n&Co" +
+      "mmitBlockSynchronizationRequestProto\022\"\n\005" +
+      "block\030\001 \002(\0132\023.ExtendedBlockProto\022\023\n\013newG",
+      "enStamp\030\002 \002(\004\022\021\n\tnewLength\030\003 \002(\004\022\021\n\tclos" +
+      "eFile\030\004 \002(\010\022\023\n\013deleteBlock\030\005 \002(\010\022%\n\013newT" +
+      "aragets\030\006 \003(\0132\020.DatanodeIDProto\")\n\'Commi" +
+      "tBlockSynchronizationResponseProto2\353\005\n\027D" +
+      "atanodeProtocolService\022Q\n\020registerDatano" +
+      "de\022\035.RegisterDatanodeRequestProto\032\036.Regi" +
+      "sterDatanodeResponseProto\022@\n\rsendHeartbe" +
+      "at\022\026.HeartbeatRequestProto\032\027.HeartbeatRe" +
+      "sponseProto\022B\n\013blockReport\022\030.BlockReport" +
+      "RequestProto\032\031.BlockReportResponseProto\022",
+      "f\n\027blockReceivedAndDeleted\022$.BlockReceiv" +
+      "edAndDeletedRequestProto\032%.BlockReceived" +
+      "AndDeletedResponseProto\022B\n\013errorReport\022\030" +
+      ".ErrorReportRequestProto\032\031.ErrorReportRe" +
+      "sponseProto\022=\n\016versionRequest\022\024.VersionR" +
+      "equestProto\032\025.VersionResponseProto\022K\n\016pr" +
+      "ocessUpgrade\022\033.ProcessUpgradeRequestProt" +
+      "o\032\034.ProcessUpgradeResponseProto\022N\n\017repor" +
+      "tBadBlocks\022\034.ReportBadBlocksRequestProto" +
+      "\032\035.ReportBadBlocksResponseProto\022o\n\032commi",
+      "tBlockSynchronization\022\'.CommitBlockSynch" +
+      "ronizationRequestProto\032(.CommitBlockSync" +
+      "hronizationResponseProtoBE\n%org.apache.h" +
+      "adoop.hdfs.protocol.protoB\026DatanodeProto" +
+      "colProtos\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -16936,7 +17016,7 @@ public final class DatanodeProtocolProtos {
           internal_static_DatanodeRegistrationProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DatanodeRegistrationProto_descriptor,
-              new java.lang.String[] { "DatanodeID", "StorateInfo", "Keys", },
+              new java.lang.String[] { "DatanodeID", "StorageInfo", "Keys", },
               org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto.class,
               org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto.Builder.class);
           internal_static_DatanodeCommandProto_descriptor =
@@ -16963,14 +17043,14 @@ public final class DatanodeProtocolProtos {
               new java.lang.String[] { "Action", "BlockPoolId", "Blocks", "Targets", },
               org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.class,
               org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto.Builder.class);
-          internal_static_BlockRecoveryCommndProto_descriptor =
+          internal_static_BlockRecoveryCommandProto_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_BlockRecoveryCommndProto_fieldAccessorTable = new
+          internal_static_BlockRecoveryCommandProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_BlockRecoveryCommndProto_descriptor,
+              internal_static_BlockRecoveryCommandProto_descriptor,
               new java.lang.String[] { "Blocks", },
-              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.class,
-              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommndProto.Builder.class);
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.class,
+              org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto.Builder.class);
           internal_static_FinalizeCommandProto_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_FinalizeCommandProto_fieldAccessorTable = new
