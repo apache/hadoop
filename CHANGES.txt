@@ -63,6 +63,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-3319. Hadoop example "multifilewc" broken in 0.20.205.0.
     (Subroto Sanyal via mattf)
 
+    HADOOP-7898. Fix javadoc warnings in AuthenticationToken.java.
+    (suresh via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for 
