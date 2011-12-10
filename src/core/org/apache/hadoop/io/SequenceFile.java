@@ -419,7 +419,6 @@ public class SequenceFile {
    * @param createParent create parent directory if non-existent
    * @param compressionType The compression type.
    * @param codec The compression codec.
-   * @param progress The Progressable object to track progress.
    * @param metadata The metadata of the file.
    * @return Returns the handle to the constructed SequenceFile Writer.
    * @throws IOException

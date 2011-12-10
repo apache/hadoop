@@ -46,7 +46,7 @@ public class QueueAclsInfo implements Writable {
    * queue operations array
    * 
    * @param queueName Name of the job queue
-   * @param queue operations
+   * @param operations queue operations
    * 
    */
   public QueueAclsInfo(String queueName, String[] operations) {

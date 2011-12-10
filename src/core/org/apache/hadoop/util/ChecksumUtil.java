@@ -25,7 +25,7 @@ public class ChecksumUtil {
    * updates the checksum for a buffer
    * 
    * @param buf - buffer to update the checksum in
-   * @param chunkOff - offset in the buffer where the checksum is to update
+   * @param checksumOff - offset in the buffer where the checksum is to update
    * @param dataOff - offset in the buffer of the data
    * @param dataLen - length of data to compute checksum on
    */
