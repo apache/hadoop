@@ -78,6 +78,8 @@ Release 0.23.1 - Unreleased
     HADOOP-7902. skipping name rules setting (if already set) should be done 
     on UGI initialization only. (tucu)
 
+    HADOOP-7898. Fix javadoc warnings in AuthenticationToken.java. (suresh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
