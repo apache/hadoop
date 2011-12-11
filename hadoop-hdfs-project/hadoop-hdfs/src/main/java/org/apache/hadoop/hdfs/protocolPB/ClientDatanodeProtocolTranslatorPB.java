@@ -21,12 +21,19 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import javax.net.SocketFactory;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoResponseProto;
@@ -38,6 +45,8 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.RpcController;
@@ -52,20 +61,79 @@ import com.google.protobuf.ServiceException;
 @InterfaceStability.Stable
 public class ClientDatanodeProtocolTranslatorPB implements
     ClientDatanodeProtocol, Closeable {
+  public static final Log LOG = LogFactory
+      .getLog(ClientDatanodeProtocolTranslatorPB.class);
+  
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final ClientDatanodeProtocolPB rpcProxy;
   private final static RefreshNamenodesRequestProto REFRESH_NAMENODES = 
       RefreshNamenodesRequestProto.newBuilder().build();
 
+  public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
+      Configuration conf, int socketTimeout, LocatedBlock locatedBlock)
+      throws IOException {
+    rpcProxy = createClientDatanodeProtocolProxy( datanodeid, conf, 
+                  socketTimeout, locatedBlock);
+  }
+  
+  public ClientDatanodeProtocolTranslatorPB(InetSocketAddress addr,
+      UserGroupInformation ticket, Configuration conf, SocketFactory factory)
+      throws IOException {
+    rpcProxy = createClientDatanodeProtocolProxy(addr, ticket, conf, factory, 0);
+  }
+  
+  /**
+   * Constructor.
+   * @param datanodeid Datanode to connect to.
+   * @param conf Configuration.
+   * @param socketTimeout Socket timeout to use.
+   * @throws IOException
+   */
+  public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
+      Configuration conf, int socketTimeout) throws IOException {
+    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getHost()
+        + ":" + datanodeid.getIpcPort());
+    rpcProxy = createClientDatanodeProtocolProxy(addr,
+        UserGroupInformation.getCurrentUser(), conf,
+        NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+  }
 
-  public ClientDatanodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
-      Configuration conf) throws IOException {
+  static ClientDatanodeProtocolPB createClientDatanodeProtocolProxy(
+      DatanodeID datanodeid, Configuration conf, int socketTimeout,
+      LocatedBlock locatedBlock) throws IOException {
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+      datanodeid.getHost() + ":" + datanodeid.getIpcPort());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("ClientDatanodeProtocol addr=" + addr);
+    }
+    
+    // Since we're creating a new UserGroupInformation here, we know that no
+    // future RPC proxies will be able to re-use the same connection. And
+    // usages of this proxy tend to be one-off calls.
+    //
+    // This is a temporary fix: callers should really achieve this by using
+    // RPC.stopProxy() on the resulting object, but this is currently not
+    // working in trunk. See the discussion on HDFS-1965.
+    Configuration confWithNoIpcIdle = new Configuration(conf);
+    confWithNoIpcIdle.setInt(CommonConfigurationKeysPublic
+        .IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 0);
+
+    UserGroupInformation ticket = UserGroupInformation
+        .createRemoteUser(locatedBlock.getBlock().getLocalBlock().toString());
+    ticket.addToken(locatedBlock.getBlockToken());
+    return createClientDatanodeProtocolProxy(addr, ticket, confWithNoIpcIdle,
+        NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+  }
+  
+  static ClientDatanodeProtocolPB createClientDatanodeProtocolProxy(
+      InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+      SocketFactory factory, int socketTimeout) throws IOException {
     RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
-    rpcProxy = RPC.getProxy(ClientDatanodeProtocolPB.class,
-        RPC.getProtocolVersion(ClientDatanodeProtocolPB.class), nameNodeAddr,
-        conf);
+    return RPC.getProxy(ClientDatanodeProtocolPB.class,
+        RPC.getProtocolVersion(ClientDatanodeProtocolPB.class), addr, ticket,
+        conf, factory, socketTimeout);
   }
 
   @Override

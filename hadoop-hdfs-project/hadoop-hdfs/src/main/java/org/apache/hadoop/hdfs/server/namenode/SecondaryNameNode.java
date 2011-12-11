@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -217,9 +219,10 @@ public class SecondaryNameNode implements Runnable {
     nameNodeAddr = NameNode.getServiceAddress(conf, true);
 
     this.conf = conf;
-    this.namenode =
-        (NamenodeProtocol) RPC.waitForProxy(NamenodeProtocol.class,
-            NamenodeProtocol.versionID, nameNodeAddr, conf);
+    NamenodeProtocolPB proxy = 
+        RPC.waitForProxy(NamenodeProtocolPB.class,
+            RPC.getProtocolVersion(NamenodeProtocolPB.class), nameNodeAddr, conf);
+    this.namenode = new NamenodeProtocolTranslatorPB(proxy);
 
     // initialize checkpoint directories
     fsName = getInfoServer();
