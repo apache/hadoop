@@ -322,7 +322,8 @@ public class ClientNamenodeProtocolServerSideTranslatorR23 implements
   }
 
   @Override
-  public boolean restoreFailedStorage(String arg) throws AccessControlException {
+  public boolean restoreFailedStorage(String arg)
+      throws AccessControlException, IOException {
     return server.restoreFailedStorage(arg);
   }
 

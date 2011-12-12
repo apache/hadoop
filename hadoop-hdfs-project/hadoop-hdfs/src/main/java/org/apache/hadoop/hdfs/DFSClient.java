@@ -1473,7 +1473,8 @@ public class DFSClient implements java.io.Closeable {
    * 
    * @see ClientProtocol#restoreFailedStorage(String arg)
    */
-  boolean restoreFailedStorage(String arg) throws AccessControlException {
+  boolean restoreFailedStorage(String arg)
+      throws AccessControlException, IOException{
     return namenode.restoreFailedStorage(arg);
   }
 

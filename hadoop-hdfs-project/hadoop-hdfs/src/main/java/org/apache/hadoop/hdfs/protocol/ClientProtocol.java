@@ -665,7 +665,8 @@ public interface ClientProtocol extends VersionedProtocol {
    * 
    * @throws AccessControlException if the superuser privilege is violated.
    */
-  public boolean restoreFailedStorage(String arg) throws AccessControlException;
+  public boolean restoreFailedStorage(String arg) 
+      throws AccessControlException, IOException;
 
   /**
    * Tells the namenode to reread the hosts and exclude files. 
