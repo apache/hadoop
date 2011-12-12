@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.logaggregation.LogDumper;
 @InterfaceStability.Stable
 public class CLI extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CLI.class);
-  private Cluster cluster;
+  protected Cluster cluster;
 
   public CLI() {
   }

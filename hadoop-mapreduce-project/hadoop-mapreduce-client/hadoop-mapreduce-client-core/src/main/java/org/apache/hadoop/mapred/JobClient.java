@@ -432,7 +432,6 @@ public class JobClient extends CLI {
 
   }
 
-  Cluster cluster;
   /**
    * Ugi of the client. We store this ugi when the client is created and 
    * then make sure that the same ugi is used to run the various protocols.

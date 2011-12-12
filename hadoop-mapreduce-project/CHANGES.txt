@@ -75,6 +75,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3369. Migrate MR1 tests to run on MR2 using the new interfaces
     introduced in MAPREDUCE-3169. (Ahmed Radwan via tomwhite)
 
+    MAPREDUCE-3518. mapred queue -info <queue> -showJobs throws NPE. 
+    (Jonathan Eagles via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
