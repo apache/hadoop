@@ -80,6 +80,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7898. Fix javadoc warnings in AuthenticationToken.java. (suresh)
 
+    HADOOP-7878  Regression: HADOOP-7777 switch changes break HDFS tests when the
+    isSingleSwitch() predicate is used. (stevel)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
