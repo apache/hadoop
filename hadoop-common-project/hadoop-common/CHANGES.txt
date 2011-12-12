@@ -38,6 +38,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7758. Make GlobFilter class public. (tucu)
 
+    HADOOP-7912. test-patch should run eclipse:eclipse to verify that it does
+    not break again. (Robert Joseph Evans via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
