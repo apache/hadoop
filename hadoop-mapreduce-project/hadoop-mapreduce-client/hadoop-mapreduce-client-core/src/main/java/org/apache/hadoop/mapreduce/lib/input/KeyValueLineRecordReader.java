@@ -50,6 +50,8 @@ public class KeyValueLineRecordReader extends RecordReader<Text, Text> {
   
   private Text value;
   
+  public Class getKeyClass() { return Text.class; }
+  
   public KeyValueLineRecordReader(Configuration conf)
     throws IOException {
     

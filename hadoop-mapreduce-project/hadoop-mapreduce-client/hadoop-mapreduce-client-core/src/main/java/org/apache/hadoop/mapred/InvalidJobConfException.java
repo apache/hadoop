@@ -41,5 +41,13 @@ public class InvalidJobConfException
   public InvalidJobConfException(String msg) {
     super(msg);
   }
+  
+  public InvalidJobConfException(String msg, Throwable t) {
+    super(msg, t);
+  }
+
+  public InvalidJobConfException(Throwable t) {
+    super(t);
+  }
 
 }

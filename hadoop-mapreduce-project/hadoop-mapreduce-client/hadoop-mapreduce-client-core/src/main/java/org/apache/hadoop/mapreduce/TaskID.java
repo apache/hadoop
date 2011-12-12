@@ -100,6 +100,12 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
   public JobID getJobID() {
     return jobId;
   }
+  
+  /**Returns whether this TaskID is a map ID */
+  @Deprecated
+  public boolean isMap() {
+    return type == TaskType.MAP;
+  }
     
   /**
    * Get the type of the task
