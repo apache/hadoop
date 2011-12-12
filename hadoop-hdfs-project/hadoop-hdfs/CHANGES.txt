@@ -1419,7 +1419,19 @@ Release 0.23.0 - 2011-11-01
     HDFS-2445. Ensure failed tests exit with proper error code. (Jonathan 
     Eagles via acmurthy)
 
-Release 0.22.0 - Unreleased
+Release 0.22.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
 

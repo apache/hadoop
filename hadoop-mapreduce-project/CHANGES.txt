@@ -2090,7 +2090,19 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-3337. Added missing license headers. (acmurthy) 
     
-Release 0.22.0 - Unreleased
+Release 0.22.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
 
