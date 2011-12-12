@@ -199,7 +199,9 @@ public class NameNodeHttpServer {
   }
   
   public void stop() throws Exception {
-    httpServer.stop();
+    if (httpServer != null) {
+      httpServer.stop();
+    }
   }
 
   public InetSocketAddress getHttpAddress() {

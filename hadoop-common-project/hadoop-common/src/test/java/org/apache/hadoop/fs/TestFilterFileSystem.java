@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
@@ -49,6 +48,17 @@ public class TestFilterFileSystem extends TestCase {
     public boolean isDirectory(Path f) { return false; }
     public boolean isFile(Path f) { return false; }
     public boolean createNewFile(Path f) { return false; }
+    public FSDataOutputStream createNonRecursive(Path f,
+        boolean overwrite,
+        int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      return null;
+    }
+    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+        boolean overwrite, int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      return null;
+    }
     public boolean mkdirs(Path f) { return false; }
     public FSDataInputStream open(Path f) { return null; }
     public FSDataOutputStream create(Path f) { return null; }

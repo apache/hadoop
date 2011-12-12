@@ -38,8 +38,9 @@ WebHDFS REST API
 * {Introduction}
 
   The HTTP REST API supports the complete
-  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}} interface for HDFS.
-  The operations and the corresponding FileSystem methods are shown in the next section.
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}/{{{../../api/org/apache/hadoop/fs/FileContext.html}FileContext}}
+  interface for HDFS.
+  The operations and the corresponding FileSystem/FileContext methods are shown in the next section.
   The Section {{HTTP Query Parameter Dictionary}} specifies the parameter details
   such as the defaults and the valid values.
 
@@ -68,6 +69,9 @@ WebHDFS REST API
     * {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationToken)
 
+    * {{{Get Delegation Tokens}<<<GETDELEGATIONTOKENS>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationTokens)
+
   * HTTP PUT
 
     * {{{Create and Write to a File}<<<CREATE>>>}}
@@ -75,6 +79,9 @@ WebHDFS REST API
 
     * {{{Make a Directory}<<<MKDIRS>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.mkdirs)
+
+    * {{{Create a Symbolic Link}<<<CREATESYMLINK>>>}}
+        (see  {{{../../api/org/apache/hadoop/fs/FileContext.html}FileContext}}.createSymlink)
 
     * {{{Rename a File/Directory}<<<RENAME>>>}}
         (see  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.rename)
@@ -128,6 +135,20 @@ WebHDFS REST API
 +---------------------------------
   http://<HOST>:<HTTP_PORT>/webhdfs/v1/<PATH>?op=...
 +---------------------------------
+
+** {HDFS Configuration Options}
+
+  Below are the HDFS configuration options for WebHDFS.
+
+*-------------------------------------------------+---------------------------------------------------+
+|| Property Name	                          || Description                                      |
+*-------------------------------------------------+---------------------------------------------------+
+| <<<dfs.webhdfs.enabled                      >>> | Enable/disable WebHDFS in Namenodes and Datanodes |
+*-------------------------------------------------+---------------------------------------------------+
+| <<<dfs.web.authentication.kerberos.principal>>> | The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos HTTP SPENGO specification. |
+*-------------------------------------------------+---------------------------------------------------+
+| <<<dfs.web.authentication.kerberos.keytab   >>> | The Kerberos keytab file with the credentials for the HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint. |
+*-------------------------------------------------+---------------------------------------------------+
 
 * {Authentication}
 
@@ -337,6 +358,30 @@ Transfer-Encoding: chunked
   See also:
   {{{Permission}<<<permission>>>}},
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.mkdirs
+
+
+** {Create a Symbolic Link}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/<PATH>?op=CREATESYMLINK
+                              &destination=<PATH>[&createParent=<true|false>]"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{Destination}<<<destination>>>}},
+  {{{Create Parent}<<<createParent>>>}},
+   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.createSymlink
 
 
 ** {Rename a File/Directory}
@@ -710,6 +755,41 @@ Transfer-Encoding: chunked
   See also:
   {{{Renewer}<<<renewer>>>}},
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationToken
+
+
+** {Get Delegation Tokens}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i "http://<HOST>:<PORT>/webhdfs/v1/?op=GETDELEGATIONTOKENS&renewer=<USER>"
++---------------------------------
+
+  The client receives a response with a {{{Tokens JSON Schema}<<<Tokens>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+  "Tokens":
+  {
+    "Token":
+    [
+      {
+        "urlString":"KAAKSm9i ..."
+      }
+    ]
+  }
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{Renewer}<<<renewer>>>}},
+   {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getDelegationTokens
 
 
 ** {Renew Delegation Token}
@@ -1209,16 +1289,56 @@ var fileStatusProperties =
   "name"      : "Token",
   "properties":
   {
-    "Token":
+    "Token": tokenProperties      //See Token Properties
+  }
+}
++---------------------------------
+
+  See also:
+  {{{Token Properties}<<<Token>>> Properties}},
+  {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}},
+  the note in {{Delegation}}.
+
+*** {Token Properties}
+
+  JavaScript syntax is used to define <<<tokenProperties>>>
+  so that it can be referred in both <<<Token>>> and <<<Tokens>>> JSON schemas.
+
++---------------------------------
+var tokenProperties =
+{
+  "type"      : "object",
+  "properties":
+  {
+    "urlString":
+    {
+      "description": "A delegation token encoded as a URL safe string.",
+      "type"       : "string",
+      "required"   : true
+    }
+  }
+}
++---------------------------------
+
+** {Tokens JSON Schema}
+
+  A <<<Tokens>>> JSON object represents an array of <<<Token>>> JSON objects.
+
++---------------------------------
+{
+  "name"      : "Tokens",
+  "properties":
+  {
+    "Tokens":
     {
       "type"      : "object",
       "properties":
       {
-        "urlString":
+        "Token":
         {
-          "description": "A delegation token encoded as a URL safe string.",
-          "type"       : "string",
-          "required"   : true
+          "description": "An array of Token",
+          "type"       : "array",
+          "items"      : "Token": tokenProperties      //See Token Properties
         }
       }
     }
@@ -1227,7 +1347,8 @@ var fileStatusProperties =
 +---------------------------------
 
   See also:
-  {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}},
+  {{{Token Properties}<<<Token>>> Properties}},
+  {{{Get Delegation Tokens}<<<GETDELEGATIONTOKENS>>>}},
   the note in {{Delegation}}.
 
 
@@ -1295,6 +1416,26 @@ var fileStatusProperties =
   {{{Open and Read a File}<<<OPEN>>>}}
 
 
+** {Create Parent}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<createparent>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | If the parent directories do not exist, should they be created?   |
+*----------------+-------------------------------------------------------------------+
+|| Type          | boolean |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | false |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | true | false |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | true | false |
+*----------------+-------------------------------------------------------------------+
+
+  See also:
+  {{{Create a Symbolic Link}<<<CREATESYMLINK>>>}}
+
+
 ** {Delegation}
 
 *----------------+-------------------------------------------------------------------+
@@ -1326,7 +1467,7 @@ var fileStatusProperties =
 *----------------+-------------------------------------------------------------------+
 || Name          | <<<destination>>> |
 *----------------+-------------------------------------------------------------------+
-|| Description   | The destination path used in {{{Rename a File/Directory}<<<RENAME>>>}}. |
+|| Description   | The destination path. |
 *----------------+-------------------------------------------------------------------+
 || Type          | Path |
 *----------------+-------------------------------------------------------------------+
@@ -1338,6 +1479,7 @@ var fileStatusProperties =
 *----------------+-------------------------------------------------------------------+
 
   See also:
+  {{{Create a Symbolic Link}<<<CREATESYMLINK>>>}},
   {{{Rename a File/Directory}<<<RENAME>>>}}
 
 
@@ -1560,7 +1702,8 @@ var fileStatusProperties =
 *----------------+-------------------------------------------------------------------+
 
   See also:
-  {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}}
+  {{{Get Delegation Token}<<<GETDELEGATIONTOKEN>>>}},
+  {{{Get Delegation Tokens}<<<GETDELEGATIONTOKENS>>>}}
 
 
 ** {Replication}

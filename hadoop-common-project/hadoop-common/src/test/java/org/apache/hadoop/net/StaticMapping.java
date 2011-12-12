@@ -38,9 +38,11 @@ import java.util.Map;
 public class StaticMapping extends AbstractDNSToSwitchMapping  {
 
   /**
-   * key to define the node mapping as a comma-delimited list of host=rack
+   * Key to define the node mapping as a comma-delimited list of host=rack
    * mappings, e.g. <code>host1=r1,host2=r1,host3=r2</code>.
-   * </p>
+   * <p/>
+   * Value: {@value}
+   * <p/>
    * <b>Important: </b>spaces not trimmed and are considered significant.
    */
   public static final String KEY_HADOOP_CONFIGURED_NODE_MAPPING =
@@ -107,18 +109,16 @@ public class StaticMapping extends AbstractDNSToSwitchMapping  {
   }
 
   /**
-   * This mapping is only single switch if the map is empty
-   * @return the current switching status
+   * Declare that this mapping is always multi-switch
+   * @return false, always
    */
   @Override
   public boolean isSingleSwitch() {
-    synchronized (nameToRackMap) {
-      return nameToRackMap.isEmpty();
-    }
+    return false;
   }
 
   /**
-   * Clear the map and revert to being a single switch
+   * Clear the map
    */
   public static void resetMap() {
     synchronized (nameToRackMap) {

@@ -146,10 +146,10 @@ public class LeafQueue implements CSQueue {
       (float)cs.getConfiguration().getCapacity(getQueuePath()) / 100;
     float absoluteCapacity = parent.getAbsoluteCapacity() * capacity;
 
-    float maximumCapacity = cs.getConfiguration().getMaximumCapacity(getQueuePath());
+    float maximumCapacity = (float)cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
-      (maximumCapacity == CapacitySchedulerConfiguration.UNDEFINED) ? 
-          Float.MAX_VALUE : (parent.getAbsoluteCapacity() * maximumCapacity) / 100;
+      (Math.round(maximumCapacity * 100) == CapacitySchedulerConfiguration.UNDEFINED) ? 
+          Float.MAX_VALUE : (parent.getAbsoluteCapacity() * maximumCapacity);
 
     int userLimit = cs.getConfiguration().getUserLimit(getQueuePath());
     float userLimitFactor = 
@@ -402,7 +402,7 @@ public class LeafQueue implements CSQueue {
     
     this.maximumCapacity = maximumCapacity;
     this.absoluteMaxCapacity = 
-      (maximumCapacity == CapacitySchedulerConfiguration.UNDEFINED) ? 
+      (Math.round(maximumCapacity * 100) == CapacitySchedulerConfiguration.UNDEFINED) ? 
           Float.MAX_VALUE : 
           (parent.getAbsoluteCapacity() * maximumCapacity);
   }
@@ -829,13 +829,13 @@ public class LeafQueue implements CSQueue {
     float potentialNewCapacity = 
       (float)(usedResources.getMemory() + required.getMemory()) / 
         clusterResource.getMemory();
+    LOG.info(getQueueName() + 
+        " usedResources: " + usedResources.getMemory() + 
+        " currentCapacity " + ((float)usedResources.getMemory())/clusterResource.getMemory() + 
+        " required " + required.getMemory() +
+        " potentialNewCapacity: " + potentialNewCapacity + " ( " +
+        " max-capacity: " + absoluteMaxCapacity + ")");
     if (potentialNewCapacity > absoluteMaxCapacity) {
-      LOG.info(getQueueName() + 
-          " usedResources: " + usedResources.getMemory() + 
-          " currentCapacity " + ((float)usedResources.getMemory())/clusterResource.getMemory() + 
-          " required " + required.getMemory() +
-          " potentialNewCapacity: " + potentialNewCapacity + " ( " +
-          " > max-capacity (" + absoluteMaxCapacity + ")");
       return false;
     }
     return true;

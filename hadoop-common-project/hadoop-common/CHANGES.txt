@@ -16,26 +16,26 @@ Trunk (unreleased changes)
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple
-                 versions of the same protocol (sanjay Radia)
+    versions of the same protocol (sanjay Radia)
 
     HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
     HADOOP-7635. RetryInvocationHandler should release underlying resources on
-                 close (atm)
+    close (atm)
 
     HADOOP-7687 Make getProtocolSignature public  (sanjay)
 
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
-                 interface introduced in HADOOP-7524.  (cutting)
+    interface introduced in HADOOP-7524.  (cutting)
 
     HADOOP-7716. RPC protocol registration on SS does not log the protocol name
-                 (only the class which may be different) (sanjay)
+    (only the class which may be different) (sanjay)
 
     HADOOP-7717. Move handling of concurrent client fail-overs to
-                 RetryInvocationHandler (atm)
+    RetryInvocationHandler (atm)
 
     HADOOP-6490. Use StringUtils over String#replace in Path#normalizePath.
-                 (Uma Maheswara Rao G via harsh)
+    (Uma Maheswara Rao G via harsh)
 
     HADOOP-7736. Remove duplicate Path#normalizePath call. (harsh)
 
@@ -74,7 +74,12 @@ Trunk (unreleased changes)
 
     HADOOP-7886. Add toString to FileStatus. (SreeHari via jghoman)
 
+    HADOOP-7899. Generate proto java files as part of the build. (tucu)
+
   BUGS
+
+    HADOOP-7851. Configuration.getClasses() never returns the default value. 
+                 (Uma Maheswara Rao G via amarrk)
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
     by Jersey (Alejandro Abdelnur via atm)
@@ -121,7 +126,13 @@ Trunk (unreleased changes)
     KerberosName name rules from configuration. (tucu)
 
     HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
-                 via atm)
+    via atm)
+
+    HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
+    consistent with WritableRpcEngine. (suresh)
+
+    HADOOP-7902. skipping name rules setting (if already set) should be done 
+    on UGI initialization only. (tucu)
 
   OPTIMIZATIONS
 
@@ -155,6 +166,12 @@ Release 0.23.1 - Unreleased
     HADOOP-7877. Update balancer CLI usage documentation to include the new
     -policy option.  (szetszwo)
 
+    HADOOP-6840. Support non-recursive create() in FileSystem and 
+    SequenceFile.Writer. (jitendra and eli via eli)
+
+    HADOOP-6886. LocalFileSystem Needs createNonRecursive API.
+    (Nicolas Spiegelberg and eli via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -174,6 +191,14 @@ Release 0.23.1 - Unreleased
    (Andrew Bayer via eli)
 
    HADOOP-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
+
+   HADOOP-7870. fix SequenceFile#createWriter with boolean
+   createParent arg to respect createParent. (Jon Hsieh via eli)
+
+   HADOOP-7898. Fix javadoc warnings in AuthenticationToken.java. (suresh)
+
+   HADOOP-7878  Regression: HADOOP-7777 switch changes break HDFS tests when the
+   isSingleSwitch() predicate is used. (stevel)
 
 Release 0.23.0 - 2011-11-01 
 
@@ -884,7 +909,19 @@ Release 0.23.0 - 2011-11-01
     HADOOP-7797. Fix top-level pom.xml to refer to correct staging maven
     repository. (omalley via acmurthy) 
 
-Release 0.22.0 - Unreleased
+Release 0.22.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
 

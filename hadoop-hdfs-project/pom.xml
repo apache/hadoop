@@ -29,6 +29,7 @@
 
   <modules>
     <module>hadoop-hdfs</module>
+    <module>hadoop-hdfs-httpfs</module>
   </modules>
 
   <build>

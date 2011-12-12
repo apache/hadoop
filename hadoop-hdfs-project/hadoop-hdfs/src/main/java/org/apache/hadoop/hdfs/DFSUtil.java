@@ -45,7 +45,11 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -53,6 +57,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {
@@ -768,8 +773,7 @@ public class DFSUtil {
   public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
       LocatedBlock locatedBlock) throws IOException {
-    return new org.apache.hadoop.hdfs.protocolR23Compatible.
-        ClientDatanodeProtocolTranslatorR23(datanodeid, conf, socketTimeout,
+    return new ClientDatanodeProtocolTranslatorPB(datanodeid, conf, socketTimeout,
              locatedBlock);
   }
   
@@ -777,7 +781,7 @@ public class DFSUtil {
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout)
       throws IOException {
-    return new org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeProtocolTranslatorR23(
+    return new ClientDatanodeProtocolTranslatorPB(
         datanodeid, conf, socketTimeout);
   }
   
@@ -785,8 +789,7 @@ public class DFSUtil {
   public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory) throws IOException {
-    return new org.apache.hadoop.hdfs.protocolR23Compatible.
-        ClientDatanodeProtocolTranslatorR23(addr, ticket, conf, factory);
+    return new ClientDatanodeProtocolTranslatorPB(addr, ticket, conf, factory);
   }
   
   /**
@@ -930,5 +933,19 @@ public class DFSUtil {
     } catch (URISyntaxException ue) {
       throw new IllegalArgumentException(ue);
     }
+  }
+  
+  /**
+   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}
+   * @param conf configuration
+   * @param protocol Protocol interface
+   * @param service service that implements the protocol
+   * @param server RPC server to which the protocol & implementation is added to
+   * @throws IOException
+   */
+  public static void addPBProtocol(Configuration conf, Class<?> protocol,
+      BlockingService service, RPC.Server server) throws IOException {
+    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine.class);
+    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
   }
 }

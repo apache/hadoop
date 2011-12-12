@@ -42,6 +42,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
+
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -60,6 +62,9 @@ import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeProtocolServerSideTranslatorR23;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -103,6 +108,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 
+import com.google.protobuf.BlockingService;
+
 /**
  * This class is responsible for handling all of the RPC calls to the NameNode.
  * It is created, started, and stopped by {@link NameNode}.
@@ -141,6 +148,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     clientProtocolServerTranslator = 
         new ClientNamenodeProtocolServerSideTranslatorR23(this);
     
+    NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator = 
+        new NamenodeProtocolServerSideTranslatorPB(this);
+    BlockingService service = NamenodeProtocolService
+        .newReflectiveBlockingService(namenodeProtocolXlator);
+    
     InetSocketAddress dnSocketAddr = nn.getServiceRpcServerAddress(conf);
     if (dnSocketAddr != null) {
       int serviceHandlerCount =
@@ -156,8 +168,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           DatanodeProtocol.class, this);
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
-          NamenodeProtocol.class, this);
-      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           RefreshAuthorizationPolicyProtocol.class, this);
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           RefreshUserMappingsProtocol.class, this);
@@ -165,6 +175,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
           GetUserMappingsProtocol.class, this);
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           HAServiceProtocol.class, this);
+      DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, service,
+          serviceRpcServer);
       
       this.serviceRPCAddress = this.serviceRpcServer.getListenerAddress();
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
@@ -182,8 +194,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         DatanodeProtocol.class, this);
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
-        NamenodeProtocol.class, this);
-    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         RefreshAuthorizationPolicyProtocol.class, this);
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         RefreshUserMappingsProtocol.class, this);
@@ -191,7 +201,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         GetUserMappingsProtocol.class, this);
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         HAServiceProtocol.class, this);
-    
+    DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, service,
+        clientRpcServer);
 
     // set service-level authorization security policy
     if (serviceAuthEnabled =

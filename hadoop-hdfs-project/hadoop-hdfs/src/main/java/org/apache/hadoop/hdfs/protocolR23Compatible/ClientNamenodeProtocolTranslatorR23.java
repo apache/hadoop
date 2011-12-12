@@ -338,7 +338,8 @@ public class ClientNamenodeProtocolTranslatorR23 implements
   }
 
   @Override
-  public boolean restoreFailedStorage(String arg) throws AccessControlException {
+  public boolean restoreFailedStorage(String arg)
+      throws AccessControlException, IOException{
     return rpcProxy.restoreFailedStorage(arg);
   }
 

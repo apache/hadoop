@@ -252,6 +252,15 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3147. Handle leaf queues with the same name properly. (Ravi Prakash via
     mahadev)
 
+    MAPREDUCE-3327. RM web ui scheduler link doesn't show correct max value 
+    for queues (Anupam Seth via mahadev)
+
+    MAPREDUCE-3513. Capacity Scheduler web UI has a spelling mistake for Memory.
+    (chackaravarthy via mahadev)
+
+    MAPREDUCE-3519. Fixed a deadlock in NodeManager LocalDirectories's handling
+    service. (Ravi Gummadi via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
@@ -2116,7 +2125,19 @@ Release 0.23.0 - 2011-11-01
 
     MAPREDUCE-3337. Added missing license headers. (acmurthy) 
     
-Release 0.22.0 - Unreleased
+Release 0.22.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
 

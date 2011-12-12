@@ -123,10 +123,10 @@ public class ParentQueue implements CSQueue {
     float absoluteCapacity = parentAbsoluteCapacity * capacity; 
 
     float maximumCapacity = 
-      cs.getConfiguration().getMaximumCapacity(getQueuePath());
+      (float) cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
-      (maximumCapacity == CapacitySchedulerConfiguration.UNDEFINED) ? 
-          1000000000f :  (parentAbsoluteCapacity * maximumCapacity) / 100;
+      (Math.round(maximumCapacity * 100) == CapacitySchedulerConfiguration.UNDEFINED) ? 
+          Float.MAX_VALUE :  (parentAbsoluteCapacity * maximumCapacity);
     
     QueueState state = cs.getConfiguration().getState(getQueuePath());
 
@@ -233,12 +233,12 @@ public class ParentQueue implements CSQueue {
 
   @Override
   public float getAbsoluteMaximumCapacity() {
-    return 0;
+    return absoluteMaxCapacity;
   }
 
   @Override
   public float getMaximumCapacity() {
-    return 0;
+    return maximumCapacity;
   }
 
   @Override

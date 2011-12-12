@@ -57,6 +57,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
@@ -200,7 +201,7 @@ public class UserGroupInformation {
    */
   private static synchronized void ensureInitialized() {
     if (!isInitialized) {
-      initialize(new Configuration());
+        initialize(new Configuration(), KerberosName.hasRulesBeenSet());
     }
   }
 
@@ -208,11 +209,13 @@ public class UserGroupInformation {
    * Initialize UGI and related classes.
    * @param conf the configuration to use
    */
-  private static synchronized void initialize(Configuration conf) {
+  private static synchronized void initialize(Configuration conf, boolean skipRulesSetting) {
     initUGI(conf);
     // give the configuration on how to translate Kerberos names
     try {
-      HadoopKerberosName.setConfiguration(conf);
+      if (!skipRulesSetting) {
+        HadoopKerberosName.setConfiguration(conf);
+      }
     } catch (IOException ioe) {
       throw new RuntimeException("Problem with Kerberos auth_to_local name " +
           "configuration", ioe);
@@ -249,7 +252,7 @@ public class UserGroupInformation {
    * @param conf the configuration to use
    */
   public static void setConfiguration(Configuration conf) {
-    initialize(conf);
+    initialize(conf, false);
   }
   
   /**

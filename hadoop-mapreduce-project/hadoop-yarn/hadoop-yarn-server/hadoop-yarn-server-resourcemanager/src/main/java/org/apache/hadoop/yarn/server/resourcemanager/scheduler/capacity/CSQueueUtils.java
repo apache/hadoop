@@ -21,7 +21,7 @@ class CSQueueUtils {
   
   public static void checkMaxCapacity(String queueName, 
       float capacity, float maximumCapacity) {
-    if (maximumCapacity != CapacitySchedulerConfiguration.UNDEFINED && 
+    if (Math.round(100 * maximumCapacity) != CapacitySchedulerConfiguration.UNDEFINED && 
         maximumCapacity < capacity) {
       throw new IllegalArgumentException(
           "Illegal call to setMaxCapacity. " +

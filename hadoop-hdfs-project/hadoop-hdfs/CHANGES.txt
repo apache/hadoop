@@ -24,6 +24,14 @@ Trunk (unreleased changes)
     HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
                should be configurable. (atm)
 
+    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy with 
+    read/write capabilities. (tucu)
+
+    HDFS-2642. Protobuf translators for DatanodeProtocol. (jitendra)
+
+    HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
+    ClientDatanodeProtocol, JournalProtocol, NamenodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
@@ -79,12 +87,18 @@ Trunk (unreleased changes)
     HDFS-2410. Further cleanup of hardcoded configuration keys and values.
     (suresh)
 
-		HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
-									Move the support for multiple protocols to lower layer so that Writable,
-								  PB and Avro can all use it (Sanjay)
+    HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
+                  Move the support for multiple protocols to lower layer so that Writable,
+                  PB and Avro can all use it (Sanjay)
 
     HDFS-1580. Add interface for generic Write Ahead Logging mechanisms.
     (Ivan Kelly via jitendra)
+
+    HDFS-2597 ClientNameNodeProtocol in Protocol Buffers (sanjay)
+
+    HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
+
+    HDFS-2651 ClientNameNodeProtocol Translators for Protocol Buffers (sanjay)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -145,6 +159,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2316. [umbrella] WebHDFS: a complete FileSystem implementation for 
     accessing HDFS over HTTP (szetszwo)
+
+    HDFS-2594. Support getDelegationTokens and createSymlink in WebHDFS.
+    (szetszwo)
 
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
@@ -1477,7 +1494,19 @@ Release 0.23.0 - 2011-11-01
     HDFS-2445. Ensure failed tests exit with proper error code. (Jonathan 
     Eagles via acmurthy)
 
-Release 0.22.0 - Unreleased
+Release 0.22.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
 

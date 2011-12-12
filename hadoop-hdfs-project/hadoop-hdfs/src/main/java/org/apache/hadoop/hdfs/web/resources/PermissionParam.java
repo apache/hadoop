@@ -29,6 +29,11 @@ public class PermissionParam extends ShortParam {
   private static final Domain DOMAIN = new Domain(NAME, 8);
 
   private static final short DEFAULT_PERMISSION = 0755;
+
+  /** @return the default FsPermission. */
+  public static FsPermission getDefaultFsPermission() {
+    return new FsPermission(DEFAULT_PERMISSION);
+  }
   
   /**
    * Constructor.

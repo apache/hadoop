@@ -57,8 +57,14 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ClientDatanodeProtocolService;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
+import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
@@ -75,6 +81,10 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.google.protobuf.BlockingService;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /** Unit tests for block tokens */
 public class TestBlockToken {
@@ -106,22 +116,24 @@ public class TestBlockToken {
   ExtendedBlock block2 = new ExtendedBlock("10", 10L);
   ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
 
-  private static class getLengthAnswer implements Answer<Long> {
+  private static class GetLengthAnswer implements
+      Answer<GetReplicaVisibleLengthResponseProto> {
     BlockTokenSecretManager sm;
     BlockTokenIdentifier ident;
 
-    public getLengthAnswer(BlockTokenSecretManager sm,
+    public GetLengthAnswer(BlockTokenSecretManager sm,
         BlockTokenIdentifier ident) {
       this.sm = sm;
       this.ident = ident;
     }
 
     @Override
-    public Long answer(InvocationOnMock invocation) throws IOException {
+    public GetReplicaVisibleLengthResponseProto answer(
+        InvocationOnMock invocation) throws IOException {
       Object args[] = invocation.getArguments();
-      assertEquals(1, args.length);
-      org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable block = 
-          (org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable) args[0];
+      assertEquals(2, args.length);
+      GetReplicaVisibleLengthRequestProto req = 
+          (GetReplicaVisibleLengthRequestProto) args[1];
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
       assertEquals("Only one BlockTokenIdentifier expected", 1, tokenIds.size());
@@ -130,12 +142,12 @@ public class TestBlockToken {
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
         LOG.info("Got: " + id.toString());
         assertTrue("Received BlockTokenIdentifier is wrong", ident.equals(id));
-        sm.checkAccess(id, null, org.apache.hadoop.hdfs.protocolR23Compatible.
-            ExtendedBlockWritable.convertExtendedBlock(block),
+        sm.checkAccess(id, null, PBHelper.convert(req.getBlock()),
             BlockTokenSecretManager.AccessMode.WRITE);
         result = id.getBlockId();
       }
-      return result;
+      return GetReplicaVisibleLengthResponseProto.newBuilder()
+          .setLength(result).build();
     }
   }
 
@@ -208,25 +220,29 @@ public class TestBlockToken {
   }
 
   private Server createMockDatanode(BlockTokenSecretManager sm,
-      Token<BlockTokenIdentifier> token) throws IOException {
-    org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol mockDN =
-        mock(org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class);
+      Token<BlockTokenIdentifier> token) throws IOException, ServiceException {
+    ClientDatanodeProtocolPB mockDN = mock(ClientDatanodeProtocolPB.class);
     when(mockDN.getProtocolVersion(anyString(), anyLong())).thenReturn(
-        org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.versionID);
+        RPC.getProtocolVersion(ClientDatanodeProtocolPB.class));
     doReturn(
         ProtocolSignature.getProtocolSignature(mockDN,
-            org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class.getName(),
-            org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.versionID, 0)).when(mockDN)
-        .getProtocolSignature(anyString(), anyLong(), anyInt());
+            ClientDatanodeProtocolPB.class.getName(),
+            RPC.getProtocolVersion(ClientDatanodeProtocolPB.class), 0)).when(
+        mockDN).getProtocolSignature(anyString(), anyLong(), anyInt());
 
     BlockTokenIdentifier id = sm.createIdentifier();
     id.readFields(new DataInputStream(new ByteArrayInputStream(token
         .getIdentifier())));
-    doAnswer(new getLengthAnswer(sm, id)).when(mockDN).getReplicaVisibleLength(
-        any(org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable.class));
+    
+    doAnswer(new GetLengthAnswer(sm, id)).when(mockDN)
+        .getReplicaVisibleLength(any(RpcController.class),
+            any(GetReplicaVisibleLengthRequestProto.class));
 
-    return RPC.getServer(org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class, 
-        mockDN, ADDRESS, 0, 5,
+    RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+    BlockingService service = ClientDatanodeProtocolService
+        .newReflectiveBlockingService(mockDN);
+    return RPC.getServer(ClientDatanodeProtocolPB.class, service, ADDRESS, 0, 5,
         true, conf, sm);
   }
 
@@ -323,7 +339,7 @@ public class TestBlockToken {
   /**
    * @return the current number of file descriptors open by this process.
    */
-  private static int countOpenFileDescriptors() throws IOException {
+  private static int countOpenFileDescriptors() {
     return FD_DIR.list().length;
   }
 

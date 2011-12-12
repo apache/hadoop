@@ -25,6 +25,7 @@ import java.security.MessageDigest;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.util.Options;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -438,6 +439,67 @@ public class SequenceFile {
                         Writer.compression(compressionType, codec),
                         Writer.progressable(progress),
                         Writer.metadata(metadata));
+  }
+
+  /**
+   * Construct the preferred type of SequenceFile Writer.
+   * @param fs The configured filesystem.
+   * @param conf The configuration.
+   * @param name The name of the file.
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param bufferSize buffer size for the underlaying outputstream.
+   * @param replication replication factor for the file.
+   * @param blockSize block size for the file.
+   * @param createParent create parent directory if non-existent
+   * @param compressionType The compression type.
+   * @param codec The compression codec.
+   * @param metadata The metadata of the file.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  @Deprecated
+  public static Writer
+  createWriter(FileSystem fs, Configuration conf, Path name,
+               Class keyClass, Class valClass, int bufferSize,
+               short replication, long blockSize, boolean createParent,
+               CompressionType compressionType, CompressionCodec codec,
+               Metadata metadata) throws IOException {
+    return createWriter(FileContext.getFileContext(fs.getUri(), conf),
+        conf, name, keyClass, valClass, compressionType, codec,
+        metadata, EnumSet.of(CreateFlag.CREATE),
+        CreateOpts.bufferSize(bufferSize),
+        createParent ? CreateOpts.createParent()
+                     : CreateOpts.donotCreateParent(),
+        CreateOpts.repFac(replication),
+        CreateOpts.blockSize(blockSize)
+      );
+  }
+
+  /**
+   * Construct the preferred type of SequenceFile Writer.
+   * @param fc The context for the specified file.
+   * @param conf The configuration.
+   * @param name The name of the file.
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param compressionType The compression type.
+   * @param codec The compression codec.
+   * @param metadata The metadata of the file.
+   * @param createFlag gives the semantics of create: overwrite, append etc.
+   * @param opts file creation options; see {@link CreateOpts}.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  public static Writer
+  createWriter(FileContext fc, Configuration conf, Path name,
+               Class keyClass, Class valClass,
+               CompressionType compressionType, CompressionCodec codec,
+               Metadata metadata,
+               final EnumSet<CreateFlag> createFlag, CreateOpts... opts)
+               throws IOException {
+    return createWriter(conf, fc.create(name, createFlag, opts),
+          keyClass, valClass, compressionType, codec, metadata).ownStream();
   }
 
   /**
@@ -1063,6 +1125,8 @@ public class SequenceFile {
     boolean isCompressed() { return compress != CompressionType.NONE; }
     boolean isBlockCompressed() { return compress == CompressionType.BLOCK; }
     
+    Writer ownStream() { this.ownOutputStream = true; return this;  }
+
     /** Write and flush the file header. */
     private void writeFileHeader() 
       throws IOException {
