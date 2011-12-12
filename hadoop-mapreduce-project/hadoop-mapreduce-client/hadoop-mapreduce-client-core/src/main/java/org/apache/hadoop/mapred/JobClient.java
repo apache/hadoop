@@ -420,6 +420,16 @@ public class JobClient extends CLI {
     boolean monitorAndPrintJob() throws IOException, InterruptedException {
       return job.monitorAndPrintJob();
     }
+    
+    @Override
+    public String getFailureInfo() throws IOException {
+      try {
+        return job.getStatus().getFailureInfo();
+      } catch (InterruptedException ie) {
+        throw new IOException(ie);
+      }
+    }
+
   }
 
   Cluster cluster;
