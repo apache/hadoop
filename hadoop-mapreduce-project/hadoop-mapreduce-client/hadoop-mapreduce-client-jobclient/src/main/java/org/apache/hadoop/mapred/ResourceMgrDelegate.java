@@ -198,13 +198,16 @@ public class ResourceMgrDelegate {
   }
   
   private void getChildQueues(org.apache.hadoop.yarn.api.records.QueueInfo parent, 
-      List<org.apache.hadoop.yarn.api.records.QueueInfo> queues) {
+      List<org.apache.hadoop.yarn.api.records.QueueInfo> queues,
+      boolean recursive) {
     List<org.apache.hadoop.yarn.api.records.QueueInfo> childQueues = 
       parent.getChildQueues();
 
     for (org.apache.hadoop.yarn.api.records.QueueInfo child : childQueues) {
       queues.add(child);
-      getChildQueues(child, queues);
+      if(recursive) {
+        getChildQueues(child, queues, recursive);
+      }
     }
   }
 
@@ -226,7 +229,7 @@ public class ResourceMgrDelegate {
     org.apache.hadoop.yarn.api.records.QueueInfo rootQueue = 
       applicationsManager.getQueueInfo(
           getQueueInfoRequest(ROOT, false, true, true)).getQueueInfo();
-    getChildQueues(rootQueue, queues);
+    getChildQueues(rootQueue, queues, true);
 
     return TypeConverter.fromYarnQueueInfo(queues, this.conf);
   }
@@ -238,8 +241,8 @@ public class ResourceMgrDelegate {
 
     org.apache.hadoop.yarn.api.records.QueueInfo rootQueue = 
       applicationsManager.getQueueInfo(
-          getQueueInfoRequest(ROOT, false, true, false)).getQueueInfo();
-    getChildQueues(rootQueue, queues);
+          getQueueInfoRequest(ROOT, false, true, true)).getQueueInfo();
+    getChildQueues(rootQueue, queues, false);
 
     return TypeConverter.fromYarnQueueInfo(queues, this.conf);
   }
@@ -252,7 +255,7 @@ public class ResourceMgrDelegate {
         org.apache.hadoop.yarn.api.records.QueueInfo parentQueue = 
           applicationsManager.getQueueInfo(
               getQueueInfoRequest(parent, false, true, false)).getQueueInfo();
-        getChildQueues(parentQueue, queues);
+        getChildQueues(parentQueue, queues, true);
         
         return TypeConverter.fromYarnQueueInfo(queues, this.conf);
   }
