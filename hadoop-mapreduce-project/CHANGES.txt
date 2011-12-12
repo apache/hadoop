@@ -212,6 +212,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3519. Fixed a deadlock in NodeManager LocalDirectories's handling
     service. (Ravi Gummadi via vinodkv)
 
+    MAPREDUCE-3527. Fix minor API incompatibilities between 1.0 and 0.23.
+    (tomwhite)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

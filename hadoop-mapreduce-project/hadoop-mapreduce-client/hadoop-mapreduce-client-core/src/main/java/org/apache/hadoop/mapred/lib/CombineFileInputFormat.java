@@ -23,7 +23,10 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -114,6 +117,19 @@ public abstract class CombineFileInputFormat<K, V>
       org.apache.hadoop.mapreduce.InputSplit split,
       TaskAttemptContext context) throws IOException {
     return null;
+  }
+  
+  /** List input directories.
+   * Subclasses may override to, e.g., select only files matching a regular
+   * expression. 
+   * 
+   * @param job the job to list input paths for
+   * @return array of FileStatus objects
+   * @throws IOException if zero items.
+   */
+  protected FileStatus[] listStatus(JobConf job) throws IOException {
+    List<FileStatus> result = super.listStatus(new Job(job));
+    return result.toArray(new FileStatus[result.size()]);
   }
 
 }
