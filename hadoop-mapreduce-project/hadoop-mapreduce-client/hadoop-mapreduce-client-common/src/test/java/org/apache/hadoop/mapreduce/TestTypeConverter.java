@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestTypeConverter {
   @Test
@@ -133,5 +137,34 @@ public class TestTypeConverter {
       TypeConverter.fromYarn(queueInfo, new Configuration());
     Assert.assertEquals("queueInfo translation didn't work.",
       returned.getState().toString(), queueInfo.getQueueState().toString().toLowerCase());
+  }
+
+  /**
+   * Test that child queues are converted too during conversion of the parent
+   * queue
+   */
+  @Test
+  public void testFromYarnQueue() {
+    //Define child queue
+    org.apache.hadoop.yarn.api.records.QueueInfo child =
+      Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
+    Mockito.when(child.getQueueState()).thenReturn(QueueState.RUNNING);
+
+    //Define parent queue
+    org.apache.hadoop.yarn.api.records.QueueInfo queueInfo =
+      Mockito.mock(org.apache.hadoop.yarn.api.records.QueueInfo.class);
+    List<org.apache.hadoop.yarn.api.records.QueueInfo> children =
+      new ArrayList<org.apache.hadoop.yarn.api.records.QueueInfo>();
+    children.add(child); //Add one child
+    Mockito.when(queueInfo.getChildQueues()).thenReturn(children);
+    Mockito.when(queueInfo.getQueueState()).thenReturn(QueueState.RUNNING);
+
+    //Call the function we're testing
+    org.apache.hadoop.mapreduce.QueueInfo returned =
+      TypeConverter.fromYarn(queueInfo, new Configuration());
+
+    //Verify that the converted queue has the 1 child we had added
+    Assert.assertEquals("QueueInfo children weren't properly converted",
+      returned.getQueueChildren().size(), 1);
   }
 }

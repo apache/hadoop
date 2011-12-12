@@ -218,6 +218,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3527. Fix minor API incompatibilities between 1.0 and 0.23.
     (tomwhite)
 
+    MAPREDUCE-3328. mapred queue -list output inconsistent and missing child 
+    queues. (Ravi Prakash via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

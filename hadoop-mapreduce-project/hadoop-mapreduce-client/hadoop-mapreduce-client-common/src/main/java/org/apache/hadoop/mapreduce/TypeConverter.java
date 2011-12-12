@@ -450,9 +450,19 @@ public class TypeConverter {
 
   public static QueueInfo fromYarn(org.apache.hadoop.yarn.api.records.QueueInfo
       queueInfo, Configuration conf) {
-    return new QueueInfo(queueInfo.getQueueName(),queueInfo.toString(),
-        fromYarn(queueInfo.getQueueState()), TypeConverter.fromYarnApps(
-        queueInfo.getApplications(), conf));
+    QueueInfo toReturn = new QueueInfo(queueInfo.getQueueName(), "Capacity: " +
+      queueInfo.getCapacity() * 100 + ", MaximumCapacity: " +
+      (queueInfo.getMaximumCapacity() < 0 ? "UNDEFINED" :
+        queueInfo.getMaximumCapacity()) + ", CurrentCapacity: " +
+      queueInfo.getCurrentCapacity() * 100, fromYarn(queueInfo.getQueueState()),
+      TypeConverter.fromYarnApps(queueInfo.getApplications(), conf));
+    List<QueueInfo> childQueues = new ArrayList<QueueInfo>();
+    for(org.apache.hadoop.yarn.api.records.QueueInfo childQueue :
+      queueInfo.getChildQueues()) {
+      childQueues.add(fromYarn(childQueue, conf));
+    }
+    toReturn.setQueueChildren(childQueues);
+    return toReturn;
   }
 
   public static QueueInfo[] fromYarnQueueInfo(
