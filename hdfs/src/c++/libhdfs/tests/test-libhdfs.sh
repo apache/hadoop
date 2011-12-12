@@ -34,7 +34,7 @@ HADOOP_LIB_DIR=$HADOOP_HOME/lib
 HADOOP_BIN_DIR=$HADOOP_HOME/bin
 
 COMMON_BUILD_DIR=$HADOOP_HOME/build/ivy/lib/Hadoop-Hdfs/common
-COMMON_JAR=$COMMON_BUILD_DIR/hadoop-common-0.22.0-SNAPSHOT.jar
+COMMON_JAR=$COMMON_BUILD_DIR/hadoop-common-0.22.1-SNAPSHOT.jar
 
 cat > $HADOOP_CONF_DIR/core-site.xml <<EOF
 <?xml version="1.0"?>
