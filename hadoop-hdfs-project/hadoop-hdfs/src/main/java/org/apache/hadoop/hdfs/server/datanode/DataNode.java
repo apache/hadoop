@@ -1888,7 +1888,7 @@ public class DataNode extends Configured
     return new ExtendedBlock(oldBlock.getBlockPoolId(), r);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public long getProtocolVersion(String protocol, long clientVersion
       ) throws IOException {
     if (protocol.equals(InterDatanodeProtocol.class.getName())) {
@@ -1921,7 +1921,7 @@ public class DataNode extends Configured
       this.rInfo = rInfo;
     }
 
-    /** {@inheritDoc} */
+    @Override
     public String toString() {
       return "block:" + rInfo + " node:" + id;
     }
@@ -2105,7 +2105,6 @@ public class DataNode extends Configured
   }
 
   // ClientDataNodeProtocol implementation
-  /** {@inheritDoc} */
   @Override // ClientDataNodeProtocol
   public long getReplicaVisibleLength(final ExtendedBlock block) throws IOException {
     checkWriteAccess(block);

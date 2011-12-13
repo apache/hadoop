@@ -129,7 +129,7 @@ public class SecondaryNameNode implements Runnable {
   private FSNamesystem namesystem;
 
 
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     return getClass().getSimpleName() + " Status" 
       + "\nName Node Address    : " + nameNodeAddr   

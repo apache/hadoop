@@ -1689,8 +1689,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
   
-  boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr)
-      throws IOException {
+  boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr) {
     if (shortCircuitLocalReads && isLocalAddress(targetAddr)) {
       return true;
     }
@@ -1713,7 +1712,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     return getClass().getSimpleName() + "[clientName=" + clientName
         + ", ugi=" + ugi + "]"; 

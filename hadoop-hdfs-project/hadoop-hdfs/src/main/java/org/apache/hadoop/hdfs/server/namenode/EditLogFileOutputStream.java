@@ -71,7 +71,6 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     fc.position(fc.size());
   }
 
-  /** {@inheritDoc} */
   @Override
   public void write(FSEditLogOp op) throws IOException {
     doubleBuf.writeOp(op);

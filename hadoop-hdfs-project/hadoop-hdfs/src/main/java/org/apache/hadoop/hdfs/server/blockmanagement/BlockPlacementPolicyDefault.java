@@ -63,7 +63,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   BlockPlacementPolicyDefault() {
   }
     
-  /** {@inheritDoc} */
+  @Override
   public void initialize(Configuration conf,  FSClusterStats stats,
                          NetworkTopology clusterMap) {
     this.considerLoad = conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, true);
@@ -79,7 +79,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
   };
 
-  /** {@inheritDoc} */
+  @Override
   public DatanodeDescriptor[] chooseTarget(String srcPath,
                                     int numOfReplicas,
                                     DatanodeDescriptor writer,
@@ -89,7 +89,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         null, blocksize);
   }
 
-  /** {@inheritDoc} */
   @Override
   public DatanodeDescriptor[] chooseTarget(String srcPath,
                                     int numOfReplicas,
@@ -525,7 +524,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     return nodes;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int verifyBlockPlacement(String srcPath,
                                   LocatedBlock lBlk,
                                   int minRacks) {
@@ -544,7 +543,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     return minRacks - racks.size();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public DatanodeDescriptor chooseReplicaToDelete(FSInodeInfo inode,
                                                  Block block,
                                                  short replicationFactor,

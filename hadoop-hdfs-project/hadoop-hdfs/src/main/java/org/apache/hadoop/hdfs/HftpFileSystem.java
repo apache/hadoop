@@ -529,7 +529,7 @@ public class HftpFileSystem extends FileSystem
   private class ChecksumParser extends DefaultHandler {
     private FileChecksum filechecksum;
 
-    /** {@inheritDoc} */
+    @Override
     public void startElement(String ns, String localname, String qname,
                 Attributes attrs) throws SAXException {
       if (!MD5MD5CRC32FileChecksum.class.getName().equals(qname)) {
@@ -563,7 +563,7 @@ public class HftpFileSystem extends FileSystem
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public FileChecksum getFileChecksum(Path f) throws IOException {
     final String s = makeQualified(f).toUri().getPath();
     return new ChecksumParser().getFileChecksum(s);
@@ -611,7 +611,7 @@ public class HftpFileSystem extends FileSystem
   private class ContentSummaryParser extends DefaultHandler {
     private ContentSummary contentsummary;
 
-    /** {@inheritDoc} */
+    @Override
     public void startElement(String ns, String localname, String qname,
                 Attributes attrs) throws SAXException {
       if (!ContentSummary.class.getName().equals(qname)) {
@@ -697,7 +697,7 @@ public class HftpFileSystem extends FileSystem
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
     final String s = makeQualified(f).toUri().getPath();
     final ContentSummary cs = new ContentSummaryParser().getContentSummary(s);
