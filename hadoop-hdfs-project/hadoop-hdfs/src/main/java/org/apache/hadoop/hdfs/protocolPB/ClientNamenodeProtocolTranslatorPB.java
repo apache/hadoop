@@ -83,17 +83,14 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DistributedUpgradeProgressRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DistributedUpgradeProgressResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
@@ -208,10 +205,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setLength(length)
         .build();
     try {
-      GetBlockLocationsResponseProto resp = rpcProxy.getBlockLocations(null,
-          req);
-      return resp.hasLocations() ? 
-        PBHelper.convert(resp.getLocations()) : null;
+      return PBHelper.convert(rpcProxy.getBlockLocations(null, req).getLocations());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -335,15 +329,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
       throws AccessControlException, FileNotFoundException,
       NotReplicatedYetException, SafeModeException, UnresolvedLinkException,
       IOException {
-    AddBlockRequestProto.Builder builder = AddBlockRequestProto.newBuilder();
-    builder.setSrc(src)
-        .setClientName(clientName)
-        .addAllExcludeNodes(Arrays.asList(PBHelper.convert(excludeNodes)));
-    if (previous != null) {
-      builder.setPrevious(PBHelper.convert(previous));
-    }
+    AddBlockRequestProto req = AddBlockRequestProto.newBuilder().setSrc(src)
+        .setClientName(clientName).setPrevious(PBHelper.convert(previous))
+        .addAllExcludeNodes(Arrays.asList(PBHelper.convert(excludeNodes)))
+        .build();
     try {
-      return PBHelper.convert(rpcProxy.addBlock(null, builder.build()).getBlock());
+      return PBHelper.convert(rpcProxy.addBlock(null, req).getBlock());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -624,9 +615,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
         DistributedUpgradeProgressRequestProto.newBuilder().
         setAction(PBHelper.convert(action)).build();
     try {
-      DistributedUpgradeProgressResponseProto res = rpcProxy
-          .distributedUpgradeProgress(null, req);
-      return res.hasReport() ? PBHelper.convert(res.getReport()) : null;
+      return PBHelper.convert(
+          rpcProxy.distributedUpgradeProgress(null, req).getReport());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -663,8 +653,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     GetFileInfoRequestProto req = GetFileInfoRequestProto.newBuilder()
         .setSrc(src).build();
     try {
-      GetFileInfoResponseProto res = rpcProxy.getFileInfo(null, req);
-      return res.hasFs() ? PBHelper.convert(res.getFs()) : null;
+      return PBHelper.convert(rpcProxy.getFileInfo(null, req).getFs());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

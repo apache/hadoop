@@ -28,16 +28,9 @@ public class TestDfsOverAvroRpc extends TestLocalDFS {
 
   @Test(timeout=20000)
   public void testWorkingDirectory() throws IOException {
-    /*
-    Test turned off - see HDFS-2647 and HDFS-2660 for related comments.
-    This test can be turned on when Avro RPC is enabled using mechanism
-    similar to protobuf.
-    */
-    /*
     System.setProperty("hdfs.rpc.engine",
                        "org.apache.hadoop.ipc.AvroRpcEngine");
     super.testWorkingDirectory();
-    */
   }
 
 }

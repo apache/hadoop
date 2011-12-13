@@ -24,9 +24,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -55,7 +52,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdd
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
@@ -128,7 +124,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.HdfsFileStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.UpgradeStatusReportProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
@@ -213,16 +208,11 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, GetBlockLocationsRequestProto req)
       throws ServiceException {
     try {
-      LocatedBlocks b = server.getBlockLocations(req.getSrc(), req.getOffset(),
-          req.getLength());
-      Builder builder = GetBlockLocationsResponseProto
-          .newBuilder();
-      if (b != null) {
-        builder.setLocations(
-            PBHelper.convert(server.getBlockLocations(req.getSrc(),
-                req.getOffset(), req.getLength()))).build();
-      }
-      return builder.build();
+      return GetBlockLocationsResponseProto
+          .newBuilder()
+          .setLocations(
+              PBHelper.convert(server.getBlockLocations(req.getSrc(),
+                  req.getOffset(), req.getLength()))).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -335,7 +325,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       return AddBlockResponseProto.newBuilder().setBlock(
           PBHelper.convert(
           server.addBlock(req.getSrc(), req.getClientName(), 
-                req.hasPrevious() ? PBHelper.convert(req.getPrevious()) : null, 
+                PBHelper.convert(req.getPrevious()), 
                 PBHelper.convert(
                   (DatanodeInfoProto[]) req.getExcludeNodesList().toArray()))))
            .build();
@@ -604,14 +594,10 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       RpcController controller, DistributedUpgradeProgressRequestProto req)
       throws ServiceException {
     try {
-      UpgradeStatusReport result = server.distributedUpgradeProgress(PBHelper
-          .convert(req.getAction()));
-      DistributedUpgradeProgressResponseProto.Builder builder = 
-          DistributedUpgradeProgressResponseProto.newBuilder();
-      if (result != null) {
-        builder.setReport(PBHelper.convert(result));
-      }
-      return builder.build();
+      UpgradeStatusReportProto result = PBHelper.convert(server
+          .distributedUpgradeProgress(PBHelper.convert(req.getAction())));
+      return DistributedUpgradeProgressResponseProto.newBuilder()
+          .setReport(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -650,13 +636,9 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public GetFileInfoResponseProto getFileInfo(RpcController controller,
       GetFileInfoRequestProto req) throws ServiceException {
     try {
-      HdfsFileStatus res = server.getFileInfo(req.getSrc());
-      GetFileInfoResponseProto.Builder builder = 
-          GetFileInfoResponseProto.newBuilder();
-      if (res != null) {
-        builder.setFs(PBHelper.convert(res));
-      }
-      return builder.build();
+      HdfsFileStatusProto result = 
+          PBHelper.convert(server.getFileInfo(req.getSrc()));
+      return GetFileInfoResponseProto.newBuilder().setFs(result).build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
