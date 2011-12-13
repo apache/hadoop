@@ -32,8 +32,6 @@ Trunk (unreleased changes)
     HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
     ClientDatanodeProtocol, JournalProtocol, NamenodeProtocol. (suresh)
 
-    HDFS-2663. Handle protobuf optional parameters correctly. (suresh)
-
     HDFS-2666. Fix TestBackupNode failure. (suresh)
 
   IMPROVEMENTS
