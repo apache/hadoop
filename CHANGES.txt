@@ -118,6 +118,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2638. Improve a block recovery log. (eli)
 
+    HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
+
 Release 1.0.0 - unreleased
 
   NEW FEATURES

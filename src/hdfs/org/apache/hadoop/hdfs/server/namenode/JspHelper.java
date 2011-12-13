@@ -39,7 +39,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSClient.RemoteBlockReader;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -145,12 +147,11 @@ public class JspHelper {
       long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);     
       
       // Use the block name for file name. 
-      DFSClient.BlockReader blockReader = 
-        DFSClient.BlockReader.newBlockReader(s, addr.toString() + ":" + blockId,
-                                             blockId, accessToken, genStamp ,offsetIntoBlock, 
-                                             amtToRead, 
-                                             conf.getInt("io.file.buffer.size",
-                                                         4096));
+      BlockReader blockReader = 
+        RemoteBlockReader.newBlockReader(s, addr.toString() + ":" + blockId,
+                                         blockId, accessToken, genStamp ,offsetIntoBlock, 
+                                         amtToRead, 
+                                         conf.getInt("io.file.buffer.size", 4096));
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;

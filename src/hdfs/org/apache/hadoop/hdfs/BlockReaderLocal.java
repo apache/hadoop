@@ -29,8 +29,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient.BlockReader;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -57,7 +58,7 @@ import org.apache.hadoop.util.DataChecksum;
  * if security is enabled.</li>
  * </ul>
  */
-class BlockReaderLocal extends BlockReader {
+class BlockReaderLocal extends FSInputChecker implements BlockReader {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
 
   //Stores the cache and proxy for a local datanode.
@@ -119,6 +120,16 @@ class BlockReaderLocal extends BlockReader {
   private FileInputStream dataIn; // reader for the data file
   private FileInputStream checksumIn;   // reader for the checksum file
   
+  private DataChecksum checksum;
+  private int bytesPerChecksum;
+  private int checksumSize;
+  private long firstChunkOffset;
+  private long lastChunkLen = -1;
+  private long lastChunkOffset = -1;
+  private long startOffset;
+  private boolean gotEOS = false;
+  private byte[] skipBuf = null;
+
   /**
    * The only way this object can be instantiated.
    */
@@ -142,7 +153,7 @@ class BlockReaderLocal extends BlockReader {
     FileInputStream dataIn = null;
     FileInputStream checksumIn = null;
     BlockReaderLocal localBlockReader = null;
-    boolean skipChecksum = shortCircuitChecksum(conf);
+    boolean skipChecksum = skipChecksumCheck(conf);
     try {
       // get a local file system
       File blkfile = new File(pathinfo.getBlockPath());
@@ -226,7 +237,7 @@ class BlockReaderLocal extends BlockReader {
     return pathinfo;
   }
   
-  private static boolean shortCircuitChecksum(Configuration conf) {
+  private static boolean skipChecksumCheck(Configuration conf) {
     return conf.getBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
         DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_DEFAULT);
   }
@@ -256,8 +267,10 @@ class BlockReaderLocal extends BlockReader {
     super(
         new Path("/blk_" + block.getBlockId() + ":of:" + hdfsfile) /*too non path-like?*/,
         1,
-        checksum,
-        verifyChecksum);
+        verifyChecksum,
+        checksum.getChecksumSize() > 0? checksum : null,
+        checksum.getBytesPerChecksum(),
+        checksum.getChecksumSize());
     this.startOffset = startOffset;
     this.dataIn = dataIn;
     this.checksumIn = checksumIn;
@@ -278,34 +291,20 @@ class BlockReaderLocal extends BlockReader {
 
     checksumSize = checksum.getChecksumSize();
 
-    long endOffset = blockLength;
-    if (startOffset < 0 || startOffset > endOffset
-        || (length + startOffset) > endOffset) {
+    if (startOffset < 0 || startOffset > blockLength
+        || (length + startOffset) > blockLength) {
       String msg = " Offset " + startOffset + " and length " + length
-      + " don't match block " + block + " ( blockLen " + endOffset + " )";
+      + " don't match block " + block + " ( blockLen " + blockLength + " )";
       LOG.warn("BlockReaderLocal requested with incorrect offset: " + msg);
       throw new IOException(msg);
     }
 
     firstChunkOffset = (startOffset - (startOffset % bytesPerChecksum));
 
-    if (length >= 0) {
-      // Make sure endOffset points to end of a checksumed chunk.
-      long tmpLen = startOffset + length;
-      if (tmpLen % bytesPerChecksum != 0) {
-        tmpLen += (bytesPerChecksum - tmpLen % bytesPerChecksum);
-      }
-      if (tmpLen < endOffset) {
-        endOffset = tmpLen;
-      }
-    }
-
-    // seek to the right offsets
     if (firstChunkOffset > 0) {
       dataIn.getChannel().position(firstChunkOffset);
 
       long checksumSkip = (firstChunkOffset / bytesPerChecksum) * checksumSize;
-      // note blockInStream is  seeked when created below
       if (checksumSkip > 0) {
         checksumIn.skip(checksumSkip);
       }
@@ -322,9 +321,25 @@ class BlockReaderLocal extends BlockReader {
     }
     if (checksum == null) {
       return dataIn.read(buf, off, len);
-    } else {
-      return super.read(buf, off, len);
     }
+    // For the first read, skip the extra bytes at the front.
+    if (lastChunkLen < 0 && startOffset > firstChunkOffset && len > 0) {
+      // Skip these bytes. But don't call this.skip()!
+      int toSkip = (int)(startOffset - firstChunkOffset);
+      if (skipBuf == null) {
+        skipBuf = new byte[bytesPerChecksum];
+      }
+      if (super.read(skipBuf, 0, toSkip) != toSkip) {
+        // Should never happen
+        throw new IOException("Could not skip " + toSkip + " bytes");
+      }
+    }
+    return super.read(buf, off, len);
+  }
+
+  @Override
+  public int readAll(byte[] buf, int offset, int len) throws IOException {
+    return readFully(this, buf, offset, len);
   }
 
   @Override
@@ -334,17 +349,41 @@ class BlockReaderLocal extends BlockReader {
     }
     if (checksum == null) {
       return dataIn.skip(n);
-    } else {
-     return super.skip(n);
     }
+    // Skip by reading the data so we stay in sync with checksums.
+    // This could be implemented more efficiently in the future to
+    // skip to the beginning of the appropriate checksum chunk
+    // and then only read to the middle of that chunk.
+    if (skipBuf == null) {
+      skipBuf = new byte[bytesPerChecksum]; 
+    }
+    long nSkipped = 0;
+    while (nSkipped < n) {
+      int toSkip = (int)Math.min(n-nSkipped, skipBuf.length);
+      int ret = read(skipBuf, 0, toSkip);
+      if (ret <= 0) {
+        return nSkipped;
+      }
+      nSkipped += ret;
+    }
+    return nSkipped;
+  }
+
+  @Override
+  public boolean seekToNewSource(long targetPos) throws IOException {
+    // Checksum errors are handled outside BlockReaderLocal 
+    return false;
   }
 
   @Override
   public synchronized void seek(long n) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("seek " + n);
-    }
     throw new IOException("Seek() is not supported in BlockReaderLocal");
+  }
+
+  @Override
+  protected long getChunkPosition(long pos) {
+    throw new RuntimeException("getChunkPosition() is not supported, " +
+        "since seek is not implemented");
   }
 
   @Override
@@ -393,13 +432,7 @@ class BlockReaderLocal extends BlockReader {
 
   @Override
   public synchronized void close() throws IOException {
-    if (dataIn != null) {
-      dataIn.close();
-      dataIn = null;
-    }
-    if (checksumIn != null) {
-      checksumIn.close();
-      checksumIn = null;
-    }
+    IOUtils.closeStream(dataIn);
+    IOUtils.closeStream(checksumIn);
   }
 }

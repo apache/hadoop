@@ -1407,20 +1407,20 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   /** This is a wrapper around connection to datadone
    * and understands checksum, offset etc
    */
-  public static class BlockReader extends FSInputChecker {
+  public static class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
     private Socket dnSock; //for now just sending checksumOk.
     private DataInputStream in;
-    protected DataChecksum checksum;
-    protected long lastChunkOffset = -1;
-    protected long lastChunkLen = -1;
+    private DataChecksum checksum;
+    private long lastChunkOffset = -1;
+    private long lastChunkLen = -1;
     private long lastSeqNo = -1;
 
-    protected long startOffset;
-    protected long firstChunkOffset;
-    protected int bytesPerChecksum;
-    protected int checksumSize;
-    protected boolean gotEOS = false;
+    private long startOffset;
+    private long firstChunkOffset;
+    private int bytesPerChecksum;
+    private int checksumSize;
+    private boolean gotEOS = false;
     
     byte[] skipBuf = null;
     ByteBuffer checksumBytes = null;
@@ -1613,7 +1613,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return chunkLen;
     }
     
-    private BlockReader( String file, long blockId, DataInputStream in, 
+    private RemoteBlockReader( String file, long blockId, DataInputStream in, 
                          DataChecksum checksum, boolean verifyChecksum,
                          long startOffset, long firstChunkOffset, 
                          Socket dnSock ) {
@@ -1639,11 +1639,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     /**
      * Public constructor 
      */  
-    BlockReader(Path file, int numRetries) {
+    RemoteBlockReader(Path file, int numRetries) {
       super(file, numRetries);
     }
 
-    protected BlockReader(Path file, int numRetries, DataChecksum checksum,
+    protected RemoteBlockReader(Path file, int numRetries, DataChecksum checksum,
         boolean verifyChecksum) {
       super(file,
           numRetries,
@@ -1742,8 +1742,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                               startOffset + " for file " + file);
       }
 
-      return new BlockReader( file, blockId, in, checksum, verifyChecksum,
-                              startOffset, firstChunkOffset, sock );
+      return new RemoteBlockReader(file, blockId, in, checksum, verifyChecksum,
+                                   startOffset, firstChunkOffset, sock);
     }
 
     @Override
@@ -1752,10 +1752,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       checksum = null;
       // in will be closed when its Socket is closed.
     }
-    
+
     /** kind of like readFully(). Only reads as much as possible.
      * And allows use of protected readFully().
      */
+    @Override
     public int readAll(byte[] buf, int offset, int len) throws IOException {
       return readFully(this, buf, offset, len);
     }
@@ -2092,7 +2093,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           s = socketFactory.createSocket();
           NetUtils.connect(s, targetAddr, socketTimeout);
           s.setSoTimeout(socketTimeout);
-          blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
+          blockReader = RemoteBlockReader.newBlockReader(s, src, blk.getBlockId(), 
               accessToken, 
               blk.getGenerationStamp(),
               offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
@@ -2303,9 +2304,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         InetSocketAddress targetAddr = retval.addr;
         BlockReader reader = null;
 
-        int len = (int) (end - start + 1);
         try {
           Token<BlockTokenIdentifier> accessToken = block.getBlockToken();
+          int len = (int) (end - start + 1);
+
           // first try reading the block locally.
           if (shouldTryShortCircuitRead(targetAddr)) {
             try {
@@ -2322,7 +2324,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             dn = socketFactory.createSocket();
             NetUtils.connect(dn, targetAddr, socketTimeout);
             dn.setSoTimeout(socketTimeout);
-            reader = BlockReader.newBlockReader(dn, src, 
+            reader = RemoteBlockReader.newBlockReader(dn, src, 
                 block.getBlock().getBlockId(), accessToken,
                 block.getBlock().getGenerationStamp(), start, len, buffersize, 
                 verifyChecksum, clientName);
@@ -2351,7 +2353,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             }
           }
         } finally {
-          IOUtils.closeStream(reader);
+          reader.close();
           IOUtils.closeSocket(dn);
         }
         // Put chosen node into dead list, continue
