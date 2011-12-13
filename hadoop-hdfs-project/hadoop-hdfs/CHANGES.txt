@@ -34,6 +34,9 @@ Trunk (unreleased changes)
 
     HDFS-2666. Fix TestBackupNode failure. (suresh)
 
+    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
+    via jitendra)
+
     HDFS-2663. Optional protobuf parameters are not handled correctly. (suresh)
 
   IMPROVEMENTS
