@@ -110,40 +110,33 @@ class JobQueueClient extends Configured implements Tool {
   }
 
   // format and print information about the passed in job queue.
-  void printJobQueueInfo(JobQueueInfo jobQueueInfo, Writer writer)
-      throws IOException {
+  void printJobQueueInfo(JobQueueInfo jobQueueInfo, Writer writer,
+    String prefix) throws IOException {
     if (jobQueueInfo == null) {
       writer.write("No queue found.\n");
       writer.flush();
       return;
     }
-    writer.write(String.format("Queue Name : %s \n",
+    writer.write(String.format(prefix + "======================\n"));
+    writer.write(String.format(prefix + "Queue Name : %s \n",
         jobQueueInfo.getQueueName()));
-    writer.write(String.format("Queue State : %s \n",
+    writer.write(String.format(prefix + "Queue State : %s \n",
         jobQueueInfo.getQueueState()));
-    writer.write(String.format("Scheduling Info : %s \n",
+    writer.write(String.format(prefix + "Scheduling Info : %s \n",
         jobQueueInfo.getSchedulingInfo()));
     List<JobQueueInfo> childQueues = jobQueueInfo.getChildren();
     if (childQueues != null && childQueues.size() > 0) {
-      writer.write(String.format("Child Queues : "));
       for (int i = 0; i < childQueues.size(); i++) {
-        JobQueueInfo childQueue = childQueues.get(i);
-        writer.write(String.format("%s", childQueue.getQueueName()));
-        if (i != childQueues.size() - 1) {
-          writer.write(String.format(", "));
-        }
+	  printJobQueueInfo(childQueues.get(i), writer, "    " + prefix);
       }
-      writer.write("\n");
     }
-    writer.write(String.format("======================\n"));
     writer.flush();
   }
   
   private void displayQueueList() throws IOException {
     JobQueueInfo[] rootQueues = jc.getRootQueues();
-    List<JobQueueInfo> allQueues = expandQueueList(rootQueues);
-    for (JobQueueInfo queue : allQueues) {
-      printJobQueueInfo(queue, new PrintWriter(System.out));
+    for (JobQueueInfo queue : rootQueues) {
+      printJobQueueInfo(queue, new PrintWriter(System.out), "");
     }
   }
   
@@ -181,7 +174,7 @@ class JobQueueClient extends Configured implements Tool {
       System.out.println("Queue \"" + queue + "\" does not exist.");
       return;
     }
-    printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out));
+    printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out), "");
     if (showJobs && (jobQueueInfo.getChildren() == null ||
         jobQueueInfo.getChildren().size() == 0)) {
       JobStatus[] jobs = jc.getJobsFromQueue(queue);

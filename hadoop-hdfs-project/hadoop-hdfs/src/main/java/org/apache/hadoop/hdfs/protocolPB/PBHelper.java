@@ -129,6 +129,10 @@ import com.google.protobuf.ByteString;
 
 /**
  * Utilities for converting protobuf classes to and from implementation classes.
+ * 
+ * Note that when converting from an internal type to protobuf type, the
+ * converter never return null for protobuf type. The check for internal type
+ * being null must be done before calling the convert() method.
  */
 public class PBHelper {
   private static final RegisterCommandProto REG_CMD_PROTO = 
@@ -341,16 +345,19 @@ public class PBHelper {
 
   public static CheckpointCommandProto convert(CheckpointCommand cmd) {
     return CheckpointCommandProto.newBuilder()
-        .setSignature(convert(cmd.getSignature())).build();
+        .setSignature(convert(cmd.getSignature()))
+        .setNeedToReturnImage(cmd.needToReturnImage()).build();
   }
 
   public static NamenodeCommandProto convert(NamenodeCommand cmd) {
     if (cmd instanceof CheckpointCommand) {
       return NamenodeCommandProto.newBuilder().setAction(cmd.getAction())
-          .setType(NamenodeCommandProto.Type.NamenodeCommand)
+          .setType(NamenodeCommandProto.Type.CheckPointCommand)
           .setCheckpointCmd(convert((CheckpointCommand) cmd)).build();
     }
-    return NamenodeCommandProto.newBuilder().setAction(cmd.getAction()).build();
+    return NamenodeCommandProto.newBuilder()
+        .setType(NamenodeCommandProto.Type.NamenodeCommand)
+        .setAction(cmd.getAction()).build();
   }
 
   public static BlockKey[] convertBlockKeys(List<BlockKeyProto> list) {
@@ -369,6 +376,7 @@ public class PBHelper {
   }
 
   public static NamenodeCommand convert(NamenodeCommandProto cmd) {
+    if (cmd == null) return null;
     switch (cmd.getType()) {
     case CheckPointCommand:
       CheckpointCommandProto chkPt = cmd.getCheckpointCmd();
@@ -425,7 +433,8 @@ public class PBHelper {
     if (di == null) return null;
     return new DatanodeInfo(
         PBHelper.convert(di.getId()),
-        di.getLocation(), di.getHostName(),
+        di.hasLocation() ? di.getLocation() : null , 
+        di.hasHostName() ? di.getHostName() : null,
         di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
         di.getBlockPoolUsed()  ,  di.getLastUpdate() , di.getXceiverCount() ,
         PBHelper.convert(di.getAdminState())); 
@@ -433,10 +442,16 @@ public class PBHelper {
   
   static public DatanodeInfoProto convertDatanodeInfo(DatanodeInfo di) {
     if (di == null) return null;
-    return DatanodeInfoProto.newBuilder().
+    DatanodeInfoProto.Builder builder = DatanodeInfoProto.newBuilder();
+    if (di.getHostName() != null) {
+      builder.setHostName(di.getHostName());
+    }
+    if (di.getNetworkLocation() != null) {
+      builder.setLocation(di.getNetworkLocation());
+    }
+        
+    return builder.
      setId(PBHelper.convert((DatanodeID) di)).
-     setLocation(di.getNetworkLocation()).
-     setHostName(di.getHostName()).
      setCapacity(di.getCapacity()).
      setDfsUsed(di.getDfsUsed()).
      setRemaining(di.getRemaining()).
@@ -776,9 +791,14 @@ public class PBHelper {
 
   public static ReceivedDeletedBlockInfoProto convert(
       ReceivedDeletedBlockInfo receivedDeletedBlockInfo) {
-    return ReceivedDeletedBlockInfoProto.newBuilder()
-        .setBlock(PBHelper.convert(receivedDeletedBlockInfo.getBlock()))
-        .setDeleteHint(receivedDeletedBlockInfo.getDelHints()).build();
+    ReceivedDeletedBlockInfoProto.Builder builder = 
+        ReceivedDeletedBlockInfoProto.newBuilder();
+    
+    if (receivedDeletedBlockInfo.getDelHints() != null) {
+      builder.setDeleteHint(receivedDeletedBlockInfo.getDelHints());
+    }
+    return builder.setBlock(PBHelper.convert(receivedDeletedBlockInfo.getBlock()))
+        .build();
   }
 
   public static UpgradeCommandProto convert(UpgradeCommand comm) {
@@ -802,7 +822,7 @@ public class PBHelper {
   public static ReceivedDeletedBlockInfo convert(
       ReceivedDeletedBlockInfoProto proto) {
     return new ReceivedDeletedBlockInfo(PBHelper.convert(proto.getBlock()),
-        proto.getDeleteHint());
+        proto.hasDeleteHint() ? proto.getDeleteHint() : null);
   }
   
   public static NamespaceInfoProto convert(NamespaceInfo info) {
@@ -862,13 +882,10 @@ public class PBHelper {
   
   // LocatedBlocks
   public static LocatedBlocks convert(LocatedBlocksProto lb) {
-    if (lb == null) {
-      return null;
-    }
     return new LocatedBlocks(
         lb.getFileLength(), lb.getUnderConstruction(),
         PBHelper.convertLocatedBlock(lb.getBlocksList()),
-        PBHelper.convert(lb.getLastBlock()),
+        lb.hasLastBlock() ? PBHelper.convert(lb.getLastBlock()) : null,
         lb.getIsLastBlockComplete());
   }
   
@@ -876,11 +893,15 @@ public class PBHelper {
     if (lb == null) {
       return null;
     }
-    return LocatedBlocksProto.newBuilder().
-      setFileLength(lb.getFileLength()).
-      setUnderConstruction(lb.isUnderConstruction()).
-      addAllBlocks(PBHelper.convertLocatedBlock2(lb.getLocatedBlocks())).
-      setLastBlock(PBHelper.convert(lb.getLastLocatedBlock())).setIsLastBlockComplete(lb.isLastBlockComplete()).build();
+    LocatedBlocksProto.Builder builder = 
+        LocatedBlocksProto.newBuilder();
+    if (lb.getLastLocatedBlock() != null) {
+      builder.setLastBlock(PBHelper.convert(lb.getLastLocatedBlock()));
+    }
+    return builder.setFileLength(lb.getFileLength())
+        .setUnderConstruction(lb.isUnderConstruction())
+        .addAllBlocks(PBHelper.convertLocatedBlock2(lb.getLocatedBlocks()))
+        .setIsLastBlockComplete(lb.isLastBlockComplete()).build();
   }
   
   public static FsServerDefaults convert(FsServerDefaultsProto fs) {
@@ -981,11 +1002,16 @@ public class PBHelper {
       setPermission(PBHelper.convert(fs.getPermission())).
       setOwner(fs.getOwner()).
       setGroup(fs.getGroup()).
-      setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes())).
       setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
-    LocatedBlocks locations = null;
+    
+    if (fs.getSymlink() != null) {
+      builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
+    }
     if (fs instanceof HdfsLocatedFileStatus) {
-      builder.setLocations(PBHelper.convert(locations));
+      LocatedBlocks locations = ((HdfsLocatedFileStatus)fs).getBlockLocations();
+      if (locations != null) {
+        builder.setLocations(PBHelper.convert(locations));
+      }
     }
     return builder.build();
   }

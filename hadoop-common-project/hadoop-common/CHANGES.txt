@@ -134,6 +134,8 @@ Trunk (unreleased changes)
     HADOOP-7902. skipping name rules setting (if already set) should be done 
     on UGI initialization only. (tucu)
 
+    HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -172,6 +174,9 @@ Release 0.23.1 - Unreleased
     HADOOP-6886. LocalFileSystem Needs createNonRecursive API.
     (Nicolas Spiegelberg and eli via eli)
 
+    HADOOP-7912. test-patch should run eclipse:eclipse to verify that it does
+    not break again. (Robert Joseph Evans via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -199,6 +204,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7878  Regression: HADOOP-7777 switch changes break HDFS tests when the
    isSingleSwitch() predicate is used. (stevel)
+
+   HADOOP-7914. Remove the duplicated declaration of hadoop-hdfs test-jar in
+   hadoop-project/pom.xml.  (szetszwo)
 
 Release 0.23.0 - 2011-11-01 
 

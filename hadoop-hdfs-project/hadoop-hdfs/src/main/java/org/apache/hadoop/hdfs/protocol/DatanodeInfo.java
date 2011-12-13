@@ -382,7 +382,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
        });
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
@@ -400,7 +400,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     WritableUtils.writeEnum(out, getAdminState());
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 

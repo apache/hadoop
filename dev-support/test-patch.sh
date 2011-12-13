@@ -586,6 +586,35 @@ $JIRA_COMMENT_FOOTER"
 }
 
 ###############################################################################
+### Verify eclipse:eclipse works
+checkEclipseGeneration () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Running mvn eclipse:eclipse."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+
+  echo "$MVN eclipse:eclipse -D${PROJECT_NAME}PatchProcess"
+  $MVN eclipse:eclipse -D${PROJECT_NAME}PatchProcess
+  if [[ $? != 0 ]] ; then
+      JIRA_COMMENT="$JIRA_COMMENT
+
+    -1 eclipse:eclipse.  The patch failed to build with eclipse:eclipse."
+    return 1
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    +1 eclipse:eclipse.  The patch built with eclipse:eclipse."
+  return 0
+}
+
+
+
+###############################################################################
 ### Run the tests
 runTests () {
   echo ""
@@ -789,6 +818,8 @@ fi
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
 checkJavacWarnings
+(( RESULT = RESULT + $? ))
+checkEclipseGeneration
 (( RESULT = RESULT + $? ))
 ### Checkstyle not implemented yet
 #checkStyle

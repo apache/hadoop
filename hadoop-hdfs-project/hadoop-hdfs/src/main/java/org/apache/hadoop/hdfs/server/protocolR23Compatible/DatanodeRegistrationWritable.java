@@ -74,7 +74,7 @@ public class DatanodeRegistrationWritable implements Writable {
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     datanodeId.write(out);
 
@@ -85,7 +85,7 @@ public class DatanodeRegistrationWritable implements Writable {
     exportedKeys.write(out);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     datanodeId.readFields(in);
 

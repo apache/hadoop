@@ -184,7 +184,7 @@ message NNHAStatusHeartbeatProto {
  * haStatus - Status (from an HA perspective) of the NN sending this response
  */
 message HeartbeatResponseProto {
-  repeated DatanodeCommandProto cmds = 1;
+  repeated DatanodeCommandProto cmds = 1; // Returned commands can be null
   required NNHAStatusHeartbeatProto haStatus = 2;
 }
 

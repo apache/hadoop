@@ -206,7 +206,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements DatanodeProtocol,
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
-    return PBHelper.convert(resp.getCmd());
+    return resp.hasCmd() ? PBHelper.convert(resp.getCmd()) : null;
   }
 
   @Override
@@ -264,7 +264,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements DatanodeProtocol,
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
-    return PBHelper.convert(resp.getCmd());
+    return resp.hasCmd() ? PBHelper.convert(resp.getCmd()) : null;
   }
 
   @Override
