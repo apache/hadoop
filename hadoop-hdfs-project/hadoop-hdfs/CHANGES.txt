@@ -50,6 +50,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
 
+    HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
