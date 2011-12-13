@@ -29,6 +29,7 @@
 
   <modules>
     <module>hadoop-streaming</module>
+    <module>hadoop-archives</module>
   </modules>
 
   <build>

@@ -89,6 +89,8 @@ Release 0.23.1 - Unreleased
    HADOOP-7914. Remove the duplicated declaration of hadoop-hdfs test-jar in
    hadoop-project/pom.xml.  (szetszwo)
 
+   HADOOP-7810 move hadoop archive to core from tools. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
