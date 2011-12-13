@@ -153,6 +153,9 @@ Trunk (unreleased changes)
     HDFS-2606. webhdfs client filesystem impl must set the content-type 
     header for create/append. (tucu)
 
+    HDFS-1765. Block Replication should respect under-replication
+    block priority. (Uma Maheswara Rao G via eli)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -233,9 +236,6 @@ Release 0.23.1 - UNRELEASED
     HDFS-2590. Fix the missing links in the WebHDFS forrest doc.  (szetszwo)
 
     HDFS-2596. TestDirectoryScanner doesn't test parallel scans. (eli)
-
-    HDFS-1765. Block Replication should respect under-replication
-    block priority. (Uma Maheswara Rao G via eli)
     
 Release 0.23.0 - 2011-11-01 
 
