@@ -150,6 +150,10 @@ public interface MRJobConfig {
 
   public static final String NUM_REDUCE_PROFILES = "mapreduce.task.profile.reduces";
 
+  public static final String TASK_MAP_PROFILE_PARAMS = "mapreduce.task.profile.map.params";
+  
+  public static final String TASK_REDUCE_PROFILE_PARAMS = "mapreduce.task.profile.reduce.params";
+  
   public static final String TASK_TIMEOUT = "mapreduce.task.timeout";
 
   public static final String TASK_ID = "mapreduce.task.id";
@@ -298,12 +302,6 @@ public interface MRJobConfig {
     "mapreduce.job.ubertask.maxreduces";
   public static final String JOB_UBERTASK_MAXBYTES =
     "mapreduce.job.ubertask.maxbytes";
-  public static final String UBERTASK_JAVA_OPTS =
-    "mapreduce.ubertask.child.java.opts";  // or mapreduce.uber.java.opts?
-  public static final String UBERTASK_ULIMIT =
-    "mapreduce.ubertask.child.ulimit";     // or mapreduce.uber.ulimit?
-  public static final String UBERTASK_ENV =
-    "mapreduce.ubertask.child.env";        // or mapreduce.uber.env?
 
   public static final String MR_PREFIX = "yarn.app.mapreduce.";
 

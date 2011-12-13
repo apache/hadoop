@@ -236,6 +236,13 @@ public class MapReduceChildJVM {
                 getTaskLogFile(TaskLog.LogName.PROFILE)
                 )
             );
+        if (task.isMapTask()) {
+          vargs.add(conf.get(MRJobConfig.TASK_MAP_PROFILE_PARAMS, ""));
+        }
+        else {
+          vargs.add(conf.get(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, ""));
+        }
+        
       }
     }
 

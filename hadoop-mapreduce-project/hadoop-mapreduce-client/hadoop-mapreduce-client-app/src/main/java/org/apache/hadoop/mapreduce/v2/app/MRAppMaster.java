@@ -156,6 +156,7 @@ public class MRAppMaster extends CompositeService {
   private OutputCommitter committer;
   private JobEventDispatcher jobEventDispatcher;
   private boolean inRecovery = false;
+  private SpeculatorEventDispatcher speculatorEventDispatcher;
 
   private Job job;
   private Credentials fsTokens = new Credentials(); // Filled during init
@@ -265,8 +266,9 @@ public class MRAppMaster extends CompositeService {
       addIfService(speculator);
     }
 
+    speculatorEventDispatcher = new SpeculatorEventDispatcher(conf);
     dispatcher.register(Speculator.EventType.class,
-        new SpeculatorEventDispatcher(conf));
+        speculatorEventDispatcher);
 
     // service to allocate containers from RM (if non-uber) or to fake it (uber)
     containerAllocator = createContainerAllocator(clientService, context);
@@ -386,7 +388,7 @@ public class MRAppMaster extends CompositeService {
         // This will also send the final report to the ResourceManager
         LOG.info("Calling stop for all the services");
         stop();
-        
+
         // Send job-end notification
         try {
           LOG.info("Job end notification started for jobID : "
@@ -401,14 +403,14 @@ public class MRAppMaster extends CompositeService {
       } catch (Throwable t) {
         LOG.warn("Graceful stop failed ", t);
       }
-      
+
       // Cleanup staging directory
       try {
         cleanupStagingDir();
       } catch(IOException io) {
         LOG.warn("Failed to delete staging dir");
       }
-      
+
       //Bring the process down by force.
       //Not needed after HADOOP-7140
       LOG.info("Exiting MR AppMaster..GoodBye!");
@@ -790,10 +792,6 @@ public class MRAppMaster extends CompositeService {
     // job-init to be done completely here.
     jobEventDispatcher.handle(initJobEvent);
 
-    // send init to speculator. This won't yest start as dispatcher isn't
-    // started yet.
-    dispatcher.getEventHandler().handle(
-        new SpeculatorEvent(job.getID(), clock.getTime()));
 
     // JobImpl's InitTransition is done (call above is synchronous), so the
     // "uber-decision" (MR-1220) has been made.  Query job and switch to
@@ -801,9 +799,15 @@ public class MRAppMaster extends CompositeService {
     // and container-launcher services/event-handlers).
 
     if (job.isUber()) {
+      speculatorEventDispatcher.disableSpeculation();
       LOG.info("MRAppMaster uberizing job " + job.getID()
-               + " in local container (\"uber-AM\").");
+               + " in local container (\"uber-AM\") on node "
+               + nmHost + ":" + nmPort + ".");
     } else {
+      // send init to speculator only for non-uber jobs. 
+      // This won't yet start as dispatcher isn't started yet.
+      dispatcher.getEventHandler().handle(
+          new SpeculatorEvent(job.getID(), clock.getTime()));
       LOG.info("MRAppMaster launching normal, non-uberized, multi-container "
                + "job " + job.getID() + ".");
     }
@@ -865,17 +869,24 @@ public class MRAppMaster extends CompositeService {
   private class SpeculatorEventDispatcher implements
       EventHandler<SpeculatorEvent> {
     private final Configuration conf;
+    private volatile boolean disabled;
     public SpeculatorEventDispatcher(Configuration config) {
       this.conf = config;
     }
     @Override
     public void handle(SpeculatorEvent event) {
-      if (conf.getBoolean(MRJobConfig.MAP_SPECULATIVE, false)
-          || conf.getBoolean(MRJobConfig.REDUCE_SPECULATIVE, false)) {
+      if (!disabled && 
+          (conf.getBoolean(MRJobConfig.MAP_SPECULATIVE, false)
+          || conf.getBoolean(MRJobConfig.REDUCE_SPECULATIVE, false))) {
         // Speculator IS enabled, direct the event to there.
         speculator.handle(event);
       }
     }
+
+    public void disableSpeculation() {
+      disabled = true;
+    }
+
   }
 
   private static void validateInputParam(String value, String param)

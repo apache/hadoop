@@ -49,6 +49,7 @@ public class TestUberAM extends TestMRJobs {
   }
 
   @Override
+  @Test
   public void testSleepJob()
   throws IOException, InterruptedException, ClassNotFoundException {
     if (mrCluster != null) {
@@ -84,6 +85,7 @@ public class TestUberAM extends TestMRJobs {
   }
 
   @Override
+  @Test
   public void testRandomWriter()
   throws IOException, InterruptedException, ClassNotFoundException {
     super.testRandomWriter();
@@ -101,6 +103,7 @@ public class TestUberAM extends TestMRJobs {
   }
 
   @Override
+  @Test
   public void testFailingMapper()
   throws IOException, InterruptedException, ClassNotFoundException {
     LOG.info("\n\n\nStarting uberized testFailingMapper().");
