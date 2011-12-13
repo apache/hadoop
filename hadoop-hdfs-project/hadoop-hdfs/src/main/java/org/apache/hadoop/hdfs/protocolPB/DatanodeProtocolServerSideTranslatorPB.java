@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportR
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatRequestProto;
@@ -108,7 +109,9 @@ public class DatanodeProtocolServerSideTranslatorPB implements
         .newBuilder();
     if (cmds != null) {
       for (int i = 0; i < cmds.length; i++) {
-        builder.addCmds(i, PBHelper.convert(cmds[i]));
+        if (cmds[i] != null) {
+          builder.addCmds(PBHelper.convert(cmds[i]));
+        }
       }
     }
     return builder.build();
@@ -129,8 +132,12 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return BlockReportResponseProto.newBuilder().setCmd(PBHelper.convert(cmd))
-        .build();
+    BlockReportResponseProto.Builder builder = 
+        BlockReportResponseProto.newBuilder();
+    if (cmd != null) {
+      builder.setCmd(PBHelper.convert(cmd));
+    }
+    return builder.build();
   }
 
   @Override
@@ -180,14 +187,20 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   @Override
   public ProcessUpgradeResponseProto processUpgrade(RpcController controller,
       ProcessUpgradeRequestProto request) throws ServiceException {
-    UpgradeCommand cmd;
+    UpgradeCommand ret;
     try {
-      cmd = impl.processUpgradeCommand(PBHelper.convert(request.getCmd()));
+      UpgradeCommand cmd = request.hasCmd() ? PBHelper
+          .convert(request.getCmd()) : null;
+      ret = impl.processUpgradeCommand(cmd);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return ProcessUpgradeResponseProto.newBuilder()
-        .setCmd(PBHelper.convert(cmd)).build();
+    ProcessUpgradeResponseProto.Builder builder = 
+        ProcessUpgradeResponseProto.newBuilder();
+    if (ret != null) {
+      builder.setCmd(PBHelper.convert(ret));
+    }
+    return builder.build();
   }
 
   @Override

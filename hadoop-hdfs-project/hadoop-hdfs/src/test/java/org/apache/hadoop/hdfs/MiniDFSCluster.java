@@ -507,6 +507,11 @@ public class MiniDFSCluster {
     this.waitSafeMode = waitSafeMode;
     
     // use alternate RPC engine if spec'd
+    /*
+    Turned off - see HDFS-2647 and HDFS-2660 for related comments.
+    This test can be turned on when Avro RPC is enabled using mechanism
+    similar to protobuf.
+    
     String rpcEngineName = System.getProperty("hdfs.rpc.engine");
     if (rpcEngineName != null && !"".equals(rpcEngineName)) {
       
@@ -530,6 +535,7 @@ public class MiniDFSCluster {
       conf.setBoolean(HADOOP_SECURITY_AUTHORIZATION,
                       false);
     }
+    */
     
     int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
     conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));

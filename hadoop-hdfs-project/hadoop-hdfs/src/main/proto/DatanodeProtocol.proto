@@ -170,7 +170,7 @@ message HeartbeatRequestProto {
  * cmds - Commands from namenode to datanode.
  */
 message HeartbeatResponseProto {
-  repeated DatanodeCommandProto cmds = 1;
+  repeated DatanodeCommandProto cmds = 1; // Returned commands can be null
 }
 
 /**
