@@ -198,17 +198,31 @@ public class CapacitySchedulerConfiguration extends Configuration {
   private static String getAclKey(QueueACL acl) {
     return "acl_" + acl.toString().toLowerCase();
   }
-  
-  public Map<QueueACL, AccessControlList> getAcls(String queue) {
-    Map<QueueACL, AccessControlList> acls = 
-      new HashMap<QueueACL, AccessControlList>();
+
+  public AccessControlList getAcl(String queue, QueueACL acl) {
     String queuePrefix = getQueuePrefix(queue);
+    String aclString = get(queuePrefix + getAclKey(acl), DEFAULT_ACL);
+    return new AccessControlList(aclString);
+  }
+
+  public void setAcl(String queue, QueueACL acl, String aclString) {
+    String queuePrefix = getQueuePrefix(queue);
+    set(queuePrefix + getAclKey(acl), aclString);
+  }
+
+  public Map<QueueACL, AccessControlList> getAcls(String queue) {
+    Map<QueueACL, AccessControlList> acls =
+      new HashMap<QueueACL, AccessControlList>();
     for (QueueACL acl : QueueACL.values()) {
-      acls.put(acl, 
-          new AccessControlList(get(queuePrefix + getAclKey(acl), 
-              DEFAULT_ACL)));
+      acls.put(acl, getAcl(queue, acl));
     }
     return acls;
+  }
+
+  public void setAcls(String queue, Map<QueueACL, AccessControlList> acls) {
+    for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
+      setAcl(queue, e.getKey(), e.getValue().getAclString());
+    }
   }
 
   public String[] getQueues(String queue) {

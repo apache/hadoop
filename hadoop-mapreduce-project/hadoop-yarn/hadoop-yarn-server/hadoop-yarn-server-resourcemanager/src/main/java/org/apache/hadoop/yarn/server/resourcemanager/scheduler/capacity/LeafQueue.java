@@ -492,11 +492,8 @@ public class LeafQueue implements CSQueue {
     QueueUserACLInfo userAclInfo = 
       recordFactory.newRecordInstance(QueueUserACLInfo.class);
     List<QueueACL> operations = new ArrayList<QueueACL>();
-    for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
-      QueueACL operation = e.getKey();
-      AccessControlList acl = e.getValue();
-
-      if (acl.isUserAllowed(user)) {
+    for (QueueACL operation : QueueACL.values()) {
+      if (hasAccess(operation, user)) {
         operations.add(operation);
       }
     }
