@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,11 +31,14 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -102,20 +106,29 @@ public class TestLeafQueue {
   
   private static final String A = "a";
   private static final String B = "b";
+  private static final String C = "c";
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B});
+    conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B, C});
     conf.setCapacity(CapacityScheduler.ROOT, 100);
     conf.setMaximumCapacity(CapacityScheduler.ROOT, 100);
+    conf.setAcl(CapacityScheduler.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
     final String Q_A = CapacityScheduler.ROOT + "." + A;
-    conf.setCapacity(Q_A, 10);
+    conf.setCapacity(Q_A, 9);
     conf.setMaximumCapacity(Q_A, 20);
+    conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
     
     final String Q_B = CapacityScheduler.ROOT + "." + B;
     conf.setCapacity(Q_B, 90);
     conf.setMaximumCapacity(Q_B, 99);
+    conf.setAcl(Q_B, QueueACL.SUBMIT_APPLICATIONS, "*");
+
+    final String Q_C = CapacityScheduler.ROOT + "." + C;
+    conf.setCapacity(Q_C, 1);
+    conf.setMaximumCapacity(Q_C, 10);
+    conf.setAcl(Q_C, QueueACL.SUBMIT_APPLICATIONS, " ");
     
     LOG.info("Setup top-level queues a and b");
   }
@@ -167,8 +180,8 @@ public class TestLeafQueue {
 	  //can add more sturdy test with 3-layer queues 
 	  //once MAPREDUCE:3410 is resolved
 	  LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
-	  assertEquals(0.1, a.getCapacity(), epsilon);
-	  assertEquals(0.1, a.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.09, a.getCapacity(), epsilon);
+	  assertEquals(0.09, a.getAbsoluteCapacity(), epsilon);
 	  assertEquals(0.2, a.getMaximumCapacity(), epsilon);
 	  assertEquals(0.2, a.getAbsoluteMaximumCapacity(), epsilon);
 	  
@@ -177,6 +190,12 @@ public class TestLeafQueue {
 	  assertEquals(0.9, b.getAbsoluteCapacity(), epsilon);
 	  assertEquals(0.99, b.getMaximumCapacity(), epsilon);
 	  assertEquals(0.99, b.getAbsoluteMaximumCapacity(), epsilon);
+
+	  LeafQueue c = stubLeafQueue((LeafQueue)queues.get(C));
+	  assertEquals(0.01, c.getCapacity(), epsilon);
+	  assertEquals(0.01, c.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.1, c.getMaximumCapacity(), epsilon);
+	  assertEquals(0.1, c.getAbsoluteMaximumCapacity(), epsilon);
   }
  
   @Test
@@ -1080,6 +1099,37 @@ public class TestLeafQueue {
         any(Priority.class), any(ResourceRequest.class), any(Container.class));
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); // should reset
     assertEquals(0, app_0.getTotalRequiredResources(priority));
+
+  }
+
+  public boolean hasQueueACL(List<QueueUserACLInfo> aclInfos, QueueACL acl) {
+    for (QueueUserACLInfo aclInfo : aclInfos) {
+      if (aclInfo.getUserAcls().contains(acl)) {
+        return true;
+      }
+    }    
+    return false;
+  }
+
+  @Test
+  public void testInheritedQueueAcls() throws IOException {
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    LeafQueue b = stubLeafQueue((LeafQueue)queues.get(B));
+    LeafQueue c = stubLeafQueue((LeafQueue)queues.get(C));
+
+    assertFalse(root.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertTrue(a.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertTrue(b.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertFalse(c.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+
+    assertTrue(hasQueueACL(
+          a.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
+    assertTrue(hasQueueACL(
+          b.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
+    assertFalse(hasQueueACL(
+          c.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
 
   }
   

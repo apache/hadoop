@@ -221,6 +221,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3328. mapred queue -list output inconsistent and missing child 
     queues. (Ravi Prakash via mahadev)
 
+    MAPREDUCE-3510. Capacity Scheduler inherited ACLs not displayed by mapred queue 
+    -showacls (Jonathan Eagles via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
