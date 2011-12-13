@@ -364,12 +364,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
   
-  private static Set<String> localIpAddresses = Collections
-      .synchronizedSet(new HashSet<String>());
+  // Cache whether an address is local or not
+  private static Map<String, Boolean> localAddrMap = Collections
+      .synchronizedMap(new HashMap<String, Boolean>());
   
   private static boolean isLocalAddress(InetSocketAddress targetAddr) {
     InetAddress addr = targetAddr.getAddress();
-    if (localIpAddresses.contains(addr.getHostAddress())) {
+    Boolean cached = localAddrMap.get(addr.getHostAddress());
+    if (cached != null && cached) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Address " + targetAddr + " is local");
       }
@@ -390,9 +392,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Address " + targetAddr + " is local");
     }
-    if (local == true) {
-      localIpAddresses.add(addr.getHostAddress());
-    }
+    localAddrMap.put(addr.getHostAddress(), local);
     return local;
   }
   
