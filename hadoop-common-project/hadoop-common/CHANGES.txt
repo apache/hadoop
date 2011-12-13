@@ -136,6 +136,8 @@ Trunk (unreleased changes)
 
     HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
 
+    HADOOP-7810. move hadoop archive to core from tools. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

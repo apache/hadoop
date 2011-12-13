@@ -111,6 +111,14 @@ public class HadoopArchives implements Tool {
     } else {
       this.conf = new JobConf(conf, HadoopArchives.class);
     }
+
+    // This is for test purposes since MR2, different from Streaming
+    // here it is not possible to add a JAR to the classpath the tool
+    // will when running the mapreduce job.
+    String testJar = System.getProperty(TEST_HADOOP_ARCHIVES_JAR_PATH, null);
+    if (testJar != null) {
+      ((JobConf)conf).setJar(testJar);
+    }
   }
 
   public Configuration getConf() {
@@ -868,9 +876,12 @@ public class HadoopArchives implements Tool {
     return 0;
   }
 
+  static final String TEST_HADOOP_ARCHIVES_JAR_PATH = "test.hadoop.archives.jar";
+
   /** the main functions **/
   public static void main(String[] args) {
     JobConf job = new JobConf(HadoopArchives.class);
+
     HadoopArchives harchives = new HadoopArchives(job);
     int ret = 0;
 

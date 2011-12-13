@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 
@@ -46,6 +47,9 @@ import org.apache.log4j.Level;
  * test {@link HadoopArchives}
  */
 public class TestHadoopArchives extends TestCase {
+
+  public static final String HADOOP_ARCHIVES_JAR = JarFinder.getJar(HadoopArchives.class);
+
   {
     ((Log4JLogger)LogFactory.getLog(org.apache.hadoop.security.Groups.class)
         ).getLogger().setLevel(Level.OFF);
@@ -136,6 +140,7 @@ public class TestHadoopArchives extends TestCase {
           "*",
           archivePath.toString()
       };
+      System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
       final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
       assertEquals(0, ToolRunner.run(har, args));
 
