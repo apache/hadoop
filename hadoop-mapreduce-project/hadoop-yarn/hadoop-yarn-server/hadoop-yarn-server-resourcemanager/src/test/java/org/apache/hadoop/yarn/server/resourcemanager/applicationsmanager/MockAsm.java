@@ -284,6 +284,11 @@ public abstract class MockAsm extends MockApps {
       public FinalApplicationStatus getFinalApplicationStatus() {
         return FinalApplicationStatus.UNDEFINED;
       }
+
+      @Override
+      public RMAppAttempt getCurrentAppAttempt() {
+        return null;
+      }
       
     };
   }

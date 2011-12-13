@@ -8,6 +8,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
 
+    MAPREDUCE-2863. Support web services for YARN and MR components. (Thomas
+    Graves via vinodkv)
+
   IMPROVEMENTS
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.
                     (Vinay Thota via amarrk)

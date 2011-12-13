@@ -28,9 +28,9 @@ import java.util.Map.Entry;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.BODY;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -88,13 +88,11 @@ public class AllApplicationsPage extends NMView {
                .tbody();
       for (Entry<ApplicationId, Application> entry : this.nmContext
           .getApplications().entrySet()) {
-        ApplicationId appId = entry.getKey();
-        Application app = entry.getValue();
-        String appIdStr = ConverterUtils.toString(appId);
+        AppInfo info = new AppInfo(entry.getValue());
         tableBody
           .tr()
-            .td().a(url("application", appIdStr), appIdStr)._()
-            .td()._(app.getApplicationState())
+            .td().a(url("application", info.getId()), info.getId())._()
+            .td()._(info.getState())
             ._()
           ._();
       }

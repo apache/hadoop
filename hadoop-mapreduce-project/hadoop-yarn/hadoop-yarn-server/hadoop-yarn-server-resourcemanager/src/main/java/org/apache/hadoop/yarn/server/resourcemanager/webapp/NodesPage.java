@@ -25,14 +25,12 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -45,9 +43,9 @@ import com.google.inject.Inject;
 class NodesPage extends RmView {
 
   static class NodesBlock extends HtmlBlock {
-    private static final long BYTES_IN_MB = 1024 * 1024;
     final RMContext rmContext;
     final ResourceManager rm;
+    private static final long BYTES_IN_MB = 1024 * 1024;
 
     @Inject
     NodesBlock(RMContext context, ResourceManager rm, ViewContext ctx) {
@@ -59,7 +57,7 @@ class NodesPage extends RmView {
     @Override
     protected void render(Block html) {
       html._(MetricsOverviewTable.class);
-      
+
       ResourceScheduler sched = rm.getResourceScheduler();
       String type = $(NODE_STATE);
       TBODY<TABLE<Hamlet>> tbody = html.table("#nodes").
@@ -88,27 +86,18 @@ class NodesPage extends RmView {
             continue;
           }
         }
-        NodeId id = ni.getNodeID();
-        SchedulerNodeReport report = sched.getNodeReport(id);
-        int numContainers = 0;
-        int usedMemory = 0;
-        int availableMemory = 0;
-        if(report != null) {
-          numContainers = report.getNumContainers();
-          usedMemory = report.getUsedResource().getMemory();
-          availableMemory = report.getAvailableResource().getMemory();
-        }
-
-        NodeHealthStatus health = ni.getNodeHealthStatus();
+        NodeInfo info = new NodeInfo(ni, sched);
+        int usedMemory = (int)info.getUsedMemory();
+        int availableMemory = (int)info.getAvailableMemory();
         tbody.tr().
-            td(ni.getRackName()).
-            td(String.valueOf(ni.getState())).
-            td(String.valueOf(ni.getNodeID().toString())).
-            td().a("http://" + ni.getHttpAddress(), ni.getHttpAddress())._().
-            td(health.getIsNodeHealthy() ? "Healthy" : "Unhealthy").
-            td(Times.format(health.getLastHealthReportTime())).
-            td(String.valueOf(health.getHealthReport())).
-            td(String.valueOf(numContainers)).
+            td(info.getRack()).
+            td(info.getState()).
+            td(info.getNodeId()).
+            td().a("http://" + info.getNodeHTTPAddress(), info.getNodeHTTPAddress())._().
+            td(info.getHealthStatus()).
+            td(Times.format(info.getLastHealthUpdate())).
+            td(info.getHealthReport()).
+            td(String.valueOf(info.getNumContainers())).
             td().br().$title(String.valueOf(usedMemory))._().
               _(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))._().
             td().br().$title(String.valueOf(usedMemory))._().

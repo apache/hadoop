@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
 /**
@@ -41,6 +42,9 @@ public class RMWebApp extends WebApp {
 
   @Override
   public void setup() {
+    bind(JAXBContextResolver.class);
+    bind(RMWebServices.class);
+    bind(GenericExceptionHandler.class);
     if (rm != null) {
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());

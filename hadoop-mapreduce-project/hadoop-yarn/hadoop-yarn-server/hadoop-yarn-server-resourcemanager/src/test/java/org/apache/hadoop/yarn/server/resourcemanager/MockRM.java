@@ -30,7 +30,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
@@ -40,11 +42,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-
 
 public class MockRM extends ResourceManager {
 
@@ -59,48 +65,50 @@ public class MockRM extends ResourceManager {
     rootLogger.setLevel(Level.DEBUG);
   }
 
-  public void waitForState(ApplicationId appId, RMAppState finalState) 
+  public void waitForState(ApplicationId appId, RMAppState finalState)
       throws Exception {
     RMApp app = getRMContext().getRMApps().get(appId);
     Assert.assertNotNull("app shouldn't be null", app);
     int timeoutSecs = 0;
-    while (!finalState.equals(app.getState()) &&
-        timeoutSecs++ < 20) {
-      System.out.println("App State is : " + app.getState() +
-          " Waiting for state : " + finalState);
+    while (!finalState.equals(app.getState()) && timeoutSecs++ < 20) {
+      System.out.println("App State is : " + app.getState()
+          + " Waiting for state : " + finalState);
       Thread.sleep(500);
     }
     System.out.println("App State is : " + app.getState());
-    Assert.assertEquals("App state is not correct (timedout)",
-        finalState, app.getState());
-  }
-  
-  // get new application id 
-  public GetNewApplicationResponse getNewAppId() throws Exception {
-    ClientRMProtocol client = getClientRMService();
-    return client.getNewApplication(Records.newRecord(GetNewApplicationRequest.class));	  
+    Assert.assertEquals("App state is not correct (timedout)", finalState,
+        app.getState());
   }
 
-  //client
+  // get new application id
+  public GetNewApplicationResponse getNewAppId() throws Exception {
+    ClientRMProtocol client = getClientRMService();
+    return client.getNewApplication(Records
+        .newRecord(GetNewApplicationRequest.class));
+  }
+
+  // client
   public RMApp submitApp(int masterMemory) throws Exception {
     ClientRMProtocol client = getClientRMService();
-    GetNewApplicationResponse resp = client.getNewApplication(Records.newRecord(GetNewApplicationRequest.class));
+    GetNewApplicationResponse resp = client.getNewApplication(Records
+        .newRecord(GetNewApplicationRequest.class));
     ApplicationId appId = resp.getApplicationId();
-    
-    SubmitApplicationRequest req = Records.newRecord(SubmitApplicationRequest.class);
-    ApplicationSubmissionContext sub = 
-        Records.newRecord(ApplicationSubmissionContext.class);
+
+    SubmitApplicationRequest req = Records
+        .newRecord(SubmitApplicationRequest.class);
+    ApplicationSubmissionContext sub = Records
+        .newRecord(ApplicationSubmissionContext.class);
     sub.setApplicationId(appId);
     sub.setApplicationName("");
     sub.setUser("");
-    ContainerLaunchContext clc = 
-        Records.newRecord(ContainerLaunchContext.class);
-    Resource capability = Records.newRecord(Resource.class);    
+    ContainerLaunchContext clc = Records
+        .newRecord(ContainerLaunchContext.class);
+    Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(masterMemory);
     clc.setResource(capability);
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
-    
+
     client.submitApplication(req);
     // make sure app is immediately available after submit
     waitForState(appId, RMAppState.ACCEPTED);
@@ -113,28 +121,54 @@ public class MockRM extends ResourceManager {
     return nm;
   }
 
+  public void sendNodeStarted(MockNM nm) throws Exception {
+    RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
+        nm.getNodeId());
+    node.handle(new RMNodeEvent(nm.getNodeId(), RMNodeEventType.STARTED));
+  }
+
+  public void NMwaitForState(NodeId nodeid, RMNodeState finalState)
+      throws Exception {
+    RMNode node = getRMContext().getRMNodes().get(nodeid);
+    Assert.assertNotNull("node shouldn't be null", node);
+    int timeoutSecs = 0;
+    while (!finalState.equals(node.getState()) && timeoutSecs++ < 20) {
+      System.out.println("Node State is : " + node.getState()
+          + " Waiting for state : " + finalState);
+      Thread.sleep(500);
+    }
+    System.out.println("Node State is : " + node.getState());
+    Assert.assertEquals("Node state is not correct (timedout)", finalState,
+        node.getState());
+  }
+
   public void killApp(ApplicationId appId) throws Exception {
     ClientRMProtocol client = getClientRMService();
-    KillApplicationRequest req = Records.newRecord(KillApplicationRequest.class);
+    KillApplicationRequest req = Records
+        .newRecord(KillApplicationRequest.class);
     req.setApplicationId(appId);
     client.forceKillApplication(req);
   }
 
-  //from AMLauncher
-  public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId) throws Exception {
+  // from AMLauncher
+  public MockAM sendAMLaunched(ApplicationAttemptId appAttemptId)
+      throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);
     am.waitForState(RMAppAttemptState.ALLOCATED);
-    getRMContext().getDispatcher().getEventHandler().handle(
-        new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.LAUNCHED));
+    getRMContext()
+        .getDispatcher()
+        .getEventHandler()
+        .handle(
+            new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.LAUNCHED));
     return am;
   }
 
-  
-  public void sendAMLaunchFailed(ApplicationAttemptId appAttemptId) throws Exception {
+  public void sendAMLaunchFailed(ApplicationAttemptId appAttemptId)
+      throws Exception {
     MockAM am = new MockAM(getRMContext(), masterService, appAttemptId);
     am.waitForState(RMAppAttemptState.ALLOCATED);
-    getRMContext().getDispatcher().getEventHandler().handle(
-        new RMAppAttemptLaunchFailedEvent(appAttemptId, "Failed"));
+    getRMContext().getDispatcher().getEventHandler()
+        .handle(new RMAppAttemptLaunchFailedEvent(appAttemptId, "Failed"));
   }
 
   @Override
@@ -143,8 +177,9 @@ public class MockRM extends ResourceManager {
         rmAppManager, applicationACLsManager) {
       @Override
       public void start() {
-        //override to not start rpc handler
+        // override to not start rpc handler
       }
+
       @Override
       public void stop() {
         // don't do anything
@@ -155,11 +190,12 @@ public class MockRM extends ResourceManager {
   @Override
   protected ResourceTrackerService createResourceTrackerService() {
     return new ResourceTrackerService(getRMContext(), nodesListManager,
-        this.nmLivelinessMonitor, this.containerTokenSecretManager){
+        this.nmLivelinessMonitor, this.containerTokenSecretManager) {
       @Override
       public void start() {
-        //override to not start rpc handler
+        // override to not start rpc handler
       }
+
       @Override
       public void stop() {
         // don't do anything
@@ -173,8 +209,9 @@ public class MockRM extends ResourceManager {
         this.appTokenSecretManager, scheduler) {
       @Override
       public void start() {
-        //override to not start rpc handler
+        // override to not start rpc handler
       }
+
       @Override
       public void stop() {
         // don't do anything
@@ -184,17 +221,18 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected ApplicationMasterLauncher createAMLauncher() {
-    return new ApplicationMasterLauncher(
-        this.appTokenSecretManager, this.clientToAMSecretManager,
-        getRMContext()) {
+    return new ApplicationMasterLauncher(this.appTokenSecretManager,
+        this.clientToAMSecretManager, getRMContext()) {
       @Override
       public void start() {
-        //override to not start rpc handler
+        // override to not start rpc handler
       }
+
       @Override
-      public void  handle(AMLauncherEvent appEvent) {
-        //don't do anything
+      public void handle(AMLauncherEvent appEvent) {
+        // don't do anything
       }
+
       @Override
       public void stop() {
         // don't do anything
@@ -203,31 +241,31 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
-  protected AdminService createAdminService(
-      ClientRMService clientRMService, 
+  protected AdminService createAdminService(ClientRMService clientRMService,
       ApplicationMasterService applicationMasterService,
       ResourceTrackerService resourceTrackerService) {
-    return new AdminService(
-        getConfig(), scheduler, getRMContext(), this.nodesListManager,
-        clientRMService, applicationMasterService, resourceTrackerService){
+    return new AdminService(getConfig(), scheduler, getRMContext(),
+        this.nodesListManager, clientRMService, applicationMasterService,
+        resourceTrackerService) {
       @Override
       public void start() {
-        //override to not start rpc handler
+        // override to not start rpc handler
       }
+
       @Override
       public void stop() {
         // don't do anything
       }
     };
   }
-  
+
   public NodesListManager getNodesListManager() {
     return this.nodesListManager;
   }
 
   @Override
   protected void startWepApp() {
-    //override to disable webapp
+    // override to disable webapp
   }
 
 }

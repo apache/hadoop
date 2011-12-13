@@ -27,12 +27,11 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
@@ -79,14 +78,14 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 /**
- * This module is responsible for talking to the 
+ * This module is responsible for talking to the
  * JobClient (user facing).
  *
  */
 public class HistoryClientService extends AbstractService {
 
   private static final Log LOG = LogFactory.getLog(HistoryClientService.class);
-  
+
   private MRClientProtocol protocolHandler;
   private Server server;
   private WebApp webApp;
@@ -118,22 +117,22 @@ public class HistoryClientService extends AbstractService {
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,
             conf, null,
-            conf.getInt(JHAdminConfig.MR_HISTORY_CLIENT_THREAD_COUNT, 
+            conf.getInt(JHAdminConfig.MR_HISTORY_CLIENT_THREAD_COUNT,
                 JHAdminConfig.DEFAULT_MR_HISTORY_CLIENT_THREAD_COUNT));
-    
+
     // Enable service authorization?
     if (conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
         false)) {
       server.refreshServiceAcl(conf, new MRAMPolicyProvider());
     }
-    
+
     server.start();
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
             + ":" + server.getPort());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
-    
+
     super.start();
   }
 
@@ -141,7 +140,7 @@ public class HistoryClientService extends AbstractService {
     webApp = new HsWebApp(history);
     String bindAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-    WebApps.$for("jobhistory", this).with(conf).at(bindAddress).start(webApp); 
+    WebApps.$for("jobhistory", HistoryClientService.class, this, "ws").with(conf).at(bindAddress).start(webApp);
   }
 
   @Override
@@ -158,7 +157,7 @@ public class HistoryClientService extends AbstractService {
   private class MRClientProtocolHandler implements MRClientProtocol {
 
     private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    
+
     private Job verifyAndGetJob(final JobId jobID) throws YarnRemoteException {
       UserGroupInformation loginUgi = null;
       Job job = null;
@@ -194,7 +193,7 @@ public class HistoryClientService extends AbstractService {
       response.setCounters(job.getCounters());
       return response;
     }
-    
+
     @Override
     public GetJobReportResponse getJobReport(GetJobReportRequest request) throws YarnRemoteException {
       JobId jobId = request.getJobId();
@@ -227,23 +226,23 @@ public class HistoryClientService extends AbstractService {
       JobId jobId = request.getJobId();
       int fromEventId = request.getFromEventId();
       int maxEvents = request.getMaxEvents();
-      
+
       Job job = verifyAndGetJob(jobId);
       GetTaskAttemptCompletionEventsResponse response = recordFactory.newRecordInstance(GetTaskAttemptCompletionEventsResponse.class);
       response.addAllCompletionEvents(Arrays.asList(job.getTaskAttemptCompletionEvents(fromEventId, maxEvents)));
       return response;
     }
-      
+
     @Override
     public KillJobResponse killJob(KillJobRequest request) throws YarnRemoteException {
       throw RPCUtil.getRemoteException("Invalid operation on completed job");
     }
-    
+
     @Override
     public KillTaskResponse killTask(KillTaskRequest request) throws YarnRemoteException {
       throw RPCUtil.getRemoteException("Invalid operation on completed job");
     }
-    
+
     @Override
     public KillTaskAttemptResponse killTaskAttempt(KillTaskAttemptRequest request) throws YarnRemoteException {
       throw RPCUtil.getRemoteException("Invalid operation on completed job");
@@ -252,15 +251,15 @@ public class HistoryClientService extends AbstractService {
     @Override
     public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request) throws YarnRemoteException {
       TaskAttemptId taskAttemptId = request.getTaskAttemptId();
-    
+
       Job job = verifyAndGetJob(taskAttemptId.getTaskId().getJobId());
-      
+
       GetDiagnosticsResponse response = recordFactory.newRecordInstance(GetDiagnosticsResponse.class);
       response.addAllDiagnostics(job.getTask(taskAttemptId.getTaskId()).getAttempt(taskAttemptId).getDiagnostics());
       return response;
     }
 
-    @Override 
+    @Override
     public FailTaskAttemptResponse failTaskAttempt(FailTaskAttemptRequest request) throws YarnRemoteException {
       throw RPCUtil.getRemoteException("Invalid operation on completed job");
     }
@@ -269,7 +268,7 @@ public class HistoryClientService extends AbstractService {
     public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request) throws YarnRemoteException {
       JobId jobId = request.getJobId();
       TaskType taskType = request.getTaskType();
-      
+
       GetTaskReportsResponse response = recordFactory.newRecordInstance(GetTaskReportsResponse.class);
       Job job = verifyAndGetJob(jobId);
       Collection<Task> tasks = job.getTasks(taskType).values();

@@ -23,10 +23,10 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
 import java.util.Date;
 
-import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.HTML;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -35,6 +35,8 @@ import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import com.google.inject.Inject;
 
 public class NodePage extends NMView {
+
+  private static final long BYTES_IN_MB = 1024 * 1024;
 
   @Override
   protected void commonPreHead(HTML<_> html) {
@@ -60,21 +62,22 @@ public class NodePage extends NMView {
 
     @Override
     protected void render(Block html) {
+      NodeInfo info = new NodeInfo(this.context, this.resourceView);
       info("NodeManager information")
           ._("Total Vmem allocated for Containers",
-              this.resourceView.getVmemAllocatedForContainers() + "bytes")
+              StringUtils.byteDesc(info.getTotalVmemAllocated() * BYTES_IN_MB))
           ._("Total Pmem allocated for Container",
-              this.resourceView.getPmemAllocatedForContainers() + "bytes")
+              StringUtils.byteDesc(info.getTotalPmemAllocated() * BYTES_IN_MB))
           ._("NodeHealthyStatus",
-              this.context.getNodeHealthStatus().getIsNodeHealthy())
+              info.getHealthStatus())
           ._("LastNodeHealthTime", new Date(
-                this.context.getNodeHealthStatus().getLastHealthReportTime()))
+              info.getLastNodeUpdateTime()))
           ._("NodeHealthReport",
-              this.context.getNodeHealthStatus().getHealthReport())
-          ._("Node Manager Version:", YarnVersionInfo.getBuildVersion() +
-              " on " + YarnVersionInfo.getDate())
-          ._("Hadoop Version:", VersionInfo.getBuildVersion() +
-              " on " + VersionInfo.getDate());
+              info.getHealthReport())
+          ._("Node Manager Version:", info.getNMBuildVersion() +
+              " on " + info.getNMVersionBuiltOn())
+          ._("Hadoop Version:", info.getHadoopBuildVersion() +
+              " on " + info.getHadoopVersionBuiltOn());
       html._(InfoBlock.class);
     }
   }

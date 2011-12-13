@@ -72,6 +72,7 @@ public class WebApps {
     }
     
     final String name;
+    final String wsName;
     final Class<T> api;
     final T application;
     String bindAddress = "0.0.0.0";
@@ -82,10 +83,15 @@ public class WebApps {
     private final HashSet<ServletStruct> servlets = new HashSet<ServletStruct>();
     private final HashMap<String, Object> attributes = new HashMap<String, Object>();
 
-    Builder(String name, Class<T> api, T application) {
+    Builder(String name, Class<T> api, T application, String wsName) {
       this.name = name;
       this.api = api;
       this.application = application;
+      this.wsName = wsName;
+    }
+
+    Builder(String name, Class<T> api, T application) {
+      this(name, api, application, null);
     }
 
     public Builder<T> at(String bindAddress) {
@@ -142,6 +148,7 @@ public class WebApps {
         };
       }
       webapp.setName(name);
+      webapp.setWebServices(wsName);
       String basePath = "/" + name;
       webapp.setRedirectPath(basePath);
       if (basePath.equals("/")) { 
@@ -149,6 +156,14 @@ public class WebApps {
       }  else {
         webapp.addServePathSpec(basePath);
         webapp.addServePathSpec(basePath + "/*");
+      }
+      if (wsName != null && !wsName.equals(basePath)) {
+        if (wsName.equals("/")) { 
+          webapp.addServePathSpec("/*");
+        } else {
+          webapp.addServePathSpec("/" + wsName);
+          webapp.addServePathSpec("/" + wsName + "/*");
+        }
       }
       if (conf == null) {
         conf = new Configuration();
@@ -229,6 +244,20 @@ public class WebApps {
       LOG.warn("could not infer host class from", t);
       return thisClass;
     }
+  }
+
+  /**
+   * Create a new webapp builder.
+   * @see WebApps for a complete example
+   * @param <T> application (holding the embedded webapp) type
+   * @param prefix of the webapp
+   * @param api the api class for the application
+   * @param app the application instance
+   * @param wsPrefix the prefix for the webservice api for this app
+   * @return a webapp builder
+   */
+  public static <T> Builder<T> $for(String prefix, Class<T> api, T app, String wsPrefix) {
+    return new Builder<T>(prefix, api, app, wsPrefix);
   }
 
   /**

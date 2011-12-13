@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.UserMetricsInfo;
+
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -36,12 +36,12 @@ import com.google.inject.Inject;
  * current user is using on the cluster.
  */
 public class MetricsOverviewTable extends HtmlBlock {
-  private static final long BYTES_IN_GB = 1024 * 1024 * 1024;
-  
+  private static final long BYTES_IN_MB = 1024 * 1024;
+
   private final RMContext rmContext;
   private final ResourceManager rm;
 
-  @Inject 
+  @Inject
   MetricsOverviewTable(RMContext context, ResourceManager rm, ViewContext ctx) {
     super(ctx);
     this.rmContext = context;
@@ -55,22 +55,7 @@ public class MetricsOverviewTable extends HtmlBlock {
     //CSS in the correct spot
     html.style(".metrics {margin-bottom:5px}"); 
     
-    ResourceScheduler rs = rm.getResourceScheduler();
-    QueueMetrics metrics = rs.getRootQueueMetrics();
-    ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
-    
-    int appsSubmitted = metrics.getAppsSubmitted();
-    int reservedGB = metrics.getReservedGB();
-    int availableGB = metrics.getAvailableGB();
-    int allocatedGB = metrics.getAllocatedGB();
-    int containersAllocated = metrics.getAllocatedContainers();
-    int totalGB = availableGB + reservedGB + allocatedGB;
-
-    int totalNodes = clusterMetrics.getNumNMs();
-    int lostNodes = clusterMetrics.getNumLostNMs();
-    int unhealthyNodes = clusterMetrics.getUnhealthyNMs();
-    int decommissionedNodes = clusterMetrics.getNumDecommisionedNMs();
-    int rebootedNodes = clusterMetrics.getNumRebootedNMs();
+    ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm, this.rmContext);
 
     
     DIV<Hamlet> div = html.div().$class("metrics");
@@ -92,30 +77,23 @@ public class MetricsOverviewTable extends HtmlBlock {
     _().
     tbody().$class("ui-widget-content").
       tr().
-        td(String.valueOf(appsSubmitted)).
-        td(String.valueOf(containersAllocated)).
-        td(StringUtils.byteDesc(allocatedGB * BYTES_IN_GB)).
-        td(StringUtils.byteDesc(totalGB * BYTES_IN_GB)).
-        td(StringUtils.byteDesc(reservedGB * BYTES_IN_GB)).
-        td().a(url("nodes"),String.valueOf(totalNodes))._(). 
-        td().a(url("nodes/decommissioned"),String.valueOf(decommissionedNodes))._(). 
-        td().a(url("nodes/lost"),String.valueOf(lostNodes))._().
-        td().a(url("nodes/unhealthy"),String.valueOf(unhealthyNodes))._().
-        td().a(url("nodes/rebooted"),String.valueOf(rebootedNodes))._().
+        td(String.valueOf(clusterMetrics.getAppsSubmitted())).
+        td(String.valueOf(clusterMetrics.getContainersAllocated())).
+        td(StringUtils.byteDesc(clusterMetrics.getAllocatedMB() * BYTES_IN_MB)).
+        td(StringUtils.byteDesc(clusterMetrics.getTotalMB() * BYTES_IN_MB)).
+        td(StringUtils.byteDesc(clusterMetrics.getReservedMB() * BYTES_IN_MB)).
+        td().a(url("nodes"),String.valueOf(clusterMetrics.getTotalNodes()))._().
+        td().a(url("nodes/decommissioned"),String.valueOf(clusterMetrics.getDecommissionedNodes()))._().
+        td().a(url("nodes/lost"),String.valueOf(clusterMetrics.getLostNodes()))._().
+        td().a(url("nodes/unhealthy"),String.valueOf(clusterMetrics.getUnhealthyNodes()))._().
+        td().a(url("nodes/rebooted"),String.valueOf(clusterMetrics.getRebootedNodes()))._().
       _().
     _()._();
-    
+
     String user = request().getRemoteUser();
     if (user != null) {
-      QueueMetrics userMetrics = metrics.getUserMetrics(user);
-      if(userMetrics != null) {
-        int myAppsSubmitted = userMetrics.getAppsSubmitted();
-        int myRunningContainers = userMetrics.getAllocatedContainers();
-        int myPendingContainers = userMetrics.getPendingContainers();
-        int myReservedContainers = userMetrics.getReservedContainers();
-        int myReservedGB = userMetrics.getReservedGB();
-        int myPendingGB = userMetrics.getPendingGB();
-        int myAllocatedGB = userMetrics.getAllocatedGB();
+      UserMetricsInfo userMetrics = new UserMetricsInfo(this.rm, this.rmContext, user);
+      if (userMetrics.metricsAvailable()) {
         div.table("#usermetricsoverview").
         thead().$class("ui-widget-header").
           tr().
@@ -130,13 +108,13 @@ public class MetricsOverviewTable extends HtmlBlock {
         _().
         tbody().$class("ui-widget-content").
           tr().
-            td(String.valueOf(myAppsSubmitted)).
-            td(String.valueOf(myRunningContainers)).
-            td(String.valueOf(myPendingContainers)).
-            td(String.valueOf(myReservedContainers)).
-            td(StringUtils.byteDesc(myAllocatedGB * BYTES_IN_GB)).
-            td(StringUtils.byteDesc(myPendingGB * BYTES_IN_GB)).
-            td(StringUtils.byteDesc(myReservedGB * BYTES_IN_GB)).
+            td(String.valueOf(userMetrics.getAppsSubmitted())).
+            td(String.valueOf(userMetrics.getRunningContainers())).
+            td(String.valueOf(userMetrics.getPendingContainers())).
+            td(String.valueOf(userMetrics.getReservedContainers())).
+            td(StringUtils.byteDesc(userMetrics.getAllocatedMB() * BYTES_IN_MB)).
+            td(StringUtils.byteDesc(userMetrics.getPendingMB() * BYTES_IN_MB)).
+            td(StringUtils.byteDesc(userMetrics.getReservedMB() * BYTES_IN_MB)).
           _().
         _()._();
       }
