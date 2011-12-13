@@ -282,6 +282,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3542. Support "FileSystemCounter" legacy counter group name for
     compatibility. (tomwhite)
 
+    MAPREDUCE-3426. Fixed MR AM in uber mode to write map intermediate outputs
+    in the correct directory to work properly in secure mode. (Hitesh Shah via
+    vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -288,7 +288,7 @@ public class TypeConverter {
             .getMapProgress(), jobreport.getReduceProgress(), jobreport
             .getCleanupProgress(), fromYarn(jobreport.getJobState()),
         jobPriority, jobreport.getUser(), jobreport.getJobName(), jobreport
-            .getJobFile(), trackingUrl);
+            .getJobFile(), trackingUrl, jobreport.isUber());
     jobStatus.setFailureInfo(jobreport.getDiagnostics());
     return jobStatus;
   }
@@ -421,7 +421,7 @@ public class TypeConverter {
           TypeConverter.fromYarn(application.getYarnApplicationState()),
           org.apache.hadoop.mapreduce.JobPriority.NORMAL,
           application.getUser(), application.getName(),
-          application.getQueue(), jobFile, trackingUrl
+          application.getQueue(), jobFile, trackingUrl, false
       );
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
     jobStatus.setStartTime(application.getStartTime());

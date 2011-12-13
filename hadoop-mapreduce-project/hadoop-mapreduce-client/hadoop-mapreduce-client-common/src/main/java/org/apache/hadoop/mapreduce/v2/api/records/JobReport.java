@@ -36,6 +36,7 @@ public interface JobReport {
   public abstract String getDiagnostics();
   public abstract String getJobFile();
   public abstract List<AMInfo> getAMInfos();
+  public abstract boolean isUber();
 
   public abstract void setJobId(JobId jobId);
   public abstract void setJobState(JobState jobState);
@@ -52,4 +53,5 @@ public interface JobReport {
   public abstract void setDiagnostics(String diagnostics);
   public abstract void setJobFile(String jobFile);
   public abstract void setAMInfos(List<AMInfo> amInfos);
+  public abstract void setIsUber(boolean isUber);
 }

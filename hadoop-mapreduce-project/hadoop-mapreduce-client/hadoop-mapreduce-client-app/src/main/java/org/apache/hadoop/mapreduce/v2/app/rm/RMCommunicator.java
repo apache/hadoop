@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,7 +66,7 @@ public abstract class RMCommunicator extends AbstractService  {
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
   protected ApplicationAttemptId applicationAttemptId;
-  private volatile boolean stopped;
+  private AtomicBoolean stopped;
   protected Thread allocatorThread;
   protected EventHandler eventHandler;
   protected AMRMProtocol scheduler;
@@ -88,6 +89,7 @@ public abstract class RMCommunicator extends AbstractService  {
     this.eventHandler = context.getEventHandler();
     this.applicationId = context.getApplicationID();
     this.applicationAttemptId = context.getApplicationAttemptId();
+    this.stopped = new AtomicBoolean(false);
   }
 
   @Override
@@ -213,7 +215,10 @@ public abstract class RMCommunicator extends AbstractService  {
 
   @Override
   public void stop() {
-    stopped = true;
+    if (stopped.getAndSet(true)) {
+      // return if already stopped
+      return;
+    }
     allocatorThread.interrupt();
     try {
       allocatorThread.join();
@@ -228,7 +233,7 @@ public abstract class RMCommunicator extends AbstractService  {
     allocatorThread = new Thread(new Runnable() {
       @Override
       public void run() {
-        while (!stopped && !Thread.currentThread().isInterrupted()) {
+        while (!stopped.get() && !Thread.currentThread().isInterrupted()) {
           try {
             Thread.sleep(rmPollInterval);
             try {

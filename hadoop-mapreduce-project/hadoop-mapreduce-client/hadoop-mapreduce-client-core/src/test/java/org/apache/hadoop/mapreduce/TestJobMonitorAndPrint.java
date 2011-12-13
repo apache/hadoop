@@ -63,17 +63,20 @@ public class TestJobMonitorAndPrint extends TestCase {
     when(cluster.getConf()).thenReturn(conf);
     when(cluster.getClient()).thenReturn(clientProtocol);
     JobStatus jobStatus = new JobStatus(new JobID("job_000", 1), 0f, 0f, 0f, 0f, 
-        State.RUNNING, JobPriority.HIGH, "tmp-user", "tmp-jobname", "tmp-jobfile", "tmp-url");
+        State.RUNNING, JobPriority.HIGH, "tmp-user", "tmp-jobname", 
+        "tmp-jobfile", "tmp-url");
     job = Job.getInstance(cluster, jobStatus, conf);
     job = spy(job);
   }
 
   @Test
   public void testJobMonitorAndPrint() throws Exception {
-    JobStatus jobStatus_1 = new JobStatus(new JobID("job_000", 1), 1f, 0.1f, 0.1f, 0f, 
-        State.RUNNING, JobPriority.HIGH, "tmp-user", "tmp-jobname", "tmp-jobfile", "tmp-url");
-    JobStatus jobStatus_2 = new JobStatus(new JobID("job_000", 1), 1f, 1f, 1f, 1f, 
-        State.SUCCEEDED, JobPriority.HIGH, "tmp-user", "tmp-jobname", "tmp-jobfile", "tmp-url");
+    JobStatus jobStatus_1 = new JobStatus(new JobID("job_000", 1), 1f, 0.1f,
+        0.1f, 0f, State.RUNNING, JobPriority.HIGH, "tmp-user", "tmp-jobname",
+        "tmp-queue", "tmp-jobfile", "tmp-url", true);
+    JobStatus jobStatus_2 = new JobStatus(new JobID("job_000", 1), 1f, 1f,
+        1f, 1f, State.SUCCEEDED, JobPriority.HIGH, "tmp-user", "tmp-jobname",
+        "tmp-queue", "tmp-jobfile", "tmp-url", true);
 
     doAnswer(
         new Answer<TaskCompletionEvent[]>() {
@@ -102,15 +105,21 @@ public class TestJobMonitorAndPrint extends TestCase {
     String line;
     boolean foundHundred = false;
     boolean foundComplete = false;
-    String match_1 = "map 100% reduce 100%";
-    String match_2 = "completed successfully";
+    boolean foundUber = false;
+    String match_1 = "uber mode : true";
+    String match_2 = "map 100% reduce 100%";
+    String match_3 = "completed successfully";
     while ((line = r.readLine()) != null) {
-      foundHundred = line.contains(match_1);
+      if (line.contains(match_1)) {
+        foundUber = true;
+      }
+      foundHundred = line.contains(match_2);      
       if (foundHundred)
         break;
     }
     line = r.readLine();
-    foundComplete = line.contains(match_2);
+    foundComplete = line.contains(match_3);
+    assertTrue(foundUber);
     assertTrue(foundHundred);
     assertTrue(foundComplete);
   }

@@ -97,7 +97,7 @@ public class JobStatus implements Writable, Cloneable {
   private int usedMem;
   private int reservedMem;
   private int neededMem;
-
+  private boolean isUber;
     
   /**
    */
@@ -115,17 +115,17 @@ public class JobStatus implements Writable, Cloneable {
    * @param jp Priority of the job.
    * @param user userid of the person who submitted the job.
    * @param jobName user-specified job name.
-   * @param jobFile job configuration file. 
+   * @param jobFile job configuration file.
    * @param trackingUrl link to the web-ui for details of the job.
    */
    public JobStatus(JobID jobid, float setupProgress, float mapProgress,
-                    float reduceProgress, float cleanupProgress, 
+                    float reduceProgress, float cleanupProgress,
                     State runState, JobPriority jp, String user, String jobName, 
                     String jobFile, String trackingUrl) {
      this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress, 
-         runState, jp, user, jobName, "default", jobFile, trackingUrl);
+         runState, jp, user, jobName, "default", jobFile, trackingUrl, false);
    }
-           
+
    /**
     * Create a job status object for a given jobid.
     * @param jobid The jobid of the job
@@ -138,14 +138,39 @@ public class JobStatus implements Writable, Cloneable {
     * @param user userid of the person who submitted the job.
     * @param jobName user-specified job name.
     * @param queue queue name
-    * @param jobFile job configuration file. 
+    * @param jobFile job configuration file.
     * @param trackingUrl link to the web-ui for details of the job.
     */
     public JobStatus(JobID jobid, float setupProgress, float mapProgress,
-                     float reduceProgress, float cleanupProgress, 
-                     State runState, JobPriority jp, 
-                     String user, String jobName, String queue, 
+                     float reduceProgress, float cleanupProgress,
+                     State runState, JobPriority jp,
+                     String user, String jobName, String queue,
                      String jobFile, String trackingUrl) {
+      this(jobid, setupProgress, mapProgress, reduceProgress, cleanupProgress,
+          runState, jp, user, jobName, queue, jobFile, trackingUrl, false);
+    }
+
+   /**
+    * Create a job status object for a given jobid.
+    * @param jobid The jobid of the job
+    * @param setupProgress The progress made on the setup
+    * @param mapProgress The progress made on the maps
+    * @param reduceProgress The progress made on the reduces
+    * @param cleanupProgress The progress made on the cleanup
+    * @param runState The current state of the job
+    * @param jp Priority of the job.
+    * @param user userid of the person who submitted the job.
+    * @param jobName user-specified job name.
+    * @param queue queue name
+    * @param jobFile job configuration file.
+    * @param trackingUrl link to the web-ui for details of the job.
+    * @param isUber Whether job running in uber mode
+    */
+    public JobStatus(JobID jobid, float setupProgress, float mapProgress,
+                     float reduceProgress, float cleanupProgress,
+                     State runState, JobPriority jp,
+                     String user, String jobName, String queue,
+                     String jobFile, String trackingUrl, boolean isUber) {
       this.jobid = jobid;
       this.setupProgress = setupProgress;
       this.mapProgress = mapProgress;
@@ -161,8 +186,9 @@ public class JobStatus implements Writable, Cloneable {
       this.jobName = jobName;
       this.jobFile = jobFile;
       this.trackingUrl = trackingUrl;
+      this.isUber = isUber;
     }
-    
+
 
   /**
    * Sets the map progress of this job
@@ -411,6 +437,7 @@ public class JobStatus implements Writable, Cloneable {
     Text.writeString(out, jobName);
     Text.writeString(out, trackingUrl);
     Text.writeString(out, jobFile);
+    out.writeBoolean(isUber);
 
     // Serialize the job's ACLs
     out.writeInt(jobACLs.size());
@@ -438,6 +465,7 @@ public class JobStatus implements Writable, Cloneable {
     this.jobName = Text.readString(in);
     this.trackingUrl = Text.readString(in);
     this.jobFile = Text.readString(in);
+    this.isUber = in.readBoolean();
 
     // De-serialize the job's ACLs
     int numACLs = in.readInt();
@@ -562,9 +590,26 @@ public class JobStatus implements Writable, Cloneable {
     this.neededMem = n;
   }
 
+  /**
+   * Whether job running in uber mode
+   * @return job in uber-mode
+   */
+  public synchronized boolean isUber() {
+    return isUber;
+  }
+  
+  /**
+   * Set uber-mode flag 
+   * @param isUber Whether job running in uber-mode
+   */
+  public synchronized void setUber(boolean isUber) {
+    this.isUber = isUber;
+  }
+  
   public String toString() {
     StringBuffer buffer = new StringBuffer();
     buffer.append("job-id : " + jobid);
+    buffer.append("uber-mode : " + isUber);
     buffer.append("map-progress : " + mapProgress);
     buffer.append("reduce-progress : " + reduceProgress);
     buffer.append("cleanup-progress : " + cleanupProgress);
