@@ -88,6 +88,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
  
+    HDFS-2653. DFSClient should cache whether addrs are non-local when
+    short-circuiting is enabled. (eli)
+    
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
