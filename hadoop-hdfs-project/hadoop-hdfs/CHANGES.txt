@@ -34,6 +34,8 @@ Trunk (unreleased changes)
 
     HDFS-2663. Handle protobuf optional parameters correctly. (suresh)
 
+    HDFS-2666. Fix TestBackupNode failure. (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
