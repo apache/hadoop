@@ -85,7 +85,7 @@ public class RemoteBlockReader2  implements BlockReader {
   
   Socket dnSock; //for now just sending the status code (e.g. checksumOk) after the read.
   private ReadableByteChannel in;
-  protected DataChecksum checksum;
+  private DataChecksum checksum;
   
   private PacketHeader curHeader;
   private ByteBuffer curPacketBuf = null;
@@ -96,25 +96,24 @@ public class RemoteBlockReader2  implements BlockReader {
   private long lastSeqNo = -1;
 
   /** offset in block where reader wants to actually read */
-  protected long startOffset;
-  protected final String filename;
+  private long startOffset;
+  private final String filename;
 
-  protected static DirectBufferPool bufferPool =
-    new DirectBufferPool();
+  private static DirectBufferPool bufferPool = new DirectBufferPool();
   private ByteBuffer headerBuf = ByteBuffer.allocate(
       PacketHeader.PKT_HEADER_LEN);
 
-  protected int bytesPerChecksum;
-  protected int checksumSize;
+  private int bytesPerChecksum;
+  private int checksumSize;
 
   /**
    * The total number of bytes we need to transfer from the DN.
    * This is the amount that the user has requested plus some padding
    * at the beginning so that the read can begin on a chunk boundary.
    */
-  protected long bytesNeededToFinish;
+  private long bytesNeededToFinish;
 
-  protected final boolean verifyChecksum;
+  private final boolean verifyChecksum;
 
   private boolean sentStatusCode = false;
   
@@ -389,29 +388,12 @@ public class RemoteBlockReader2  implements BlockReader {
 
   @Override
   public int readAll(byte[] buf, int offset, int len) throws IOException {
-    int n = 0;
-    for (;;) {
-      int nread = read(buf, offset + n, len - n);
-      if (nread <= 0) 
-        return (n == 0) ? nread : n;
-      n += nread;
-      if (n >= len)
-        return n;
-    }
+    return BlockReaderUtil.readAll(this, buf, offset, len);
   }
 
   @Override
-  public void readFully(byte[] buf, int off, int len)
-      throws IOException {
-    int toRead = len;
-    while (toRead > 0) {
-      int ret = read(buf, off, toRead);
-      if (ret < 0) {
-        throw new IOException("Premature EOF from inputStream");
-      }
-      toRead -= ret;
-      off += ret;
-    }    
+  public void readFully(byte[] buf, int off, int len) throws IOException {
+    BlockReaderUtil.readFully(this, buf, off, len);
   }
   
   /**
