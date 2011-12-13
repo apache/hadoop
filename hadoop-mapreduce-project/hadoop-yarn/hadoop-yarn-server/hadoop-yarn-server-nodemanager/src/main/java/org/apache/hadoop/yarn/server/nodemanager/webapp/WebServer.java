@@ -30,9 +30,10 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 public class WebServer extends AbstractService {
 
@@ -61,8 +62,9 @@ public class WebServer extends AbstractService {
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     LOG.info("Instantiating NMWebApp at " + bindAddress);
     try {
-      this.webApp = WebApps.$for("node", Context.class, this.nmContext).at(
-          bindAddress).with(getConfig()).start(this.nmWebApp);
+      this.webApp =
+          WebApps.$for("node", Context.class, this.nmContext, "ws")
+              .at(bindAddress).with(getConfig()).start(this.nmWebApp);
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);
@@ -95,6 +97,9 @@ public class WebServer extends AbstractService {
 
     @Override
     public void setup() {
+      bind(NMWebServices.class);
+      bind(GenericExceptionHandler.class);
+      bind(JAXBContextResolver.class);
       bind(ResourceView.class).toInstance(this.resourceView);
       bind(ApplicationACLsManager.class).toInstance(this.aclsManager);
       bind(LocalDirsHandlerService.class).toInstance(dirsHandler);

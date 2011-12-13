@@ -18,21 +18,24 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.percent;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
-import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import com.google.inject.Inject;
 
 public class TasksBlock extends HtmlBlock {
   final App app;
@@ -67,16 +70,16 @@ public class TasksBlock extends HtmlBlock {
       if (type != null && task.getType() != type) {
         continue;
       }
-      String tid = MRApps.toString(task.getID());
-      TaskReport report = task.getReport();
-      String pct = percent(report.getProgress());
-      long startTime = report.getStartTime();
-      long finishTime = report.getFinishTime();
-      long elapsed = Times.elapsed(startTime, finishTime);
+      TaskInfo info = new TaskInfo(task);
+      String tid = info.getId();
+      String pct = percent(info.getProgress() / 100);
+      long startTime = info.getStartTime();
+      long finishTime = info.getFinishTime();
+      long elapsed = info.getElapsedTime();
       tbody.
         tr().
           td().
-            br().$title(String.valueOf(task.getID().getId()))._(). // sorting
+            br().$title(String.valueOf(info.getTaskNum()))._(). // sorting
             a(url("task", tid), tid)._().
           td().
             br().$title(pct)._().
@@ -84,7 +87,7 @@ public class TasksBlock extends HtmlBlock {
               $title(join(pct, '%')). // tooltip
               div(_PROGRESSBAR_VALUE).
                 $style(join("width:", pct, '%'))._()._()._().
-          td(report.getTaskState().toString()).
+          td(info.getState()).
           td().
             br().$title(String.valueOf(startTime))._().
             _(Times.format(startTime))._().

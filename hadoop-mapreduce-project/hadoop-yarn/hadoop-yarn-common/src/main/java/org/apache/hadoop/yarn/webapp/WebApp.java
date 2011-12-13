@@ -18,23 +18,28 @@
 
 package org.apache.hadoop.yarn.webapp;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.CharMatcher;
-import static com.google.common.base.Preconditions.*;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer;
-import org.apache.hadoop.yarn.util.StringHelper;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.sun.jersey.api.core.ResourceConfig;
+import com.sun.jersey.core.util.FeaturesAndProperties;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
  * @see WebApps for a usage example
@@ -45,9 +50,10 @@ public abstract class WebApp extends ServletModule {
   public enum HTTP { GET, POST, HEAD, PUT, DELETE };
 
   private volatile String name;
-  private volatile List<String> servePathSpecs = new ArrayList<String>(); 
+  private volatile List<String> servePathSpecs = new ArrayList<String>();
   // path to redirect to if user goes to "/"
   private volatile String redirectPath;
+  private volatile String wsName;
   private volatile Configuration conf;
   private volatile HttpServer httpServer;
   private volatile GuiceFilter guiceFilter;
@@ -104,17 +110,19 @@ public abstract class WebApp extends ServletModule {
 
   void addServePathSpec(String path) { this.servePathSpecs.add(path); }
 
-  public String[] getServePathSpecs() { 
+  public String[] getServePathSpecs() {
     return this.servePathSpecs.toArray(new String[this.servePathSpecs.size()]);
   }
 
   /**
-   * Set a path to redirect the user to if they just go to "/". For 
-   * instance "/" goes to "/yarn/apps". This allows the filters to 
+   * Set a path to redirect the user to if they just go to "/". For
+   * instance "/" goes to "/yarn/apps". This allows the filters to
    * more easily differentiate the different webapps.
    * @param path  the path to redirect to
    */
   void setRedirectPath(String path) { this.redirectPath = path; }
+
+  void setWebServices (String name) { this.wsName = name; }
 
   public String getRedirectPath() { return this.redirectPath; }
 
@@ -129,10 +137,32 @@ public abstract class WebApp extends ServletModule {
   @Override
   public void configureServlets() {
     setup();
+
     serve("/", "/__stop").with(Dispatcher.class);
+
     for (String path : this.servePathSpecs) {
       serve(path).with(Dispatcher.class);
     }
+
+    // Add in the web services filters/serves if app has them.
+    // Using Jersey/guice integration module. If user has web services
+    // they must have also bound a default one in their webapp code.
+    if (this.wsName != null) {
+      // There seems to be an issue with the guice/jersey integration
+      // where we have to list the stuff we don't want it to serve
+      // through the guicecontainer. In this case its everything except
+      // the the web services api prefix. We can't just change the filter
+      // from /* below - that doesn't work.
+      String regex = "(?!/" + this.wsName + ")";
+      serveRegex(regex).with(DefaultWrapperServlet.class);
+
+      Map<String, String> params = new HashMap<String, String>();
+      params.put(ResourceConfig.FEATURE_IMPLICIT_VIEWABLES, "true");
+      params.put(ServletContainer.FEATURE_FILTER_FORWARD_ON_404, "true");
+      params.put(FeaturesAndProperties.FEATURE_XMLROOTELEMENT_PROCESSING, "true");
+      filter("/*").through(GuiceContainer.class, params);
+    }
+
   }
 
   /**

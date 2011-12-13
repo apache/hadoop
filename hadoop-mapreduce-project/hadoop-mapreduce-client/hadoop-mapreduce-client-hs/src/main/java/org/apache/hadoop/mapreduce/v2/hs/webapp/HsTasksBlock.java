@@ -20,12 +20,13 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
 
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ReduceTaskAttemptInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -65,7 +66,7 @@ public class HsTasksBlock extends HtmlBlock {
     if (!symbol.isEmpty()) {
       type = MRApps.taskType(symbol);
     }
-    
+
     THEAD<TABLE<Hamlet>> thead = html.table("#tasks").thead();
     //Create the spanning row
     int attemptColSpan = type == TaskType.REDUCE ? 8 : 3;
@@ -74,7 +75,7 @@ public class HsTasksBlock extends HtmlBlock {
       th().$colspan(attemptColSpan).$class("ui-state-default").
         _("Successful Attempt")._().
     _();
-    
+
     TR<THEAD<TABLE<Hamlet>>> theadRow = thead.
           tr().
             th("Name").
@@ -83,33 +84,33 @@ public class HsTasksBlock extends HtmlBlock {
             th("Finish Time").
             th("Elapsed Time").
             th("Start Time"); //Attempt
-    
+
     if(type == TaskType.REDUCE) {
       theadRow.th("Shuffle Finish Time"); //Attempt
       theadRow.th("Merge Finish Time"); //Attempt
     }
-    
+
     theadRow.th("Finish Time"); //Attempt
-    
+
     if(type == TaskType.REDUCE) {
       theadRow.th("Elapsed Time Shuffle"); //Attempt
       theadRow.th("Elapsed Time Merge"); //Attempt
       theadRow.th("Elapsed Time Reduce"); //Attempt
     }
     theadRow.th("Elapsed Time"); //Attempt
-    
+
     TBODY<TABLE<Hamlet>> tbody = theadRow._()._().tbody();
     for (Task task : app.getJob().getTasks().values()) {
       if (type != null && task.getType() != type) {
         continue;
       }
-      String tid = MRApps.toString(task.getID());
-      
-      TaskReport report = task.getReport();
-      long startTime = report.getStartTime();
-      long finishTime = report.getFinishTime();
-      long elapsed = Times.elapsed(startTime, finishTime, false);
-      
+      TaskInfo info = new TaskInfo(task);
+      String tid = info.getId();
+
+      long startTime = info.getStartTime();
+      long finishTime = info.getFinishTime();
+      long elapsed = info.getElapsedTime();
+
       long attemptStartTime = -1;
       long shuffleFinishTime = -1;
       long sortFinishTime = -1;
@@ -118,30 +119,31 @@ public class HsTasksBlock extends HtmlBlock {
       long elapsedSortTime = -1;;
       long elapsedReduceTime = -1;
       long attemptElapsed = -1;
-      TaskAttempt successful = getSuccessfulAttempt(task);
+      TaskAttempt successful = info.getSuccessful();
       if(successful != null) {
-        attemptStartTime = successful.getLaunchTime();
-        attemptFinishTime = successful.getFinishTime();
+        TaskAttemptInfo ta;
         if(type == TaskType.REDUCE) {
-          shuffleFinishTime = successful.getShuffleFinishTime();
-          sortFinishTime = successful.getSortFinishTime();
-          elapsedShuffleTime =
-              Times.elapsed(attemptStartTime, shuffleFinishTime, false);
-          elapsedSortTime =
-              Times.elapsed(shuffleFinishTime, sortFinishTime, false);
-          elapsedReduceTime =
-              Times.elapsed(sortFinishTime, attemptFinishTime, false); 
+          ReduceTaskAttemptInfo rta = new ReduceTaskAttemptInfo(successful, type);
+          shuffleFinishTime = rta.getShuffleFinishTime();
+          sortFinishTime = rta.getMergeFinishTime();
+          elapsedShuffleTime = rta.getElapsedShuffleTime();
+          elapsedSortTime = rta.getElapsedMergeTime();
+          elapsedReduceTime = rta.getElapsedReduceTime();
+          ta = rta;
+        } else {
+          ta = new TaskAttemptInfo(successful, type, false);
         }
-        attemptElapsed =
-            Times.elapsed(attemptStartTime, attemptFinishTime, false);
+        attemptStartTime = ta.getStartTime();
+        attemptFinishTime = ta.getFinishTime();
+        attemptElapsed = ta.getElapsedTime();
       }
-      
+
       TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
       row.
           td().
-            br().$title(String.valueOf(task.getID().getId()))._(). // sorting
+            br().$title(String.valueOf(info.getTaskNum()))._(). // sorting
             a(url("task", tid), tid)._().
-          td(report.getTaskState().toString()).
+          td(info.getState()).
           td().
             br().$title(String.valueOf(startTime))._().
             _(Times.format(startTime))._().
@@ -166,7 +168,7 @@ public class HsTasksBlock extends HtmlBlock {
           td().
             br().$title(String.valueOf(attemptFinishTime))._().
             _(Times.format(attemptFinishTime))._();
-      
+
       if(type == TaskType.REDUCE) {
         row.td().
           br().$title(String.valueOf(elapsedShuffleTime))._().
@@ -178,7 +180,7 @@ public class HsTasksBlock extends HtmlBlock {
           br().$title(String.valueOf(elapsedReduceTime))._().
         _(formatTime(elapsedReduceTime))._();
       }
-      
+
       row.td().
         br().$title(String.valueOf(attemptElapsed))._().
         _(formatTime(attemptElapsed))._();
@@ -194,7 +196,7 @@ public class HsTasksBlock extends HtmlBlock {
         .$type(InputType.text).$name("elapsed_time").$value("Elapsed Time")._()
         ._().th().input("search_init").$type(InputType.text)
         .$name("attempt_start_time").$value("Start Time")._()._();
-    
+
     if(type == TaskType.REDUCE) {
       footRow.th().input("search_init").$type(InputType.text)
           .$name("shuffle_time").$value("Shuffle Time")._()._();
@@ -216,20 +218,12 @@ public class HsTasksBlock extends HtmlBlock {
 
     footRow.th().input("search_init").$type(InputType.text)
         .$name("attempt_elapsed").$value("Elapsed Time")._()._();
-    
+
     footRow._()._()._();
   }
 
   private String formatTime(long elapsed) {
     return elapsed < 0 ? "N/A" : StringUtils.formatTime(elapsed);
   }
-  
-  private TaskAttempt getSuccessfulAttempt(Task task) {
-    for(TaskAttempt attempt: task.getAttempts().values()) {
-      if(attempt.getState() == TaskAttemptState.SUCCEEDED) {
-        return attempt;
-      }
-    }
-    return null;
-  }
+
 }

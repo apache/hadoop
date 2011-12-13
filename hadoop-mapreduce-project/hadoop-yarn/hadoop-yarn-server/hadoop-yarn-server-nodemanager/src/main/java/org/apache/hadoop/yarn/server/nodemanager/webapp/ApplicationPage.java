@@ -23,19 +23,16 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
-import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
@@ -81,15 +78,14 @@ public class ApplicationPage extends NMView implements YarnWebParams {
           ConverterUtils.toApplicationId(this.recordFactory,
               $(APPLICATION_ID));
       Application app = this.nmContext.getApplications().get(applicationID);
-      Map<ContainerId, Container> containers = app.getContainers();
+      AppInfo info = new AppInfo(app);
       info("Application's information")
-            ._("ApplicationId", ConverterUtils.toString(app.getAppId()))
-            ._("ApplicationState", app.getApplicationState().toString())
-            ._("User", app.getUser());
+            ._("ApplicationId", info.getId())
+            ._("ApplicationState", info.getState())
+            ._("User", info.getUser());
       TABLE<Hamlet> containersListBody = html._(InfoBlock.class)
           .table("#containers");
-      for (ContainerId containerId : containers.keySet()) {
-        String containerIdStr = ConverterUtils.toString(containerId);
+      for (String containerIdStr : info.getContainers()) {
         containersListBody
                .tr().td()
                  .a(url("container", containerIdStr), containerIdStr)

@@ -21,10 +21,9 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -38,8 +37,8 @@ import com.google.inject.Inject;
  */
 public class HsJobsBlock extends HtmlBlock {
   final AppContext appContext;
-  static final SimpleDateFormat dateFormat = 
-    new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z"); 
+  static final SimpleDateFormat dateFormat =
+    new SimpleDateFormat("yyyy.MM.dd HH:mm:ss z");
 
   @Inject HsJobsBlock(AppContext appCtx) {
     appContext = appCtx;
@@ -68,28 +67,21 @@ public class HsJobsBlock extends HtmlBlock {
             th("Reduces Completed")._()._().
         tbody();
     LOG.info("Getting list of all Jobs.");
-    for (Job job : appContext.getAllJobs().values()) {
-      String jobID = MRApps.toString(job.getID());
-      JobReport report = job.getReport();
-      String mapsTotal = String.valueOf(job.getTotalMaps());
-      String mapsCompleted = String.valueOf(job.getCompletedMaps());
-      String reduceTotal = String.valueOf(job.getTotalReduces());
-      String reduceCompleted = String.valueOf(job.getCompletedReduces());
-      long startTime = report.getStartTime();
-      long finishTime = report.getFinishTime();
+    for (Job j : appContext.getAllJobs().values()) {
+      JobInfo job = new JobInfo(j);
       tbody.
         tr().
-          td(dateFormat.format(new Date(startTime))).
-          td(dateFormat.format(new Date(finishTime))).
-          td().a(url("job", jobID), jobID)._().
-          td(job.getName().toString()).
+          td(dateFormat.format(new Date(job.getStartTime()))).
+          td(dateFormat.format(new Date(job.getFinishTime()))).
+          td().a(url("job", job.getId()), job.getId())._().
+          td(job.getName()).
           td(job.getUserName()).
           td(job.getQueueName()).
-          td(job.getState().toString()).
-          td(mapsTotal).
-          td(mapsCompleted).
-          td(reduceTotal).
-          td(reduceCompleted)._();
+          td(job.getState()).
+          td(String.valueOf(job.getMapsTotal())).
+          td(String.valueOf(job.getMapsCompleted())).
+          td(String.valueOf(job.getReducesTotal())).
+          td(String.valueOf(job.getReducesCompleted()))._();
     }
     tbody._().
     tfoot().

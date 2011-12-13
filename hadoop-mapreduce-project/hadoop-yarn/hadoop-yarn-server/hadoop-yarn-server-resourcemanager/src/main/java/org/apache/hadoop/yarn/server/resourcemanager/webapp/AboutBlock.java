@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -30,25 +29,25 @@ import com.google.inject.Inject;
 public class AboutBlock extends HtmlBlock {
   final ResourceManager rm;
 
-  @Inject 
+  @Inject
   AboutBlock(ResourceManager rm, ViewContext ctx) {
     super(ctx);
     this.rm = rm;
   }
-  
+
   @Override
   protected void render(Block html) {
     html._(MetricsOverviewTable.class);
-    long ts = ResourceManager.clusterTimeStamp;
     ResourceManager rm = getInstance(ResourceManager.class);
+    ClusterInfo cinfo = new ClusterInfo(rm);
     info("Cluster overview").
-      _("Cluster ID:", ts).
-      _("ResourceManager state:", rm.getServiceState()).
-      _("ResourceManager started on:", Times.format(ts)).
-      _("ResourceManager version:", YarnVersionInfo.getBuildVersion() +
-          " on " + YarnVersionInfo.getDate()).
-      _("Hadoop version:", VersionInfo.getBuildVersion() +
-          " on " + VersionInfo.getDate());
+      _("Cluster ID:", cinfo.getClusterId()).
+      _("ResourceManager state:", cinfo.getState()).
+      _("ResourceManager started on:", Times.format(cinfo.getStartedOn())).
+      _("ResourceManager version:", cinfo.getRMBuildVersion() +
+          " on " + cinfo.getRMVersionBuiltOn()).
+      _("Hadoop version:", cinfo.getHadoopBuildVersion() +
+          " on " + cinfo.getHadoopVersionBuiltOn());
     html._(InfoBlock.class);
   }
 

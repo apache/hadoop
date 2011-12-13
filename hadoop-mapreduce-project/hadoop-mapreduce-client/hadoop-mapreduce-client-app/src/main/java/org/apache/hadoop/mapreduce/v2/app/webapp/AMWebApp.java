@@ -18,8 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
+import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
 /**
@@ -29,6 +30,9 @@ public class AMWebApp extends WebApp implements AMParams {
 
   @Override
   public void setup() {
+    bind(JAXBContextResolver.class);
+    bind(GenericExceptionHandler.class);
+    bind(AMWebServices.class);
     route("/", AppController.class);
     route("/app", AppController.class);
     route(pajoin("/job", JOB_ID), AppController.class, "job");

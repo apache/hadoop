@@ -22,14 +22,14 @@ import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -71,11 +71,8 @@ public class ConfBlock extends HtmlBlock {
     }
     Path confPath = job.getConfFile();
     try {
-      //Read in the configuration file and put it in a key/value table.
-      FileContext fc = FileContext.getFileContext(confPath.toUri(), conf);
-      Configuration jobConf = new Configuration(false);
-      jobConf.addResource(fc.open(confPath));
-    
+      ConfInfo info = new ConfInfo(job, this.conf);
+
       html.div().h3(confPath.toString())._();
       TBODY<TABLE<Hamlet>> tbody = html.
         // Tasks table
@@ -87,10 +84,10 @@ public class ConfBlock extends HtmlBlock {
           _().
         _().
       tbody();
-      for(Map.Entry<String, String> entry : jobConf) {
+      for (ConfEntryInfo entry : info.getProperties()) {
         tbody.
           tr().
-            td(entry.getKey()).
+            td(entry.getName()).
             td(entry.getValue()).
           _();
       }

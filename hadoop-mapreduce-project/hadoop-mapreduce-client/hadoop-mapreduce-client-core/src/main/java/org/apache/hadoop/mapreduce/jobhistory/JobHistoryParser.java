@@ -353,7 +353,7 @@ public class JobHistoryParser {
    * The class where job information is aggregated into after parsing
    */
   public static class JobInfo {
-    String errorInfo = "None";
+    String errorInfo = "";
     long submitTime;
     long finishTime;
     JobID jobid;

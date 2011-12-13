@@ -26,17 +26,16 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
@@ -73,13 +72,14 @@ public class RmController extends Controller {
     }
     ApplicationId appID = Apps.toAppID(aid);
     RMContext context = getInstance(RMContext.class);
-    RMApp app = context.getRMApps().get(appID);
-    if (app == null) {
+    RMApp rmApp = context.getRMApps().get(appID);
+    if (rmApp == null) {
       // TODO: handle redirect to jobhistory server
       setStatus(HttpServletResponse.SC_NOT_FOUND);
       setTitle("Application not found: "+ aid);
       return;
     }
+    AppInfo app = new AppInfo(rmApp, true);
 
     // Check for the authorization.
     String remoteUser = request().getRemoteUser();
@@ -98,32 +98,22 @@ public class RmController extends Controller {
     }
 
     setTitle(join("Application ", aid));
-    String trackingUrl = app.getTrackingUrl();
-    boolean trackingUrlIsNotReady = trackingUrl == null
-        || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
-    String ui = trackingUrlIsNotReady ? "UNASSIGNED" :
-        (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
 
     ResponseInfo info = info("Application Overview").
       _("User:", app.getUser()).
       _("Name:", app.getName()).
-      _("State:", app.getState().toString()).
-      _("FinalStatus:", app.getFinalApplicationStatus().toString()).
+      _("State:", app.getState()).
+      _("FinalStatus:", app.getFinalStatus()).
       _("Started:", Times.format(app.getStartTime())).
       _("Elapsed:", StringUtils.formatTime(
         Times.elapsed(app.getStartTime(), app.getFinishTime()))).
-      _("Tracking URL:", trackingUrlIsNotReady ?
-        "#" : join("http://", trackingUrl), ui).
-      _("Diagnostics:", app.getDiagnostics());
-    Container masterContainer = app.getCurrentAppAttempt()
-        .getMasterContainer();
-    if (masterContainer != null) {
-      String url = join("http://", masterContainer.getNodeHttpAddress(),
-          "/node", "/containerlogs/",
-          ConverterUtils.toString(masterContainer.getId()));
-      info._("AM container logs:", url, url);
+      _("Tracking URL:", !app.isTrackingUrlReady() ?
+        "#" : app.getTrackingUrlPretty(), app.getTrackingUI()).
+      _("Diagnostics:", app.getNote());
+    if (app.amContainerLogsExist()) {
+      info._("AM container logs:", app.getAMContainerLogs(), app.getAMContainerLogs());
     } else {
-      info._("AM container logs:", "AM not yet registered with RM");
+      info._("AM container logs:", "");
     }
     render(AppPage.class);
   }
