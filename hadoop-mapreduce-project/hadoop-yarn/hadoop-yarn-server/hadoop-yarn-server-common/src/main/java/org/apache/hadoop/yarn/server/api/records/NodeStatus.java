@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.api.records;
 
 import java.util.List;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -33,6 +34,9 @@ public interface NodeStatus {
   public abstract void setContainersStatuses(
       List<ContainerStatus> containersStatuses);
 
+  public abstract List<ApplicationId> getKeepAliveApplications();
+  public abstract void setKeepAliveApplications(List<ApplicationId> appIds);
+  
   NodeHealthStatus getNodeHealthStatus();
   void setNodeHealthStatus(NodeHealthStatus healthStatus);
 

@@ -34,6 +34,7 @@ message NodeStatusProto {
   optional int32 response_id = 2;
   repeated ContainerStatusProto containersStatuses = 3;
   optional NodeHealthStatusProto nodeHealthStatus = 4;
+  repeated ApplicationIdProto keep_alive_applications = 5;
 }
 
 message RegistrationResponseProto {

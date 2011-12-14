@@ -272,7 +272,8 @@ public class ResourceTrackerService extends AbstractService implements
     // 4. Send status to RMNode, saving the latest response.
     this.rmContext.getDispatcher().getEventHandler().handle(
         new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
-            remoteNodeStatus.getContainersStatuses(), latestResponse));
+            remoteNodeStatus.getContainersStatuses(), 
+            remoteNodeStatus.getKeepAliveApplications(), latestResponse));
 
     nodeHeartBeatResponse.setHeartbeatResponse(latestResponse);
     return nodeHeartBeatResponse;

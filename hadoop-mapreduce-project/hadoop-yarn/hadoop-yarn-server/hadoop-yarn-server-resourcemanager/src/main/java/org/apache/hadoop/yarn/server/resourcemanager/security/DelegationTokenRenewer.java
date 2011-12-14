@@ -20,14 +20,19 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
@@ -40,6 +45,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 /**
@@ -65,7 +71,16 @@ public class DelegationTokenRenewer extends AbstractService {
   // appId=>List<tokens>
   private Set<DelegationTokenToRenew> delegationTokens = 
     Collections.synchronizedSet(new HashSet<DelegationTokenToRenew>());
+  
+  private final ConcurrentMap<ApplicationId, Long> delayedRemovalMap =
+      new ConcurrentHashMap<ApplicationId, Long>();
 
+  private long tokenRemovalDelayMs;
+  
+  private Thread delayedRemovalThread;
+  
+  private boolean tokenKeepAliveEnabled;
+  
   public DelegationTokenRenewer() {
     super(DelegationTokenRenewer.class.getName());
   }
@@ -73,6 +88,12 @@ public class DelegationTokenRenewer extends AbstractService {
   @Override
   public synchronized void init(Configuration conf) {
     super.init(conf);
+    this.tokenKeepAliveEnabled =
+        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED);
+    this.tokenRemovalDelayMs =
+        conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
   }
 
   @Override
@@ -81,6 +102,12 @@ public class DelegationTokenRenewer extends AbstractService {
     
     dtCancelThread.start();
     renewalTimer = new Timer(true);
+    if (tokenKeepAliveEnabled) {
+      delayedRemovalThread =
+          new Thread(new DelayedTokenRemovalRunnable(getConfig()),
+              "DelayedTokenCanceller");
+      delayedRemovalThread.start();
+    }
   }
 
   @Override
@@ -93,6 +120,14 @@ public class DelegationTokenRenewer extends AbstractService {
       dtCancelThread.join(1000);
     } catch (InterruptedException e) {
       e.printStackTrace();
+    }
+    if (tokenKeepAliveEnabled && delayedRemovalThread != null) {
+      delayedRemovalThread.interrupt();
+      try {
+        delayedRemovalThread.join(1000);
+      } catch (InterruptedException e) {
+        LOG.info("Interrupted while joining on delayed removal thread.", e);
+      }
     }
     
     super.stop();
@@ -343,12 +378,38 @@ public class DelegationTokenRenewer extends AbstractService {
     if(t.timerTask!=null)
       t.timerTask.cancel();
   }
-  
+
   /**
    * Removing delegation token for completed applications.
    * @param applicationId completed application
    */
-  public void removeApplication(ApplicationId applicationId) {
+  public void applicationFinished(ApplicationId applicationId) {
+    if (!tokenKeepAliveEnabled) {
+      removeApplicationFromRenewal(applicationId);
+    } else {
+      delayedRemovalMap.put(applicationId, System.currentTimeMillis()
+          + tokenRemovalDelayMs);
+    }
+  }
+
+  /**
+   * Add a list of applications to the keep alive list. If an appId already
+   * exists, update it's keep-alive time.
+   * 
+   * @param appIds
+   *          the list of applicationIds to be kept alive.
+   * 
+   */
+  public void updateKeepAliveApplications(List<ApplicationId> appIds) {
+    if (tokenKeepAliveEnabled && appIds != null && appIds.size() > 0) {
+      for (ApplicationId appId : appIds) {
+        delayedRemovalMap.put(appId, System.currentTimeMillis()
+            + tokenRemovalDelayMs);
+      }
+    }
+  }
+
+  private void removeApplicationFromRenewal(ApplicationId applicationId) {
     synchronized (delegationTokens) {
       Iterator<DelegationTokenToRenew> it = delegationTokens.iterator();
       while(it.hasNext()) {
@@ -371,4 +432,50 @@ public class DelegationTokenRenewer extends AbstractService {
       }
     }
   }
+
+  /**
+   * Takes care of cancelling app delegation tokens after the configured
+   * cancellation delay, taking into consideration keep-alive requests.
+   * 
+   */
+  private class DelayedTokenRemovalRunnable implements Runnable {
+
+    private long waitTimeMs;
+
+    DelayedTokenRemovalRunnable(Configuration conf) {
+      waitTimeMs =
+          conf.getLong(
+              YarnConfiguration.RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS,
+              YarnConfiguration.DEFAULT_RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS);
+    }
+
+    @Override
+    public void run() {
+      List<ApplicationId> toCancel = new ArrayList<ApplicationId>();
+      while (!Thread.currentThread().isInterrupted()) {
+        Iterator<Entry<ApplicationId, Long>> it =
+            delayedRemovalMap.entrySet().iterator();
+        toCancel.clear();
+        while (it.hasNext()) {
+          Entry<ApplicationId, Long> e = it.next();
+          if (e.getValue() < System.currentTimeMillis()) {
+            toCancel.add(e.getKey());
+          }
+        }
+        for (ApplicationId appId : toCancel) {
+          removeApplicationFromRenewal(appId);
+          delayedRemovalMap.remove(appId);
+        }
+        synchronized (this) {
+          try {
+            wait(waitTimeMs);
+          } catch (InterruptedException e) {
+            LOG.info("Delayed Deletion Thread Interrupted. Shutting it down");
+            return;
+          }
+        }
+      }
+    }
+  }
+  
 }

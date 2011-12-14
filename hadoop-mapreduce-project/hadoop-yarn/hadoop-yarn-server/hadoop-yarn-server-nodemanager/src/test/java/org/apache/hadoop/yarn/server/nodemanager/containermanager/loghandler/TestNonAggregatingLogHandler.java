@@ -68,7 +68,7 @@ public class TestNonAggregatingLogHandler {
             + localLogDirs[1].getAbsolutePath();
 
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDirsString);
-    conf.setBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, false);
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 0l);
 
     DrainDispatcher dispatcher = createDispatcher(conf);
@@ -142,7 +142,7 @@ public class TestNonAggregatingLogHandler {
             + localLogDirs[1].getAbsolutePath();
 
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDirsString);
-    conf.setBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED, false);
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, false);
 
     conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 10800l);
 

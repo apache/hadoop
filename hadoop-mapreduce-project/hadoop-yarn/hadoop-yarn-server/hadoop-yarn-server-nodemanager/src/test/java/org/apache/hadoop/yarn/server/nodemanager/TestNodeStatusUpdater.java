@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -56,6 +58,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -63,10 +66,12 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.Service.STATE;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import static org.mockito.Mockito.mock;
 
 public class TestNodeStatusUpdater {
 
@@ -216,7 +221,7 @@ public class TestNodeStatusUpdater {
       HeartbeatResponse response = recordFactory
           .newRecordInstance(HeartbeatResponse.class);
       response.setResponseId(heartBeatID);
-      
+
       NodeHeartbeatResponse nhResponse = recordFactory
           .newRecordInstance(NodeHeartbeatResponse.class);
       nhResponse.setHeartbeatResponse(response);
@@ -239,6 +244,48 @@ public class TestNodeStatusUpdater {
     @Override
     protected ResourceTracker getRMClient() {
       return resourceTracker;
+    }
+  }
+
+  private class MyNodeStatusUpdater3 extends NodeStatusUpdaterImpl {
+    public ResourceTracker resourceTracker;
+    private Context context;
+
+    public MyNodeStatusUpdater3(Context context, Dispatcher dispatcher,
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
+        ContainerTokenSecretManager containerTokenSecretManager) {
+      super(context, dispatcher, healthChecker, metrics,
+          containerTokenSecretManager);
+      this.context = context;
+      this.resourceTracker = new MyResourceTracker3(this.context);
+    }
+
+    @Override
+    protected ResourceTracker getRMClient() {
+      return resourceTracker;
+    }
+    
+    @Override
+    protected boolean isSecurityEnabled() {
+      return true;
+    }
+  }
+
+  private class MyNodeManager extends NodeManager {
+    
+    private MyNodeStatusUpdater3 nodeStatusUpdater;
+    @Override
+    protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+        Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
+        ContainerTokenSecretManager containerTokenSecretManager) {
+      this.nodeStatusUpdater =
+          new MyNodeStatusUpdater3(context, dispatcher, healthChecker, metrics,
+              containerTokenSecretManager);
+      return this.nodeStatusUpdater;
+    }
+
+    protected MyNodeStatusUpdater3 getNodeStatusUpdater() {
+      return this.nodeStatusUpdater;
     }
   }
   
@@ -276,6 +323,65 @@ public class TestNodeStatusUpdater {
     }
   }
   
+  private class MyResourceTracker3 implements ResourceTracker {
+    public NodeAction heartBeatNodeAction = NodeAction.NORMAL;
+    public NodeAction registerNodeAction = NodeAction.NORMAL;
+    private Map<ApplicationId, List<Long>> keepAliveRequests =
+        new HashMap<ApplicationId, List<Long>>();
+    private ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    private final Context context;
+
+    MyResourceTracker3(Context context) {
+      this.context = context;
+    }
+    
+    @Override
+    public RegisterNodeManagerResponse registerNodeManager(
+        RegisterNodeManagerRequest request) throws YarnRemoteException {
+
+      RegisterNodeManagerResponse response =
+          recordFactory.newRecordInstance(RegisterNodeManagerResponse.class);
+      RegistrationResponse regResponse =
+          recordFactory.newRecordInstance(RegistrationResponse.class);
+      regResponse.setNodeAction(registerNodeAction);
+      response.setRegistrationResponse(regResponse);
+      return response;
+    }
+
+    @Override
+    public NodeHeartbeatResponse nodeHeartbeat(NodeHeartbeatRequest request)
+        throws YarnRemoteException {
+      LOG.info("Got heartBeatId: [" + heartBeatID +"]");
+      NodeStatus nodeStatus = request.getNodeStatus();
+      nodeStatus.setResponseId(heartBeatID++);
+      HeartbeatResponse response =
+          recordFactory.newRecordInstance(HeartbeatResponse.class);
+      response.setResponseId(heartBeatID);
+      response.setNodeAction(heartBeatNodeAction);
+
+      if (nodeStatus.getKeepAliveApplications() != null
+          && nodeStatus.getKeepAliveApplications().size() > 0) {
+        for (ApplicationId appId : nodeStatus.getKeepAliveApplications()) {
+          List<Long> list = keepAliveRequests.get(appId);
+          if (list == null) {
+            list = new LinkedList<Long>();
+            keepAliveRequests.put(appId, list);
+          }
+          list.add(System.currentTimeMillis());
+        }
+      }
+      if (heartBeatID == 2) {
+        LOG.info("Sending FINISH_APP for application: [" + appId + "]");
+        this.context.getApplications().put(appId, mock(Application.class));
+        response.addAllApplicationsToCleanup(Collections.singletonList(appId));
+      }
+      NodeHeartbeatResponse nhResponse =
+          recordFactory.newRecordInstance(NodeHeartbeatResponse.class);
+      nhResponse.setHeartbeatResponse(response);
+      return nhResponse;
+    }
+  }
+
   @Before
   public void clearError() {
     nmStartError = null;
@@ -454,6 +560,38 @@ public class TestNodeStatusUpdater {
     };
 
     verifyNodeStartFailure("Starting of RPC Server failed");
+  }
+
+  @Test
+  public void testApplicationKeepAlive() throws Exception {
+    MyNodeManager nm = new MyNodeManager();
+    try {
+      YarnConfiguration conf = createNMConfig();
+      conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+      conf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
+          4000l);
+      nm.init(conf);
+      nm.start();
+      // HB 2 -> app cancelled by RM.
+      while (heartBeatID < 12) {
+        Thread.sleep(1000l);
+      }
+      MyResourceTracker3 rt =
+          (MyResourceTracker3) nm.getNodeStatusUpdater().getRMClient();
+      rt.context.getApplications().remove(rt.appId);
+      Assert.assertEquals(1, rt.keepAliveRequests.size());
+      int numKeepAliveRequests = rt.keepAliveRequests.get(rt.appId).size();
+      LOG.info("Number of Keep Alive Requests: [" + numKeepAliveRequests + "]");
+      Assert.assertTrue(numKeepAliveRequests == 2 || numKeepAliveRequests == 3);
+      while (heartBeatID < 20) {
+        Thread.sleep(1000l);
+      }
+      int numKeepAliveRequests2 = rt.keepAliveRequests.get(rt.appId).size();
+      Assert.assertEquals(numKeepAliveRequests, numKeepAliveRequests2);
+    } finally {
+      if (nm.getServiceState() == STATE.STARTED)
+        nm.stop();
+    }
   }
 
   private void verifyNodeStartFailure(String errMessage) {

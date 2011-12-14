@@ -20,12 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,6 +44,7 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -328,7 +329,7 @@ public class TestDelegationTokenRenewer {
 
     ApplicationId applicationId_1 = BuilderUtils.newApplicationId(0, 1);
     delegationTokenRenewer.addApplication(applicationId_1, ts, true);
-    delegationTokenRenewer.removeApplication(applicationId_1);
+    delegationTokenRenewer.applicationFinished(applicationId_1);
     
     numberOfExpectedRenewals = Renewer.counter; // number of renewals so far
     try {
@@ -343,7 +344,7 @@ public class TestDelegationTokenRenewer {
     // also renewing of the cancelled token should fail
     try {
       token4.renew(conf);
-      assertTrue("Renewal of canceled token didn't fail", false);
+      fail("Renewal of cancelled token should have failed");
     } catch (InvalidToken ite) {
       //expected
     }
@@ -377,7 +378,7 @@ public class TestDelegationTokenRenewer {
 
     ApplicationId applicationId_1 = BuilderUtils.newApplicationId(0, 1);
     delegationTokenRenewer.addApplication(applicationId_1, ts, false);
-    delegationTokenRenewer.removeApplication(applicationId_1);
+    delegationTokenRenewer.applicationFinished(applicationId_1);
     
     int numberOfExpectedRenewals = Renewer.counter; // number of renewals so far
     try {
@@ -392,5 +393,124 @@ public class TestDelegationTokenRenewer {
     // also renewing of the canceled token should not fail, because it has not
     // been canceled
     token1.renew(conf);
+  }
+  
+  /**
+   * Basic idea of the test:
+   * 0. Setup token KEEP_ALIVE
+   * 1. create tokens.
+   * 2. register them for renewal - to be cancelled on app complete
+   * 3. Complete app.
+   * 4. Verify token is alive within the KEEP_ALIVE time
+   * 5. Verify token has been cancelled after the KEEP_ALIVE_TIME
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testDTKeepAlive1 () throws Exception {
+    DelegationTokenRenewer localDtr = new DelegationTokenRenewer();
+    Configuration lconf = new Configuration(conf);
+    lconf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    //Keep tokens alive for 6 seconds.
+    lconf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 6000l);
+    //Try removing tokens every second.
+    lconf.setLong(
+        YarnConfiguration.RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS,
+        1000l);
+    localDtr.init(lconf);
+    localDtr.start();
+    
+    MyFS dfs = (MyFS)FileSystem.get(lconf);
+    LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+lconf.hashCode());
+    
+    Credentials ts = new Credentials();
+    // get the delegation tokens
+    MyToken token1 = dfs.getDelegationToken(new Text("user1"));
+
+    String nn1 = DelegationTokenRenewer.SCHEME + "://host1:0";
+    ts.addToken(new Text(nn1), token1);
+
+    // register the tokens for renewal
+    ApplicationId applicationId_0 =  BuilderUtils.newApplicationId(0, 0);
+    localDtr.addApplication(applicationId_0, ts, true);
+    localDtr.applicationFinished(applicationId_0);
+ 
+    Thread.sleep(3000l);
+
+    //Token should still be around. Renewal should not fail.
+    token1.renew(lconf);
+
+    //Allow the keepalive time to run out
+    Thread.sleep(6000l);
+
+    //The token should have been cancelled at this point. Renewal will fail.
+    try {
+      token1.renew(lconf);
+      fail("Renewal of cancelled token should have failed");
+    } catch (InvalidToken ite) {}
+  }
+
+  /**
+   * Basic idea of the test:
+   * 0. Setup token KEEP_ALIVE
+   * 1. create tokens.
+   * 2. register them for renewal - to be cancelled on app complete
+   * 3. Complete app.
+   * 4. Verify token is alive within the KEEP_ALIVE time
+   * 5. Send an explicity KEEP_ALIVE_REQUEST
+   * 6. Verify token KEEP_ALIVE time is renewed.
+   * 7. Verify token has been cancelled after the renewed KEEP_ALIVE_TIME.
+   * @throws IOException
+   * @throws URISyntaxException
+   */
+  @Test
+  public void testDTKeepAlive2() throws Exception {
+    DelegationTokenRenewer localDtr = new DelegationTokenRenewer();
+    Configuration lconf = new Configuration(conf);
+    lconf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+    //Keep tokens alive for 6 seconds.
+    lconf.setLong(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS, 6000l);
+    //Try removing tokens every second.
+    lconf.setLong(
+        YarnConfiguration.RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS,
+        1000l);
+    localDtr.init(lconf);
+    localDtr.start();
+    
+    MyFS dfs = (MyFS)FileSystem.get(lconf);
+    LOG.info("dfs="+(Object)dfs.hashCode() + ";conf="+lconf.hashCode());
+
+    Credentials ts = new Credentials();
+    // get the delegation tokens
+    MyToken token1 = dfs.getDelegationToken(new Text("user1"));
+    
+    String nn1 = DelegationTokenRenewer.SCHEME + "://host1:0";
+    ts.addToken(new Text(nn1), token1);
+
+    // register the tokens for renewal
+    ApplicationId applicationId_0 =  BuilderUtils.newApplicationId(0, 0);
+    localDtr.addApplication(applicationId_0, ts, true);
+    localDtr.applicationFinished(applicationId_0);
+
+    Thread.sleep(4000l);
+
+    //Send another keep alive.
+    localDtr.updateKeepAliveApplications(Collections
+        .singletonList(applicationId_0));
+    //Renewal should not fail.
+    token1.renew(lconf);
+
+    //Token should be around after this. 
+    Thread.sleep(4500l);
+    //Renewal should not fail. - ~1.5 seconds for keepalive timeout.
+    token1.renew(lconf);
+
+    //Allow the keepalive time to run out
+    Thread.sleep(3000l);
+    //The token should have been cancelled at this point. Renewal will fail.
+    try {
+      token1.renew(lconf);
+      fail("Renewal of cancelled token should have failed");
+    } catch (InvalidToken ite) {}
   }
 }

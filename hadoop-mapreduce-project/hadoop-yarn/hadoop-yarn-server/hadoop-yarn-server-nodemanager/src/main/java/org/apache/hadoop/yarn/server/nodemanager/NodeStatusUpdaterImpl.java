@@ -20,8 +20,12 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Map.Entry;
 
 import org.apache.avro.AvroRuntimeException;
@@ -56,6 +60,7 @@ import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
 
@@ -76,6 +81,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private byte[] secretKeyBytes = new byte[0];
   private boolean isStopped;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+  private boolean tokenKeepAliveEnabled;
+  private long tokenRemovalDelayMs;
+  /** Keeps track of when the next keep alive request should be sent for an app*/
+  private Map<ApplicationId, Long> appTokenKeepAliveMap =
+      new HashMap<ApplicationId, Long>();
+  private Random keepAliveDelayRandom = new Random();
 
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
@@ -103,6 +114,13 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
     this.totalResource.setMemory(memoryMb);
     metrics.addResource(totalResource);
+    this.tokenKeepAliveEnabled =
+        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)
+            && isSecurityEnabled();
+    this.tokenRemovalDelayMs =
+        conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
+            YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
     super.init(conf);
   }
 
@@ -137,6 +155,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     // Interrupt the updater.
     this.isStopped = true;
     super.stop();
+  }
+
+  protected boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
   }
 
   protected ResourceTracker getRMClient() {
@@ -188,6 +210,29 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return this.secretKeyBytes.clone();
   }
 
+  private List<ApplicationId> createKeepAliveApplicationList() {
+    if (!tokenKeepAliveEnabled) {
+      return Collections.emptyList();
+    }
+
+    List<ApplicationId> appList = new ArrayList<ApplicationId>();
+    for (Iterator<Entry<ApplicationId, Long>> i =
+        this.appTokenKeepAliveMap.entrySet().iterator(); i.hasNext();) {
+      Entry<ApplicationId, Long> e = i.next();
+      ApplicationId appId = e.getKey();
+      Long nextKeepAlive = e.getValue();
+      if (!this.context.getApplications().containsKey(appId)) {
+        // Remove if the application has finished.
+        i.remove();
+      } else if (System.currentTimeMillis() > nextKeepAlive) {
+        // KeepAlive list for the next hearbeat.
+        appList.add(appId);
+        trackAppForKeepAlive(appId);
+      }
+    }
+    return appList;
+  }
+
   private NodeStatus getNodeStatus() {
 
     NodeStatus nodeStatus = recordFactory.newRecordInstance(NodeStatus.class);
@@ -231,7 +276,27 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     }
     nodeStatus.setNodeHealthStatus(nodeHealthStatus);
 
+    List<ApplicationId> keepAliveAppIds = createKeepAliveApplicationList();
+    nodeStatus.setKeepAliveApplications(keepAliveAppIds);
+    
     return nodeStatus;
+  }
+
+  private void trackAppsForKeepAlive(List<ApplicationId> appIds) {
+    if (tokenKeepAliveEnabled && appIds != null && appIds.size() > 0) {
+      for (ApplicationId appId : appIds) {
+        trackAppForKeepAlive(appId);
+      }
+    }
+  }
+
+  private void trackAppForKeepAlive(ApplicationId appId) {
+    // Next keepAlive request for app between 0.7 & 0.9 of when the token will
+    // likely expire.
+    long nextTime = System.currentTimeMillis()
+    + (long) (0.7 * tokenRemovalDelayMs + (0.2 * tokenRemovalDelayMs
+        * keepAliveDelayRandom.nextInt(100))/100);
+    appTokenKeepAliveMap.put(appId, nextTime);
   }
 
   @Override
@@ -245,6 +310,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
     new Thread("Node Status Updater") {
       @Override
+      @SuppressWarnings("unchecked")
       public void run() {
         int lastHeartBeatID = 0;
         while (!isStopped) {
@@ -284,6 +350,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
             List<ApplicationId> appsToCleanup =
                 response.getApplicationsToCleanupList();
+            //Only start tracking for keepAlive on FINISH_APP
+            trackAppsForKeepAlive(appsToCleanup);
             if (appsToCleanup.size() != 0) {
               dispatcher.getEventHandler().handle(
                   new CMgrCompletedAppsEvent(appsToCleanup));

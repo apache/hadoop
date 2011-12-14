@@ -414,7 +414,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeUpdateSchedulerEvent(rmNode, newlyLaunchedContainers, 
               completedContainers));
-
+      
+      rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
+          statusEvent.getKeepAliveAppIds());
       return RMNodeState.RUNNING;
     }
   }

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
 import java.util.List;
 
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -28,15 +29,17 @@ import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 public class RMNodeStatusEvent extends RMNodeEvent {
 
   private final NodeHealthStatus nodeHealthStatus;
-  private List<ContainerStatus> containersCollection;
+  private final List<ContainerStatus> containersCollection;
   private final HeartbeatResponse latestResponse;
+  private final List<ApplicationId> keepAliveAppIds;
 
   public RMNodeStatusEvent(NodeId nodeId, NodeHealthStatus nodeHealthStatus,
-      List<ContainerStatus> collection,
+      List<ContainerStatus> collection, List<ApplicationId> keepAliveAppIds,
       HeartbeatResponse latestResponse) {
     super(nodeId, RMNodeEventType.STATUS_UPDATE);
     this.nodeHealthStatus = nodeHealthStatus;
     this.containersCollection = collection;
+    this.keepAliveAppIds = keepAliveAppIds;
     this.latestResponse = latestResponse;
   }
 
@@ -50,5 +53,9 @@ public class RMNodeStatusEvent extends RMNodeEvent {
 
   public HeartbeatResponse getLatestResponse() {
     return this.latestResponse;
+  }
+  
+  public List<ApplicationId> getKeepAliveAppIds() {
+    return this.keepAliveAppIds;
   }
 }

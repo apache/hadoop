@@ -170,6 +170,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       this.writer.closeWriter();
       LOG.info("Finished aggregate log-file for app " + this.applicationId);
     }
+
     try {
       userUgi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
