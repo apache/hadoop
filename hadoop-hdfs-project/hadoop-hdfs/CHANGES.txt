@@ -95,7 +95,10 @@ Release 0.23.1 - UNRELEASED
  
     HDFS-2653. DFSClient should cache whether addrs are non-local when
     short-circuiting is enabled. (eli)
-    
+
+    HDFS-2649. eclipse:eclipse build fails for hadoop-hdfs-httpfs.
+    (Jason Lowe via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
