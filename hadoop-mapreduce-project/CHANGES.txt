@@ -84,6 +84,8 @@ Release 0.23.1 - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES
+    MAPREDUCE-2950. [Rumen] Fixed TestUserResolve. (Ravi Gummadi via amarrk)
+
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
 
     MAPREDUCE-3346 [Rumen] LoggedTaskAttempt#getHostName() returns null.
