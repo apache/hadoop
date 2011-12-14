@@ -93,16 +93,30 @@ class RetryInvocationHandler implements InvocationHandler, Closeable {
           }
           return null;
         } else { // retry or failover
+
+          if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
+            String msg = "Exception while invoking " + method.getName()
+              + " of " + currentProxy.getClass()
+              + " after " + invocationFailoverCount + " fail over attempts."
+              + " Trying to fail over " + formatSleepMessage(action.delayMillis);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(msg, e);
+            } else {
+              LOG.warn(msg);
+            }
+          } else {
+            if(LOG.isDebugEnabled()) {
+              LOG.debug("Exception while invoking " + method.getName()
+                  + " of " + currentProxy.getClass() + ". Retrying " +
+                  formatSleepMessage(action.delayMillis), e);
+            }
+          }
           
           if (action.delayMillis > 0) {
             ThreadUtil.sleepAtLeastIgnoreInterrupts(action.delayMillis);
           }
           
           if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
-            LOG.warn("Exception while invoking " + method.getName()
-                + " of " + currentProxy.getClass()
-                + " after " + invocationFailoverCount + " fail over attempts."
-                + " Trying to fail over.", e);
             // Make sure that concurrent failed method invocations only cause a
             // single actual fail over.
             synchronized (proxyProvider) {
@@ -118,14 +132,18 @@ class RetryInvocationHandler implements InvocationHandler, Closeable {
             invocationFailoverCount++;
           }
         }
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Exception while invoking " + method.getName()
-              + " of " + currentProxy.getClass() + ". Retrying.", e);
-        }
       }
     }
   }
-
+  
+  private static String formatSleepMessage(long millis) {
+    if (millis > 0) {
+      return "after sleeping for " + millis + "ms.";
+    } else {
+      return "immediately.";
+    }
+  }
+  
   private Object invokeMethod(Method method, Object[] args) throws Throwable {
     try {
       if (!method.isAccessible()) {

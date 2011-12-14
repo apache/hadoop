@@ -10,3 +10,6 @@ HADOOP-7774. HA: Administrative CLI to control HA daemons. (todd)
 
 HADOOP-7896. HA: if both NNs are in Standby mode, client needs to try failing
              back and forth several times with sleeps. (atm)
+
+HADOOP-7922. Improve some logging for client IPC failovers and
+             StandbyExceptions (todd)
