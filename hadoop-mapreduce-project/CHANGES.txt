@@ -234,6 +234,9 @@ Release 0.23.1 - Unreleased
     in the correct directory to work properly in secure mode. (Hitesh Shah via
     vinodkv)
 
+    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be 
+    added as ivy dependency. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
