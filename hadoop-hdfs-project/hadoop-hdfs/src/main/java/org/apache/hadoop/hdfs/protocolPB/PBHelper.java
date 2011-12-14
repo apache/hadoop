@@ -1259,4 +1259,23 @@ public class PBHelper {
       throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" + s.getState());
     }
   }
+
+  public static NNHAStatusHeartbeatProto convert(NNHAStatusHeartbeat hb) {
+    if (hb == null) return null;
+    NNHAStatusHeartbeatProto.Builder builder =
+      NNHAStatusHeartbeatProto.newBuilder();
+    switch (hb.getState()) {
+      case ACTIVE:
+        builder.setState(NNHAStatusHeartbeatProto.State.ACTIVE);
+        break;
+      case STANDBY:
+        builder.setState(NNHAStatusHeartbeatProto.State.STANDBY);
+        break;
+      default:
+        throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" +
+            hb.getState());
+    }
+    builder.setTxid(hb.getTxId());
+    return builder.build();
+  }
 }
