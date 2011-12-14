@@ -88,8 +88,8 @@ public class NMController extends Controller implements YarnWebParams {
         containerId.getApplicationAttemptId().getApplicationId();
     Application app = nmContext.getApplications().get(appId);
     if (app == null
-        && nmConf.getBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED,
-            YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_ENABLED)) {
+        && nmConf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
       String logServerUrl = nmConf.get(YarnConfiguration.YARN_LOG_SERVER_URL);
       String redirectUrl = null;
       if (logServerUrl == null || logServerUrl.isEmpty()) {

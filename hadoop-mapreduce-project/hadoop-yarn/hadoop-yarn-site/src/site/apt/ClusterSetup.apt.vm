@@ -194,6 +194,10 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | | Defaults to special value of <<*>> which means <anyone>. |
 | | | Special value of just <space> means no one has access. |
 *-------------------------+-------------------------+------------------------+
+| <<<yarn.log-aggregation-enable>>> | | |
+| | <false> | |
+| | | Configuration to enable or disable log aggregation |
+*-------------------------+-------------------------+------------------------+
 
 
         * Configurations for ResourceManager:
@@ -259,10 +263,6 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | Comma-separated list of paths on the local filesystem where logs  | |
 | | are written. | |
 | | | Multiple paths help spread disk i/o. |
-*-------------------------+-------------------------+------------------------+
-| <<<yarn.nodemanager.log-aggregation-enable>>> | | |
-| | <false> | |
-| | | Configuration to enable or disable log aggregation |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.nodemanager.log.retain-seconds>>> | | |
 | | <10800> | |

@@ -242,6 +242,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives 
     dependency. (tucu)
 
+    MAPREDUCE-3398. Fixed log aggregation to work correctly in secure mode.
+    (Siddharth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

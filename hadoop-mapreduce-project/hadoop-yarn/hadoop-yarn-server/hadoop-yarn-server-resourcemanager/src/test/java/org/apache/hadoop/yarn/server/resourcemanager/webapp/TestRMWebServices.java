@@ -395,7 +395,7 @@ public class TestRMWebServices extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null));
+        new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm1.getNodeId(), RMNodeState.UNHEALTHY);
 
     JSONObject json = r.path("ws").path("v1").path("cluster").path("nodes")
