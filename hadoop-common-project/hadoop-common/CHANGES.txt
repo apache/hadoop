@@ -3,6 +3,7 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+    HADOOP-7920. Remove Avro Rpc. (suresh)
 
   NEW FEATURES
     HADOOP-7773. Add support for protocol buffer based RPC engine.
