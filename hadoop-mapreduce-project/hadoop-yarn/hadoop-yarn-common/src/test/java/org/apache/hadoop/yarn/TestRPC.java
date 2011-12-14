@@ -58,16 +58,6 @@ public class TestRPC {
   private static final String EXCEPTION_CAUSE = "exception cause";
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
-//  @Test
-//  public void testAvroRPC() throws Exception {
-//    test(AvroYarnRPC.class.getName());
-//  }
-//
-//  @Test
-//  public void testHadoopNativeRPC() throws Exception {
-//    test(HadoopYarnRPC.class.getName());
-//  }
-
   @Test
   public void testUnknownCall() {
     Configuration conf = new Configuration();

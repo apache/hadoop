@@ -60,7 +60,8 @@ public class MRBuilderUtils {
   public static JobReport newJobReport(JobId jobId, String jobName,
       String userName, JobState state, long submitTime, long startTime, long finishTime,
       float setupProgress, float mapProgress, float reduceProgress,
-      float cleanupProgress, String jobFile, List<AMInfo> amInfos) {
+      float cleanupProgress, String jobFile, List<AMInfo> amInfos,
+      boolean isUber) {
     JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(jobId);
     report.setJobName(jobName);
@@ -75,6 +76,7 @@ public class MRBuilderUtils {
     report.setReduceProgress(reduceProgress);
     report.setJobFile(jobFile);
     report.setAMInfos(amInfos);
+    report.setIsUber(isUber);
     return report;
   }
 

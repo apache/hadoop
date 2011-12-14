@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
-import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import com.google.inject.Inject;
 
 public class JobsBlock extends HtmlBlock {
   final AppContext appContext;
@@ -54,38 +55,31 @@ public class JobsBlock extends HtmlBlock {
             th("Reduces Total").
             th("Reduces Completed")._()._().
         tbody();
-    for (Job job : appContext.getAllJobs().values()) {
-      String jobID = MRApps.toString(job.getID());
-      JobReport report = job.getReport();
-      String mapPct = percent(report.getMapProgress());
-      String mapsTotal = String.valueOf(job.getTotalMaps());
-      String mapsCompleted = String.valueOf(job.getCompletedMaps());
-      String reducePct = percent(report.getReduceProgress());
-      String reduceTotal = String.valueOf(job.getTotalReduces());
-      String reduceCompleted = String.valueOf(job.getCompletedReduces());
+    for (Job j : appContext.getAllJobs().values()) {
+      JobInfo job = new JobInfo(j, false);
       tbody.
         tr().
           td().
-            span().$title(String.valueOf(job.getID().getId()))._(). // for sorting
-            a(url("job", jobID), jobID)._().
-          td(job.getName().toString()).
-          td(job.getState().toString()).
+            span().$title(String.valueOf(job.getId()))._(). // for sorting
+            a(url("job", job.getId()), job.getId())._().
+          td(job.getName()).
+          td(job.getState()).
           td().
-            span().$title(mapPct)._(). // for sorting
+            span().$title(job.getMapProgressPercent())._(). // for sorting
             div(_PROGRESSBAR).
-              $title(join(mapPct, '%')). // tooltip
+              $title(join(job.getMapProgressPercent(), '%')). // tooltip
               div(_PROGRESSBAR_VALUE).
-                $style(join("width:", mapPct, '%'))._()._()._().
-          td(mapsTotal).
-          td(mapsCompleted).
+                $style(join("width:", job.getMapProgressPercent(), '%'))._()._()._().
+          td(String.valueOf(job.getMapsTotal())).
+          td(String.valueOf(job.getMapsCompleted())).
           td().
-            span().$title(reducePct)._(). // for sorting
+            span().$title(job.getReduceProgressPercent())._(). // for sorting
             div(_PROGRESSBAR).
-              $title(join(reducePct, '%')). // tooltip
+              $title(join(job.getReduceProgressPercent(), '%')). // tooltip
               div(_PROGRESSBAR_VALUE).
-                $style(join("width:", reducePct, '%'))._()._()._().
-          td(reduceTotal).
-          td(reduceCompleted)._();
+                $style(join("width:", job.getReduceProgressPercent(), '%'))._()._()._().
+          td(String.valueOf(job.getReducesTotal())).
+          td(String.valueOf(job.getReducesCompleted()))._();
     }
     tbody._()._();
   }

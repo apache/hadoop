@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -72,13 +73,14 @@ public class AppController extends Controller implements AMParams {
    * Render the /info page with an overview of current application.
    */
   public void info() {
+    AppInfo info = new AppInfo(app, app.context);
     info("Application Master Overview").
-      _("Application ID:", $(APP_ID)).
-      _("Application Name:", app.context.getApplicationName()).
-      _("User:", app.context.getUser()).
-      _("Started on:", Times.format(app.context.getStartTime())).
+      _("Application ID:", info.getId()).
+      _("Application Name:", info.getName()).
+      _("User:", info.getUser()).
+      _("Started on:", Times.format(info.getStartTime())).
       _("Elasped: ", org.apache.hadoop.util.StringUtils.formatTime(
-        Times.elapsed(app.context.getStartTime(), 0)));
+          info.getElapsedTime() ));
     render(InfoPage.class);
   }
 

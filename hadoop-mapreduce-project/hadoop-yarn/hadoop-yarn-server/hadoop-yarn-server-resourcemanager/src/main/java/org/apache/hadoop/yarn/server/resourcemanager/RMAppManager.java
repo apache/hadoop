@@ -173,7 +173,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent> {
     } else {
       // Inform the DelegationTokenRenewer
       if (UserGroupInformation.isSecurityEnabled()) {
-        rmContext.getDelegationTokenRenewer().removeApplication(applicationId);
+        rmContext.getDelegationTokenRenewer().applicationFinished(applicationId);
       }
       
       completedApps.add(applicationId);  

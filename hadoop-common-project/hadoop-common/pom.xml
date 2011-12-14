@@ -240,11 +240,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro-ipc</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>net.sf.kosmosfs</groupId>
       <artifactId>kfs</artifactId>
       <scope>compile</scope>
@@ -282,7 +277,6 @@
             <phase>generate-test-sources</phase>
             <goals>
               <goal>schema</goal>
-              <goal>protocol</goal>
             </goals>
           </execution>
         </executions>

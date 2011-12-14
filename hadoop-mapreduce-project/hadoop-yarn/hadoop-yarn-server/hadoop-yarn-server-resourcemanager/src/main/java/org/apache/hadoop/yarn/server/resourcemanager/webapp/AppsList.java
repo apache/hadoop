@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.ToJSON;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
@@ -54,31 +55,27 @@ class AppsList implements ToJSON {
     out.append('[');
     boolean first = true;
     for (RMApp app : apps.values()) {
+      AppInfo appInfo = new AppInfo(app, false);
       if (first) {
         first = false;
       } else {
         out.append(",\n");
       }
-      String appID = app.getApplicationId().toString();
-      String trackingUrl = app.getTrackingUrl();
-      boolean trackingUrlIsNotReady = trackingUrl == null
-          || trackingUrl.isEmpty() || "N/A".equalsIgnoreCase(trackingUrl);
-      String ui = trackingUrlIsNotReady ? "UNASSIGNED"
-          : (app.getFinishTime() == 0 ? "ApplicationMaster" : "History");
       out.append("[\"");
-      appendSortable(out, app.getApplicationId().getId());
-      appendLink(out, appID, rc.prefix(), "app", appID).append(_SEP).
-          append(escapeHtml(app.getUser().toString())).append(_SEP).
-          append(escapeHtml(app.getName().toString())).append(_SEP).
-          append(escapeHtml(app.getQueue())).append(_SEP).
-          append(app.getState().toString()).append(_SEP).
-          append(app.getFinalApplicationStatus().toString()).append(_SEP);
-      appendProgressBar(out, app.getProgress()).append(_SEP);
-      appendLink(out, ui, rc.prefix(),
-          trackingUrlIsNotReady ?
-            "#" : "http://", trackingUrl).
+      appendSortable(out, appInfo.getAppIdNum());
+      appendLink(out, appInfo.getAppId(), rc.prefix(), "app",
+          appInfo.getAppId()).append(_SEP).
+          append(escapeHtml(appInfo.getUser())).append(_SEP).
+          append(escapeHtml(appInfo.getName())).append(_SEP).
+          append(escapeHtml(appInfo.getQueue())).append(_SEP).
+          append(appInfo.getState()).append(_SEP).
+          append(appInfo.getFinalStatus()).append(_SEP);
+      appendProgressBar(out, appInfo.getProgress()).append(_SEP);
+      appendLink(out, appInfo.getTrackingUI(), rc.prefix(),
+          !appInfo.isTrackingUrlReady() ?
+            "#" : appInfo.getTrackingUrlPretty()).
           append(_SEP).append(escapeJavaScript(escapeHtml(
-                              app.getDiagnostics().toString()))).
+                              appInfo.getNote()))).
           append("\"]");
     }
     out.append(']');

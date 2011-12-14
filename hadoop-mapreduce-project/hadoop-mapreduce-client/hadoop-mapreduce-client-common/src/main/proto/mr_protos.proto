@@ -152,6 +152,7 @@ message JobReportProto {
   optional string jobFile = 13;
   repeated AMInfoProto am_infos = 14;
   optional int64 submit_time = 15;
+  optional bool is_uber = 16 [default = false];
 }
 
 message AMInfoProto {

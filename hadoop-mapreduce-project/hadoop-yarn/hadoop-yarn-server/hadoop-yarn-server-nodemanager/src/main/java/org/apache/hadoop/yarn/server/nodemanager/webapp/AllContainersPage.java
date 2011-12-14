@@ -28,9 +28,9 @@ import java.util.Map.Entry;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.webapp.YarnWebParams;
+import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.BODY;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -83,17 +83,14 @@ public class AllContainersPage extends NMView {
           ._().tbody();
       for (Entry<ContainerId, Container> entry : this.nmContext
           .getContainers().entrySet()) {
-        ContainerId containerId = entry.getKey();
-        Container container = entry.getValue();
-        String containerIdStr = ConverterUtils.toString(containerId);
+        ContainerInfo info = new ContainerInfo(this.nmContext, entry.getValue());
         tableBody
           .tr()
-            .td().a(url("container", containerIdStr), containerIdStr)
+            .td().a(url("container", info.getId()), info.getId())
             ._()
-            .td()._(container.getContainerState())._()
+            .td()._(info.getState())._()
             .td()
-                .a(url("containerlogs", containerIdStr, container.getUser()),
-                    "logs")._()
+                .a(url(info.getShortLogLink()), "logs")._()
           ._();
       }
       tableBody._()._()._();

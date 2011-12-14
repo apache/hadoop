@@ -91,12 +91,7 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_CLIENT_THREAD_COUNT =
     RM_PREFIX + "client.thread-count";
   public static final int DEFAULT_RM_CLIENT_THREAD_COUNT = 10;
-  
-  /** The expiry interval for application master reporting.*/
-  public static final String RM_AM_EXPIRY_INTERVAL_MS = 
-    RM_PREFIX  + "am.liveness-monitor.expiry-interval-ms";
-  public static final int DEFAULT_RM_AM_EXPIRY_INTERVAL_MS = 600000;
-  
+
   /** The Kerberos principal for the resource manager.*/
   public static final String RM_PRINCIPAL =
     RM_PREFIX + "principal";
@@ -126,7 +121,17 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_RESOURCE_TRACKER_PORT = 8025;
   public static final String DEFAULT_RM_RESOURCE_TRACKER_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_RESOURCE_TRACKER_PORT;
-  
+
+  /** The expiry interval for application master reporting.*/
+  public static final String RM_AM_EXPIRY_INTERVAL_MS = 
+    YARN_PREFIX  + "am.liveness-monitor.expiry-interval-ms";
+  public static final int DEFAULT_RM_AM_EXPIRY_INTERVAL_MS = 600000;
+
+  /** How long to wait until a node manager is considered dead.*/
+  public static final String RM_NM_EXPIRY_INTERVAL_MS = 
+    YARN_PREFIX + "nm.liveness-monitor.expiry-interval-ms";
+  public static final int DEFAULT_RM_NM_EXPIRY_INTERVAL_MS = 600000;
+
   /** Are acls enabled.*/
   public static final String YARN_ACL_ENABLE = 
     YARN_PREFIX + "acl.enable";
@@ -160,12 +165,7 @@ public class YarnConfiguration extends Configuration {
   /** The keytab for the resource manager.*/
   public static final String RM_KEYTAB = 
     RM_PREFIX + "keytab";
-  
-  /** How long to wait until a node manager is considered dead.*/
-  public static final String RM_NM_EXPIRY_INTERVAL_MS = 
-    RM_PREFIX + "nm.liveness-monitor.expiry-interval-ms";
-  public static final int DEFAULT_RM_NM_EXPIRY_INTERVAL_MS = 600000;
-  
+
   /** How long to wait until a container is considered dead.*/
   public static final String RM_CONTAINER_ALLOC_EXPIRY_INTERVAL_MS = 
     RM_PREFIX + "rm.container-allocation.expiry-interval-ms";
@@ -293,10 +293,16 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LOG_DIRS = NM_PREFIX + "log-dirs";
   public static final String DEFAULT_NM_LOG_DIRS = "/tmp/logs";
 
+  /** Interval at which the delayed token removal thread runs */
+  public static final String RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
+      RM_PREFIX + "delayed.delegation-token.removal-interval-ms";
+  public static final long DEFAULT_RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
+      30000l;
+
   /** Whether to enable log aggregation */
-  public static final String NM_LOG_AGGREGATION_ENABLED = NM_PREFIX
+  public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";
-  public static final boolean DEFAULT_NM_LOG_AGGREGATION_ENABLED = false;
+  public static final boolean DEFAULT_LOG_AGGREGATION_ENABLED = false;
   
   /**
    * Number of seconds to retain logs on the NodeManager. Only applicable if Log

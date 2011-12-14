@@ -467,6 +467,7 @@ public class Job extends JobContextImpl implements JobContext {
     sb.append("Job File: ").append(status.getJobFile()).append("\n");
     sb.append("Job Tracking URL : ").append(status.getTrackingUrl());
     sb.append("\n");
+    sb.append("Uber job : ").append(status.isUber()).append("\n");
     sb.append("map() completion: ");
     sb.append(status.getMapProgress()).append("\n");
     sb.append("reduce() completion: ");
@@ -1268,12 +1269,20 @@ public class Job extends JobContextImpl implements JobContext {
       Job.getProgressPollInterval(clientConf);
     /* make sure to report full progress after the job is done */
     boolean reportedAfterCompletion = false;
+    boolean reportedUberMode = false;
     while (!isComplete() || !reportedAfterCompletion) {
       if (isComplete()) {
         reportedAfterCompletion = true;
       } else {
         Thread.sleep(progMonitorPollIntervalMillis);
       }
+      if (status.getState() == JobStatus.State.PREP) {
+        continue;
+      }      
+      if (!reportedUberMode) {
+        reportedUberMode = true;
+        LOG.info("Job " + jobId + " running in uber mode : " + isUber());
+      }      
       String report = 
         (" map " + StringUtils.formatPercent(mapProgress(), 0)+
             " reduce " + 
@@ -1497,4 +1506,10 @@ public class Job extends JobContextImpl implements JobContext {
     conf.set(Job.OUTPUT_FILTER, newValue.toString());
   }
 
+  public boolean isUber() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    updateStatus();
+    return status.isUber();
+  }
+  
 }

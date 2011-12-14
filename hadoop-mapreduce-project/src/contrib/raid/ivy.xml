@@ -61,6 +61,8 @@
                rev="${yarn.version}" conf="common->default"/>
    <dependency org="org.apache.hadoop" name="hadoop-yarn-common"
                rev="${yarn.version}" conf="common->default"/>
+   <dependency org="org.apache.hadoop" name="hadoop-archives" 
+               rev="${hadoop-common.version}" conf="common->default"/> 
 
     <dependency org="commons-logging"
       name="commons-logging"

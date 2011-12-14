@@ -72,7 +72,7 @@
 
   <property>
     <description>The expiry interval for application master reporting.</description>
-    <name>yarn.resourcemanager.am.liveness-monitor.expiry-interval-ms</name>
+    <name>yarn.am.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
   </property>
 
@@ -155,7 +155,7 @@
 
   <property>
     <description>How long to wait until a node manager is considered dead.</description>
-    <name>yarn.resourcemanager.nm.liveness-monitor.expiry-interval-ms</name>
+    <name>yarn.nm.liveness-monitor.expiry-interval-ms</name>
     <value>600000</value>
   </property>
 
@@ -208,6 +208,12 @@
     <description>The maximum number of completed applications RM keeps. </description>
     <name>yarn.resourcemanager.max-completed-applications</name>
     <value>10000</value>
+  </property>
+
+  <property>
+    <description>Interval at which the delayed token removal thread runs</description>
+    <name>yarn.resourcemanager.delayed.delegation-token.removal-interval-ms</name>
+    <value>30000</value>
   </property>
 
   <!-- Node Manager Configs -->
@@ -304,7 +310,7 @@
 
   <property>
     <description>Whether to enable log aggregation</description>
-    <name>yarn.nodemanager.log-aggregation-enable</name>
+    <name>yarn.log-aggregation-enable</name>
     <value>false</value>
   </property>
   

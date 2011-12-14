@@ -3,6 +3,7 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+    HADOOP-7920. Remove Avro Rpc. (suresh)
 
   NEW FEATURES
     HADOOP-7773. Add support for protocol buffer based RPC engine.
@@ -135,6 +136,10 @@ Trunk (unreleased changes)
     on UGI initialization only. (tucu)
 
     HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
+
+    HADOOP-7810. move hadoop archive to core from tools. (tucu)
+
+    HADOOP-7892. IPC logs too verbose after "RpcKind" introduction (todd)
 
   OPTIMIZATIONS
 

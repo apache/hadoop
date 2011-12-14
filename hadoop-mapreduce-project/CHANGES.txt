@@ -3,6 +3,7 @@ Hadoop MapReduce Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+    MAPREDUCE-3545. Remove Avro RPC. (suresh)
 
   NEW FEATURES
 
@@ -77,6 +78,12 @@ Trunk (unreleased changes)
     MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
     classpath from the build machine. (tucu)
 
+    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be added as 
+    ivy dependency. (tucu)
+
+    MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives dependency. 
+    (tucu)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -84,6 +91,9 @@ Release 0.23.1 - Unreleased
   NEW FEATURES                                                                    
    
    MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
+
+   MAPREDUCE-2863. Support web services for YARN and MR components. (Thomas
+   Graves via vinodkv)
 
   IMPROVEMENTS
 
@@ -275,6 +285,22 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3537. Fix race condition in DefaultContainerExecutor which led
     to container localization occuring in wrong directories. (acmurthy) 
+
+    MAPREDUCE-3542. Support "FileSystemCounter" legacy counter group name for
+    compatibility. (tomwhite)
+
+    MAPREDUCE-3426. Fixed MR AM in uber mode to write map intermediate outputs
+    in the correct directory to work properly in secure mode. (Hitesh Shah via
+    vinodkv)
+
+    MAPREDUCE-3541. Fix broken TestJobQueueClient test. (Ravi Prakash via 
+    mahadev)
+
+    MAPREDUCE-3398. Fixed log aggregation to work correctly in secure mode.
+    (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-3530. Fixed an NPE occuring during scheduling in the
+    ResourceManager. (Arun C Murthy via vinodkv)
 
 Release 0.23.0 - 2011-11-01 
 

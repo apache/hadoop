@@ -109,7 +109,14 @@ class JobQueueClient extends Configured implements Tool {
     return exitcode;
   }
 
+// format and print information about the passed in job queue.
+  void printJobQueueInfo(JobQueueInfo jobQueueInfo, Writer writer)
+    throws IOException {
+    printJobQueueInfo(jobQueueInfo, writer, "");
+  }
+
   // format and print information about the passed in job queue.
+  @SuppressWarnings("deprecation")
   void printJobQueueInfo(JobQueueInfo jobQueueInfo, Writer writer,
     String prefix) throws IOException {
     if (jobQueueInfo == null) {
@@ -136,7 +143,7 @@ class JobQueueClient extends Configured implements Tool {
   private void displayQueueList() throws IOException {
     JobQueueInfo[] rootQueues = jc.getRootQueues();
     for (JobQueueInfo queue : rootQueues) {
-      printJobQueueInfo(queue, new PrintWriter(System.out), "");
+      printJobQueueInfo(queue, new PrintWriter(System.out));
     }
   }
   
@@ -174,7 +181,7 @@ class JobQueueClient extends Configured implements Tool {
       System.out.println("Queue \"" + queue + "\" does not exist.");
       return;
     }
-    printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out), "");
+    printJobQueueInfo(jobQueueInfo, new PrintWriter(System.out));
     if (showJobs && (jobQueueInfo.getChildren() == null ||
         jobQueueInfo.getChildren().size() == 0)) {
       JobStatus[] jobs = jc.getJobsFromQueue(queue);

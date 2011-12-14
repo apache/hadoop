@@ -18,23 +18,29 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.percent;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
+
 import java.util.Collection;
 
-import com.google.common.base.Joiner;
-import com.google.inject.Inject;
-
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-import static org.apache.hadoop.yarn.util.StringHelper.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+
+import com.google.inject.Inject;
 
 public class TaskPage extends AppView {
 
@@ -66,24 +72,26 @@ public class TaskPage extends AppView {
             th(".tsh", "Elapsed").
             th(".note", "Note")._()._().
         tbody();
-      for (TaskAttempt ta : getTaskAttempts()) {
-        String taid = MRApps.toString(ta.getID());
-        String progress = percent(ta.getProgress());
-        ContainerId containerId = ta.getAssignedContainerID();
+      for (TaskAttempt attempt : getTaskAttempts()) {
+        TaskAttemptInfo ta = new TaskAttemptInfo(attempt, true);
+        String taid = ta.getId();
+        String progress = percent(ta.getProgress() / 100);
+        ContainerId containerId = ta.getAssignedContainerId();
 
-        String nodeHttpAddr = ta.getNodeHttpAddress();
-        long startTime = ta.getLaunchTime();
+        String nodeHttpAddr = ta.getNode();
+        long startTime = ta.getStartTime();
         long finishTime = ta.getFinishTime();
-        long elapsed = Times.elapsed(startTime, finishTime);
+        long elapsed = ta.getElapsedTime();
+        String diag = ta.getNote() == null ? "" : ta.getNote();
         TD<TR<TBODY<TABLE<Hamlet>>>> nodeTd = tbody.
           tr().
             td(".id", taid).
             td(".progress", progress).
-            td(".state", ta.getState().toString()).
+            td(".state", ta.getState()).
             td().
               a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
         if (containerId != null) {
-          String containerIdStr = ConverterUtils.toString(containerId);
+          String containerIdStr = ta.getAssignedContainerIdStr();
           nodeTd._(" ").
             a(".logslink", url("http://", nodeHttpAddr, "node", "containerlogs",
               containerIdStr, app.getJob().getUserName()), "logs");
@@ -92,7 +100,7 @@ public class TaskPage extends AppView {
           td(".ts", Times.format(startTime)).
           td(".ts", Times.format(finishTime)).
           td(".dt", StringUtils.formatTime(elapsed)).
-          td(".note", Joiner.on('\n').join(ta.getDiagnostics()))._();
+          td(".note", diag)._();
       }
       tbody._()._();
     }

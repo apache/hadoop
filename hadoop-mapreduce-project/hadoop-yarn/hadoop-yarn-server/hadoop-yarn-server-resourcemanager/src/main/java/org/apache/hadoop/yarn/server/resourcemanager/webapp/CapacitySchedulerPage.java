@@ -18,19 +18,23 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Inject;
-import com.google.inject.servlet.RequestScoped;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
+import com.google.inject.Inject;
+import com.google.inject.servlet.RequestScoped;
 
 class CapacitySchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
@@ -47,22 +51,21 @@ class CapacitySchedulerPage extends RmView {
 
   public static class QueueBlock extends HtmlBlock {
     final Parent parent;
+    final CapacitySchedulerInfo sinfo;
 
     @Inject QueueBlock(Parent parent) {
       this.parent = parent;
+      sinfo = new CapacitySchedulerInfo(parent.queue);
     }
 
     @Override
     public void render(Block html) {
       UL<Hamlet> ul = html.ul();
-      CSQueue parentQueue = parent.queue;
-      for (CSQueue queue : parentQueue.getChildQueues()) {
-        float used = queue.getUsedCapacity();
-        float set = queue.getCapacity();
+      for (CapacitySchedulerQueueInfo info : sinfo.getSubQueues()) {
+        float used = info.getUsedCapacity() / 100;
+        float set = info.getCapacity() / 100;
         float delta = Math.abs(set - used) + 0.001f;
-        float max = queue.getMaximumCapacity();
-        if (max < EPSILON || max > 1f) max = 1f;
-        //String absMaxPct = percent(queue.getAbsoluteMaximumCapacity());
+        float max = info.getMaxCapacity() / 100;
         LI<UL<Hamlet>> li = ul.
           li().
             a(_Q).$style(width(max * WIDTH_F)).
@@ -72,14 +75,16 @@ class CapacitySchedulerPage extends RmView {
               span().$style(join(width(delta/max), ';',
                 used > set ? OVER : UNDER, ';',
                 used > set ? left(set/max) : left(used/max)))._('.')._().
-              span(".q", queue.getQueuePath().substring(5))._();
-        if (queue instanceof ParentQueue) {
-          parent.queue = queue;
+              span(".q", info.getQueuePath().substring(5))._();
+        if (info.getQueue() instanceof ParentQueue) {
+          // this could be optimized better
+          parent.queue = info.getQueue();
           li.
             _(QueueBlock.class);
         }
         li._();
       }
+
       ul._();
     }
   }
@@ -111,8 +116,9 @@ class CapacitySchedulerPage extends RmView {
       } else {
         CSQueue root = cs.getRootQueue();
         parent.queue = root;
-        float used = root.getUsedCapacity();
-        float set = root.getCapacity();
+        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(parent.queue);
+        float used = sinfo.getUsedCapacity() / 100;
+        float set = sinfo.getCapacity() / 100;
         float delta = Math.abs(set - used) + 0.001f;
         ul.
           li().

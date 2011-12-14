@@ -21,7 +21,7 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
-import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.HistoryInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -45,8 +45,9 @@ public class HsAboutPage extends HsView {
    * @return AttemptsBlock.class
    */
   @Override protected Class<? extends SubView> content() {
+    HistoryInfo info = new HistoryInfo();
     info("History Server").
-      _("BuildVersion", VersionInfo.getBuildVersion());
+      _("BuildVersion", info.getHadoopBuildVersion() + " on " + info.getHadoopVersionBuiltOn());
     return InfoBlock.class;
   }
 }

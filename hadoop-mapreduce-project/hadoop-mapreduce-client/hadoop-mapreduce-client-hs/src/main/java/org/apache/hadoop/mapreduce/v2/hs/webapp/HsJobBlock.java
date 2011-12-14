@@ -34,6 +34,9 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.AMAttemptInfo;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -56,19 +59,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 public class HsJobBlock extends HtmlBlock {
   final AppContext appContext;
 
-  int killedMapAttempts = 0;
-  int failedMapAttempts = 0;
-  int successfulMapAttempts = 0;
-  int killedReduceAttempts = 0;
-  int failedReduceAttempts = 0;
-  int successfulReduceAttempts = 0;
-  long avgMapTime = 0;
-  long avgReduceTime = 0;
-  long avgShuffleTime = 0;
-  long avgSortTime = 0;
-  int numMaps;
-  int numReduces;
-
   @Inject HsJobBlock(AppContext appctx) {
     appContext = appctx;
   }
@@ -85,37 +75,30 @@ public class HsJobBlock extends HtmlBlock {
       return;
     }
     JobId jobID = MRApps.toJobID(jid);
-    Job job = appContext.getJob(jobID);
-    if (job == null) {
+    Job j = appContext.getJob(jobID);
+    if (j == null) {
       html.
         p()._("Sorry, ", jid, " not found.")._();
       return;
     }
-    Map<JobACL, AccessControlList> acls = job.getJobACLs();
-    List<AMInfo> amInfos = job.getAMInfos();
-    JobReport jobReport = job.getReport();
-    int mapTasks = job.getTotalMaps();
-    int mapTasksComplete = job.getCompletedMaps();
-    int reduceTasks = job.getTotalReduces();
-    int reducesTasksComplete = job.getCompletedReduces();
-    long startTime = jobReport.getStartTime();
-    long finishTime = jobReport.getFinishTime();
-    countTasksAndAttempts(job);
+    List<AMInfo> amInfos = j.getAMInfos();
+    JobInfo job = new JobInfo(j);
     ResponseInfo infoBlock = info("Job Overview").
         _("Job Name:", job.getName()).
         _("User Name:", job.getUserName()).
         _("Queue:", job.getQueueName()).
         _("State:", job.getState()).
         _("Uberized:", job.isUber()).
-        _("Started:", new Date(startTime)).
-        _("Finished:", new Date(finishTime)).
+        _("Started:", new Date(job.getStartTime())).
+        _("Finished:", new Date(job.getFinishTime())).
         _("Elapsed:", StringUtils.formatTime(
-            Times.elapsed(startTime, finishTime, false)));
+            Times.elapsed(job.getStartTime(), job.getFinishTime(), false)));
     
     String amString =
         amInfos.size() == 1 ? "ApplicationMaster" : "ApplicationMasters"; 
     
-    List<String> diagnostics = job.getDiagnostics();
+    // todo - switch to use JobInfo
+    List<String> diagnostics = j.getDiagnostics();
     if(diagnostics != null && !diagnostics.isEmpty()) {
       StringBuffer b = new StringBuffer();
       for(String diag: diagnostics) {
@@ -124,18 +107,17 @@ public class HsJobBlock extends HtmlBlock {
       infoBlock._("Diagnostics:", b.toString());
     }
 
-    if(numMaps > 0) {
-      infoBlock._("Average Map Time", StringUtils.formatTime(avgMapTime));
+    if(job.getNumMaps() > 0) {
+      infoBlock._("Average Map Time", StringUtils.formatTime(job.getAvgMapTime()));
     }
-    if(numReduces > 0) {
-      infoBlock._("Average Reduce Time", StringUtils.formatTime(avgReduceTime));
-      infoBlock._("Average Shuffle Time", StringUtils.formatTime(avgShuffleTime));
-      infoBlock._("Average Merge Time", StringUtils.formatTime(avgSortTime));
+    if(job.getNumReduces() > 0) {
+      infoBlock._("Average Reduce Time", StringUtils.formatTime(job.getAvgReduceTime()));
+      infoBlock._("Average Shuffle Time", StringUtils.formatTime(job.getAvgShuffleTime()));
+      infoBlock._("Average Merge Time", StringUtils.formatTime(job.getAvgMergeTime()));
     }
 
-    for(Map.Entry<JobACL, AccessControlList> entry : acls.entrySet()) {
-      infoBlock._("ACL "+entry.getKey().getAclName()+":",
-          entry.getValue().getAclString());
+    for (ConfEntryInfo entry : job.getAcls()) {
+      infoBlock._("ACL "+entry.getName()+":", entry.getValue());
     }
     DIV<Hamlet> div = html.
       _(InfoBlock.class).
@@ -154,18 +136,14 @@ public class HsJobBlock extends HtmlBlock {
             th(_TH, "Logs").
             _();
           for (AMInfo amInfo : amInfos) {
-            String nodeHttpAddress = amInfo.getNodeManagerHost() + 
-                ":" + amInfo.getNodeManagerHttpPort();
-            NodeId nodeId = BuilderUtils.newNodeId(
-                amInfo.getNodeManagerHost(), amInfo.getNodeManagerPort());
-            
+            AMAttemptInfo attempt = new AMAttemptInfo(amInfo,
+                job.getId(), job.getUserName(), "", "");
             table.tr().
-              td(String.valueOf(amInfo.getAppAttemptId().getAttemptId())).
-              td(new Date(amInfo.getStartTime()).toString()).
-              td().a(".nodelink", url("http://", nodeHttpAddress), 
-                  nodeHttpAddress)._().
-              td().a(".logslink", url("logs", nodeId.toString(), 
-                  amInfo.getContainerId().toString(), jid, job.getUserName()), 
+              td(String.valueOf(attempt.getAttemptId())).
+              td(new Date(attempt.getStartTime()).toString()).
+              td().a(".nodelink", url("http://", attempt.getNodeHttpAddress()), 
+                  attempt.getNodeHttpAddress())._().
+              td().a(".logslink", url(attempt.getShortLogsLink()), 
                       "logs")._().
             _();
           }
@@ -184,13 +162,13 @@ public class HsJobBlock extends HtmlBlock {
           tr(_ODD).
             th().
               a(url("tasks", jid, "m"), "Map")._().
-            td(String.valueOf(mapTasks)).
-            td(String.valueOf(mapTasksComplete))._().
+            td(String.valueOf(String.valueOf(job.getMapsTotal()))).
+            td(String.valueOf(String.valueOf(job.getMapsCompleted())))._().
           tr(_EVEN).
             th().
               a(url("tasks", jid, "r"), "Reduce")._().
-            td(String.valueOf(reduceTasks)).
-            td(String.valueOf(reducesTasksComplete))._()
+            td(String.valueOf(String.valueOf(job.getReducesTotal()))).
+            td(String.valueOf(String.valueOf(job.getReducesCompleted())))._()
           ._().
 
         // Attempts table
@@ -204,99 +182,27 @@ public class HsJobBlock extends HtmlBlock {
           th("Maps").
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.FAILED.toString()), 
-              String.valueOf(failedMapAttempts))._().
+              String.valueOf(job.getFailedMapAttempts()))._().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.KILLED.toString()), 
-              String.valueOf(killedMapAttempts))._().
+              String.valueOf(job.getKilledMapAttempts()))._().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.SUCCESSFUL.toString()), 
-              String.valueOf(successfulMapAttempts))._().
+              String.valueOf(job.getSuccessfulMapAttempts()))._().
         _().
         tr(_EVEN).
           th("Reduces").
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.FAILED.toString()), 
-              String.valueOf(failedReduceAttempts))._().
+              String.valueOf(job.getFailedReduceAttempts()))._().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.KILLED.toString()), 
-              String.valueOf(killedReduceAttempts))._().
+              String.valueOf(job.getKilledReduceAttempts()))._().
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.SUCCESSFUL.toString()), 
-              String.valueOf(successfulReduceAttempts))._().
+              String.valueOf(job.getSuccessfulReduceAttempts()))._().
          _().
        _().
      _();
-  }
-
-  /**
-   * Go through a job and update the member variables with counts for
-   * information to output in the page.
-   * @param job the job to get counts for.
-   */
-  private void countTasksAndAttempts(Job job) {
-    numReduces = 0;
-    numMaps = 0;
-    Map<TaskId, Task> tasks = job.getTasks();
-    for (Task task : tasks.values()) {
-      // Attempts counts
-      Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
-      for (TaskAttempt attempt : attempts.values()) {
-
-        int successful = 0, failed = 0, killed =0;
-
-        if (TaskAttemptStateUI.NEW.correspondsTo(attempt.getState())) {
-          //Do Nothing
-        } else if (TaskAttemptStateUI.RUNNING.correspondsTo(attempt
-            .getState())) {
-          //Do Nothing
-        } else if (TaskAttemptStateUI.SUCCESSFUL.correspondsTo(attempt
-            .getState())) {
-          ++successful;
-        } else if (TaskAttemptStateUI.FAILED
-            .correspondsTo(attempt.getState())) {
-          ++failed;
-        } else if (TaskAttemptStateUI.KILLED
-            .correspondsTo(attempt.getState())) {
-          ++killed;
-        }
-
-        switch (task.getType()) {
-        case MAP:
-          successfulMapAttempts += successful;
-          failedMapAttempts += failed;
-          killedMapAttempts += killed;
-          if(attempt.getState() == TaskAttemptState.SUCCEEDED) {
-            numMaps++;
-            avgMapTime += (attempt.getFinishTime() -
-                attempt.getLaunchTime());
-          }
-          break;
-        case REDUCE:
-          successfulReduceAttempts += successful;
-          failedReduceAttempts += failed;
-          killedReduceAttempts += killed;
-          if(attempt.getState() == TaskAttemptState.SUCCEEDED) {
-            numReduces++;
-            avgShuffleTime += (attempt.getShuffleFinishTime() - 
-                attempt.getLaunchTime());
-            avgSortTime += attempt.getSortFinishTime() - 
-                attempt.getLaunchTime();
-            avgReduceTime += (attempt.getFinishTime() -
-                attempt.getShuffleFinishTime());
-          }
-          break;
-        }
-      }
-    }
-
-    if(numMaps > 0) {
-      avgMapTime = avgMapTime / numMaps;
-    }
-    
-    if(numReduces > 0) {
-      avgReduceTime = avgReduceTime / numReduces;
-      avgShuffleTime = avgShuffleTime / numReduces;
-      avgSortTime = avgSortTime / numReduces;
-    }
   }
 }

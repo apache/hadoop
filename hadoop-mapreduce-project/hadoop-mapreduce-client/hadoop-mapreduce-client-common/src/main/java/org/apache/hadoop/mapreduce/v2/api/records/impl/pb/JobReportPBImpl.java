@@ -332,4 +332,16 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements
   private JobState convertFromProtoFormat(JobStateProto e) {
     return MRProtoUtils.convertFromProtoFormat(e);
   }
+
+  @Override
+  public synchronized boolean isUber() {
+    JobReportProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getIsUber();
+  }
+
+  @Override
+  public synchronized void setIsUber(boolean isUber) {
+    maybeInitBuilder();
+    builder.setIsUber(isUber);
+  }
 }  

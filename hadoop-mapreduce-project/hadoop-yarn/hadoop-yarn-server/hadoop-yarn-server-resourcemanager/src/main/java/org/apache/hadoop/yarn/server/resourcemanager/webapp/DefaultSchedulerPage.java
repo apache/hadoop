@@ -18,22 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
-import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.QueueState;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
-import static org.apache.hadoop.yarn.util.StringHelper.*;
+import com.google.inject.Inject;
 
 class DefaultSchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
@@ -44,66 +42,35 @@ class DefaultSchedulerPage extends RmView {
   static final float EPSILON = 1e-8f;
 
   static class QueueInfoBlock extends HtmlBlock {
-    final RMContext rmContext;
-    final FifoScheduler fs;
-    final String qName;
-    final QueueInfo qInfo;
+    final FifoSchedulerInfo sinfo;
 
     @Inject QueueInfoBlock(RMContext context, ViewContext ctx, ResourceManager rm) {
       super(ctx);
-      this.rmContext = context;
-
-      fs = (FifoScheduler) rm.getResourceScheduler();
-      qName = fs.getQueueInfo("",false,false).getQueueName();
-      qInfo = fs.getQueueInfo(qName,true,true);
+      sinfo = new FifoSchedulerInfo(rm);
     }
 
     @Override public void render(Block html) {
-      String minmemoryresource = 
-                Integer.toString(fs.getMinimumResourceCapability().getMemory());
-      String maxmemoryresource = 
-                Integer.toString(fs.getMaximumResourceCapability().getMemory());
-      String qstate = (qInfo.getQueueState() == QueueState.RUNNING) ?
-                       "Running" :
-                           (qInfo.getQueueState() == QueueState.STOPPED) ?
-                                  "Stopped" : "Unknown";
-
-      int usedNodeMem      = 0;
-      int availNodeMem     = 0;
-      int totNodeMem       = 0;
-      int nodeContainers   = 0;
-
-      for (RMNode ni : this.rmContext.getRMNodes().values()) {
-        SchedulerNodeReport report = fs.getNodeReport(ni.getNodeID());
-        usedNodeMem += report.getUsedResource().getMemory();
-        availNodeMem += report.getAvailableResource().getMemory();
-        totNodeMem += ni.getTotalCapability().getMemory();
-        nodeContainers += fs.getNodeReport(ni.getNodeID()).getNumContainers();
-      }
-
-      info("\'" + qName + "\' Queue Status").
-        _("Queue State:" , qstate).
-        _("Minimum Queue Memory Capacity:" , minmemoryresource).
-        _("Maximum Queue Memory Capacity:" , maxmemoryresource).
-        _("Number of Nodes:" , Integer.toString(this.rmContext.getRMNodes().size())).
-        _("Used Node Capacity:" , Integer.toString(usedNodeMem)).
-        _("Available Node Capacity:" , Integer.toString(availNodeMem)).
-        _("Total Node Capacity:" , Integer.toString(totNodeMem)).
-        _("Number of Node Containers:" , Integer.toString(nodeContainers));
+      info("\'" + sinfo.getQueueName() + "\' Queue Status").
+        _("Queue State:" , sinfo.getState()).
+        _("Minimum Queue Memory Capacity:" , Integer.toString(sinfo.getMinQueueMemoryCapacity())).
+        _("Maximum Queue Memory Capacity:" , Integer.toString(sinfo.getMaxQueueMemoryCapacity())).
+        _("Number of Nodes:" , Integer.toString(sinfo.getNumNodes())).
+        _("Used Node Capacity:" , Integer.toString(sinfo.getUsedNodeCapacity())).
+        _("Available Node Capacity:" , Integer.toString(sinfo.getAvailNodeCapacity())).
+        _("Total Node Capacity:" , Integer.toString(sinfo.getTotalNodeCapacity())).
+        _("Number of Node Containers:" , Integer.toString(sinfo.getNumContainers()));
 
       html._(InfoBlock.class);
     }
   }
 
   static class QueuesBlock extends HtmlBlock {
+    final FifoSchedulerInfo sinfo;
     final FifoScheduler fs;
-    final String qName;
-    final QueueInfo qInfo;
 
     @Inject QueuesBlock(ResourceManager rm) {
+      sinfo = new FifoSchedulerInfo(rm);
       fs = (FifoScheduler) rm.getResourceScheduler();
-      qName = fs.getQueueInfo("",false,false).getQueueName();
-      qInfo = fs.getQueueInfo(qName,false,false);
     }
 
     @Override
@@ -123,8 +90,8 @@ class DefaultSchedulerPage extends RmView {
               span().$style(Q_END)._("100% ")._().
               span(".q", "default")._()._();
       } else {
-        float used = qInfo.getCurrentCapacity();
-        float set = qInfo.getCapacity();
+        float used = sinfo.getUsedCapacity();
+        float set = sinfo.getCapacity();
         float delta = Math.abs(set - used) + 0.001f;
         ul.
           li().
@@ -133,7 +100,7 @@ class DefaultSchedulerPage extends RmView {
               span().$style(Q_END)._("100%")._().
               span().$style(join(width(delta), ';', used > set ? OVER : UNDER,
                 ';', used > set ? left(set) : left(used)))._(".")._().
-              span(".q", qName)._().
+              span(".q", sinfo.getQueueName())._().
             _(QueueInfoBlock.class)._();
       }
 

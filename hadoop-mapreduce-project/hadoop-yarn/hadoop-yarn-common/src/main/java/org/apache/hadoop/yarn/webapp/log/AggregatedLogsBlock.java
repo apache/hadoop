@@ -53,8 +53,8 @@ public class AggregatedLogsBlock extends HtmlBlock {
       logEntity = containerId.toString();
     }
 
-    if (!conf.getBoolean(YarnConfiguration.NM_LOG_AGGREGATION_ENABLED,
-        YarnConfiguration.DEFAULT_NM_LOG_AGGREGATION_ENABLED)) {
+    if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
       html.h1()
           ._("Aggregation is not enabled. Try the nodemanager at " + nodeId)
           ._();
