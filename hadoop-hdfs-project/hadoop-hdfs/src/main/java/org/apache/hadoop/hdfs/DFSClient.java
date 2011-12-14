@@ -147,6 +147,9 @@ public class DFSClient implements java.io.Closeable {
    * DFSClient configuration 
    */
   static class Conf {
+    final int maxFailoverAttempts;
+    final int failoverSleepBaseMillis;
+    final int failoverSleepMaxMillis;
     final int maxBlockAcquireFailures;
     final int confTime;
     final int ioBufferSize;
@@ -168,6 +171,16 @@ public class DFSClient implements java.io.Closeable {
     final boolean useLegacyBlockReader;
 
     Conf(Configuration conf) {
+      maxFailoverAttempts = conf.getInt(
+          DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
+          DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
+      failoverSleepBaseMillis = conf.getInt(
+          DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY,
+          DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT);
+      failoverSleepMaxMillis = conf.getInt(
+          DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY,
+          DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT);
+
       maxBlockAcquireFailures = conf.getInt(
           DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
           DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
@@ -306,7 +319,12 @@ public class DFSClient implements java.io.Closeable {
       FailoverProxyProvider failoverProxyProvider = (FailoverProxyProvider)
           ReflectionUtils.newInstance(failoverProxyProviderClass, conf);
       this.namenode = (ClientProtocol)RetryProxy.create(ClientProtocol.class,
-          failoverProxyProvider, RetryPolicies.failoverOnNetworkException(1));
+          failoverProxyProvider,
+          RetryPolicies.failoverOnNetworkException(
+              RetryPolicies.TRY_ONCE_THEN_FAIL,
+              dfsClientConf.maxFailoverAttempts,
+              dfsClientConf.failoverSleepBaseMillis,
+              dfsClientConf.failoverSleepMaxMillis));
       nnAddress = null;
     } else if (nameNodeUri != null && rpcNamenode == null) {
       this.namenode = DFSUtil.createNamenode(NameNode.getAddress(nameNodeUri), conf);

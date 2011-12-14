@@ -51,3 +51,5 @@ HDFS-2627. Determine DN's view of which NN is active based on heartbeat response
 HDFS-2634. Standby needs to ingest latest edit logs before transitioning to active (todd)
 
 HDFS-2671. NN should throw StandbyException in response to RPCs in STANDBY state (todd)
+
+HDFS-2680. DFSClient should construct failover proxy with exponential backoff (todd)
