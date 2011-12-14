@@ -115,6 +115,8 @@ Trunk (unreleased changes)
 
     HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh).
 
+    HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)

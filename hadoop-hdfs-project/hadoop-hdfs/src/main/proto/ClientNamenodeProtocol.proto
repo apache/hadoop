@@ -74,7 +74,7 @@ message AppendRequestProto {
 }
 
 message AppendResponseProto {
-  required LocatedBlockProto block = 1;
+  optional LocatedBlockProto block = 1;
 }
 
 message SetReplicationRequestProto {
@@ -96,8 +96,8 @@ message SetPermissionResponseProto { // void response
 
 message SetOwnerRequestProto {
   required string src = 1;
-  required string username = 2;
-  required string groupname = 3;
+  optional string username = 2;
+  optional string groupname = 3;
 }
 
 message SetOwnerResponseProto { // void response
@@ -139,7 +139,7 @@ message GetAdditionalDatanodeResponseProto {
 message CompleteRequestProto {
   required string src = 1;
   required string clientName = 2;
-  required ExtendedBlockProto last = 3;
+  optional ExtendedBlockProto last = 3;
 }
 
 message CompleteResponseProto {
@@ -204,7 +204,7 @@ message GetListingRequestProto {
   required bool needLocation = 3;
 }
 message GetListingResponseProto {
-  required DirectoryListingProto dirList = 1;
+  optional DirectoryListingProto dirList = 1;
 }
 
 message RenewLeaseRequestProto {
@@ -311,7 +311,7 @@ message DistributedUpgradeProgressResponseProto {
 
 message ListCorruptFileBlocksRequestProto {
   required string path = 1;
-  required string cookie = 2;
+  optional string cookie = 2;
 }
 
 message ListCorruptFileBlocksResponseProto {
@@ -338,7 +338,7 @@ message GetFileLinkInfoRequestProto {
 }
 
 message GetFileLinkInfoResponseProto {
-  required HdfsFileStatusProto fs = 1;
+  optional HdfsFileStatusProto fs = 1;
 }
 
 message GetContentSummaryRequestProto {
