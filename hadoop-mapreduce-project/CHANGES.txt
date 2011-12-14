@@ -77,6 +77,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
     classpath from the build machine. (tucu)
 
+    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be added as 
+    ivy dependency. (tucu)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
