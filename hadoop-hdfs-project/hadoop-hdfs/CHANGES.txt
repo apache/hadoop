@@ -12,6 +12,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2594. Support getDelegationTokens and createSymlink in WebHDFS.
     (szetszwo)
 
+    HDFS-2545. Change WebHDFS to support multiple namenodes in federation.
+    (szetszwo)
+
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 
