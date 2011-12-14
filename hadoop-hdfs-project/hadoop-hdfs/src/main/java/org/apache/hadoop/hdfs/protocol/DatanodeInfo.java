@@ -36,8 +36,6 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.avro.reflect.Nullable;
-
 /** 
  * DatanodeInfo represents the status of a DataNode.
  * This object is used for communication in the
@@ -57,7 +55,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /** HostName as supplied by the datanode during registration as its 
    * name. Namenode uses datanode IP address as the name.
    */
-  @Nullable
   protected String hostName = null;
   
   // administrative states of a datanode
@@ -84,9 +81,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
   }
 
-  @Nullable
   protected AdminStates adminState;
-
 
   public DatanodeInfo() {
     super();

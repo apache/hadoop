@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.protocolR23Compatible;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.apache.avro.reflect.Nullable;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CreateFlag;
@@ -97,7 +95,6 @@ public interface ClientNamenodeWireProtocol extends VersionedProtocol {
    * The specification of this method matches that of
    * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#getBlockLocations}
    */
-  @Nullable
   public LocatedBlocksWritable getBlockLocations(String src,
                                          long offset,
                                          long length) 
@@ -175,7 +172,7 @@ public interface ClientNamenodeWireProtocol extends VersionedProtocol {
    * org.apache.hadoop.hdfs.protocol.DatanodeInfo[])}
    */
   public LocatedBlockWritable addBlock(String src, String clientName,
-      @Nullable ExtendedBlockWritable previous, @Nullable DatanodeInfoWritable[] excludeNodes)
+      ExtendedBlockWritable previous, DatanodeInfoWritable[] excludeNodes)
       throws AccessControlException, FileNotFoundException,
       NotReplicatedYetException, SafeModeException, UnresolvedLinkException,
       IOException;
@@ -344,7 +341,6 @@ public interface ClientNamenodeWireProtocol extends VersionedProtocol {
    * The specification of this method matches that of
    * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#distributedUpgradeProgress}
    */
-  @Nullable
   public UpgradeStatusReportWritable distributedUpgradeProgress(
       UpgradeAction action) 
       throws IOException;
@@ -373,7 +369,6 @@ public interface ClientNamenodeWireProtocol extends VersionedProtocol {
    * The specification of this method matches that of
    * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#getFileInfo(String)}
    */
-  @Nullable
   public HdfsFileStatusWritable getFileInfo(String src)
       throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;

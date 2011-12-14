@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.protocolR23Compatible;
 
 import java.io.IOException;
 
-import org.apache.avro.reflect.Nullable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -98,7 +97,6 @@ public interface DatanodeWireProtocol extends VersionedProtocol {
    * @param failedVolumes number of failed volumes
    * @throws IOException on error
    */
-  @Nullable
   public DatanodeCommandWritable[] sendHeartbeat(
       DatanodeRegistrationWritable registration, long capacity, long dfsUsed,
       long remaining, long blockPoolUsed, int xmitsInProgress,

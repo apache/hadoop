@@ -1,6 +1,9 @@
 Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
+  INCOMPATIBLE CHANGES
+    HDFS-2676. Remove Avro RPC. (suresh)
+
   NEW FEATURES
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
     via hairong)
