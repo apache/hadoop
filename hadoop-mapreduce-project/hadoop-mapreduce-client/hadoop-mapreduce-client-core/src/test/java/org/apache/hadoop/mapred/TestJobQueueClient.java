@@ -45,7 +45,7 @@ public class TestJobQueueClient {
 
     ByteArrayOutputStream bbos = new ByteArrayOutputStream();
     PrintWriter writer = new PrintWriter(bbos);
-    queueClient.printJobQueueInfo(parent, writer, "");
+    queueClient.printJobQueueInfo(parent, writer);
 
     Assert.assertTrue("printJobQueueInfo did not print grandchild's name",
       bbos.toString().contains("GrandChildQueue"));

@@ -30,6 +30,8 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.junit.After;
 import org.junit.Test;
@@ -79,14 +81,11 @@ public class TestJobQueueClient {
     StringWriter writer = new StringWriter();
     client.printJobQueueInfo(root, writer);
     
-    StringBuffer sb = new StringBuffer();
-    sb.append("Queue Name : q1 \n");
-    sb.append("Queue State : running \n");
-    sb.append("Scheduling Info : q1 scheduling info \n");
-    sb.append("Child Queues : q1:1, q1:2\n");
-    sb.append("======================\n");
-    
-    assertEquals(sb.toString(), writer.toString());
+    Assert.assertTrue(writer.toString().contains("Queue Name : q1"));
+    Assert.assertTrue(writer.toString().contains("Queue State : running"));
+    Assert.assertTrue(writer.toString().contains("Scheduling Info : q1 scheduling info"));
+    Assert.assertTrue(writer.toString().contains("Queue Name : q1:1"));
+    Assert.assertTrue(writer.toString().contains("Queue Name : q1:2"));
   }
   
   @Test
