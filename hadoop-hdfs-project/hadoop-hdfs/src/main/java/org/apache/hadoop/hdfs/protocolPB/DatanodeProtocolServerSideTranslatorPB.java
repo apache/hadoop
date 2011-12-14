@@ -96,7 +96,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   @Override
   public HeartbeatResponseProto sendHeartbeat(RpcController controller,
       HeartbeatRequestProto request) throws ServiceException {
-    DatanodeCommand[] cmds;
+    DatanodeCommand[] cmds = null;
     try {
       cmds = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
           request.getCapacity(), request.getDfsUsed(), request.getRemaining(),
@@ -120,7 +120,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   @Override
   public BlockReportResponseProto blockReport(RpcController controller,
       BlockReportRequestProto request) throws ServiceException {
-    DatanodeCommand cmd;
+    DatanodeCommand cmd = null;
     List<Long> blockIds = request.getBlocksList();
     long[] blocks = new long[blockIds.size()];
     for (int i = 0; i < blockIds.size(); i++) {

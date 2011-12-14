@@ -665,6 +665,9 @@ public class PBHelper {
     case DatanodeProtocol.DNA_INVALIDATE:
       builder.setAction(BlockCommandProto.Action.INVALIDATE);
       break;
+    case DatanodeProtocol.DNA_SHUTDOWN:
+      builder.setAction(BlockCommandProto.Action.SHUTDOWN);
+      break;
     }
     Block[] blocks = cmd.getBlocks();
     for (int i = 0; i < blocks.length; i++) {
@@ -685,6 +688,10 @@ public class PBHelper {
 
   public static DatanodeCommandProto convert(DatanodeCommand datanodeCommand) {
     DatanodeCommandProto.Builder builder = DatanodeCommandProto.newBuilder();
+    if (datanodeCommand == null) {
+      return builder.setCmdType(DatanodeCommandProto.Type.NullDatanodeCommand)
+          .build();
+    }
     switch (datanodeCommand.getAction()) {
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
       builder.setCmdType(DatanodeCommandProto.Type.BalancerBandwidthCommand)
@@ -711,11 +718,18 @@ public class PBHelper {
       break;
     case DatanodeProtocol.DNA_TRANSFER:
     case DatanodeProtocol.DNA_INVALIDATE:
+    case DatanodeProtocol.DNA_SHUTDOWN:
       builder.setCmdType(DatanodeCommandProto.Type.BlockCommand).setBlkCmd(
           PBHelper.convert((BlockCommand) datanodeCommand));
       break;
-    case DatanodeProtocol.DNA_SHUTDOWN: //Not expected
+    case DatanodeProtocol.DNA_UC_ACTION_REPORT_STATUS:
+    case DatanodeProtocol.DNA_UC_ACTION_START_UPGRADE:
+      builder.setCmdType(DatanodeCommandProto.Type.UpgradeCommand)
+          .setUpgradeCmd(PBHelper.convert((UpgradeCommand) datanodeCommand));
+      break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
+    default:
+      builder.setCmdType(DatanodeCommandProto.Type.NullDatanodeCommand);
     }
     return builder.build();
   }
@@ -754,12 +768,14 @@ public class PBHelper {
 
   public static BlockCommand convert(BlockCommandProto blkCmd) {
     List<BlockProto> blockProtoList = blkCmd.getBlocksList();
-    List<DatanodeInfosProto> targetList = blkCmd.getTargetsList();
-    DatanodeInfo[][] targets = new DatanodeInfo[blockProtoList.size()][];
     Block[] blocks = new Block[blockProtoList.size()];
     for (int i = 0; i < blockProtoList.size(); i++) {
-      targets[i] = PBHelper.convert(targetList.get(i));
       blocks[i] = PBHelper.convert(blockProtoList.get(i));
+    }
+    List<DatanodeInfosProto> targetList = blkCmd.getTargetsList();
+    DatanodeInfo[][] targets = new DatanodeInfo[targetList.size()][];
+    for (int i = 0; i < targetList.size(); i++) {
+      targets[i] = PBHelper.convert(targetList.get(i));
     }
     int action = DatanodeProtocol.DNA_UNKNOWN;
     switch (blkCmd.getAction()) {
@@ -768,6 +784,9 @@ public class PBHelper {
       break;
     case INVALIDATE:
       action = DatanodeProtocol.DNA_INVALIDATE;
+      break;
+    case SHUTDOWN:
+      action = DatanodeProtocol.DNA_SHUTDOWN;
       break;
     }
     return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets);
@@ -800,9 +819,13 @@ public class PBHelper {
   }
 
   public static UpgradeCommandProto convert(UpgradeCommand comm) {
-    UpgradeCommandProto.Builder builder = UpgradeCommandProto.newBuilder()
-        .setVersion(comm.getVersion())
-        .setUpgradeStatus(comm.getCurrentStatus());
+    UpgradeCommandProto.Builder builder = UpgradeCommandProto.newBuilder();
+    if (comm == null) {
+      return builder.setAction(UpgradeCommandProto.Action.UNKNOWN)
+          .setVersion(0).setUpgradeStatus(0).build();
+    }
+    builder.setVersion(comm.getVersion()).setUpgradeStatus(
+        comm.getCurrentStatus());
     switch (comm.getAction()) {
     case UpgradeCommand.UC_ACTION_REPORT_STATUS:
       builder.setAction(UpgradeCommandProto.Action.REPORT_STATUS);

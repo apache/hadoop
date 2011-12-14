@@ -47,6 +47,7 @@ message DatanodeCommandProto {
     KeyUpdateCommand = 4;
     RegisterCommand = 5;
     UpgradeCommand = 6;
+    NullDatanodeCommand = 7;
   }
 
   required Type cmdType = 1;    // Type of the command
@@ -80,6 +81,7 @@ message BlockCommandProto {
   enum Action {  
     TRANSFER = 1;   // Transfer blocks to another datanode
     INVALIDATE = 2; // Invalidate blocks
+    SHUTDOWN = 3; // Shutdown the datanode
   }
   required Action action = 1;
   required string blockPoolId = 2;
@@ -190,7 +192,7 @@ message BlockReportRequestProto {
  * cmd - Command from namenode to the datanode
  */
 message BlockReportResponseProto {
-  required DatanodeCommandProto cmd = 1;
+  optional DatanodeCommandProto cmd = 1;
 } 
 
 /**

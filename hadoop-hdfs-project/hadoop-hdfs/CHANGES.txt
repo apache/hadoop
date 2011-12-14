@@ -40,6 +40,8 @@ Trunk (unreleased changes)
     HDFS-2663. Optional protobuf parameters are not handled correctly.
     (suresh)
 
+    HDFS-2661. Enable protobuf RPC for DatanodeProtocol. (jitendra)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
