@@ -239,6 +239,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be 
     added as ivy dependency. (tucu)
 
+    MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives 
+    dependency. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
