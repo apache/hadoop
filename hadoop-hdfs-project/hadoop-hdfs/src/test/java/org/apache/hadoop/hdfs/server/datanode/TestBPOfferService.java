@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -67,8 +68,8 @@ public class TestBPOfferService {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  private DatanodeProtocol mockNN1;
-  private DatanodeProtocol mockNN2;
+  private DatanodeProtocolClientSideTranslatorPB mockNN1;
+  private DatanodeProtocolClientSideTranslatorPB mockNN2;
   private NNHAStatusHeartbeat[] mockHaStatuses = new NNHAStatusHeartbeat[2];
   private int heartbeatCounts[] = new int[2];
   private DataNode mockDn;
@@ -100,8 +101,10 @@ public class TestBPOfferService {
   /**
    * Set up a mock NN with the bare minimum for a DN to register to it.
    */
-  private DatanodeProtocol setupNNMock(int nnIdx) throws Exception {
-    DatanodeProtocol mock = Mockito.mock(DatanodeProtocol.class);
+  private DatanodeProtocolClientSideTranslatorPB setupNNMock(int nnIdx)
+      throws Exception {
+    DatanodeProtocolClientSideTranslatorPB mock =
+        Mockito.mock(DatanodeProtocolClientSideTranslatorPB.class);
     Mockito.doReturn(
         new NamespaceInfo(1, FAKE_CLUSTERID, FAKE_BPID,
             0, HdfsConstants.LAYOUT_VERSION))
@@ -298,19 +301,21 @@ public class TestBPOfferService {
    * Create a BPOfferService which registers with and heartbeats with the
    * specified namenode proxy objects.
    */
-  private BPOfferService setupBPOSForNNs(DatanodeProtocol ... nns) {
+  private BPOfferService setupBPOSForNNs(
+      DatanodeProtocolClientSideTranslatorPB ... nns) {
     // Set up some fake InetAddresses, then override the connectToNN
     // function to return the corresponding proxies.
 
-    final Map<InetSocketAddress, DatanodeProtocol> nnMap = Maps.newLinkedHashMap();
+    final Map<InetSocketAddress, DatanodeProtocolClientSideTranslatorPB> nnMap = Maps.newLinkedHashMap();
     for (int port = 0; port < nns.length; port++) {
       nnMap.put(new InetSocketAddress(port), nns[port]);
     }
 
     return new BPOfferService(Lists.newArrayList(nnMap.keySet()), mockDn) {
       @Override
-      DatanodeProtocol connectToNN(InetSocketAddress nnAddr) throws IOException {
-        DatanodeProtocol nn = nnMap.get(nnAddr);
+      DatanodeProtocolClientSideTranslatorPB  connectToNN(InetSocketAddress nnAddr)
+          throws IOException {
+        DatanodeProtocolClientSideTranslatorPB nn = nnMap.get(nnAddr);
         if (nn == null) {
           throw new AssertionError("bad NN addr: " + nnAddr);
         }
@@ -329,7 +334,7 @@ public class TestBPOfferService {
     }, 100, 10000);
   }
   
-  private void waitForBlockReport(final DatanodeProtocol mockNN)
+  private void waitForBlockReport(final DatanodeProtocolClientSideTranslatorPB mockNN)
       throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
@@ -374,7 +379,7 @@ public class TestBPOfferService {
   
   private ReceivedDeletedBlockInfo[] waitForBlockReceived(
       ExtendedBlock fakeBlock,
-      DatanodeProtocol mockNN) throws Exception {
+      DatanodeProtocolClientSideTranslatorPB mockNN) throws Exception {
     final ArgumentCaptor<ReceivedDeletedBlockInfo[]> captor =
       ArgumentCaptor.forClass(ReceivedDeletedBlockInfo[].class);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {

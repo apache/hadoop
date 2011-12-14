@@ -15,29 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
-import org.junit.Test;
-
-/** Test for simple signs of life using Avro RPC.  Not an exhaustive test
- * yet, just enough to catch fundamental problems using Avro reflection to
- * infer namenode RPC protocols. */
-public class TestDfsOverAvroRpc extends TestLocalDFS {
-
-  @Test(timeout=20000)
-  public void testWorkingDirectory() throws IOException {
-    /*
-    Test turned off - see HDFS-2647 and HDFS-2660 for related comments.
-    This test can be turned on when Avro RPC is enabled using mechanism
-    similar to protobuf.
-    */
-    /*
-    System.setProperty("hdfs.rpc.engine",
-                       "org.apache.hadoop.ipc.AvroRpcEngine");
-    super.testWorkingDirectory();
-    */
+/**
+ * Utilities for testing edit logs
+ */
+public class FSEditLogTestUtil {
+  public static FSEditLogOp getNoOpInstance() {
+    return FSEditLogOp.LogSegmentOp.getInstance(FSEditLogOpCodes.OP_END_LOG_SEGMENT);
   }
 
+  public static long countTransactionsInStream(EditLogInputStream in) 
+      throws IOException {
+    FSEditLogLoader.EditLogValidation validation = FSEditLogLoader.validateEditLog(in);
+    return validation.getNumTransactions();
+  }
 }

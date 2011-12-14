@@ -29,6 +29,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -405,7 +412,7 @@ class BPOfferService {
    * @return a proxy to the active NN
    */
   @Deprecated
-  synchronized DatanodeProtocol getActiveNN() {
+  synchronized DatanodeProtocolClientSideTranslatorPB getActiveNN() {
     if (bpServiceToActive != null) {
       return bpServiceToActive.bpNamenode;
     } else {
@@ -622,10 +629,10 @@ class BPOfferService {
    * Connect to the NN at the given address. This is separated out for ease
    * of testing.
    */
-  DatanodeProtocol connectToNN(InetSocketAddress nnAddr)
+  DatanodeProtocolClientSideTranslatorPB connectToNN(InetSocketAddress nnAddr)
       throws IOException {
-    return (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
-        DatanodeProtocol.versionID, nnAddr, dn.getConf());
+    return new DatanodeProtocolClientSideTranslatorPB(nnAddr,
+        dn.getConf());
   }
 
 }

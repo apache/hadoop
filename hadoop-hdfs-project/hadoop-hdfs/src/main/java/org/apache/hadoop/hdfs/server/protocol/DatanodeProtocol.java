@@ -30,8 +30,6 @@ import org.apache.hadoop.hdfs.server.protocolR23Compatible.DatanodeWireProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
-import org.apache.avro.reflect.Nullable;
-
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
  * It's used to upload current load information and block reports.
@@ -76,6 +74,8 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
+  final static int DNA_UC_ACTION_REPORT_STATUS = 100; // Report upgrade status
+  final static int DNA_UC_ACTION_START_UPGRADE = 101; // start upgrade
 
   /** 
    * Register Datanode.
@@ -105,7 +105,6 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @param failedVolumes number of failed volumes
    * @throws IOException on error
    */
-  @Nullable
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
                                        long capacity,
                                        long dfsUsed, long remaining,

@@ -1,6 +1,9 @@
 Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
+  INCOMPATIBLE CHANGES
+    HDFS-2676. Remove Avro RPC. (suresh)
+
   NEW FEATURES
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
     via hairong)
@@ -32,9 +35,15 @@ Trunk (unreleased changes)
     HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
     ClientDatanodeProtocol, JournalProtocol, NamenodeProtocol. (suresh)
 
-    HDFS-2663. Handle protobuf optional parameters correctly. (suresh)
-
     HDFS-2666. Fix TestBackupNode failure. (suresh)
+
+    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
+    via jitendra)
+
+    HDFS-2663. Optional protobuf parameters are not handled correctly.
+    (suresh)
+
+    HDFS-2661. Enable protobuf RPC for DatanodeProtocol. (jitendra)
 
   IMPROVEMENTS
 
@@ -106,6 +115,8 @@ Trunk (unreleased changes)
 
     HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh).
 
+    HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
@@ -171,6 +182,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2594. Support getDelegationTokens and createSymlink in WebHDFS.
     (szetszwo)
 
+    HDFS-2545. Change WebHDFS to support multiple namenodes in federation.
+    (szetszwo)
+
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
 
@@ -209,6 +223,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
 
+    HDFS-2675. Reduce warning verbosity when double-closing edit logs
+    (todd)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -244,7 +261,10 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2653. DFSClient should cache whether addrs are non-local when
     short-circuiting is enabled. (eli)
-    
+
+    HDFS-2649. eclipse:eclipse build fails for hadoop-hdfs-httpfs.
+    (Jason Lowe via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

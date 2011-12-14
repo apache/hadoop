@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.apache.avro.reflect.Nullable;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ContentSummary;
@@ -117,7 +115,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Nullable
   @Idempotent
   public LocatedBlocks getBlockLocations(String src,
                                          long offset,
@@ -317,7 +314,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException If an I/O error occurred
    */
   public LocatedBlock addBlock(String src, String clientName,
-      @Nullable ExtendedBlock previous, @Nullable DatanodeInfo[] excludeNodes)
+      ExtendedBlock previous, DatanodeInfo[] excludeNodes)
       throws AccessControlException, FileNotFoundException,
       NotReplicatedYetException, SafeModeException, UnresolvedLinkException,
       IOException;
@@ -706,7 +703,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return upgrade status information or null if no upgrades are in progress
    * @throws IOException
    */
-  @Nullable
   //TODO(HA): Should this be @Idempotent?
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
       throws IOException;
@@ -754,7 +750,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws UnresolvedLinkException if the path contains a symlink. 
    * @throws IOException If an I/O error occurred        
    */
-  @Nullable
   @Idempotent
   public HdfsFileStatus getFileInfo(String src) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
