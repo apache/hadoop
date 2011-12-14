@@ -24,11 +24,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.util.ThreadUtil;
 
 class RetryInvocationHandler implements InvocationHandler, Closeable {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
@@ -85,31 +85,38 @@ class RetryInvocationHandler implements InvocationHandler, Closeable {
             .isAnnotationPresent(Idempotent.class);
         RetryAction action = policy.shouldRetry(e, retries++, invocationFailoverCount,
             isMethodIdempotent);
-        if (action == RetryAction.FAIL) {
+        if (action.action == RetryAction.RetryDecision.FAIL) {
           LOG.warn("Exception while invoking " + method.getName()
                    + " of " + currentProxy.getClass() + ". Not retrying.", e);
           if (!method.getReturnType().equals(Void.TYPE)) {
             throw e; // non-void methods can't fail without an exception
           }
           return null;
-        } else if (action == RetryAction.FAILOVER_AND_RETRY) {
-          LOG.warn("Exception while invoking " + method.getName()
-              + " of " + currentProxy.getClass()
-              + " after " + invocationFailoverCount + " fail over attempts."
-              + " Trying to fail over.", e);
-          // Make sure that concurrent failed method invocations only cause a
-          // single actual fail over.
-          synchronized (proxyProvider) {
-            if (invocationAttemptFailoverCount == proxyProviderFailoverCount) {
-              proxyProvider.performFailover(currentProxy);
-              proxyProviderFailoverCount++;
-              currentProxy = proxyProvider.getProxy();
-            } else {
-              LOG.warn("A failover has occurred since the start of this method"
-                  + " invocation attempt.");
-            }
+        } else { // retry or failover
+          
+          if (action.delayMillis > 0) {
+            ThreadUtil.sleepAtLeastIgnoreInterrupts(action.delayMillis);
           }
-          invocationFailoverCount++;
+          
+          if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
+            LOG.warn("Exception while invoking " + method.getName()
+                + " of " + currentProxy.getClass()
+                + " after " + invocationFailoverCount + " fail over attempts."
+                + " Trying to fail over.", e);
+            // Make sure that concurrent failed method invocations only cause a
+            // single actual fail over.
+            synchronized (proxyProvider) {
+              if (invocationAttemptFailoverCount == proxyProviderFailoverCount) {
+                proxyProvider.performFailover(currentProxy);
+                proxyProviderFailoverCount++;
+                currentProxy = proxyProvider.getProxy();
+              } else {
+                LOG.warn("A failover has occurred since the start of this method"
+                    + " invocation attempt.");
+              }
+            }
+            invocationFailoverCount++;
+          }
         }
         if(LOG.isDebugEnabled()) {
           LOG.debug("Exception while invoking " + method.getName()

@@ -25,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.io.retry.UnreliableImplementation.TypeOfExceptionToFailWith;
 import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.util.ThreadUtil;
 import org.junit.Test;
 
 public class TestFailoverProxy {
@@ -266,5 +267,41 @@ public class TestFailoverProxy {
     assertEquals("impl2", t1.result);
     assertEquals("impl2", t2.result);
     assertEquals(1, proxyProvider.getFailoversOccurred());
+  }
+
+  /**
+   * Ensure that when all configured services are throwing StandbyException
+   * that we fail over back and forth between them until one is no longer
+   * throwing StandbyException.
+   */
+  @Test
+  public void testFailoverBetweenMultipleStandbys()
+      throws UnreliableException, StandbyException, IOException {
+    
+    final long millisToSleep = 10000;
+    
+    final UnreliableImplementation impl1 = new UnreliableImplementation("impl1",
+        TypeOfExceptionToFailWith.STANDBY_EXCEPTION);
+    FlipFlopProxyProvider proxyProvider = new FlipFlopProxyProvider(
+        UnreliableInterface.class,
+        impl1,
+        new UnreliableImplementation("impl2",
+            TypeOfExceptionToFailWith.STANDBY_EXCEPTION));
+    
+    final UnreliableInterface unreliable = (UnreliableInterface)RetryProxy
+      .create(UnreliableInterface.class, proxyProvider,
+          RetryPolicies.failoverOnNetworkException(
+              RetryPolicies.TRY_ONCE_THEN_FAIL, 10, 1000, 10000));
+    
+    new Thread() {
+      @Override
+      public void run() {
+        ThreadUtil.sleepAtLeastIgnoreInterrupts(millisToSleep);
+        impl1.setIdentifier("renamed-impl1");
+      }
+    }.start();
+    
+    String result = unreliable.failsIfIdentifierDoesntMatch("renamed-impl1");
+    assertEquals("renamed-impl1", result);
   }
 }

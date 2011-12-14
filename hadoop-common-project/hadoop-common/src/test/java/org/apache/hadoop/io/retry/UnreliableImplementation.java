@@ -48,6 +48,10 @@ public class UnreliableImplementation implements UnreliableInterface {
     this(identifier, TypeOfExceptionToFailWith.UNRELIABLE_EXCEPTION);
   }
   
+  public void setIdentifier(String identifier) {
+    this.identifier = identifier;
+  }
+  
   public UnreliableImplementation(String identifier,
       TypeOfExceptionToFailWith exceptionToFailWith) {
     this.identifier = identifier;
@@ -147,15 +151,17 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (this.identifier.equals(identifier)) {
       return identifier;
     } else {
+      String message = "expected '" + this.identifier + "' but received '" +
+          identifier + "'";
       switch (exceptionToFailWith) {
       case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
+        throw new StandbyException(message);
       case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
+        throw new UnreliableException(message);
       case IO_EXCEPTION:
-        throw new IOException(identifier);
+        throw new IOException(message);
       default:
-        throw new RuntimeException(identifier);
+        throw new RuntimeException(message);
       }
     }
   }
