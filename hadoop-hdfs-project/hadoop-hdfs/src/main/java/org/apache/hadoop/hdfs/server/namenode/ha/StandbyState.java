@@ -22,6 +22,8 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.ipc.StandbyException;
 
 /**
  * Namenode standby state. In this state the namenode acts as warm standby and
@@ -65,6 +67,14 @@ public class StandbyState extends HAState {
     } catch (IOException e) {
       throw new ServiceFailedException("Failed to stop standby services", e);
     }
+  }
+
+  @Override
+  public void checkOperation(HAContext context, OperationCategory op)
+      throws StandbyException {
+    String msg = "Operation category " + op + " is not supported in state "
+        + context.getState();
+    throw new StandbyException(msg);
   }
 }
 

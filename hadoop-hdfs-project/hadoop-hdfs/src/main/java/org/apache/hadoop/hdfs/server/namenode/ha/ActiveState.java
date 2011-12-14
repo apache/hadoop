@@ -37,8 +37,7 @@ public class ActiveState extends HAState {
   }
 
   @Override
-  public void checkOperation(HAContext context, OperationCategory op)
-      throws UnsupportedActionException {
+  public void checkOperation(HAContext context, OperationCategory op) {
     return; // Other than journal all operations are allowed in active state
   }
   

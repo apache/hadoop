@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
@@ -910,7 +911,7 @@ public class NameNode {
   
   /** Check if an operation of given category is allowed */
   protected synchronized void checkOperation(final OperationCategory op)
-      throws UnsupportedActionException {
+      throws StandbyException {
     state.checkOperation(haContext, op);
   }
   

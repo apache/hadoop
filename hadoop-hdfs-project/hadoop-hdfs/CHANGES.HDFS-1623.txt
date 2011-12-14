@@ -49,3 +49,5 @@ HDFS-2625. TestDfsOverAvroRpc failing after introduction of HeartbeatResponse ty
 HDFS-2627. Determine DN's view of which NN is active based on heartbeat responses (todd)
 
 HDFS-2634. Standby needs to ingest latest edit logs before transitioning to active (todd)
+
+HDFS-2671. NN should throw StandbyException in response to RPCs in STANDBY state (todd)

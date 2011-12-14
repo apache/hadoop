@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
+import org.apache.hadoop.ipc.StandbyException;
 
 /**
  * Namenode base state to implement state machine pattern.
@@ -89,12 +90,8 @@ abstract public class HAState {
    * @throws UnsupportedActionException if a given type of operation is not
    *           supported in this state.
    */
-  public void checkOperation(final HAContext context, final OperationCategory op)
-      throws UnsupportedActionException {
-    String msg = "Operation category " + op + " is not supported in state "
-        + context.getState();
-    throw new UnsupportedActionException(msg);
-  }
+  public abstract void checkOperation(final HAContext context, final OperationCategory op)
+      throws StandbyException;
   
   @Override
   public String toString() {

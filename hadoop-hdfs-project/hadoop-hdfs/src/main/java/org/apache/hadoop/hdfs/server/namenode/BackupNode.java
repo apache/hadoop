@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
 
 import com.google.protobuf.BlockingService;
@@ -397,11 +398,11 @@ public class BackupNode extends NameNode {
   
   @Override // NameNode
   protected void checkOperation(OperationCategory op)
-      throws UnsupportedActionException {
+      throws StandbyException {
     if (OperationCategory.JOURNAL != op) {
       String msg = "Operation category " + op
           + " is not supported at the BackupNode";
-      throw new UnsupportedActionException(msg);
+      throw new StandbyException(msg);
     }
   }
   
