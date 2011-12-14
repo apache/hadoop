@@ -218,7 +218,7 @@ public class FSEditLog  {
    */
   synchronized void close() {
     if (state == State.CLOSED) {
-      LOG.warn("Closing log when already closed", new Exception());
+      LOG.debug("Closing log when already closed");
       return;
     }
     if (state == State.IN_SEGMENT) {
