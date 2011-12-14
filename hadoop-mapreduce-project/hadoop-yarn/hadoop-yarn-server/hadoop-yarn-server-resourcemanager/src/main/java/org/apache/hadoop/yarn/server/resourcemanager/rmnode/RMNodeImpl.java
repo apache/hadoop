@@ -262,6 +262,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   }
 
+  @Private
+  public List<ContainerId> getContainersToCleanUp() {
+    this.readLock.lock();
+    try {
+      return new ArrayList<ContainerId>(containersToClean);
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+  
   @Override
   public List<ContainerId> pullContainersToCleanUp() {
 
@@ -342,7 +352,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-
       rmNode.containersToClean.add(((
           RMNodeCleanContainerEvent) event).getContainerId());
     }
@@ -396,8 +405,17 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       List<ContainerStatus> completedContainers = 
           new ArrayList<ContainerStatus>();
       for (ContainerStatus remoteContainer : statusEvent.getContainers()) {
-        // Process running containers
         ContainerId containerId = remoteContainer.getContainerId();
+        
+        // Don't bother with containers already scheduled for cleanup,
+        // the scheduler doens't need to know any more about this container
+        if (rmNode.containersToClean.contains(containerId)) {
+          LOG.info("Container " + containerId + " already scheduled for " +
+          		"cleanup, no further processing");
+          continue;
+        }
+        
+        // Process running containers
         if (remoteContainer.getState() == ContainerState.RUNNING) {
           if (!rmNode.justLaunchedContainers.containsKey(containerId)) {
             // Just launched container. RM knows about it the first time.

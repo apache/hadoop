@@ -248,6 +248,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3398. Fixed log aggregation to work correctly in secure mode.
     (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3530. Fixed an NPE occuring during scheduling in the
+    ResourceManager. (Arun C Murthy via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
