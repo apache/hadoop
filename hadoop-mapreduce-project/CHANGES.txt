@@ -11,6 +11,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-2863. Support web services for YARN and MR components. (Thomas
     Graves via vinodkv)
 
+    MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR ApplicationMaster.
+    (Anupam Seth via mahadev)
+
   IMPROVEMENTS
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.
                     (Vinay Thota via amarrk)
