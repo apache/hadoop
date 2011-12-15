@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -205,13 +205,13 @@ public class MultiFileWordCount extends Configured implements Tool {
    * This Mapper is similar to the one in {@link WordCount.MapClass}.
    */
   public static class MapClass extends MapReduceBase
-    implements Mapper<WordOffset, Text, Text, IntWritable> {
+    implements Mapper<WordOffset, Text, Text, LongWritable> {
 
-    private final static IntWritable one = new IntWritable(1);
+    private final static LongWritable one = new LongWritable(1);
     private Text word = new Text();
     
     public void map(WordOffset key, Text value,
-        OutputCollector<Text, IntWritable> output, Reporter reporter)
+        OutputCollector<Text, LongWritable> output, Reporter reporter)
         throws IOException {
       
       String line = value.toString();
@@ -244,7 +244,7 @@ public class MultiFileWordCount extends Configured implements Tool {
     // the keys are words (strings)
     job.setOutputKeyClass(Text.class);
     // the values are counts (ints)
-    job.setOutputValueClass(IntWritable.class);
+    job.setOutputValueClass(LongWritable.class);
 
     //use the defined mapper
     job.setMapperClass(MapClass.class);
