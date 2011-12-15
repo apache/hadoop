@@ -145,6 +145,11 @@ public class YarnConfiguration extends Configuration {
   /** ACL used in case none is found. Allows nothing. */
   public static final String DEFAULT_YARN_APP_ACL = " ";
 
+  /** RM-AM ACL disabled. **/
+  public static final String RM_AM_NETWORK_ACL_CLOSED = 
+    RM_PREFIX + "am.acl.disabled";
+  public static final boolean DEFAULT_RM_AM_NETWORK_ACL_CLOSED = false;
+
   /** The address of the RM admin interface.*/
   public static final String RM_ADMIN_ADDRESS = 
     RM_PREFIX + "admin.address";
