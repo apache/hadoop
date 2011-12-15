@@ -61,6 +61,9 @@ Release 1.0.0 - 2011.11.27
 
   BUG FIXES
 
+    HDFS-2589. Remove unnecessary hftp token fetch and renewal thread.
+    (Daryn Sharp via mattf)
+
     MAPREDUCE-3475. JT can't renew its own tokens. (Daryn Sharp via mattf)
 
     HADOOP-7869. HADOOP_HOME warning happens all of the time (Owen O'Malley

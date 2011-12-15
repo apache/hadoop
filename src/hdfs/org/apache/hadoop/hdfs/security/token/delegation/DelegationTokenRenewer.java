@@ -139,9 +139,15 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
     setDaemon(true);
   }
 
+  @Override
+  public void start() {
+    return; // lazy start when addRenewAction is actually called
+  }
+  
   /** Add a renew action to the queue. */
   public void addRenewAction(final T fs) {
     queue.add(new RenewAction<T>(fs));
+    if (!isAlive()) super.start();
   }
 
   @Override
