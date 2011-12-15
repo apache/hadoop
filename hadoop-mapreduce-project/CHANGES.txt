@@ -260,6 +260,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3531. Fixed a race in ContainerTokenSecretManager. (Robert Joseph
     Evans via sseth)
 
+    MAPREDUCE-3560. TestRMNodeTransitions is failing on trunk. 
+    (Siddharth Seth via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -74,8 +75,9 @@ public class TestRMNodeTransitions {
   public void setUp() throws Exception {
     InlineDispatcher rmDispatcher = new InlineDispatcher();
     
-    rmContext = 
-        new RMContextImpl(new MemStore(), rmDispatcher, null, null, null);
+    rmContext =
+        new RMContextImpl(new MemStore(), rmDispatcher, null, null,
+            mock(DelegationTokenRenewer.class));
     scheduler = mock(YarnScheduler.class);
     doAnswer(
         new Answer<Void>() {
