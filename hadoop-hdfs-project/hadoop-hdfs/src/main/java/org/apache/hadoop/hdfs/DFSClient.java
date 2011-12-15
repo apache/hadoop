@@ -313,7 +313,8 @@ public class DFSClient implements java.io.Closeable {
     
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     
-    Class<?> failoverProxyProviderClass = getFailoverProxyProviderClass(authority, conf);
+    Class<?> failoverProxyProviderClass = getFailoverProxyProviderClass(
+        nameNodeUri, conf);
     
     if (nameNodeUri != null && failoverProxyProviderClass != null) {
       FailoverProxyProvider failoverProxyProvider = (FailoverProxyProvider)
@@ -353,15 +354,32 @@ public class DFSClient implements java.io.Closeable {
     }
   }
   
-  private Class<?> getFailoverProxyProviderClass(String authority, Configuration conf)
+  private Class<?> getFailoverProxyProviderClass(URI nameNodeUri, Configuration conf)
       throws IOException {
-    String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + authority;
+    if (nameNodeUri == null) {
+      return null;
+    }
+    String host = nameNodeUri.getHost();
+
+    String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + host;
     try {
-      return conf.getClass(configKey, null);
+      Class<?> ret = conf.getClass(configKey, null);
+      if (ret != null) {
+        // If we found a proxy provider, then this URI should be a logical NN.
+        // Given that, it shouldn't have a non-default port number.
+        int port = nameNodeUri.getPort();
+        if (port > 0 && port != NameNode.DEFAULT_PORT) {
+          throw new IOException(
+              "Port " + port + " specified in URI " + nameNodeUri +
+              " but host '" + host + "' is a logical (HA) namenode" +
+              " and does not use port information.");
+        }
+      }
+      return ret;
     } catch (RuntimeException e) {
       if (e.getCause() instanceof ClassNotFoundException) {
         throw new IOException("Could not load failover proxy provider class "
-            + conf.get(configKey) + " which is configured for authority " + authority,
+            + conf.get(configKey) + " which is configured for authority " + nameNodeUri,
             e);
       } else {
         throw e;
