@@ -224,17 +224,29 @@
             </goals>
             <configuration>
               <target>
-                <echo file="${project.build.directory}/compile-proto.sh">
-                  PROTO_DIR=${basedir}/src/main/proto
-                  ls $PROTO_DIR &amp;> /dev/null
-                  if [ $? = 0 ]; then
-                    JAVA_DIR=${project.build.directory}/generated-sources/java
-                    mkdir -p $JAVA_DIR
-                    ls $PROTO_DIR/*.proto | xargs -n 1 protoc -I$PROTO_DIR --java_out=$JAVA_DIR
-                  fi
+                <echo file="target/compile-proto.sh">
+                    PROTO_DIR=src/main/proto
+                    JAVA_DIR=target/generated-sources/java
+                    which cygpath 2> /dev/null
+                    if [ $? = 1 ]; then
+                      IS_WIN=false
+                    else
+                      IS_WIN=true
+                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
+                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
+                    fi
+                    mkdir -p $JAVA_DIR 2> /dev/null
+                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2> /dev/null`
+                    do
+                        if [ "$IS_WIN" = "true" ]; then
+                          protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
+                        else
+                          protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
+                        fi
+                    done
                 </echo>
-                <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                  <arg line="./compile-proto.sh"/>
+                <exec executable="sh" dir="${basedir}" failonerror="true">
+                  <arg line="target/compile-proto.sh"/>
                 </exec>
               </target>
             </configuration>

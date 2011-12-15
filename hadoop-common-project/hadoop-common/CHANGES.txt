@@ -91,6 +91,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7810 move hadoop archive to core from tools. (tucu)
 
+   HADOOP_7917. compilation of protobuf files fails in windows/cygwin. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
