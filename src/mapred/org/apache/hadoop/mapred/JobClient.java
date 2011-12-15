@@ -19,6 +19,8 @@ package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -509,7 +511,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
     @Override
     public boolean isManaged(Token<?> token) throws IOException {
-      return true;
+      ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
+      DelegationTokenIdentifier id = new DelegationTokenIdentifier(); 
+      id.readFields(new DataInputStream(buf));
+      // AbstractDelegationToken converts given renewer to a short name, but
+      // AbstractDelegationTokenSecretManager does not, so we have to do it
+      String loginUser = UserGroupInformation.getLoginUser().getShortUserName();
+      return loginUser.equals(id.getRenewer().toString());
     }
     
   }
