@@ -1015,7 +1015,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.processBlocksBeingWrittenReport(nodeReg, blist);
     
     stateChangeLog.info("*BLOCK* NameNode.blocksBeingWrittenReport: "
-           +"from "+nodeReg.getName()+" "+blocks.length +" blocks");
+           +"from "+nodeReg.getName()+" "+blist.getNumberOfBlocks() +" blocks");
     
   }
 
