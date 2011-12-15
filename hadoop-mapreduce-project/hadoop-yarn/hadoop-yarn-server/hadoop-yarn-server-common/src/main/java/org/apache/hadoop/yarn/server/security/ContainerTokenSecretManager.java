@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.security;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.SecretKey;
 
@@ -34,9 +34,9 @@ public class ContainerTokenSecretManager extends
   private static Log LOG = LogFactory
       .getLog(ContainerTokenSecretManager.class);
 
-  private Map<String, SecretKey> secretkeys =
-      new HashMap<String, SecretKey>();
-
+  Map<String, SecretKey> secretkeys =
+    new ConcurrentHashMap<String, SecretKey>();
+  
   // Used by master for generation of secretyKey per host
   public SecretKey createAndGetSecretKey(CharSequence hostName) {
     String hostNameStr = hostName.toString();

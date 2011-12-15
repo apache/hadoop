@@ -254,6 +254,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3484. Fixed JobEndNotifier to not get interrupted before completing
     all its retries. (Ravi Prakash via vinodkv)
 
+    MAPREDUCE-3531. Fixed a race in ContainerTokenSecretManager. (Robert Joseph
+    Evans via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
