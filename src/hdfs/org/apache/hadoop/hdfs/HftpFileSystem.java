@@ -81,12 +81,12 @@ public class HftpFileSystem extends FileSystem
 
   static {
     HttpURLConnection.setFollowRedirects(true);
-    dtRenewer.start();
   }
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
   
   protected UserGroupInformation ugi; 
+  private boolean remoteIsInsecure = false;
   private URI hftpURI;
 
   protected InetSocketAddress nnAddr;
@@ -150,10 +150,6 @@ public class HftpFileSystem extends FileSystem
     this.nnAddr = getNamenodeAddr(name);
     this.nnSecureAddr = getNamenodeSecureAddr(name);
     this.hftpURI = DFSUtil.createUri(name.getScheme(), nnAddr);
-    
-    if (UserGroupInformation.isSecurityEnabled()) {
-      initDelegationToken();
-    }
   }
   
   protected void initDelegationToken() throws IOException {
@@ -229,6 +225,7 @@ public class HftpFileSystem extends FileSystem
             " using https.");
             LOG.debug("error was ", e);
             //Maybe the server is in unsecure mode (that's bad but okay)
+            remoteIsInsecure = true;
             return null;
           }
           for (Token<? extends TokenIdentifier> t : c.getAllTokens()) {
@@ -296,6 +293,9 @@ public class HftpFileSystem extends FileSystem
     String tokenString = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       synchronized (this) {
+        if (delegationToken == null && !remoteIsInsecure) {
+          initDelegationToken();
+        }    
         if (delegationToken != null) {
           tokenString = delegationToken.encodeToUrlString();
           return (query + JspHelper.getDelegationTokenUrlParam(tokenString));
