@@ -15,8 +15,12 @@
   limitations under the License.
 -->
 
-<!DOCTYPE tabs PUBLIC "-//APACHE//DTD Cocoon Documentation Tab V1.0//EN" 
-          "http://forrest.apache.org/dtd/tab-cocoon-v10.dtd">
+<!DOCTYPE tabs PUBLIC "-//APACHE//DTD Cocoon Documentation Tab V1.1//EN"
+  "http://forrest.apache.org/dtd/tab-cocoon-v11.dtd" [
+    <!ENTITY % hadoop-entities PUBLIC "-//Apache//ENTITIES Hadoop//EN"
+    "../../../../../../build/hadoop.ent">
+    %hadoop-entities;
+]>
 
 <tabs software="Hadoop"
       title="Hadoop"
@@ -31,6 +35,6 @@
 
   <tab label="Project" href="http://hadoop.apache.org/core/" />
   <tab label="Wiki" href="http://wiki.apache.org/hadoop" />
-  <tab label="Hadoop 0.20 Documentation" dir="" />  
+  <tab label="Hadoop &HadoopVersion; Documentation" dir="" />
   
 </tabs>
