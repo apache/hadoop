@@ -129,6 +129,12 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     return null;
   }
 
+  // TODO(HA): Test this.
+  @Override
+  public boolean isInProgress() {
+    return true;
+  }
+
   /**
    * Input stream implementation which can be used by 
    * FSEditLogOp.Reader

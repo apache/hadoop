@@ -86,5 +86,5 @@ public abstract class EditLogInputStream implements JournalStream, Closeable {
   /**
    * Return true if this stream is in progress, false if it is finalized.
    */
-  abstract boolean isInProgress();
+  public abstract boolean isInProgress();
 }

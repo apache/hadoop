@@ -55,3 +55,5 @@ HDFS-2671. NN should throw StandbyException in response to RPCs in STANDBY state
 HDFS-2680. DFSClient should construct failover proxy with exponential backoff (todd)
 
 HDFS-2683. Authority-based lookup of proxy provider fails if path becomes canonicalized (todd)
+
+HDFS-2689. HA: BookKeeperEditLogInputStream doesn't implement isInProgress() (atm)
