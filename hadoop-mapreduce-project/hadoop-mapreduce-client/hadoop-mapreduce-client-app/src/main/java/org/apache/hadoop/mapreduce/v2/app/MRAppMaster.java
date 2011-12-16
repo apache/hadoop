@@ -375,15 +375,17 @@ public class MRAppMaster extends CompositeService {
       // this is the only job, so shut down the Appmaster
       // note in a workflow scenario, this may lead to creation of a new
       // job (FIXME?)
-      try {
-        LOG.info("Job end notification started for jobID : "
-          + job.getReport().getJobId());
-        JobEndNotifier notifier = new JobEndNotifier();
-        notifier.setConf(getConfig());
-        notifier.notify(job.getReport());
-      } catch (InterruptedException ie) {
-        LOG.warn("Job end notification interrupted for jobID : "
-          + job.getReport().getJobId(), ie );
+      if (getConfig().get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL) != null) {
+        try {
+          LOG.info("Job end notification started for jobID : "
+              + job.getReport().getJobId());
+          JobEndNotifier notifier = new JobEndNotifier();
+          notifier.setConf(getConfig());
+          notifier.notify(job.getReport());
+        } catch (InterruptedException ie) {
+          LOG.warn("Job end notification interrupted for jobID : "
+              + job.getReport().getJobId(), ie);
+        }
       }
 
       // TODO:currently just wait for some time so clients can know the
