@@ -41,10 +41,6 @@ if [ "$YARN_HEAPSIZE" != "" ]; then
   #echo $JAVA_HEAP_MAX
 fi
 
-# CLASSPATH initially contains $YARN_CONF_DIR
-CLASSPATH="${YARN_CONF_DIR}"
-CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
-
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
