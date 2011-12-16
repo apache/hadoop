@@ -273,6 +273,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
+    this.proxiedTrackingUrl = generateProxyUriWithoutScheme();
+    
     this.stateMachine = stateMachineFactory.make(this);
   }
 
@@ -358,11 +360,16 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     }    
   }
   
+  private String generateProxyUriWithoutScheme() {
+    return generateProxyUriWithoutScheme(null);
+  }
+  
   private String generateProxyUriWithoutScheme(
       final String trackingUriWithoutScheme) {
     this.readLock.lock();
     try {
-      URI trackingUri = ProxyUriUtils.getUriFromAMUrl(trackingUriWithoutScheme);
+      URI trackingUri = trackingUriWithoutScheme == null ? null : 
+        ProxyUriUtils.getUriFromAMUrl(trackingUriWithoutScheme);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
       URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri, 
           applicationAttemptId.getApplicationId());
