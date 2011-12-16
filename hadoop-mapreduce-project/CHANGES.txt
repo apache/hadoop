@@ -269,6 +269,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3564. Fixed failures in TestStagingCleanup and TestJobEndNotifier
     tests. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3422. Counter display names are not being picked up. (Jonathan
+    Eagles via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
