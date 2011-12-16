@@ -188,7 +188,7 @@ public class PendingDataNodeMessages {
    */
   synchronized DataNodeMessage take(long gs) {
     DataNodeMessage m = queue.peek();
-    if (m != null && m.getTargetGs() < gs) {
+    if (m != null && m.getTargetGs() <= gs) {
       return queue.remove();
     } else {
       return null;

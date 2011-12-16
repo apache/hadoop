@@ -52,6 +52,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERSIST_BLOCKS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
@@ -203,7 +205,7 @@ import com.google.common.base.Preconditions;
 @Metrics(context="dfs")
 public class FSNamesystem implements Namesystem, FSClusterStats,
     FSNamesystemMBean, NameNodeMXBean {
-  static final Log LOG = LogFactory.getLog(FSNamesystem.class);
+  public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
 
   private static final ThreadLocal<StringBuilder> auditBuffer =
     new ThreadLocal<StringBuilder>() {
@@ -252,6 +254,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static final int DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED = 100;
   static int BLOCK_DELETION_INCREMENT = 1000;
   private boolean isPermissionEnabled;
+  private boolean persistBlocks;
   private UserGroupInformation fsOwner;
   private String supergroup;
   private PermissionStatus defaultPermission;
@@ -669,6 +672,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                                DFS_PERMISSIONS_ENABLED_DEFAULT);
     LOG.info("supergroup=" + supergroup);
     LOG.info("isPermissionEnabled=" + isPermissionEnabled);
+
+    this.persistBlocks = conf.getBoolean(DFS_PERSIST_BLOCKS_KEY,
+                                         DFS_PERSIST_BLOCKS_DEFAULT);
+    // block allocation has to be persisted in HA using a shared edits directory
+    // so that the standby has up-to-date namespace information
+    String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
+    this.persistBlocks |= HAUtil.isHAEnabled(conf, nameserviceId) &&
+        HAUtil.usesSharedEditsDir(conf);
+
     short filePermission = (short)conf.getInt(DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
                                               DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);
     this.defaultPermission = PermissionStatus.createImmutable(
@@ -1403,26 +1415,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
 
       if (append && myFile != null) {
-        //
-        // Replace current node with a INodeUnderConstruction.
-        // Recreate in-memory lease record.
-        //
-        INodeFile node = (INodeFile) myFile;
-        INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                        node.getLocalNameBytes(),
-                                        node.getReplication(),
-                                        node.getModificationTime(),
-                                        node.getPreferredBlockSize(),
-                                        node.getBlocks(),
-                                        node.getPermissionStatus(),
-                                        holder,
-                                        clientMachine,
-                                        clientNode);
-        dir.replaceNode(src, node, cons);
-        leaseManager.addLease(cons.getClientName(), src);
-
-        // convert last block to under-construction
-        return blockManager.convertLastBlockToUnderConstruction(cons);
+        return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode);
       } else {
        // Now we can add the name to the filesystem. This file has no
        // blocks associated with it.
@@ -1449,6 +1442,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw ie;
     }
     return null;
+  }
+  
+  /**
+   * Replace current node with a INodeUnderConstruction.
+   * Recreate in-memory lease record.
+   * 
+   * @param src path to the file
+   * @param file existing file object
+   * @param leaseHolder identifier of the lease holder on this file
+   * @param clientMachine identifier of the client machine
+   * @param clientNode if the client is collocated with a DN, that DN's descriptor
+   * @return the last block locations if the block is partial or null otherwise
+   * @throws UnresolvedLinkException
+   * @throws IOException
+   */
+  public LocatedBlock prepareFileForWrite(String src, INode file,
+      String leaseHolder, String clientMachine, DatanodeDescriptor clientNode)
+      throws UnresolvedLinkException, IOException {
+    INodeFile node = (INodeFile) file;
+    INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                    node.getLocalNameBytes(),
+                                    node.getReplication(),
+                                    node.getModificationTime(),
+                                    node.getPreferredBlockSize(),
+                                    node.getBlocks(),
+                                    node.getPermissionStatus(),
+                                    leaseHolder,
+                                    clientMachine,
+                                    clientNode);
+    dir.replaceNode(src, node, cons);
+    leaseManager.addLease(cons.getClientName(), src);
+
+    return blockManager.convertLastBlockToUnderConstruction(cons);
   }
 
   /**
@@ -1700,9 +1726,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
       for (DatanodeDescriptor dn : targets) {
         dn.incBlocksScheduled();
-      }      
+      }
+      dir.persistBlocks(src, pendingFile);
     } finally {
       writeUnlock();
+    }
+    if (persistBlocks) {
+      getEditLog().logSync();
     }
 
     // Create next block
@@ -1782,10 +1812,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                       + b + " is removed from pendingCreates");
       }
-      return true;
+      dir.persistBlocks(src, file);
     } finally {
       writeUnlock();
     }
+    if (persistBlocks) {
+      getEditLog().logSync();
+    }
+
+    return true;
   }
   
   // make sure that we still have the lease on this file.
@@ -2594,8 +2629,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //remove lease, close file
         finalizeINodeFileUnderConstruction(src, pendingFile);
       } else if (supportAppends) {
-        // If this commit does not want to close the file, persist
-        // blocks only if append is supported 
+        // If this commit does not want to close the file, persist blocks
+        // only if append is supported or we're explicitly told to
         dir.persistBlocks(src, pendingFile);
       }
     } finally {
@@ -3565,7 +3600,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           assert node != null : "Found a lease for nonexisting file.";
           assert node.isUnderConstruction() :
-            "Found a lease for file that is not under construction.";
+            "Found a lease for file " + path + " that is not under construction." +
+            " lease=" + lease;
           INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
           BlockInfo[] blocks = cons.getBlocks();
           if(blocks == null)
@@ -3881,7 +3917,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void setGenerationStamp(long stamp) {
     generationStamp.setStamp(stamp);
-    notifyGenStampUpdate(stamp);
   }
 
   /**
@@ -4000,7 +4035,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    if (supportAppends) {
+    if (supportAppends || persistBlocks) {
       getEditLog().logSync();
     }
     LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);

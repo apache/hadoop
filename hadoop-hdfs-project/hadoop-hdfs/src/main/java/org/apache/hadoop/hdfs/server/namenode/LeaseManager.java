@@ -153,6 +153,9 @@ public class LeaseManager {
     Lease lease = getLease(holder);
     if (lease != null) {
       removeLease(lease, src);
+    } else {
+      LOG.warn("Removing non-existent lease! holder=" + holder +
+          " src=" + src);
     }
   }
 

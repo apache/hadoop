@@ -425,7 +425,7 @@ public class BlockManager {
     
     final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication)
-      completeBlock(fileINode,fileINode.numBlocks()-1);
+      completeBlock(fileINode,fileINode.numBlocks()-1, false);
     return b;
   }
 
@@ -437,14 +437,14 @@ public class BlockManager {
    * of replicas reported from data-nodes.
    */
   private BlockInfo completeBlock(final INodeFile fileINode,
-      final int blkIndex) throws IOException {
+      final int blkIndex, boolean force) throws IOException {
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
     if(curBlock.isComplete())
       return curBlock;
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)curBlock;
-    if(ucBlock.numNodes() < minReplication)
+    if (!force && ucBlock.numNodes() < minReplication)
       throw new IOException("Cannot complete block: " +
           "block does not satisfy minimal replication requirement.");
     BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
@@ -455,15 +455,27 @@ public class BlockManager {
   }
 
   private BlockInfo completeBlock(final INodeFile fileINode,
-      final BlockInfo block) throws IOException {
+      final BlockInfo block, boolean force) throws IOException {
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
       if(fileBlocks[idx] == block) {
-        return completeBlock(fileINode, idx);
+        return completeBlock(fileINode, idx, force);
       }
     return block;
   }
+  
+  /**
+   * Force the given block in the given file to be marked as complete,
+   * regardless of whether enough replicas are present. This is necessary
+   * when tailing edit logs as a Standby.
+   */
+  public BlockInfo forceCompleteBlock(final INodeFile fileINode,
+      final BlockInfoUnderConstruction block) throws IOException {
+    block.commitBlock(block);
+    return completeBlock(fileINode, block, true);
+  }
 
+  
   /**
    * Convert the last block of the file to an under construction block.<p>
    * The block is converted only if the file has blocks and the last one
@@ -590,8 +602,8 @@ public class BlockManager {
     final boolean isCorrupt = numCorruptNodes == numNodes;
     final int numMachines = isCorrupt ? numNodes: numNodes - numCorruptNodes;
     final DatanodeDescriptor[] machines = new DatanodeDescriptor[numMachines];
+    int j = 0;
     if (numMachines > 0) {
-      int j = 0;
       for(Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(blk);
           it.hasNext();) {
         final DatanodeDescriptor d = it.next();
@@ -600,6 +612,12 @@ public class BlockManager {
           machines[j++] = d;
       }
     }
+    assert j == machines.length :
+      "isCorrupt: " + isCorrupt + 
+      " numMachines: " + numMachines +
+      " numNodes: " + numNodes +
+      " numCorrupt: " + numCorruptNodes +
+      " numCorruptRepls: " + numCorruptReplicas;
     final ExtendedBlock eb = new ExtendedBlock(namesystem.getBlockPoolId(), blk);
     return new LocatedBlock(eb, machines, pos, isCorrupt);
   }
@@ -1608,7 +1626,7 @@ public class BlockManager {
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication)
-      storedBlock = completeBlock(storedBlock.getINode(), storedBlock);
+      storedBlock = completeBlock(storedBlock.getINode(), storedBlock, false);
 
     // check whether safe replication is reached for the block
     // only complete blocks are counted towards that
@@ -1673,7 +1691,7 @@ public class BlockManager {
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication)
-      storedBlock = completeBlock(fileINode, storedBlock);
+      storedBlock = completeBlock(fileINode, storedBlock, false);
 
     // check whether safe replication is reached for the block
     // only complete blocks are counted towards that

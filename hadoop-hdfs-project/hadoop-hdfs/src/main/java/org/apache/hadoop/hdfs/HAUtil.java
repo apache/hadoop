@@ -45,6 +45,16 @@ public class HAUtil {
   }
 
   /**
+   * Returns true if HA is using a shared edits directory.
+   *
+   * @param conf Configuration
+   * @return true if HA config is using a shared edits dir, false otherwise.
+   */
+  public static boolean usesSharedEditsDir(Configuration conf) {
+    return null != conf.get(DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+  }
+
+  /**
    * Get the namenode Id by matching the {@code addressKey}
    * with the the address of the local node.
    * 

@@ -116,10 +116,12 @@ public class TestEditLog extends TestCase {
     int numTransactions;
     short replication = 3;
     long blockSize = 64;
+    final int id;
 
-    Transactions(FSNamesystem ns, int num) {
+    Transactions(FSNamesystem ns, int num, int id) {
       namesystem = ns;
       numTransactions = num;
+      this.id = id;
     }
 
     // add a bunch of transactions.
@@ -131,8 +133,9 @@ public class TestEditLog extends TestCase {
       for (int i = 0; i < numTransactions; i++) {
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
                             p, replication, blockSize, 0, "", "", null);
-        editLog.logOpenFile("/filename" + i, inode);
-        editLog.logCloseFile("/filename" + i, inode);
+        String fileName = "/filename-" + id + "-" + i;
+        editLog.logOpenFile(fileName, inode);
+        editLog.logCloseFile(fileName, inode);
         editLog.logSync();
       }
     }
@@ -280,7 +283,7 @@ public class TestEditLog extends TestCase {
       // Create threads and make them run transactions concurrently.
       Thread threadId[] = new Thread[NUM_THREADS];
       for (int i = 0; i < NUM_THREADS; i++) {
-        Transactions trans = new Transactions(namesystem, NUM_TRANSACTIONS);
+        Transactions trans = new Transactions(namesystem, NUM_TRANSACTIONS, i);
         threadId[i] = new Thread(trans, "TransactionThread-" + i);
         threadId[i].start();
       }

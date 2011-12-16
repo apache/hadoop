@@ -263,34 +263,19 @@ public class FSDirectory implements Closeable {
    */
   INode unprotectedAddFile( String path, 
                             PermissionStatus permissions,
-                            BlockInfo[] blocks, 
                             short replication,
                             long modificationTime,
                             long atime,
                             long preferredBlockSize) 
       throws UnresolvedLinkException {
     INode newNode;
-    long diskspace = UNKNOWN_DISK_SPACE;
     assert hasWriteLock();
-    if (blocks == null)
-      newNode = new INodeDirectory(permissions, modificationTime);
-    else {
-      newNode = new INodeFile(permissions, blocks.length, replication,
-                              modificationTime, atime, preferredBlockSize);
-      diskspace = ((INodeFile)newNode).diskspaceConsumed(blocks);
-    }
+    newNode = new INodeFile(permissions, new BlockInfo[0], replication,
+                            modificationTime, atime, preferredBlockSize);
     writeLock();
     try {
       try {
-        newNode = addNode(path, newNode, diskspace);
-        if(newNode != null && blocks != null) {
-          int nrBlocks = blocks.length;
-          // Add file->block mapping
-          INodeFile newF = (INodeFile)newNode;
-          for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
-          }
-        }
+        newNode = addNode(path, newNode, 0);
       } catch (IOException e) {
         return null;
       }
@@ -391,7 +376,7 @@ public class FSDirectory implements Closeable {
       writeUnlock();
     }
   }
-
+  
   /**
    * Close file.
    */
@@ -414,7 +399,7 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Remove a block to the file.
+   * Remove a block from the file.
    */
   boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
                       Block block) throws IOException {
@@ -422,26 +407,31 @@ public class FSDirectory implements Closeable {
 
     writeLock();
     try {
-      // modify file-> block and blocksMap
-      fileNode.removeLastBlock(block);
-      getBlockManager().removeBlockFromMap(block);
-
+      unprotectedRemoveBlock(path, fileNode, block);
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
-            +path+" with "+block
-            +" block is removed from the file system");
-      }
-
-      // update space consumed
-      INode[] pathINodes = getExistingPathINodes(path);
-      updateCount(pathINodes, pathINodes.length-1, 0,
-          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
     } finally {
       writeUnlock();
     }
     return true;
+  }
+  
+  void unprotectedRemoveBlock(String path,
+      INodeFileUnderConstruction fileNode, Block block) throws IOException {
+    // modify file-> block and blocksMap
+    fileNode.removeLastBlock(block);
+    getBlockManager().removeBlockFromMap(block);
+
+    if(NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
+          +path+" with "+block
+          +" block is removed from the file system");
+    }
+
+    // update space consumed
+    INode[] pathINodes = getExistingPathINodes(path);
+    updateCount(pathINodes, pathINodes.length - 1, 0,
+        - fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
   }
 
   /**
