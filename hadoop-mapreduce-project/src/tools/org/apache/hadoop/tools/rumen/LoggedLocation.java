@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.tools.rumen.datatypes.NodeName;
 import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
@@ -44,20 +45,20 @@ import org.codehaus.jackson.annotate.JsonAnySetter;
  * 
  */
 public class LoggedLocation implements DeepCompare {
-   static final Map<List<String>, List<String>> layersCache = 
-    new HashMap<List<String>, List<String>>();
+   static final Map<List<String>, List<NodeName>> layersCache = 
+    new HashMap<List<String>, List<NodeName>>();
 
   /**
    * The full path from the root of the network to the host.
    * 
    * NOTE that this assumes that the network topology is a tree.
    */
-  List<String> layers = Collections.emptyList();
+  List<NodeName> layers = Collections.emptyList();
 
   static private Set<String> alreadySeenAnySetterAttributes =
       new TreeSet<String>();
 
-  public List<String> getLayers() {
+  public List<NodeName> getLayers() {
     return layers;
   }
 
@@ -66,16 +67,17 @@ public class LoggedLocation implements DeepCompare {
       this.layers = Collections.emptyList();
     } else {
       synchronized (layersCache) {
-        List<String> found = layersCache.get(layers);
+        List<NodeName> found = layersCache.get(layers);
         if (found == null) {
           // make a copy with interned string.
-          List<String> clone = new ArrayList<String>(layers.size());
-          for (String s : layers) {
-            clone.add(s.intern());
-          }
+          List<NodeName> clone = new ArrayList<NodeName>(layers.size());
+          clone.add(new NodeName(layers.get(0).intern(), null)); 
+          clone.add(new NodeName(null, layers.get(1).intern()));
+          
           // making it read-only as we are sharing them.
-          List<String> readonlyLayers = Collections.unmodifiableList(clone);
-          layersCache.put(readonlyLayers, readonlyLayers);
+          List<NodeName> readonlyLayers = Collections.unmodifiableList(clone);
+          List<String> readonlyLayersKey = Collections.unmodifiableList(layers);
+          layersCache.put(readonlyLayersKey, readonlyLayers);
           this.layers = readonlyLayers;
         } else {
           this.layers = found;
@@ -84,7 +86,6 @@ public class LoggedLocation implements DeepCompare {
     }
   }
 
-  @SuppressWarnings("unused")
   // for input parameter ignored.
   @JsonAnySetter
   public void setUnknownAttribute(String attributeName, Object ignored) {
@@ -96,16 +97,32 @@ public class LoggedLocation implements DeepCompare {
   }
 
   // I'll treat this as an atomic object type
-  private void compareStrings(List<String> c1, List<String> c2, TreePath loc,
-      String eltname) throws DeepInequalityException {
+  private void compareStrings(List<NodeName> c1, List<NodeName> c2, 
+                              TreePath loc, String eltname) 
+  throws DeepInequalityException {
     if (c1 == null && c2 == null) {
       return;
     }
 
     TreePath recursePath = new TreePath(loc, eltname);
 
-    if (c1 == null || c2 == null || !c1.equals(c2)) {
+    if (c1 == null || c2 == null || (c1.size() != c2.size())) {
       throw new DeepInequalityException(eltname + " miscompared", recursePath);
+    }
+    
+    for (NodeName n1 : c1) {
+      boolean found = false;
+      for (NodeName n2 : c2) {
+        if (n1.getValue().equals(n2.getValue())) {
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        throw new DeepInequalityException(eltname 
+                  + " miscompared [" + n1.getValue() +"]", recursePath);
+      }
     }
   }
 

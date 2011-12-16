@@ -27,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.mapred.TaskStatus;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.jobhistory.AMStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
@@ -51,6 +52,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskUpdatedEvent;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
+import org.apache.hadoop.tools.rumen.datatypes.JobProperties;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -83,11 +85,6 @@ public class JobBuilder {
    * The number of splits a task can have, before we ignore them all.
    */
   private final static int MAXIMUM_PREFERRED_LOCATIONS = 25;
-  /**
-   * The regular expression used to parse task attempt IDs in job tracker logs
-   */
-  private final static Pattern taskAttemptIDPattern =
-      Pattern.compile(".*_([0-9]+)");
 
   private int[] attemptTimesPercentiles = null;
 
@@ -262,7 +259,9 @@ public class JobBuilder {
     finalized = true;
 
     // set the conf
-    result.setJobProperties(jobConfigurationParameters);
+    if (jobConfigurationParameters != null) {
+      result.setJobProperties(jobConfigurationParameters);
+    }
     
     // initialize all the per-job statistics gathering places
     Histogram[] successfulMapAttemptTimes =
@@ -314,20 +313,10 @@ public class JobBuilder {
               }
             }
 
-            String attemptID = attempt.getAttemptID();
+            TaskAttemptID attemptID = attempt.getAttemptID();
 
             if (attemptID != null) {
-              Matcher matcher = taskAttemptIDPattern.matcher(attemptID);
-
-              if (matcher.matches()) {
-                String attemptNumberString = matcher.group(1);
-
-                if (attemptNumberString != null) {
-                  int attemptNumber = Integer.parseInt(attemptNumberString);
-
-                  successfulNthMapperAttempts.enter(attemptNumber);
-                }
-              }
+              successfulNthMapperAttempts.enter(attemptID.getId());
             }
           } else {
             if (attempt.getResult() == Pre21JobHistoryConstants.Values.FAILED) {

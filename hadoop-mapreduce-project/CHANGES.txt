@@ -6,6 +6,7 @@ Trunk (unreleased changes)
     MAPREDUCE-3545. Remove Avro RPC. (suresh)
 
   NEW FEATURES
+    MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
 
     MAPREDUCE-2669. Add new examples for Mean, Median, and Standard Deviation.
     (Plamen Jeliazkov via shv)

@@ -22,7 +22,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-class ParsedHost {
+import org.apache.hadoop.tools.rumen.datatypes.NodeName;
+
+public class ParsedHost {
   private final String rackName;
   private final String nodeName;
 
@@ -70,10 +72,10 @@ class ParsedHost {
   }
 
   public ParsedHost(LoggedLocation loc) {
-    List<String> coordinates = loc.getLayers();
+    List<NodeName> coordinates = loc.getLayers();
 
-    rackName = coordinates.get(0);
-    nodeName = coordinates.get(1);
+    rackName = coordinates.get(0).getRackName();
+    nodeName = coordinates.get(1).getHostName();
   }
 
   LoggedLocation makeLoggedLocation() {
@@ -89,11 +91,11 @@ class ParsedHost {
     return result;
   }
   
-  String getNodeName() {
+  public String getNodeName() {
     return nodeName;
   }
   
-  String getRackName() {
+  public String getRackName() {
     return rackName;
   }
 

@@ -28,12 +28,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskStatus.State;
+import org.apache.hadoop.mapreduce.ID;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.tools.rumen.datatypes.*;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
 
 /**
@@ -128,7 +130,7 @@ public class ZombieJob implements JobStory {
       // file, are added first because the specialized values obtained from 
       // Rumen should override the job conf values.
       //
-      for (Map.Entry<Object, Object> entry : job.getJobProperties().entrySet()) {
+      for (Map.Entry<Object, Object> entry : job.getJobProperties().getValue().entrySet()) {
         jobConf.set(entry.getKey().toString(), entry.getValue().toString());
       }
       
@@ -161,12 +163,12 @@ public class ZombieJob implements JobStory {
         List<String> hostList = new ArrayList<String>();
         if (locations != null) {
           for (LoggedLocation location : locations) {
-            List<String> layers = location.getLayers();
+            List<NodeName> layers = location.getLayers();
             if (layers.size() == 0) {
               LOG.warn("Bad location layer format for task "+mapTask.getTaskID());
               continue;
             }
-            String host = layers.get(layers.size() - 1);
+            String host = layers.get(layers.size() - 1).getValue();
             if (host == null) {
               LOG.warn("Bad location layer format for task "+mapTask.getTaskID() + ": " + layers);
               continue;
@@ -226,20 +228,20 @@ public class ZombieJob implements JobStory {
 
   @Override
   public String getName() {
-    String jobName = job.getJobName();
+    JobName jobName = job.getJobName();
     if (jobName == null) {
       return "(name unknown)";
     } else {
-      return jobName;
+      return jobName.getValue();
     }
   }
 
   @Override
   public JobID getJobID() {
-    return JobID.forName(getLoggedJob().getJobID());
+    return getLoggedJob().getJobID();
   }
 
-  private int sanitizeValue(int oldVal, int defaultVal, String name, String id) {
+  private int sanitizeValue(int oldVal, int defaultVal, String name, JobID id) {
     if (oldVal == -1) {
       LOG.warn(name +" not defined for "+id);
       return defaultVal;
@@ -269,8 +271,10 @@ public class ZombieJob implements JobStory {
 
   @Override
   public String getQueueName() {
-    String queue = job.getQueue();
-    return (queue == null)? JobConf.DEFAULT_QUEUE_NAME : queue;
+    QueueName queue = job.getQueue();
+    return (queue == null || queue.getValue() == null) 
+           ? JobConf.DEFAULT_QUEUE_NAME 
+           : queue.getValue();
   }
   
   /**
@@ -357,13 +361,12 @@ public class ZombieJob implements JobStory {
       for (LoggedTask map : job.getMapTasks()) {
         map = sanitizeLoggedTask(map);
         if (map != null) {
-          loggedTaskMap.put(maskTaskID(TaskID.forName(map.taskID)), map);
+          loggedTaskMap.put(maskTaskID(map.taskID), map);
 
           for (LoggedTaskAttempt mapAttempt : map.getAttempts()) {
             mapAttempt = sanitizeLoggedTaskAttempt(mapAttempt);
             if (mapAttempt != null) {
-              TaskAttemptID id = TaskAttemptID.forName(mapAttempt
-                  .getAttemptID());
+              TaskAttemptID id = mapAttempt.getAttemptID();
               loggedTaskAttemptMap.put(maskAttemptID(id), mapAttempt);
             }
           }
@@ -372,13 +375,12 @@ public class ZombieJob implements JobStory {
       for (LoggedTask reduce : job.getReduceTasks()) {
         reduce = sanitizeLoggedTask(reduce);
         if (reduce != null) {
-          loggedTaskMap.put(maskTaskID(TaskID.forName(reduce.taskID)), reduce);
+          loggedTaskMap.put(maskTaskID(reduce.taskID), reduce);
 
           for (LoggedTaskAttempt reduceAttempt : reduce.getAttempts()) {
             reduceAttempt = sanitizeLoggedTaskAttempt(reduceAttempt);
             if (reduceAttempt != null) {
-              TaskAttemptID id = TaskAttemptID.forName(reduceAttempt
-                  .getAttemptID());
+              TaskAttemptID id = reduceAttempt.getAttemptID();
               loggedTaskAttemptMap.put(maskAttemptID(id), reduceAttempt);
             }
           }
@@ -391,8 +393,10 @@ public class ZombieJob implements JobStory {
 
   @Override
   public String getUser() {
-    String retval = job.getUser();
-    return (retval==null)?"(unknown)":retval;
+    UserName retval = job.getUser();
+    return (retval == null || retval.getValue() == null)
+           ? "(unknown)"
+           : retval.getValue();
   }
 
   /**
@@ -511,7 +515,7 @@ public class ZombieJob implements JobStory {
     }
   }
 
-  private long sanitizeTaskRuntime(long time, String id) {
+  private long sanitizeTaskRuntime(long time, ID id) {
     if (time < 0) {
       LOG.warn("Negative running time for task "+id+": "+time);
       return 100L; // set default to 100ms.
@@ -547,7 +551,7 @@ public class ZombieJob implements JobStory {
 
   private int getLocality(LoggedTask loggedTask, LoggedTaskAttempt loggedAttempt) {
     int distance = cluster.getMaximumDistance();
-    String rackHostName = loggedAttempt.getHostName();
+    String rackHostName = loggedAttempt.getHostName().getValue();
     if (rackHostName == null) {
       return distance;
     }
@@ -558,11 +562,11 @@ public class ZombieJob implements JobStory {
     List<LoggedLocation> locations = loggedTask.getPreferredLocations();
     if (locations != null) {
       for (LoggedLocation location : locations) {
-        List<String> layers = location.getLayers();
+        List<NodeName> layers = location.getLayers();
         if ((layers == null) || (layers.isEmpty())) {
           continue;
         }
-        String dataNodeName = layers.get(layers.size()-1);
+        String dataNodeName = layers.get(layers.size()-1).getValue();
         MachineNode dataNode = cluster.getMachineByName(dataNodeName);
         if (dataNode != null) {
           distance = Math.min(distance, cluster.distance(mn, dataNode));
@@ -690,8 +694,8 @@ public class ZombieJob implements JobStory {
 
   private TaskAttemptID makeTaskAttemptID(TaskType taskType, int taskNumber,
       int taskAttemptNumber) {
-    return new TaskAttemptID(new TaskID(JobID.forName(job.getJobID()),
-        taskType, taskNumber), taskAttemptNumber);
+    return new TaskAttemptID(new TaskID(job.getJobID(), taskType, taskNumber), 
+                             taskAttemptNumber);
   }
   
   private TaskAttemptInfo makeUpTaskAttemptInfo(TaskType taskType, TaskInfo taskInfo,
@@ -704,7 +708,7 @@ public class ZombieJob implements JobStory {
       state = makeUpState(taskAttemptNumber, job.getMapperTriesToSucceed());
       runtime = makeUpMapRuntime(state, locality);
       runtime = sanitizeTaskRuntime(runtime, makeTaskAttemptID(taskType,
-          taskNumber, taskAttemptNumber).toString());
+                                               taskNumber, taskAttemptNumber));
       TaskAttemptInfo tai
         = new MapTaskAttemptInfo(state, taskInfo, runtime, null);
       return tai;
