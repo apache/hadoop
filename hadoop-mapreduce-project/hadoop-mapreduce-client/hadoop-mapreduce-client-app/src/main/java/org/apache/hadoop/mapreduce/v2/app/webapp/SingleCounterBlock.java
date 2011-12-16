@@ -24,6 +24,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
+import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -120,8 +121,9 @@ public class SingleCounterBlock extends HtmlBlock {
       for(Map.Entry<TaskAttemptId, TaskAttempt> entry : 
         task.getAttempts().entrySet()) {
         long value = 0;
-        CounterGroup group = entry.getValue().getCounters()
-        .getCounterGroup($(COUNTER_GROUP));
+        Counters counters = entry.getValue().getCounters();
+        CounterGroup group = (counters != null)
+        		? counters.getCounterGroup($(COUNTER_GROUP)) : null;
         if(group != null)  {
           Counter c = group.getCounter($(COUNTER_NAME));
           if(c != null) {

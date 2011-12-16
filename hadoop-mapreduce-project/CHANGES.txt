@@ -263,6 +263,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3560. TestRMNodeTransitions is failing on trunk. 
     (Siddharth Seth via mahadev)
 
+    MAPREDUCE-3487. Fixed JobHistory web-UI to display links to single task's
+    counters' page. (Jason Lowe via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

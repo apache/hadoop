@@ -120,7 +120,7 @@ public class CountersBlock extends HtmlBlock {
         // Ditto
         TR<TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupRow = group.
           tr();
-          if (mg == null && rg == null) {
+          if (task == null && mg == null && rg == null) {
             groupRow.td().$title(counter.getName())._(counter.getDisplayName()).
             _();
           } else {
