@@ -73,6 +73,7 @@ import org.junit.Test;
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      MRAppMaster appMaster = new TestMRApp(attemptId);
+     appMaster.init(conf);
      EventHandler<JobFinishEvent> handler = 
          appMaster.createJobFinishEventHandler();
      handler.handle(new JobFinishEvent(jobid));

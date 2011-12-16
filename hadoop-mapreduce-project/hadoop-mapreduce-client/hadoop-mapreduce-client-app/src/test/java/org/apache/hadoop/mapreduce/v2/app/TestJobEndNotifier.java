@@ -96,8 +96,8 @@ public class TestJobEndNotifier extends JobEndNotifier {
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_URL, "http://nonexistent");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "3");
     conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "3");
-    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "3");
-    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "3");
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "3000");
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "3000");
     JobReport jobReport = Mockito.mock(JobReport.class);
 
     long startTime = System.currentTimeMillis();
