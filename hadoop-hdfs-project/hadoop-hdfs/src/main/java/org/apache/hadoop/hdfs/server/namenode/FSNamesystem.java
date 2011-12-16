@@ -535,6 +535,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         leaseManager.stopMonitor();
       }
       dir.fsImage.editLog.close();
+      // Update the fsimage with the last txid that we wrote
+      // so that the tailer starts from the right spot.
+      dir.fsImage.updateLastAppliedTxIdFromWritten();
     } finally {
       writeUnlock();
     }
@@ -2795,8 +2798,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new AssertionError("Invalid state: " + state.getClass());
     }
     return new NNHAStatusHeartbeat(hbState,
-        Math.max(getFSImage().getLastAppliedTxId(),
-                 getFSImage().getEditLog().getLastWrittenTxId()));
+        getFSImage().getLastAppliedOrWrittenTxId());
   }
 
   /**

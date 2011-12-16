@@ -59,3 +59,5 @@ HDFS-2683. Authority-based lookup of proxy provider fails if path becomes canoni
 HDFS-2689. HA: BookKeeperEditLogInputStream doesn't implement isInProgress() (atm)
 
 HDFS-2602. NN should log newly-allocated blocks without losing BlockInfo (atm)
+
+HDFS-2667. Fix transition from active to standby (todd)

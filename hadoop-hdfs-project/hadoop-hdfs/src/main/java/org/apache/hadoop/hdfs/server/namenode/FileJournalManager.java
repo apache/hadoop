@@ -304,7 +304,7 @@ class FileJournalManager implements JournalManager {
     for (EditLogFile elf : allLogFiles) {
       if (fromTxId > elf.getFirstTxId()
           && fromTxId <= elf.getLastTxId()) {
-        throw new IOException("Asked for fromTxId " + fromTxId
+        throw new IllegalStateException("Asked for fromTxId " + fromTxId
             + " which is in middle of file " + elf.file);
       }
       if (fromTxId <= elf.getFirstTxId()) {

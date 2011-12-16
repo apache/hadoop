@@ -199,7 +199,7 @@ public class TestFileJournalManager {
    * This should fail as edit logs must currently be treated as indevisable 
    * units.
    */
-  @Test(expected=IOException.class)
+  @Test(expected=IllegalStateException.class)
   public void testAskForTransactionsMidfile() throws IOException {
     File f = new File(TestEditLog.TEST_DIR + "/filejournaltest2");
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 
@@ -295,7 +295,7 @@ public class TestFileJournalManager {
     try {
       assertEquals("[]", getLogsAsString(fjm, 150));
       fail("Did not throw when asking for a txn in the middle of a log");
-    } catch (IOException ioe) {
+    } catch (IllegalStateException ioe) {
       GenericTestUtils.assertExceptionContains(
           "150 which is in the middle", ioe);
     }

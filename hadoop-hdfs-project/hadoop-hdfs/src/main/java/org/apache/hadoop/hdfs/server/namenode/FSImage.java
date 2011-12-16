@@ -678,9 +678,9 @@ public class FSImage implements Closeable {
       for (EditLogInputStream editIn : editStreams) {
         LOG.info("Reading " + editIn + " expecting start txid #" + startingTxId);
         int thisNumLoaded = loader.loadFSEdits(editIn, startingTxId);
+        lastAppliedTxId = startingTxId + thisNumLoaded - 1;
         startingTxId += thisNumLoaded;
         numLoaded += thisNumLoaded;
-        lastAppliedTxId += thisNumLoaded;
       }
     } finally {
       // TODO(HA): Should this happen when called by the tailer?
@@ -1115,6 +1115,15 @@ public class FSImage implements Closeable {
 
   public synchronized long getLastAppliedTxId() {
     return lastAppliedTxId;
+  }
+
+  public long getLastAppliedOrWrittenTxId() {
+    return Math.max(lastAppliedTxId,
+        editLog != null ? editLog.getLastWrittenTxId() : 0);
+  }
+
+  public void updateLastAppliedTxIdFromWritten() {
+    this.lastAppliedTxId = editLog.getLastWrittenTxId();
   }
 
 }

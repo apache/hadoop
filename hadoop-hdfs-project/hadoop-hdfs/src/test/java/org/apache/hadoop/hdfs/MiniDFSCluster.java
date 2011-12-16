@@ -1553,7 +1553,7 @@ public class MiniDFSCluster {
   
   public void transitionToStandby(int nnIndex) throws IOException,
       ServiceFailedException {
-    getHaServiceClient(nnIndex).transitionToActive();
+    getHaServiceClient(nnIndex).transitionToStandby();
   }
 
   /** Wait until the given namenode gets registration from all the datanodes */
