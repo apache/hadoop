@@ -181,7 +181,7 @@ public class TestFailoverProxy {
     
     assertEquals("impl1", unreliable.succeedsOnceThenFailsReturningString());
     try {
-      assertEquals("impl2", unreliable.succeedsOnceThenFailsReturningString());
+      unreliable.succeedsOnceThenFailsReturningString();
       fail("should not have succeeded twice");
     } catch (IOException e) {
       // Make sure we *don't* fail over since the first implementation threw an
@@ -303,5 +303,27 @@ public class TestFailoverProxy {
     
     String result = unreliable.failsIfIdentifierDoesntMatch("renamed-impl1");
     assertEquals("renamed-impl1", result);
+  }
+  
+  /**
+   * Ensure that normal IO exceptions don't result in a failover.
+   */
+  @Test
+  public void testExpectedIOException() {
+    UnreliableInterface unreliable = (UnreliableInterface)RetryProxy
+    .create(UnreliableInterface.class,
+        new FlipFlopProxyProvider(UnreliableInterface.class,
+          new UnreliableImplementation("impl1", TypeOfExceptionToFailWith.REMOTE_EXCEPTION),
+          new UnreliableImplementation("impl2", TypeOfExceptionToFailWith.UNRELIABLE_EXCEPTION)),
+          RetryPolicies.failoverOnNetworkException(
+              RetryPolicies.TRY_ONCE_THEN_FAIL, 10, 1000, 10000));
+    
+    try {
+      unreliable.failsIfIdentifierDoesntMatch("no-such-identifier");
+      fail("Should have thrown *some* exception");
+    } catch (Exception e) {
+      assertTrue("Expected IOE but got " + e.getClass(),
+          e instanceof IOException);
+    }
   }
 }

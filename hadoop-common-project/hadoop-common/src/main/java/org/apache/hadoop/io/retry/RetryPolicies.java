@@ -341,7 +341,7 @@ public class RetryPolicies {
             failovers == 0 ? 0 :
                 calculateExponentialTime(delayMillis, failovers, maxDelayBase));
       } else if (e instanceof SocketException ||
-                 e instanceof IOException) {
+                 (e instanceof IOException && !(e instanceof RemoteException))) {
         if (isMethodIdempotent) {
           return RetryAction.FAILOVER_AND_RETRY;
         } else {

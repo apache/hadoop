@@ -19,6 +19,7 @@ package org.apache.hadoop.io.retry;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -37,7 +38,8 @@ public class UnreliableImplementation implements UnreliableInterface {
   public static enum TypeOfExceptionToFailWith {
     UNRELIABLE_EXCEPTION,
     STANDBY_EXCEPTION,
-    IO_EXCEPTION
+    IO_EXCEPTION,
+    REMOTE_EXCEPTION
   }
   
   public UnreliableImplementation() {
@@ -95,14 +97,7 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (succeedsOnceThenFailsCount++ < 1) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      }
+      throwAppropriateException(exceptionToFailWith, identifier);
       return null;
     }
   }
@@ -113,16 +108,8 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (succeedsTenTimesThenFailsCount++ < 10) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      default:
-        throw new RuntimeException(identifier);
-      }
+      throwAppropriateException(exceptionToFailWith, identifier);
+      return null;
     }
   }
 
@@ -132,16 +119,8 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (succeedsOnceThenFailsIdempotentCount++ < 1) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      default:
-        throw new RuntimeException(identifier);
-      }
+      throwAppropriateException(exceptionToFailWith, identifier);
+      return null;
     }
   }
 
@@ -153,17 +132,24 @@ public class UnreliableImplementation implements UnreliableInterface {
     } else {
       String message = "expected '" + this.identifier + "' but received '" +
           identifier + "'";
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(message);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(message);
-      case IO_EXCEPTION:
-        throw new IOException(message);
-      default:
-        throw new RuntimeException(message);
-      }
+      throwAppropriateException(exceptionToFailWith, message);
+      return null;
     }
   }
 
+  private static void throwAppropriateException(TypeOfExceptionToFailWith eType,
+      String message) throws UnreliableException, StandbyException, IOException {
+    switch (eType) {
+    case STANDBY_EXCEPTION:
+      throw new StandbyException(message);
+    case UNRELIABLE_EXCEPTION:
+      throw new UnreliableException(message);
+    case IO_EXCEPTION:
+      throw new IOException(message);
+    case REMOTE_EXCEPTION:
+      throw new RemoteException(IOException.class.getName(), message);
+    default:
+      throw new RuntimeException(message);
+    }
+  }
 }

@@ -15,3 +15,6 @@ HADOOP-7922. Improve some logging for client IPC failovers and
              StandbyExceptions (todd)
 
 HADOOP-7921. StandbyException should extend IOException (todd)
+
+HADOOP-7928. HA: Client failover policy is incorrectly trying to fail over all
+             IOExceptions (atm)
