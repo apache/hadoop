@@ -495,7 +495,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       FSEditLog editLog = dir.fsImage.getEditLog();
       
-      if (!editLog.isSegmentOpen()) {
+      if (!editLog.isOpenForWrite()) {
         // During startup, we're already open for write during initialization.
         // TODO(HA): consider adding a startup state?
         editLog.initJournalsForWrite();
@@ -2774,7 +2774,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, blockPoolId, capacity, dfsUsed, remaining, blockPoolUsed,
           xceiverCount, maxTransfer, failedVolumes);
-      if (cmds == null) {
+      if (cmds == null || cmds.length == 0) {
         DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
         if (cmd != null) {
           cmds = new DatanodeCommand[] {cmd};

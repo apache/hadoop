@@ -110,7 +110,7 @@ public class TestHeartbeatHandling extends TestCase {
 
           cmds = NameNodeAdapter.sendHeartBeat(nodeReg, dd, namesystem)
               .getCommands();
-          assertEquals(null, cmds);
+          assertEquals(0, cmds.length);
         }
       } finally {
         namesystem.writeUnlock();

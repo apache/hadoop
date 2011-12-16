@@ -923,10 +923,12 @@ public class TestCheckpoint extends TestCase {
         throw new IOException(e);
       }
       
+      final int EXPECTED_TXNS_FIRST_SEG = 12;
+      
       // the following steps should have happened:
-      //   edits_inprogress_1 -> edits_1-8  (finalized)
-      //   fsimage_8 created
-      //   edits_inprogress_9 created
+      //   edits_inprogress_1 -> edits_1-12  (finalized)
+      //   fsimage_12 created
+      //   edits_inprogress_13 created
       //
       for(URI uri : editsDirs) {
         File ed = new File(uri.getPath());
@@ -938,19 +940,21 @@ public class TestCheckpoint extends TestCase {
                                       NNStorage.getInProgressEditsFileName(1));
         assertFalse(originalEdits.exists());
         File finalizedEdits = new File(curDir,
-            NNStorage.getFinalizedEditsFileName(1,8));
-        assertTrue(finalizedEdits.exists());
+            NNStorage.getFinalizedEditsFileName(1, EXPECTED_TXNS_FIRST_SEG));
+        GenericTestUtils.assertExists(finalizedEdits);
         assertTrue(finalizedEdits.length() > Integer.SIZE/Byte.SIZE);
 
-        assertTrue(new File(ed, "current/"
-                       + NNStorage.getInProgressEditsFileName(9)).exists());
+        GenericTestUtils.assertExists(new File(ed, "current/"
+                       + NNStorage.getInProgressEditsFileName(
+                           EXPECTED_TXNS_FIRST_SEG + 1)));
       }
       
       Collection<URI> imageDirs = cluster.getNameDirs(0);
       for (URI uri : imageDirs) {
         File imageDir = new File(uri.getPath());
         File savedImage = new File(imageDir, "current/"
-                                   + NNStorage.getImageFileName(8));
+                                   + NNStorage.getImageFileName(
+                                       EXPECTED_TXNS_FIRST_SEG));
         assertTrue("Should have saved image at " + savedImage,
             savedImage.exists());        
       }

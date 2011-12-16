@@ -61,3 +61,5 @@ HDFS-2689. HA: BookKeeperEditLogInputStream doesn't implement isInProgress() (at
 HDFS-2602. NN should log newly-allocated blocks without losing BlockInfo (atm)
 
 HDFS-2667. Fix transition from active to standby (todd)
+
+HDFS-2684. Fix up some failing unit tests on HA branch (todd)

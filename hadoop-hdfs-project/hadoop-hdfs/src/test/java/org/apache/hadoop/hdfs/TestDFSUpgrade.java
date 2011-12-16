@@ -52,7 +52,7 @@ import static org.junit.Assert.*;
 */
 public class TestDFSUpgrade {
  
-  private static final int EXPECTED_TXID = 33;
+  private static final int EXPECTED_TXID = 49;
   private static final Log LOG = LogFactory.getLog(TestDFSUpgrade.class.getName());
   private Configuration conf;
   private int testCounter = 0;

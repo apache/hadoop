@@ -199,6 +199,11 @@ public class BackupNode extends NameNode {
       checkpointManager.interrupt();
       checkpointManager = null;
     }
+
+    // Abort current log segment - otherwise the NN shutdown code
+    // will close it gracefully, which is incorrect.
+    getFSImage().getEditLog().abortCurrentLogSegment();
+
     // Stop name-node threads
     super.stop();
   }

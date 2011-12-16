@@ -240,9 +240,9 @@ public class TestBackupNode extends TestCase {
   }  
 
   void testCheckpoint(StartupOption op) throws Exception {
-    Path file1 = new Path("checkpoint.dat");
-    Path file2 = new Path("checkpoint2.dat");
-    Path file3 = new Path("backup.dat");
+    Path file1 = new Path("/checkpoint.dat");
+    Path file2 = new Path("/checkpoint2.dat");
+    Path file3 = new Path("/backup.dat");
 
     Configuration conf = new HdfsConfiguration();
     short replication = (short)conf.getInt("dfs.replication", 3);
@@ -341,11 +341,13 @@ public class TestBackupNode extends TestCase {
       TestCheckpoint.checkFile(fileSys, file3, replication);
       // should also be on BN right away
       assertTrue("file3 does not exist on BackupNode",
-          op != StartupOption.BACKUP || bnFS.exists(file3));
+          op != StartupOption.BACKUP ||
+          backup.getNamesystem().getFileInfo(
+              file3.toUri().getPath(), false) != null);
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
-      assertTrue(e.getLocalizedMessage(), false);
+      throw new AssertionError(e);
     } finally {
       if(backup != null) backup.stop();
       if(fileSys != null) fileSys.close();

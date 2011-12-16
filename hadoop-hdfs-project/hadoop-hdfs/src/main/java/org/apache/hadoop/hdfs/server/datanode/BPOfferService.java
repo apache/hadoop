@@ -325,6 +325,8 @@ class BPOfferService {
     } else {
       bpRegistration = reg;
     }
+    
+    dn.bpRegistrationSucceeded(bpRegistration, getBlockPoolId());
   }
 
   /**

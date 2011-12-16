@@ -916,6 +916,7 @@ public class FSEditLog  {
       if (editLogStream != null) {
         editLogStream.abort();
         editLogStream = null;
+        state = State.BETWEEN_LOG_SEGMENTS;
       }
     } catch (IOException e) {
       LOG.warn("All journals failed to abort", e);
