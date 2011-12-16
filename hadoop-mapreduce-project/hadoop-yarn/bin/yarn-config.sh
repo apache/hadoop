@@ -15,29 +15,24 @@
 
 # included in all the hadoop scripts with source command
 # should not be executable directly
-# also should not be passed any arguments, since we need original $*
-
-# resolve links - $0 may be a softlink
-
-this="$0"
-while [ -h "$this" ]; do
-  ls=`ls -ld "$this"`
-  link=`expr "$ls" : '.*-> \(.*\)$'`
-  if expr "$link" : '.*/.*' > /dev/null; then
-    this="$link"
-  else
-    this=`dirname "$this"`/"$link"
-  fi
-done
-
-# convert relative path to absolute path
-bin=`dirname "$this"`
-script=`basename "$this"`
+bin=`which "$0"`
+bin=`dirname "${bin}"`
 bin=`cd "$bin"; pwd`
-this="$bin/$script"
 
-# the root of the Hadoop installation
-export YARN_HOME=`dirname "$this"`/..
+export HADOOP_PREFIX="${HADOOP_PREFIX:-$bin/..}"
+
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+if [ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]; then
+  . ${HADOOP_LIBEXEC_DIR}/hadoop-config.sh
+elif [ -e "${HADOOP_COMMON_HOME}/libexec/hadoop-config.sh" ]; then
+  . "$HADOOP_COMMON_HOME"/libexec/hadoop-config.sh
+elif [ -e "${HADOOP_HOME}/libexec/hadoop-config.sh" ]; then
+  . "$HADOOP_HOME"/libexec/hadoop-config.sh
+else
+  echo "Hadoop common not found."
+  exit
+fi
 
 # Same glibc bug that discovered in Hadoop.
 # Without this you can see very large vmem settings on containers.
@@ -56,7 +51,7 @@ then
 fi
  
 # Allow alternate conf dir location.
-YARN_CONF_DIR="${YARN_CONF_DIR:-$YARN_HOME/conf}"
+YARN_CONF_DIR="${HADOOP_CONF_DIR:-$YARN_HOME/conf}"
 
 #check to see it is specified whether to use the slaves or the
 # masters file

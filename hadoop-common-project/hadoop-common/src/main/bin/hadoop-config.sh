@@ -231,6 +231,23 @@ fi
 
 CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs'/*'
 
+# put yarn in classpath if present
+if [ "$YARN_HOME" = "" ]; then
+  if [ -d "${HADOOP_PREFIX}/share/hadoop/mapreduce" ]; then
+    YARN_HOME=$HADOOP_PREFIX
+  fi
+fi
+
+if [ -d "$YARN_HOME/share/hadoop/mapreduce/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce
+fi
+
+if [ -d "$YARN_HOME/share/hadoop/mapreduce/lib" ]; then
+  CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce/lib'/*'
+fi
+
+CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce'/*'
+
 # cygwin path translation
 if $cygwin; then
   HADOOP_HDFS_HOME=`cygpath -w "$HADOOP_HDFS_HOME"`

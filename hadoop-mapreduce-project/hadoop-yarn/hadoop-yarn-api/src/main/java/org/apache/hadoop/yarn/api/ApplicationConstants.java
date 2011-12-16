@@ -96,8 +96,8 @@ public interface ApplicationConstants {
         "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
         "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
         "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
-        "$YARN_HOME/modules/*",
-        "$YARN_HOME/lib/*"
+        "$YARN_HOME/share/hadoop/mapreduce/*",
+        "$YARN_HOME/share/hadoop/mapreduce/lib/*"
       };
   
   /**

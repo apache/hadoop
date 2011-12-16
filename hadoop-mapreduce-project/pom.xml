@@ -34,6 +34,8 @@
     <test.timeout>600000</test.timeout>
     <fork.mode>once</fork.mode>
     <mr.basedir>${basedir}</mr.basedir>
+    <hadoop.component>mapreduce</hadoop.component>
+    <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
   <modules>
@@ -321,7 +323,10 @@
 
   <profiles>
     <profile>
-      <id>release</id>
+      <id>dist</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -336,16 +341,6 @@
               </execution>
             </executions>
           </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>dist</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-assembly-plugin</artifactId>
@@ -367,7 +362,7 @@
             </configuration>
             <executions>
               <execution>
-                <id>dist</id>
+                <id>package-mapreduce</id>
                 <phase>prepare-package</phase>
                 <goals>
                   <goal>single</goal>
