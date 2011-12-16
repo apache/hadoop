@@ -275,6 +275,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3366. Mapreduce component should use consistent directory structure 
     layout as HDFS/common (Eric Yang via mahadev)
 
+    MAPREDUCE-3387. Fixed AM's tracking URL to always go through the proxy, even
+    before the job started, so that it works properly with oozie throughout
+    the job execution. (Robert Joseph Evans via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

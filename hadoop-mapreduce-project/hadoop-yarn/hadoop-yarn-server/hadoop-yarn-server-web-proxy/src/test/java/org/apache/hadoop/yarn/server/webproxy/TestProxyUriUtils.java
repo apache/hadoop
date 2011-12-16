@@ -23,44 +23,16 @@ import static org.junit.Assert.*;
 import java.net.URI;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestProxyUriUtils {
-  public static class TestAppId extends ApplicationId {
-    private long timestamp;
-    private int id;
-
-    public TestAppId(int id, long timestamp) {
-      setId(id);
-      setClusterTimestamp(timestamp);
-    }
-    @Override
-    public int getId() {
-      return id;
-    }
-
-    @Override
-    public void setId(int id) {
-      this.id = id;
-    }
-
-    @Override
-    public long getClusterTimestamp() {
-      return timestamp;
-    }
-
-    @Override
-    public void setClusterTimestamp(long clusterTimestamp) {
-      this.timestamp = clusterTimestamp;
-    }
-  }
-  
   @Test
   public void testGetPathApplicationId() {
     assertEquals("/proxy/application_100_0001", 
-        ProxyUriUtils.getPath(new TestAppId(1, 100l)));
+        ProxyUriUtils.getPath(BuilderUtils.newApplicationId(100l, 1)));
     assertEquals("/proxy/application_6384623_0005", 
-        ProxyUriUtils.getPath(new TestAppId(5, 6384623l)));
+        ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5)));
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -71,23 +43,23 @@ public class TestProxyUriUtils {
   @Test
   public void testGetPathApplicationIdString() {
     assertEquals("/proxy/application_6384623_0005", 
-        ProxyUriUtils.getPath(new TestAppId(5, 6384623l), null));
+        ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), null));
     assertEquals("/proxy/application_6384623_0005/static/app",
-        ProxyUriUtils.getPath(new TestAppId(5, 6384623l), "/static/app"));
+        ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), "/static/app"));
     assertEquals("/proxy/application_6384623_0005/", 
-        ProxyUriUtils.getPath(new TestAppId(5, 6384623l), "/"));
+        ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), "/"));
     assertEquals("/proxy/application_6384623_0005/some/path", 
-        ProxyUriUtils.getPath(new TestAppId(5, 6384623l), "some/path"));
+        ProxyUriUtils.getPath(BuilderUtils.newApplicationId(6384623l, 5), "some/path"));
   }
   
   @Test 
   public void testGetPathAndQuery() {
     assertEquals("/proxy/application_6384623_0005/static/app?foo=bar",
-    ProxyUriUtils.getPathAndQuery(new TestAppId(5, 6384623l), "/static/app", 
+    ProxyUriUtils.getPathAndQuery(BuilderUtils.newApplicationId(6384623l, 5), "/static/app", 
         "?foo=bar", false));
     
     assertEquals("/proxy/application_6384623_0005/static/app?foo=bar&bad=good&proxyapproved=true",
-        ProxyUriUtils.getPathAndQuery(new TestAppId(5, 6384623l), "/static/app", 
+        ProxyUriUtils.getPathAndQuery(BuilderUtils.newApplicationId(6384623l, 5), "/static/app", 
             "foo=bar&bad=good", true));
   }
 
@@ -95,10 +67,20 @@ public class TestProxyUriUtils {
   public void testGetProxyUri() throws Exception {
     URI originalUri = new URI("http://host.com/static/foo?bar=bar");
     URI proxyUri = new URI("http://proxy.net:8080/");
-    TestAppId id = new TestAppId(5, 6384623l);
+    ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
     URI expected = new URI("http://proxy.net:8080/proxy/application_6384623_0005/static/foo?bar=bar");
     URI result = ProxyUriUtils.getProxyUri(originalUri, proxyUri, id);
     assertEquals(expected, result);
   }
 
+  
+  @Test
+  public void testGetProxyUriNull() throws Exception {
+    URI originalUri = null;
+    URI proxyUri = new URI("http://proxy.net:8080/");
+    ApplicationId id = BuilderUtils.newApplicationId(6384623l, 5);
+    URI expected = new URI("http://proxy.net:8080/proxy/application_6384623_0005/");
+    URI result = ProxyUriUtils.getProxyUri(originalUri, proxyUri, id);
+    assertEquals(expected, result);
+  }
 }

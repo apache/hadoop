@@ -80,8 +80,10 @@ public class AppInfo {
 
     if (app != null) {
       String trackingUrl = app.getTrackingUrl();
+      this.state = app.getState();
       this.trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty()
-          || "N/A".equalsIgnoreCase(trackingUrl);
+          || RMAppState.NEW == this.state || RMAppState.SUBMITTED == this.state
+          || RMAppState.ACCEPTED == this.state;
       this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED" : (app
           .getFinishTime() == 0 ? "ApplicationMaster" : "History");
       if (!trackingUrlIsNotReady) {
@@ -95,7 +97,6 @@ public class AppInfo {
       this.user = app.getUser().toString();
       this.name = app.getName().toString();
       this.queue = app.getQueue().toString();
-      this.state = app.getState();
       this.progress = app.getProgress() * 100;
       this.diagnostics = app.getDiagnostics().toString();
       if (diagnostics == null || diagnostics.isEmpty()) {

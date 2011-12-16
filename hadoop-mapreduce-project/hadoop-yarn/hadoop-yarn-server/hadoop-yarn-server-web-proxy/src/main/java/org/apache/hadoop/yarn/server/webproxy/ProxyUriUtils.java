@@ -114,7 +114,8 @@ public class ProxyUriUtils {
   
   /**
    * Get a proxied URI for the original URI.
-   * @param originalUri the original URI to go through the proxy
+   * @param originalUri the original URI to go through the proxy, or null if
+   * a default path "/" can be used. 
    * @param proxyUri the URI of the proxy itself, scheme, host and port are used.
    * @param id the id of the application
    * @return the proxied URI
@@ -122,9 +123,10 @@ public class ProxyUriUtils {
   public static URI getProxyUri(URI originalUri, URI proxyUri,
       ApplicationId id) {
     try {
-      String path = getPath(id, originalUri.getPath());
+      String path = getPath(id, originalUri == null ? "/" : originalUri.getPath());
       return new URI(proxyUri.getScheme(), proxyUri.getAuthority(), path,
-          originalUri.getQuery(), originalUri.getFragment());
+          originalUri == null ? null : originalUri.getQuery(),
+          originalUri == null ? null : originalUri.getFragment());
     } catch (URISyntaxException e) {
       throw new RuntimeException("Could not proxify "+originalUri,e);
     }
