@@ -233,7 +233,10 @@ Release 0.23.1 - Unreleased
     -showacls (Jonathan Eagles via mahadev)
 
     MAPREDUCE-3537. Fix race condition in DefaultContainerExecutor which led
-    to container localization occuring in wrong directories. (acmurthy) 
+    to container localization occuring in wrong directories. (acmurthy)
+
+    MAPREDUCE-3542. Support "FileSystemCounter" legacy counter group name for
+    compatibility. (tomwhite)
 
     MAPREDUCE-3426. Fixed MR AM in uber mode to write map intermediate outputs
     in the correct directory to work properly in secure mode. (Hitesh Shah via

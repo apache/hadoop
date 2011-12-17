@@ -76,6 +76,7 @@ public abstract class AbstractCounters<C extends Counter,
                   TaskCounter.class.getName());
     legacyMap.put("org.apache.hadoop.mapred.JobInProgress$Counter",
                   JobCounter.class.getName());
+    legacyMap.put("FileSystemCounter", FileSystemCounter.class.getName());
   }
 
   private final Limits limits = new Limits();
