@@ -2353,7 +2353,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             }
           }
         } finally {
-          reader.close();
+          IOUtils.closeStream(reader);
           IOUtils.closeSocket(dn);
         }
         // Put chosen node into dead list, continue
