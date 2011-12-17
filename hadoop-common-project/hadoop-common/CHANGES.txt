@@ -141,6 +141,9 @@ Trunk (unreleased changes)
 
     HADOOP-7892. IPC logs too verbose after "RpcKind" introduction (todd)
 
+    HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
+                 initialization (atm)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
