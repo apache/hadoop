@@ -21,10 +21,16 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.hadoop.mapreduce.ID;
+import org.apache.hadoop.tools.rumen.datatypes.DataType;
+import org.apache.hadoop.tools.rumen.serializers.DefaultRumenSerializer;
+import org.apache.hadoop.tools.rumen.serializers.ObjectStringSerializer;
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonGenerator;
+import org.codehaus.jackson.Version;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
+import org.codehaus.jackson.map.module.SimpleModule;
 
 /**
  * Simple wrapper around {@link JsonGenerator} to write objects in JSON format.
@@ -37,6 +43,19 @@ public class JsonObjectMapperWriter<T> implements Closeable {
     ObjectMapper mapper = new ObjectMapper();
     mapper.configure(
         SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
+
+    // define a module
+    SimpleModule module = new SimpleModule("Default Serializer",  
+                                           new Version(0, 1, 1, "FINAL"));
+    // add various serializers to the module
+    //   add default (all-pass) serializer for all rumen specific data types
+    module.addSerializer(DataType.class, new DefaultRumenSerializer());
+    //   add a serializer to use object.toString() while serializing
+    module.addSerializer(ID.class, new ObjectStringSerializer<ID>());
+    
+    // register the module with the object-mapper
+    mapper.registerModule(module);
+
     mapper.getJsonFactory();
     writer = mapper.getJsonFactory().createJsonGenerator(
         output, JsonEncoding.UTF8);

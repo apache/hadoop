@@ -27,6 +27,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.tools.rumen.datatypes.*;
 import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
@@ -50,8 +52,8 @@ public class LoggedJob implements DeepCompare {
   static private Set<String> alreadySeenAnySetterAttributes =
       new TreeSet<String>();
 
-  String jobID;
-  String user;
+  JobID jobID;
+  UserName user;
   long computonsPerMapInputByte = -1L;
   long computonsPerMapOutputByte = -1L;
   long computonsPerReduceInputByte = -1L;
@@ -80,9 +82,9 @@ public class LoggedJob implements DeepCompare {
   LoggedDiscreteCDF successfulReduceAttemptCDF;
   LoggedDiscreteCDF failedReduceAttemptCDF;
 
-  String queue = null;
+  QueueName queue = null;
 
-  String jobName = null;
+  JobName jobName = null;
 
   int clusterMapMB = -1;
   int clusterReduceMB = -1;
@@ -94,7 +96,7 @@ public class LoggedJob implements DeepCompare {
   double[] mapperTriesToSucceed;
   double failedMapperFraction; // !!!!!
 
-  private Properties jobProperties = new Properties();
+  private JobProperties jobProperties = new JobProperties();
   
   LoggedJob() {
 
@@ -110,13 +112,13 @@ public class LoggedJob implements DeepCompare {
    * Set the configuration properties of the job.
    */
   void setJobProperties(Properties conf) {
-    this.jobProperties = conf;
+    this.jobProperties = new JobProperties(conf);
   }
   
   /**
    * Get the configuration properties of the job.
    */
-  public Properties getJobProperties() {
+  public JobProperties getJobProperties() {
     return jobProperties;
   }
   
@@ -138,7 +140,6 @@ public class LoggedJob implements DeepCompare {
     }
   }
 
-  @SuppressWarnings("unused")
   // for input parameter ignored.
   @JsonAnySetter
   public void setUnknownAttribute(String attributeName, Object ignored) {
@@ -149,20 +150,20 @@ public class LoggedJob implements DeepCompare {
     }
   }
 
-  public String getUser() {
+  public UserName getUser() {
     return user;
   }
 
   void setUser(String user) {
-    this.user = user;
+    this.user = new UserName(user);
   }
 
-  public String getJobID() {
+  public JobID getJobID() {
     return jobID;
   }
 
   void setJobID(String jobID) {
-    this.jobID = jobID;
+    this.jobID = JobID.forName(jobID);
   }
 
   public JobPriority getPriority() {
@@ -359,20 +360,20 @@ public class LoggedJob implements DeepCompare {
     this.relativeTime = relativeTime;
   }
 
-  public String getQueue() {
+  public QueueName getQueue() {
     return queue;
   }
 
   void setQueue(String queue) {
-    this.queue = queue;
+    this.queue = new QueueName(queue);
   }
 
-  public String getJobName() {
+  public JobName getJobName() {
     return jobName;
   }
 
   void setJobName(String jobName) {
-    this.jobName = jobName;
+    this.jobName = new JobName(jobName);
   }
 
   public int getClusterMapMB() {
@@ -555,33 +556,52 @@ public class LoggedJob implements DeepCompare {
     }
   }
 
-  private void compareJobProperties(Properties prop1, Properties prop2,
+  private void compareJobProperties(JobProperties jprop1, JobProperties jprop2,
                                     TreePath loc, String eltname) 
   throws DeepInequalityException {
-    if (prop1 == null && prop2 == null) {
+    if (jprop1 == null && jprop2 == null) {
       return;
     }
 
-    if (prop1 == null || prop2 == null) {
-      throw new DeepInequalityException(eltname + " miscompared [null]", 
+    if (jprop1 == null || jprop2 == null) {
+      throw new DeepInequalityException(eltname + " miscompared", 
                                         new TreePath(loc, eltname));
     }
 
+    Properties prop1 = jprop1.getValue();
+    Properties prop2 = jprop2.getValue();
+    
     if (prop1.size() != prop2.size()) {
       throw new DeepInequalityException(eltname + " miscompared [size]", 
                                         new TreePath(loc, eltname));
     }
     
     for (Map.Entry<Object, Object> entry : prop1.entrySet()) {
-      Object v1 = entry.getValue();
-      Object v2 = prop2.get(entry.getKey());
-      if (v1 == null || v2 == null || !v1.equals(v2)) {
-        throw new DeepInequalityException(
-          eltname + " miscompared for value of key : " 
-            + entry.getKey().toString(), 
-          new TreePath(loc, eltname));
-      }
+      String v1 = entry.getValue().toString();
+      String v2 = prop2.get(entry.getKey()).toString();
+      compare1(v1, v2, new TreePath(loc, eltname), "key:" + entry.getKey());
     }
+  }
+  
+  private void compare1(DataType<String> c1, DataType<String> c2, TreePath loc, 
+                        String eltname) 
+  throws DeepInequalityException {
+    if (c1 == null && c2 == null) {
+      return;
+    }
+
+    if (c1 == null || c2 == null) {
+      throw new DeepInequalityException(eltname + " miscompared", 
+                                        new TreePath(loc, eltname));
+    }
+    TreePath dtPath = new TreePath(loc, eltname);
+    
+    if (!c1.getClass().getName().equals(c2.getClass().getName())) {
+      throw new DeepInequalityException(eltname + " miscompared", 
+                                        new TreePath(dtPath, "class"));
+    }
+    
+    compare1(c1.getValue(), c2.getValue(), dtPath, "value");
   }
   
   public void deepCompare(DeepCompare comparand, TreePath loc)
@@ -592,7 +612,7 @@ public class LoggedJob implements DeepCompare {
 
     LoggedJob other = (LoggedJob) comparand;
 
-    compare1(jobID, other.jobID, loc, "jobID");
+    compare1(jobID.toString(), other.jobID.toString(), loc, "jobID");
     compare1(user, other.user, loc, "user");
 
     compare1(computonsPerMapInputByte, other.computonsPerMapInputByte, loc,

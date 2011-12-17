@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -153,7 +154,7 @@ public class TestAMWebApp {
     e.getValue().getType();
     Map<String, String> params = new HashMap<String, String>();
     params.put(AMParams.JOB_ID, MRApps.toString(jobId));
-    params.put(AMParams.TASK_ID, e.getKey().toString());
+    params.put(AMParams.TASK_ID, MRApps.toString(e.getKey()));
     params.put(AMParams.TASK_TYPE, MRApps.taskSymbol(e.getValue().getType()));
     return params;
   }
@@ -176,6 +177,32 @@ public class TestAMWebApp {
     params.put(AMParams.COUNTER_GROUP, 
         "org.apache.hadoop.mapreduce.FileSystemCounter");
     params.put(AMParams.COUNTER_NAME, "HDFS_WRITE_OPS");
+    WebAppTests.testPage(SingleCounterPage.class, AppContext.class,
+                         appContext, params);
+  }
+
+  @Test public void testTaskCountersView() {
+    AppContext appContext = new TestAppContext();
+    Map<String, String> params = getTaskParams(appContext);
+    WebAppTests.testPage(CountersPage.class, AppContext.class,
+                         appContext, params);
+  }
+
+  @Test public void testSingleTaskCounterView() {
+    AppContext appContext = new TestAppContext(0, 1, 1, 2);
+    Map<String, String> params = getTaskParams(appContext);
+    params.put(AMParams.COUNTER_GROUP, 
+        "org.apache.hadoop.mapreduce.FileSystemCounter");
+    params.put(AMParams.COUNTER_NAME, "HDFS_WRITE_OPS");
+    
+    // remove counters from one task attempt
+    // to test handling of missing counters
+    TaskId taskID = MRApps.toTaskID(params.get(AMParams.TASK_ID));
+    Job job = appContext.getJob(taskID.getJobId());
+    Task task = job.getTask(taskID);
+    TaskAttempt attempt = task.getAttempts().values().iterator().next();
+    attempt.getReport().setCounters(null);
+    
     WebAppTests.testPage(SingleCounterPage.class, AppContext.class,
                          appContext, params);
   }

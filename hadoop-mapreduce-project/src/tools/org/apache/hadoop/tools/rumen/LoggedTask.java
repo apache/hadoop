@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.hadoop.mapreduce.jobhistory.Events;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounter;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounterGroup;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
@@ -44,7 +44,7 @@ public class LoggedTask implements DeepCompare {
   long inputRecords = -1L;
   long outputBytes = -1L;
   long outputRecords = -1L;
-  String taskID;
+  TaskID taskID;
   long startTime = -1L;
   long finishTime = -1L;
   Pre21JobHistoryConstants.Values taskType;
@@ -55,7 +55,6 @@ public class LoggedTask implements DeepCompare {
   static private Set<String> alreadySeenAnySetterAttributes =
       new TreeSet<String>();
 
-  @SuppressWarnings("unused")
   // for input parameter ignored.
   @JsonAnySetter
   public void setUnknownAttribute(String attributeName, Object ignored) {
@@ -111,12 +110,12 @@ public class LoggedTask implements DeepCompare {
     this.outputRecords = outputRecords;
   }
 
-  public String getTaskID() {
+  public TaskID getTaskID() {
     return taskID;
   }
 
   void setTaskID(String taskID) {
-    this.taskID = taskID;
+    this.taskID = TaskID.forName(taskID);
   }
 
   public long getStartTime() {
@@ -357,7 +356,7 @@ public class LoggedTask implements DeepCompare {
     compare1(outputBytes, other.outputBytes, loc, "outputBytes");
     compare1(outputRecords, other.outputRecords, loc, "outputRecords");
 
-    compare1(taskID, other.taskID, loc, "taskID");
+    compare1(taskID.toString(), other.taskID.toString(), loc, "taskID");
 
     compare1(startTime, other.startTime, loc, "startTime");
     compare1(finishTime, other.finishTime, loc, "finishTime");

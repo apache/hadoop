@@ -22,7 +22,6 @@
     <format>dir</format>
   </formats>
   <includeBaseDirectory>false</includeBaseDirectory>
-  <!-- TODO: this layout is wrong. We need module specific bin files in module specific dirs -->
   <fileSets>
     <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/target/native/target/usr/local/bin</directory>
@@ -33,7 +32,7 @@
       <directory>hadoop-yarn/bin</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
-        <include>*</include>
+        <include>yarn</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
@@ -41,16 +40,80 @@
       <directory>bin</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
-        <include>*</include>
+        <include>mapred</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>bin</directory>
+      <outputDirectory>libexec</outputDirectory>
+      <includes>
+        <include>mapred-config.sh</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/bin</directory>
+      <outputDirectory>libexec</outputDirectory>
+      <includes>
+        <include>yarn-config.sh</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/bin</directory>
+      <outputDirectory>sbin</outputDirectory>
+      <includes>
+        <include>yarn-daemon.sh</include>
+        <include>yarn-daemons.sh</include>
+        <include>start-yarn.sh</include>
+        <include>stop-yarn.sh</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
       <directory>hadoop-yarn/conf</directory>
-      <outputDirectory>conf</outputDirectory>
+      <outputDirectory>etc/hadoop</outputDirectory>
       <includes>
         <include>**/*</include>
       </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}</directory>
+      <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
+      <includes>
+        <include>*.txt</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/webapps</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/webapps</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/src/main/conf</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/templates</outputDirectory>
+      <includes>
+        <include>*-site.xml</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/src/main/packages/templates/conf</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/templates/conf</outputDirectory>
+      <includes>
+        <include>*</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+      <directory>${basedir}/dev-support/jdiff</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/jdiff</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/site/jdiff/xml</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/jdiff</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${project.build.directory}/site</directory>
+      <outputDirectory>/share/doc/hadoop/${hadoop.component}</outputDirectory>
     </fileSet>
   </fileSets>
   <moduleSets>
@@ -59,7 +122,7 @@
         <exclude>org.apache.hadoop:hadoop-yarn-server-tests</exclude>
       </excludes>
       <binaries>
-        <outputDirectory>modules</outputDirectory>
+        <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
         <includeDependencies>false</includeDependencies>
         <unpack>false</unpack>
       </binaries>
@@ -68,7 +131,7 @@
   <dependencySets>
     <dependencySet>
       <useProjectArtifact>false</useProjectArtifact>
-      <outputDirectory>/lib</outputDirectory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib</outputDirectory>
       <!-- Exclude hadoop artifacts. They will be found via HADOOP* env -->
       <excludes>
         <exclude>org.apache.hadoop:hadoop-common</exclude>

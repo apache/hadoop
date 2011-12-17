@@ -44,7 +44,7 @@
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-DEFAULT_LIBEXEC_DIR="$bin"
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/yarn-config.sh
 
@@ -109,8 +109,7 @@ if [ ! -d "$HADOOP_CONF_DIR" ]; then
   exit 1
 fi
 
-CLASSPATH="${HADOOP_CONF_DIR}:${YARN_CONF_DIR}"
-CLASSPATH=${CLASSPATH}:${YARN_CLASSPATH}
+CLASSPATH="${HADOOP_CONF_DIR}:${YARN_CONF_DIR}:${CLASSPATH}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH
@@ -145,38 +144,6 @@ fi
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
-
-# add hadoop-common libs to CLASSPATH
-if [ ! -d "$HADOOP_COMMON_HOME" ]; then
-  if [ -d "$HADOOP_PREFIX" ]; then
-    export HADOOP_COMMON_HOME=$HADOOP_PREFIX
-  else
-    echo No HADOOP_COMMON_HOME set. 
-    echo Please specify it either in yarn-env.sh or in the environment.
-    exit 1
-  fi
-fi
-
-CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common'/*'
-CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/share/hadoop/common/lib'/*'
-
-# add hadoop-hdfs libs to CLASSPATH
-if [ ! -d "$HADOOP_HDFS_HOME" ]; then
-  if [ -d "$HADOOP_PREFIX" ]; then
-    export HADOOP_HDFS_HOME=$HADOOP_PREFIX
-  else
-    echo No HADOOP_HDFS_HOME set. 
-    echo Please specify it either in yarn-env.sh or in the environment.
-    exit 1
-  fi
-fi
-CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs'/*'
-CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib'/*'
-
-# add yarn libs to CLASSPATH
-
-CLASSPATH=${CLASSPATH}:$YARN_HOME/modules'/*'
-CLASSPATH=${CLASSPATH}:$YARN_HOME/lib'/*'
 
 # default log directory & file
 if [ "$YARN_LOG_DIR" = "" ]; then

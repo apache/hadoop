@@ -171,20 +171,6 @@ Add the following configs to your <<<yarn-site.xml>>>
   </property>
 +---+
 
-* Create Symlinks.
-
-  You will have to create the following symlinks:
-
-+---+
-$ cd $HADOOP_COMMON_HOME/share/hadoop/common/lib/
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-mapreduce-client-app-*-SNAPSHOT.jar .
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-mapreduce-client-jobclient-*-SNAPSHOT.jar .
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-mapreduce-client-common-*-SNAPSHOT.jar .
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-mapreduce-client-shuffle-*-SNAPSHOT.jar .
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-mapreduce-client-core-*-SNAPSHOT.jar .
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-yarn-common-*-SNAPSHOT.jar .
-$ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-yarn-api-*-SNAPSHOT.jar .
-+---+
 * Running daemons.
 
   Assuming that the environment variables <<$HADOOP_COMMON_HOME>>, <<$HADOOP_HDFS_HOME>>, <<$HADOO_MAPRED_HOME>>,
@@ -195,8 +181,8 @@ $ ln -s $HADOOP_MAPRED_HOME/modules/hadoop-yarn-api-*-SNAPSHOT.jar .
   
 +---+
 $ cd $HADOOP_MAPRED_HOME
-$ bin/yarn-daemon.sh start resourcemanager
-$ bin/yarn-daemon.sh start nodemanager
+$ sbin/yarn-daemon.sh start resourcemanager
+$ sbin/yarn-daemon.sh start nodemanager
 +---+
 
   You should be up and running. You can run randomwriter as:

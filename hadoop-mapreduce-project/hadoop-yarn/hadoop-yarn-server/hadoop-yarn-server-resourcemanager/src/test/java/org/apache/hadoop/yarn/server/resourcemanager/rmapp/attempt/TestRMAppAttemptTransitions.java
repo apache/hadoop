@@ -17,8 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
@@ -203,6 +202,8 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0.0, (double)applicationAttempt.getProgress(), 0.0001);
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
+    assertNotNull(applicationAttempt.getTrackingUrl());
+    assertFalse("N/A".equals(applicationAttempt.getTrackingUrl()));
   }
 
   /**
