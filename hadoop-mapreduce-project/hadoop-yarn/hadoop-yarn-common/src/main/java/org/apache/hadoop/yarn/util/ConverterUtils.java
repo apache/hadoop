@@ -58,8 +58,15 @@ public class ConverterUtils {
    */
   public static Path getPathFromYarnURL(URL url) throws URISyntaxException {
     String scheme = url.getScheme() == null ? "" : url.getScheme();
-    String authority = url.getHost() != null ? url.getHost() + ":" + url.getPort()
-        : "";
+    
+    String authority = "";
+    if (url.getHost() != null) {
+      authority = url.getHost();
+      if (url.getPort() > 0) {
+        authority += ":" + url.getPort();
+      }
+    }
+    
     return new Path(
         (new URI(scheme, authority, url.getFile(), null, null)).normalize());
   }

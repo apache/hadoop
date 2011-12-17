@@ -282,6 +282,8 @@ Release 0.23.1 - Unreleased
     before the job started, so that it works properly with oozie throughout
     the job execution. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3579. ConverterUtils shouldn't include a port in a path from a url without a port. (atm via harsh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
