@@ -102,6 +102,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2649. eclipse:eclipse build fails for hadoop-hdfs-httpfs.
     (Jason Lowe via eli)
 
+    HDFS-2640. Javadoc generation hangs. (tomwhite)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
