@@ -450,14 +450,14 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized long getEarliestScanTime() {
-    if ( blockInfoSet.size() > 0 ) {
+    if (!blockInfoSet.isEmpty()) {
       return blockInfoSet.first().lastScanTime;
     }
     return Long.MAX_VALUE; 
   }
   
   private synchronized boolean isFirstBlockProcessed() {
-    if (blockInfoSet.size() > 0 ) {
+    if (!blockInfoSet.isEmpty()) {
       long blockId = blockInfoSet.first().block.getBlockId();
       if ((processedBlocks.get(blockId) != null)
           && (processedBlocks.get(blockId) == 1)) {
@@ -471,7 +471,7 @@ class BlockPoolSliceScanner {
   private void verifyFirstBlock() {
     Block block = null;
     synchronized (this) {
-      if ( blockInfoSet.size() > 0 ) {
+      if (!blockInfoSet.isEmpty()) {
         block = blockInfoSet.first().block;
       }
     }
@@ -560,7 +560,7 @@ class BlockPoolSliceScanner {
      * lastModificationTime > 0.
      */    
     synchronized (this) {
-      if (blockInfoSet.size() > 0 ) {
+      if (!blockInfoSet.isEmpty()) {
         BlockScanInfo info;
         while ((info =  blockInfoSet.first()).lastScanTime < 0) {
           delBlockInfo(info);        
@@ -630,7 +630,7 @@ class BlockPoolSliceScanner {
           }
         }
         if (((now - getEarliestScanTime()) >= scanPeriod)
-            || (!(this.isFirstBlockProcessed()))) {
+            || ((!blockInfoSet.isEmpty()) && !(this.isFirstBlockProcessed()))) {
           verifyFirstBlock();
         } else {
           if (LOG.isDebugEnabled()) {
