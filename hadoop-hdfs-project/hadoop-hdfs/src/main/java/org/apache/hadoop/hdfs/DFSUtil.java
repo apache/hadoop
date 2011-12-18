@@ -30,6 +30,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -69,10 +70,22 @@ public class DFSUtil {
       return new Random();
     }
   };
+  
+  private static final ThreadLocal<SecureRandom> SECURE_RANDOM = new ThreadLocal<SecureRandom>() {
+    @Override
+    protected SecureRandom initialValue() {
+      return new SecureRandom();
+    }
+  };
 
-  /** @return a pseudorandom number generator. */
+  /** @return a pseudo random number generator. */
   public static Random getRandom() {
     return RANDOM.get();
+  }
+  
+  /** @return a pseudo secure random number generator. */
+  public static SecureRandom getSecureRandom() {
+    return SECURE_RANDOM.get();
   }
 
   /**
