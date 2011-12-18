@@ -104,6 +104,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2640. Javadoc generation hangs. (tomwhite)
 
+    HDFS-2553. Fix BlockPoolSliceScanner spinning in a tight loop (Uma
+    Maheswara Rao G via todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
