@@ -26,8 +26,6 @@ import java.io.RandomAccessFile;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -955,13 +953,7 @@ public class NNStorage extends Storage implements Closeable {
       throw e;
     }
     
-    int rand = 0;
-    try {
-      rand = SecureRandom.getInstance("SHA1PRNG").nextInt(Integer.MAX_VALUE);
-    } catch (NoSuchAlgorithmException e) {
-      LOG.warn("Could not use SecureRandom");
-      rand = DFSUtil.getRandom().nextInt(Integer.MAX_VALUE);
-    }
+    int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
     String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
     return bpid;
   }

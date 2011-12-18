@@ -65,7 +65,6 @@ import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
-import java.security.SecureRandom;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1056,7 +1055,7 @@ public class DataNode extends Configured
       LOG.warn("Could not find ip address of \"default\" inteface.");
     }
     
-    int rand = new SecureRandom().nextInt(Integer.MAX_VALUE);
+    int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
     return "DS-" + rand + "-" + ip + "-" + port + "-"
         + System.currentTimeMillis();
   }

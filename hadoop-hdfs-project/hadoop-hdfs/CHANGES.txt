@@ -58,6 +58,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2675. Reduce warning verbosity when double-closing edit logs
     (todd)
 
+    HDFS-2335. DataNodeCluster and NNStorage always pull fresh entropy.
+    (Uma Maheswara Rao G via eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

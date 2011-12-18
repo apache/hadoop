@@ -19,10 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -234,12 +231,7 @@ public class DataNodeCluster {
       System.out.println("Could not find ip address of \"default\" inteface.");
     }
     
-    int rand = 0;
-    try {
-      rand = SecureRandom.getInstance("SHA1PRNG").nextInt(Integer.MAX_VALUE);
-    } catch (NoSuchAlgorithmException e) {
-      rand = (new Random()).nextInt(Integer.MAX_VALUE);
-    }
+    int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
     return "/Rack-" + rand + "-"+ ip  + "-" + 
                       System.currentTimeMillis();
   }
