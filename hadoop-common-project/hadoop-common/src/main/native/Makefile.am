@@ -46,6 +46,9 @@ libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
                        src/org/apache/hadoop/io/compress/snappy/SnappyCompressor.c \
                        src/org/apache/hadoop/io/compress/snappy/SnappyDecompressor.c \
+                       src/org/apache/hadoop/io/compress/lz4/lz4.c \
+                       src/org/apache/hadoop/io/compress/lz4/Lz4Compressor.c \
+                       src/org/apache/hadoop/io/compress/lz4/Lz4Decompressor.c \
                        src/org/apache/hadoop/security/getGroup.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c \

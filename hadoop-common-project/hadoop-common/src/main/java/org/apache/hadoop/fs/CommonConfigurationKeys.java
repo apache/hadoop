@@ -93,7 +93,15 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
   public static final int IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT =
       256 * 1024;
-  
+
+  /** Internal buffer size for Snappy compressor/decompressors */
+  public static final String IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_KEY =
+      "io.compression.codec.lz4.buffersize";
+
+  /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
+  public static final int IO_COMPRESSION_CODEC_LZ4_BUFFERSIZE_DEFAULT =
+      256 * 1024;
+
   /**
    * Service Authorization
    */
