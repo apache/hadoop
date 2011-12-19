@@ -65,3 +65,5 @@ HDFS-2667. Fix transition from active to standby (todd)
 HDFS-2684. Fix up some failing unit tests on HA branch (todd)
 
 HDFS-2679. Add interface to query current state to HAServiceProtocol (eli via todd)
+
+HDFS-2677. Web UI should indicate the NN state. (eli via todd)

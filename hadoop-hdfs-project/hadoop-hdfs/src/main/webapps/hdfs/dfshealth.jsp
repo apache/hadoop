@@ -20,6 +20,7 @@
 <%@ page
   contentType="text/html; charset=UTF-8"
   import="org.apache.hadoop.util.ServletUtil"
+  import="org.apache.hadoop.ha.HAServiceProtocol.HAServiceState"
 %>
 <%!
   //for java.io.Serializable
@@ -30,6 +31,7 @@
   NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
   FSNamesystem fsn = nn.getNamesystem();
   String namenodeRole = nn.getRole().toString();
+  String namenodeState = HAServiceState.ACTIVE.equals(nn.getServiceState()) ? "active" : "standby";
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
 %>
 
@@ -40,7 +42,7 @@
 <title>Hadoop <%=namenodeRole%> <%=namenodeLabel%></title>
     
 <body>
-<h1><%=namenodeRole%> '<%=namenodeLabel%>'</h1>
+<h1><%=namenodeRole%> '<%=namenodeLabel%>' (<%=namenodeState%>)</h1>
 <%= NamenodeJspHelper.getVersionTable(fsn) %>
 <br />
 <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
