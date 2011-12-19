@@ -18,3 +18,6 @@ HADOOP-7921. StandbyException should extend IOException (todd)
 
 HADOOP-7928. HA: Client failover policy is incorrectly trying to fail over all
              IOExceptions (atm)
+
+HADOOP-7925. Add interface and update CLI to query current state to
+             HAServiceProtocol (eli via todd)

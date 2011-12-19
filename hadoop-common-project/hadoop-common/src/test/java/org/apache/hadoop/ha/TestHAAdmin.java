@@ -79,7 +79,7 @@ public class TestHAAdmin {
     assertOutputContains("transitionToActive: incorrect number of arguments");
     assertEquals(-1, runTool("-transitionToActive", "x", "y"));
     assertOutputContains("transitionToActive: incorrect number of arguments");
-}
+  }
   
   @Test
   public void testHelp() throws Exception {
@@ -99,7 +99,13 @@ public class TestHAAdmin {
     assertEquals(0, runTool("-transitionToStandby", "xxx"));
     Mockito.verify(mockProtocol).transitionToStandby();
   }
-  
+
+  @Test
+  public void testGetServiceState() throws Exception {
+    assertEquals(0, runTool("-getServiceState", "xxx"));
+    Mockito.verify(mockProtocol).getServiceState();
+  }
+
   @Test
   public void testCheckHealth() throws Exception {
     assertEquals(0, runTool("-checkHealth", "xxx"));

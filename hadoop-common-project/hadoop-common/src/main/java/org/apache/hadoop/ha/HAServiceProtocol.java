@@ -36,6 +36,24 @@ public interface HAServiceProtocol extends VersionedProtocol {
   public static final long versionID = 1L;
 
   /**
+   * An HA service may be in active or standby state.
+   */
+  public enum HAServiceState {
+    ACTIVE("active"),
+    STANDBY("standby");
+
+    private String name;
+
+    HAServiceState(String name) {
+      this.name = name;
+    }
+
+    public String toString() {
+      return name;
+    }
+  }
+
+  /**
    * Monitor the health of service. This periodically called by the HA
    * frameworks to monitor the health of the service.
    * 
@@ -69,4 +87,9 @@ public interface HAServiceProtocol extends VersionedProtocol {
    *           if transition from active to standby fails.
    */
   public void transitionToStandby() throws ServiceFailedException;
+
+  /**
+   * Return the current state of the service.
+   */
+  public HAServiceState getServiceState();
 }
