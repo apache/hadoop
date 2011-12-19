@@ -92,9 +92,9 @@ public class HttpFSServer {
    * Special binding for '/' as it is not handled by the wildcard binding.
    *
    * @param user principal making the request.
-   * @param op GET operation, default value is {@link HttpFSFileSystem.GetOpValues#OPEN}.
+   * @param op GET operation, default value is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#OPEN}.
    * @param filter Glob filter, default value is none. Used only if the
-   * operation is {@link HttpFSFileSystem.GetOpValues#LISTSTATUS}
+   * operation is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#LISTSTATUS}
    * @param doAs user being impersonated, defualt value is none. It can be used
    * only if the current user is a HttpFSServer proxyuser.
    *
@@ -202,31 +202,31 @@ public class HttpFSServer {
 
   /**
    * Binding to handle all GET requests, supported operations are
-   * {@link HttpFSFileSystem.GetOpValues}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues}.
    * <p/>
-   * The {@link HttpFSFileSystem.GetOpValues#INSTRUMENTATION} operation is available only
+   * The @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#INSTRUMENTATION} operation is available only
    * to users that are in HttpFSServer's admin group (see {@link HttpFSServer}. It returns
    * HttpFSServer instrumentation data. The specified path must be '/'.
    *
    * @param user principal making the request.
    * @param path path for the GET request.
-   * @param op GET operation, default value is {@link HttpFSFileSystem.GetOpValues#OPEN}.
+   * @param op GET operation, default value is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#OPEN}.
    * @param offset of the  file being fetch, used only with
-   * {@link HttpFSFileSystem.GetOpValues#OPEN} operations.
-   * @param len amounts of bytes, used only with {@link HttpFSFileSystem.GetOpValues#OPEN}
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#OPEN} operations.
+   * @param len amounts of bytes, used only with @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#OPEN}
    * operations.
    * @param filter Glob filter, default value is none. Used only if the
-   * operation is {@link HttpFSFileSystem.GetOpValues#LISTSTATUS}
+   * operation is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#LISTSTATUS}
    * @param doAs user being impersonated, defualt value is none. It can be used
    * only if the current user is a HttpFSServer proxyuser.
    * @param override, default is true. Used only for
-   * {@link HttpFSFileSystem.PutOpValues#CREATE} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
    * @param blockSize block size to set, used only by
-   * {@link HttpFSFileSystem.PutOpValues#CREATE} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
    * @param permission permission to set, used only by
-   * {@link HttpFSFileSystem.PutOpValues#SETPERMISSION}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETPERMISSION}.
    * @param replication replication factor to set, used only by
-   * {@link HttpFSFileSystem.PutOpValues#SETREPLICATION}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETREPLICATION}.
    *
    * @return the request response.
    *
@@ -361,7 +361,7 @@ public class HttpFSServer {
    *
    * @param user principal making the request.
    * @param path path for the DELETE request.
-   * @param op DELETE operation, default value is {@link HttpFSFileSystem.DeleteOpValues#DELETE}.
+   * @param op DELETE operation, default value is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.DeleteOpValues#DELETE}.
    * @param recursive indicates if the delete is recursive, default is <code>false</code>
    * @param doAs user being impersonated, defualt value is none. It can be used
    * only if the current user is a HttpFSServer proxyuser.
@@ -404,33 +404,33 @@ public class HttpFSServer {
 
   /**
    * Binding to handle all PUT requests, supported operations are
-   * {@link HttpFSFileSystem.PutOpValues}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues}.
    *
    * @param is request input stream, used only for
-   * {@link HttpFSFileSystem.PostOpValues#APPEND} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PostOpValues#APPEND} operations.
    * @param user principal making the request.
    * @param uriInfo the request uriInfo.
    * @param path path for the PUT request.
    * @param op PUT operation, no default value.
    * @param toPath new path, used only for
-   * {@link HttpFSFileSystem.PutOpValues#RENAME} operations.
-   * {@link HttpFSFileSystem.PutOpValues#SETTIMES}.
+   * {@link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#RENAME} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETTIMES}.
    * @param owner owner to set, used only for
-   * {@link HttpFSFileSystem.PutOpValues#SETOWNER} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETOWNER} operations.
    * @param group group to set, used only for
-   * {@link HttpFSFileSystem.PutOpValues#SETOWNER} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETOWNER} operations.
    * @param override, default is true. Used only for
-   * {@link HttpFSFileSystem.PutOpValues#CREATE} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
    * @param blockSize block size to set, used only by
-   * {@link HttpFSFileSystem.PutOpValues#CREATE} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
    * @param permission permission to set, used only by
-   * {@link HttpFSFileSystem.PutOpValues#SETPERMISSION}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETPERMISSION}.
    * @param replication replication factor to set, used only by
-   * {@link HttpFSFileSystem.PutOpValues#SETREPLICATION}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETREPLICATION}.
    * @param modifiedTime modified time, in seconds since EPOC, used only by
-   * {@link HttpFSFileSystem.PutOpValues#SETTIMES}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETTIMES}.
    * @param accessTime accessed time, in seconds since EPOC, used only by
-   * {@link HttpFSFileSystem.PutOpValues#SETTIMES}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETTIMES}.
    * @param hasData indicates if the append request is uploading data or not
    * (just getting the handle).
    * @param doAs user being impersonated, defualt value is none. It can be used
@@ -547,14 +547,14 @@ public class HttpFSServer {
 
   /**
    * Binding to handle all OPST requests, supported operations are
-   * {@link HttpFSFileSystem.PostOpValues}.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PostOpValues}.
    *
    * @param is request input stream, used only for
-   * {@link HttpFSFileSystem.PostOpValues#APPEND} operations.
+   * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PostOpValues#APPEND} operations.
    * @param user principal making the request.
    * @param uriInfo the request uriInfo.
    * @param path path for the POST request.
-   * @param op POST operation, default is {@link HttpFSFileSystem.PostOpValues#APPEND}.
+   * @param op POST operation, default is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PostOpValues#APPEND}.
    * @param hasData indicates if the append request is uploading data or not (just getting the handle).
    * @param doAs user being impersonated, defualt value is none. It can be used
    * only if the current user is a HttpFSServer proxyuser.

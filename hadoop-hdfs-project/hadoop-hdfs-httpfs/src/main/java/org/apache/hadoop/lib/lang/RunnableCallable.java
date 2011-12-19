@@ -68,9 +68,7 @@ public class RunnableCallable implements Callable<Void>, Runnable {
   /**
    * Invokes the wrapped callable/runnable as a runnable.
    *
-   * @return void
-   *
-   * @throws Exception thrown by the wrapped callable/runnable invocation.
+   * @throws RuntimeException thrown by the wrapped callable/runnable invocation.
    */
   @Override
   public void run() {

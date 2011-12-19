@@ -228,8 +228,6 @@ public class HttpFSParams {
      * <p/>
      * This is required because JAX-RS resolution of paths does not add
      * the root '/'.
-     *
-     * @returns absolute path.
      */
     public void makeAbsolute() {
       String path = value();
