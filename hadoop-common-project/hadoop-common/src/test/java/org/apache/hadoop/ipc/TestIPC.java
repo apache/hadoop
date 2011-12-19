@@ -20,7 +20,9 @@ package org.apache.hadoop.ipc;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
@@ -588,6 +590,38 @@ public class TestIPC {
   public void testHttpGetResponse() throws Exception {
     doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
         Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
+  }
+  
+  @Test
+  public void testConnectionRetriesOnSocketTimeoutExceptions() throws Exception {
+    Configuration conf = new Configuration();
+    // set max retries to 0
+    conf.setInt(
+      CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+      0);
+    assertRetriesOnSocketTimeouts(conf, 1);
+
+    // set max retries to 3
+    conf.setInt(
+      CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+      3);
+    assertRetriesOnSocketTimeouts(conf, 4);
+  }
+
+  private void assertRetriesOnSocketTimeouts(Configuration conf,
+      int maxTimeoutRetries) throws IOException, InterruptedException {
+    SocketFactory mockFactory = Mockito.mock(SocketFactory.class);
+    doThrow(new SocketTimeoutException()).when(mockFactory).createSocket();
+    Client client = new Client(IntWritable.class, conf, mockFactory);
+    InetSocketAddress address = new InetSocketAddress("127.0.0.1", 9090);
+    try {
+      client.call(new IntWritable(RANDOM.nextInt()), address, null, null, 0,
+          conf);
+      fail("Not throwing the SocketTimeoutException");
+    } catch (SocketTimeoutException e) {
+      Mockito.verify(mockFactory, Mockito.times(maxTimeoutRetries))
+          .createSocket();
+    }
   }
   
   private void doIpcVersionTest(

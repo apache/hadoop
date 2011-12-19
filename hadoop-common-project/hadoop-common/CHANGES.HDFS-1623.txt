@@ -21,3 +21,6 @@ HADOOP-7928. HA: Client failover policy is incorrectly trying to fail over all
 
 HADOOP-7925. Add interface and update CLI to query current state to
              HAServiceProtocol (eli via todd)
+
+HADOOP-7932. Make client connection retries on socket time outs configurable.
+             (Uma Maheswara Rao G via todd)
