@@ -45,7 +45,7 @@ import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
-import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
@@ -392,7 +392,7 @@ class BPServiceActor implements Runnable {
   private synchronized void cleanUp() {
     
     shouldServiceRun = false;
-    RPC.stopProxy(bpNamenode);
+    IOUtils.cleanup(LOG, bpNamenode);
     bpos.shutdownActor(this);
   }
 

@@ -60,6 +60,7 @@ import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.util.LineReader;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.commons.codec.binary.Base64;
@@ -105,6 +106,18 @@ public class TestCodec {
       }
       else {
         Assert.fail("Snappy native available but Hadoop native not");
+      }
+    }
+  }
+  
+  @Test
+  public void testLz4Codec() throws IOException {
+    if (NativeCodeLoader.isNativeCodeLoaded()) {
+      if (Lz4Codec.isNativeCodeLoaded()) {
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.Lz4Codec");
+        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.Lz4Codec");
+      } else {
+        Assert.fail("Native hadoop library available but lz4 not");
       }
     }
   }

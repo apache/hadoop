@@ -172,6 +172,12 @@ Trunk (unreleased changes)
 
     HDFS-2694. Removal of Avro broke non-PB NN services. (atm)
 
+    HDFS-2687. Tests failing with ClassCastException post protobuf RPC
+    changes. (suresh)
+
+    HDFS-2700. Fix failing TestDataNodeMultipleRegistrations in trunk
+    (Uma Maheswara Rao G via todd)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -228,6 +234,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2675. Reduce warning verbosity when double-closing edit logs
     (todd)
 
+    HDFS-2335. DataNodeCluster and NNStorage always pull fresh entropy.
+    (Uma Maheswara Rao G via eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -268,6 +277,9 @@ Release 0.23.1 - UNRELEASED
     (Jason Lowe via eli)
 
     HDFS-2640. Javadoc generation hangs. (tomwhite)
+
+    HDFS-2553. Fix BlockPoolSliceScanner spinning in a tight loop (Uma
+    Maheswara Rao G via todd)
 
 Release 0.23.0 - 2011-11-01 
 
