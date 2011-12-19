@@ -251,7 +251,7 @@ public class Server {
    * The status must be settable.
    * <p/>
    * All services will be notified o the status change via the
-   * {@link Service#serverStatusChange(Status, Status)} method. If a service
+   * {@link Service#serverStatusChange(Server.Status, Server.Status)} method. If a service
    * throws an exception during the notification, the server will be destroyed.
    *
    * @param status status to set.
@@ -703,7 +703,7 @@ public class Server {
   /**
    * Returns the server configuration.
    *
-   * @return
+   * @return the server configuration.
    */
   public Configuration getConfig() {
     return config;
