@@ -1061,7 +1061,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public synchronized void transitionToStandby() throws ServiceFailedException {
     nn.transitionToStandby();
   }
-  
+
+  @Override // HAServiceProtocol
+  public synchronized HAServiceState getServiceState() {
+    return nn.getServiceState();
+  }
+
   /**
    * Verify version.
    * 

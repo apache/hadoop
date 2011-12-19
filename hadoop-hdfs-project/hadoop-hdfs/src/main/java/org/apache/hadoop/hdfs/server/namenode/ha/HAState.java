@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
@@ -28,14 +29,21 @@ import org.apache.hadoop.ipc.StandbyException;
  */
 @InterfaceAudience.Private
 abstract public class HAState {
-  protected final String name;
+  protected final HAServiceState state;
 
   /**
    * Constructor
    * @param name Name of the state.
    */
-  public HAState(String name) {
-    this.name = name;
+  public HAState(HAServiceState state) {
+    this.state = state;
+  }
+
+  /**
+   * @return the generic service state
+   */
+  public HAServiceState getServiceState() {
+    return state;
   }
 
   /**
@@ -92,9 +100,11 @@ abstract public class HAState {
    */
   public abstract void checkOperation(final HAContext context, final OperationCategory op)
       throws StandbyException;
-  
-  @Override
+
+  /**
+   * @return String representation of the service state.
+   */
   public String toString() {
-    return super.toString();
+    return state.toString();
   }
 }

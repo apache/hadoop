@@ -20,10 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 
 /**
  * Active state of the namenode. In this state, namenode provides the namenode
@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 @InterfaceAudience.Private
 public class ActiveState extends HAState {
   public ActiveState() {
-    super("active");
+    super(HAServiceState.ACTIVE);
   }
 
   @Override

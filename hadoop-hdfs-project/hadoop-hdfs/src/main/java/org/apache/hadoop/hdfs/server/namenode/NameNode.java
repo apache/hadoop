@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -908,7 +909,11 @@ public class NameNode {
     }
     state.setState(haContext, STANDBY_STATE);
   }
-  
+
+  synchronized HAServiceState getServiceState() {
+    return state.getServiceState();
+  }
+
   /** Check if an operation of given category is allowed */
   protected synchronized void checkOperation(final OperationCategory op)
       throws StandbyException {
