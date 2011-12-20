@@ -116,9 +116,10 @@ public class FSImage extends Storage {
   private boolean isUpgradeFinalized = false;
   
   /**
-   * list of failed (and thus removed) storages
+   * List of failed (and thus removed) storages
    */
-  protected List<StorageDirectory> removedStorageDirs = new ArrayList<StorageDirectory>();
+  private List<StorageDirectory> removedStorageDirs 
+    = new ArrayList<StorageDirectory>();
   
   /**
    * Directories for importing an image from a checkpoint.
@@ -207,6 +208,11 @@ public class FSImage extends Storage {
   
   List<StorageDirectory> getRemovedStorageDirs() {
 	  return removedStorageDirs;
+  }
+
+  void updateRemovedDirs(StorageDirectory sd, IOException ioe) {
+    LOG.warn("Removing storage dir " + sd.getRoot().getPath(), ioe);
+    removedStorageDirs.add(sd);
   }
 
   File getEditFile(StorageDirectory sd) {
@@ -618,7 +624,7 @@ public class FSImage extends Storage {
         writeCheckpointTime(sd);
       } catch (IOException ioe) {
         editLog.removeEditsForStorageDir(sd);
-        removedStorageDirs.add(sd);
+        updateRemovedDirs(sd, ioe);
         it.remove();
       }
     }
@@ -632,8 +638,7 @@ public class FSImage extends Storage {
     while (it.hasNext()) {
       StorageDirectory sd = it.next();
       if (sd.getRoot().getPath().equals(dir.getPath())) {
-        LOG.info("Removing " + dir.getPath());
-        removedStorageDirs.add(sd);
+        updateRemovedDirs(sd, null);
         it.remove();
       }
     }
@@ -1449,7 +1454,7 @@ public class FSImage extends Storage {
         curFile.delete();
         if (!ckpt.renameTo(curFile)) {
           editLog.removeEditsForStorageDir(sd);
-          removedStorageDirs.add(sd);
+          updateRemovedDirs(sd, null);
           it.remove();
         }
       }
@@ -1477,9 +1482,8 @@ public class FSImage extends Storage {
       try {
         sd.write();
       } catch (IOException ioe) {
-        LOG.error("Cannot write file " + sd.getRoot(), ioe);
         editLog.removeEditsForStorageDir(sd);
-        removedStorageDirs.add(sd);
+        updateRemovedDirs(sd, ioe);
         it.remove();
       }
     }

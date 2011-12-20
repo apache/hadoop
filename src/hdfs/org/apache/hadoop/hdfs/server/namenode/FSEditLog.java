@@ -340,7 +340,7 @@ public class FSEditLog {
         EditLogOutputStream eStream = new EditLogFileOutputStream(eFile);
         editStreams.add(eStream);
       } catch (IOException ioe) {
-        FSNamesystem.LOG.warn("Unable to open edit log file " + eFile);
+        fsimage.updateRemovedDirs(sd, ioe);
         it.remove();
       }
     }
@@ -1248,6 +1248,7 @@ public class FSEditLog {
         editStreams.add(eStream);
       } catch (IOException ioe) {
         removeEditsForStorageDir(sd);
+        fsimage.updateRemovedDirs(sd, ioe);
         it.remove();
       }
     }
@@ -1270,8 +1271,8 @@ public class FSEditLog {
     //
     // Delete edits and rename edits.new to edits.
     //
-    for (Iterator<StorageDirectory> it = 
-           fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
+    Iterator<StorageDirectory> it = fsimage.dirIterator(NameNodeDirType.EDITS);
+    while (it.hasNext()) {
       StorageDirectory sd = it.next();
       if (!getEditNewFile(sd).renameTo(getEditFile(sd))) {
         //
@@ -1281,7 +1282,8 @@ public class FSEditLog {
         getEditFile(sd).delete();
         if (!getEditNewFile(sd).renameTo(getEditFile(sd))) {
           // Should we also remove from edits
-          it.remove(); 
+          fsimage.updateRemovedDirs(sd, null);
+          it.remove();
         }
       }
     }
