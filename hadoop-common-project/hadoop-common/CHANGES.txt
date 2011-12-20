@@ -95,6 +95,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP_7917. compilation of protobuf files fails in windows/cygwin. (tucu)
 
+   HADOOP-7837. no NullAppender in the log4j config. (eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
