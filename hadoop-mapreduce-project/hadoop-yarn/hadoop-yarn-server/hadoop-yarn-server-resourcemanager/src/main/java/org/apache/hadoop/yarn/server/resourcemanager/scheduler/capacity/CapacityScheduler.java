@@ -159,6 +159,7 @@ implements ResourceScheduler, CapacitySchedulerContext {
     return maximumAllocation;
   }
 
+  @Override
   public synchronized int getNumClusterNodes() {
     return numNodeManagers;
   }

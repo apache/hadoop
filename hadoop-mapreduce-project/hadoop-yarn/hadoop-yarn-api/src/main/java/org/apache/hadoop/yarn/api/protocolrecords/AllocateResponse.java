@@ -61,4 +61,17 @@ public interface AllocateResponse {
   @Private
   @Unstable
   public abstract void setAMResponse(AMResponse amResponse);
+  
+  
+  /**
+   * Get the number of hosts available on the cluster.
+   * @return the available host count.
+   */
+  @Public
+  @Stable
+  public int getNumClusterNodes();
+  
+  @Private
+  @Unstable
+  public void setNumClusterNodes(int numNodes);
 }

@@ -68,6 +68,7 @@ public abstract class RMCommunicator extends AbstractService  {
   protected ApplicationAttemptId applicationAttemptId;
   private AtomicBoolean stopped;
   protected Thread allocatorThread;
+  @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
   protected AMRMProtocol scheduler;
   private final ClientService clientService;

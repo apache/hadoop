@@ -294,6 +294,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3376. Fixed Task to ensure it passes reporter to combiners using
     old MR api. (Subroto Sanyal via acmurthy)
 
+    MAPREDUCE-3339. Fixed MR AM to stop considering node blacklisting after the
+    number of nodes blacklisted crosses a threshold. (Siddharth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
