@@ -84,6 +84,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3518. mapred queue -info <queue> -showJobs throws NPE. 
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3391. Making a trivial change to correct a log message in
+    DistributedShell app's AM. (Subroto Sanyal via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
