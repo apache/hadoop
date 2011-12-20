@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.mapreduce.v2.app.rm;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.AMResponse;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+
 
 /**
  * Keeps the data structures to send container requests to RM.
@@ -74,9 +76,15 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   private final Set<ContainerId> release = new TreeSet<ContainerId>(); 
 
   private boolean nodeBlacklistingEnabled;
+  private int blacklistDisablePercent;
+  private AtomicBoolean ignoreBlacklisting = new AtomicBoolean(false);
+  private int blacklistedNodeCount = 0;
+  private int lastClusterNmCount = 0;
+  private int clusterNmCount = 0;
   private int maxTaskFailuresPerNode;
   private final Map<String, Integer> nodeFailures = new HashMap<String, Integer>();
-  private final Set<String> blacklistedNodes = new HashSet<String>();
+  private final Set<String> blacklistedNodes = Collections
+      .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
   public RMContainerRequestor(ClientService clientService, AppContext context) {
     super(clientService, context);
@@ -122,7 +130,17 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info("nodeBlacklistingEnabled:" + nodeBlacklistingEnabled);
     maxTaskFailuresPerNode = 
       conf.getInt(MRJobConfig.MAX_TASK_FAILURES_PER_TRACKER, 3);
+    blacklistDisablePercent =
+        conf.getInt(
+            MRJobConfig.MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERECENT,
+            MRJobConfig.DEFAULT_MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERCENT);
     LOG.info("maxTaskFailuresPerNode is " + maxTaskFailuresPerNode);
+    if (blacklistDisablePercent < -1 || blacklistDisablePercent > 100) {
+      throw new YarnException("Invalid blacklistDisablePercent: "
+          + blacklistDisablePercent
+          + ". Should be an integer between 0 and 100 or -1 to disabled");
+    }
+    LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
   }
 
   protected AMResponse makeRemoteRequest() throws YarnRemoteException {
@@ -134,19 +152,49 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     AMResponse response = allocateResponse.getAMResponse();
     lastResponseID = response.getResponseId();
     availableResources = response.getAvailableResources();
+    lastClusterNmCount = clusterNmCount;
+    clusterNmCount = allocateResponse.getNumClusterNodes();
 
     LOG.info("getResources() for " + applicationId + ":" + " ask="
         + ask.size() + " release= " + release.size() + 
         " newContainers=" + response.getAllocatedContainers().size() + 
         " finishedContainers=" + 
         response.getCompletedContainersStatuses().size() + 
-        " resourcelimit=" + availableResources);
+        " resourcelimit=" + availableResources + 
+        "knownNMs=" + clusterNmCount);
 
     ask.clear();
     release.clear();
     return response;
   }
 
+  // May be incorrect if there's multiple NodeManagers running on a single host.
+  // knownNodeCount is based on node managers, not hosts. blacklisting is
+  // currently based on hosts.
+  protected void computeIgnoreBlacklisting() {
+    if (blacklistDisablePercent != -1
+        && (blacklistedNodeCount != blacklistedNodes.size() ||
+            clusterNmCount != lastClusterNmCount)) {
+      blacklistedNodeCount = blacklistedNodes.size();
+      if (clusterNmCount == 0) {
+        LOG.info("KnownNode Count at 0. Not computing ignoreBlacklisting");
+        return;
+      }
+      int val = (int) ((float) blacklistedNodes.size() / clusterNmCount * 100);
+      if (val >= blacklistDisablePercent) {
+        if (ignoreBlacklisting.compareAndSet(false, true)) {
+          LOG.info("Ignore blacklisting set to true. Known: " + clusterNmCount
+              + ", Blacklisted: " + blacklistedNodeCount + ", " + val + "%");
+        }
+      } else {
+        if (ignoreBlacklisting.compareAndSet(true, false)) {
+          LOG.info("Ignore blacklisting set to false. Known: " + clusterNmCount
+              + ", Blacklisted: " + blacklistedNodeCount + ", " + val + "%");
+        }
+      }
+    }
+  }
+  
   protected void containerFailedOnHost(String hostName) {
     if (!nodeBlacklistingEnabled) {
       return;
@@ -161,8 +209,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
     LOG.info(failures + " failures on node " + hostName);
     if (failures >= maxTaskFailuresPerNode) {
       blacklistedNodes.add(hostName);
+      //Even if blacklisting is ignored, continue to remove the host from
+      // the request table. The RM may have additional nodes it can allocate on.
       LOG.info("Blacklisted host " + hostName);
-      
+
       //remove all the requests corresponding to this hostname
       for (Map<String, Map<Resource, ResourceRequest>> remoteRequests 
           : remoteRequestsTable.values()){
@@ -316,7 +366,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
   
   protected boolean isNodeBlacklisted(String hostname) {
-    if (!nodeBlacklistingEnabled) {
+    if (!nodeBlacklistingEnabled || ignoreBlacklisting.get()) {
       return false;
     }
     return blacklistedNodes.contains(hostname);

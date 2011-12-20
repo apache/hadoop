@@ -29,7 +29,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProtoOrBui
 
 
     
-public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto> implements AllocateResponse {
+public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto>
+    implements AllocateResponse {
   AllocateResponseProto proto = AllocateResponseProto.getDefaultInstance();
   AllocateResponseProto.Builder builder = null;
   boolean viaProto = false;
@@ -95,7 +96,20 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto> imp
       builder.clearAMResponse();
     this.amResponse = aMResponse;
   }
+  
+  @Override
+  public int getNumClusterNodes() {
+    AllocateResponseProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getNumClusterNodes();
+  }
+  
+  @Override
+  public void setNumClusterNodes(int numNodes) {
+    maybeInitBuilder();
+    builder.setNumClusterNodes(numNodes);
+  }
 
+  
   private AMResponsePBImpl convertFromProtoFormat(AMResponseProto p) {
     return new AMResponsePBImpl(p);
   }
@@ -103,7 +117,4 @@ public class AllocateResponsePBImpl extends ProtoBase<AllocateResponseProto> imp
   private AMResponseProto convertToProtoFormat(AMResponse t) {
     return ((AMResponsePBImpl)t).getProto();
   }
-
-
-
 }  

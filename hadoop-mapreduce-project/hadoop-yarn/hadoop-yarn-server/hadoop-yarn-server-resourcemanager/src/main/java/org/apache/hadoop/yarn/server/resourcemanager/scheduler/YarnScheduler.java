@@ -80,6 +80,14 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   public Resource getMaximumResourceCapability();
 
   /**
+   * Get the number of nodes available in the cluster.
+   * @return the number of available nodes.
+   */
+  @Public
+  @Stable
+  public int getNumClusterNodes();
+  
+  /**
    * The main api between the ApplicationMaster and the Scheduler.
    * The ApplicationMaster is updating his future resource requirements
    * and may release containers he doens't need.

@@ -285,6 +285,7 @@ public class ApplicationMasterService extends AbstractService implements
       response.setAvailableResources(allocation.getResourceLimit());
       responseMap.put(appAttemptId, response);
       allocateResponse.setAMResponse(response);
+      allocateResponse.setNumClusterNodes(this.rScheduler.getNumClusterNodes());
       return allocateResponse;
     }
   }
