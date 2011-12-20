@@ -288,6 +288,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3563. Fixed LocalJobRunner to work correctly with new mapreduce
     apis. (acmurthy)
 
+    MAPREDUCE-3376. Fixed Task to ensure it passes reporter to combiners using
+    old MR api. (Subroto Sanyal via acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

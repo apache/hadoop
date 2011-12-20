@@ -1458,11 +1458,11 @@ abstract public class Task implements Writable, Configurable {
       try {
         CombineValuesIterator<K,V> values = 
           new CombineValuesIterator<K,V>(kvIter, comparator, keyClass, 
-                                         valueClass, job, Reporter.NULL,
+                                         valueClass, job, reporter,
                                          inputCounter);
         while (values.more()) {
           combiner.reduce(values.getKey(), values, combineCollector,
-              Reporter.NULL);
+              reporter);
           values.nextKey();
         }
       } finally {
