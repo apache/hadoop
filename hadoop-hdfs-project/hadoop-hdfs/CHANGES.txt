@@ -112,6 +112,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
 
+    HDFS-2706. Use configuration for blockInvalidateLimit if it is set.
+    (szetszwo)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
