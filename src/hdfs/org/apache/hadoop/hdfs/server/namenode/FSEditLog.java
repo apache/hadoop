@@ -344,6 +344,7 @@ public class FSEditLog {
         it.remove();
       }
     }
+    exitIfNoStreams();
   }
 
   public synchronized void createEditLogFile(File name) throws IOException {
@@ -382,17 +383,27 @@ public class FSEditLog {
     editStreams.clear();
   }
 
+  void fatalExit(String msg) {
+    FSNamesystem.LOG.fatal(msg, new Exception(msg));
+    Runtime.getRuntime().exit(-1);
+  }
+
   /**
-   * Exit the NN process if there will be no valid edit streams 
-   * remaining after removing one. This method is called before
-   * removing the stream which is why we fail even if there is
-   * still one stream.
+   * Exit the NN process if the edit streams have not yet been
+   * initialized, eg we failed while opening.
    */
-  private void exitIfInvalidStreams() {
-    if (editStreams == null || editStreams.size() <= 1) {
-      FSNamesystem.LOG.fatal(
-          "Fatal Error: No edit streams are accessible");
-      Runtime.getRuntime().exit(-1);
+  private void exitIfStreamsNotSet() {
+    if (editStreams == null) {
+      fatalExit("Edit streams not yet initialized");
+    }
+  }
+
+  /**
+   * Exit the NN process if there are no edit streams to log to.
+   */
+  void exitIfNoStreams() {
+    if (editStreams == null || editStreams.isEmpty()) {
+      fatalExit("No edit streams are accessible");
     }
   }
 
@@ -408,10 +419,9 @@ public class FSEditLog {
 
   /**
    * Remove the given edits stream and its containing storage dir.
-   * Exit the NN process if we have insufficient streams.
    */
   synchronized void removeEditsAndStorageDir(int idx) {
-    exitIfInvalidStreams();
+    exitIfStreamsNotSet();
 
     assert idx < getNumStorageDirs();
     assert getNumStorageDirs() == editStreams.size();
@@ -423,15 +433,13 @@ public class FSEditLog {
 
   /**
    * Remove all edits streams for the given storage directory.
-   * Exit the NN process if we have insufficient streams.
    */
   synchronized void removeEditsForStorageDir(StorageDirectory sd) {
+    exitIfStreamsNotSet();
+
     if (!sd.getStorageDirType().isOfType(NameNodeDirType.EDITS)) {
       return;
     }
-
-    exitIfInvalidStreams();
-
     for (int idx = 0; idx < editStreams.size(); idx++) {
       File parentDir = getStorageDirForStream(idx);
       if (parentDir.getName().equals(sd.getRoot().getName())) {
@@ -452,9 +460,7 @@ public class FSEditLog {
     for (EditLogOutputStream errorStream : errorStreams) {
       int idx = editStreams.indexOf(errorStream);
       if (-1 == idx) {
-        FSNamesystem.LOG.error(
-            "Fatal Error: Unable to find edits stream with IO error");
-        Runtime.getRuntime().exit(-1);
+        fatalExit("Unable to find edits stream with IO error");
       }
       removeEditsAndStorageDir(idx);
     }
@@ -910,7 +916,9 @@ public class FSEditLog {
    * store yet.
    */
   synchronized void logEdit(byte op, Writable ... writables) {
-    assert this.getNumEditStreams() > 0 : "no editlog streams";
+    if (getNumEditStreams() < 1) {
+      throw new AssertionError("No edit streams to log to");
+    }
     long start = FSNamesystem.now();
     for (int idx = 0; idx < editStreams.size(); idx++) {
       EditLogOutputStream eStream = editStreams.get(idx);
@@ -921,6 +929,7 @@ public class FSEditLog {
         idx--; 
       }
     }
+    exitIfNoStreams();
     // get a new transactionId
     txid++;
 
@@ -1003,6 +1012,7 @@ public class FSEditLog {
 
     synchronized (this) {
        removeEditsStreamsAndStorageDirs(errorStreams);
+       exitIfNoStreams();
        synctxid = syncStart;
        isSyncRunning = false;
        this.notifyAll();
@@ -1252,6 +1262,7 @@ public class FSEditLog {
         it.remove();
       }
     }
+    exitIfNoStreams();
   }
 
   /**
@@ -1281,7 +1292,8 @@ public class FSEditLog {
         //
         getEditFile(sd).delete();
         if (!getEditNewFile(sd).renameTo(getEditFile(sd))) {
-          // Should we also remove from edits
+          sd.unlock();
+          removeEditsForStorageDir(sd);
           fsimage.updateRemovedDirs(sd, null);
           it.remove();
         }

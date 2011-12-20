@@ -628,6 +628,7 @@ public class FSImage extends Storage {
         it.remove();
       }
     }
+    editLog.exitIfNoStreams();
   }
   
   /**
@@ -646,6 +647,11 @@ public class FSImage extends Storage {
 
   public FSEditLog getEditLog() {
     return editLog;
+  }
+
+  /** Testing hook */
+  public void setEditLog(FSEditLog newLog) {
+    editLog = newLog;
   }
 
   public boolean isConversionNeeded(StorageDirectory sd) throws IOException {
@@ -1459,6 +1465,7 @@ public class FSImage extends Storage {
         }
       }
     }
+    editLog.exitIfNoStreams();
 
     //
     // Updates the fstime file on all directories (fsimage and edits)
