@@ -42,6 +42,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.TestNoJobSetupCleanup.MyOutputFormat;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
@@ -49,6 +50,9 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.tools.rumen.TraceBuilder.MyOptions;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -246,8 +250,10 @@ public class TestRumenJobTraces {
   }
 
   /**
-   * Validate the parsing of given history file name. Also validate the history
-   * file name suffixed with old/stale file suffix.
+   * Validate the parsing of given history file name. 
+   * 
+   * TODO: Also validate the history file name suffixed with old/stale file 
+   *       suffix.
    * @param jhFileName job history file path
    * @param jid JobID
    */
@@ -257,13 +263,7 @@ public class TestRumenJobTraces {
       JobID.forName(JobHistoryUtils.extractJobID(jhFileName.getName()));
     assertEquals("TraceBuilder failed to parse the current JH filename"
                  + jhFileName, jid, extractedJID);
-    // test jobhistory filename with old/stale file suffix
-    jhFileName = jhFileName.suffix(JobHistory.getOldFileSuffix("123"));
-    extractedJID =
-      JobID.forName(JobHistoryUtils.extractJobID(jhFileName.getName()));
-    assertEquals("TraceBuilder failed to parse the current JH filename"
-                 + "(old-suffix):" + jhFileName,
-                 jid, extractedJID);
+    //TODO test jobhistory filename with old/stale file suffix
   }
 
   /**
@@ -318,8 +318,9 @@ public class TestRumenJobTraces {
             .makeQualified(lfs.getUri(), lfs.getWorkingDirectory());
     
     // Check if current jobhistory filenames are detected properly
-    Path jhFilename = org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils
-        .getStagingJobHistoryFile(rootInputDir, jid.toString(), 1);
+    JobId jobId = TypeConverter.toYarn(jid);
+    JobIndexInfo info = new JobIndexInfo(0L, 0L, "", "", jobId, 0, 0, "");
+    Path jhFilename = new Path(FileNameIndexUtils.getDoneFileName(info));
     validateHistoryFileNameParsing(jhFilename, jid);
 
     // Check if Pre21 V1 jophistory file names are detected properly
@@ -932,18 +933,18 @@ public class TestRumenJobTraces {
     subject.process(new TaskAttemptFinishedEvent(TaskAttemptID
         .forName("attempt_200904211745_0003_m_000004_0"), TaskType
         .valueOf("MAP"), "STATUS", 1234567890L,
-        "/194\\.6\\.134\\.64/cluster50261\\.secondleveldomain\\.com",
+        "/194\\.6\\.134\\.64", "cluster50261\\.secondleveldomain\\.com",
         "SUCCESS", null));
     subject.process(new TaskAttemptUnsuccessfulCompletionEvent
                     (TaskAttemptID.forName("attempt_200904211745_0003_m_000004_1"),
                      TaskType.valueOf("MAP"), "STATUS", 1234567890L,
-                     "/194\\.6\\.134\\.80/cluster50262\\.secondleveldomain\\.com",
-                     -1, "MACHINE_EXPLODED", splits));
+                     "cluster50262\\.secondleveldomain\\.com",
+                     -1, "/194\\.6\\.134\\.80", "MACHINE_EXPLODED", splits));
     subject.process(new TaskAttemptUnsuccessfulCompletionEvent
                     (TaskAttemptID.forName("attempt_200904211745_0003_m_000004_2"),
                      TaskType.valueOf("MAP"), "STATUS", 1234567890L,
-                     "/194\\.6\\.134\\.80/cluster50263\\.secondleveldomain\\.com",
-                     -1, "MACHINE_EXPLODED", splits));
+                     "cluster50263\\.secondleveldomain\\.com",
+                     -1, "/194\\.6\\.134\\.80", "MACHINE_EXPLODED", splits));
     subject.process(new TaskStartedEvent(TaskID
         .forName("task_200904211745_0003_m_000004"), 1234567890L, TaskType
         .valueOf("MAP"),

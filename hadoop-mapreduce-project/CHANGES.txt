@@ -300,6 +300,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3588. Fixed bin/yarn which was broken by MAPREDUCE-3366 so that
     yarn daemons can start. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. (Amar
+    Kamat and Devaraj K via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

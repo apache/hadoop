@@ -69,7 +69,9 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
     datum.finishTime = finishTime;
     datum.hostname = new Utf8(hostname);
     datum.port = port;
-    datum.rackname = new Utf8(rackName);
+    if (rackName != null) {
+      datum.rackname = new Utf8(rackName);
+    }
     datum.state = new Utf8(state);
     datum.counters = EventWriter.toAvro(counters);
 
@@ -142,8 +144,12 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
   public String getHostname() { return datum.hostname.toString(); }
   /** Get the tracker rpc port */
   public int getPort() { return datum.port; }
+  
   /** Get the rack name of the node where the attempt ran */
-  public String getRackName() { return datum.rackname.toString(); }
+  public String getRackName() {
+    return datum.rackname == null ? null : datum.rackname.toString();
+  }
+  
   /** Get the state string */
   public String getState() { return datum.state.toString(); }
   /** Get the counters for the attempt */

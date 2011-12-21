@@ -25,6 +25,8 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionEvent;
+import org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinishedEvent;
+import org.apache.hadoop.mapreduce.jobhistory.ReduceAttemptFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 
 /**
@@ -46,6 +48,10 @@ public class TopologyBuilder {
       processTaskAttemptUnsuccessfulCompletionEvent((TaskAttemptUnsuccessfulCompletionEvent) event);
     } else if (event instanceof TaskStartedEvent) {
       processTaskStartedEvent((TaskStartedEvent) event);
+    } else if (event instanceof MapAttemptFinishedEvent) {
+      processMapAttemptFinishedEvent((MapAttemptFinishedEvent) event);
+    } else if (event instanceof ReduceAttemptFinishedEvent) {
+      processReduceAttemptFinishedEvent((ReduceAttemptFinishedEvent) event);
     }
 
     // I do NOT expect these if statements to be exhaustive.
@@ -78,15 +84,40 @@ public class TopologyBuilder {
 
   private void processTaskAttemptUnsuccessfulCompletionEvent(
       TaskAttemptUnsuccessfulCompletionEvent event) {
-    recordParsedHost(event.getHostname());
+    recordParsedHost(event.getHostname(), event.getRackName());
   }
 
   private void processTaskAttemptFinishedEvent(TaskAttemptFinishedEvent event) {
-    recordParsedHost(event.getHostname());
+    recordParsedHost(event.getHostname(), event.getRackName());
   }
 
-  private void recordParsedHost(String hostName) {
-    ParsedHost result = ParsedHost.parse(hostName);
+  private void processMapAttemptFinishedEvent(MapAttemptFinishedEvent event) {
+    recordParsedHost(event.getHostname(), event.getRackName());
+  }
+
+  private void processReduceAttemptFinishedEvent(ReduceAttemptFinishedEvent event) {
+    recordParsedHost(event.getHostname(), event.getRackName());
+  }
+
+  private void recordParsedHost(String hostName, String rackName) {
+    if (hostName == null) {
+      return;
+    }
+    ParsedHost result = null;
+    if (rackName == null) {
+      result = ParsedHost.parse(hostName);
+    } else {
+      result = new ParsedHost(rackName, hostName);
+    }
+    
+
+    if (result != null && !allHosts.contains(result)) {
+      allHosts.add(result);
+    }
+  }
+
+  private void recordParsedHost(String nodeName) {
+    ParsedHost result = ParsedHost.parse(nodeName);
 
     if (result != null && !allHosts.contains(result)) {
       allHosts.add(result);

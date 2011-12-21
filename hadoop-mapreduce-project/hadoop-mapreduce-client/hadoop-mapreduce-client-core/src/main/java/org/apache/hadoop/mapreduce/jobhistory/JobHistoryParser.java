@@ -224,7 +224,7 @@ public class JobHistoryParser {
     attemptInfo.counters = event.getCounters();
     attemptInfo.hostname = event.getHostname();
     attemptInfo.port = event.getPort();
-    attemptInfo.rackname = event.getRackname();
+    attemptInfo.rackname = event.getRackName();
   }
 
   private void handleTaskAttemptFailedEvent(
@@ -237,6 +237,7 @@ public class JobHistoryParser {
     attemptInfo.status = event.getTaskStatus();
     attemptInfo.hostname = event.getHostname();
     attemptInfo.port = event.getPort();
+    attemptInfo.rackname = event.getRackName();
     attemptInfo.shuffleFinishTime = event.getFinishTime();
     attemptInfo.sortFinishTime = event.getFinishTime();
     attemptInfo.mapFinishTime = event.getFinishTime();

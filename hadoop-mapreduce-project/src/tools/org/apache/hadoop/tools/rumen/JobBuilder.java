@@ -474,10 +474,11 @@ public class JobBuilder {
     }
 
     attempt.setResult(getPre21Value(event.getTaskStatus()));
-    ParsedHost parsedHost = getAndRecordParsedHost(event.getHostname());
-
-    if (parsedHost != null) {
-      attempt.setLocation(parsedHost.makeLoggedLocation());
+    attempt.setHostName(event.getHostname(), event.getRackName());
+    ParsedHost pHost = 
+      getAndRecordParsedHost(event.getRackName(), event.getHostname());
+    if (pHost != null) {
+      attempt.setLocation(pHost.makeLoggedLocation());
     }
 
     attempt.setFinishTime(event.getFinishTime());
@@ -506,8 +507,10 @@ public class JobBuilder {
       return;
     }
     attempt.setResult(getPre21Value(event.getTaskStatus()));
-    attempt.setLocation(getAndRecordParsedHost(event.getHostname())
-        .makeLoggedLocation());
+    ParsedHost pHost = getAndRecordParsedHost(event.getRackName(), event.getHostname());
+    if (pHost != null) {
+      attempt.setLocation(pHost.makeLoggedLocation());
+    }
     attempt.setFinishTime(event.getFinishTime());
     attempt
         .incorporateCounters(((TaskAttemptFinished) event.getDatum()).counters);
@@ -523,6 +526,11 @@ public class JobBuilder {
     }
     attempt.setResult(getPre21Value(event.getTaskStatus()));
     attempt.setHostName(event.getHostname(), event.getRackName());
+    ParsedHost pHost = 
+      getAndRecordParsedHost(event.getRackName(), event.getHostname());
+    if (pHost != null) {
+      attempt.setLocation(pHost.makeLoggedLocation());
+    }
 
     // XXX There may be redundant location info available in the event.
     // We might consider extracting it from this event. Currently this
@@ -546,8 +554,14 @@ public class JobBuilder {
       return;
     }
     attempt.setResult(getPre21Value(event.getTaskStatus()));
-    attempt.setHostName(event.getHostname(), event.getRackname());
+    attempt.setHostName(event.getHostname(), event.getRackName());
 
+    ParsedHost pHost = 
+      getAndRecordParsedHost(event.getRackName(), event.getHostname());
+    if (pHost != null) {
+      attempt.setLocation(pHost.makeLoggedLocation());
+    }
+    
     // XXX There may be redundant location info available in the event.
     // We might consider extracting it from this event. Currently this
     // is redundant, but making this will add future-proofing.
@@ -676,7 +690,19 @@ public class JobBuilder {
   }
 
   private ParsedHost getAndRecordParsedHost(String hostName) {
-    ParsedHost result = ParsedHost.parse(hostName);
+    return getAndRecordParsedHost(null, hostName);
+  }
+  
+  private ParsedHost getAndRecordParsedHost(String rackName, String hostName) {
+    ParsedHost result = null;
+    if (rackName == null) {
+      // for old (pre-23) job history files where hostname was represented as
+      // /rackname/hostname
+      result = ParsedHost.parse(hostName);
+    } else {
+      // for new (post-23) job history files
+      result = new ParsedHost(rackName, hostName);
+    }
 
     if (result != null) {
       ParsedHost canonicalResult = allHosts.get(result);

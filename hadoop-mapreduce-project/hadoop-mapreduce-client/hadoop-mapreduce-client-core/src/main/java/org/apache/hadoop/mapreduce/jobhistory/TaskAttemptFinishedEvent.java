@@ -51,13 +51,16 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
    */
   public TaskAttemptFinishedEvent(TaskAttemptID id, 
       TaskType taskType, String taskStatus, 
-      long finishTime,
+      long finishTime, String rackName,
       String hostname, String state, Counters counters) {
     datum.taskid = new Utf8(id.getTaskID().toString());
     datum.attemptId = new Utf8(id.toString());
     datum.taskType = new Utf8(taskType.name());
     datum.taskStatus = new Utf8(taskStatus);
     datum.finishTime = finishTime;
+    if (rackName != null) {
+      datum.rackname = new Utf8(rackName);
+    }
     datum.hostname = new Utf8(hostname);
     datum.state = new Utf8(state);
     datum.counters = EventWriter.toAvro(counters);
@@ -86,6 +89,12 @@ public class TaskAttemptFinishedEvent  implements HistoryEvent {
   public long getFinishTime() { return datum.finishTime; }
   /** Get the host where the attempt executed */
   public String getHostname() { return datum.hostname.toString(); }
+  
+  /** Get the rackname where the attempt executed */
+  public String getRackName() {
+    return datum.rackname == null ? null : datum.rackname.toString();
+  }
+  
   /** Get the state string */
   public String getState() { return datum.state.toString(); }
   /** Get the counters for the attempt */

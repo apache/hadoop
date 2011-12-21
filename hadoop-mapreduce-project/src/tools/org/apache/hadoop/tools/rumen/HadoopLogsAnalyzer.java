@@ -1329,6 +1329,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         if (host != null) {
           attempt.setHostName(host.getNodeName(), host.getRackName());
           attempt.setLocation(host.makeLoggedLocation());
+        } else {
+          attempt.setHostName(hostName, null);
         }
 
         List<LoggedLocation> locs = task.getPreferredLocations();
@@ -1491,9 +1493,13 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         }
       }
 
-      ParsedHost host = getAndRecordParsedHost(hostName);
-      if (host != null) {
-        attempt.setHostName(host.getNodeName(), host.getRackName());
+      if (hostName != null) {
+        ParsedHost host = getAndRecordParsedHost(hostName);
+        if (host != null) {
+          attempt.setHostName(host.getNodeName(), host.getRackName());
+        } else {
+          attempt.setHostName(hostName, null);
+        }
       }
 
       if (attemptID != null) {

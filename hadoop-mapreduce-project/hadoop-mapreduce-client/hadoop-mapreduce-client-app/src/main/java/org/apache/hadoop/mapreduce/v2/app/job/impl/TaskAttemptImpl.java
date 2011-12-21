@@ -926,6 +926,8 @@ public abstract class TaskAttemptImpl implements
                 : taskAttempt.containerNodeId.getHost(),
             taskAttempt.containerNodeId == null ? -1 
                 : taskAttempt.containerNodeId.getPort(),    
+            taskAttempt.nodeRackName == null ? "UNKNOWN" 
+                : taskAttempt.nodeRackName,
             StringUtils.join(
                 LINE_SEPARATOR, taskAttempt.getDiagnostics()), taskAttempt
                 .getProgressSplitBlock().burst());
