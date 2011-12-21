@@ -81,6 +81,10 @@ public class CompositeService extends AbstractService {
   }
 
   public synchronized void stop() {
+    if (this.getServiceState() == STATE.STOPPED) {
+      // The base composite-service is already stopped, don't do anything again.
+      return;
+    }
     if (serviceList.size() > 0) {
       stop(serviceList.size() - 1);
     }

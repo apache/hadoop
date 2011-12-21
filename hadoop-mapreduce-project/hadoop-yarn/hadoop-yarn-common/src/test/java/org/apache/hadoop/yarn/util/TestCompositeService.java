@@ -88,6 +88,14 @@ public class TestCompositeService {
           ((NUM_OF_SERVICES - 1) - i), services[i].getCallSequenceNumber());
     }
 
+    // Try to stop again. This should be a no-op.
+    serviceManager.stop();
+    // Verify that stop() call sequence numbers for every service don't change.
+    for (int i = 0; i < NUM_OF_SERVICES; i++) {
+      assertEquals("For " + services[i]
+          + " service, stop() call sequence number should have been ",
+          ((NUM_OF_SERVICES - 1) - i), services[i].getCallSequenceNumber());
+    }
   }
 
   @Test
@@ -153,7 +161,7 @@ public class TestCompositeService {
 
     serviceManager.start();
 
-    // Start the composite service
+    // Stop the composite service
     try {
       serviceManager.stop();
     } catch (YarnException e) {

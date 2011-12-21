@@ -303,6 +303,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. (Amar
     Kamat and Devaraj K via sseth)
 
+    MAPREDUCE-3586. Modified CompositeService to avoid duplicate stop operations
+    thereby solving race conditions in MR AM shutdown. (vinodkv)
+
+>>>>>>> .merge-right.r1221950
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
