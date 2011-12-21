@@ -281,8 +281,18 @@ class BPServiceActor implements Runnable {
    */
   @VisibleForTesting
   void triggerBlockReportForTests() throws IOException {
+    synchronized (receivedAndDeletedBlockList) {
       lastBlockReport = 0;
-      blockReport();
+      lastHeartbeat = 0;
+      receivedAndDeletedBlockList.notifyAll();
+      while (lastBlockReport == 0) {
+        try {
+          receivedAndDeletedBlockList.wait(100);
+        } catch (InterruptedException e) {
+          return;
+        }
+      }
+    }
   }
   
   @VisibleForTesting
@@ -290,6 +300,29 @@ class BPServiceActor implements Runnable {
     synchronized (receivedAndDeletedBlockList) {
       lastHeartbeat = 0;
       receivedAndDeletedBlockList.notifyAll();
+      while (lastHeartbeat == 0) {
+        try {
+          receivedAndDeletedBlockList.wait(100);
+        } catch (InterruptedException e) {
+          return;
+        }
+      }
+    }
+  }
+
+  @VisibleForTesting
+  void triggerDeletionReportForTests() throws IOException {
+    synchronized (receivedAndDeletedBlockList) {
+      lastDeletedReport = 0;
+      receivedAndDeletedBlockList.notifyAll();
+
+      while (lastDeletedReport == 0) {
+        try {
+          receivedAndDeletedBlockList.wait(100);
+        } catch (InterruptedException e) {
+          return;
+        }
+      }
     }
   }
 

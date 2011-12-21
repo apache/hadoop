@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
@@ -1574,6 +1575,30 @@ public class MiniDFSCluster {
       ServiceFailedException {
     getHaServiceClient(nnIndex).transitionToStandby();
   }
+  
+  
+  public void triggerBlockReports()
+      throws IOException {
+    for (DataNode dn : getDataNodes()) {
+      DataNodeAdapter.triggerBlockReport(dn);
+    }
+  }
+
+
+  public void triggerDeletionReports()
+      throws IOException {
+    for (DataNode dn : getDataNodes()) {
+      DataNodeAdapter.triggerDeletionReport(dn);
+    }
+  }
+
+  public void triggerHeartbeats()
+      throws IOException {
+    for (DataNode dn : getDataNodes()) {
+      DataNodeAdapter.triggerHeartbeat(dn);
+    }
+  }
+
 
   /** Wait until the given namenode gets registration from all the datanodes */
   public void waitActive(int nnIndex) throws IOException {

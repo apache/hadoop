@@ -60,7 +60,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     initialize(conf, stats, clusterMap);
   }
 
-  BlockPlacementPolicyDefault() {
+  protected BlockPlacementPolicyDefault() {
   }
     
   @Override

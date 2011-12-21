@@ -108,8 +108,7 @@ public class TestEditLogTailer {
     long activeTxId = active.getNamesystem().getFSImage().getEditLog()
       .getLastWrittenTxId();
     
-    // TODO: we should really just ask for a log roll here
-    doSaveNamespace(active);
+    active.getRpcServer().rollEditLog();
     
     long start = System.currentTimeMillis();
     while (System.currentTimeMillis() - start < NN_LAG_TIMEOUT) {
@@ -124,12 +123,4 @@ public class TestEditLogTailer {
         " (currently at " +
         standby.getNamesystem().getFSImage().getLastAppliedTxId() + ")");
   }
-  
-  private static void doSaveNamespace(NameNode nn)
-      throws IOException {
-    NameNodeAdapter.enterSafeMode(nn, false);
-    NameNodeAdapter.saveNamespace(nn);
-    NameNodeAdapter.leaveSafeMode(nn, false);
-  }
-  
 }

@@ -71,6 +71,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
@@ -508,6 +509,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             "taking over writer role in edits logs.");
         editLogTailer.catchupDuringFailover();
         
+        LOG.info("Reprocessing replication and invalidation queues...");
+        blockManager.getDatanodeManager().markAllDatanodesStale();
+        blockManager.clearQueues();
+        blockManager.processMisReplicatedBlocks();
+        
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("NameNode metadata after re-processing " +
+              "replication and invalidation queues during failover:\n" +
+              metaSaveAsString());
+        }
+        
         long nextTxId = dir.fsImage.getLastAppliedTxId() + 1;
         LOG.info("Will take over writing edit logs at txnid " + 
             nextTxId);
@@ -523,7 +535,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
   }
-  
+
   /** 
    * Stop services required in active state
    * @throws InterruptedException
@@ -781,20 +793,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
       PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file,
           true)));
-  
-      long totalInodes = this.dir.totalInodes();
-      long totalBlocks = this.getBlocksTotal();
-      out.println(totalInodes + " files and directories, " + totalBlocks
-          + " blocks = " + (totalInodes + totalBlocks) + " total");
-
-      blockManager.metaSave(out);
-
+      metaSave(out);
       out.flush();
       out.close();
     } finally {
       writeUnlock();
     }
   }
+
+  private void metaSave(PrintWriter out) {
+    assert hasWriteLock();
+    long totalInodes = this.dir.totalInodes();
+    long totalBlocks = this.getBlocksTotal();
+    out.println(totalInodes + " files and directories, " + totalBlocks
+        + " blocks = " + (totalInodes + totalBlocks) + " total");
+
+    blockManager.metaSave(out);
+  }
+
+  private String metaSaveAsString() {
+    StringWriter sw = new StringWriter();
+    PrintWriter pw = new PrintWriter(sw);
+    metaSave(pw);
+    pw.flush();
+    return sw.toString();
+  }
+  
 
   long getDefaultBlockSize() {
     return serverDefaults.getBlockSize();
@@ -3605,6 +3629,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override
   public boolean isPopulatingReplQueues() {
+    if (!haContext.getState().shouldPopulateReplQueues()) {
+      return false;
+    }
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -3936,6 +3963,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric
   public long getExcessBlocks() {
     return blockManager.getExcessBlocksCount();
+  }
+  
+  @Metric
+  public long getPostponedMisreplicatedBlocks() {
+    return blockManager.getPostponedMisreplicatedBlocksCount();
   }
   
   @Metric

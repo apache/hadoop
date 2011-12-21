@@ -80,5 +80,10 @@ public class StandbyState extends HAState {
         + context.getState();
     throw new StandbyException(msg);
   }
+
+  @Override
+  public boolean shouldPopulateReplQueues() {
+    return false;
+  }
 }
 

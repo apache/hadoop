@@ -499,6 +499,16 @@ class BPOfferService {
   }
 
   /**
+   * Run an immediate deletion report on this thread. Used by tests.
+   */
+  @VisibleForTesting
+  void triggerDeletionReportForTests() throws IOException {
+    for (BPServiceActor actor : bpServices) {
+      actor.triggerDeletionReportForTests();
+    }
+  }
+
+  /**
    * Run an immediate heartbeat from all actors. Used by tests.
    */
   @VisibleForTesting

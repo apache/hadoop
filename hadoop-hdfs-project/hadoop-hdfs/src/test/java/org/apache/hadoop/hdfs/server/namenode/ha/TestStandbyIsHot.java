@@ -24,6 +24,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,10 +34,17 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.TestDFSClientFailover;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
@@ -51,6 +59,12 @@ public class TestStandbyIsHot {
   private static final String TEST_FILE_DATA = "hello highly available world";
   private static final String TEST_FILE = "/testStandbyIsHot";
   private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
+
+  static {
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LogFactory.getLog(BlockManager.class)).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+  }
 
   @Test
   public void testStandbyIsHot() throws Exception {
@@ -79,19 +93,40 @@ public class TestStandbyIsHot {
       nn1.getRpcServer().rollEditLog();
       System.err.println("==================================");
 
-      waitForBlockLocations(nn2, TEST_FILE, 3);
-      
-      nn1.stop();
-      cluster.transitionToActive(1);
+      // Block locations should show up on standby.
+      LOG.info("Waiting for block locations to appear on standby node");
+      waitForBlockLocations(cluster, nn2, TEST_FILE, 3);
 
-      assertEquals(TEST_FILE_DATA, DFSTestUtil.readFile(fs, TEST_FILE_PATH));
+      // Trigger immediate heartbeats and block reports so
+      // that the active "trusts" all of the DNs
+      cluster.triggerHeartbeats();
+      cluster.triggerBlockReports();
+
+      // Change replication
+      LOG.info("Changing replication to 1");
+      fs.setReplication(TEST_FILE_PATH, (short)1);
+      waitForBlockLocations(cluster, nn1, TEST_FILE, 1);
+
+      nn1.getRpcServer().rollEditLog();
+      
+      LOG.info("Waiting for lowered replication to show up on standby");
+      waitForBlockLocations(cluster, nn2, TEST_FILE, 1);
+      
+      // Change back to 3
+      LOG.info("Changing replication to 3");
+      fs.setReplication(TEST_FILE_PATH, (short)3);
+      nn1.getRpcServer().rollEditLog();
+      
+      LOG.info("Waiting for higher replication to show up on standby");
+      waitForBlockLocations(cluster, nn2, TEST_FILE, 3);
       
     } finally {
       cluster.shutdown();
     }
   }
 
-  private void waitForBlockLocations(final NameNode nn,
+  static void waitForBlockLocations(final MiniDFSCluster cluster,
+      final NameNode nn,
       final String path, final int expectedReplicas)
       throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -100,8 +135,19 @@ public class TestStandbyIsHot {
       public Boolean get() {
         try {
           LocatedBlocks locs = NameNodeAdapter.getBlockLocations(nn, path, 0, 1000);
-          LOG.info("Got locs: " + locs);
-          return locs.getLastLocatedBlock().getLocations().length == expectedReplicas;
+          DatanodeInfo[] dnis = locs.getLastLocatedBlock().getLocations();
+          for (DatanodeInfo dni : dnis) {
+            Assert.assertNotNull(dni);
+          }
+          int numReplicas = dnis.length;
+          
+          LOG.info("Got " + numReplicas + " locs: " + locs);
+          if (numReplicas > expectedReplicas) {
+            for (DataNode dn : cluster.getDataNodes()) {
+              DataNodeAdapter.triggerDeletionReport(dn);
+            }
+          }
+          return numReplicas == expectedReplicas;
         } catch (IOException e) {
           LOG.warn("No block locations yet: " + e.getMessage());
           return false;

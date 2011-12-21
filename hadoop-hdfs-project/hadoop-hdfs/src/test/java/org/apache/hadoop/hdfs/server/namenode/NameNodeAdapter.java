@@ -81,6 +81,11 @@ public class NameNodeAdapter {
     namenode.getNamesystem().leaveSafeMode(checkForUpgrades);
   }
   
+  public static void abortEditLogs(NameNode nn) {
+    FSEditLog el = nn.getFSImage().getEditLog();
+    el.abortCurrentLogSegment();
+  }
+  
   /**
    * Get the internal RPC server instance.
    * @return rpc server

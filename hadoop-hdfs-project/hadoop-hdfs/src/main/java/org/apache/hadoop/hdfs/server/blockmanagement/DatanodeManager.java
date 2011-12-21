@@ -945,4 +945,27 @@ public class DatanodeManager {
       }
     }
   }
+  
+  public void markAllDatanodesStale() {
+    LOG.info("Marking all datandoes as stale");
+    synchronized (datanodeMap) {
+      for (DatanodeDescriptor dn : datanodeMap.values()) {
+        dn.markStaleAfterFailover();
+      }
+    }
+  }
+
+  /**
+   * Clear any actions that are queued up to be sent to the DNs
+   * on their next heartbeats. This includes block invalidations,
+   * recoveries, and replication requests.
+   */
+  public void clearPendingQueues() {
+    synchronized (datanodeMap) {
+      for (DatanodeDescriptor dn : datanodeMap.values()) {
+        dn.clearBlockQueues();
+      }
+    }
+  }
+
 }

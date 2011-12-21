@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.IOException;
+
 /**
  * WARNING!! This is TEST ONLY class: it never has to be used
  * for ANY development purposes.
@@ -41,5 +43,28 @@ public class DataNodeAdapter {
   public static void setHeartbeatsDisabledForTests(DataNode dn,
       boolean heartbeatsDisabledForTests) {
     dn.setHeartbeatsDisabledForTests(heartbeatsDisabledForTests);
+  }
+
+  public static void triggerDeletionReport(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerDeletionReportForTests();
+    }
+  }
+
+  public static void triggerHeartbeat(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerHeartbeatForTests();
+    }
+  }
+  
+  public static void triggerBlockReport(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerBlockReportForTests();
+    }
+  }
+
+  public static long getPendingAsyncDeletions(DataNode dn) {
+    FSDataset fsd = (FSDataset)dn.getFSDataset();
+    return fsd.asyncDiskService.countPendingDeletions();
   }
 }

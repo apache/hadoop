@@ -73,3 +73,5 @@ HDFS-2678. When a FailoverProxyProvider is used, DFSClient should not retry conn
 HDFS-2682. When a FailoverProxyProvider is used, Client should not retry for 45 times if it is timing out to connect to server. (Uma Maheswara Rao G via todd)
 
 HDFS-2693. Fix synchronization issues around state transition (todd)
+
+HDFS-1972. Fencing mechanism for block invalidations and replications (todd)

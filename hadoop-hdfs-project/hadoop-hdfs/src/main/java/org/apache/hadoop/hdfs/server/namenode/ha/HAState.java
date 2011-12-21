@@ -106,9 +106,12 @@ abstract public class HAState {
   public abstract void checkOperation(final HAContext context, final OperationCategory op)
       throws StandbyException;
 
+  public abstract boolean shouldPopulateReplQueues();
+
   /**
    * @return String representation of the service state.
    */
+  @Override
   public String toString() {
     return state.toString();
   }

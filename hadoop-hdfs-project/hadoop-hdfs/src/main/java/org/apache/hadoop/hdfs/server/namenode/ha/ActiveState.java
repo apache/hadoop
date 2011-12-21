@@ -42,6 +42,11 @@ public class ActiveState extends HAState {
   }
   
   @Override
+  public boolean shouldPopulateReplQueues() {
+    return true;
+  }
+  
+  @Override
   public void setState(HAContext context, HAState s) throws ServiceFailedException {
     if (s == NameNode.STANDBY_STATE) {
       setStateInternal(context, s);
@@ -67,4 +72,5 @@ public class ActiveState extends HAState {
       throw new ServiceFailedException("Failed to stop active services", e);
     }
   }
+
 }
