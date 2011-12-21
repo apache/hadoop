@@ -115,6 +115,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2706. Use configuration for blockInvalidateLimit if it is set.
     (szetszwo)
 
+    HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -1,0 +1,12 @@
+<FindBugsFilter>
+  <Match>
+    <Class name="org.apache.hadoop.lib.service.instrumentation.InstrumentationService" />
+    <Method name="getToAdd" />
+    <Bug pattern="UL_UNRELEASED_LOCK" />
+  </Match>
+  <Match>
+    <Class name="org.apache.hadoop.fs.http.server.HttpFSServerWebApp" />
+    <Method name="destroy" />
+    <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
+  </Match>
+</FindBugsFilter>
