@@ -98,6 +98,8 @@ public class HttpFSFileSystem extends FileSystem {
 
   public static final String SET_REPLICATION_JSON = "boolean";
 
+  public static final String UPLOAD_CONTENT_TYPE= "application/octet-stream";
+
   public static enum FILE_TYPE {
     FILE, DIRECTORY, SYMLINK;
 
@@ -459,7 +461,7 @@ public class HttpFSFileSystem extends FileSystem {
         String location = conn.getHeaderField("Location");
         if (location != null) {
           conn = getConnection(new URL(location), method);
-          conn.setRequestProperty("Content-Type", "application/octet-stream");
+          conn.setRequestProperty("Content-Type", UPLOAD_CONTENT_TYPE);
           try {
             OutputStream os = new BufferedOutputStream(conn.getOutputStream(), bufferSize);
             return new HttpFSDataOutputStream(conn, os, expectedStatus, statistics);

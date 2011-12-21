@@ -119,6 +119,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2657. TestHttpFSServer and TestServerWebApp are failing on trunk. (tucu)
 
+    HDFS-2705. HttpFS server should check that upload requests have correct 
+    content-type. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
