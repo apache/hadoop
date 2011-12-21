@@ -71,11 +71,17 @@ public class ParsedHost {
     return new ParsedHost(matcher.group(1), matcher.group(2));
   }
 
+  private String process(String name) {
+    return name == null 
+           ? null 
+           : name.startsWith("/") ? name.substring(1) : name;
+  }
+  
   public ParsedHost(LoggedLocation loc) {
     List<NodeName> coordinates = loc.getLayers();
 
-    rackName = coordinates.get(0).getRackName();
-    nodeName = coordinates.get(1).getHostName();
+    rackName = process(coordinates.get(0).getRackName());
+    nodeName = process(coordinates.get(1).getHostName());
   }
 
   LoggedLocation makeLoggedLocation() {
@@ -101,8 +107,8 @@ public class ParsedHost {
 
   // expects the broadest name first
   ParsedHost(String rackName, String nodeName) {
-    this.rackName = rackName;
-    this.nodeName = nodeName;
+    this.rackName = process(rackName);
+    this.nodeName = process(nodeName);
   }
 
   @Override

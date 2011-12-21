@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     PB and Avro can all use it (Sanjay)
 
   BUG FIXES
+    MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. 
+                    (Devaraj K and Amar Kamat via amarrk)
+
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
 
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
