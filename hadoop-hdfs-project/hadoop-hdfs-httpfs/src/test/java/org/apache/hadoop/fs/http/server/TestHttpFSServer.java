@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.http.server;
 
 import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.lib.service.security.DummyGroupMapping;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.apache.hadoop.test.TestDir;
@@ -66,6 +68,7 @@ public class TestHttpFSServer extends HFSTestCase {
     String fsDefaultName = TestHdfsHelper.getHdfsConf().get("fs.default.name");
     Configuration conf = new Configuration(false);
     conf.set("httpfs.hadoop.conf:fs.default.name", fsDefaultName);
+    conf.set("httpfs.groups." + CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING, DummyGroupMapping.class.getName());
     File hoopSite = new File(new File(homeDir, "conf"), "httpfs-site.xml");
     OutputStream os = new FileOutputStream(hoopSite);
     conf.writeXml(os);
