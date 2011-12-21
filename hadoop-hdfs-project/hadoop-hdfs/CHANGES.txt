@@ -182,6 +182,9 @@ Trunk (unreleased changes)
 
     HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
 
+    HDFS-2657. TestHttpFSServer and TestServerWebApp are failing on trunk. 
+    (tucu)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
