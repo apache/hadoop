@@ -180,6 +180,8 @@ Trunk (unreleased changes)
 
     HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
 
+    HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

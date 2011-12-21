@@ -111,7 +111,7 @@ public class XException extends Exception {
       }
       template = sb.deleteCharAt(0).toString();
     }
-    return error + ": " + MessageFormat.format(error.getTemplate(), args);
+    return error + ": " + MessageFormat.format(template, args);
   }
 
   /**
