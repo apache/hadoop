@@ -141,6 +141,8 @@ if [ -d "$YARN_HOME/build/tools" ]; then
   CLASSPATH=${CLASSPATH}:$YARN_HOME/build/tools
 fi
 
+CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce/*
+CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce/lib/*
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
