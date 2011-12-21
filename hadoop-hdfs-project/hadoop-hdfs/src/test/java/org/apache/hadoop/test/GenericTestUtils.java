@@ -20,6 +20,7 @@ package org.apache.hadoop.test;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
@@ -176,4 +177,35 @@ public abstract class GenericTestUtils {
     }
   }
 
+  /**
+   * An Answer implementation which sleeps for a random number of milliseconds
+   * between 0 and a configurable value before delegating to the real
+   * implementation of the method. This can be useful for drawing out race
+   * conditions.
+   */
+  public static class SleepAnswer implements Answer<Object> {
+    private final int maxSleepTime;
+    private static Random r = new Random();
+    
+    public SleepAnswer(int maxSleepTime) {
+      this.maxSleepTime = maxSleepTime;
+    }
+    
+    @Override
+    public Object answer(InvocationOnMock invocation) throws Throwable {
+      boolean interrupted = false;
+      try {
+        Thread.sleep(r.nextInt(maxSleepTime));
+      } catch (InterruptedException ie) {
+        interrupted = true;
+      }
+      try {
+        return invocation.callRealMethod();
+      } finally {
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
+  }
 }

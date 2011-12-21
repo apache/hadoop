@@ -308,6 +308,14 @@ public class MiniDFSCluster {
   private boolean federation;
   
   /**
+   * A unique instance identifier for the cluster. This
+   * is used to disambiguate HA filesystems in the case where
+   * multiple MiniDFSClusters are used in the same test suite. 
+   */
+  private int instanceId;
+  private static int instanceCount = 0;
+  
+  /**
    * Stores the information related to a namenode in the cluster
    */
   static class NameNodeInfo {
@@ -325,6 +333,9 @@ public class MiniDFSCluster {
    */
   public MiniDFSCluster() {
     nameNodes = new NameNodeInfo[0]; // No namenode in the cluster
+    synchronized (MiniDFSCluster.class) {
+      instanceId = instanceCount++;
+    }
   }
   
   /**
@@ -510,6 +521,10 @@ public class MiniDFSCluster {
       boolean waitSafeMode, boolean setupHostsFile,
       MiniDFSNNTopology nnTopology)
   throws IOException {
+    synchronized (MiniDFSCluster.class) {
+      instanceId = instanceCount++;
+    }
+
     this.conf = conf;
     base_dir = new File(determineDfsBaseDir());
     data_dir = new File(base_dir, "data");
@@ -736,6 +751,10 @@ public class MiniDFSCluster {
       NameNode.LOG.warn("unexpected URISyntaxException: " + e );
     }
     return uri;
+  }
+  
+  public int getInstanceId() {
+    return instanceId;
   }
 
   /**

@@ -71,3 +71,5 @@ HDFS-2677. Web UI should indicate the NN state. (eli via todd)
 HDFS-2678. When a FailoverProxyProvider is used, DFSClient should not retry connection ten times before failing over (atm via todd)
 
 HDFS-2682. When a FailoverProxyProvider is used, Client should not retry for 45 times if it is timing out to connect to server. (Uma Maheswara Rao G via todd)
+
+HDFS-2693. Fix synchronization issues around state transition (todd)

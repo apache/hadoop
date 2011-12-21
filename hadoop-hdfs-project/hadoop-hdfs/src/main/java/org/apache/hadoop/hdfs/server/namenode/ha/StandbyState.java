@@ -73,6 +73,9 @@ public class StandbyState extends HAState {
   @Override
   public void checkOperation(HAContext context, OperationCategory op)
       throws StandbyException {
+    if (op == OperationCategory.READ && context.allowStaleReads()) {
+      return;
+    }
     String msg = "Operation category " + op + " is not supported in state "
         + context.getState();
     throw new StandbyException(msg);

@@ -817,22 +817,18 @@ public class BlockManager {
    */
   public void findAndMarkBlockAsCorrupt(final ExtendedBlock blk,
       final DatanodeInfo dn) throws IOException {
-    namesystem.writeLock();
-    try {
-      final BlockInfo storedBlock = getStoredBlock(blk.getLocalBlock());
-      if (storedBlock == null) {
-        // Check if the replica is in the blockMap, if not
-        // ignore the request for now. This could happen when BlockScanner
-        // thread of Datanode reports bad block before Block reports are sent
-        // by the Datanode on startup
-        NameNode.stateChangeLog.info("BLOCK* findAndMarkBlockAsCorrupt: "
-            + blk + " not found.");
-        return;
-      }
-      markBlockAsCorrupt(storedBlock, dn);
-    } finally {
-      namesystem.writeUnlock();
+    assert namesystem.hasWriteLock();
+    final BlockInfo storedBlock = getStoredBlock(blk.getLocalBlock());
+    if (storedBlock == null) {
+      // Check if the replica is in the blockMap, if not
+      // ignore the request for now. This could happen when BlockScanner
+      // thread of Datanode reports bad block before Block reports are sent
+      // by the Datanode on startup
+      NameNode.stateChangeLog.info("BLOCK* findAndMarkBlockAsCorrupt: "
+          + blk + " not found.");
+      return;
     }
+    markBlockAsCorrupt(storedBlock, dn);
   }
 
   private void markBlockAsCorrupt(BlockInfo storedBlock,

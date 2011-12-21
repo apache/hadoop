@@ -54,9 +54,14 @@ abstract public class HAState {
    */
   protected final void setStateInternal(final HAContext context, final HAState s)
       throws ServiceFailedException {
-    exitState(context);
-    context.setState(s);
-    s.enterState(context);
+    context.writeLock();
+    try {
+      exitState(context);
+      context.setState(s);
+      s.enterState(context);
+    } finally {
+      context.writeUnlock();
+    }
   }
 
   /**

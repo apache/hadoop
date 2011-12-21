@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -29,7 +30,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
+import org.mockito.Mockito;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
@@ -52,7 +55,8 @@ public class NameNodeAdapter {
   }
   
   public static HdfsFileStatus getFileInfo(NameNode namenode, String src,
-      boolean resolveLink) throws AccessControlException, UnresolvedLinkException {
+      boolean resolveLink) throws AccessControlException, UnresolvedLinkException,
+        StandbyException {
     return namenode.getNamesystem().getFileInfo(src, resolveLink);
   }
   
@@ -133,5 +137,11 @@ public class NameNodeAdapter {
    */
   public static long[] getStats(final FSNamesystem fsn) {
     return fsn.getStats();
+  }
+  
+  public static ReentrantReadWriteLock spyOnFsLock(FSNamesystem fsn) {
+    ReentrantReadWriteLock spy = Mockito.spy(fsn.getFsLockForTests());
+    fsn.setFsLockForTests(spy);
+    return spy;
   }
 }

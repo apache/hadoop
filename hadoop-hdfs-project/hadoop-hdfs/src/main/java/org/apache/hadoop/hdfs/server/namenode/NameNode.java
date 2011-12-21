@@ -182,6 +182,7 @@ public class NameNode {
   private HAState state;
   private final boolean haEnabled;
   private final HAContext haContext;
+  protected boolean allowStaleStandbyReads;
 
   
   /** httpServer */
@@ -531,7 +532,8 @@ public class NameNode {
     this.role = role;
     String nsId = getNameServiceId(conf);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
-    this.haContext = new NameNodeHAContext();
+    this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
+    this.haContext = createHAContext();
     try {
       initializeGenericKeys(conf, nsId);
       initialize(conf);
@@ -551,6 +553,10 @@ public class NameNode {
       this.stop();
       throw new IOException("Service failed to start", e);
     }
+  }
+
+  protected HAContext createHAContext() {
+    return new NameNodeHAContext();
   }
 
   /**
@@ -914,11 +920,6 @@ public class NameNode {
     return state.getServiceState();
   }
 
-  /** Check if an operation of given category is allowed */
-  protected synchronized void checkOperation(final OperationCategory op)
-      throws StandbyException {
-    state.checkOperation(haContext, op);
-  }
   
   /**
    * Class used as expose {@link NameNode} as context to {@link HAState}
@@ -928,7 +929,7 @@ public class NameNode {
    * appropriate action is needed todo either shutdown the node or recover
    * from failure.
    */
-  private class NameNodeHAContext implements HAContext {
+  protected class NameNodeHAContext implements HAContext {
     @Override
     public void setState(HAState s) {
       state = s;
@@ -960,6 +961,28 @@ public class NameNode {
     public void stopStandbyServices() throws IOException {
       // TODO(HA): Are we guaranteed to be the only active here?
       namesystem.stopStandbyServices();
+    }
+    
+    @Override
+    public void writeLock() {
+      namesystem.writeLock();
+    }
+    
+    @Override
+    public void writeUnlock() {
+      namesystem.writeUnlock();
+    }
+    
+    /** Check if an operation of given category is allowed */
+    @Override
+    public void checkOperation(final OperationCategory op)
+        throws StandbyException {
+      state.checkOperation(haContext, op);
+    }
+    
+    @Override
+    public boolean allowStaleReads() {
+      return allowStaleStandbyReads;
     }
   }
   

@@ -126,7 +126,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   private static final Log stateChangeLog = NameNode.stateChangeLog;
   
   // Dependencies from other parts of NN.
-  private final FSNamesystem namesystem;
+  protected final FSNamesystem namesystem;
   protected final NameNode nn;
   private final NameNodeMetrics metrics;
   
@@ -318,7 +318,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void errorReport(NamenodeRegistration registration,
                           int errorCode, 
                           String msg) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
+    // nn.checkOperation(OperationCategory.WRITE);
+    // TODO: I dont think this should be checked - it's just for logging
+    // and dropping backups
     verifyRequest(registration);
     LOG.info("Error report from " + registration + ": " + msg);
     if(errorCode == FATAL)
@@ -346,28 +348,24 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
-    nn.checkOperation(OperationCategory.CHECKPOINT);
     namesystem.endCheckpoint(registration, sig);
   }
 
   @Override // ClientProtocol
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     return namesystem.getDelegationToken(renewer);
   }
 
   @Override // ClientProtocol
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     return namesystem.renewDelegationToken(token);
   }
 
   @Override // ClientProtocol
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.cancelDelegationToken(token);
   }
   
@@ -376,7 +374,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
                                           long offset, 
                                           long length) 
       throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     metrics.incrGetBlockLocations();
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
@@ -384,7 +381,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // ClientProtocol
   public FsServerDefaults getServerDefaults() throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     return namesystem.getServerDefaults();
   }
 
@@ -396,7 +392,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
                      boolean createParent,
                      short replication,
                      long blockSize) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.create: file "
@@ -417,7 +412,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public LocatedBlock append(String src, String clientName) 
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     String clientMachine = getClientMachine();
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.append: file "
@@ -430,7 +424,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public boolean recoverLease(String src, String clientName) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     String clientMachine = getClientMachine();
     return namesystem.recoverLease(src, clientName, clientMachine);
   }
@@ -438,21 +431,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean setReplication(String src, short replication) 
     throws IOException {  
-    nn.checkOperation(OperationCategory.WRITE);
     return namesystem.setReplication(src, replication);
   }
     
   @Override // ClientProtocol
   public void setPermission(String src, FsPermission permissions)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.setPermission(src, permissions);
   }
 
   @Override // ClientProtocol
   public void setOwner(String src, String username, String groupname)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.setOwner(src, username, groupname);
   }
 
@@ -462,7 +452,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
                                ExtendedBlock previous,
                                DatanodeInfo[] excludedNodes)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
           +src+" for "+clientName);
@@ -486,7 +475,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
       final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if (LOG.isDebugEnabled()) {
       LOG.debug("getAdditionalDatanode: src=" + src
           + ", blk=" + blk
@@ -514,7 +502,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void abandonBlock(ExtendedBlock b, String src, String holder)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
           +b+" of file "+src);
@@ -527,7 +514,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean complete(String src, String clientName, ExtendedBlock last)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.complete: "
           + src + " for " + clientName);
@@ -543,22 +529,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
    */
   @Override // ClientProtocol, DatanodeProtocol
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
-    stateChangeLog.info("*DIR* NameNode.reportBadBlocks");
-    for (int i = 0; i < blocks.length; i++) {
-      ExtendedBlock blk = blocks[i].getBlock();
-      DatanodeInfo[] nodes = blocks[i].getLocations();
-      for (int j = 0; j < nodes.length; j++) {
-        DatanodeInfo dn = nodes[j];
-        namesystem.getBlockManager().findAndMarkBlockAsCorrupt(blk, dn);
-      }
-    }
+    namesystem.reportBadBlocks(blocks);
   }
 
   @Override // ClientProtocol
   public LocatedBlock updateBlockForPipeline(ExtendedBlock block, String clientName)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     return namesystem.updateBlockForPipeline(block, clientName);
   }
 
@@ -567,7 +543,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void updatePipeline(String clientName, ExtendedBlock oldBlock,
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes);
   }
   
@@ -576,18 +551,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
       long newgenerationstamp, long newlength,
       boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
-    if (nn.isStandbyState()) {
-      if (namesystem.isGenStampInFuture(newgenerationstamp)) {
-        LOG.info("Required GS=" + newgenerationstamp
-            + ", Queuing commitBlockSynchronization message");
-        namesystem.getPendingDataNodeMessages().queueMessage(
-            new PendingDataNodeMessages.CommitBlockSynchronizationMessage(
-                block, newgenerationstamp, newlength, closeFile, deleteblock,
-                newtargets, newgenerationstamp));
-        return;
-      }
-    }
     namesystem.commitBlockSynchronization(block,
         newgenerationstamp, newlength, closeFile, deleteblock, newtargets);
   }
@@ -595,14 +558,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public long getPreferredBlockSize(String filename) 
       throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     return namesystem.getPreferredBlockSize(filename);
   }
     
   @Deprecated
   @Override // ClientProtocol
   public boolean rename(String src, String dst) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     }
@@ -619,14 +580,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.concat(trg, src);
   }
   
   @Override // ClientProtocol
   public void rename2(String src, String dst, Options.Rename... options)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.rename: " + src + " to " + dst);
     }
@@ -640,7 +599,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public boolean delete(String src, boolean recursive) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if (stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
           + ", recursive=" + recursive);
@@ -665,7 +623,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
     }
@@ -680,14 +637,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public void renewLease(String clientName) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.renewLease(clientName);        
   }
 
   @Override // ClientProtocol
   public DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     DirectoryListing files = namesystem.getListing(
         src, startAfter, needLocation);
     if (files != null) {
@@ -699,21 +654,19 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public HdfsFileStatus getFileInfo(String src)  throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, true);
   }
 
   @Override // ClientProtocol
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException { 
-    nn.checkOperation(OperationCategory.READ);
     metrics.incrFileInfoOps();
     return namesystem.getFileInfo(src, false);
   }
   
   @Override // ClientProtocol
   public long[] getStats() throws IOException {
-    nn.checkOperation(OperationCategory.READ);
+    namesystem.checkOperation(OperationCategory.READ);
     return namesystem.getStats();
   }
 
@@ -793,7 +746,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
       throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     String[] cookieTab = new String[] { cookie };
     Collection<FSNamesystem.CorruptFileBlockInfo> fbs =
       namesystem.listCorruptFileBlocks(path, cookieTab);
@@ -820,34 +772,29 @@ class NameNodeRpcServer implements NamenodeProtocols {
   
   @Override // ClientProtocol
   public ContentSummary getContentSummary(String path) throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     return namesystem.getContentSummary(path);
   }
 
   @Override // ClientProtocol
   public void setQuota(String path, long namespaceQuota, long diskspaceQuota) 
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.setQuota(path, namespaceQuota, diskspaceQuota);
   }
   
   @Override // ClientProtocol
   public void fsync(String src, String clientName) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.fsync(src, clientName);
   }
 
   @Override // ClientProtocol
   public void setTimes(String src, long mtime, long atime) 
       throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     namesystem.setTimes(src, mtime, atime);
   }
 
   @Override // ClientProtocol
   public void createSymlink(String target, String link, FsPermission dirPerms,
       boolean createParent) throws IOException {
-    nn.checkOperation(OperationCategory.WRITE);
     metrics.incrCreateSymlinkOps();
     /* We enforce the MAX_PATH_LENGTH limit even though a symlink target 
      * URI may refer to a non-HDFS file system. 
@@ -867,7 +814,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public String getLinkTarget(String path) throws IOException {
-    nn.checkOperation(OperationCategory.READ);
     metrics.incrGetLinkTargetOps();
     try {
       HdfsFileStatus stat = namesystem.getFileInfo(path, false);

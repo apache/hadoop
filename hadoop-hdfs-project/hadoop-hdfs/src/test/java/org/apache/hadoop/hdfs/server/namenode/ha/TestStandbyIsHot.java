@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.TestDFSClientFailover;
@@ -54,6 +55,8 @@ public class TestStandbyIsHot {
   @Test
   public void testStandbyIsHot() throws Exception {
     Configuration conf = new Configuration();
+    // We read from the standby to watch block locations
+    HAUtil.setAllowStandbyReads(conf, true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(3)

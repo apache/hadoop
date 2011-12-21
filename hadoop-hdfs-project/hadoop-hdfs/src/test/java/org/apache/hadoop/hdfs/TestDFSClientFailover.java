@@ -46,7 +46,7 @@ public class TestDFSClientFailover {
   
   private Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
-  private static final String LOGICAL_HOSTNAME = "ha-nn-uri";
+  private static final String LOGICAL_HOSTNAME = "ha-nn-uri-%d";
   
   @Before
   public void setUpCluster() throws IOException {
@@ -91,7 +91,8 @@ public class TestDFSClientFailover {
     
     // Check that it functions even if the URL becomes canonicalized
     // to include a port number.
-    Path withPort = new Path("hdfs://" + LOGICAL_HOSTNAME + ":" +
+    Path withPort = new Path("hdfs://" +
+        getLogicalHostname(cluster) + ":" +
         NameNode.DEFAULT_PORT + "/" + TEST_FILE.toUri().getPath());
     FileSystem fs2 = withPort.getFileSystem(fs.getConf());
     assertTrue(fs2.exists(withPort));
@@ -126,6 +127,7 @@ public class TestDFSClientFailover {
     
     String nameNodeId1 = "nn1";
     String nameNodeId2 = "nn2";
+    String logicalName = getLogicalHostname(cluster);
     
     conf = new Configuration(conf);
     String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();
@@ -138,11 +140,15 @@ public class TestDFSClientFailover {
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nsId);
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, nsId),
         nameNodeId1 + "," + nameNodeId2);
-    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + LOGICAL_HOSTNAME,
+    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
         ConfiguredFailoverProxyProvider.class.getName());
     
-    FileSystem fs = FileSystem.get(new URI("hdfs://" + LOGICAL_HOSTNAME), conf);
+    FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
     return fs;
+  }
+
+  private static String getLogicalHostname(MiniDFSCluster cluster) {
+    return String.format(LOGICAL_HOSTNAME, cluster.getInstanceId());
   }
 
 }

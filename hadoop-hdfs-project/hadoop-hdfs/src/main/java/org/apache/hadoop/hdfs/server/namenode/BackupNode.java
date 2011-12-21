@@ -244,18 +244,17 @@ public class BackupNode extends NameNode {
     @Override
     public void startLogSegment(NamenodeRegistration registration, long txid)
         throws IOException {
-      nn.checkOperation(OperationCategory.JOURNAL);
+      namesystem.checkOperation(OperationCategory.JOURNAL);
       verifyRequest(registration);
-        verifyRequest(registration);
       
-        getBNImage().namenodeStartedLogSegment(txid);
+      getBNImage().namenodeStartedLogSegment(txid);
     }
     
     @Override
     public void journal(NamenodeRegistration nnReg,
         long firstTxId, int numTxns,
         byte[] records) throws IOException {
-      nn.checkOperation(OperationCategory.JOURNAL);
+      namesystem.checkOperation(OperationCategory.JOURNAL);
       verifyRequest(nnReg);
       if(!nnRpcAddress.equals(nnReg.getAddress()))
         throw new IOException("Journal request from unexpected name-node: "
@@ -401,13 +400,21 @@ public class BackupNode extends NameNode {
     return clusterId;
   }
   
-  @Override // NameNode
-  protected void checkOperation(OperationCategory op)
-      throws StandbyException {
-    if (OperationCategory.JOURNAL != op) {
-      String msg = "Operation category " + op
-          + " is not supported at the BackupNode";
-      throw new StandbyException(msg);
+  @Override
+  protected NameNodeHAContext createHAContext() {
+    return new BNHAContext();
+  }
+  
+  private class BNHAContext extends NameNodeHAContext {
+    @Override // NameNode
+    public void checkOperation(OperationCategory op)
+        throws StandbyException {
+      if (OperationCategory.JOURNAL != op &&
+          !(OperationCategory.READ == op && allowStaleStandbyReads)) {
+        String msg = "Operation category " + op
+            + " is not supported at the BackupNode";
+        throw new StandbyException(msg);
+      }
     }
   }
   

@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -120,6 +121,7 @@ public class TestBackupNode extends TestCase {
    */
   public void testBackupNodeTailsEdits() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    HAUtil.setAllowStandbyReads(conf, true);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     BackupNode backup = null;
@@ -245,6 +247,7 @@ public class TestBackupNode extends TestCase {
     Path file3 = new Path("/backup.dat");
 
     Configuration conf = new HdfsConfiguration();
+    HAUtil.setAllowStandbyReads(conf, true);
     short replication = (short)conf.getInt("dfs.replication", 3);
     int numDatanodes = Math.max(3, replication);
     conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");

@@ -99,4 +99,16 @@ public class HAUtil {
     return null;
   }
 
+  /**
+   * This is used only by tests at the moment.
+   * @return true if the NN should allow read operations while in standby mode.
+   */
+  public static boolean shouldAllowStandbyReads(Configuration conf) {
+    return conf.getBoolean("dfs.ha.allow.stale.reads", false);
+  }
+  
+  public static void setAllowStandbyReads(Configuration conf, boolean val) {
+    conf.setBoolean("dfs.ha.allow.stale.reads", val);
+  }
+
 }

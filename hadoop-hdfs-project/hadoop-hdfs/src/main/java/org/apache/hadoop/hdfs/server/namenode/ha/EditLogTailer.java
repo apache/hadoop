@@ -85,27 +85,37 @@ public class EditLogTailer {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
         "Tailer thread should not be running once failover starts");
-    doTailEdits();
+    try {
+      doTailEdits();
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
   }
   
-  private void doTailEdits() throws IOException {
-    // TODO(HA) in a transition from active to standby,
-    // the following is wrong and ends up causing all of the
-    // last log segment to get re-read
-    long lastTxnId = image.getLastAppliedTxId();
-    
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("lastTxnId: " + lastTxnId);
-    }
-    Collection<EditLogInputStream> streams = editLog
-        .selectInputStreams(lastTxnId + 1, 0, false);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("edit streams to load from: " + streams.size());
-    }
-    
-    long editsLoaded = image.loadEdits(streams, namesystem);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("editsLoaded: " + editsLoaded);
+  private void doTailEdits() throws IOException, InterruptedException {
+    // Write lock needs to be interruptible here because the 
+    // transitionToActive RPC takes the write lock before calling
+    // tailer.stop() -- so if we're not interruptible, it will
+    // deadlock.
+    namesystem.writeLockInterruptibly();
+    try {
+      long lastTxnId = image.getLastAppliedTxId();
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("lastTxnId: " + lastTxnId);
+      }
+      Collection<EditLogInputStream> streams = editLog
+          .selectInputStreams(lastTxnId + 1, 0, false);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("edit streams to load from: " + streams.size());
+      }
+      
+      long editsLoaded = image.loadEdits(streams, namesystem);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("editsLoaded: " + editsLoaded);
+      }
+    } finally {
+      namesystem.writeUnlock();
     }
   }
 

@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.*;
 
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -28,8 +30,12 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.TestDFSClientFailover;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Tests state transition from active->standby, and manual failover
@@ -129,6 +135,59 @@ public class TestHAStateTransitions {
       cluster.transitionToActive(1);
       assertFalse(fs.exists(TEST_DIR));
 
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Regression test for HDFS-2693: when doing state transitions, we need to
+   * lock the FSNamesystem so that we don't end up doing any writes while it's
+   * "in between" states.
+   * This test case starts up several client threads which do mutation operations
+   * while flipping a NN back and forth from active to standby.
+   */
+  @Test(timeout=120000)
+  public void testTransitionSynchronization() throws Exception {
+    Configuration conf = new Configuration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleHATopology())
+      .numDataNodes(0)
+      .build();
+    try {
+      cluster.waitActive();
+      ReentrantReadWriteLock spyLock = NameNodeAdapter.spyOnFsLock(
+          cluster.getNameNode(0).getNamesystem());
+      Mockito.doAnswer(new GenericTestUtils.SleepAnswer(50))
+        .when(spyLock).writeLock();
+      
+      final FileSystem fs = TestDFSClientFailover.configureFailoverFs(
+          cluster, conf);
+      
+      TestContext ctx = new TestContext();
+      for (int i = 0; i < 50; i++) {
+        final int finalI = i;
+        ctx.addThread(new RepeatingTestThread(ctx) {
+          @Override
+          public void doAnAction() throws Exception {
+            Path p = new Path("/test-" + finalI);
+            fs.mkdirs(p);
+            fs.delete(p, true);
+          }
+        });
+      }
+      
+      ctx.addThread(new RepeatingTestThread(ctx) {
+        @Override
+        public void doAnAction() throws Exception {
+          cluster.transitionToStandby(0);
+          Thread.sleep(50);
+          cluster.transitionToActive(0);
+        }
+      });
+      ctx.startThreads();
+      ctx.waitFor(20000);
+      ctx.stop();
     } finally {
       cluster.shutdown();
     }
