@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.util.Collection;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -34,14 +33,14 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.event.EventHandler;
 
-
+@SuppressWarnings({ "rawtypes", "deprecation" })
 public class ReduceTaskAttemptImpl extends TaskAttemptImpl {
 
   private final int numMapTasks;
 
   public ReduceTaskAttemptImpl(TaskId id, int attempt,
       EventHandler eventHandler, Path jobFile, int partition,
-      int numMapTasks, Configuration conf,
+      int numMapTasks, JobConf conf,
       TaskAttemptListener taskAttemptListener, OutputCommitter committer,
       Token<JobTokenIdentifier> jobToken,
       Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock) {

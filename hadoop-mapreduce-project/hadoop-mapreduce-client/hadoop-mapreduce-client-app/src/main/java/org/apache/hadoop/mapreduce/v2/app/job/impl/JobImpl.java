@@ -54,7 +54,6 @@ import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.lib.chain.ChainMapper;
 import org.apache.hadoop.mapreduce.lib.chain.ChainReducer;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -110,6 +109,7 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 /** Implementation of Job interface. Maintains the state machines of Job.
  * The read and write calls use ReadWriteLock for concurrency.
  */
+@SuppressWarnings({ "rawtypes", "deprecation" })
 public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job, 
   EventHandler<JobEvent> {
 
@@ -154,7 +154,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // Can then replace task-level uber counters (MR-2424) with job-level ones
     // sent from LocalContainerLauncher, and eventually including a count of
     // of uber-AM attempts (probably sent from MRAppMaster).
-  public Configuration conf;
+  public JobConf conf;
 
   //fields initialized in init
   private FileSystem fs;
@@ -371,7 +371,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
     this.jobName = conf.get(JobContext.JOB_NAME, "<missing job name>");
-    this.conf = conf;
+    this.conf = new JobConf(conf);
     this.metrics = metrics;
     this.clock = clock;
     this.completedTasksFromPreviousRun = completedTasksFromPreviousRun;
@@ -979,7 +979,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               job.oldJobId);
         } else {
           job.jobContext = new org.apache.hadoop.mapred.JobContextImpl(
-              new JobConf(job.conf), job.oldJobId);
+              job.conf, job.oldJobId);
         }
         
         long inputLength = 0;

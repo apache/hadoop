@@ -119,6 +119,10 @@ public class MRApp extends MRAppMaster {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1);
   }
   
+  @Override
+  protected void downloadTokensAndSetupUGI(Configuration conf) {
+  }
+
   private static ApplicationAttemptId getApplicationAttemptId(
       ApplicationId applicationId, int startCount) {
     ApplicationAttemptId applicationAttemptId =

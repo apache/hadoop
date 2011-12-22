@@ -30,7 +30,6 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -169,7 +168,7 @@ public class MRAppBenchmark {
   }
 
   public void benchmark1() throws Exception {
-    int maps = 900;
+    int maps = 100000;
     int reduces = 100;
     System.out.println("Running benchmark with maps:"+maps +
         " reduces:"+reduces);
