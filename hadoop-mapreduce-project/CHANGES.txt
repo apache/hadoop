@@ -89,6 +89,9 @@ Release 0.23.1 - Unreleased
 
   OPTIMIZATIONS
 
+    MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
+    Vavilapalli via sseth)
+
   BUG FIXES
     MAPREDUCE-2950. [Rumen] Fixed TestUserResolve. (Ravi Gummadi via amarrk)
 

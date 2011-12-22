@@ -125,6 +125,7 @@ import org.apache.hadoop.yarn.util.RackResolver;
 /**
  * Implementation of TaskAttempt interface.
  */
+@SuppressWarnings({ "rawtypes", "deprecation" })
 public abstract class TaskAttemptImpl implements
     org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt,
       EventHandler<TaskAttemptEvent> {
@@ -135,10 +136,9 @@ public abstract class TaskAttemptImpl implements
   private static final int REDUCE_MEMORY_MB_DEFAULT = 1024;
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
-  protected final Configuration conf;
+  protected final JobConf conf;
   protected final Path jobFile;
   protected final int partition;
-  @SuppressWarnings("rawtypes")
   protected final EventHandler eventHandler;
   private final TaskAttemptId attemptId;
   private final Clock clock;
@@ -445,9 +445,9 @@ public abstract class TaskAttemptImpl implements
       .getProperty("line.separator");
 
   public TaskAttemptImpl(TaskId taskId, int i, 
-      @SuppressWarnings("rawtypes") EventHandler eventHandler,
+      EventHandler eventHandler,
       TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
-      Configuration conf, String[] dataLocalHosts, OutputCommitter committer,
+      JobConf conf, String[] dataLocalHosts, OutputCommitter committer,
       Token<JobTokenIdentifier> jobToken,
       Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock) {
     oldJobId = TypeConverter.fromYarn(taskId.getJobId());
@@ -1199,7 +1199,7 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       @SuppressWarnings("deprecation")
       TaskAttemptContext taskContext =
-        new TaskAttemptContextImpl(new JobConf(taskAttempt.conf),
+        new TaskAttemptContextImpl(taskAttempt.conf,
             TypeConverter.fromYarn(taskAttempt.attemptId));
       taskAttempt.eventHandler.handle(new TaskCleanupEvent(
           taskAttempt.attemptId,
