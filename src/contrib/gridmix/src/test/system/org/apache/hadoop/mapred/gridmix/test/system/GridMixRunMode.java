@@ -15,24 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapred.gridmix;
+package org.apache.hadoop.mapred.gridmix.test.system;
 /**
  * Gridmix run modes. 
  *
  */
-public class GridMixRunMode {
-   public static final int DATA_GENERATION = 1;
-   public static final int RUN_GRIDMIX = 2;
-   public static final int DATA_GENERATION_AND_RUN_GRIDMIX = 3;
-   private static String [] modeStr = {"DATA GENERATION",
-      "RUNNING GRIDMIX",
-      "DATA GENERATION AND RUNNING GRIDMIX"};
-   /**
-    * Get the appropriate message against the mode.
-    * @param mode - grimdix run mode either 1 or 2 or 3.
-    * @return - message as string.
-    */
-   public static String getMode(int mode){
-     return modeStr[mode-1];
+public enum GridMixRunMode {
+   DATA_GENERATION(1), RUN_GRIDMIX(2), DATA_GENERATION_AND_RUN_GRIDMIX(3);
+   private int mode;
+
+   GridMixRunMode (int mode) {
+      this.mode = mode;
+   }
+   
+   public int getValue() {
+     return mode;
    }
 }

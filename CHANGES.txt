@@ -75,6 +75,8 @@ Release 1.1.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
+
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for
                     short running tasks. (amarrk)
 

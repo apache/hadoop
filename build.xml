@@ -1594,6 +1594,7 @@
     <mkdir dir="${dist.dir}/share/${name}/contrib"/>
     <mkdir dir="${dist.dir}/share/${name}/webapps"/>
     <mkdir dir="${dist.dir}/share/${name}/templates/conf"/>
+    <mkdir dir="${dist.dir}/native"/>
 
     <copy todir="${dist.dir}/share/${name}/templates/conf" includeEmptyDirs="false">
       <fileset dir="${basedir}/src/packages/templates/conf">

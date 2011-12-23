@@ -27,6 +27,9 @@ import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.gridmix.RoundRobinUserResolver;
 import org.apache.hadoop.mapred.gridmix.EchoUserResolver;
 import org.apache.hadoop.mapred.gridmix.SubmitterUserResolver;
+import org.apache.hadoop.mapred.gridmix.test.system.UtilsForGridmix;
+import org.apache.hadoop.mapred.gridmix.test.system.GridMixRunMode;
+import org.apache.hadoop.mapred.gridmix.test.system.GridMixConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,15 +58,14 @@ public class TestGridMixDataGeneration {
   @BeforeClass
   public static void before() throws Exception {
     String [] excludeExpList = {"java.net.ConnectException", 
-        "java.io.IOException"};
+                                "java.io.IOException"};
     cluster = MRCluster.createCluster(conf);
     cluster.setExcludeExpList(excludeExpList);
     cluster.setUp();
     cSize = cluster.getTTClients().size();
     jtClient = cluster.getJTClient();
     rtClient = jtClient.getProxy();
-    gridmixDir = new Path("hdfs:///user/" + UtilsForGridmix.getUserName()
-       + "/herriot-gridmix");
+    gridmixDir = new Path("herriot-gridmix");
     UtilsForGridmix.createDirs(gridmixDir, rtClient.getDaemonConf());
   }
 
@@ -82,17 +84,24 @@ public class TestGridMixDataGeneration {
   @Test
   public void testGenerateDataWithSTRESSSubmission() throws Exception {
     conf = rtClient.getDaemonConf();
-    final long inputSize = cSize * 128;
-    String [] runtimeValues ={"LOADJOB",
-       SubmitterUserResolver.class.getName(),
-       "STRESS",
-       inputSize+"m",
-       "file:///dev/null"}; 
+    final long inputSizeInMB = cSize * 128;
+    String [] runtimeValues = {"LOADJOB",
+                               SubmitterUserResolver.class.getName(),
+                               "STRESS",
+                               inputSizeInMB + "m",
+                               "file:///dev/null"};
 
-    int exitCode = UtilsForGridmix.runGridmixJob(gridmixDir, 
-      conf,GridMixRunMode.DATA_GENERATION, runtimeValues);
+    String [] otherArgs = {
+        "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false", 
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
+        "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
+    };
+    int exitCode = 
+        UtilsForGridmix.runGridmixJob(gridmixDir, conf, 
+            GridMixRunMode.DATA_GENERATION.getValue(), 
+            runtimeValues, otherArgs);
     Assert.assertEquals("Data generation has failed.", 0 , exitCode);
-    checkGeneratedDataAndJobStatus(inputSize);
+    checkGeneratedDataAndJobStatus(inputSizeInMB);
   }
   
   /**
@@ -104,18 +113,27 @@ public class TestGridMixDataGeneration {
   @Test
   public void testGenerateDataWithREPLAYSubmission() throws Exception {
     conf = rtClient.getDaemonConf();
-    final long inputSize = cSize * 300;
-    String [] runtimeValues ={"LOADJOB",
-       RoundRobinUserResolver.class.getName(),
-       "REPLAY",
-       inputSize +"m",
-       "file://" + UtilsForGridmix.getProxyUsersFile(cluster.getHadoopProxyUsers()),
-       "file:///dev/null"};
+    final long inputSizeInMB = cSize * 300;
+    String [] runtimeValues = 
+               {"LOADJOB",
+                RoundRobinUserResolver.class.getName(),
+                "REPLAY",
+                inputSizeInMB +"m",
+                "file://" + UtilsForGridmix.getProxyUsersFile(conf),
+                "file:///dev/null"};
     
-    int exitCode = UtilsForGridmix.runGridmixJob(gridmixDir, 
-       conf,GridMixRunMode.DATA_GENERATION, runtimeValues);
+    String [] otherArgs = {
+        "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false", 
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
+        "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
+    };
+
+    int exitCode = 
+        UtilsForGridmix.runGridmixJob(gridmixDir, conf, 
+            GridMixRunMode.DATA_GENERATION.getValue(), 
+            runtimeValues, otherArgs);
     Assert.assertEquals("Data generation has failed.", 0 , exitCode);
-    checkGeneratedDataAndJobStatus(inputSize); 
+    checkGeneratedDataAndJobStatus(inputSizeInMB); 
   }
   
   /**
@@ -128,72 +146,81 @@ public class TestGridMixDataGeneration {
   @Test
   public void testGenerateDataWithSERIALSubmission() throws Exception {
     conf = rtClient.getDaemonConf();
-    int perNodeSize = 500; // 500 mb per node data
-    final long inputSize = cSize * perNodeSize;
-    String [] runtimeValues ={"LOADJOB",
-       EchoUserResolver.class.getName(),
-       "SERIAL",
-       inputSize + "m",
-       "file:///dev/null"};
-    int bytesPerFile = 200; // 200 mb per file of data
+    long perNodeSizeInMB = 500; // 500 mb per node data
+    final long inputSizeInMB = cSize * perNodeSizeInMB;
+    String [] runtimeValues ={"LOADJOB", 
+                              EchoUserResolver.class.getName(), 
+                              "SERIAL", 
+                              inputSizeInMB + "m", 
+                              "file:///dev/null"};
+    long bytesPerFile = 200  * 1024 * 1024; // 200 mb per file of data
     String [] otherArgs = {
-      "-D", GridMixConfig.GRIDMIX_BYTES_PER_FILE + 
-      "=" + (bytesPerFile * 1024 * 1024)
+        "-D", GridMixConfig.GRIDMIX_BYTES_PER_FILE + "=" + bytesPerFile, 
+        "-D", GridmixJob.GRIDMIX_HIGHRAM_EMULATION_ENABLE + "=false",
+        "-D", GridMixConfig.GRIDMIX_DISTCACHE_ENABLE + "=false", 
+        "-D", GridMixConfig.GRIDMIX_COMPRESSION_ENABLE + "=false"
     };
-    int exitCode = UtilsForGridmix.runGridmixJob(gridmixDir, 
-       conf,GridMixRunMode.DATA_GENERATION, runtimeValues,otherArgs);
+    int exitCode = 
+        UtilsForGridmix.runGridmixJob(gridmixDir, conf, 
+            GridMixRunMode.DATA_GENERATION.getValue(), 
+            runtimeValues, otherArgs);
     Assert.assertEquals("Data generation has failed.", 0 , exitCode);
     LOG.info("Verify the eache file size in a generate data.");
-    verifyEachNodeSize(new Path(gridmixDir,"input"));
-    verifyNumOfFilesGeneratedInEachNode(new Path(gridmixDir,"input"), 
-       perNodeSize, bytesPerFile);
-    checkGeneratedDataAndJobStatus(inputSize);
+    verifyEachNodeSize(new Path(gridmixDir, "input"), perNodeSizeInMB);
+    verifyNumOfFilesGeneratedInEachNode(new Path(gridmixDir, "input"), 
+                                        perNodeSizeInMB, bytesPerFile);
+    checkGeneratedDataAndJobStatus(inputSizeInMB);
   }
   
   private void checkGeneratedDataAndJobStatus(long inputSize) 
-     throws IOException {
+      throws IOException {
     LOG.info("Verify the generated data size.");
-    long dataSize = getDataSize(new Path(gridmixDir,"input"));
+    long dataSizeInMB = getDataSizeInMB(new Path(gridmixDir,"input"));
     Assert.assertTrue("Generate data has not matched with given size",
-       dataSize + 0.1 > inputSize || dataSize - 0.1 < inputSize);
+       dataSizeInMB + 0.1 > inputSize || dataSizeInMB - 0.1 < inputSize);
  
     JobClient jobClient = jtClient.getClient();
+    int len = jobClient.getAllJobs().length;
     LOG.info("Verify the job status after completion of job.");
     Assert.assertEquals("Job has not succeeded.", JobStatus.SUCCEEDED, 
-       jobClient.getAllJobs()[0].getRunState());
+                        jobClient.getAllJobs()[len-1].getRunState());
   }
   
-  private void verifyEachNodeSize(Path inputDir) throws IOException {
+  private void verifyEachNodeSize(Path inputDir, long dataSizePerNode) 
+      throws IOException {
     FileSystem fs = inputDir.getFileSystem(conf);
     FileStatus [] fstatus = fs.listStatus(inputDir);
     for (FileStatus fstat : fstatus) {
       if ( fstat.isDir()) {
-        long fileSize = getDataSize(fstat.getPath());
-        Assert.assertTrue("The Size has not " + 
-           " matched with given per node file size(500mb)", 
-           fileSize + 0.1 > 500 || fileSize - 0.1 < 500);
+        long fileSize = getDataSizeInMB(fstat.getPath());
+        Assert.assertTrue("The Size has not matched with given "
+                         + "per node file size(" + dataSizePerNode +"MB)", 
+                         fileSize + 0.1 > dataSizePerNode 
+                         || fileSize - 0.1 < dataSizePerNode);
       }
     }    
   }
 
   private void verifyNumOfFilesGeneratedInEachNode(Path inputDir, 
-     int nodeSize, int fileSize) throws IOException {
-    int expFileCount = Math.round(nodeSize/fileSize) + 
-       ((nodeSize%fileSize != 0)? 1:0);
+      long nodeSize, long fileSize) throws IOException {
+    long fileCount = (nodeSize * 1024 * 1024)/fileSize;
+    long expFileCount = Math.round(fileCount);
+    expFileCount = expFileCount + ((nodeSize%fileSize != 0)? 1:0);
     FileSystem fs = inputDir.getFileSystem(conf);
     FileStatus [] fstatus = fs.listStatus(inputDir);
     for (FileStatus fstat : fstatus) {
-      if ( fstat.isDir()) {
+      if (fstat.isDir()) {
         FileSystem nodeFs = fstat.getPath().getFileSystem(conf);
-        long actFileCount = nodeFs.getContentSummary(fstat.getPath())
-           .getFileCount();
-        Assert.assertEquals("File count has not matched.", 
-           expFileCount, actFileCount);
+        LOG.info("getPath():" + fstat.getPath().toString());
+        long actFileCount = nodeFs.getContentSummary(
+            fstat.getPath()).getFileCount();
+        Assert.assertEquals("File count has not matched.", expFileCount, 
+                            actFileCount);
       }
     }
   }
 
-  private static long getDataSize(Path inputDir) throws IOException {
+  private static long getDataSizeInMB(Path inputDir) throws IOException {
     FileSystem fs = inputDir.getFileSystem(conf);
     ContentSummary csmry = fs.getContentSummary(inputDir);
     long dataSize = csmry.getLength();

@@ -124,7 +124,7 @@ public class Gridmix extends Configured implements Tool {
     summarizer = new Summarizer(args);
   }
   
-  Gridmix() {
+  public Gridmix() {
     summarizer = new Summarizer();
   }
   

@@ -360,7 +360,7 @@ class DistributedCacheEmulator {
    * @return true if the path provided is of a local file system based
    *              distributed cache file
    */
-  private boolean isLocalDistCacheFile(String filePath, String user,
+  protected static boolean isLocalDistCacheFile(String filePath, String user,
                                        boolean visibility) {
     return (!visibility && filePath.contains(user + "/.staging"));
   }
