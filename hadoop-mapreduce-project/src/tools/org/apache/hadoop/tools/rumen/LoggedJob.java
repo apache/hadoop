@@ -360,6 +360,10 @@ public class LoggedJob implements DeepCompare {
     this.relativeTime = relativeTime;
   }
 
+  /**
+   * @return job queue name if it is available in job history file or
+   *         job history conf file. Returns null otherwise.
+   */
   public QueueName getQueue() {
     return queue;
   }

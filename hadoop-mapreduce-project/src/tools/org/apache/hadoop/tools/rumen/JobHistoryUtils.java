@@ -18,10 +18,15 @@
 package org.apache.hadoop.tools.rumen;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.jobhistory.JhCounter;
+import org.apache.hadoop.mapreduce.jobhistory.JhCounterGroup;
+import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistory;
 
 /**
@@ -142,5 +147,22 @@ public class JobHistoryUtils {
   static boolean isJobConfXml(String fileName) {
     String jobId = extractJobIDFromConfFileName(fileName);
     return jobId != null;
+  }
+
+  /**
+   * Extract/Add counters into the Map from the given JhCounters object.
+   * @param counters the counters to be extracted from
+   * @return the map of counters
+   */
+  static Map<String, Long> extractCounters(JhCounters counters) {
+    Map<String, Long> countersMap = new HashMap<String, Long>();
+    if (counters != null) {
+      for (JhCounterGroup group : counters.groups) {
+        for (JhCounter counter : group.counts) {
+          countersMap.put(counter.name.toString(), counter.value);
+        }
+      }
+    }
+    return countersMap;
   }
 }

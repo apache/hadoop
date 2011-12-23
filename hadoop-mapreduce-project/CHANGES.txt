@@ -12,6 +12,9 @@ Trunk (unreleased changes)
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+    MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the 
+                    job-history related information.
+
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests. 
                     (Vinay Thota via amarrk)
 
