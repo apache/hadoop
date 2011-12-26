@@ -459,7 +459,7 @@ public class TestAuthenticationFilter extends TestCase {
 
       AuthenticationToken token = new AuthenticationToken("u", "p", "t");
       token.setExpires(System.currentTimeMillis() + 1000);
-      Signer signer = new Signer("alfredo".getBytes());
+      Signer signer = new Signer("secret".getBytes());
       String tokenSigned = signer.sign(token.toString());
 
       Cookie cookie = new Cookie(AuthenticatedURL.AUTH_COOKIE, tokenSigned);
@@ -504,7 +504,7 @@ public class TestAuthenticationFilter extends TestCase {
 
       AuthenticationToken token = new AuthenticationToken("u", "p", DummyAuthenticationHandler.TYPE);
       token.setExpires(System.currentTimeMillis() - 1000);
-      Signer signer = new Signer("alfredo".getBytes());
+      Signer signer = new Signer("secret".getBytes());
       String tokenSigned = signer.sign(token.toString());
 
       Cookie cookie = new Cookie(AuthenticatedURL.AUTH_COOKIE, tokenSigned);
@@ -564,7 +564,7 @@ public class TestAuthenticationFilter extends TestCase {
 
       AuthenticationToken token = new AuthenticationToken("u", "p", "invalidtype");
       token.setExpires(System.currentTimeMillis() + 1000);
-      Signer signer = new Signer("alfredo".getBytes());
+      Signer signer = new Signer("secret".getBytes());
       String tokenSigned = signer.sign(token.toString());
 
       Cookie cookie = new Cookie(AuthenticatedURL.AUTH_COOKIE, tokenSigned);

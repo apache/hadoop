@@ -52,7 +52,7 @@
       <p>
         If a custom authentication mechanism is required for the HTTP web-consoles, it is possible 
         to implement a plugin to support the alternate authentication mechanism (refer to 
-        Hadoop Alfredo for details on writing an <code>AuthenticatorHandler</code>).
+        Hadoop hadoop-auth for details on writing an <code>AuthenticatorHandler</code>).
       </p>
       <p>       
         The next section describes how to configure Hadoop HTTP web-consoles to require user 

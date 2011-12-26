@@ -86,7 +86,7 @@
     </init-param>
     <init-param>
       <param-name>kerberos.keytab</param-name>
-      <param-value>/tmp/alfredo.keytab</param-value>
+      <param-value>/tmp/my.keytab</param-value>
     </init-param>
     <init-param>
       <param-name>token.validity</param-name>
