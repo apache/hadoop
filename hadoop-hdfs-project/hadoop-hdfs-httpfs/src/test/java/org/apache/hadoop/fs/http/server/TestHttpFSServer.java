@@ -39,8 +39,10 @@ import org.mortbay.jetty.webapp.WebAppContext;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Writer;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.MessageFormat;
@@ -65,10 +67,16 @@ public class TestHttpFSServer extends HFSTestCase {
     Assert.assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
+    File secretFile = new File(new File(homeDir, "conf"), "secret");
+    Writer w = new FileWriter(secretFile);
+    w.write("secret");
+    w.close();
+
     String fsDefaultName = TestHdfsHelper.getHdfsConf().get("fs.default.name");
     Configuration conf = new Configuration(false);
     conf.set("httpfs.hadoop.conf:fs.default.name", fsDefaultName);
     conf.set("httpfs.groups." + CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING, DummyGroupMapping.class.getName());
+    conf.set("httpfs.authentication.signature.secret.file", secretFile.getAbsolutePath());
     File hoopSite = new File(new File(homeDir, "conf"), "httpfs-site.xml");
     OutputStream os = new FileOutputStream(hoopSite);
     conf.writeXml(os);

@@ -26,7 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Initializes Alfredo AuthenticationFilter which provides support for
+ * Initializes hadoop-auth AuthenticationFilter which provides support for
  * Kerberos HTTP SPENGO authentication.
  * <p/>
  * It enables anonymous access, simple/speudo and Kerberos HTTP SPNEGO
@@ -43,9 +43,9 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
   private static final String PREFIX = "hadoop.http.authentication.";
 
   /**
-   * Initializes Alfredo AuthenticationFilter.
+   * Initializes hadoop-auth AuthenticationFilter.
    * <p/>
-   * Propagates to Alfredo AuthenticationFilter configuration all Hadoop
+   * Propagates to hadoop-auth AuthenticationFilter configuration all Hadoop
    * configuration properties prefixed with "hadoop.http.authentication."
    *
    * @param container The filter container

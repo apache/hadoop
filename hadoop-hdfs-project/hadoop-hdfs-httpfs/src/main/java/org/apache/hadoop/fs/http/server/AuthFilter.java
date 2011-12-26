@@ -21,18 +21,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
 import javax.servlet.FilterConfig;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
 import java.util.Map;
 import java.util.Properties;
 
 /**
- * Subclass of Alfredo's <code>AuthenticationFilter</code> that obtains its configuration
+ * Subclass of hadoop-auth <code>AuthenticationFilter</code> that obtains its configuration
  * from HttpFSServer's server configuration.
  */
 public class AuthFilter extends AuthenticationFilter {
   private static final String CONF_PREFIX = "httpfs.authentication.";
 
+  private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
+
   /**
-   * Returns the Alfredo configuration from HttpFSServer's configuration.
+   * Returns the hadoop-auth configuration from HttpFSServer's configuration.
    * <p/>
    * It returns all HttpFSServer's configuration properties prefixed with
    * <code>httpfs.authentication</code>. The <code>httpfs.authentication</code>
@@ -41,7 +46,7 @@ public class AuthFilter extends AuthenticationFilter {
    * @param configPrefix parameter not used.
    * @param filterConfig parameter not used.
    *
-   * @return Alfredo configuration read from HttpFSServer's configuration.
+   * @return hadoop-auth configuration read from HttpFSServer's configuration.
    */
   @Override
   protected Properties getConfiguration(String configPrefix, FilterConfig filterConfig) {
@@ -56,6 +61,25 @@ public class AuthFilter extends AuthenticationFilter {
         name = name.substring(CONF_PREFIX.length());
         props.setProperty(name, value);
       }
+    }
+
+    String signatureSecretFile = props.getProperty(SIGNATURE_SECRET_FILE, null);
+    if (signatureSecretFile == null) {
+      throw new RuntimeException("Undefined property: " + SIGNATURE_SECRET_FILE);
+    }
+
+    try {
+      StringBuilder secret = new StringBuilder();
+      Reader reader = new FileReader(signatureSecretFile);
+      int c = reader.read();
+      while (c > -1) {
+        secret.append((char)c);
+        c = reader.read();
+      }
+      reader.close();
+      props.setProperty(AuthenticationFilter.SIGNATURE_SECRET, secret.toString());
+    } catch (IOException ex) {
+      throw new RuntimeException("Could not read HttpFS signature secret file: " + signatureSecretFile);
     }
     return props;
   }

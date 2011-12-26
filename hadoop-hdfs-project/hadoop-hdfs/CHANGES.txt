@@ -122,6 +122,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2705. HttpFS server should check that upload requests have correct 
     content-type. (tucu)
 
+    HDFS-2707. HttpFS should read the hadoop-auth secret from a file instead 
+    inline from the configuration. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
