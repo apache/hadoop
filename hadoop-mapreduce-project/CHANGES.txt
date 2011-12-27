@@ -12,6 +12,9 @@ Trunk (unreleased changes)
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+    MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the 
+                    job-history related information.
+
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests. 
                     (Vinay Thota via amarrk)
 
@@ -47,6 +50,9 @@ Trunk (unreleased changes)
     PB and Avro can all use it (Sanjay)
 
   BUG FIXES
+    MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. 
+                    (Devaraj K and Amar Kamat via amarrk)
+
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
 
     MAPREDUCE-3346. [Rumen] LoggedTaskAttempt#getHostName() returns null. 
@@ -161,7 +167,13 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3518. mapred queue -info <queue> -showJobs throws NPE. 
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3391. Making a trivial change to correct a log message in
+    DistributedShell app's AM. (Subroto Sanyal via vinodkv)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
+    Vavilapalli via sseth)
 
   BUG FIXES
 
@@ -331,7 +343,23 @@ Release 0.23.1 - Unreleased
     before the job started, so that it works properly with oozie throughout
     the job execution. (Robert Joseph Evans via vinodkv)
 
-    MAPREDUCE-3579. ConverterUtils shouldn't include a port in a path from a url without a port. (atm via harsh)
+    MAPREDUCE-3579. ConverterUtils shouldn't include a port in a path from a url 
+    without a port. (atm via harsh)
+
+    MAPREDUCE-3563. Fixed LocalJobRunner to work correctly with new mapreduce
+    apis. (acmurthy)
+
+    MAPREDUCE-3376. Fixed Task to ensure it passes reporter to combiners using
+    old MR api. (Subroto Sanyal via acmurthy)
+
+    MAPREDUCE-3339. Fixed MR AM to stop considering node blacklisting after the
+    number of nodes blacklisted crosses a threshold. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-3588. Fixed bin/yarn which was broken by MAPREDUCE-3366 so that
+    yarn daemons can start. (Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3586. Modified CompositeService to avoid duplicate stop operations
+    thereby solving race conditions in MR AM shutdown. (vinodkv)
 
 Release 0.23.0 - 2011-11-01 
 

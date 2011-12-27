@@ -70,6 +70,19 @@
   </property>
 
   <property>
+    <name>httpfs.authentication.signature.secret.file</name>
+    <value>${httpfs.config.dir}/httpfs-signature.secret</value>
+    <description>
+      File containing the secret to sign HttpFS hadoop-auth cookies.
+
+      This file should be readable only by the system user running HttpFS service.
+
+      If multiple HttpFS servers are used in a load-balancer/round-robin fashion,
+      they should share the secret file.
+    </description>
+  </property>
+
+  <property>
     <name>httpfs.authentication.type</name>
     <value>simple</value>
     <description>

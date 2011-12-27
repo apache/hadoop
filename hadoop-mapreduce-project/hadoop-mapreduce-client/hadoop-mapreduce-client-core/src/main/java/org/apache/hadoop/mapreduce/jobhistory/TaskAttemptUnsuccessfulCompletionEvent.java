@@ -47,6 +47,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    * @param finishTime Finish time of the attempt
    * @param hostname Name of the host where the attempt executed
    * @param port rpc port for for the tracker
+   * @param rackName Name of the rack where the attempt executed
    * @param error Error string
    * @param allSplits the "splits", or a pixelated graph of various
    *        measurable worker node state variables against progress.
@@ -55,14 +56,17 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    */
   public TaskAttemptUnsuccessfulCompletionEvent
        (TaskAttemptID id, TaskType taskType,
-        String status, long finishTime, 
-        String hostname, int port, String error,
-        int[][] allSplits) {
+        String status, long finishTime,
+        String hostname, int port, String rackName,
+        String error, int[][] allSplits) {
     datum.taskid = new Utf8(id.getTaskID().toString());
     datum.taskType = new Utf8(taskType.name());
     datum.attemptId = new Utf8(id.toString());
     datum.finishTime = finishTime;
     datum.hostname = new Utf8(hostname);
+    if (rackName != null) {
+      datum.rackname = new Utf8(rackName);
+    }
     datum.port = port;
     datum.error = new Utf8(error);
     datum.status = new Utf8(status);
@@ -99,7 +103,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
        (TaskAttemptID id, TaskType taskType,
         String status, long finishTime, 
         String hostname, String error) {
-    this(id, taskType, status, finishTime, hostname, -1, error, null);
+    this(id, taskType, status, finishTime, hostname, -1, null, error, null);
   }
 
   TaskAttemptUnsuccessfulCompletionEvent() {}
@@ -125,6 +129,12 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   public String getHostname() { return datum.hostname.toString(); }
   /** Get the rpc port for the host where the attempt executed */
   public int getPort() { return datum.port; }
+  
+  /** Get the rack name of the node where the attempt ran */
+  public String getRackName() {
+    return datum.rackname == null ? null : datum.rackname.toString();
+  }
+  
   /** Get the error string */
   public String getError() { return datum.error.toString(); }
   /** Get the task status */

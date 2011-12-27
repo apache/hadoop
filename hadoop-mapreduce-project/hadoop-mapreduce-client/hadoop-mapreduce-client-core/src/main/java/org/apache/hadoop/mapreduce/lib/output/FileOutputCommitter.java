@@ -233,7 +233,7 @@ public class FileOutputCommitter extends OutputCommitter {
           " directory of task: " + attemptId + " - " + workPath);
         }
         LOG.info("Saved output of task '" + attemptId + "' to " + 
-                 outputPath);
+            jobOutputPath);
       }
     }
   }

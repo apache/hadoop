@@ -175,6 +175,7 @@
           {"name": "taskType", "type": "string"},
           {"name": "taskStatus", "type": "string"},
           {"name": "finishTime", "type": "long"},
+          {"name": "rackname", "type": "string"},
           {"name": "hostname", "type": "string"},
           {"name": "state", "type": "string"},
           {"name": "counters", "type": "JhCounters"}
@@ -202,6 +203,7 @@
           {"name": "finishTime", "type": "long"},
           {"name": "hostname", "type": "string"},
           {"name": "port", "type": "int"},
+          {"name": "rackname", "type": "string"},
           {"name": "status", "type": "string"},
           {"name": "error", "type": "string"},
           {"name": "clockSplits", "type": { "type": "array", "items": "int"}},

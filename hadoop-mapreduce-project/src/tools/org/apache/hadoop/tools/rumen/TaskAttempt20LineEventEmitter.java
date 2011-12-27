@@ -108,9 +108,12 @@ public abstract class TaskAttempt20LineEventEmitter extends HistoryEventEmitter 
         TaskAttempt20LineEventEmitter that =
             (TaskAttempt20LineEventEmitter) thatg;
 
+        ParsedHost pHost = ParsedHost.parse(hostName);
+
         return new TaskAttemptFinishedEvent(taskAttemptID,
             that.originalTaskType, status, Long.parseLong(finishTime),
-            hostName, state, maybeParseCounters(counters));
+            pHost.getRackName(), pHost.getNodeName(), state, 
+            maybeParseCounters(counters));
       }
 
       return null;
@@ -138,10 +141,19 @@ public abstract class TaskAttempt20LineEventEmitter extends HistoryEventEmitter 
         TaskAttempt20LineEventEmitter that =
             (TaskAttempt20LineEventEmitter) thatg;
 
+        ParsedHost pHost = ParsedHost.parse(hostName);
+        String rackName = null;
+        
+        // Earlier versions of MR logged on hostnames (without rackname) for
+        // unsuccessful attempts
+        if (pHost != null) {
+          rackName = pHost.getRackName();
+          hostName = pHost.getNodeName();
+        }
         return new TaskAttemptUnsuccessfulCompletionEvent
           (taskAttemptID,
            that.originalTaskType, status, Long.parseLong(finishTime),
-           hostName, -1, error, null);
+           hostName, -1, rackName, error, null);
       }
 
       return null;

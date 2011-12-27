@@ -21,8 +21,8 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 import java.util.Collection;
 import java.util.Set;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapTaskAttemptImpl;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -31,20 +31,20 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
+import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.event.EventHandler;
 
-
+@SuppressWarnings({ "rawtypes", "deprecation" })
 public class MapTaskImpl extends TaskImpl {
 
   private final TaskSplitMetaInfo taskSplitMetaInfo;
 
   public MapTaskImpl(JobId jobId, int partition, EventHandler eventHandler,
-      Path remoteJobConfFile, Configuration conf,
+      Path remoteJobConfFile, JobConf conf,
       TaskSplitMetaInfo taskSplitMetaInfo,
       TaskAttemptListener taskAttemptListener, OutputCommitter committer,
       Token<JobTokenIdentifier> jobToken,

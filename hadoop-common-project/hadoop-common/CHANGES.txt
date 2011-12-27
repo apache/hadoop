@@ -189,6 +189,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7912. test-patch should run eclipse:eclipse to verify that it does
     not break again. (Robert Joseph Evans via tomwhite)
 
+    HADOOP-7890. Redirect hadoop script's deprecation message to stderr.
+    (Koji Knoguchi via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -219,6 +222,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7914. Remove the duplicated declaration of hadoop-hdfs test-jar in
    hadoop-project/pom.xml.  (szetszwo)
+
+   HADOOP-7837. no NullAppender in the log4j config. (eli)
 
 Release 0.23.0 - 2011-11-01 
 

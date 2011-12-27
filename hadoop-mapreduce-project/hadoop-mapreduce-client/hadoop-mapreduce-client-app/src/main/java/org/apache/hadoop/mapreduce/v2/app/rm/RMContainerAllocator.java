@@ -479,12 +479,16 @@ public class RMContainerAllocator extends RMContainerRequestor
       //something changed
       recalculateReduceSchedule = true;
     }
-    
-    List<Container> allocatedContainers = new ArrayList<Container>();
-    for (Container cont : newContainers) {
-        allocatedContainers.add(cont);
+
+    if (LOG.isDebugEnabled()) {
+      for (Container cont : newContainers) {
         LOG.debug("Received new Container :" + cont);
+      }
     }
+
+    //Called on each allocation. Will know about newly blacklisted/added hosts.
+    computeIgnoreBlacklisting();
+    
     for (ContainerStatus cont : finishedContainers) {
       LOG.info("Received completed container " + cont);
       TaskAttemptId attemptID = assignedRequests.get(cont.getContainerId());

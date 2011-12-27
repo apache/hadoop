@@ -61,6 +61,11 @@
   </filter>
 
   <filter>
+    <filter-name>checkUploadContentType</filter-name>
+    <filter-class>org.apache.hadoop.fs.http.server.CheckUploadContentTypeFilter</filter-class>
+  </filter>
+
+  <filter>
     <filter-name>fsReleaseFilter</filter-name>
     <filter-class>org.apache.hadoop.fs.http.server.HttpFSReleaseFilter</filter-class>
   </filter>
@@ -77,6 +82,11 @@
 
   <filter-mapping>
     <filter-name>hostnameFilter</filter-name>
+    <url-pattern>*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>checkUploadContentType</filter-name>
     <url-pattern>*</url-pattern>
   </filter-mapping>
 

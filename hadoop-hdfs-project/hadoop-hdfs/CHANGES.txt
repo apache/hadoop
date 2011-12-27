@@ -180,6 +180,17 @@ Trunk (unreleased changes)
 
     HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
 
+    HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
+
+    HDFS-2657. TestHttpFSServer and TestServerWebApp are failing on trunk. 
+    (tucu)
+
+    HttpFS server should check that upload requests have correct 
+    content-type. (tucu)
+
+    HDFS-2707. HttpFS should read the hadoop-auth secret from a file 
+    instead inline from the configuration. (tucu)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -282,6 +293,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2553. Fix BlockPoolSliceScanner spinning in a tight loop (Uma
     Maheswara Rao G via todd)
+
+    HDFS-2706. Use configuration for blockInvalidateLimit if it is set.
+    (szetszwo)
 
 Release 0.23.0 - 2011-11-01 
 

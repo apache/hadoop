@@ -42,7 +42,10 @@ public class InputStreamEntity implements StreamingOutput {
 
   @Override
   public void write(OutputStream os) throws IOException {
-    is.skip(offset);
+    long skipped = is.skip(offset);
+    if (skipped < offset) {
+      throw new IOException("Requested offset beyond stream size");
+    }
     if (len == -1) {
       IOUtils.copyBytes(is, os, 4096, true);
     } else {
