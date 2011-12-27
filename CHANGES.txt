@@ -126,6 +126,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2701. Cleanup FS* processIOError methods. (eli)
 
+    HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
+
 Release 1.0.0 - unreleased
 
   NEW FEATURES

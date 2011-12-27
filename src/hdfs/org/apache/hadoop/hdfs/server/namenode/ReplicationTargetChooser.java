@@ -32,7 +32,7 @@ import java.util.*;
  * the 1st replica is placed on the local machine, 
  * otherwise a random datanode. The 2nd replica is placed on a datanode
  * that is on a different rack. The 3rd replica is placed on a datanode
- * which is on the same rack as the first replca.
+ * which is on the same rack as the second replica.
  */
 class ReplicationTargetChooser {
   private final boolean considerLoad; 
