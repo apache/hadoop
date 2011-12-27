@@ -161,7 +161,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         " finishedContainers=" + 
         response.getCompletedContainersStatuses().size() + 
         " resourcelimit=" + availableResources + 
-        "knownNMs=" + clusterNmCount);
+        " knownNMs=" + clusterNmCount);
 
     ask.clear();
     release.clear();
