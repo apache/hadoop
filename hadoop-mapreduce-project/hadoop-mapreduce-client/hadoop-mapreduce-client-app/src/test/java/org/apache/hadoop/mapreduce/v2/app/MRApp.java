@@ -115,7 +115,8 @@ public class MRApp extends MRAppMaster {
     applicationId.setId(0);
   }
 
-  public MRApp(int maps, int reduces, boolean autoComplete, String testName, boolean cleanOnStart) {
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1);
   }
   
@@ -141,10 +142,17 @@ public class MRApp extends MRAppMaster {
     return containerId;
   }
 
-  public MRApp(int maps, int reduces, boolean autoComplete, String testName, 
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
-    super(getApplicationAttemptId(applicationId, startCount), getContainerId(
-        applicationId, startCount), NM_HOST, NM_PORT, NM_HTTP_PORT, System
+    this(getApplicationAttemptId(applicationId, startCount), getContainerId(
+      applicationId, startCount), maps, reduces, autoComplete, testName,
+      cleanOnStart, startCount);
+  }
+
+  public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
+      int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, int startCount) {
+    super(appAttemptId, amContainerId, NM_HOST, NM_PORT, NM_HTTP_PORT, System
         .currentTimeMillis());
     this.testWorkDir = new File("target", testName);
     testAbsPath = new Path(testWorkDir.getAbsolutePath());
@@ -205,9 +213,9 @@ public class MRApp extends MRAppMaster {
     TaskReport report = task.getReport();
     while (!finalState.equals(report.getTaskState()) &&
         timeoutSecs++ < 20) {
-      System.out.println("Task State is : " + report.getTaskState() +
-          " Waiting for state : " + finalState +
-          "   progress : " + report.getProgress());
+      System.out.println("Task State for " + task.getID() + " is : "
+          + report.getTaskState() + " Waiting for state : " + finalState
+          + "   progress : " + report.getProgress());
       report = task.getReport();
       Thread.sleep(500);
     }

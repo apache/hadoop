@@ -228,7 +228,7 @@ public class MRAppMaster extends CompositeService {
           + recoveryEnabled + " recoverySupportedByCommitter: "
           + recoverySupportedByCommitter + " ApplicationAttemptID: "
           + appAttemptID.getAttemptId());
-      dispatcher = new AsyncDispatcher();
+      dispatcher = createDispatcher();
       addIfService(dispatcher);
     }
 
@@ -290,6 +290,10 @@ public class MRAppMaster extends CompositeService {
 
     super.init(conf);
   } // end of init()
+
+  protected Dispatcher createDispatcher() {
+    return new AsyncDispatcher();
+  }
 
   private OutputCommitter createOutputCommitter(Configuration conf) {
     OutputCommitter committer = null;

@@ -426,6 +426,11 @@ public class MockJobs extends MockApps {
       }
 
       @Override
+      public float getProgress() {
+        return 0;
+      }
+
+      @Override
       public Counters getCounters() {
         return counters;
       }

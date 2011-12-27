@@ -128,25 +128,7 @@ public abstract class RMCommunicator extends AbstractService  {
   protected float getApplicationProgress() {
     // For now just a single job. In future when we have a DAG, we need an
     // aggregate progress.
-    JobReport report = this.job.getReport();
-    float setupWeight = 0.05f;
-    float cleanupWeight = 0.05f;
-    float mapWeight = 0.0f;
-    float reduceWeight = 0.0f;
-    int numMaps = this.job.getTotalMaps();
-    int numReduces = this.job.getTotalReduces();
-    if (numMaps == 0 && numReduces == 0) {
-    } else if (numMaps == 0) {
-      reduceWeight = 0.9f;
-    } else if (numReduces == 0) {
-      mapWeight = 0.9f;
-    } else {
-      mapWeight = reduceWeight = 0.45f;
-    }
-    return (report.getSetupProgress() * setupWeight
-        + report.getCleanupProgress() * cleanupWeight
-        + report.getMapProgress() * mapWeight + report.getReduceProgress()
-        * reduceWeight);
+    return this.job.getProgress();
   }
 
   protected void register() {

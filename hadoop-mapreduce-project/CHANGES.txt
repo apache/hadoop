@@ -96,6 +96,8 @@ Release 0.23.1 - Unreleased
     immediately after downloading a resource instead of always waiting for a
     second. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3568. Optimized Job's progress calculations in MR AM. (vinodkv)
+
   BUG FIXES
     MAPREDUCE-2950. [Rumen] Fixed TestUserResolve. (Ravi Gummadi via amarrk)
 

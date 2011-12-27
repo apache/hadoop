@@ -128,6 +128,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final String username;
   private final OutputCommitter committer;
   private final Map<JobACL, AccessControlList> jobACLs;
+  private float setupWeight = 0.05f;
+  private float cleanupWeight = 0.05f;
+  private float mapWeight = 0.0f;
+  private float reduceWeight = 0.0f;
   private final Set<TaskId> completedTasksFromPreviousRun;
   private final List<AMInfo> amInfos;
   private final Lock readLock;
@@ -147,7 +151,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final long appSubmitTime;
 
   private boolean lazyTasksCopyNeeded = false;
-  private volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
+  volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
   private Counters jobCounters = newCounters();
     // FIXME:  
     //
@@ -353,6 +357,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private long startTime;
   private long finishTime;
   private float setupProgress;
+  private float mapProgress;
+  private float reduceProgress;
   private float cleanupProgress;
   private boolean isUber = false;
 
@@ -587,30 +593,51 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             cleanupProgress, remoteJobConfFile.toString(), amInfos, isUber);
       }
 
+      computeProgress();
       return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
           appSubmitTime, startTime, finishTime, setupProgress,
-          computeProgress(mapTasks), computeProgress(reduceTasks),
+          this.mapProgress, this.reduceProgress,
           cleanupProgress, remoteJobConfFile.toString(), amInfos, isUber);
     } finally {
       readLock.unlock();
     }
   }
 
-  private float computeProgress(Set<TaskId> taskIds) {
-    readLock.lock();
+  @Override
+  public float getProgress() {
+    this.readLock.lock();
     try {
-      float progress = 0;
-      for (TaskId taskId : taskIds) {
-        Task task = tasks.get(taskId);
-        progress += task.getProgress();
-      }
-      int taskIdsSize = taskIds.size();
-      if (taskIdsSize != 0) {
-        progress = progress/taskIdsSize;
-      }
-      return progress;
+      computeProgress();
+      return (this.setupProgress * this.setupWeight + this.cleanupProgress
+          * this.cleanupWeight + this.mapProgress * this.mapWeight + this.reduceProgress
+          * this.reduceWeight);
     } finally {
-      readLock.unlock();
+      this.readLock.unlock();
+    }
+  }
+
+  private void computeProgress() {
+    this.readLock.lock();
+    try {
+      float mapProgress = 0f;
+      float reduceProgress = 0f;
+      for (Task task : this.tasks.values()) {
+        if (task.getType() == TaskType.MAP) {
+          mapProgress += task.getProgress();
+        } else {
+          reduceProgress += task.getProgress();
+        }
+      }
+      if (this.numMapTasks != 0) {
+        mapProgress = mapProgress / this.numMapTasks;
+      }
+      if (this.numReduceTasks != 0) {
+        reduceProgress = reduceProgress / this.numReduceTasks;
+      }
+      this.mapProgress = mapProgress;
+      this.reduceProgress = reduceProgress;
+    } finally {
+      this.readLock.unlock();
     }
   }
 
@@ -731,7 +758,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   
   static JobState checkJobCompleteSuccess(JobImpl job) {
     // check for Job success
-    if (job.completedTaskCount == job.getTasks().size()) {
+    if (job.completedTaskCount == job.tasks.size()) {
       try {
         // Commit job & do cleanup
         job.getCommitter().commitJob(job.getJobContext());
@@ -970,6 +997,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
         if (job.numMapTasks == 0 && job.numReduceTasks == 0) {
           job.addDiagnostic("No of maps and reduces are 0 " + job.jobId);
+        } else if (job.numMapTasks == 0) {
+          job.reduceWeight = 0.9f;
+        } else if (job.numReduceTasks == 0) {
+          job.mapWeight = 0.9f;
+        } else {
+          job.mapWeight = job.reduceWeight = 0.45f;
         }
 
         checkTaskLimits();

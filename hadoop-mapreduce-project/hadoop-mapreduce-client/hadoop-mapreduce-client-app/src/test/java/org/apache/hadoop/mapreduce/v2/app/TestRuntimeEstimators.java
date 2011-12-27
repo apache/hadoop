@@ -394,6 +394,11 @@ public class TestRuntimeEstimators {
     }
 
     @Override
+    public float getProgress() {
+      return 0;
+    }
+
+    @Override
     public Counters getCounters() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
