@@ -35,6 +35,12 @@
       
 </blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7923">HADOOP-7923</a>.
+     Major task reported by szetszwo and fixed by szetszwo (build, documentation)<br>
+     <b>Update doc versions from 0.20 to 1.0</b><br>
+     <blockquote>                                              Docs version number is now automatically updated by reference to the build number.
+</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-617">HDFS-617</a>.
      Major improvement reported by kzhang and fixed by kzhang (hdfs client, name-node)<br>
      <b>Support for non-recursive create() in HDFS</b><br>
@@ -89,6 +95,11 @@ Previous hftp feature was a read-only FileSystem and does not provide &quot;writ
      Minor improvement reported by nspiegelberg and fixed by  (fs)<br>
      <b>LocalFileSystem Needs createNonRecursive API</b><br>
      <blockquote>While running sanity check tests for HBASE-2312, I noticed that HDFS-617 did not include createNonRecursive() support for the LocalFileSystem.  This is a problem for HBase, which allows the user to run over the LocalFS instead of HDFS for local cluster testing.  I think this only affects 0.20-append, but may affect the trunk based upon how exactly FileContext handles non-recursive creates.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7461">HADOOP-7461</a>.
+     Major bug reported by rbodkin and fixed by gkesavan (build)<br>
+     <b>Jackson Dependency Not Declared in Hadoop POM</b><br>
+     <blockquote>(COMMENT: This bug still affects 0.20.205.0, four months after the bug was filed.  This causes total failure, and the fix is trivial for whoever manages the POM -- just add the missing dependency! --ben)<br><br>This issue was identified and the fix &amp; workaround was documented at <br><br>https://issues.cloudera.org/browse/DISTRO-44<br><br>The issue affects use of Hadoop 0.20.203.0 from the Maven central repo. I built a job using that maven repo and ran it, resulting in this failure:<br><br>Exception in thread &quot;main&quot; ...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7664">HADOOP-7664</a>.
      Minor improvement reported by raviprak and fixed by raviprak (conf)<br>
@@ -245,6 +256,11 @@ Previous hftp feature was a read-only FileSystem and does not provide &quot;writ
      <b>Add WebHdfs Forrest doc</b><br>
      <blockquote></blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2589">HDFS-2589</a>.
+     Major bug reported by daryn and fixed by daryn (security)<br>
+     <b>unnecessary hftp token fetch and renewal thread</b><br>
+     <blockquote>Instantiation of the hftp filesystem is causing a token to be implicitly created and added to a custom token renewal thread.  With the new token renewal feature in the JT, this causes the mapreduce {{obtainTokensForNamenodes}} to fetch two tokens (an implicit and uncancelled token, and an explicit token) and leave a spurious renewal thread running.  This thread should not be running in the JT.<br><br>After speaking with Owen, the quick solution is to lazy fetch the token, and to lazy start the rene...</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2590">HDFS-2590</a>.
      Major bug reported by szetszwo and fixed by szetszwo (documentation)<br>
      <b>Some links in WebHDFS forrest doc do not work</b><br>
@@ -255,15 +271,31 @@ Previous hftp feature was a read-only FileSystem and does not provide &quot;writ
      <b>Add a log message to show if WebHDFS is enabled</b><br>
      <blockquote>WebHDFS can be enabled/disabled by the conf key {{dfs.webhdfs.enabled}}.  Let&apos;s add a log message to show if it is enabled.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2673">HDFS-2673</a>.
+     Trivial bug reported by umamaheswararao and fixed by umamaheswararao (name-node)<br>
+     <b>While Namenode processing the blocksBeingWrittenReport, it will log incorrect number blocks count</b><br>
+     <blockquote>In NameNode#blocksBeingWrittenReport<br> we have the following stateChangeLog<br>{code}<br>stateChangeLog.info(&quot;*BLOCK* NameNode.blocksBeingWrittenReport: &quot;<br>           +&quot;from &quot;+nodeReg.getName()+&quot; &quot;+blocks.length +&quot; blocks&quot;);<br>{code}<br><br>here blocks is long array. Every consecutive 3 elements represents a block ( length, blockid, genstamp).<br><br>So, here in log message, blocks.length should be blocks.length/3.<br><br> </blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3169">MAPREDUCE-3169</a>.
      Major improvement reported by tlipcon and fixed by ahmed.radwan (mrv1, mrv2, test)<br>
      <b>Create a new MiniMRCluster equivalent which only provides client APIs cross MR1 and MR2</b><br>
      <blockquote>Many dependent projects like HBase, Hive, Pig, etc, depend on MiniMRCluster for writing tests. Many users do as well. MiniMRCluster, however, exposes MR implementation details like the existence of TaskTrackers, JobTrackers, etc, since it was used by MR1 for testing the server implementations as well.<br><br>This JIRA is to create a new interface which could be implemented either by MR1 or MR2 that exposes only the client-side portions of the MR framework. Ideally it would be &quot;recompile-compatible&quot;...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3319">MAPREDUCE-3319</a>.
+     Blocker bug reported by rvs and fixed by subrotosanyal (examples)<br>
+     <b>multifilewc from hadoop examples seems to be broken in 0.20.205.0</b><br>
+     <blockquote>{noformat}<br>/usr/lib/hadoop/bin/hadoop jar /usr/lib/hadoop/hadoop-examples-0.20.205.0.22.jar multifilewc  examples/text examples-output/multifilewc<br>11/10/31 16:50:26 INFO mapred.FileInputFormat: Total input paths to process : 2<br>11/10/31 16:50:26 INFO mapred.JobClient: Running job: job_201110311350_0220<br>11/10/31 16:50:27 INFO mapred.JobClient:  map 0% reduce 0%<br>11/10/31 16:50:42 INFO mapred.JobClient: Task Id : attempt_201110311350_0220_m_000000_0, Status : FAILED<br>java.lang.ClassCastException: ...</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3374">MAPREDUCE-3374</a>.
      Major bug reported by rvs and fixed by  (task-controller)<br>
      <b>src/c++/task-controller/configure is not set executable in the tarball and that prevents task-controller from rebuilding</b><br>
      <blockquote>ant task-controller fails because src/c++/task-controller/configure is not set executable</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3475">MAPREDUCE-3475</a>.
+     Major bug reported by daryn and fixed by daryn (jobtracker)<br>
+     <b>JT can&apos;t renew its own tokens</b><br>
+     <blockquote>When external systems submit jobs whose tasks need to submit additional jobs (such as oozie/pig), they include their own MR token used to submit the job.  The token&apos;s renewer may not allow the JT to renew the token.  The JT log will include very long SASL/GSSAPI exceptions when the job is submitted.  It is also dubious for the JT to renew its token because it renders the expiry as meaningless since the JT will renew its own token until the max lifetime is exceeded.<br><br>After speaking with Owen &amp;...</blockquote></li>
+
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3480">MAPREDUCE-3480</a>.
      Major bug reported by jnp and fixed by jnp <br>
