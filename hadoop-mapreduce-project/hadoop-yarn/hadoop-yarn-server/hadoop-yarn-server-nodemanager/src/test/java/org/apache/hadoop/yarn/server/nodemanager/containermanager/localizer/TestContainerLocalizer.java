@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -146,7 +147,8 @@ public class TestContainerLocalizer {
 
     // return result instantly for deterministic test
     ExecutorService syncExec = mock(ExecutorService.class);
-    when(syncExec.submit(isA(Callable.class)))
+    CompletionService<Path> cs = mock(CompletionService.class);
+    when(cs.submit(isA(Callable.class)))
       .thenAnswer(new Answer<Future<Path>>() {
           @Override
           public Future<Path> answer(InvocationOnMock invoc)
@@ -159,6 +161,7 @@ public class TestContainerLocalizer {
           }
         });
     doReturn(syncExec).when(localizer).createDownloadThreadPool();
+    doReturn(cs).when(localizer).createCompletionService(syncExec);
 
     // run localization
     assertEquals(0, localizer.runLocalization(nmAddr));

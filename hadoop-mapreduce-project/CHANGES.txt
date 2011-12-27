@@ -92,6 +92,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
     Vavilapalli via sseth)
 
+    MAPREDUCE-3399. Modifying ContainerLocalizer to send a heartbeat to NM
+    immediately after downloading a resource instead of always waiting for a
+    second. (Siddarth Seth via vinodkv)
+
   BUG FIXES
     MAPREDUCE-2950. [Rumen] Fixed TestUserResolve. (Ravi Gummadi via amarrk)
 
