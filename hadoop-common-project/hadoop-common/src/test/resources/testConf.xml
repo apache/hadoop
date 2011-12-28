@@ -449,7 +449,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-getmerge &lt;src&gt; &lt;localdst&gt; \[addnl\]:( |\t)*Get all the files in the directories that( )*</expected-output>
+          <expected-output>^-getmerge \[-nl\] &lt;src&gt; &lt;localdst&gt;:( |\t)*Get all the files in the directories that( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -458,6 +458,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*one file on local fs. &lt;src&gt; is kept.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-nl   Add a newline character at the end of each file.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

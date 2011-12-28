@@ -260,11 +260,11 @@
 		<section>
 			<title> getmerge </title>
 			<p>
-				<code>Usage: hdfs dfs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</code>
+				<code>Usage: hdfs dfs -getmerge [-nl] &lt;src&gt; &lt;localdst&gt;</code>
 			</p>
 			<p>
 	  Takes a source directory and a destination file as input and concatenates files in src into the destination local file. 
-	  Optionally <code>addnl</code> can be set to enable adding a newline character at the end of each file.  
+	  Optionally <code>-nl</code> flag can be set to enable adding a newline character at the end of each file during merge.
 	  </p>
 		</section>
 		

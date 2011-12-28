@@ -79,6 +79,8 @@ Trunk (unreleased changes)
 
     HADOOP-7574. Improve FSShell -stat, add user/group elements (XieXianshan via harsh)
 
+    HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead (XieXianshan via harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
