@@ -723,6 +723,8 @@ public class JobClient extends CLI {
    * @param type the type of the task (map/reduce/setup/cleanup)
    * @param state the state of the task 
    * (pending/running/completed/failed/killed)
+   * @throws IOException when there is an error communicating with the master
+   * @throws IllegalArgumentException if an invalid type/state is passed
    */
   public void displayTasks(final JobID jobId, String type, String state) 
   throws IOException {

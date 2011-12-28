@@ -49,6 +49,8 @@ Trunk (unreleased changes)
     Move the support for multiple protocols to lower layer so that Writable,
     PB and Avro can all use it (Sanjay)
 
+    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
+
   BUG FIXES
     MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. 
                     (Devaraj K and Amar Kamat via amarrk)
