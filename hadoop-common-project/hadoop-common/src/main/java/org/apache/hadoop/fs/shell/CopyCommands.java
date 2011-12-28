@@ -45,26 +45,22 @@ class CopyCommands {
   /** merge multiple files together */
   public static class Merge extends FsCommand {
     public static final String NAME = "getmerge";    
-    public static final String USAGE = "<src> <localdst> [addnl]";
+    public static final String USAGE = "[-nl] <src> <localdst>";
     public static final String DESCRIPTION =
       "Get all the files in the directories that\n" +
       "match the source file pattern and merge and sort them to only\n" +
-      "one file on local fs. <src> is kept.";
+      "one file on local fs. <src> is kept.\n" +
+      "  -nl   Add a newline character at the end of each file.";
 
     protected PathData dst = null;
     protected String delimiter = null;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, 3);
+      CommandFormat cf = new CommandFormat(2, 3, "nl");
       cf.parse(args);
 
-      // TODO: this really should be a -nl option
-      if ((args.size() > 2) && Boolean.parseBoolean(args.removeLast())) {
-        delimiter = "\n";
-      } else {
-        delimiter = null;
-      }
+      delimiter = cf.getOpt("nl") ? "\n" : null;
 
       dst = new PathData(new File(args.removeLast()), getConf());
     }

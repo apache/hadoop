@@ -49,6 +49,8 @@ Trunk (unreleased changes)
     Move the support for multiple protocols to lower layer so that Writable,
     PB and Avro can all use it (Sanjay)
 
+    MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
+
   BUG FIXES
     MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. 
                     (Devaraj K and Amar Kamat via amarrk)
@@ -174,6 +176,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
     Vavilapalli via sseth)
+
+    MAPREDUCE-3399. Modifying ContainerLocalizer to send a heartbeat to NM
+    immediately after downloading a resource instead of always waiting for a
+    second. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3568. Optimized Job's progress calculations in MR AM. (vinodkv)
 
   BUG FIXES
 

@@ -376,7 +376,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     try {
       TaskAttempt bestAttempt = selectBestAttempt();
       if (bestAttempt == null) {
-        return 0;
+        return 0f;
       }
       return bestAttempt.getProgress();
     } finally {
@@ -457,9 +457,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         result = at; //The first time around
       }
       // calculate the best progress
-      if (at.getProgress() > progress) {
+      float attemptProgress = at.getProgress();
+      if (attemptProgress > progress) {
         result = at;
-        progress = at.getProgress();
+        progress = attemptProgress;
       }
     }
     return result;

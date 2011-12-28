@@ -65,7 +65,7 @@ public class TestJobImpl {
     Task mockTask = mock(Task.class);
     Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
     tasks.put(mockTask.getID(), mockTask);
-    when(mockJob.getTasks()).thenReturn(tasks);
+    mockJob.tasks = tasks;
 
     when(mockJob.getState()).thenReturn(JobState.ERROR);
     JobEvent mockJobEvent = mock(JobEvent.class);
@@ -73,11 +73,12 @@ public class TestJobImpl {
     Assert.assertEquals("Incorrect state returned from JobNoTasksCompletedTransition",
         JobState.ERROR, state);
   }
-  
+
   @Test
   public void testCheckJobCompleteSuccess() {
     
     JobImpl mockJob = mock(JobImpl.class);
+    mockJob.tasks = new HashMap<TaskId, Task>();
     OutputCommitter mockCommitter = mock(OutputCommitter.class);
     EventHandler mockEventHandler = mock(EventHandler.class);
     JobContext mockJobContext = mock(JobContext.class);
@@ -110,7 +111,7 @@ public class TestJobImpl {
     Task mockTask = mock(Task.class);
     Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
     tasks.put(mockTask.getID(), mockTask);
-    when(mockJob.getTasks()).thenReturn(tasks);
+    mockJob.tasks = tasks;
     
     try {
       // Just in case the code breaks and reaches these calls

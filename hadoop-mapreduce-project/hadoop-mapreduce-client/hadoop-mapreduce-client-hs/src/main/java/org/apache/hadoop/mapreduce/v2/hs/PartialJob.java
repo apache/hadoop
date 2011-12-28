@@ -90,6 +90,11 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   }
 
   @Override
+  public float getProgress() {
+    return 1.0f;
+  }
+
+  @Override
   public Counters getCounters() {
     return null;
   }
