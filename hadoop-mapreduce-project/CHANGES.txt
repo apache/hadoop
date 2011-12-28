@@ -315,7 +315,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3586. Modified CompositeService to avoid duplicate stop operations
     thereby solving race conditions in MR AM shutdown. (vinodkv)
 
->>>>>>> .merge-right.r1221950
+    MAPREDUCE-3604. Fixed streaming to use new mapreduce.framework.name to
+    check for local mode. (acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
