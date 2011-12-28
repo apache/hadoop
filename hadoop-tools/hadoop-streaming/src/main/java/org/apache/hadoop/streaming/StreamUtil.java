@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.mapreduce.MRConfig;
 
 /** 
  * Utilities used in streaming
@@ -189,6 +192,8 @@ public class StreamUtil {
   }
 
   public static boolean isLocalJobTracker(JobConf job) {
-    return job.get(JTConfig.JT_IPC_ADDRESS, "local").equals("local");
+    String framework = 
+        job.get(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME); 
+    return framework.equals(MRConfig.LOCAL_FRAMEWORK_NAME);
   }
 }
