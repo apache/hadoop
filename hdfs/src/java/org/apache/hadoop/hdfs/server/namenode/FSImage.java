@@ -1421,7 +1421,7 @@ public class FSImage extends Storage {
   void rollFSImage(CheckpointSignature sig, 
       boolean renewCheckpointTime) throws IOException {
     sig.validateStorageInfo(this);
-    rollFSImage(renewCheckpointTime);
+    rollFSImage(true);
   }
 
   private void rollFSImage(boolean renewCheckpointTime)
