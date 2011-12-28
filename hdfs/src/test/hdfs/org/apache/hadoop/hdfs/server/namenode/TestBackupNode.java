@@ -155,6 +155,18 @@ public class TestBackupNode {
           THIS_HOST + ":0");
       backup = startBackupNode(conf, op, 1);
       waitCheckpointDone(backup);
+
+      // Verify fstime files are identical in case of BN and not in case of CN
+      FSImage imageNN = cluster.getNameNode().getFSImage();
+      long cpTimeNN = imageNN.readCheckpointTime(imageNN.dirIterator().next());
+      FSImage imageBN = backup.getFSImage();
+      long cpTimeBN = imageBN.readCheckpointTime(imageBN.dirIterator().next());
+      assertTrue(
+          op == StartupOption.BACKUP ?
+              "NN should have the same checkpointTime as BN" :
+                "NN should have different checkpointTime from CN", 
+          op == StartupOption.BACKUP && cpTimeNN == cpTimeBN ||
+          op == StartupOption.CHECKPOINT && cpTimeNN != cpTimeBN);
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
       assertTrue(e.getLocalizedMessage(), false);
