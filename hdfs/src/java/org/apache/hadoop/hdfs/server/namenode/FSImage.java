@@ -1257,6 +1257,8 @@ public class FSImage extends Storage {
       if (errorSDs.contains(sd)) {
         continue;
       }
+      if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE_AND_EDITS))
+        continue; // this has already been saved as IMAGE directory
       try {
         FSImageSaver saver = new FSImageSaver(sd, errorSDs);
         Thread saveThread = new Thread(saver, saver.toString());

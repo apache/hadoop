@@ -12,6 +12,8 @@ Release 0.22.1 - Unreleased
 
   BUG FIXES
 
+    HDFS-1910. NameNode should not save fsimage twice. (shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
