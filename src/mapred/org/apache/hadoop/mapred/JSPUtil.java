@@ -295,8 +295,10 @@ class JSPUtil {
         sb.append("<tr>");
       }
 
-      sb.append("<td><b>Jobid</b></td><td><b>Priority" +
-      		"</b></td><td><b>User</b></td>");
+      sb.append("<td><b>Jobid</b></td>");
+      sb.append("<td><b>Started</b></td>");
+      sb.append("<td><b>Priority</b></td>");
+      sb.append("<td><b>User</b></td>");
       sb.append("<td><b>Name</b></td>");
       sb.append("<td><b>Map % Complete</b></td>");
       sb.append("<td><b>Map Total</b></td>");
@@ -310,6 +312,7 @@ class JSPUtil {
 
       for (Iterator<JobInProgress> it = jobs.iterator(); it.hasNext(); ++rowId) {
         JobInProgress job = it.next();
+        Date time = new Date(job.getStartTime());
         JobProfile profile = job.getProfile();
         JobStatus status = job.getStatus();
         JobID jobid = profile.getJobID();
@@ -335,8 +338,10 @@ class JSPUtil {
 
         sb.append("<td id=\"job_" + rowId
             + "\"><a href=\"jobdetails.jsp?jobid=" + jobid + "&refresh="
-            + refresh + "\">" + jobid + "</a></td>" + "<td id=\"priority_"
-            + rowId + "\">" + jobpri + "</td>" + "<td id=\"user_" + rowId
+            + refresh + "\">" + jobid + "</a></td>"
+            + "<td id=\"started_" + rowId + "\">" + time + "</td>"
+            + "<td id=\"priority_" + rowId + "\">"
+            + jobpri + "</td>" + "<td id=\"user_" + rowId
             + "\">" + HtmlQuoting.quoteHtmlChars(profile.getUser()) +
               "</td>" + "<td id=\"name_" + rowId
             + "\">" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + "<td>"

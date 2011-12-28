@@ -128,6 +128,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
 
+    MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
+
 Release 1.0.0 - unreleased
 
   NEW FEATURES
