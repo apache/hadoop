@@ -77,6 +77,8 @@ Trunk (unreleased changes)
 
     HADOOP-7899. Generate proto java files as part of the build. (tucu)
 
+    HADOOP-7574. Improve FSShell -stat, add user/group elements (XieXianshan via harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
