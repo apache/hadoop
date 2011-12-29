@@ -324,6 +324,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3521. Fixed streaming to ensure it doesn't silently ignore
     unknown arguments. (Robert Evans via acmurthy) 
 
+    MAPREDUCE-3522. Ensure queues inherit ACLs from parent if they aren't
+    explicitly specified. (Jonathan Eagles via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

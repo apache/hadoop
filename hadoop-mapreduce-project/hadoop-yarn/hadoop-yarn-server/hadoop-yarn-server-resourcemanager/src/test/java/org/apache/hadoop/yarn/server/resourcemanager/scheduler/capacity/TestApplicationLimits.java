@@ -88,13 +88,13 @@ public class TestApplicationLimits {
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
-    final String Q_A = CapacityScheduler.ROOT + "." + A;
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 10);
     
-    final String Q_B = CapacityScheduler.ROOT + "." + B;
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
     conf.setCapacity(Q_B, 90);
     
     LOG.info("Setup top-level queues a and b");
@@ -252,7 +252,7 @@ public class TestApplicationLimits {
   public void testHeadroom() throws Exception {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
-    csConf.setUserLimit(CapacityScheduler.ROOT + "." + A, 25);
+    csConf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 25);
     setupQueueConfiguration(csConf);
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);

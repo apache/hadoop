@@ -155,16 +155,16 @@ public class TestRMWebApp {
 
   static void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
-    final String A = CapacityScheduler.ROOT + ".a";
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
 
-    final String B = CapacityScheduler.ROOT + ".b";
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
 
-    final String C = CapacityScheduler.ROOT + ".c";
+    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
 
     // Define 2nd-level queues

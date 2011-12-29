@@ -42,16 +42,16 @@ public class TestQueueParsing {
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
-    final String A = CapacityScheduler.ROOT + ".a";
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     
-    final String B = CapacityScheduler.ROOT + ".b";
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
 
-    final String C = CapacityScheduler.ROOT + ".c";
+    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
 
     LOG.info("Setup top-level queues");
@@ -100,7 +100,7 @@ public class TestQueueParsing {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     // non-100 percent value will throw IllegalArgumentException
-    conf.setCapacity(CapacityScheduler.ROOT, 90);
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 90);
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.reinitialize(conf, null, null);
@@ -109,14 +109,14 @@ public class TestQueueParsing {
   public void testMaxCapacity() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
-    final String A = CapacityScheduler.ROOT + ".a";
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 50);
     conf.setMaximumCapacity(A, 60);
 
-    final String B = CapacityScheduler.ROOT + ".b";
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 50);
     conf.setMaximumCapacity(B, 45);  // Should throw an exception
 
