@@ -42,6 +42,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.WebApp;
 
@@ -92,12 +93,16 @@ public class NMWebServices {
 
       AppInfo appInfo = new AppInfo(entry.getValue());
       if (stateQuery != null && !stateQuery.isEmpty()) {
-        ApplicationState state = ApplicationState.valueOf(stateQuery);
+        ApplicationState.valueOf(stateQuery);
         if (!appInfo.getState().equalsIgnoreCase(stateQuery)) {
           continue;
         }
       }
-      if (userQuery != null && !userQuery.isEmpty()) {
+      if (userQuery != null) {
+        if (userQuery.isEmpty()) {
+          String msg = "Error: You must specify a non-empty string for the user";
+          throw new BadRequestException(msg);
+        }
         if (!appInfo.getUser().toString().equals(userQuery)) {
           continue;
         }
@@ -146,11 +151,12 @@ public class NMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ContainerInfo getNodeContainer(@PathParam("containerid") String id) {
     ContainerId containerId = null;
-    containerId = ConverterUtils.toContainerId(id);
-    if (containerId == null) {
-      throw new NotFoundException("container with id, " + id
-          + ", is empty or null");
+    try {
+      containerId = ConverterUtils.toContainerId(id);
+    } catch (Exception e) {
+      throw new BadRequestException("invalid container id, " + id);
     }
+
     Container container = nmContext.getContainers().get(containerId);
     if (container == null) {
       throw new NotFoundException("container with id, " + id + ", not found");
