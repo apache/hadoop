@@ -23,6 +23,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 @XmlRootElement
@@ -31,7 +32,7 @@ public class ClusterInfo {
 
   protected long id;
   protected long startedOn;
-  protected String state;
+  protected STATE state;
   protected String resourceManagerVersion;
   protected String resourceManagerBuildVersion;
   protected String resourceManagerVersionBuiltOn;
@@ -46,7 +47,7 @@ public class ClusterInfo {
     long ts = ResourceManager.clusterTimeStamp;
 
     this.id = ts;
-    this.state = rm.getServiceState().toString();
+    this.state = rm.getServiceState();
     this.startedOn = ts;
     this.resourceManagerVersion = YarnVersionInfo.getVersion();
     this.resourceManagerBuildVersion = YarnVersionInfo.getBuildVersion();
@@ -57,7 +58,7 @@ public class ClusterInfo {
   }
 
   public String getState() {
-    return this.state;
+    return this.state.toString();
   }
 
   public String getRMVersion() {

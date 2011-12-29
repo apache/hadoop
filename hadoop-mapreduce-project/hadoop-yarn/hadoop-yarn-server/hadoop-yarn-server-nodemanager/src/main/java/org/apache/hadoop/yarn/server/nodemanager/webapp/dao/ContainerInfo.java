@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -56,7 +57,7 @@ public class ContainerInfo {
   }
 
   public ContainerInfo(final Context nmContext, final Container container,
-      final String requestUri, final String pathPrefix) {
+       String requestUri, String pathPrefix) {
 
     this.id = container.getContainerID().toString();
     this.nodeId = nmContext.getNodeId().toString();
@@ -71,10 +72,19 @@ public class ContainerInfo {
     }
 
     this.user = container.getUser();
-    this.totalMemoryNeededMB = container.getLaunchContext().getResource()
-        .getMemory();
+    Resource res = container.getLaunchContext().getResource();
+    if (res != null) {
+      this.totalMemoryNeededMB = res.getMemory();
+    }
     this.containerLogsShortLink = ujoin("containerlogs", this.id,
         container.getUser());
+
+    if (requestUri == null) {
+      requestUri = "";
+    }
+    if (pathPrefix == null) {
+      pathPrefix = "";
+    }
     this.containerLogsLink = join(requestUri, pathPrefix,
         this.containerLogsShortLink);
   }

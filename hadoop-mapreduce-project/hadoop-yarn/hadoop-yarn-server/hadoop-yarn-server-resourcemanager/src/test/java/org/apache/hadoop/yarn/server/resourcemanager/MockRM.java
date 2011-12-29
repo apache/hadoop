@@ -87,8 +87,12 @@ public class MockRM extends ResourceManager {
         .newRecord(GetNewApplicationRequest.class));
   }
 
-  // client
   public RMApp submitApp(int masterMemory) throws Exception {
+    return submitApp(masterMemory, "", "");
+  }
+
+  // client
+  public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
     ClientRMProtocol client = getClientRMService();
     GetNewApplicationResponse resp = client.getNewApplication(Records
         .newRecord(GetNewApplicationRequest.class));
@@ -99,8 +103,8 @@ public class MockRM extends ResourceManager {
     ApplicationSubmissionContext sub = Records
         .newRecord(ApplicationSubmissionContext.class);
     sub.setApplicationId(appId);
-    sub.setApplicationName("");
-    sub.setUser("");
+    sub.setApplicationName(name);
+    sub.setUser(user);
     ContainerLaunchContext clc = Records
         .newRecord(ContainerLaunchContext.class);
     Resource capability = Records.newRecord(Resource.class);
