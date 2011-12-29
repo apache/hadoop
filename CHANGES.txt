@@ -76,6 +76,8 @@ Release 1.1.0 - unreleased
     HADOOP-7942. enabling clover coverage reports fails hadoop unit test 
     compilation. (jitendra)
 
+    HDFS-2728. Remove dfsadmin -printTopology from branch-1 docs since it does not exist. (harsh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
