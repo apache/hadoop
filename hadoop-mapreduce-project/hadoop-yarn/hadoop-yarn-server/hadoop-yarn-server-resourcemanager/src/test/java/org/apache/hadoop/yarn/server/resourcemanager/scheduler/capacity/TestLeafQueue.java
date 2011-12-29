@@ -107,28 +107,34 @@ public class TestLeafQueue {
   private static final String A = "a";
   private static final String B = "b";
   private static final String C = "c";
+  private static final String C1 = "c1";
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B, C});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
-    conf.setMaximumCapacity(CapacityScheduler.ROOT, 100);
-    conf.setAcl(CapacityScheduler.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
+    conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
+    conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
-    final String Q_A = CapacityScheduler.ROOT + "." + A;
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 9);
     conf.setMaximumCapacity(Q_A, 20);
     conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
     
-    final String Q_B = CapacityScheduler.ROOT + "." + B;
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
     conf.setCapacity(Q_B, 90);
     conf.setMaximumCapacity(Q_B, 99);
     conf.setAcl(Q_B, QueueACL.SUBMIT_APPLICATIONS, "*");
 
-    final String Q_C = CapacityScheduler.ROOT + "." + C;
+    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
     conf.setCapacity(Q_C, 1);
     conf.setMaximumCapacity(Q_C, 10);
     conf.setAcl(Q_C, QueueACL.SUBMIT_APPLICATIONS, " ");
+    
+    conf.setQueues(Q_C, new String[] {C1});
+
+    final String Q_C1 = Q_C + "." + C1;
+    conf.setCapacity(Q_C1, 100);
     
     LOG.info("Setup top-level queues a and b");
   }
@@ -191,7 +197,7 @@ public class TestLeafQueue {
 	  assertEquals(0.99, b.getMaximumCapacity(), epsilon);
 	  assertEquals(0.99, b.getAbsoluteMaximumCapacity(), epsilon);
 
-	  LeafQueue c = stubLeafQueue((LeafQueue)queues.get(C));
+	  ParentQueue c = (ParentQueue)queues.get(C);
 	  assertEquals(0.01, c.getCapacity(), epsilon);
 	  assertEquals(0.01, c.getAbsoluteCapacity(), epsilon);
 	  assertEquals(0.1, c.getMaximumCapacity(), epsilon);
@@ -1117,12 +1123,14 @@ public class TestLeafQueue {
 
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     LeafQueue b = stubLeafQueue((LeafQueue)queues.get(B));
-    LeafQueue c = stubLeafQueue((LeafQueue)queues.get(C));
+    ParentQueue c = (ParentQueue)queues.get(C);
+    LeafQueue c1 = stubLeafQueue((LeafQueue)queues.get(C1));
 
     assertFalse(root.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
     assertTrue(a.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
     assertTrue(b.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
     assertFalse(c.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertFalse(c1.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
 
     assertTrue(hasQueueACL(
           a.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
@@ -1130,6 +1138,8 @@ public class TestLeafQueue {
           b.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
     assertFalse(hasQueueACL(
           c.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
+    assertFalse(hasQueueACL(
+          c1.getQueueUserAclInfo(user), QueueACL.SUBMIT_APPLICATIONS));
 
   }
   
