@@ -172,6 +172,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3391. Making a trivial change to correct a log message in
     DistributedShell app's AM. (Subroto Sanyal via vinodkv)
 
+    MAPREDUCE-3547. Added a bunch of unit tests for the the RM/NM webservices.
+    (Thomas Graves via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -368,6 +371,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3586. Modified CompositeService to avoid duplicate stop operations
     thereby solving race conditions in MR AM shutdown. (vinodkv)
+
+    MAPREDUCE-3604. Fixed streaming to use new mapreduce.framework.name to
+    check for local mode. (acmurthy) 
+
+    MAPREDUCE-3521. Fixed streaming to ensure it doesn't silently ignore
+    unknown arguments. (Robert Evans via acmurthy) 
 
 Release 0.23.0 - 2011-11-01 
 

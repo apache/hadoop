@@ -255,6 +255,13 @@ public class StreamJob implements Tool {
     }
 
     if (cmdLine != null) {
+      @SuppressWarnings("unchecked")
+      List<String> args = cmdLine.getArgList();
+      if(args != null && args.size() > 0) {
+        fail("Found " + args.size() + " unexpected arguments on the " +
+            "command line " + args);
+      }
+      
       detailedUsage_ = cmdLine.hasOption("info");
       if (cmdLine.hasOption("help") || detailedUsage_) {
         printUsage = true;

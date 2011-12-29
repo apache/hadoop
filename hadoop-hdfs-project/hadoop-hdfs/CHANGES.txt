@@ -117,6 +117,10 @@ Trunk (unreleased changes)
 
     HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
 
+    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
+
+    HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)

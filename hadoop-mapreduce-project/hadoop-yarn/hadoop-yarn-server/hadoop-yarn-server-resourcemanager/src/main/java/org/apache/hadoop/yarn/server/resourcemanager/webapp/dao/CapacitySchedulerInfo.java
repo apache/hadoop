@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
@@ -90,7 +91,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
       if (max < EPSILON || max > 1f)
         max = 1f;
       float maxCapacity = max * 100;
-      String state = queue.getState().toString();
+      QueueState state = queue.getState();
       CapacitySchedulerQueueInfo info = new CapacitySchedulerQueueInfo(
           capacity, usedCapacity, maxCapacity, queueName, state, queuePath);
 
