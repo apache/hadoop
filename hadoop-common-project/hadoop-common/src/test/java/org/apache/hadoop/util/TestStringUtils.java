@@ -143,8 +143,62 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     }
     
     assertEquals(0L, StringUtils.TraditionalBinaryPrefix.string2long("0"));
-    assertEquals(-1259520L, StringUtils.TraditionalBinaryPrefix.string2long("-1230k"));
-    assertEquals(956703965184L, StringUtils.TraditionalBinaryPrefix.string2long("891g"));
+    assertEquals(1024L, StringUtils.TraditionalBinaryPrefix.string2long("1k"));
+    assertEquals(-1024L, StringUtils.TraditionalBinaryPrefix.string2long("-1k"));
+    assertEquals(1259520L,
+        StringUtils.TraditionalBinaryPrefix.string2long("1230K"));
+    assertEquals(-1259520L,
+        StringUtils.TraditionalBinaryPrefix.string2long("-1230K"));
+    assertEquals(104857600L,
+        StringUtils.TraditionalBinaryPrefix.string2long("100m"));
+    assertEquals(-104857600L,
+        StringUtils.TraditionalBinaryPrefix.string2long("-100M"));
+    assertEquals(956703965184L,
+        StringUtils.TraditionalBinaryPrefix.string2long("891g"));
+    assertEquals(-956703965184L,
+        StringUtils.TraditionalBinaryPrefix.string2long("-891G"));
+    assertEquals(501377302265856L,
+        StringUtils.TraditionalBinaryPrefix.string2long("456t"));
+    assertEquals(-501377302265856L,
+        StringUtils.TraditionalBinaryPrefix.string2long("-456T"));
+    assertEquals(11258999068426240L,
+        StringUtils.TraditionalBinaryPrefix.string2long("10p"));
+    assertEquals(-11258999068426240L,
+        StringUtils.TraditionalBinaryPrefix.string2long("-10P"));
+    assertEquals(1152921504606846976L,
+        StringUtils.TraditionalBinaryPrefix.string2long("1e"));
+    assertEquals(-1152921504606846976L,
+        StringUtils.TraditionalBinaryPrefix.string2long("-1E"));
+
+    String tooLargeNumStr = "10e";
+    try {
+      StringUtils.TraditionalBinaryPrefix.string2long(tooLargeNumStr);
+      fail("Test passed for a number " + tooLargeNumStr + " too large");
+    } catch (IllegalArgumentException e) {
+      assertEquals(tooLargeNumStr + " does not fit in a Long", e.getMessage());
+    }
+
+    String tooSmallNumStr = "-10e";
+    try {
+      StringUtils.TraditionalBinaryPrefix.string2long(tooSmallNumStr);
+      fail("Test passed for a number " + tooSmallNumStr + " too small");
+    } catch (IllegalArgumentException e) {
+      assertEquals(tooSmallNumStr + " does not fit in a Long", e.getMessage());
+    }
+
+    String invalidFormatNumStr = "10kb";
+    char invalidPrefix = 'b';
+    try {
+      StringUtils.TraditionalBinaryPrefix.string2long(invalidFormatNumStr);
+      fail("Test passed for a number " + invalidFormatNumStr
+          + " has invalid format");
+    } catch (IllegalArgumentException e) {
+      assertEquals("Invalid size prefix '" + invalidPrefix + "' in '"
+          + invalidFormatNumStr
+          + "'. Allowed prefixes are k, m, g, t, p, e(case insensitive)",
+          e.getMessage());
+    }
+
   }
 
   @Test
