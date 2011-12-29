@@ -321,6 +321,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3604. Fixed streaming to use new mapreduce.framework.name to
     check for local mode. (acmurthy) 
 
+    MAPREDUCE-3521. Fixed streaming to ensure it doesn't silently ignore
+    unknown arguments. (Robert Evans via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
