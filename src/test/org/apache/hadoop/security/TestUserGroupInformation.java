@@ -217,12 +217,12 @@ public class TestUserGroupInformation {
   
   @SuppressWarnings("unchecked") // from Mockito mocks
   @Test
-  public <T extends TokenIdentifier> void testUGITokens() throws Exception {
+  public void testUGITokens() throws Exception {
     UserGroupInformation ugi = 
       UserGroupInformation.createUserForTesting("TheDoctor", 
                                                 new String [] { "TheTARDIS"});
-    Token<T> t1 = mock(Token.class);
-    Token<T> t2 = mock(Token.class);
+    Token<? extends TokenIdentifier> t1 = mock(Token.class);
+    Token<? extends TokenIdentifier> t2 = mock(Token.class);
     
     ugi.addToken(t1);
     ugi.addToken(t2);

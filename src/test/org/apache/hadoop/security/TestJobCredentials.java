@@ -59,13 +59,13 @@ public class TestJobCredentials {
   
   @SuppressWarnings("unchecked")
   @Test 
-  public <T extends TokenIdentifier> void testReadWriteStorage() 
+  public void testReadWriteStorage() 
   throws IOException, NoSuchAlgorithmException{
     // create tokenStorage Object
     Credentials ts = new Credentials();
     
-    Token<T> token1 = new Token();
-    Token<T> token2 = new Token();
+    Token<? extends TokenIdentifier> token1 = new Token();
+    Token<? extends TokenIdentifier> token2 = new Token();
     Text service1 = new Text("service1");
     Text service2 = new Text("service2");
     Collection<Text> services = new ArrayList<Text>();

@@ -73,6 +73,9 @@ Release 1.1.0 - unreleased
 
     HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
 
+    HADOOP-7942. enabling clover coverage reports fails hadoop unit test 
+    compilation. (jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)

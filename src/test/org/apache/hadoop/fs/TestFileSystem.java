@@ -623,7 +623,7 @@ public class TestFileSystem extends TestCase {
   }
 
   @SuppressWarnings("unchecked")
-  public <T extends TokenIdentifier> void testCacheForUgi() throws Exception {
+  public void testCacheForUgi() throws Exception {
     final Configuration conf = new Configuration();
     conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
@@ -650,7 +650,7 @@ public class TestFileSystem extends TestCase {
     //corresponding to the two UGIs
     assertNotSame(fsA, fsB);
     
-    Token<T> t1 = mock(Token.class);
+    Token<? extends TokenIdentifier> t1 = mock(Token.class);
     UserGroupInformation ugiA2 = UserGroupInformation.createRemoteUser("foo");
     
     fsA = ugiA2.doAs(new PrivilegedExceptionAction<FileSystem>() {
