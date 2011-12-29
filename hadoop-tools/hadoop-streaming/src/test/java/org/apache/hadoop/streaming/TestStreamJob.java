@@ -32,7 +32,18 @@ import static org.junit.Assert.*;
  * This class tests hadoop Streaming's StreamJob class.
  */
 public class TestStreamJob {
-
+  
+  @Test(expected = IllegalArgumentException.class)
+  public void testCreateJobWithExtraArgs() throws IOException {
+    ArrayList<String> dummyArgs = new ArrayList<String>();
+    dummyArgs.add("-input"); dummyArgs.add("dummy");
+    dummyArgs.add("-output"); dummyArgs.add("dummy");
+    dummyArgs.add("-mapper"); dummyArgs.add("dummy");
+    dummyArgs.add("dummy");
+    dummyArgs.add("-reducer"); dummyArgs.add("dummy");
+    StreamJob.createJob(dummyArgs.toArray(new String[] {}));
+  }
+  
   @Test
   public void testCreateJob() throws IOException {
     JobConf job;
