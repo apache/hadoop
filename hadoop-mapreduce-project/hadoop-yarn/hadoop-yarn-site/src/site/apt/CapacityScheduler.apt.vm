@@ -161,7 +161,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
     
     A given queue's children can be defined with the configuration knob:
     <<<yarn.scheduler.capacity.<queue-path>.queues>>>. Children do not 
-    inherit properties directly from the parent.
+    inherit properties directly from the parent unless otherwise noted.
 
     Here is an example with three top-level child-queues <<<a>>>, <<<b>>> and 
     <<<c>>> and some sub-queues for <<<a>>> and <<<b>>>:
@@ -274,17 +274,21 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 | <<<yarn.scheduler.capacity.root.<queue-path>.acl_submit_jobs>>> | |
 | | The <ACL> which controls who can <submit> jobs to the given queue. |
 | | If the given user/group has necessary ACLs on the given queue or |
-| | <one of the parent queues in the hierarchy> they can submit jobs. | 
+| | <one of the parent queues in the hierarchy> they can submit jobs. |
+| | <ACLs> for this property <are> inherited from the parent queue |
+| | if not specified. |
 *--------------------------------------+--------------------------------------+
 | <<<yarn.scheduler.capacity.root.<queue-path>.acl_administer_jobs>>> | |
 | | The <ACL> which controls who can <administer> jobs on the given queue. |
 | | If the given user/group has necessary ACLs on the given queue or |
-| | <one of the parent queues in the hierarchy> they can administer jobs. | 
+| | <one of the parent queues in the hierarchy> they can administer jobs. |
+| | <ACLs> for this property <are> inherited from the parent queue |
+| | if not specified. |
 *--------------------------------------+--------------------------------------+
     
     <Note:> An <ACL> is of the form <user1>, <user2><space><group1>, <group2>.
     The special value of <<*>> implies <anyone>. The special value of <space>
-    implies <no one>. The default is <<*>> if not specified.
+    implies <no one>. The default is <<*>> for the root queue if not specified.
      
     * Reviewing the configuration of the CapacityScheduler
 

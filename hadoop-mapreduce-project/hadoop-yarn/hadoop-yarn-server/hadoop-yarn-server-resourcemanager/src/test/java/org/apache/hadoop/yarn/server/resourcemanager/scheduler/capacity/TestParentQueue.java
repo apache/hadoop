@@ -70,13 +70,13 @@ public class TestParentQueue {
   private void setupSingleLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
-    final String Q_A = CapacityScheduler.ROOT + "." + A;
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 30);
     
-    final String Q_B = CapacityScheduler.ROOT + "." + B;
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
     conf.setCapacity(Q_B, 70);
     
     LOG.info("Setup top-level queues a and b");
@@ -144,7 +144,7 @@ public class TestParentQueue {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
-            CapacityScheduler.ROOT, queues, queues, 
+            CapacitySchedulerConfiguration.ROOT, queues, queues, 
             CapacityScheduler.queueComparator, 
             CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
@@ -246,19 +246,19 @@ public class TestParentQueue {
   private void setupMultiLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] {A, B, C, D});
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
-    final String Q_A = CapacityScheduler.ROOT + "." + A;
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 10);
     
-    final String Q_B = CapacityScheduler.ROOT + "." + B;
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
     conf.setCapacity(Q_B, 50);
     
-    final String Q_C = CapacityScheduler.ROOT + "." + C;
+    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
     conf.setCapacity(Q_C, 20);
     
-    final String Q_D = CapacityScheduler.ROOT + "." + D;
+    final String Q_D = CapacitySchedulerConfiguration.ROOT + "." + D;
     conf.setCapacity(Q_D, 20);
     
     // Define 2-nd level queues
@@ -282,7 +282,7 @@ public class TestParentQueue {
     Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
-            CapacityScheduler.ROOT, queues, queues, 
+            CapacitySchedulerConfiguration.ROOT, queues, queues, 
             CapacityScheduler.queueComparator, 
             CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
