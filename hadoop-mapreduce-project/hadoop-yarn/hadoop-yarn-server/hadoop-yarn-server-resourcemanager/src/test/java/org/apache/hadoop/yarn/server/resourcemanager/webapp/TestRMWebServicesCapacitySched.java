@@ -93,14 +93,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacityScheduler.ROOT, new String[] { "a", "b" });
-    conf.setCapacity(CapacityScheduler.ROOT, 100);
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a", "b" });
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
-    final String A = CapacityScheduler.ROOT + ".a";
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 50);
 
-    final String B = CapacityScheduler.ROOT + ".b";
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 90);
 
     // Define 2nd-level queues
@@ -209,7 +209,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       for (int j = 0; j < queues.getLength(); j++) {
         Element qElem = (Element) queues.item(j);
         String qName = WebServicesTestUtils.getXmlString(qElem, "queueName");
-        String q = CapacityScheduler.ROOT + "." + qName;
+        String q = CapacitySchedulerConfiguration.ROOT + "." + qName;
         verifySubQueueXML(qElem, q);
       }
     }
@@ -253,7 +253,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     // test subqueues
     for (int i = 0; i < arr.length(); i++) {
       JSONObject obj = arr.getJSONObject(i);
-      String q = CapacityScheduler.ROOT + "." + obj.getString("queueName");
+      String q = CapacitySchedulerConfiguration.ROOT + "." + obj.getString("queueName");
       verifySubQueue(obj, q);
     }
   }
