@@ -65,6 +65,7 @@ import com.google.common.base.Joiner;
 @InterfaceStability.Evolving
 public class FSEditLogLoader {
   private final FSNamesystem fsNamesys;
+  private long maxGenStamp = 0;
 
   public FSEditLogLoader(FSNamesystem fsNamesys) {
     this.fsNamesys = fsNamesys;
@@ -78,14 +79,19 @@ public class FSEditLogLoader {
   int loadFSEdits(EditLogInputStream edits, long expectedStartingTxId)
   throws IOException {
     long startTime = now();
-    int numEdits = loadFSEdits(edits, true, expectedStartingTxId);
-    FSImage.LOG.info("Edits file " + edits.getName() 
-        + " of size " + edits.length() + " edits # " + numEdits 
-        + " loaded in " + (now()-startTime)/1000 + " seconds.");
-    return numEdits;
+    fsNamesys.writeLock();
+    try {
+      int numEdits = loadFSEdits(edits, true, expectedStartingTxId);
+      FSImage.LOG.info("Edits file " + edits.getName() 
+          + " of size " + edits.length() + " edits # " + numEdits 
+          + " loaded in " + (now()-startTime)/1000 + " seconds.");
+      return numEdits;
+    } finally {
+      fsNamesys.writeUnlock();
+    }
   }
 
-  int loadFSEdits(EditLogInputStream edits, boolean closeOnExit,
+  private int loadFSEdits(EditLogInputStream edits, boolean closeOnExit,
                   long expectedStartingTxId)
       throws IOException {
     int numEdits = 0;
@@ -95,6 +101,13 @@ public class FSEditLogLoader {
       numEdits = loadEditRecords(logVersion, edits, false, 
                                  expectedStartingTxId);
     } finally {
+      fsNamesys.setBlockTotal();
+      // Delay the notification of genstamp updates until after
+      // setBlockTotal() above. Otherwise, we will mark blocks
+      // as "safe" before they've been incorporated in the expected
+      // totalBlocks and threshold for SafeMode -- triggering an
+      // assertion failure and/or exiting safemode too early!
+      fsNamesys.notifyGenStampUpdate(maxGenStamp);
       if(closeOnExit) {
         edits.close();
       }
@@ -485,9 +498,9 @@ public class FSEditLogLoader {
       }
     }
     
-    if (addCloseOp.blocks.length > 0) {
-      fsNamesys.notifyGenStampUpdate(
-          addCloseOp.blocks[addCloseOp.blocks.length - 1].getGenerationStamp());
+    // Record the max genstamp seen
+    for (Block b : addCloseOp.blocks) {
+      maxGenStamp = Math.max(maxGenStamp, b.getGenerationStamp());
     }
   }
 

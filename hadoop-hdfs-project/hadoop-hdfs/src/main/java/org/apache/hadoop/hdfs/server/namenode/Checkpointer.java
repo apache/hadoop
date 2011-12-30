@@ -243,11 +243,16 @@ class Checkpointer extends Daemon {
     
     long txid = bnImage.getLastAppliedTxId();
     
-    backupNode.namesystem.dir.setReady();
-    backupNode.namesystem.setBlockTotal();
-    
-    bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
-    bnStorage.writeAll();
+    backupNode.namesystem.writeLock();
+    try {
+      backupNode.namesystem.dir.setReady();
+      backupNode.namesystem.setBlockTotal();
+      
+      bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
+      bnStorage.writeAll();
+    } finally {
+      backupNode.namesystem.writeUnlock();
+    }
 
     if(cpCmd.needToReturnImage()) {
       TransferFsImage.uploadImageFromStorage(

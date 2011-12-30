@@ -418,6 +418,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       startOpt = StartupOption.REGULAR;
     }
     boolean success = false;
+    writeLock();
     try {
       // We shouldn't be calling saveNamespace if we've come up in standby state.
       if (fsImage.recoverTransitionRead(startOpt, this) && !haEnabled) {
@@ -434,6 +435,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!success) {
         fsImage.close();
       }
+      writeUnlock();
     }
     dir.imageLoadComplete();
   }
@@ -3244,9 +3246,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @return true if in safe mode
      */
     private synchronized boolean isOn() {
-      assert isConsistent() : " SafeMode: Inconsistent filesystem state: "
-        + "Total num of blocks, active blocks, or "
-        + "total safe blocks don't match.";
+      doConsistencyCheck();
       return this.reached >= 0;
     }
       
@@ -3362,6 +3362,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * Check and trigger safe mode if needed. 
      */
     private void checkMode() {
+      // Have to have write-lock since leaving safemode initializes
+      // repl queues, which requires write lock
+      assert hasWriteLock();
       if (needEnter()) {
         enter();
         // check if we are ready to initialize replication queues
@@ -3541,16 +3544,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
     /**
      * Checks consistency of the class state.
-     * This is costly and currently called only in assert.
-     * @throws IOException 
+     * This is costly so only runs if asserts are enabled.
      */
-    private boolean isConsistent() {
-      if (blockTotal == -1 && blockSafe == -1) {
-        return true; // manual safe mode
-      }
+    private void doConsistencyCheck() {
+      boolean assertsOn = false;
+      assert assertsOn = true; // set to true if asserts are on
+      if (!assertsOn) return;
+      
+      
       int activeBlocks = blockManager.getActiveBlockCount();
-      return (blockTotal == activeBlocks) ||
-        (blockSafe >= 0 && blockSafe <= blockTotal);
+      if (blockTotal == -1 && blockSafe == -1) {
+        return; // manual safe mode
+      }
+      if ((blockTotal != activeBlocks) &&
+          !(blockSafe >= 0 && blockSafe <= blockTotal)) {
+        throw new AssertionError(
+            " SafeMode: Inconsistent filesystem state: "
+        + "SafeMode data: blockTotal=" + blockTotal
+        + " blockSafe=" + blockSafe + "; "
+        + "BlockManager data: active="  + activeBlocks);
+      }
     }
   }
     
@@ -3663,7 +3676,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Set the total number of blocks in the system. 
    */
-  void setBlockTotal() {
+  public void setBlockTotal() {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
@@ -4822,10 +4835,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   public void notifyGenStampUpdate(long gs) {
-    LOG.info("=> notified of genstamp update for: " + gs);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Generation stamp " + gs + " has been reached. " +
+          "Processing pending messages from DataNodes...");
+    }
     DataNodeMessage msg = pendingDatanodeMessages.take(gs);
     while (msg != null) {
-      LOG.info("processing message: " + msg);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processing previously pending message: " + msg);
+      }
       try {
         switch (msg.getType()) {
         case BLOCK_RECEIVED_DELETE:

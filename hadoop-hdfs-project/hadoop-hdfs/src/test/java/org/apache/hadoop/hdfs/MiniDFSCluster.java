@@ -1452,7 +1452,8 @@ public class MiniDFSCluster {
     sizes = NameNodeAdapter.getStats(nameNode.getNamesystem());
     boolean isUp = false;
     synchronized (this) {
-      isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
+      isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) &&
+          sizes[ClientProtocol.GET_STATS_CAPACITY_IDX] != 0);
     }
     return isUp;
   }

@@ -49,6 +49,8 @@ public class EditLogTailer {
   private final FSImage image;
   private final FSEditLog editLog;
   
+  private volatile Throwable lastError = null;
+  
   public EditLogTailer(FSNamesystem namesystem) {
     this.tailerThread = new EditLogTailerThread();
     this.namesystem = namesystem;
@@ -79,6 +81,11 @@ public class EditLogTailer {
   @VisibleForTesting
   public void interrupt() {
     tailerThread.interrupt();
+  }
+  
+  @VisibleForTesting
+  public Throwable getLastError() {
+    return lastError;
   }
   
   public void catchupDuringFailover() throws IOException {
@@ -146,12 +153,19 @@ public class EditLogTailer {
           try {
             doTailEdits();
           } catch (IOException e) {
+            if (e.getCause() instanceof RuntimeException) {
+              throw (RuntimeException)e.getCause();
+            } else if (e.getCause() instanceof Error) {
+              throw (Error)e.getCause();
+            }
+                
             // Will try again
             LOG.info("Got error, will try again.", e);
           }
         } catch (Throwable t) {
           // TODO(HA): What should we do in this case? Shutdown the standby NN?
           LOG.error("Edit log tailer received throwable", t);
+          lastError = t;
         }
 
         try {

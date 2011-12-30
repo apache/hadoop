@@ -2481,7 +2481,10 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
   public void removeBlock(Block block) {
     assert namesystem.hasWriteLock();
-    block.setNumBytes(BlockCommand.NO_ACK);
+    // TODO(HA): the following causes some problems for HA:
+    // the SBN doesn't get block deletions until the next
+    // BR...
+    // block.setNumBytes(BlockCommand.NO_ACK);
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block);

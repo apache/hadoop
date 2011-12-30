@@ -410,7 +410,7 @@ public class TestDNFencing {
     return count;
   }
 
-  private void waitForDNDeletions(final MiniDFSCluster cluster)
+  static void waitForDNDeletions(final MiniDFSCluster cluster)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
@@ -426,7 +426,7 @@ public class TestDNFencing {
     
   }
 
-  private void waitForNNToIssueDeletions(final NameNode nn)
+  static void waitForNNToIssueDeletions(final NameNode nn)
       throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
