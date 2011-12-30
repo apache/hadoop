@@ -579,7 +579,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   
   void checkOperation(OperationCategory op) throws StandbyException {
-    haContext.checkOperation(op);
+    if (haContext != null) {
+      // null in some unit tests
+      haContext.checkOperation(op);
+    }
   }
   
   public static Collection<URI> getNamespaceDirs(Configuration conf) {

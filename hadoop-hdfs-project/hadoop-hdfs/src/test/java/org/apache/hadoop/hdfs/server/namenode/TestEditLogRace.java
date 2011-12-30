@@ -375,6 +375,7 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
+            LOG.fatal("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterFlush.countDown();
           }
@@ -469,6 +470,7 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
+            LOG.fatal("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterSync.countDown();
           }
