@@ -79,3 +79,5 @@ HDFS-1972. Fencing mechanism for block invalidations and replications (todd)
 HDFS-2714. Fix test cases which use standalone FSNamesystems (todd)
 
 HDFS-2692. Fix bugs related to failover from/into safe mode. (todd)
+
+HDFS-2716. Configuration needs to allow different dfs.http.addresses for each HA NN (todd)

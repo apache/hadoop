@@ -46,6 +46,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
@@ -177,8 +178,14 @@ public class SecondaryNameNode implements Runnable {
   public SecondaryNameNode(Configuration conf,
       CommandLineOpts commandLineOpts) throws IOException {
     try {
-      NameNode.initializeGenericKeys(conf,
-          DFSUtil.getSecondaryNameServiceId(conf));
+      String nsId = DFSUtil.getSecondaryNameServiceId(conf);
+      if (HAUtil.isHAEnabled(conf, nsId)) {
+        LOG.fatal("Cannot use SecondaryNameNode in an HA cluster." +
+            " The Standby Namenode will perform checkpointing.");
+        shutdown();
+        return;
+      }
+      NameNode.initializeGenericKeys(conf, nsId, null);
       initialize(conf, commandLineOpts);
     } catch(IOException e) {
       shutdown();

@@ -337,7 +337,7 @@ public class DFSUtil {
    * @param nsId the nameservice ID to look at, or null for non-federated 
    * @return collection of namenode Ids
    */
-  static Collection<String> getNameNodeIds(Configuration conf, String nsId) {
+  public static Collection<String> getNameNodeIds(Configuration conf, String nsId) {
     String key = addSuffix(DFS_HA_NAMENODES_KEY, nsId);
     return conf.getTrimmedStringCollection(key);
   }
@@ -644,24 +644,28 @@ public class DFSUtil {
         DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
     String httpAddressDefault = (securityOn && httpsAddress) ? 
         DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT : DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
+      
+    String suffixes[];
     if (namenodeAddr != null) {
       // if non-default namenode, try reverse look up 
       // the nameServiceID if it is available
-      String nameServiceId = DFSUtil.getNameServiceIdFromAddress(
-          conf, namenodeAddr,
+      suffixes = getSuffixIDs(conf, namenodeAddr,
           DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
           DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    } else {
+      suffixes = new String[2];
+    }
 
-      if (nameServiceId != null) {
-        httpAddress = conf.get(DFSUtil.addKeySuffixes(
-            httpAddressKey, nameServiceId));
-      }
+    return getSuffixedConf(conf, httpAddressKey, httpAddressDefault, suffixes);
+  }
+  
+  private static String getSuffixedConf(Configuration conf,
+      String key, String defaultVal, String[] suffixes) {
+    String ret = conf.get(DFSUtil.addKeySuffixes(key, suffixes));
+    if (ret != null) {
+      return ret;
     }
-    // else - Use non-federation style configuration
-    if (httpAddress == null) {
-      httpAddress = conf.get(httpAddressKey, httpAddressDefault);
-    }
-    return httpAddress;
+    return conf.get(key, defaultVal);
   }
   
   /**

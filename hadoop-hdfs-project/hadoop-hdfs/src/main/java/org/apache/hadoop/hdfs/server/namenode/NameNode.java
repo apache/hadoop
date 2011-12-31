@@ -531,11 +531,12 @@ public class NameNode {
     this.conf = conf;
     this.role = role;
     String nsId = getNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
     try {
-      initializeGenericKeys(conf, nsId);
+      initializeGenericKeys(conf, nsId, namenodeId);
       initialize(conf);
       if (!haEnabled) {
         state = ACTIVE_STATE;
@@ -852,15 +853,22 @@ public class NameNode {
    * @param conf
    *          Configuration object to lookup specific key and to set the value
    *          to the key passed. Note the conf object is modified
-   * @param nameserviceId name service Id
+   * @param nameserviceId name service Id (to distinguish federated NNs)
+   * @param namenodeId the namenode ID (to distinguish HA NNs)
    * @see DFSUtil#setGenericConf(Configuration, String, String, String...)
    */
-  public static void initializeGenericKeys(Configuration conf, String
-      nameserviceId) {
-    String namenodeId = HAUtil.getNameNodeId(conf, nameserviceId);
+  public static void initializeGenericKeys(Configuration conf,
+      String nameserviceId, String namenodeId) {
     if ((nameserviceId == null || nameserviceId.isEmpty()) && 
         (namenodeId == null || namenodeId.isEmpty())) {
       return;
+    }
+    
+    if (nameserviceId != null) {
+      conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+    }
+    if (namenodeId != null) {
+      conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
     }
     
     DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,

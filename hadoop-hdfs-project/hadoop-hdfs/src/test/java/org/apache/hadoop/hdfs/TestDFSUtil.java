@@ -258,20 +258,51 @@ public class TestDFSUtil {
    * copied to generic keys when the namenode starts.
    */
   @Test
-  public void testConfModification() {
+  public void testConfModificationFederationOnly() {
     final HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(DFS_FEDERATION_NAMESERVICES, "nn1");
-    conf.set(DFS_FEDERATION_NAMESERVICE_ID, "nn1");
-    final String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
+    String nsId = "ns1";
+    
+    conf.set(DFS_FEDERATION_NAMESERVICES, nsId);
+    conf.set(DFS_FEDERATION_NAMESERVICE_ID, nsId);
 
     // Set the nameservice specific keys with nameserviceId in the config key
     for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
       // Note: value is same as the key
-      conf.set(DFSUtil.addKeySuffixes(key, nameserviceId), key);
+      conf.set(DFSUtil.addKeySuffixes(key, nsId), key);
     }
 
     // Initialize generic keys from specific keys
-    NameNode.initializeGenericKeys(conf, nameserviceId);
+    NameNode.initializeGenericKeys(conf, nsId, null);
+
+    // Retrieve the keys without nameserviceId and Ensure generic keys are set
+    // to the correct value
+    for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
+      assertEquals(key, conf.get(key));
+    }
+  }
+  
+  /**
+   * Test to ensure nameservice specific keys in the configuration are
+   * copied to generic keys when the namenode starts.
+   */
+  @Test
+  public void testConfModificationFederationAndHa() {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    String nsId = "ns1";
+    String nnId = "nn1";
+    
+    conf.set(DFS_FEDERATION_NAMESERVICES, nsId);
+    conf.set(DFS_FEDERATION_NAMESERVICE_ID, nsId);
+    conf.set(DFS_HA_NAMENODES_KEY + "." + nsId, nnId);
+
+    // Set the nameservice specific keys with nameserviceId in the config key
+    for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
+      // Note: value is same as the key
+      conf.set(DFSUtil.addKeySuffixes(key, nsId, nnId), key);
+    }
+
+    // Initialize generic keys from specific keys
+    NameNode.initializeGenericKeys(conf, nsId, nnId);
 
     // Retrieve the keys without nameserviceId and Ensure generic keys are set
     // to the correct value
