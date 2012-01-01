@@ -199,8 +199,8 @@ creations/deletions), or "all".</description>
   <name>dfs.namenode.name.dir.restore</name>
   <value>false</value>
   <description>Set to true to enable NameNode to attempt recovering a
-      previously failed dfs.name.dir. When enabled, a recovery of any failed
-      directory is attempted during checkpoint.</description>
+      previously failed dfs.namenode.name.dir. When enabled, a recovery of any
+      failed directory is attempted during checkpoint.</description>
 </property>
 
 <property>
@@ -223,7 +223,7 @@ creations/deletions), or "all".</description>
   <description>Determines where on the local filesystem the DFS name node
       should store the transaction (edits) file. If this is a comma-delimited list
       of directories then the transaction file is replicated in all of the 
-      directories, for redundancy. Default value is same as dfs.name.dir
+      directories, for redundancy. Default value is same as dfs.namenode.name.dir
   </description>
 </property>
 <property>
