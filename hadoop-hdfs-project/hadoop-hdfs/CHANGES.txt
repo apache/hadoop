@@ -131,6 +131,8 @@ Trunk (unreleased changes)
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
 
+    HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
+
   BUG FIXES
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
                via atm)
