@@ -61,6 +61,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2335. DataNodeCluster and NNStorage always pull fresh entropy.
     (Uma Maheswara Rao G via eli)
 
+    HDFS-2574. Remove references to some deprecated properties in conf templates and defaults files. (Joe Crobak via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

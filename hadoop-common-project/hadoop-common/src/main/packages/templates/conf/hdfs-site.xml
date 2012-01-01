@@ -19,7 +19,7 @@
 <!-- file system properties -->
 
   <property>
-    <name>dfs.name.dir</name>
+    <name>dfs.namenode.name.dir</name>
     <value>${HADOOP_NN_DIR}</value>
     <description>Determines where on the local filesystem the DFS name node
       should store the name table.  If this is a comma-delimited list
@@ -29,7 +29,7 @@
   </property>
 
   <property>
-    <name>dfs.data.dir</name>
+    <name>dfs.datanode.data.dir</name>
     <value>${HADOOP_DN_DIR}</value>
     <description>Determines where on the local filesystem an DFS data node
        should store its blocks.  If this is a comma-delimited
@@ -41,11 +41,11 @@
   </property>
 
   <property>
-    <name>dfs.safemode.threshold.pct</name>
+    <name>dfs.namenode.safemode.threshold-pct</name>
     <value>1.0f</value>
     <description>
-        Specifies the percentage of blocks that should satisfy 
-        the minimal replication requirement defined by dfs.replication.min.
+        Specifies the percentage of blocks that should satisfy the minimal 
+        replication requirement defined by dfs.namenode.replication.min. 
         Values less than or equal to 0 mean not to start in safe mode.
         Values greater than 1 will make safe mode permanent.
         </description>
@@ -62,7 +62,7 @@
   </property>
 
   <property>
-    <name>dfs.http.address</name>
+    <name>dfs.namenode.http-address</name>
     <value>${HADOOP_NN_HOST}:50070</value>
     <description>The name of the default file system.  Either the
        literal string "local" or a host:port for NDFS.
@@ -167,7 +167,7 @@
   </property>
 
   <property>
-    <name>dfs.https.address</name>
+    <name>dfs.namenode.https-address</name>
     <value>${HADOOP_NN_HOST}:50470</value>
     <description>The https address where namenode binds</description>
   </property>
@@ -175,9 +175,9 @@
   <property>
     <name>dfs.datanode.data.dir.perm</name>
     <value>${DFS_DATANODE_DIR_PERM}</value>
-    <description>The permissions that should be there on dfs.data.dir
+    <description>The permissions that should be there on dfs.datanode.data.dir
       directories. The datanode will not come up if the permissions are
-      different on existing dfs.data.dir directories. If the directories
+      different on existing dfs.datanode.data.dir directories. If the directories
       don't exist, they will be created with this permission.
     </description>
   </property>
@@ -209,7 +209,7 @@
   </property>
 
   <property>
-    <name>dfs.secondary.http.address</name>
+    <name>dfs.namenode.secondary.http-address</name>
     <value>${HADOOP_SNN_HOST}:50090</value>
     <description>
       The secondary namenode http server address and port.
