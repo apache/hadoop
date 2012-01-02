@@ -83,6 +83,8 @@ Trunk (unreleased changes)
 
     HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead (XieXianshan via harsh)
 
+    HADOOP-7919. Remove the unused hadoop.logfile.* properties from the core-default.xml file. (harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
