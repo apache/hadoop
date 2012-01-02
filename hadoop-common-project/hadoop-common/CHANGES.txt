@@ -46,6 +46,8 @@ Release 0.23.1 - Unreleased
     HADOOP-7890. Redirect hadoop script's deprecation message to stderr.
     (Koji Knoguchi via mahadev)
 
+    HADOOP-7504. Add the missing Ganglia31 opts to hadoop-metrics.properties as a comment. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
