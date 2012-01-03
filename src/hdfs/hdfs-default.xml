@@ -426,4 +426,12 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.datanode.max.xcievers</name>
+  <value>4096</value>
+  <description>Specifies the maximum number of threads to use for transferring data
+  in and out of the DN.
+  </description>
+</property>
+
 </configuration>

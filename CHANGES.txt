@@ -135,6 +135,8 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
 
+    HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
+
 Release 1.0.0 - unreleased
 
   NEW FEATURES
