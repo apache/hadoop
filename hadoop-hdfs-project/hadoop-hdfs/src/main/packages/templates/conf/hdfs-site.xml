@@ -22,11 +22,11 @@
     <value>${HADOOP_REPLICATION}</value>
   </property>
   <property>
-    <name>dfs.name.dir</name>
+    <name>dfs.namenode.name.dir</name>
     <value>${HADOOP_NN_DIR}</value>
   </property>
   <property>
-    <name>dfs.data.dir</name>
+    <name>dfs.datanode.data.dir</name>
     <value>${HADOOP_DN_DIR}</value>
   </property>
   <property>

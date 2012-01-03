@@ -131,6 +131,8 @@ Trunk (unreleased changes)
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
 
+    HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
+
   BUG FIXES
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
                via atm)
@@ -253,6 +255,10 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2335. DataNodeCluster and NNStorage always pull fresh entropy.
     (Uma Maheswara Rao G via eli)
+
+    HDFS-2574. Remove references to some deprecated properties in conf templates and defaults files. (Joe Crobak via harsh)
+
+    HDFS-2722. HttpFs should not be using an int for block size. (harsh)
 
   OPTIMIZATIONS
 

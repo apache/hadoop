@@ -83,6 +83,8 @@ Trunk (unreleased changes)
 
     HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead (XieXianshan via harsh)
 
+    HADOOP-7919. Remove the unused hadoop.logfile.* properties from the core-default.xml file. (harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
@@ -197,6 +199,8 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7890. Redirect hadoop script's deprecation message to stderr.
     (Koji Knoguchi via mahadev)
+
+    HADOOP-7504. Add the missing Ganglia31 opts to hadoop-metrics.properties as a comment. (harsh)
 
   OPTIMIZATIONS
 
