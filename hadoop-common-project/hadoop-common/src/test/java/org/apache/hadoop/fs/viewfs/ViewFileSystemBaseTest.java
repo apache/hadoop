@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.junit.After;
 import org.junit.Assert;
@@ -89,6 +90,16 @@ public class ViewFileSystemBaseTest {
     // Set up the defaultMT in the config with our mount point links
     //Configuration conf = new Configuration();
     conf = ViewFileSystemTestSetup.configWithViewfsScheme();
+    setupMountPoints();
+    fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
+  }
+  
+  void setupMountPoints() {
     ConfigUtil.addLink(conf, "/user", new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/user2", new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/data", new Path(targetTestRoot,"data").toUri());
@@ -100,20 +111,17 @@ public class ViewFileSystemBaseTest {
         new Path(targetTestRoot,"missingTarget").toUri());
     ConfigUtil.addLink(conf, "/linkToAFile",
         new Path(targetTestRoot,"aFile").toUri());
-    
-    fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
   }
   
   @Test
   public void testGetMountPoints() {
     ViewFileSystem viewfs = (ViewFileSystem) fsView;
     MountPoint[] mountPoints = viewfs.getMountPoints();
-    Assert.assertEquals(7, mountPoints.length); 
+    Assert.assertEquals(getExpectedMountPoints(), mountPoints.length); 
+  }
+  
+  int getExpectedMountPoints() {
+    return 7;
   }
   
   /**
@@ -125,9 +133,46 @@ public class ViewFileSystemBaseTest {
   public void testGetDelegationTokens() throws IOException {
     List<Token<?>> delTokens = 
         fsView.getDelegationTokens("sanjay");
-    Assert.assertEquals(0, delTokens.size()); 
+    Assert.assertEquals(getExpectedDelegationTokenCount(), delTokens.size()); 
   }
   
+  int getExpectedDelegationTokenCount() {
+    return 0;
+  }
+
+  @Test
+  public void testGetDelegationTokensWithCredentials() throws IOException {
+    Credentials credentials = new Credentials();
+    List<Token<?>> delTokens =
+        fsView.getDelegationTokens("sanjay", credentials);
+
+    int expectedTokenCount = getExpectedDelegationTokenCountWithCredentials();
+
+    Assert.assertEquals(expectedTokenCount, delTokens.size());
+    for (int i = 0; i < expectedTokenCount / 2; i++) {
+      Token<?> token = delTokens.get(i);
+      credentials.addToken(token.getService(), token);
+    }
+
+    List<Token<?>> delTokens2 =
+        fsView.getDelegationTokens("sanjay", credentials);
+    Assert.assertEquals(expectedTokenCount, delTokens2.size());
+
+    for (int i = 0; i < delTokens2.size(); i++) {
+      for (int j = 0; j < delTokens.size(); j++) {
+        if (delTokens.get(j) == delTokens2.get(i)) {
+          delTokens.remove(j);
+          break;
+        }
+      }
+    }
+    Assert.assertEquals(expectedTokenCount / 2, delTokens.size());
+  }
+
+  int getExpectedDelegationTokenCountWithCredentials() {
+    return 0;
+  }
+
   @Test
   public void testBasicPaths() {
     Assert.assertEquals(FsConstants.VIEWFS_URI,
@@ -340,7 +385,7 @@ public class ViewFileSystemBaseTest {
     
     FileStatus[] dirPaths = fsView.listStatus(new Path("/"));
     FileStatus fs;
-    Assert.assertEquals(6, dirPaths.length);
+    Assert.assertEquals(getExpectedDirPaths(), dirPaths.length);
     fs = FileSystemTestHelper.containsPath(fsView, "/user", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
@@ -370,6 +415,10 @@ public class ViewFileSystemBaseTest {
           dirPaths);
         Assert.assertNotNull(fs);
         Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
+  }
+  
+  int getExpectedDirPaths() {
+    return 6;
   }
   
   @Test

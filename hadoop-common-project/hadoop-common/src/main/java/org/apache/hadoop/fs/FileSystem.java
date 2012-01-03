@@ -47,6 +47,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -392,6 +393,40 @@ public abstract class FileSystem extends Configured implements Closeable {
   @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
     return new ArrayList<Token<?>>(0);
+  }
+  
+  /**
+   * @see #getDelegationTokens(String)
+   * This is similar to getDelegationTokens, with the added restriction that if
+   * a token is already present in the passed Credentials object - that token
+   * is returned instead of a new delegation token. 
+   * 
+   * If the token is found to be cached in the Credentials object, this API does
+   * not verify the token validity or the passed in renewer. 
+   * 
+   * 
+   * @param renewer the account name that is allowed to renew the token.
+   * @param credentials a Credentials object containing already knowing 
+   *   delegationTokens.
+   * @return a list of delegation tokens.
+   * @throws IOException
+   */
+  @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
+  public List<Token<?>> getDelegationTokens(String renewer,
+      Credentials credentials) throws IOException {
+    List<Token<?>> allTokens = getDelegationTokens(renewer);
+    List<Token<?>> newTokens = new ArrayList<Token<?>>();
+    if (allTokens != null) {
+      for (Token<?> token : allTokens) {
+        Token<?> knownToken = credentials.getToken(token.getService());
+        if (knownToken == null) {
+          newTokens.add(token);
+        } else {
+          newTokens.add(knownToken);
+        }
+      }
+    }
+    return newTokens;
   }
 
   /** create a file with the provided permission
