@@ -273,10 +273,10 @@ public class FSOperations {
     @Override
     public Void execute(FileSystem fs) throws IOException {
       if (replication == -1) {
-        replication = (short) fs.getConf().getInt("dfs.replication", 3);
+        replication = fs.getDefaultReplication();
       }
       if (blockSize == -1) {
-        blockSize = fs.getConf().getInt("dfs.block.size", 67108864);
+        blockSize = fs.getDefaultBlockSize();
       }
       FsPermission fsPermission = getPermission(permission);
       int bufferSize = fs.getConf().getInt("httpfs.buffer.size", 4096);

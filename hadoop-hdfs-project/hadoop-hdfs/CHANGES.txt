@@ -63,6 +63,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2574. Remove references to some deprecated properties in conf templates and defaults files. (Joe Crobak via harsh)
 
+    HDFS-2722. HttpFs should not be using an int for block size. (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
