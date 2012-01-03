@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
@@ -387,5 +388,12 @@ public class FilterFileSystem extends FileSystem {
   @Override // FileSystem
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
     return fs.getDelegationTokens(renewer);
+  }
+  
+  @Override
+  // FileSystem
+  public List<Token<?>> getDelegationTokens(String renewer,
+      Credentials credentials) throws IOException {
+    return fs.getDelegationTokens(renewer, credentials);
   }
 }

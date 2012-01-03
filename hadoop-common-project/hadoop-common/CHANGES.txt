@@ -48,6 +48,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7504. Add the missing Ganglia31 opts to hadoop-metrics.properties as a comment. (harsh)
 
+    HADOOP-7933. Add a getDelegationTokens api to FileSystem which checks
+    for known tokens in the passed Credentials object. (sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
