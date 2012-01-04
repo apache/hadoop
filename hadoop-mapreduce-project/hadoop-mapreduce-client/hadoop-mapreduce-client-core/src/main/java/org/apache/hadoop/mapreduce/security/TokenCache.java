@@ -19,9 +19,7 @@
 package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,9 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -90,7 +86,7 @@ public class TokenCache {
       obtainTokensForNamenodesInternal(fs, credentials, conf);
     }
   }
-  
+
   /**
    * get delegation token for a specific FS
    * @param fs
@@ -99,6 +95,7 @@ public class TokenCache {
    * @param conf
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   static void obtainTokensForNamenodesInternal(FileSystem fs, 
       Credentials credentials, Configuration conf) throws IOException {
     String delegTokenRenewer = Master.getMasterPrincipal(conf);
@@ -131,7 +128,8 @@ public class TokenCache {
           return;
         }
       }
-      List<Token<?>> tokens = fs.getDelegationTokens(delegTokenRenewer);
+      List<Token<?>> tokens =
+          fs.getDelegationTokens(delegTokenRenewer, credentials);
       if (tokens != null) {
         for (Token<?> token : tokens) {
           credentials.addToken(token.getService(), token);
@@ -141,13 +139,13 @@ public class TokenCache {
       }
       //Call getDelegationToken as well for now - for FS implementations
       // which may not have implmented getDelegationTokens (hftp)
-      Token<?> token = fs.getDelegationToken(delegTokenRenewer);
-      if (token != null) {
-        Text fsNameText = new Text(fsName);
-        token.setService(fsNameText);
-        credentials.addToken(fsNameText, token);
-        LOG.info("Got dt for " + fs.getUri() + ";uri="+ fsName + 
-            ";t.service="+token.getService());
+      if (tokens == null || tokens.size() == 0) {
+        Token<?> token = fs.getDelegationToken(delegTokenRenewer);
+        if (token != null) {
+          credentials.addToken(token.getService(), token);
+          LOG.info("Got dt for " + fs.getUri() + ";uri=" + fsName
+              + ";t.service=" + token.getService());
+        }
       }
     }
   }
