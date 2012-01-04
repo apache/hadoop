@@ -81,3 +81,5 @@ HDFS-2714. Fix test cases which use standalone FSNamesystems (todd)
 HDFS-2692. Fix bugs related to failover from/into safe mode. (todd)
 
 HDFS-2716. Configuration needs to allow different dfs.http.addresses for each HA NN (todd)
+
+HDFS-2720. Fix MiniDFSCluster HA support to work properly on Windows. (Uma Maheswara Rao G via todd)

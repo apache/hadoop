@@ -601,10 +601,13 @@ public class MiniDFSCluster {
         }
       }
 
-      // Now start all the NNs in this nameservice.
+      // Now format first NN and copy the storage directory from that node to the others.
       int i = 0;
+      Collection<URI> prevNNDirs = null;
+      int nnCounterForFormat = nnCounter;
       for (NNConf nn : nameservice.getNNs()) {
-        initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs, nnCounter);
+        initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs,
+            nnCounterForFormat);
         
         boolean formatThisOne = format;
         if (format && i++ > 0) {
@@ -613,11 +616,21 @@ public class MiniDFSCluster {
           // block pool ID, etc. Instead, copy the name dirs
           // from the first one.
           formatThisOne = false;
-          copyNameDirs(getConfiguration(nnCounter - 1), conf);
+          assert (null != prevNNDirs);
+          copyNameDirs(prevNNDirs, FSNamesystem.getNamespaceDirs(conf), conf);
         }
         
-        createNameNode(nnCounter++, conf, numDataNodes, formatThisOne,
-            operation, clusterId, nsId, nn.getNnId());
+        nnCounterForFormat++;
+        if (formatThisOne) {
+          NameNode.format(conf);
+        }
+        prevNNDirs = FSNamesystem.getNamespaceDirs(conf);
+      }
+      // Start all Namenodes
+      for (NNConf nn : nameservice.getNNs()) {
+        initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs, nnCounter);
+        createNameNode(nnCounter++, conf, numDataNodes, false, operation,
+            clusterId, nsId, nn.getNnId());
       }
       
     }
@@ -655,10 +668,8 @@ public class MiniDFSCluster {
     }
   }
 
-  private void copyNameDirs(Configuration srcConf, Configuration dstConf)
-      throws IOException {
-    Collection<URI> srcDirs = FSNamesystem.getNamespaceDirs(srcConf);
-    Collection<URI> dstDirs = FSNamesystem.getNamespaceDirs(dstConf);
+  private void copyNameDirs(Collection<URI> srcDirs, Collection<URI> dstDirs,
+      Configuration dstConf) throws IOException {
     URI srcDir = Lists.newArrayList(srcDirs).get(0);
     FileSystem dstFS = FileSystem.getLocal(dstConf).getRaw();
     for (URI dstDir : dstDirs) {
