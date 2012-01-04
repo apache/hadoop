@@ -858,8 +858,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     int sysMaxReduces = 1;
 
     long sysMaxBytes = conf.getLong(MRJobConfig.JOB_UBERTASK_MAXBYTES,
-        conf.getLong("dfs.block.size", 64*1024*1024));  //FIXME: this is
-    // wrong; get FS from [File?]InputFormat and default block size from that
+        fs.getDefaultBlockSize()); // FIXME: this is wrong; get FS from
+                                   // [File?]InputFormat and default block size
+                                   // from that
 
     long sysMemSizeForUberSlot =
         conf.getInt(MRJobConfig.MR_AM_VMEM_MB,
