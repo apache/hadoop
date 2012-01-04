@@ -121,6 +121,8 @@ Trunk (unreleased changes)
 
     HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
 
+    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)

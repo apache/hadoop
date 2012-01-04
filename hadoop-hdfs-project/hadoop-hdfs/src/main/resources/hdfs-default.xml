@@ -329,7 +329,12 @@ creations/deletions), or "all".</description>
 <property>
   <name>dfs.blocksize</name>
   <value>67108864</value>
-  <description>The default block size for new files.</description>
+  <description>
+      The default block size for new files, in bytes.
+      You can use the following suffix (case insensitive):
+      k(kilo), m(mega), g(giga), t(tera), p(peta), e(exa) to specify the size (such as 128k, 512m, 1g, etc.),
+      Or provide complete size in bytes (such as 134217728 for 128 MB).
+  </description>
 </property>
 
 <property>

@@ -51,7 +51,7 @@ public class TestParam {
     final BlockSizeParam p = new BlockSizeParam(BlockSizeParam.DEFAULT);
     Assert.assertEquals(null, p.getValue());
     Assert.assertEquals(
-        conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+        conf.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
             DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT),
         p.getValue(conf));
 

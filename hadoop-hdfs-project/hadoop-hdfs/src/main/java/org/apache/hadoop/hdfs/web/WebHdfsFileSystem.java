@@ -529,7 +529,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public long getDefaultBlockSize() {
-    return getConf().getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
+    return getConf().getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY,
         DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT);
   }
 
