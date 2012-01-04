@@ -335,6 +335,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3608. Fixed compile issue with MAPREDUCE-3522. (mahadev via
     acmurthy) 
 
+    MAPREDUCE-3490. Fixed MapReduce AM to count failed maps also towards Reduce
+    ramp up. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
