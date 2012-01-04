@@ -521,6 +521,7 @@ public class TestGridmixSubmission {
       DebugGridmix client = new DebugGridmix();
       conf = new Configuration();
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
+      conf.set("mapreduce.job.hdfs-servers", "");
       if (useDefaultQueue) {
         conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, false);
         conf.set(GridmixJob.GRIDMIX_DEFAULT_QUEUE, "q1");

@@ -1144,7 +1144,7 @@ public class TestCombineFileInputFormat extends TestCase {
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IOException("Wrong file system: " + fs.getClass().getName());
     }
-    int blockSize = conf.getInt("dfs.block.size", 128 * 1024 * 1024);
+    long blockSize = fs.getDefaultBlockSize();
 
     DummyInputFormat inFormat = new DummyInputFormat();
     for (int i = 0; i < args.length; i++) {

@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
   BUG FIXES
+    MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
+                    (Ravi Prakash and Ravi Gummadi via amarrk)
+
     MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. 
                     (Devaraj K and Amar Kamat via amarrk)
 
@@ -174,6 +177,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3547. Added a bunch of unit tests for the the RM/NM webservices.
     (Thomas Graves via acmurthy)
+
+    MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
 
   OPTIMIZATIONS
 
@@ -383,6 +388,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3608. Fixed compile issue with MAPREDUCE-3522. (mahadev via
     acmurthy) 
+
+    MAPREDUCE-3490. Fixed MapReduce AM to count failed maps also towards Reduce
+    ramp up. (Sharad Agarwal and Arun C Murthy via vinodkv)
+
+    MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
+    adding a file/archive to the path. (Dick King via tucu)
 
 Release 0.23.0 - 2011-11-01 
 

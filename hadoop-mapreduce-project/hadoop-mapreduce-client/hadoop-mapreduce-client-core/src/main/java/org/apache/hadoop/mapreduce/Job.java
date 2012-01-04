@@ -1030,7 +1030,7 @@ public class Job extends JobContextImpl implements JobContext {
   public void addFileToClassPath(Path file)
     throws IOException {
     ensureState(JobState.DEFINE);
-    DistributedCache.addFileToClassPath(file, conf);
+    DistributedCache.addFileToClassPath(file, conf, file.getFileSystem(conf));
   }
 
   /**
@@ -1045,7 +1045,7 @@ public class Job extends JobContextImpl implements JobContext {
   public void addArchiveToClassPath(Path archive)
     throws IOException {
     ensureState(JobState.DEFINE);
-    DistributedCache.addArchiveToClassPath(archive, conf);
+    DistributedCache.addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
   }
 
   /**
