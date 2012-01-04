@@ -105,6 +105,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7837. no NullAppender in the log4j config. (eli)
 
+   HADOOP-7948. Shell scripts created by hadoop-dist/pom.xml to build tar do not 
+   properly propagate failure. (cim_michajlomatijkiw via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

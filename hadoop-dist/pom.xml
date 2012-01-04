@@ -98,11 +98,12 @@
                       run() {
                         echo "\$ ${@}"
                         "${@}"
-                        if [ $? != 0 ]; then
+                        res=$?
+                        if [ $res != 0 ]; then
                           echo
                           echo "Failed!"
                           echo
-                          exit $?
+                          exit $res
                         fi
                       }
 
@@ -139,11 +140,12 @@
                       run() {
                         echo "\$ ${@}"
                         "${@}"
-                        if [ $? != 0 ]; then
+                        res=$?
+                        if [ $res != 0 ]; then
                           echo
                           echo "Failed!"
                           echo
-                          exit $?
+                          exit $res
                         fi
                       }
 
