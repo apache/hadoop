@@ -90,6 +90,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3547. Added a bunch of unit tests for the the RM/NM webservices.
     (Thomas Graves via acmurthy)
 
+    MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
