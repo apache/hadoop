@@ -341,6 +341,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3529. TokenCache does not cache viewfs credentials correctly
     (sseth)
 
+    MAPREDUCE-3595. Add missing TestCounters#testCounterValue test from branch
+    1 to 0.23 (Tom White via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
