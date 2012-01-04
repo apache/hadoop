@@ -338,6 +338,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3490. Fixed MapReduce AM to count failed maps also towards Reduce
     ramp up. (Sharad Agarwal and Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3529. TokenCache does not cache viewfs credentials correctly
+    (sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
