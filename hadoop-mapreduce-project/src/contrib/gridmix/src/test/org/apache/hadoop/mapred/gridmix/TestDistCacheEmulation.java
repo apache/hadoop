@@ -141,6 +141,7 @@ public class TestDistCacheEmulation {
       boolean useOldProperties) throws IOException {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
     conf.set(MRJobConfig.USER_NAME, user);
+    conf.set("mapreduce.job.hdfs-servers", "");
     // Set some dummy dist cache files in gridmix configuration so that they go
     // into the configuration of JobStory objects.
     String[] distCacheFiles = {"hdfs:///tmp/file1.txt",

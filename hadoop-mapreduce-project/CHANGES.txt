@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
   BUG FIXES
+    MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
+                    (Ravi Prakash and Ravi Gummadi via amarrk)
+
     MAPREDUCE-3349. Log rack-name in JobHistory for unsuccessful tasks. 
                     (Devaraj K and Amar Kamat via amarrk)
 
