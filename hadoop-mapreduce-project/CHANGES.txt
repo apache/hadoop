@@ -102,6 +102,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3568. Optimized Job's progress calculations in MR AM. (vinodkv)
 
   BUG FIXES
+    MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
+                    (Ravi Prakash and Ravi Gummadi via amarrk)
+
     MAPREDUCE-2950. [Rumen] Fixed TestUserResolve. (Ravi Gummadi via amarrk)
 
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)

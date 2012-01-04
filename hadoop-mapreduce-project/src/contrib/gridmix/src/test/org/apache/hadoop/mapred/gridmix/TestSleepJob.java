@@ -205,6 +205,7 @@ public class TestSleepJob {
       throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(SleepJob.SLEEPJOB_MAPTASK_ONLY, true);
+    conf.set("mapreduce.job.hdfs-servers", "");
     DebugJobProducer jobProducer = new DebugJobProducer(5, conf);
     JobConf jconf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
@@ -253,6 +254,7 @@ public class TestSleepJob {
       DebugGridmix client = new DebugGridmix();
       conf = new Configuration();
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy);
+      conf.set("mapreduce.job.hdfs-servers", "");
       conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
       // allow synthetic users to create home directories
       GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short) 0777));

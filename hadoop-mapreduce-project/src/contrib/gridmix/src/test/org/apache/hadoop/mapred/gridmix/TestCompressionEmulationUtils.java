@@ -105,6 +105,7 @@ public class TestCompressionEmulationUtils {
     conf.setInt(RandomTextDataGenerator.GRIDMIX_DATAGEN_RANDOMTEXT_WORDSIZE, 
                 wordSize);
     conf.setLong(GenerateData.GRIDMIX_GEN_BYTES, dataSize);
+    conf.set("mapreduce.job.hdfs-servers", "");
     
     FileSystem lfs = FileSystem.getLocal(conf);
     
@@ -192,6 +193,7 @@ public class TestCompressionEmulationUtils {
     CompressionEmulationUtil.setInputCompressionEmulationEnabled(conf, true);
     
     conf.setLong(GenerateData.GRIDMIX_GEN_BYTES, dataSize);
+    conf.set("mapreduce.job.hdfs-servers", "");
     
     float expectedRatio = CompressionEmulationUtil.DEFAULT_COMPRESSION_RATIO;
     if (ratio > 0) {
