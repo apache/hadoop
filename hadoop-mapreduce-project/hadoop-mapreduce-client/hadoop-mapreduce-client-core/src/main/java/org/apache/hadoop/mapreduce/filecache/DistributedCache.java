@@ -269,7 +269,7 @@ public class DistributedCache {
   /**
    * Add an file path to the current set of classpath entries It adds the file
    * to cache as well.  Intended to be used by user code.
-   * 
+   *
    * @param file Path of the file to be added
    * @param conf Configuration that contains the classpath setting
    * @deprecated Use {@link Job#addFileToClassPath(Path)} instead
@@ -277,12 +277,25 @@ public class DistributedCache {
   @Deprecated
   public static void addFileToClassPath(Path file, Configuration conf)
     throws IOException {
+	  addFileToClassPath(file, conf, file.getFileSystem(conf));
+  }
+
+  /**
+   * Add a file path to the current set of classpath entries. It adds the file
+   * to cache as well.  Intended to be used by user code.
+   *
+   * @param file Path of the file to be added
+   * @param conf Configuration that contains the classpath setting
+   * @param fs FileSystem with respect to which {@code archivefile} should
+   *              be interpreted.
+   */
+  public static void addFileToClassPath
+           (Path file, Configuration conf, FileSystem fs)
+        throws IOException {
     String classpath = conf.get(MRJobConfig.CLASSPATH_FILES);
     conf.set(MRJobConfig.CLASSPATH_FILES, classpath == null ? file.toString()
              : classpath + "," + file.toString());
-    FileSystem fs = FileSystem.get(conf);
     URI uri = fs.makeQualified(file).toUri();
-
     addCacheFile(uri, conf);
   }
 
@@ -318,10 +331,23 @@ public class DistributedCache {
   @Deprecated
   public static void addArchiveToClassPath(Path archive, Configuration conf)
     throws IOException {
+    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
+  }
+
+  /**
+   * Add an archive path to the current set of classpath entries. It adds the
+   * archive to cache as well.  Intended to be used by user code.
+   *
+   * @param archive Path of the archive to be added
+   * @param conf Configuration that contains the classpath setting
+   * @param fs FileSystem with respect to which {@code archive} should be interpreted.
+   */
+  public static void addArchiveToClassPath
+         (Path archive, Configuration conf, FileSystem fs)
+      throws IOException {
     String classpath = conf.get(MRJobConfig.CLASSPATH_ARCHIVES);
     conf.set(MRJobConfig.CLASSPATH_ARCHIVES, classpath == null ? archive
              .toString() : classpath + "," + archive.toString());
-    FileSystem fs = FileSystem.get(conf);
     URI uri = fs.makeQualified(archive).toUri();
 
     addCacheArchive(uri, conf);

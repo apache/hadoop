@@ -392,6 +392,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3490. Fixed MapReduce AM to count failed maps also towards Reduce
     ramp up. (Sharad Agarwal and Arun C Murthy via vinodkv)
 
+    MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
+    adding a file/archive to the path. (Dick King via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
