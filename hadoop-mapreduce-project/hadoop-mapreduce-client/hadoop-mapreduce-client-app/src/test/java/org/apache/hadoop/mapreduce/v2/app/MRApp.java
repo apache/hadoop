@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
@@ -65,7 +66,9 @@ import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleaner;
 import org.apache.hadoop.mapreduce.v2.app.taskclean.TaskCleanupEvent;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.Clock;
@@ -173,7 +176,8 @@ public class MRApp extends MRAppMaster {
   }
 
   public Job submit(Configuration conf) throws Exception {
-    String user = conf.get(MRJobConfig.USER_NAME, "mapred");
+    String user = conf.get(MRJobConfig.USER_NAME, UserGroupInformation
+      .getCurrentUser().getShortUserName());
     conf.set(MRJobConfig.USER_NAME, user);
     conf.set(MRJobConfig.MR_AM_STAGING_DIR, testAbsPath.toString());
     conf.setBoolean(MRJobConfig.MR_AM_CREATE_JH_INTERMEDIATE_BASE_DIR, true);
@@ -187,6 +191,14 @@ public class MRApp extends MRAppMaster {
     start();
     DefaultMetricsSystem.shutdown();
     Job job = getContext().getAllJobs().values().iterator().next();
+
+    // Write job.xml
+    String jobFile = MRApps.getJobFile(conf, user,
+      TypeConverter.fromYarn(job.getID()));
+    LOG.info("Writing job conf to " + jobFile);
+    new File(jobFile).getParentFile().mkdirs();
+    conf.writeXml(new FileOutputStream(jobFile));
+
     return job;
   }
 
@@ -308,7 +320,7 @@ public class MRApp extends MRAppMaster {
     return new TaskAttemptListener(){
       @Override
       public InetSocketAddress getAddress() {
-        return null;
+        return NetUtils.createSocketAddr("localhost:54321");
       }
       @Override
       public void registerLaunchedTask(TaskAttemptId attemptID, 
@@ -337,10 +349,13 @@ public class MRApp extends MRAppMaster {
     return new MockContainerLauncher();
   }
 
-  class MockContainerLauncher implements ContainerLauncher {
+  protected class MockContainerLauncher implements ContainerLauncher {
 
     //We are running locally so set the shuffle port to -1 
     int shufflePort = -1;
+
+    public MockContainerLauncher() {
+    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -474,6 +489,7 @@ public class MRApp extends MRAppMaster {
     }
     @Override
     protected void setup(JobImpl job) throws IOException {
+      super.setup(job);
       job.conf.setInt(MRJobConfig.NUM_REDUCES, reduces);
       job.remoteJobConfFile = new Path("test");
     }
