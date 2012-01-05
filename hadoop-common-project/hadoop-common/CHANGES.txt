@@ -82,7 +82,9 @@ Trunk (unreleased changes)
     HADOOP-7808. Port HADOOP-7510 - Add configurable option to use original 
     hostname in token instead of IP to allow server IP change. 
     (Daryn Sharp via suresh)
-  
+ 
+    HADOOP-7957. Classes deriving GetGroupsBase should be able to override 
+    proxy creation. (jitendra)
 
   BUGS
 
