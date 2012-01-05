@@ -29,7 +29,7 @@ import java.net.Socket;
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.lib.ZKClient;
-import org.apache.zookeeper.server.NIOServerCnxn;
+import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
@@ -45,7 +45,8 @@ public class TestZKClient  {
 
   protected String hostPort = "127.0.0.1:2000";
   protected int maxCnxns = 0;
-  protected NIOServerCnxn.Factory factory = null;
+  protected NIOServerCnxnFactory factory = null;
+  protected ZooKeeperServer zks;
   protected File tmpDir = null;
 
   public static String send4LetterWord(String host, int port, String cmd)
@@ -144,10 +145,11 @@ public class TestZKClient  {
       BASETEST.mkdirs();
     }
     File dataDir = createTmpDir(BASETEST);
-    ZooKeeperServer zks = new ZooKeeperServer(dataDir, dataDir, 3000);
+    zks = new ZooKeeperServer(dataDir, dataDir, 3000);
     final int PORT = Integer.parseInt(hostPort.split(":")[1]);
     if (factory == null) {
-      factory = new NIOServerCnxn.Factory(new InetSocketAddress(PORT),maxCnxns);
+      factory = new NIOServerCnxnFactory();
+      factory.configure(new InetSocketAddress(PORT), maxCnxns);
     }
     factory.startup(zks);
     Assert.assertTrue("waiting for server up",
@@ -158,8 +160,8 @@ public class TestZKClient  {
   
   @After
   public void tearDown() throws IOException, InterruptedException {
-    if (factory != null) {
-      ZKDatabase zkDb = factory.getZooKeeperServer().getZKDatabase();
+    if (zks != null) {
+      ZKDatabase zkDb = zks.getZKDatabase();
       factory.shutdown();
       try {
         zkDb.close();

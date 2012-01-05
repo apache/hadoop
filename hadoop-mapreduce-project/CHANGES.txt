@@ -92,6 +92,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
 
+    MAPREDUCE-3478. Cannot build against ZooKeeper 3.4.0. (Tom White via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
