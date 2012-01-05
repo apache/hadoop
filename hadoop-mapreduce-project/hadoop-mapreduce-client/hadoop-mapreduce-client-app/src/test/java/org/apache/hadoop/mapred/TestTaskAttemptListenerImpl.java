@@ -17,8 +17,11 @@
 */
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
@@ -68,33 +71,47 @@ public class TestTaskAttemptListenerImpl {
     JVMId id = new JVMId("foo",1, true, 1);
     WrappedJvmID wid = new WrappedJvmID(id.getJobId(), id.isMap, id.getId());
 
+    // Verify ask before registration.
     //The JVM ID has not been registered yet so we should kill it.
     JvmContext context = new JvmContext();
     context.jvmId = id; 
     JvmTask result = listener.getTask(context);
     assertNotNull(result);
     assertTrue(result.shouldDie);
-    
-    //Now register the JVM, and see
-    listener.registerPendingTask(wid);
-    result = listener.getTask(context);
-    assertNull(result);
-    
+
+    // Verify ask after registration but before launch
     TaskAttemptId attemptID = mock(TaskAttemptId.class);
     Task task = mock(Task.class);
     //Now put a task with the ID
-    listener.registerLaunchedTask(attemptID, task, wid);
+    listener.registerPendingTask(task, wid);
+    result = listener.getTask(context);
+    assertNotNull(result);
+    assertFalse(result.shouldDie);
+    // Unregister for more testing.
+    listener.unregister(attemptID, wid);
+
+    // Verify ask after registration and launch
+    //Now put a task with the ID
+    listener.registerPendingTask(task, wid);
+    listener.registerLaunchedTask(attemptID);
     verify(hbHandler).register(attemptID);
     result = listener.getTask(context);
     assertNotNull(result);
     assertFalse(result.shouldDie);
-    
+    // Don't unregister yet for more testing.
+
     //Verify that if we call it again a second time we are told to die.
     result = listener.getTask(context);
     assertNotNull(result);
     assertTrue(result.shouldDie);
-    
+
     listener.unregister(attemptID, wid);
+
+    // Verify after unregistration.
+    result = listener.getTask(context);
+    assertNotNull(result);
+    assertTrue(result.shouldDie);
+
     listener.stop();
   }
 }

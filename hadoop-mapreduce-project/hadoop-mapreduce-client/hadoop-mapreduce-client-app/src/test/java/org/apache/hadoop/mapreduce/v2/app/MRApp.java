@@ -91,6 +91,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
  * Mock MRAppMaster. Doesn't start RPC servers.
  * No threads are started except of the event Dispatcher thread.
  */
+@SuppressWarnings("unchecked")
 public class MRApp extends MRAppMaster {
   private static final Log LOG = LogFactory.getLog(MRApp.class);
 
@@ -323,13 +324,13 @@ public class MRApp extends MRAppMaster {
         return NetUtils.createSocketAddr("localhost:54321");
       }
       @Override
-      public void registerLaunchedTask(TaskAttemptId attemptID, 
-          org.apache.hadoop.mapred.Task task, WrappedJvmID jvmID) {}
+      public void registerLaunchedTask(TaskAttemptId attemptID) {}
       @Override
       public void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID) {
       }
       @Override
-      public void registerPendingTask(WrappedJvmID jvmID) {
+      public void registerPendingTask(org.apache.hadoop.mapred.Task task,
+          WrappedJvmID jvmID) {
       }
     };
   }
@@ -357,7 +358,6 @@ public class MRApp extends MRAppMaster {
     public MockContainerLauncher() {
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void handle(ContainerLauncherEvent event) {
       switch (event.getType()) {
