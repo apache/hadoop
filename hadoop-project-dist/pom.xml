@@ -213,7 +213,7 @@
                     <artifactItem>
                       <groupId>org.apache.hadoop</groupId>
                       <artifactId>hadoop-annotations</artifactId>
-                      <version>${hadoop.annotations.version}</version>
+                      <version>${project.version}</version>
                       <overWrite>false</overWrite>
                       <outputDirectory>${project.build.directory}</outputDirectory>
                       <destFileName>hadoop-annotations.jar</destFileName>

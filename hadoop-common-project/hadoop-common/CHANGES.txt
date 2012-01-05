@@ -55,6 +55,8 @@ Release 0.23.1 - Unreleased
     hostname in token instead of IP to allow server IP change. 
     (Daryn Sharp via suresh)
 
+    HADOOP-7934. Normalize dependencies versions across all modules. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
