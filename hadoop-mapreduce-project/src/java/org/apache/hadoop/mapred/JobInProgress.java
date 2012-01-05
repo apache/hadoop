@@ -3210,7 +3210,7 @@ public class JobInProgress {
             (taskid, 
              taskType, taskStatus.getRunState().toString(),
              finishTime, 
-             taskTrackerHostName, -1, null, diagInfo,
+             taskTrackerHostName, -1, "", diagInfo,
              splits.burst());
     jobHistory.logEvent(tue, taskid.getJobID());
         
