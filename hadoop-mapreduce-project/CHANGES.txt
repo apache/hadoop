@@ -346,6 +346,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3595. Add missing TestCounters#testCounterValue test from branch
     1 to 0.23 (Tom White via sseth)
 
+    MAPREDUCE-3566. Fixed MR AM to construct CLC only once across all tasks.
+    (vinodkv via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

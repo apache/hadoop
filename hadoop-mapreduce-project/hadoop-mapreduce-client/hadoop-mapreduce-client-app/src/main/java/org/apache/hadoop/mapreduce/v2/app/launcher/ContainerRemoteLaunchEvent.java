@@ -24,17 +24,31 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
 
-public abstract class ContainerRemoteLaunchEvent extends ContainerLauncherEvent {
+public class ContainerRemoteLaunchEvent extends ContainerLauncherEvent {
+
+  private final ContainerLaunchContext container;
+  private final Task task;
 
   public ContainerRemoteLaunchEvent(TaskAttemptId taskAttemptID,
       ContainerId containerID, String containerMgrAddress,
-      ContainerToken containerToken) {
-    super(taskAttemptID, containerID, containerMgrAddress,
-        containerToken,
+      ContainerToken containerToken,
+      ContainerLaunchContext containerLaunchContext, Task remoteTask) {
+    super(taskAttemptID, containerID, containerMgrAddress, containerToken,
         ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH);
+    this.container = containerLaunchContext;
+    this.task = remoteTask;
   }
-  public abstract ContainerLaunchContext getContainer();
 
-  public abstract Task getRemoteTask();
+  public ContainerLaunchContext getContainer() {
+    return this.container;
+  }
 
+  public Task getRemoteTask() {
+    return this.task;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    return super.equals(obj);
+  }
 }
