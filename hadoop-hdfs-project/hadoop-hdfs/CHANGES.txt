@@ -27,9 +27,6 @@ Trunk (unreleased changes)
     HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
                should be configurable. (atm)
 
-    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy with 
-    read/write capabilities. (tucu)
-
     HDFS-2642. Protobuf translators for DatanodeProtocol. (jitendra)
 
     HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
@@ -76,11 +73,6 @@ Trunk (unreleased changes)
 
     HDFS-2181 Separate HDFS Client wire protocol data types (sanjay)
 
-    HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)
-
-    HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be 
-    fetched. (tucu)
-
     HDFS-2489. Move Finalize and Register to separate file out of
     DatanodeCommand.java. (suresh)
 
@@ -108,8 +100,6 @@ Trunk (unreleased changes)
     (Ivan Kelly via jitendra)
 
     HDFS-2597 ClientNameNodeProtocol in Protocol Buffers (sanjay)
-
-    HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
 
     HDFS-2651 ClientNameNodeProtocol Translators for Protocol Buffers (sanjay)
 
@@ -172,9 +162,6 @@ Trunk (unreleased changes)
     HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
     via todd)
 
-    HDFS-2606. webhdfs client filesystem impl must set the content-type 
-    header for create/append. (tucu)
-
     HDFS-1765. Block Replication should respect under-replication
     block priority. (Uma Maheswara Rao G via eli)
 
@@ -185,19 +172,6 @@ Trunk (unreleased changes)
 
     HDFS-2700. Fix failing TestDataNodeMultipleRegistrations in trunk
     (Uma Maheswara Rao G via todd)
-
-    HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
-
-    HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
-
-    HDFS-2657. TestHttpFSServer and TestServerWebApp are failing on trunk. 
-    (tucu)
-
-    HttpFS server should check that upload requests have correct 
-    content-type. (tucu)
-
-    HDFS-2707. HttpFS should read the hadoop-auth secret from a file 
-    instead inline from the configuration. (tucu)
 
 Release 0.23.1 - UNRELEASED
 
@@ -213,6 +187,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2545. Change WebHDFS to support multiple namenodes in federation.
     (szetszwo)
+
+    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy with 
+    read/write capabilities. (tucu)
 
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
@@ -265,6 +242,13 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2710. Add HDFS tests related to HADOOP-7933. (sid via suresh)
 
+    HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)
+
+    HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be 
+    fetched. (tucu)
+
+    HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -311,6 +295,22 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2706. Use configuration for blockInvalidateLimit if it is set.
     (szetszwo)
+
+    HDFS-2606. webhdfs client filesystem impl must set the content-type 
+    header for create/append. (tucu)
+
+    HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
+
+    HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
+
+    HDFS-2657. TestHttpFSServer and TestServerWebApp are failing on trunk. 
+    (tucu)
+
+    HttpFS server should check that upload requests have correct 
+    content-type. (tucu)
+
+    HDFS-2707. HttpFS should read the hadoop-auth secret from a file 
+    instead inline from the configuration. (tucu)
 
 Release 0.23.0 - 2011-11-01 
 

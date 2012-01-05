@@ -46,15 +46,8 @@ Trunk (unreleased changes)
     if the override value is same as the final parameter value.
     (Ravi Prakash via suresh)
 
-    HADOOP-7737. normalize hadoop-mapreduce & hadoop-dist dist/tar build with 
-    common/hdfs. (tucu)
-
-    HADOOP-7743. Add Maven profile to create a full source tarball. (tucu)
-
     HADOOP-7729. Send back valid HTTP response if user hits IPC port with
     HTTP GET. (todd)
-
-    HADOOP-7758. Make GlobFilter class public. (tucu)
 
     HADOOP-7728. Enable task memory management to be configurable in hadoop
     config setup script. (ramya)
@@ -67,9 +60,7 @@ Trunk (unreleased changes)
     HADOOP-7688. Add servlet handler check in HttpServer.start().
     (Uma Maheswara Rao G via szetszwo)
 
-    HADOOP-7590. Mavenize streaming and MR examples. (tucu)
-
-		HADOOP-7862. Move the support for multiple protocols to lower layer so 
+    HADOOP-7862. Move the support for multiple protocols to lower layer so 
     that Writable, PB and Avro can all use it (Sanjay)
 
     HADOOP-7876. Provided access to encoded key in DelegationKey for
@@ -132,28 +123,13 @@ Trunk (unreleased changes)
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
     (John Lee via suresh)
 
-    HADOOP-7853. multiple javax security configurations cause conflicts. 
-    (daryn via tucu)
-
-    HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
-
-    HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
-
-    HADOOP-7887. KerberosAuthenticatorHandler is not setting
-    KerberosName name rules from configuration. (tucu)
-
     HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
     via atm)
 
     HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
     consistent with WritableRpcEngine. (suresh)
 
-    HADOOP-7902. skipping name rules setting (if already set) should be done 
-    on UGI initialization only. (tucu)
-
     HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
-
-    HADOOP-7810. move hadoop archive to core from tools. (tucu)
 
     HADOOP-7892. IPC logs too verbose after "RpcKind" introduction (todd)
 
@@ -163,8 +139,6 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
-
-    HADOOP_7917. compilation of protobuf files fails in windows/cygwin. (tucu)
 
 Release 0.23.1 - Unreleased
 
@@ -213,6 +187,15 @@ Release 0.23.1 - Unreleased
     HADOOP-7933. Add a getDelegationTokens api to FileSystem which checks
     for known tokens in the passed Credentials object. (sseth)
 
+    HADOOP-7737. normalize hadoop-mapreduce & hadoop-dist dist/tar build with 
+    common/hdfs. (tucu)
+
+    HADOOP-7743. Add Maven profile to create a full source tarball. (tucu)
+
+    HADOOP-7758. Make GlobFilter class public. (tucu)
+
+    HADOOP-7590. Mavenize streaming and MR examples. (tucu)
+
     HADOOP-7934. Normalize dependencies versions across all modules. (tucu)
 
   OPTIMIZATIONS
@@ -253,6 +236,23 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7949. Updated maxIdleTime default in the code to match
    core-default.xml (eli)
+
+   HADOOP-7853. multiple javax security configurations cause conflicts. 
+   (daryn via tucu)
+
+   HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
+
+   HADOOP-7874. native libs should be under lib/native/ dir. (tucu)
+
+   HADOOP-7887. KerberosAuthenticatorHandler is not setting
+   KerberosName name rules from configuration. (tucu)
+
+   HADOOP-7902. skipping name rules setting (if already set) should be done 
+   on UGI initialization only. (tucu)
+
+   HADOOP-7810. move hadoop archive to core from tools. (tucu)
+
+   HADOOP_7917. compilation of protobuf files fails in windows/cygwin. (tucu)
 
 Release 0.23.0 - 2011-11-01 
 
