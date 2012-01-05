@@ -349,6 +349,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3566. Fixed MR AM to construct CLC only once across all tasks.
     (vinodkv via acmurthy) 
 
+    MAPREDUCE-3572. Moved AM event dispatcher to a separate thread for
+    performance reasons. (vinodkv via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
