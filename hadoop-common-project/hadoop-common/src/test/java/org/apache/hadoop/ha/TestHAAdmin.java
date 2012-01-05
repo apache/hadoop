@@ -101,6 +101,11 @@ public class TestHAAdmin {
   }
 
   @Test
+  public void testFailover() throws Exception {
+    assertEquals(0, runTool("-failover", "xxx", "yyy"));
+  }
+
+  @Test
   public void testGetServiceState() throws Exception {
     assertEquals(0, runTool("-getServiceState", "xxx"));
     Mockito.verify(mockProtocol).getServiceState();

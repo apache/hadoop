@@ -24,7 +24,6 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
@@ -46,6 +45,9 @@ public class HAAdmin extends Configured implements Tool {
         new UsageInfo("<host:port>", "Transitions the daemon into Active state"))
     .put("-transitionToStandby",
         new UsageInfo("<host:port>", "Transitions the daemon into Standby state"))
+    .put("-failover",
+        new UsageInfo("<host:port> <host:port>",
+            "Failover from the first daemon to the second"))
     .put("-getServiceState",
         new UsageInfo("<host:port>", "Returns the state of the daemon"))
     .put("-checkHealth",
@@ -94,7 +96,6 @@ public class HAAdmin extends Configured implements Tool {
     return 0;
   }
 
-  
   private int transitionToStandby(final String[] argv)
       throws IOException, ServiceFailedException {
     if (argv.length != 2) {
@@ -107,7 +108,27 @@ public class HAAdmin extends Configured implements Tool {
     proto.transitionToStandby();
     return 0;
   }
-  
+
+  private int failover(final String[] argv)
+      throws IOException, ServiceFailedException {
+    if (argv.length != 3) {
+      errOut.println("failover: incorrect number of arguments");
+      printUsage(errOut, "-failover");
+      return -1;
+    }
+
+    HAServiceProtocol proto1 = getProtocol(argv[1]);
+    HAServiceProtocol proto2 = getProtocol(argv[2]);
+    try {
+      FailoverController.failover(proto1, argv[1], proto2, argv[2]);
+      out.println("Failover from "+argv[1]+" to "+argv[2]+" successful");
+    } catch (FailoverFailedException ffe) {
+      errOut.println("Failover failed: " + ffe.getLocalizedMessage());
+      return 1;
+    }
+    return 0;
+  }
+
   private int checkHealth(final String[] argv)
       throws IOException, ServiceFailedException {
     if (argv.length != 2) {
@@ -171,6 +192,8 @@ public class HAAdmin extends Configured implements Tool {
       return transitionToActive(argv);
     } else if ("-transitionToStandby".equals(cmd)) {
       return transitionToStandby(argv);
+    } else if ("-failover".equals(cmd)) {
+      return failover(argv);
     } else if ("-getServiceState".equals(cmd)) {
       return getServiceState(argv);
     } else if ("-checkHealth".equals(cmd)) {

@@ -21,18 +21,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Exception thrown to indicate that health check of a service failed.
+ * Exception thrown to indicate service failover has failed.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HealthCheckFailedException extends Exception {
+public class FailoverFailedException extends Exception {
   private static final long serialVersionUID = 1L;
 
-  public HealthCheckFailedException(final String message) {
+  public FailoverFailedException(final String message) {
     super(message);
   }
-  
-  public HealthCheckFailedException(String message, Throwable cause) {
+
+  public FailoverFailedException(String message, Throwable cause) {
     super(message, cause);
   }
 }

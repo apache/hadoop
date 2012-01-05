@@ -36,6 +36,7 @@ function print_usage(){
   echo "  classpath            prints the class path needed to get the"
   echo "                       Hadoop jar and the required libraries"
   echo "  daemonlog            get/set the log level for each daemon"
+  echo "  haadmin              run a HA admin client"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
   echo ""
@@ -93,6 +94,10 @@ case $COMMAND in
       HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [ "$COMMAND" = "archive" ] ; then
       CLASS=org.apache.hadoop.tools.HadoopArchives
+      CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+      HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+    elif [ "$COMMAND" = "haadmin" ] ; then
+      CLASS=org.apache.hadoop.ha.HAAdmin
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
       HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
     elif [[ "$COMMAND" = -*  ]] ; then
