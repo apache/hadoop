@@ -357,6 +357,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3615. Fix some ant test failures. (Thomas Graves via sseth)
 
+    MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
+    adding a file/archive to the path. (Dick King via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

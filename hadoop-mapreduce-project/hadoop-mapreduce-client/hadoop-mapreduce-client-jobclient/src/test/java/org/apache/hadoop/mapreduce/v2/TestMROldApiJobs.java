@@ -196,7 +196,7 @@ public class TestMROldApiJobs {
       file.close();
     }
 
-    DistributedCache.addFileToClassPath(TestMRJobs.APP_JAR, conf);
+    DistributedCache.addFileToClassPath(TestMRJobs.APP_JAR, conf, fs);
     conf.setOutputCommitter(CustomOutputCommitter.class);
     conf.setInputFormat(TextInputFormat.class);
     conf.setOutputKeyClass(LongWritable.class);
