@@ -77,6 +77,15 @@ public class FilterFileSystem extends FileSystem {
     return fs.getUri();
   }
 
+  /**
+   * Returns a qualified URI whose scheme and authority identify this
+   * FileSystem.
+   */
+  @Override
+  protected URI getCanonicalUri() {
+    return fs.getCanonicalUri();
+  }
+  
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     return fs.makeQualified(path);

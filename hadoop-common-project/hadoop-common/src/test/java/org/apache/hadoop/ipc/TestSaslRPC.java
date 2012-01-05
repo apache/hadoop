@@ -287,10 +287,7 @@ public class TestSaslRPC {
         .getUserName()));
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
         sm);
-    Text host = new Text(addr.getAddress().getHostAddress() + ":"
-        + addr.getPort());
-    token.setService(host);
-    LOG.info("Service IP address for token is " + host);
+    SecurityUtil.setTokenService(token, addr);
     current.addToken(token);
 
     TestSaslProtocol proxy = null;
@@ -362,10 +359,7 @@ public class TestSaslRPC {
         .getUserName()));
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
         sm);
-    Text host = new Text(addr.getAddress().getHostAddress() + ":"
-        + addr.getPort());
-    token.setService(host);
-    LOG.info("Service IP address for token is " + host);
+    SecurityUtil.setTokenService(token, addr);
     current.addToken(token);
 
     Configuration newConf = new Configuration(conf);
@@ -452,10 +446,7 @@ public class TestSaslRPC {
         .getUserName()));
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
         sm);
-    Text host = new Text(addr.getAddress().getHostAddress() + ":"
-        + addr.getPort());
-    token.setService(host);
-    LOG.info("Service IP address for token is " + host);
+    SecurityUtil.setTokenService(token, addr);
     current.addToken(token);
 
     current.doAs(new PrivilegedExceptionAction<Object>() {

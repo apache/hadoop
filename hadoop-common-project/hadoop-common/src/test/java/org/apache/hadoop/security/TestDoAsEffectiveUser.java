@@ -418,9 +418,7 @@ public class TestDoAsEffectiveUser {
         .getUserName()), new Text("SomeSuperUser"));
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
         sm);
-    Text host = new Text(addr.getAddress().getHostAddress() + ":"
-        + addr.getPort());
-    token.setService(host);
+    SecurityUtil.setTokenService(token, addr);
     UserGroupInformation proxyUserUgi = UserGroupInformation
         .createProxyUserForTesting(PROXY_USER_NAME, current, GROUP_NAMES);
     proxyUserUgi.addToken(token);
@@ -476,9 +474,7 @@ public class TestDoAsEffectiveUser {
         .getUserName()), new Text("SomeSuperUser"));
     Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
         sm);
-    Text host = new Text(addr.getAddress().getHostAddress() + ":"
-        + addr.getPort());
-    token.setService(host);
+    SecurityUtil.setTokenService(token, addr);
     current.addToken(token);
     String retVal = current.doAs(new PrivilegedExceptionAction<String>() {
       @Override
