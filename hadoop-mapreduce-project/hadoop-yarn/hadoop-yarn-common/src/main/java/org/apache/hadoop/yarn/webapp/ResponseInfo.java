@@ -80,6 +80,10 @@ public class ResponseInfo implements Iterable<ResponseInfo.Item> {
     return this;
   }
 
+  public void clear() {
+    items.clear();
+  }
+
   @Override
   public Iterator<Item> iterator() {
     return items.iterator();
