@@ -32,20 +32,21 @@ public interface TaskAttemptListener {
   InetSocketAddress getAddress();
 
   /**
-   * register a JVM with the listener.  This should be called as soon as a 
+   * Register a JVM with the listener.  This should be called as soon as a 
    * JVM ID is assigned to a task attempt, before it has been launched.
+   * @param task the task itself for this JVM.
    * @param jvmID The ID of the JVM .
    */
-  void registerPendingTask(WrappedJvmID jvmID);
+  void registerPendingTask(Task task, WrappedJvmID jvmID);
   
   /**
-   * Register the task and task attempt with the JVM.  This should be called
-   * when the JVM has been launched.
-   * @param attemptID the id of the attempt for this JVM.
-   * @param task the task itself for this JVM.
-   * @param jvmID the id of the JVM handling the task.
+   * Register task attempt. This should be called when the JVM has been
+   * launched.
+   * 
+   * @param attemptID
+   *          the id of the attempt for this JVM.
    */
-  void registerLaunchedTask(TaskAttemptId attemptID, Task task, WrappedJvmID jvmID);
+  void registerLaunchedTask(TaskAttemptId attemptID);
 
   /**
    * Unregister the JVM and the attempt associated with it.  This should be 

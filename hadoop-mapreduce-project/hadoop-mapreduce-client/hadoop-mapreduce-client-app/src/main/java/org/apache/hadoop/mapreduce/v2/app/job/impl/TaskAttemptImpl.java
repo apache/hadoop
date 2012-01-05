@@ -1109,7 +1109,8 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.jvmID = new WrappedJvmID(
           taskAttempt.remoteTask.getTaskID().getJobID(), 
           taskAttempt.remoteTask.isMapTask(), taskAttempt.containerID.getId());
-      taskAttempt.taskAttemptListener.registerPendingTask(taskAttempt.jvmID);
+      taskAttempt.taskAttemptListener.registerPendingTask(
+          taskAttempt.remoteTask, taskAttempt.jvmID);
       
       //launch the container
       //create the container object to be launched for a given Task attempt
@@ -1198,10 +1199,9 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.launchTime = taskAttempt.clock.getTime();
       taskAttempt.shufflePort = event.getShufflePort();
 
-      // register it to TaskAttemptListener so that it start listening
-      // for it
-      taskAttempt.taskAttemptListener.registerLaunchedTask(
-          taskAttempt.attemptId, taskAttempt.remoteTask, taskAttempt.jvmID);
+      // register it to TaskAttemptListener so that it can start monitoring it.
+      taskAttempt.taskAttemptListener
+        .registerLaunchedTask(taskAttempt.attemptId);
       //TODO Resolve to host / IP in case of a local address.
       InetSocketAddress nodeHttpInetAddr =
           NetUtils.createSocketAddr(taskAttempt.nodeHttpAddress); // TODO:

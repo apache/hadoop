@@ -105,6 +105,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3568. Optimized Job's progress calculations in MR AM. (vinodkv)
 
+    MAPREDUCE-3569. TaskAttemptListener holds a global lock for all
+    task-updates. (Vinod Kumar Vavilapalli via sseth)
+
   BUG FIXES
     MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
                     (Ravi Prakash and Ravi Gummadi via amarrk)
