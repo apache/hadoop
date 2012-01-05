@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -50,6 +51,35 @@ public class SecurityUtil {
   public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
   public static final String HOSTNAME_PATTERN = "_HOST";
 
+  // controls whether buildTokenService will use an ip or host/ip as given
+  // by the user
+  private static boolean useIpForTokenService;
+  
+  static {
+    boolean useIp = new Configuration().getBoolean(
+      CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
+      CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
+    setTokenServiceUseIp(useIp);
+  }
+  
+  /**
+   * For use only by tests and initialization
+   */
+  @InterfaceAudience.Private
+  static void setTokenServiceUseIp(boolean flag) {
+    useIpForTokenService = flag;
+    NetUtils.setUseQualifiedHostResolver(!flag);
+  }
+  
+  /**
+   * Intended only for temporary use by NetUtils.  Do not use.
+   * @return whether tokens use an IP address
+   */
+  @InterfaceAudience.Private
+  public static boolean getTokenServiceUseIp() {
+    return useIpForTokenService;
+  }
+  
   /**
    * Find the original TGT within the current subject's credentials. Cross-realm
    * TGT's of the form "krbtgt/TWO.COM@ONE.COM" may be present.
@@ -263,29 +293,20 @@ public class SecurityUtil {
   }
 
   /**
-   * create service name for Delegation token ip:port
-   * @param uri
-   * @param defPort
-   * @return "ip:port"
+   * create the service name for a Delegation token
+   * @param uri of the service
+   * @param defPort is used if the uri lacks a port
+   * @return the token service, or null if no authority
+   * @see #buildTokenService(InetSocketAddress)
    */
   public static String buildDTServiceName(URI uri, int defPort) {
-    int port = uri.getPort();
-    if(port == -1) 
-      port = defPort;
-
-    // build the service name string "/ip:port"
-    // for whatever reason using NetUtils.createSocketAddr(target).toString()
-    // returns "localhost/ip:port"
-    StringBuffer sb = new StringBuffer();
-    String host = uri.getHost();
-    if (host != null) {
-      host = NetUtils.normalizeHostName(host);
-    } else {
-      host = "";
+    String authority = uri.getAuthority();
+    if (authority == null) {
+      return null;
     }
-    sb.append(host).append(":").append(port);
-    return sb.toString();
-  }
+    InetSocketAddress addr = NetUtils.createSocketAddr(authority, defPort);
+    return buildTokenService(addr).toString();
+   }
   
   /**
    * Get the host name from the principal name of format <service>/host@realm.
@@ -368,21 +389,57 @@ public class SecurityUtil {
   }
 
   /**
+   * Decode the given token's service field into an InetAddress
+   * @param token from which to obtain the service
+   * @return InetAddress for the service
+   */
+  public static InetSocketAddress getTokenServiceAddr(Token<?> token) {
+    return NetUtils.createSocketAddr(token.getService().toString());
+  }
+
+  /**
    * Set the given token's service to the format expected by the RPC client 
    * @param token a delegation token
    * @param addr the socket for the rpc connection
    */
   public static void setTokenService(Token<?> token, InetSocketAddress addr) {
-    token.setService(buildTokenService(addr));
+    Text service = buildTokenService(addr);
+    if (token != null) {
+      token.setService(service);
+      LOG.info("Acquired token "+token);  // Token#toString() prints service
+    } else {
+      LOG.warn("Failed to get token for service "+service);
+    }
   }
   
   /**
    * Construct the service key for a token
    * @param addr InetSocketAddress of remote connection with a token
-   * @return "ip:port"
+   * @return "ip:port" or "host:port" depending on the value of
+   *          hadoop.security.token.service.use_ip
    */
   public static Text buildTokenService(InetSocketAddress addr) {
-    String host = addr.getAddress().getHostAddress();
+    String host = null;
+    if (useIpForTokenService) {
+      if (addr.isUnresolved()) { // host has no ip address
+        throw new IllegalArgumentException(
+            new UnknownHostException(addr.getHostName())
+        );
+      }
+      host = addr.getAddress().getHostAddress();
+    } else {
+      host = addr.getHostName().toLowerCase();
+    }
     return new Text(host + ":" + addr.getPort());
+  }
+
+  /**
+   * Construct the service key for a token
+   * @param uri of remote connection with a token
+   * @return "ip:port" or "host:port" depending on the value of
+   *          hadoop.security.token.service.use_ip
+   */
+  public static Text buildTokenService(URI uri) {
+    return buildTokenService(NetUtils.createSocketAddr(uri.getAuthority()));
   }
 }

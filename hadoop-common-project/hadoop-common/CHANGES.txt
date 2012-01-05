@@ -51,6 +51,10 @@ Release 0.23.1 - Unreleased
     HADOOP-7933. Add a getDelegationTokens api to FileSystem which checks
     for known tokens in the passed Credentials object. (sseth)
 
+    HADOOP-7808. Port HADOOP-7510 - Add configurable option to use original 
+    hostname in token instead of IP to allow server IP change. 
+    (Daryn Sharp via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -28,6 +28,7 @@ import com.google.common.collect.Lists;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * Helpers to handle server addresses
@@ -57,14 +58,7 @@ public class Servers {
     else {
       String[] specStrings = specs.split("[ ,]+");
       for (String specString : specStrings) {
-        int colon = specString.indexOf(':');
-        if (colon < 0 || colon == specString.length() - 1) {
-          result.add(new InetSocketAddress(specString, defaultPort));
-        } else {
-          String hostname = specString.substring(0, colon);
-          int port = Integer.parseInt(specString.substring(colon+1));
-          result.add(new InetSocketAddress(hostname, port));
-        }
+        result.add(NetUtils.createSocketAddr(specString, defaultPort));
       }
     }
     return result;

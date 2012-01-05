@@ -17,25 +17,29 @@
  */
 package org.apache.hadoop.net;
 
-import junit.framework.AssertionFailedError;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.junit.Test;
-
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.ConnectException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
-import java.net.ConnectException;
 import java.net.SocketException;
-import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
+import junit.framework.AssertionFailedError;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestNetUtils {
 
@@ -247,5 +251,256 @@ public class TestNetUtils {
                                          + " got " + wrapped.getClass() + ": " + wrapped).initCause(wrapped);
     }
     return wrapped;
+  }
+
+  static NetUtilsTestResolver resolver;
+  static Configuration config;
+  
+  @BeforeClass
+  public static void setupResolver() {
+    resolver = NetUtilsTestResolver.install();
+  }
+  
+  @Before
+  public void resetResolver() {
+    resolver.reset();
+    config = new Configuration();
+  }
+
+  // getByExactName
+  
+  private void verifyGetByExactNameSearch(String host, String ... searches) {
+    assertNull(resolver.getByExactName(host));
+    assertBetterArrayEquals(searches, resolver.getHostSearches());
+  }
+
+  @Test
+  public void testResolverGetByExactNameUnqualified() {
+    verifyGetByExactNameSearch("unknown", "unknown.");
+  }
+
+  @Test
+  public void testResolverGetByExactNameUnqualifiedWithDomain() {
+    verifyGetByExactNameSearch("unknown.domain", "unknown.domain.");
+  }
+
+  @Test
+  public void testResolverGetByExactNameQualified() {
+    verifyGetByExactNameSearch("unknown.", "unknown.");
+  }
+  
+  @Test
+  public void testResolverGetByExactNameQualifiedWithDomain() {
+    verifyGetByExactNameSearch("unknown.domain.", "unknown.domain.");
+  }
+
+  // getByNameWithSearch
+  
+  private void verifyGetByNameWithSearch(String host, String ... searches) {
+    assertNull(resolver.getByNameWithSearch(host));
+    assertBetterArrayEquals(searches, resolver.getHostSearches());
+  }
+
+  @Test
+  public void testResolverGetByNameWithSearchUnqualified() {
+    String host = "unknown";
+    verifyGetByNameWithSearch(host, host+".a.b.", host+".b.", host+".c.");
+  }
+
+  @Test
+  public void testResolverGetByNameWithSearchUnqualifiedWithDomain() {
+    String host = "unknown.domain";
+    verifyGetByNameWithSearch(host, host+".a.b.", host+".b.", host+".c.");
+  }
+
+  @Test
+  public void testResolverGetByNameWithSearchQualified() {
+    String host = "unknown.";
+    verifyGetByNameWithSearch(host, host);
+  }
+
+  @Test
+  public void testResolverGetByNameWithSearchQualifiedWithDomain() {
+    String host = "unknown.domain.";
+    verifyGetByNameWithSearch(host, host);
+  }
+
+  // getByName
+
+  private void verifyGetByName(String host, String ... searches) {
+    InetAddress addr = null;
+    try {
+      addr = resolver.getByName(host);
+    } catch (UnknownHostException e) {} // ignore
+    assertNull(addr);
+    assertBetterArrayEquals(searches, resolver.getHostSearches());
+  }
+  
+  @Test
+  public void testResolverGetByNameQualified() {
+    String host = "unknown.";
+    verifyGetByName(host, host);
+  }
+
+  @Test
+  public void testResolverGetByNameQualifiedWithDomain() {
+    verifyGetByName("unknown.domain.", "unknown.domain.");
+  }
+
+  @Test
+  public void testResolverGetByNameUnqualified() {
+    String host = "unknown";
+    verifyGetByName(host, host+".a.b.", host+".b.", host+".c.", host+".");
+  }
+
+  @Test
+  public void testResolverGetByNameUnqualifiedWithDomain() {
+    String host = "unknown.domain";
+    verifyGetByName(host, host+".", host+".a.b.", host+".b.", host+".c.");
+  }
+  
+  // resolving of hosts
+
+  private InetAddress verifyResolve(String host, String ... searches) {
+    InetAddress addr = null;
+    try {
+      addr = resolver.getByName(host);
+    } catch (UnknownHostException e) {} // ignore
+    assertNotNull(addr);
+    assertBetterArrayEquals(searches, resolver.getHostSearches());
+    return addr;
+  }
+
+  private void
+  verifyInetAddress(InetAddress addr, String host, String ip) {
+    assertNotNull(addr);
+    assertEquals(host, addr.getHostName());
+    assertEquals(ip, addr.getHostAddress());
+  }
+  
+  @Test
+  public void testResolverUnqualified() {
+    String host = "host";
+    InetAddress addr = verifyResolve(host, host+".a.b.");
+    verifyInetAddress(addr, "host.a.b", "1.1.1.1");
+  }
+
+  @Test
+  public void testResolverUnqualifiedWithDomain() {
+    String host = "host.a";
+    InetAddress addr = verifyResolve(host, host+".", host+".a.b.", host+".b.");
+    verifyInetAddress(addr, "host.a.b", "1.1.1.1");
+  }
+
+  @Test
+  public void testResolverUnqualifedFull() {
+    String host = "host.a.b";
+    InetAddress addr = verifyResolve(host, host+".");
+    verifyInetAddress(addr, host, "1.1.1.1");
+  }
+  
+  @Test
+  public void testResolverQualifed() {
+    String host = "host.a.b.";
+    InetAddress addr = verifyResolve(host, host);
+    verifyInetAddress(addr, host, "1.1.1.1");
+  }
+  
+  // localhost
+  
+  @Test
+  public void testResolverLoopback() {
+    String host = "Localhost";
+    InetAddress addr = verifyResolve(host); // no lookup should occur
+    verifyInetAddress(addr, "Localhost", "127.0.0.1");
+  }
+
+  @Test
+  public void testResolverIP() {
+    String host = "1.1.1.1";
+    InetAddress addr = verifyResolve(host); // no lookup should occur for ips
+    verifyInetAddress(addr, host, host);
+  }
+
+  //
+    
+  @Test
+  public void testCanonicalUriWithPort() {
+    URI uri;
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123"), 456);
+    assertEquals("scheme://host.a.b:123", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123/"), 456);
+    assertEquals("scheme://host.a.b:123/", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123/path"), 456);
+    assertEquals("scheme://host.a.b:123/path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host:123/path?q#frag"), 456);
+    assertEquals("scheme://host.a.b:123/path?q#frag", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithDefaultPort() {
+    URI uri;
+    
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host"), 123);
+    assertEquals("scheme://host.a.b:123", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host/"), 123);
+    assertEquals("scheme://host.a.b:123/", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path"), 123);
+    assertEquals("scheme://host.a.b:123/path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path?q#frag"), 123);
+    assertEquals("scheme://host.a.b:123/path?q#frag", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithPath() {
+    URI uri;
+
+    uri = NetUtils.getCanonicalUri(URI.create("path"), 2);
+    assertEquals("path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("/path"), 2);
+    assertEquals("/path", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithNoAuthority() {
+    URI uri;
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:/"), 2);
+    assertEquals("scheme:/", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:/path"), 2);
+    assertEquals("scheme:/path", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:///"), 2);
+    assertEquals("scheme:///", uri.toString());
+
+    uri = NetUtils.getCanonicalUri(URI.create("scheme:///path"), 2);
+    assertEquals("scheme:///path", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithNoHost() {
+    URI uri = NetUtils.getCanonicalUri(URI.create("scheme://:123/path"), 2);
+    assertEquals("scheme://:123/path", uri.toString());
+  }
+
+  @Test
+  public void testCanonicalUriWithNoPortNoDefaultPort() {
+    URI uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path"), -1);
+    assertEquals("scheme://host.a.b/path", uri.toString());
+  }
+  
+  private <T> void assertBetterArrayEquals(T[] expect, T[]got) {
+    String expectStr = StringUtils.join(expect, ", ");
+    String gotStr = StringUtils.join(got, ", ");
+    assertEquals(expectStr, gotStr);
   }
 }

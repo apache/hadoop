@@ -417,7 +417,7 @@ public class Client {
      */
     private synchronized boolean updateAddress() throws IOException {
       // Do a fresh lookup with the old host name.
-      InetSocketAddress currentAddr =  new InetSocketAddress(
+      InetSocketAddress currentAddr = NetUtils.createSocketAddrForHost(
                                server.getHostName(), server.getPort());
 
       if (!server.equals(currentAddr)) {
