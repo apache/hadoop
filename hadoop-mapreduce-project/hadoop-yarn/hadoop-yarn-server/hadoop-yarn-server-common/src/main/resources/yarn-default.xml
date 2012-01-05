@@ -79,7 +79,6 @@
   <property>
     <description>The Kerberos principal for the resource manager.</description>
     <name>yarn.resourcemanager.principal</name>
-    <value>rm/sightbusy-lx@LOCALHOST</value>
   </property>
 
   <property>
@@ -430,7 +429,7 @@
   <property>
     <description>The kerberos principal for the node manager.</description>
     <name>yarn.nodemanager.principal</name>
-    <value>nm/sightbusy-lx@LOCALHOST</value>
+    <value></value>
   </property>
 
   <property>

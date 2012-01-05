@@ -366,6 +366,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3548. Added more unit tests for MR AM & JHS web-services.
     (Thomas Graves via acmurthy) 
 
+    MAPREDUCE-3617. Removed wrong default value for
+    yarn.resourcemanager.principal and yarn.nodemanager.principal. (Jonathan
+    Eagles via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
