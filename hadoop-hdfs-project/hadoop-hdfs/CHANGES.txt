@@ -42,6 +42,9 @@ Trunk (unreleased changes)
 
     HDFS-2661. Enable protobuf RPC for DatanodeProtocol. (jitendra)
 
+    HDFS-2697. Move RefreshAuthPolicy, RefreshUserMappings, GetUserMappings 
+    protocol to protocol buffers. (jitendra)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
