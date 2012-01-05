@@ -51,7 +51,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** How often does RPC client send pings to RPC server */
   public static final String  IPC_PING_INTERVAL_KEY = "ipc.ping.interval";
   /** Default value for IPC_PING_INTERVAL_KEY */
-  public static final int     IPC_PING_INTERVAL_DEFAULT = 60000;
+  public static final int     IPC_PING_INTERVAL_DEFAULT = 60000; // 1 min
   /** Enables pings from RPC client to the server */
   public static final String  IPC_CLIENT_PING_KEY = "ipc.client.ping";
   /** Default value of IPC_CLIENT_PING_KEY */

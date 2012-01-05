@@ -61,6 +61,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -298,7 +299,9 @@ public abstract class Server {
                                          //-tion (for idle connections) ran
     private long cleanupInterval = 10000; //the minimum interval between 
                                           //two cleanup runs
-    private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
+    private int backlogLength = conf.getInt(
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_LISTEN_QUEUE_SIZE_DEFAULT);
     
     public Listener() throws IOException {
       address = new InetSocketAddress(bindAddress, port);
@@ -1575,12 +1578,18 @@ public abstract class Server {
     } else {
       this.readThreads = conf.getInt(
           CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
-          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);      
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
     }
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
-    this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
-    this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
-    this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
+    this.maxIdleTime = 2 * conf.getInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT);
+    this.maxConnectionsToNuke = conf.getInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY,
+        CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_DEFAULT);
+    this.thresholdIdleConnections = conf.getInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_KEY,
+        CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_DEFAULT);
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
     this.authorize = 
       conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, 
@@ -1592,7 +1601,9 @@ public abstract class Server {
     this.port = listener.getAddress().getPort();    
     this.rpcMetrics = RpcMetrics.create(this);
     this.rpcDetailedMetrics = RpcDetailedMetrics.create(this.port);
-    this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
+    this.tcpNoDelay = conf.getBoolean(
+        CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_KEY,
+        CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_DEFAULT);
 
     // Create the responder here
     responder = new Responder();
