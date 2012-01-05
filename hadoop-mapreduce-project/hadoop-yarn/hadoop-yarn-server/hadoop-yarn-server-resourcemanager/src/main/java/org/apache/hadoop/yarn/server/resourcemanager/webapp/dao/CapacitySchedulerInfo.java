@@ -26,9 +26,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
-import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 
 @XmlRootElement(name = "capacityScheduler")
 @XmlType(name = "capacityScheduler")
@@ -83,21 +82,11 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     CSQueue parentQueue = parent;
     ArrayList<CapacitySchedulerQueueInfo> queuesInfo = new ArrayList<CapacitySchedulerQueueInfo>();
     for (CSQueue queue : parentQueue.getChildQueues()) {
-      float usedCapacity = queue.getUsedCapacity() * 100;
-      float capacity = queue.getCapacity() * 100;
-      String queueName = queue.getQueueName();
-      String queuePath = queue.getQueuePath();
-      float max = queue.getMaximumCapacity();
-      if (max < EPSILON || max > 1f)
-        max = 1f;
-      float maxCapacity = max * 100;
-      QueueState state = queue.getState();
-      CapacitySchedulerQueueInfo info = new CapacitySchedulerQueueInfo(
-          capacity, usedCapacity, maxCapacity, queueName, state, queuePath);
-
-      if (queue instanceof ParentQueue) {
-        info.isParent = true;
-        info.queue = queue;
+      CapacitySchedulerQueueInfo info;
+      if (queue instanceof LeafQueue) {
+        info = new CapacitySchedulerLeafQueueInfo((LeafQueue)queue);
+      } else {
+        info = new CapacitySchedulerQueueInfo(queue);
         info.subQueues = getQueues(queue);
       }
       queuesInfo.add(info);

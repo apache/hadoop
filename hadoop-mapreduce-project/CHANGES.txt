@@ -360,6 +360,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
     adding a file/archive to the path. (Dick King via tucu)
 
+    MAPREDUCE-3326. Added detailed information about queue's to the
+    CapacityScheduler web-ui. (Jason Lowe via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
