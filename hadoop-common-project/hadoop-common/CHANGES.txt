@@ -79,11 +79,19 @@ Trunk (unreleased changes)
 
     HADOOP-7899. Generate proto java files as part of the build. (tucu)
 
-    HADOOP-7574. Improve FSShell -stat, add user/group elements (XieXianshan via harsh)
+    HADOOP-7574. Improve FSShell -stat, add user/group elements.
+    (XieXianshan via harsh)
 
-    HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead (XieXianshan via harsh)
+    HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead.
+    (XieXianshan via harsh)
 
-    HADOOP-7919. Remove the unused hadoop.logfile.* properties from the core-default.xml file. (harsh)
+    HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
+    core-default.xml file. (harsh)
+
+    HADOOP-7808. Port HADOOP-7510 - Add configurable option to use original 
+    hostname in token instead of IP to allow server IP change. 
+    (Daryn Sharp via suresh)
+  
 
   BUGS
 
@@ -240,6 +248,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7948. Shell scripts created by hadoop-dist/pom.xml to build tar do not 
    properly propagate failure. (cim_michajlomatijkiw via tucu)
+
+   HADOOP-7949. Updated maxIdleTime default in the code to match
+   core-default.xml (eli)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -48,6 +48,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RpcPayloadHeader.*;
 import org.apache.hadoop.io.IOUtils;
@@ -88,8 +89,6 @@ public class Client {
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
   
-  final static String PING_INTERVAL_NAME = "ipc.ping.interval";
-  final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
   final static int PING_CALL_ID = -1;
   
   /**
@@ -99,7 +98,7 @@ public class Client {
    * @param pingInterval the ping interval
    */
   final public static void setPingInterval(Configuration conf, int pingInterval) {
-    conf.setInt(PING_INTERVAL_NAME, pingInterval);
+    conf.setInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY, pingInterval);
   }
 
   /**
@@ -110,7 +109,8 @@ public class Client {
    * @return the ping interval
    */
   final static int getPingInterval(Configuration conf) {
-    return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
+    return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
+        CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
   }
 
   /**
@@ -123,7 +123,7 @@ public class Client {
    * @return the timeout period in milliseconds. -1 if no timeout value is set
    */
   final public static int getTimeout(Configuration conf) {
-    if (!conf.getBoolean("ipc.client.ping", true)) {
+    if (!conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true)) {
       return getPingInterval(conf);
     }
     return -1;
@@ -425,7 +425,7 @@ public class Client {
      */
     private synchronized boolean updateAddress() throws IOException {
       // Do a fresh lookup with the old host name.
-      InetSocketAddress currentAddr =  new InetSocketAddress(
+      InetSocketAddress currentAddr = NetUtils.createSocketAddrForHost(
                                server.getHostName(), server.getPort());
 
       if (!server.equals(currentAddr)) {
@@ -1347,15 +1347,19 @@ public class Client {
         Class<?> protocol, UserGroupInformation ticket, int rpcTimeout,
         Configuration conf) throws IOException {
       String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
-      boolean doPing = conf.getBoolean("ipc.client.ping", true);
+      boolean doPing =
+        conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true);
       return new ConnectionId(addr, protocol, ticket,
           rpcTimeout, remotePrincipal,
-          conf.getInt("ipc.client.connection.maxidletime", 10000), // 10s
-          conf.getInt("ipc.client.connect.max.retries", 10),
           conf.getInt(
             CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
             CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT),
-          conf.getBoolean("ipc.client.tcpnodelay", false),
+          conf.getInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+              CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT),
+          conf.getInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+              CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT),
+          conf.getBoolean(CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
+              CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT),
           doPing, 
           (doPing ? Client.getPingInterval(conf) : 0));
     }

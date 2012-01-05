@@ -165,7 +165,7 @@ public class CommonConfigurationKeysPublic {
   public static final String  IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY =
     "ipc.client.connection.maxidletime";
   /** Default value for IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY */
-  public static final int     IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT = 10000;
+  public static final int     IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT = 10000; // 10s
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IPC_CLIENT_CONNECT_MAX_RETRIES_KEY =
     "ipc.client.connect.max.retries";

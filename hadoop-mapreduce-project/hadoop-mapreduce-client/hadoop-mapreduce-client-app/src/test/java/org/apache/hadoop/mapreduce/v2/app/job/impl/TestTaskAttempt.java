@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.Test;
 
+@SuppressWarnings("unchecked")
 public class TestTaskAttempt{
 
   @Test

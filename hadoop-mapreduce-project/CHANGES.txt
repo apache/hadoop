@@ -180,6 +180,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
 
+    MAPREDUCE-3478. Cannot build against ZooKeeper 3.4.0. (Tom White via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -190,6 +192,9 @@ Release 0.23.1 - Unreleased
     second. (Siddarth Seth via vinodkv)
 
     MAPREDUCE-3568. Optimized Job's progress calculations in MR AM. (vinodkv)
+
+    MAPREDUCE-3569. TaskAttemptListener holds a global lock for all
+    task-updates. (Vinod Kumar Vavilapalli via sseth)
 
   BUG FIXES
 
@@ -394,6 +399,20 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
     adding a file/archive to the path. (Dick King via tucu)
+
+    MAPREDUCE-3529. TokenCache does not cache viewfs credentials correctly
+    (sseth)
+
+    MAPREDUCE-3595. Add missing TestCounters#testCounterValue test from branch
+    1 to 0.23 (Tom White via sseth)
+
+    MAPREDUCE-3566. Fixed MR AM to construct CLC only once across all tasks.
+    (vinodkv via acmurthy) 
+
+    MAPREDUCE-3572. Moved AM event dispatcher to a separate thread for
+    performance reasons. (vinodkv via acmurthy) 
+
+    MAPREDUCE-3615. Fix some ant test failures. (Thomas Graves via sseth)
 
 Release 0.23.0 - 2011-11-01 
 

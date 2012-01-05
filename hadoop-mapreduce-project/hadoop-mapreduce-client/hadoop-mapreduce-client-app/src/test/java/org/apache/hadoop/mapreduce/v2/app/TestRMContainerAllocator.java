@@ -1186,12 +1186,12 @@ public class TestRMContainerAllocator {
 
     public void sendRequests(List<ContainerRequestEvent> reqs) {
       for (ContainerRequestEvent req : reqs) {
-        super.handle(req);
+        super.handleEvent(req);
       }
     }
 
     public void sendFailure(ContainerFailedEvent f) {
-      super.handle(f);
+      super.handleEvent(f);
     }
     
     // API to be used by tests

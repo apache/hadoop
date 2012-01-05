@@ -40,6 +40,7 @@ import org.junit.Test;
 /**
  * Tests the state machine of MR App.
  */
+@SuppressWarnings("unchecked")
 public class TestMRApp {
 
   @Test

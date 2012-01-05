@@ -104,10 +104,9 @@ public abstract class RMCommunicator extends AbstractService  {
   @Override
   public void start() {
     scheduler= createSchedulerProxy();
-    //LOG.info("Scheduler is " + scheduler);
     register();
     startAllocatorThread();
-    JobID id = TypeConverter.fromYarn(context.getApplicationID());
+    JobID id = TypeConverter.fromYarn(this.applicationId);
     JobId jobId = TypeConverter.toYarn(id);
     job = context.getJob(jobId);
     super.start();

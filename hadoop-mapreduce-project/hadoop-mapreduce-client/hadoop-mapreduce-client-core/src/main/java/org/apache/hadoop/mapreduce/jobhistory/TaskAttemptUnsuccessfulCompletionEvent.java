@@ -103,7 +103,7 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
        (TaskAttemptID id, TaskType taskType,
         String status, long finishTime, 
         String hostname, String error) {
-    this(id, taskType, status, finishTime, hostname, -1, null, error, null);
+    this(id, taskType, status, finishTime, hostname, -1, "", error, null);
   }
 
   TaskAttemptUnsuccessfulCompletionEvent() {}

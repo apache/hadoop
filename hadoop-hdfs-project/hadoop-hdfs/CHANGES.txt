@@ -258,9 +258,12 @@ Release 0.23.1 - UNRELEASED
     HDFS-2335. DataNodeCluster and NNStorage always pull fresh entropy.
     (Uma Maheswara Rao G via eli)
 
-    HDFS-2574. Remove references to some deprecated properties in conf templates and defaults files. (Joe Crobak via harsh)
+    HDFS-2574. Remove references to some deprecated properties in conf 
+    templates and defaults files. (Joe Crobak via harsh)
 
     HDFS-2722. HttpFs should not be using an int for block size. (harsh)
+
+    HDFS-2710. Add HDFS tests related to HADOOP-7933. (sid via suresh)
 
   OPTIMIZATIONS
 
