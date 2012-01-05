@@ -355,6 +355,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3572. Moved AM event dispatcher to a separate thread for
     performance reasons. (vinodkv via acmurthy) 
 
+    MAPREDUCE-3615. Fix some ant test failures. (Thomas Graves via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
