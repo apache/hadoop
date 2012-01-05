@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
@@ -43,7 +44,7 @@ public class TaskAttemptInfo {
   protected float progress;
   protected String id;
   protected String rack;
-  protected String state;
+  protected TaskAttemptState state;
   protected String nodeHttpAddress;
   protected String diagnostics;
   protected String type;
@@ -69,7 +70,7 @@ public class TaskAttemptInfo {
         .getAssignedContainerID());
     this.assignedContainer = ta.getAssignedContainerID();
     this.progress = ta.getProgress() * 100;
-    this.state = ta.getState().toString();
+    this.state = ta.getState();
     this.elapsedTime = Times
         .elapsed(this.startTime, this.finishTime, isRunning);
     if (this.elapsedTime == -1) {
@@ -95,7 +96,7 @@ public class TaskAttemptInfo {
   }
 
   public String getState() {
-    return this.state;
+    return this.state.toString();
   }
 
   public String getId() {
