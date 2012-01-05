@@ -65,6 +65,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2722. HttpFs should not be using an int for block size. (harsh)
 
+    HDFS-2710. Add HDFS tests related to HADOOP-7933. (Siddarth Seth via
+    suresh)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

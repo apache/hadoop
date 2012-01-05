@@ -20,44 +20,54 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.List;
 
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 
 
 public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
+  private static Path defaultWorkingDirectory2;
   private static Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
+  private static FileSystem fHdfs2;
+  private FileSystem fsTarget2;
+  Path targetTestRoot2;
   
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
-    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
+    cluster =
+        new MiniDFSCluster.Builder(CONF).numNameNodes(2).numDataNodes(2)
+            .build();
     cluster.waitClusterUp();
-    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
-    fHdfs = cluster.getFileSystem();
+    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem(0)).startThreads();
+    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem(1)).startThreads();
+    
+    fHdfs = cluster.getFileSystem(0);
+    fHdfs2 = cluster.getFileSystem(1);
+    
     defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
+    defaultWorkingDirectory2 = fHdfs2.makeQualified( new Path("/user/" + 
+        UserGroupInformation.getCurrentUser().getShortUserName()));
+    
     fHdfs.mkdirs(defaultWorkingDirectory);
+    fHdfs2.mkdirs(defaultWorkingDirectory2);
   }
 
       
@@ -70,25 +80,42 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   public void setUp() throws Exception {
     // create the test root on local_fs
     fsTarget = fHdfs;
+    fsTarget2 = fHdfs2;
+    targetTestRoot2 = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget2);
     super.setUp();
-    
   }
 
   @After
   public void tearDown() throws Exception {
     super.tearDown();
   }
-  
-  /*
-   * This overides the default implementation since hdfs does have delegation
-   * tokens.
-   */
+
   @Override
-  @Test
-  public void testGetDelegationTokens() throws IOException {
-    List<Token<?>> delTokens = 
-        fsView.getDelegationTokens("sanjay");
-    Assert.assertEquals(7, delTokens.size()); 
+  void setupMountPoints() {
+    super.setupMountPoints();
+    ConfigUtil.addLink(conf, "/mountOnNn2", new Path(targetTestRoot2,
+        "mountOnNn2").toUri());
   }
 
+  // Overriden test helper methods - changed values based on hdfs and the
+  // additional mount.
+  @Override
+  int getExpectedDirPaths() {
+    return 7;
+  }
+  
+  @Override
+  int getExpectedMountPoints() {
+    return 8;
+  }
+
+  @Override
+  int getExpectedDelegationTokenCount() {
+    return 8;
+  }
+
+  @Override
+  int getExpectedDelegationTokenCountWithCredentials() {
+    return 2;
+  }
 }
