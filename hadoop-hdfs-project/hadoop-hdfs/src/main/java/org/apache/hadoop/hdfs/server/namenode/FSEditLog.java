@@ -285,7 +285,7 @@ public class FSEditLog  {
   /**
    * @return true if the log is open in read mode.
    */
-  synchronized boolean isOpenForRead() {
+  public synchronized boolean isOpenForRead() {
     return state == State.OPEN_FOR_READING;
   }
 

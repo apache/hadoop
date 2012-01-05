@@ -1339,17 +1339,11 @@ public class TestCheckpoint extends TestCase {
       // Let the first one finish
       delayer.proceed();
       
-      // Letting the first node continue should catch an exception
+      // Letting the first node continue, it should try to upload the
+      // same image, and gracefully ignore it, while logging an
+      // error message.
       checkpointThread.join();
-      try {
-        checkpointThread.propagateExceptions();
-        fail("Didn't throw!");
-      } catch (Exception ioe) {
-        assertTrue("Unexpected exception: " +
-            StringUtils.stringifyException(ioe),
-            ioe.toString().contains("Another checkpointer already uploaded"));
-        LOG.info("Caught expected exception", ioe);
-      }
+      checkpointThread.propagateExceptions();
       
       // primary should still consider fsimage_4 the latest
       assertEquals(4, storage.getMostRecentCheckpointTxId());
@@ -1791,7 +1785,7 @@ public class TestCheckpoint extends TestCase {
   private void assertParallelFilesInvariant(MiniDFSCluster cluster,
       ImmutableList<SecondaryNameNode> secondaries) throws Exception {
     List<File> allCurrentDirs = Lists.newArrayList();
-    allCurrentDirs.addAll(getNameNodeCurrentDirs(cluster));
+    allCurrentDirs.addAll(getNameNodeCurrentDirs(cluster, 0));
     for (SecondaryNameNode snn : secondaries) {
       allCurrentDirs.addAll(getCheckpointCurrentDirs(snn));
     }

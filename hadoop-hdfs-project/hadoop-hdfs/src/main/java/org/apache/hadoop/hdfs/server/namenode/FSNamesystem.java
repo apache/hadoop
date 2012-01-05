@@ -47,6 +47,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DAT
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY;
@@ -112,6 +114,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -159,6 +162,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
+import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -261,6 +265,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private UserGroupInformation fsOwner;
   private String supergroup;
   private PermissionStatus defaultPermission;
+  private boolean standbyShouldCheckpoint;
   
   // Scan interval is not configurable.
   private static final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL =
@@ -322,10 +327,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private EditLogTailer editLogTailer = null;
 
   /**
+   * Used when this NN is in standby state to perform checkpoints.
+   */
+  private StandbyCheckpointer standbyCheckpointer;
+
+  /**
    * Reference to the NN's HAContext object. This is only set once
    * {@link #startCommonServices(Configuration, HAContext)} is called. 
    */
   private HAContext haContext;
+
+  private final Configuration conf;
   
   PendingDataNodeMessages getPendingDataNodeMessages() {
     return pendingDatanodeMessages;
@@ -381,6 +393,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException on bad configuration
    */
   FSNamesystem(Configuration conf, FSImage fsImage) throws IOException {
+    this.conf = conf;
     try {
       initialize(conf, fsImage);
     } catch(IOException e) {
@@ -568,11 +581,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     editLogTailer = new EditLogTailer(this);
     editLogTailer.start();
+    if (standbyShouldCheckpoint) {
+      standbyCheckpointer = new StandbyCheckpointer(conf, this);
+      standbyCheckpointer.start();
+    }
+  }
+
+
+  /**
+   * Called while the NN is in Standby state, but just about to be
+   * asked to enter Active state. This cancels any checkpoints
+   * currently being taken.
+   */
+  void prepareToStopStandbyServices() throws ServiceFailedException {
+    if (standbyCheckpointer != null) {
+      standbyCheckpointer.cancelAndPreventCheckpoints();
+    }
   }
 
   /** Stop services required in standby state */
   void stopStandbyServices() throws IOException {
     LOG.info("Stopping services started for standby state");
+    if (standbyCheckpointer != null) {
+      standbyCheckpointer.stop();
+    }
     if (editLogTailer != null) {
       editLogTailer.stop();
     }
@@ -728,6 +760,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         DFS_SUPPORT_APPEND_DEFAULT);
 
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
+    
+    this.standbyShouldCheckpoint = conf.getBoolean(
+        DFS_HA_STANDBY_CHECKPOINTS_KEY,
+        DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
   }
 
   /**

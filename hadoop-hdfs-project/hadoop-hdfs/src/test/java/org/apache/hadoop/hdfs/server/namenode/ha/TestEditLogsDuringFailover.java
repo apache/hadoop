@@ -129,7 +129,7 @@ public class TestEditLogsDuringFailover {
       // Create a fake in-progress edit-log in the shared directory
       URI sharedUri = cluster.getSharedEditsDir(0, 1);
       File sharedDir = new File(sharedUri.getPath(), "current");
-      FSImageTestUtil.createAbortedLogWithMkdirs(sharedDir, NUM_DIRS_IN_LOG);
+      FSImageTestUtil.createAbortedLogWithMkdirs(sharedDir, NUM_DIRS_IN_LOG, 1);
       assertEditFiles(Collections.singletonList(sharedUri),
           NNStorage.getInProgressEditsFileName(1));
 

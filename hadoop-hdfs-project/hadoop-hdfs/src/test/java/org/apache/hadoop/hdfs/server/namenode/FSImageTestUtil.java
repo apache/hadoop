@@ -195,9 +195,10 @@ public abstract class FSImageTestUtil {
    * Create an aborted in-progress log in the given directory, containing
    * only a specified number of "mkdirs" operations.
    */
-  public static void createAbortedLogWithMkdirs(File editsLogDir, int numDirs)
-      throws IOException {
+  public static void createAbortedLogWithMkdirs(File editsLogDir, int numDirs,
+      long firstTxId) throws IOException {
     FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
+    editLog.setNextTxId(firstTxId);
     editLog.openForWrite();
     
     PermissionStatus perms = PermissionStatus.createImmutable("fakeuser", "fakegroup",
@@ -399,10 +400,15 @@ public abstract class FSImageTestUtil {
    * Assert that the NameNode has checkpoints at the expected
    * transaction IDs.
    */
-  static void assertNNHasCheckpoints(MiniDFSCluster cluster,
+  public static void assertNNHasCheckpoints(MiniDFSCluster cluster,
       List<Integer> txids) {
+    assertNNHasCheckpoints(cluster, 0, txids);
+  }
+  
+  public static void assertNNHasCheckpoints(MiniDFSCluster cluster,
+      int nnIdx, List<Integer> txids) {
 
-    for (File nameDir : getNameNodeCurrentDirs(cluster)) {
+    for (File nameDir : getNameNodeCurrentDirs(cluster, nnIdx)) {
       // Should have fsimage_N for the three checkpoints
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
@@ -412,9 +418,9 @@ public abstract class FSImageTestUtil {
     }
   }
 
-  static List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster) {
+  public static List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster, int nnIdx) {
     List<File> nameDirs = Lists.newArrayList();
-    for (URI u : cluster.getNameDirs(0)) {
+    for (URI u : cluster.getNameDirs(nnIdx)) {
       nameDirs.add(new File(u.getPath(), "current"));
     }
     return nameDirs;

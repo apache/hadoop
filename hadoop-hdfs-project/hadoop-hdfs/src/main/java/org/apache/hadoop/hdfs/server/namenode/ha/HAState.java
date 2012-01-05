@@ -54,6 +54,8 @@ abstract public class HAState {
    */
   protected final void setStateInternal(final HAContext context, final HAState s)
       throws ServiceFailedException {
+    prepareToExitState(context);
+    s.prepareToEnterState(context);
     context.writeLock();
     try {
       exitState(context);
@@ -65,6 +67,18 @@ abstract public class HAState {
   }
 
   /**
+   * Method to be overridden by subclasses to prepare to enter a state.
+   * This method is called <em>without</em> the context being locked,
+   * and after {@link #prepareToExitState(HAContext)} has been called
+   * for the previous state, but before {@link #exitState(HAContext)}
+   * has been called for the previous state.
+   * @param context HA context
+   * @throws ServiceFailedException on precondition failure
+   */
+  public void prepareToEnterState(final HAContext context)
+      throws ServiceFailedException {}
+
+  /**
    * Method to be overridden by subclasses to perform steps necessary for
    * entering a state.
    * @param context HA context
@@ -72,6 +86,22 @@ abstract public class HAState {
    */
   public abstract void enterState(final HAContext context)
       throws ServiceFailedException;
+
+  /**
+   * Method to be overridden by subclasses to prepare to exit a state.
+   * This method is called <em>without</em> the context being locked.
+   * This is used by the standby state to cancel any checkpoints
+   * that are going on. It can also be used to check any preconditions
+   * for the state transition.
+   * 
+   * This method should not make any destructuve changes to the state
+   * (eg stopping threads) since {@link #prepareToEnterState(HAContext)}
+   * may subsequently cancel the state transition.
+   * @param context HA context
+   * @throws ServiceFailedException on precondition failure
+   */
+  public void prepareToExitState(final HAContext context)
+      throws ServiceFailedException {}
 
   /**
    * Method to be overridden by subclasses to perform steps necessary for

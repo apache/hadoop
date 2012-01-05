@@ -62,6 +62,11 @@ public class StandbyState extends HAState {
   }
 
   @Override
+  public void prepareToExitState(HAContext context) throws ServiceFailedException {
+    context.prepareToStopStandbyServices();
+  }
+
+  @Override
   public void exitState(HAContext context) throws ServiceFailedException {
     try {
       context.stopStandbyServices();

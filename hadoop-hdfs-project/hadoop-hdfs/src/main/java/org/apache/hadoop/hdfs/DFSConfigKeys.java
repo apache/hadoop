@@ -331,4 +331,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // HA related configuration
   public static final String DFS_HA_NAMENODES_KEY = "dfs.ha.namenodes";
   public static final String DFS_HA_NAMENODE_ID_KEY = "dfs.ha.namenode.id";
+  public static final String  DFS_HA_STANDBY_CHECKPOINTS_KEY = "dfs.ha.standby.checkpoints";
+  public static final boolean DFS_HA_STANDBY_CHECKPOINTS_DEFAULT = true;
 }

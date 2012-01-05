@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileSystem;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -117,16 +118,8 @@ public class SecondaryNameNode implements Runnable {
 
   private Collection<URI> checkpointDirs;
   private Collection<URI> checkpointEditsDirs;
-  
-  /** How often to checkpoint regardless of number of txns */
-  private long checkpointPeriod;    // in seconds
-  
-  /** How often to poll the NN to check checkpointTxnCount */
-  private long checkpointCheckPeriod; // in seconds
-  
-  /** checkpoint once every this many transactions, regardless of time */
-  private long checkpointTxnCount;
 
+  private CheckpointConf checkpointConf;
   private FSNamesystem namesystem;
 
 
@@ -136,9 +129,9 @@ public class SecondaryNameNode implements Runnable {
       + "\nName Node Address    : " + nameNodeAddr   
       + "\nStart Time           : " + new Date(starttime)
       + "\nLast Checkpoint Time : " + (lastCheckpointTime == 0? "--": new Date(lastCheckpointTime))
-      + "\nCheckpoint Period    : " + checkpointPeriod + " seconds"
-      + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointTxnCount)
-                                    + " (= " + checkpointTxnCount + " bytes)" 
+      + "\nCheckpoint Period    : " + checkpointConf.getPeriod() + " seconds"
+      + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointConf.getTxnCount())
+                                    + " (= " + checkpointConf.getTxnCount() + " bytes)" 
       + "\nCheckpoint Dirs      : " + checkpointDirs
       + "\nCheckpoint Edits Dirs: " + checkpointEditsDirs;
   }
@@ -243,16 +236,8 @@ public class SecondaryNameNode implements Runnable {
     namesystem = new FSNamesystem(conf, checkpointImage);
 
     // Initialize other scheduling parameters from the configuration
-    checkpointCheckPeriod = conf.getLong(
-        DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY,
-        DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_DEFAULT);
-        
-    checkpointPeriod = conf.getLong(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
-                                    DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
-    checkpointTxnCount = conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
-                                  DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
-    warnForDeprecatedConfigs(conf);
-
+    checkpointConf = new CheckpointConf(conf);
+    
     // initialize the webserver for uploading files.
     // Kerberized SSL servers must be run from the host principal...
     UserGroupInformation httpUGI = 
@@ -307,21 +292,9 @@ public class SecondaryNameNode implements Runnable {
     conf.set(DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
     LOG.info("Secondary image servlet up at: " + infoBindAddress + ":" + imagePort);
-    LOG.info("Checkpoint Period   :" + checkpointPeriod + " secs " +
-             "(" + checkpointPeriod/60 + " min)");
-    LOG.info("Log Size Trigger    :" + checkpointTxnCount + " txns");
-  }
-
-  static void warnForDeprecatedConfigs(Configuration conf) {
-    for (String key : ImmutableList.of(
-          "fs.checkpoint.size",
-          "dfs.namenode.checkpoint.size")) {
-      if (conf.get(key) != null) {
-        LOG.warn("Configuration key " + key + " is deprecated! Ignoring..." +
-            " Instead please specify a value for " +
-            DFS_NAMENODE_CHECKPOINT_TXNS_KEY);
-      }
-    }
+    LOG.info("Checkpoint Period   :" + checkpointConf.getPeriod() + " secs " +
+             "(" + checkpointConf.getPeriod()/60 + " min)");
+    LOG.info("Log Size Trigger    :" + checkpointConf.getTxnCount() + " txns");
   }
 
   /**
@@ -372,7 +345,7 @@ public class SecondaryNameNode implements Runnable {
     // Poll the Namenode (once every checkpointCheckPeriod seconds) to find the
     // number of transactions in the edit log that haven't yet been checkpointed.
     //
-    long period = Math.min(checkpointCheckPeriod, checkpointPeriod);
+    long period = checkpointConf.getCheckPeriod();
 
     while (shouldRun) {
       try {
@@ -391,7 +364,7 @@ public class SecondaryNameNode implements Runnable {
         long now = System.currentTimeMillis();
 
         if (shouldCheckpointBasedOnCount() ||
-            now >= lastCheckpointTime + 1000 * checkpointPeriod) {
+            now >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {
           doCheckpoint();
           lastCheckpointTime = now;
         }
@@ -585,13 +558,13 @@ public class SecondaryNameNode implements Runnable {
       switch (opts.getCommand()) {
       case CHECKPOINT:
         long count = countUncheckpointedTxns();
-        if (count > checkpointTxnCount ||
+        if (count > checkpointConf.getTxnCount() ||
             opts.shouldForceCheckpoint()) {
           doCheckpoint();
         } else {
           System.err.println("EditLog size " + count + " transactions is " +
                              "smaller than configured checkpoint " +
-                             "interval " + checkpointTxnCount + " transactions.");
+                             "interval " + checkpointConf.getTxnCount() + " transactions.");
           System.err.println("Skipping checkpoint.");
         }
         break;
@@ -637,7 +610,7 @@ public class SecondaryNameNode implements Runnable {
   }
 
   boolean shouldCheckpointBasedOnCount() throws IOException {
-    return countUncheckpointedTxns() >= checkpointTxnCount;
+    return countUncheckpointedTxns() >= checkpointConf.getTxnCount();
   }
 
   /**

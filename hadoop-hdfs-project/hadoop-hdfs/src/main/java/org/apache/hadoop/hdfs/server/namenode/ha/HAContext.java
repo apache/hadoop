@@ -3,6 +3,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -26,7 +27,10 @@ public interface HAContext {
   
   /** Start the services required in standby state */
   public void startStandbyServices() throws IOException;
-  
+
+  /** Prepare to exit the standby state */
+  public void prepareToStopStandbyServices() throws ServiceFailedException;
+
   /** Stop the services when exiting standby state */
   public void stopStandbyServices() throws IOException;
 

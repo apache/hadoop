@@ -46,7 +46,6 @@ public class EditLogTailer {
   private final EditLogTailerThread tailerThread;
   
   private final FSNamesystem namesystem;
-  private final FSImage image;
   private final FSEditLog editLog;
   
   private volatile Throwable lastError = null;
@@ -54,7 +53,6 @@ public class EditLogTailer {
   public EditLogTailer(FSNamesystem namesystem) {
     this.tailerThread = new EditLogTailerThread();
     this.namesystem = namesystem;
-    this.image = namesystem.getFSImage();
     this.editLog = namesystem.getEditLog();
   }
   
@@ -106,6 +104,8 @@ public class EditLogTailer {
     // deadlock.
     namesystem.writeLockInterruptibly();
     try {
+      FSImage image = namesystem.getFSImage();
+
       long lastTxnId = image.getLastAppliedTxId();
       
       if (LOG.isDebugEnabled()) {

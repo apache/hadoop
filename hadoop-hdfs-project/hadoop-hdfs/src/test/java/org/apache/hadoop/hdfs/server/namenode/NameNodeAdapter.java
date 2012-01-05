@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.mockito.Mockito;
 
 /**
@@ -147,6 +148,12 @@ public class NameNodeAdapter {
   public static ReentrantReadWriteLock spyOnFsLock(FSNamesystem fsn) {
     ReentrantReadWriteLock spy = Mockito.spy(fsn.getFsLockForTests());
     fsn.setFsLockForTests(spy);
+    return spy;
+  }
+
+  public static FSImage spyOnFsImage(NameNode nn1) {
+    FSImage spy = Mockito.spy(nn1.getNamesystem().dir.fsImage);
+    nn1.getNamesystem().dir.fsImage = spy;
     return spy;
   }
 }

@@ -538,6 +538,16 @@ public class MiniDFSCluster {
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
                    StaticMapping.class, DNSToSwitchMapping.class);
     
+    // In an HA cluster, in order for the StandbyNode to perform checkpoints,
+    // it needs to know the HTTP port of the Active. So, if ephemeral ports
+    // are chosen, disable checkpoints for the test.
+    if (!nnTopology.allHttpPortsSpecified() &&
+        nnTopology.isHA()) {
+      LOG.info("MiniDFSCluster disabling checkpointing in the Standby node " +
+          "since no HTTP ports have been specified.");
+      conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
+    }
+    
     federation = nnTopology.isFederated();
     createNameNodesAndSetConf(
         nnTopology, manageNameDfsDirs, format, operation, clusterId, conf);

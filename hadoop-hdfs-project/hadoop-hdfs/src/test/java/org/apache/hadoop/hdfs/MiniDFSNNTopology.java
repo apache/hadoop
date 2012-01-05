@@ -106,6 +106,34 @@ public class MiniDFSNNTopology {
   public boolean isFederated() {
     return nameservices.size() > 1 || federation;
   }
+  
+  /**
+   * @return true if at least one of the nameservices
+   * in the topology has HA enabled.
+   */
+  public boolean isHA() {
+    for (NSConf ns : nameservices) {
+      if (ns.getNNs().size() > 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @return true if all of the NNs in the cluster have their HTTP
+   * port specified to be non-ephemeral.
+   */
+  public boolean allHttpPortsSpecified() {
+    for (NSConf ns : nameservices) {
+      for (NNConf nn : ns.getNNs()) {
+        if (nn.getHttpPort() == 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   public List<NSConf> getNameservices() {
     return nameservices;

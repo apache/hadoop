@@ -543,6 +543,7 @@ public class NameNode {
       } else {
         state = STANDBY_STATE;;
       }
+      state.prepareToEnterState(haContext);
       state.enterState(haContext);
     } catch (IOException e) {
       this.stop();
@@ -966,6 +967,11 @@ public class NameNode {
     }
 
     @Override
+    public void prepareToStopStandbyServices() throws ServiceFailedException {
+      namesystem.prepareToStopStandbyServices();
+    }
+    
+    @Override
     public void stopStandbyServices() throws IOException {
       // TODO(HA): Are we guaranteed to be the only active here?
       namesystem.stopStandbyServices();
@@ -992,6 +998,7 @@ public class NameNode {
     public boolean allowStaleReads() {
       return allowStaleStandbyReads;
     }
+
   }
   
   public boolean isStandbyState() {

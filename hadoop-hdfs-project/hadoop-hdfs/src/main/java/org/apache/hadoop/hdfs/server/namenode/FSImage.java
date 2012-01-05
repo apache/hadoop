@@ -808,7 +808,7 @@ public class FSImage implements Closeable {
    * Save the contents of the FS image to a new image file in each of the
    * current storage directories.
    */
-  synchronized void saveNamespace(FSNamesystem source) throws IOException {
+  public synchronized void saveNamespace(FSNamesystem source) throws IOException {
     assert editLog != null : "editLog must be initialized";
     storage.attemptRestoreRemovedStorage();
 
@@ -817,7 +817,7 @@ public class FSImage implements Closeable {
     if (editLogWasOpen) {
       editLog.endCurrentLogSegment(true);
     }
-    long imageTxId = editLog.getLastWrittenTxId();
+    long imageTxId = getLastAppliedOrWrittenTxId();
     try {
       saveFSImageInAllDirs(source, imageTxId);
       storage.writeAll();
@@ -834,7 +834,7 @@ public class FSImage implements Closeable {
     
   }
   
-  void cancelSaveNamespace(String reason)
+  public void cancelSaveNamespace(String reason)
       throws InterruptedException {
     SaveNamespaceContext ctx = curSaveNamespaceContext;
     if (ctx != null) {

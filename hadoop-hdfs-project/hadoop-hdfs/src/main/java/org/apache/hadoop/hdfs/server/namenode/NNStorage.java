@@ -463,7 +463,7 @@ public class NNStorage extends Storage implements Closeable {
   /**
    * Return the transaction ID of the last checkpoint.
    */
-  long getMostRecentCheckpointTxId() {
+  public long getMostRecentCheckpointTxId() {
     return mostRecentCheckpointTxId;
   }
 
