@@ -40,6 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
@@ -311,14 +312,17 @@ public class TestSaslRPC {
   public void testPingInterval() throws Exception {
     Configuration newConf = new Configuration(conf);
     newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
-    conf.setInt(Client.PING_INTERVAL_NAME, Client.DEFAULT_PING_INTERVAL);
+    conf.setInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
+        CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
+
     // set doPing to true
-    newConf.setBoolean("ipc.client.ping", true);
+    newConf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true);
     ConnectionId remoteId = ConnectionId.getConnectionId(
         new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
-    assertEquals(Client.DEFAULT_PING_INTERVAL, remoteId.getPingInterval());
+    assertEquals(CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT,
+        remoteId.getPingInterval());
     // set doPing to false
-    newConf.setBoolean("ipc.client.ping", false);
+    newConf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, false);
     remoteId = ConnectionId.getConnectionId(
         new InetSocketAddress(0), TestSaslProtocol.class, null, 0, newConf);
     assertEquals(0, remoteId.getPingInterval());
