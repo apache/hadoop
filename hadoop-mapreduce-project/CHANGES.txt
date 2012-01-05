@@ -363,6 +363,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3326. Added detailed information about queue's to the
     CapacityScheduler web-ui. (Jason Lowe via acmurthy) 
 
+    MAPREDUCE-3548. Added more unit tests for MR AM & JHS web-services.
+    (Thomas Graves via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -76,13 +76,89 @@ public class AMWebServices {
   }
 
   Boolean hasAccess(Job job, HttpServletRequest request) {
-    UserGroupInformation callerUgi = UserGroupInformation
-        .createRemoteUser(request.getRemoteUser());
-    if (!job.checkAccess(callerUgi, JobACL.VIEW_JOB)) {
+    String remoteUser = request.getRemoteUser();
+    UserGroupInformation callerUGI = null;
+    if (remoteUser != null) {
+      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+    }
+    if (callerUGI != null && !job.checkAccess(callerUGI, JobACL.VIEW_JOB)) {
       return false;
     }
     return true;
   }
+
+  /**
+   * convert a job id string to an actual job and handle all the error checking.
+   */
+ public static Job getJobFromJobIdString(String jid, AppContext appCtx) throws NotFoundException {
+    JobId jobId;
+    Job job;
+    try {
+      jobId = MRApps.toJobID(jid);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    }
+    if (jobId == null) {
+      throw new NotFoundException("job, " + jid + ", is not found");
+    }
+    job = appCtx.getJob(jobId);
+    if (job == null) {
+      throw new NotFoundException("job, " + jid + ", is not found");
+    }
+    return job;
+  }
+
+  /**
+   * convert a task id string to an actual task and handle all the error
+   * checking.
+   */
+  public static Task getTaskFromTaskIdString(String tid, Job job) throws NotFoundException {
+    TaskId taskID;
+    Task task;
+    try {
+      taskID = MRApps.toTaskID(tid);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    } catch (NumberFormatException ne) {
+      throw new NotFoundException(ne.getMessage());
+    }
+    if (taskID == null) {
+      throw new NotFoundException("taskid " + tid + " not found or invalid");
+    }
+    task = job.getTask(taskID);
+    if (task == null) {
+      throw new NotFoundException("task not found with id " + tid);
+    }
+    return task;
+  }
+
+  /**
+   * convert a task attempt id string to an actual task attempt and handle all
+   * the error checking.
+   */
+  public static TaskAttempt getTaskAttemptFromTaskAttemptString(String attId, Task task)
+      throws NotFoundException {
+    TaskAttemptId attemptId;
+    TaskAttempt ta;
+    try {
+      attemptId = MRApps.toTaskAttemptID(attId);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    } catch (NumberFormatException ne) {
+      throw new NotFoundException(ne.getMessage());
+    }
+    if (attemptId == null) {
+      throw new NotFoundException("task attempt id " + attId
+          + " not found or invalid");
+    }
+    ta = task.getAttempt(attemptId);
+    if (ta == null) {
+      throw new NotFoundException("Error getting info on task attempt id "
+          + attId);
+    }
+    return ta;
+  }
+
 
   /**
    * check for job access.
@@ -130,16 +206,8 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobInfo getJob(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+    Job job = getJobFromJobIdString(jid, appCtx);
     return new JobInfo(job, hasAccess(job, hsr));
-
   }
 
   @GET
@@ -147,42 +215,9 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobCounterInfo getJobCounters(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+    Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     return new JobCounterInfo(this.appCtx, job);
-  }
-
-  @GET
-  @Path("/jobs/{jobid}/tasks/{taskid}/counters")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public JobTaskCounterInfo getSingleTaskCounters(
-      @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
-      @PathParam("taskid") String tid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = this.appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    checkAccess(job, hsr);
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    return new JobTaskCounterInfo(task);
   }
 
   @GET
@@ -190,20 +225,15 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ConfInfo getJobConf(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     ConfInfo info;
     try {
       info = new ConfInfo(job, this.conf);
     } catch (IOException e) {
-      throw new NotFoundException("unable to load configuration for job: " + jid);
+      throw new NotFoundException("unable to load configuration for job: "
+          + jid);
     }
     return info;
   }
@@ -213,10 +243,8 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TasksInfo getJobTasks(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @QueryParam("type") String type) {
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     TasksInfo allTasks = new TasksInfo();
     for (Task task : job.getTasks().values()) {
@@ -225,7 +253,8 @@ public class AMWebServices {
         try {
           ttype = MRApps.taskType(type);
         } catch (YarnException e) {
-          throw new BadRequestException("tasktype must be either m or r");        }
+          throw new BadRequestException("tasktype must be either m or r");
+        }
       }
       if (ttype != null && task.getType() != ttype) {
         continue;
@@ -240,21 +269,24 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TaskInfo getJobTask(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    checkAccess(job, hsr);
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    return new TaskInfo(task);
 
+    Job job = getJobFromJobIdString(jid, appCtx);
+    checkAccess(job, hsr);
+    Task task = getTaskFromTaskIdString(tid, job);
+    return new TaskInfo(task);
+  }
+
+  @GET
+  @Path("/jobs/{jobid}/tasks/{taskid}/counters")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public JobTaskCounterInfo getSingleTaskCounters(
+      @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
+      @PathParam("taskid") String tid) {
+
+    Job job = getJobFromJobIdString(jid, appCtx);
+    checkAccess(job, hsr);
+    Task task = getTaskFromTaskIdString(tid, job);
+    return new JobTaskCounterInfo(task);
   }
 
   @GET
@@ -263,19 +295,11 @@ public class AMWebServices {
   public TaskAttemptsInfo getJobTaskAttempts(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
     TaskAttemptsInfo attempts = new TaskAttemptsInfo();
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
+    Task task = getTaskFromTaskIdString(tid, job);
+
     for (TaskAttempt ta : task.getAttempts().values()) {
       if (ta != null) {
         if (task.getType() == TaskType.REDUCE) {
@@ -294,29 +318,11 @@ public class AMWebServices {
   public TaskAttemptInfo getJobTaskAttemptId(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid,
       @PathParam("attemptid") String attId) {
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    TaskAttemptId attemptId = MRApps.toTaskAttemptID(attId);
-    if (attemptId == null) {
-      throw new NotFoundException("task attempt id " + attId
-          + " not found or invalid");
-    }
-    TaskAttempt ta = task.getAttempt(attemptId);
-    if (ta == null) {
-      throw new NotFoundException("Error getting info on task attempt id "
-          + attId);
-    }
+    Task task = getTaskFromTaskIdString(tid, job);
+    TaskAttempt ta = getTaskAttemptFromTaskAttemptString(attId, task);
     if (task.getType() == TaskType.REDUCE) {
       return new ReduceTaskAttemptInfo(ta, task.getType());
     } else {
@@ -330,33 +336,11 @@ public class AMWebServices {
   public JobTaskAttemptCounterInfo getJobTaskAttemptIdCounters(
       @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
       @PathParam("taskid") String tid, @PathParam("attemptid") String attId) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = this.appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    TaskAttemptId attemptId = MRApps.toTaskAttemptID(attId);
-    if (attemptId == null) {
-      throw new NotFoundException("task attempt id " + attId
-          + " not found or invalid");
-    }
-    TaskAttempt ta = task.getAttempt(attemptId);
-    if (ta == null) {
-      throw new NotFoundException("Error getting info on task attempt id "
-          + attId);
-    }
+    Task task = getTaskFromTaskIdString(tid, job);
+    TaskAttempt ta = getTaskAttemptFromTaskAttemptString(attId, task);
     return new JobTaskAttemptCounterInfo(ta);
   }
 }

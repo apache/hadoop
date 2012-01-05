@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 
-@XmlRootElement
+@XmlRootElement(name = "conf")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ConfInfo {
 

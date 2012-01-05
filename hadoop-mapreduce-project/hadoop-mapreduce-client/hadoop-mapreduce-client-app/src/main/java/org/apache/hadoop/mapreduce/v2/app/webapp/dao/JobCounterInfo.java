@@ -46,14 +46,14 @@ public class JobCounterInfo {
   protected Counters reduce = null;
 
   protected String id;
-  protected ArrayList<CounterGroupInfo> counterGroups;
+  protected ArrayList<CounterGroupInfo> counterGroup;
 
   public JobCounterInfo() {
   }
 
   public JobCounterInfo(AppContext ctx, Job job) {
     getCounters(ctx, job);
-    counterGroups = new ArrayList<CounterGroupInfo>();
+    counterGroup = new ArrayList<CounterGroupInfo>();
     this.id = MRApps.toString(job.getID());
 
     int numGroups = 0;
@@ -68,7 +68,7 @@ public class JobCounterInfo {
           ++numGroups;
 
           CounterGroupInfo cginfo = new CounterGroupInfo(g.getName(), g, mg, rg);
-          counterGroups.add(cginfo);
+          counterGroup.add(cginfo);
         }
       }
     }

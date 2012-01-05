@@ -32,7 +32,6 @@ public class AppInfo {
   protected String appId;
   protected String name;
   protected String user;
-  protected String hostname;
   protected long startedOn;
   protected long elapsedTime;
 
@@ -44,7 +43,7 @@ public class AppInfo {
     this.name = context.getApplicationName().toString();
     this.user = context.getUser().toString();
     this.startedOn = context.getStartTime();
-    this.elapsedTime = Times.elapsed(context.getStartTime(), 0);
+    this.elapsedTime = Times.elapsed(this.startedOn, 0);
   }
 
   public String getId() {

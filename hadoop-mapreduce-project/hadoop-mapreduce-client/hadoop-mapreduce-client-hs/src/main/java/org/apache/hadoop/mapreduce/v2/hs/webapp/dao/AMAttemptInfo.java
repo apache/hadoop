@@ -26,6 +26,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -48,21 +49,28 @@ public class AMAttemptInfo {
 
   public AMAttemptInfo(AMInfo amInfo, String jobId, String user, String host,
       String pathPrefix) {
-    this.nodeHttpAddress = amInfo.getNodeManagerHost() + ":"
-        + amInfo.getNodeManagerHttpPort();
-    NodeId nodeId = BuilderUtils.newNodeId(amInfo.getNodeManagerHost(),
-        amInfo.getNodeManagerPort());
-    this.nodeId = nodeId.toString();
+    this.nodeHttpAddress = "";
+    this.nodeId = "";
+    String nmHost = amInfo.getNodeManagerHost();
+    int nmPort = amInfo.getNodeManagerHttpPort();
+    if (nmHost != null) {
+      this.nodeHttpAddress = nmHost + ":" + nmPort;
+      NodeId nodeId = BuilderUtils.newNodeId(nmHost, nmPort);
+      this.nodeId = nodeId.toString();
+    }
     this.id = amInfo.getAppAttemptId().getAttemptId();
     this.startTime = amInfo.getStartTime();
-    this.containerId = amInfo.getContainerId().toString();
-    this.logsLink = join(
-        host,
-        pathPrefix,
-        ujoin("logs", nodeId.toString(), amInfo.getContainerId().toString(),
-            jobId, user));
-    this.shortLogsLink = ujoin("logs", nodeId.toString(), amInfo
-        .getContainerId().toString(), jobId, user);
+    this.containerId = "";
+    this.logsLink = "";
+    this.shortLogsLink = "";
+    ContainerId containerId = amInfo.getContainerId();
+    if (containerId != null) {
+      this.containerId = containerId.toString();
+      this.logsLink = join(host, pathPrefix,
+          ujoin("logs", this.nodeId, this.containerId, jobId, user));
+      this.shortLogsLink = ujoin("logs", this.nodeId, this.containerId,
+          jobId, user);
+    }
   }
 
   public String getNodeHttpAddress() {
