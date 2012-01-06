@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
@@ -48,6 +52,7 @@ public class TestHASafeMode {
   private NameNode nn1;
   private FileSystem fs;
   private MiniDFSCluster cluster;
+  private Runtime mockRuntime = mock(Runtime.class);
   
   @Before
   public void setupCluster() throws Exception {
@@ -64,6 +69,8 @@ public class TestHASafeMode {
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
     fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+    
+    nn0.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
 
     cluster.transitionToActive(0);
   }
@@ -71,7 +78,7 @@ public class TestHASafeMode {
   @After
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
-      assertNull(nn1.getNamesystem().getEditLogTailer().getLastError());
+      verify(mockRuntime, times(0)).exit(anyInt());
       cluster.shutdown();
     }
   }

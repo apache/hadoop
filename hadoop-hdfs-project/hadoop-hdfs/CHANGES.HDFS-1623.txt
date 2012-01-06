@@ -85,3 +85,5 @@ HDFS-2716. Configuration needs to allow different dfs.http.addresses for each HA
 HDFS-2720. Fix MiniDFSCluster HA support to work properly on Windows. (Uma Maheswara Rao G via todd)
 
 HDFS-2291. Allow the StandbyNode to make checkpoints in an HA setup. (todd)
+
+HDFS-2709. Appropriately handle error conditions in EditLogTailer (atm via todd)

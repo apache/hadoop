@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
@@ -155,5 +156,13 @@ public class NameNodeAdapter {
     FSImage spy = Mockito.spy(nn1.getNamesystem().dir.fsImage);
     nn1.getNamesystem().dir.fsImage = spy;
     return spy;
+  }
+  
+  public static String getMkdirOpPath(FSEditLogOp op) {
+    if (op.opCode == FSEditLogOpCodes.OP_MKDIR) {
+      return ((MkdirOp) op).path;
+    } else {
+      return null;
+    }
   }
 }

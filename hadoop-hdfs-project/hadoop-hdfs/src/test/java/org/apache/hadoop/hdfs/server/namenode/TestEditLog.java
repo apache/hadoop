@@ -147,7 +147,7 @@ public class TestEditLog extends TestCase {
   public void testPreTxIdEditLogNoEdits() throws Exception {
     FSNamesystem namesys = Mockito.mock(FSNamesystem.class);
     namesys.dir = Mockito.mock(FSDirectory.class);
-    int numEdits = testLoad(
+    long numEdits = testLoad(
         StringUtils.hexStringToByte("ffffffed"), // just version number
         namesys);
     assertEquals(0, numEdits);
@@ -166,7 +166,7 @@ public class TestEditLog extends TestCase {
       cluster.waitActive();
       final FSNamesystem namesystem = cluster.getNamesystem();
 
-      int numEdits = testLoad(HADOOP20_SOME_EDITS, namesystem);
+      long numEdits = testLoad(HADOOP20_SOME_EDITS, namesystem);
       assertEquals(3, numEdits);
       // Sanity check the edit
       HdfsFileStatus fileInfo = namesystem.getFileInfo("/myfile", false);
@@ -177,7 +177,7 @@ public class TestEditLog extends TestCase {
     }
   }
   
-  private int testLoad(byte[] data, FSNamesystem namesys) throws IOException {
+  private long testLoad(byte[] data, FSNamesystem namesys) throws IOException {
     FSEditLogLoader loader = new FSEditLogLoader(namesys);
     return loader.loadFSEdits(new EditLogByteInputStream(data), 1);
   }
@@ -315,7 +315,7 @@ public class TestEditLog extends TestCase {
         assertTrue("Expect " + editFile + " exists", editFile.exists());
         
         System.out.println("Verifying file: " + editFile);
-        int numEdits = loader.loadFSEdits(
+        long numEdits = loader.loadFSEdits(
             new EditLogFileInputStream(editFile), 3);
         int numLeases = namesystem.leaseManager.countLease();
         System.out.println("Number of outstanding leases " + numLeases);

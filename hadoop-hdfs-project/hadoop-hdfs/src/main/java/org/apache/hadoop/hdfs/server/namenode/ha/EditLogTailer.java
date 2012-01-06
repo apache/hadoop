@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.namenode.EditLogInputException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
@@ -46,9 +47,9 @@ public class EditLogTailer {
   private final EditLogTailerThread tailerThread;
   
   private final FSNamesystem namesystem;
-  private final FSEditLog editLog;
+  private FSEditLog editLog;
   
-  private volatile Throwable lastError = null;
+  private volatile Runtime runtime = Runtime.getRuntime();
   
   public EditLogTailer(FSNamesystem namesystem) {
     this.tailerThread = new EditLogTailerThread();
@@ -82,8 +83,18 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  public Throwable getLastError() {
-    return lastError;
+  FSEditLog getEditLog() {
+    return editLog;
+  }
+  
+  @VisibleForTesting
+  void setEditLog(FSEditLog editLog) {
+    this.editLog = editLog;
+  }
+  
+  @VisibleForTesting
+  synchronized void setRuntime(Runtime runtime) {
+    this.runtime = runtime;
   }
   
   public void catchupDuringFailover() throws IOException {
@@ -111,13 +122,31 @@ public class EditLogTailer {
       if (LOG.isDebugEnabled()) {
         LOG.debug("lastTxnId: " + lastTxnId);
       }
-      Collection<EditLogInputStream> streams = editLog
-          .selectInputStreams(lastTxnId + 1, 0, false);
+      Collection<EditLogInputStream> streams;
+      try {
+        streams = editLog.selectInputStreams(lastTxnId + 1, 0, false);
+      } catch (IOException ioe) {
+        // This is acceptable. If we try to tail edits in the middle of an edits
+        // log roll, i.e. the last one has been finalized but the new inprogress
+        // edits file hasn't been started yet.
+        LOG.warn("Edits tailer failed to find any streams. Will try again " +
+            "later.", ioe);
+        return;
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("edit streams to load from: " + streams.size());
       }
       
-      long editsLoaded = image.loadEdits(streams, namesystem);
+      // Once we have streams to load, errors encountered are legitimate cause
+      // for concern, so we don't catch them here. Simple errors reading from
+      // disk are ignored.
+      long editsLoaded = 0;
+      try {
+        editsLoaded = image.loadEdits(streams, namesystem);
+      } catch (EditLogInputException elie) {
+        LOG.warn("Error while reading edits from disk. Will try again.", elie);
+        editsLoaded = elie.getNumEditsLoaded();
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("editsLoaded: " + editsLoaded);
       }
@@ -150,22 +179,14 @@ public class EditLogTailer {
     public void run() {
       while (shouldRun) {
         try {
-          try {
-            doTailEdits();
-          } catch (IOException e) {
-            if (e.getCause() instanceof RuntimeException) {
-              throw (RuntimeException)e.getCause();
-            } else if (e.getCause() instanceof Error) {
-              throw (Error)e.getCause();
-            }
-                
-            // Will try again
-            LOG.info("Got error, will try again.", e);
-          }
+          doTailEdits();
+        } catch (InterruptedException ie) {
+          // interrupter should have already set shouldRun to false
+          continue;
         } catch (Throwable t) {
-          // TODO(HA): What should we do in this case? Shutdown the standby NN?
-          LOG.error("Edit log tailer received throwable", t);
-          lastError = t;
+          LOG.error("Error encountered while tailing edits. Shutting down " +
+              "standby NN.", t);
+          runtime.exit(1);
         }
 
         try {

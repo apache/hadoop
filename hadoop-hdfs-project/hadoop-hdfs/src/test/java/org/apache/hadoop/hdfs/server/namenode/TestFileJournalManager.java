@@ -30,6 +30,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import org.junit.Test;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.JournalManager.CorruptionException;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.test.GenericTestUtils;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.setupEdits;
@@ -194,12 +195,12 @@ public class TestFileJournalManager {
   }
 
   /**
-   * Try to make a request with a start transaction id which doesn't
-   * match the start ID of some log segment. 
-   * This should fail as edit logs must currently be treated as indevisable 
-   * units.
+   * Make requests with starting transaction ids which don't match the beginning
+   * txid of some log segments.
+   * 
+   * This should succeed.
    */
-  @Test(expected=IllegalStateException.class)
+  @Test
   public void testAskForTransactionsMidfile() throws IOException {
     File f = new File(TestEditLog.TEST_DIR + "/filejournaltest2");
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 
@@ -207,7 +208,12 @@ public class TestFileJournalManager {
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
     
     FileJournalManager jm = new FileJournalManager(sd);
-    jm.getNumberOfTransactions(2);    
+    
+    // 10 rolls, so 11 rolled files, 110 txids total.
+    final int TOTAL_TXIDS = 10 * 11;
+    for (int txid = 1; txid <= TOTAL_TXIDS; txid++) {
+      assertEquals((TOTAL_TXIDS - txid) + 1, jm.getNumberOfTransactions(txid));
+    }
   }
 
   /** 
@@ -301,6 +307,25 @@ public class TestFileJournalManager {
     }
     assertEquals("Asking for a newer log than exists should return empty list",
         "", getLogsAsString(fjm, 9999));
+  }
+
+  /**
+   * Make sure that we starting reading the correct op when we request a stream
+   * with a txid in the middle of an edit log file.
+   */
+  @Test
+  public void testReadFromMiddleOfEditLog() throws CorruptionException,
+      IOException {
+    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest2");
+    NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 
+                                   10);
+    StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
+    
+    FileJournalManager jm = new FileJournalManager(sd);
+    
+    EditLogInputStream elis = jm.getInputStream(5);
+    FSEditLogOp op = elis.readOp();
+    assertEquals("read unexpected op", op.getTransactionId(), 5);
   }
 
   private static String getLogsAsString(

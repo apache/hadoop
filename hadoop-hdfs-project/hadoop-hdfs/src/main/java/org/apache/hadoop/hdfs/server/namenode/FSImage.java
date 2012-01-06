@@ -665,11 +665,11 @@ public class FSImage implements Closeable {
    * @return the number of transactions loaded
    */
   public long loadEdits(Iterable<EditLogInputStream> editStreams,
-                           FSNamesystem target) throws IOException {
+      FSNamesystem target) throws IOException, EditLogInputException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
 
     long startingTxId = getLastAppliedTxId() + 1;
-    int numLoaded = 0;
+    long numLoaded = 0;
 
     try {    
       FSEditLogLoader loader = new FSEditLogLoader(target);
@@ -677,20 +677,28 @@ public class FSImage implements Closeable {
       // Load latest edits
       for (EditLogInputStream editIn : editStreams) {
         LOG.info("Reading " + editIn + " expecting start txid #" + startingTxId);
-        int thisNumLoaded = loader.loadFSEdits(editIn, startingTxId);
-        lastAppliedTxId = startingTxId + thisNumLoaded - 1;
-        startingTxId += thisNumLoaded;
-        numLoaded += thisNumLoaded;
+        long thisNumLoaded = 0;
+        try {
+          thisNumLoaded = loader.loadFSEdits(editIn, startingTxId);
+        } catch (EditLogInputException elie) {
+          thisNumLoaded = elie.getNumEditsLoaded();
+          throw elie;
+        } finally {
+          // Update lastAppliedTxId even in case of error, since some ops may
+          // have been successfully applied before the error.
+          lastAppliedTxId = startingTxId + thisNumLoaded - 1;
+          startingTxId += thisNumLoaded;
+          numLoaded += thisNumLoaded;
+        }
       }
     } finally {
-      // TODO(HA): Should this happen when called by the tailer?
       FSEditLog.closeAllStreams(editStreams);
+      // update the counts
+      // TODO(HA): this may be very slow -- we probably want to
+      // update them as we go for HA.
+      target.dir.updateCountForINodeWithQuota();   
     }
-
-    // update the counts
-    // TODO(HA): this may be very slow -- we probably want to
-    // update them as we go for HA.
-    target.dir.updateCountForINodeWithQuota();    
+    
     return numLoaded;
   }
 

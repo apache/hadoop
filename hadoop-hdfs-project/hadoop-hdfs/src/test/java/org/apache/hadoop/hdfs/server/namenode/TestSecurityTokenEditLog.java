@@ -141,7 +141,7 @@ public class TestSecurityTokenEditLog extends TestCase {
         System.out.println("Verifying file: " + editFile);
         
         FSEditLogLoader loader = new FSEditLogLoader(namesystem);        
-        int numEdits = loader.loadFSEdits(
+        long numEdits = loader.loadFSEdits(
             new EditLogFileInputStream(editFile), 1);
         assertEquals("Verification for " + editFile, expectedTransactions, numEdits);
       }

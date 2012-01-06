@@ -217,7 +217,7 @@ public class BackupImage extends FSImage {
       int logVersion = storage.getLayoutVersion();
       backupInputStream.setBytes(data, logVersion);
 
-      int numLoaded = logLoader.loadEditRecords(logVersion, backupInputStream, 
+      long numLoaded = logLoader.loadEditRecords(logVersion, backupInputStream, 
                                                 true, lastAppliedTxId + 1);
       if (numLoaded != numTxns) {
         throw new IOException("Batch of txns starting at txnid " +
@@ -310,7 +310,7 @@ public class BackupImage extends FSImage {
             + " txns from in-progress stream " + stream);
         
         FSEditLogLoader loader = new FSEditLogLoader(namesystem);
-        int numLoaded = loader.loadFSEdits(stream, lastAppliedTxId + 1);
+        long numLoaded = loader.loadFSEdits(stream, lastAppliedTxId + 1);
         lastAppliedTxId += numLoaded;
         assert numLoaded == remainingTxns :
           "expected to load " + remainingTxns + " but loaded " +

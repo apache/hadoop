@@ -68,7 +68,8 @@ class EditLogFileInputStream extends EditLogInputStream {
    *         header
    */
   EditLogFileInputStream(File name, long firstTxId, long lastTxId,
-      boolean isInProgress) throws LogHeaderCorruptException, IOException {
+      boolean isInProgress)
+      throws LogHeaderCorruptException, IOException {
     file = name;
     fStream = new FileInputStream(name);
 
@@ -86,6 +87,24 @@ class EditLogFileInputStream extends EditLogInputStream {
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
     this.isInProgress = isInProgress;
+  }
+
+  /**
+   * Skip over a number of transactions. Subsequent calls to
+   * {@link EditLogFileInputStream#readOp()} will begin after these skipped
+   * transactions. If more transactions are requested to be skipped than remain
+   * in the edit log, all edit log ops in the log will be skipped and subsequent
+   * calls to {@link EditLogInputStream#readOp} will return null.
+   * 
+   * @param transactionsToSkip number of transactions to skip over.
+   * @throws IOException if there's an error while reading an operation
+   */
+  public void skipTransactions(long transactionsToSkip) throws IOException {
+    assert firstTxId != HdfsConstants.INVALID_TXID &&
+        lastTxId != HdfsConstants.INVALID_TXID;
+    for (long i = 0; i < transactionsToSkip; i++) {
+      reader.readOp();
+    }
   }
 
   @Override
@@ -179,14 +198,13 @@ class EditLogFileInputStream extends EditLogInputStream {
       throw new LogHeaderCorruptException(
           "Reached EOF when reading log header");
     }
-    if (logVersion < HdfsConstants.LAYOUT_VERSION) { // future version
+    if (logVersion < HdfsConstants.LAYOUT_VERSION || // future version
+        logVersion > Storage.LAST_UPGRADABLE_LAYOUT_VERSION) { // unsupported
       throw new LogHeaderCorruptException(
           "Unexpected version of the file system log file: "
           + logVersion + ". Current version = "
           + HdfsConstants.LAYOUT_VERSION + ".");
     }
-    assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
-      "Unsupported version " + logVersion;
     return logVersion;
   }
   

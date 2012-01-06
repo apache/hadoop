@@ -147,6 +147,7 @@ class FileJournalManager implements JournalManager {
         ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
       } else if ((firstTxId > elf.getFirstTxId()) &&
                  (firstTxId <= elf.getLastTxId())) {
+        // Note that this behavior is different from getLogFiles below.
         throw new IllegalStateException("Asked for firstTxId " + firstTxId
             + " which is in the middle of file " + elf.file);
       }
@@ -194,20 +195,21 @@ class FileJournalManager implements JournalManager {
   synchronized public EditLogInputStream getInputStream(long fromTxId)
       throws IOException {
     for (EditLogFile elf : getLogFiles(fromTxId)) {
-      if (elf.getFirstTxId() == fromTxId) {
+      if (elf.containsTxId(fromTxId)) {
         if (elf.isInProgress()) {
           elf.validateLog();
         }
         if (LOG.isTraceEnabled()) {
           LOG.trace("Returning edit stream reading from " + elf);
         }
-        return new EditLogFileInputStream(elf.getFile(), 
+        EditLogFileInputStream elfis = new EditLogFileInputStream(elf.getFile(),
             elf.getFirstTxId(), elf.getLastTxId(), elf.isInProgress());
+        elfis.skipTransactions(fromTxId - elf.getFirstTxId());
+        return elfis;
       }
     }
 
-    throw new IOException("Cannot find editlog file with " + fromTxId
-        + " as first first txid");
+    throw new IOException("Cannot find editlog file containing " + fromTxId);
   }
 
   @Override
@@ -223,7 +225,7 @@ class FileJournalManager implements JournalManager {
         LOG.warn("Gap in transactions in " + sd.getRoot() + ". Gap is "
             + fromTxId + " - " + (elf.getFirstTxId() - 1));
         break;
-      } else if (fromTxId == elf.getFirstTxId()) {
+      } else if (elf.containsTxId(fromTxId)) {
         if (elf.isInProgress()) {
           elf.validateLog();
         } 
@@ -231,22 +233,12 @@ class FileJournalManager implements JournalManager {
         if (elf.isCorrupt()) {
           break;
         }
+        numTxns += elf.getLastTxId() + 1 - fromTxId;
         fromTxId = elf.getLastTxId() + 1;
-        numTxns += fromTxId - elf.getFirstTxId();
         
         if (elf.isInProgress()) {
           break;
         }
-      } else if (elf.getFirstTxId() < fromTxId &&
-                 elf.getLastTxId() >= fromTxId) {
-        // Middle of a log segment - this should never happen
-        // since getLogFiles checks for it. But we should be
-        // paranoid about this case since it might result in
-        // overlapping txid ranges, etc, if we had a bug.
-        IOException ioe = new IOException("txid " + fromTxId +
-            " falls in the middle of file " + elf);
-        LOG.error("Broken invariant in edit log file management", ioe);
-        throw ioe;
       }
     }
 
@@ -302,12 +294,8 @@ class FileJournalManager implements JournalManager {
     List<EditLogFile> logFiles = Lists.newArrayList();
     
     for (EditLogFile elf : allLogFiles) {
-      if (fromTxId > elf.getFirstTxId()
-          && fromTxId <= elf.getLastTxId()) {
-        throw new IllegalStateException("Asked for fromTxId " + fromTxId
-            + " which is in middle of file " + elf.file);
-      }
-      if (fromTxId <= elf.getFirstTxId()) {
+      if (fromTxId <= elf.getFirstTxId() ||
+          elf.containsTxId(fromTxId)) {
         logFiles.add(elf);
       }
     }
@@ -388,6 +376,10 @@ class FileJournalManager implements JournalManager {
     
     long getLastTxId() {
       return lastTxId;
+    }
+    
+    boolean containsTxId(long txId) {
+      return firstTxId <= txId && txId <= lastTxId;
     }
 
     /** 

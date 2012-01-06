@@ -101,9 +101,21 @@ public class TestEditLogTailer {
   private static String getDirPath(int suffix) {
     return DIR_PREFIX + suffix;
   }
-  
+
+  /**
+   * Trigger an edits log roll on the active and then wait for the standby to
+   * catch up to all the edits done by the active. This method will check
+   * repeatedly for up to NN_LAG_TIMEOUT milliseconds, and then fail throwing
+   * {@link CouldNotCatchUpException}.
+   * 
+   * @param active active NN
+   * @param standby standby NN which should catch up to active
+   * @throws IOException if an error occurs rolling the edit log
+   * @throws CouldNotCatchUpException if the standby doesn't catch up to the
+   *         active in NN_LAG_TIMEOUT milliseconds
+   */
   static void waitForStandbyToCatchUp(NameNode active,
-      NameNode standby) throws InterruptedException, IOException {
+      NameNode standby) throws InterruptedException, IOException, CouldNotCatchUpException {
     
     long activeTxId = active.getNamesystem().getFSImage().getEditLog()
       .getLastWrittenTxId();
@@ -119,8 +131,15 @@ public class TestEditLogTailer {
       }
       Thread.sleep(SLEEP_TIME);
     }
-    Assert.fail("Standby did not catch up to txid " + activeTxId +
-        " (currently at " +
+    throw new CouldNotCatchUpException("Standby did not catch up to txid " +
+        activeTxId + " (currently at " +
         standby.getNamesystem().getFSImage().getLastAppliedTxId() + ")");
+  }
+  
+  public static class CouldNotCatchUpException extends IOException {
+
+    public CouldNotCatchUpException(String message) {
+      super(message);
+    }
   }
 }
