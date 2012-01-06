@@ -119,6 +119,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7907. hadoop-tools JARs are not part of the distro. (tucu)
 
+   HADOOP-7936. There's a Hoop README in the root dir of the tarball. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
