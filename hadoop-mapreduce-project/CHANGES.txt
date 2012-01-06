@@ -370,6 +370,9 @@ Release 0.23.1 - Unreleased
     yarn.resourcemanager.principal and yarn.nodemanager.principal. (Jonathan
     Eagles via acmurthy) 
 
+    MAPREDUCE-3624. Remove unnecessary dependency on JDK's tools.jar. (mahadev
+    via acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
