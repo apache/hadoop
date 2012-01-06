@@ -256,6 +256,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP_7917. compilation of protobuf files fails in windows/cygwin. (tucu)
 
+   HADOOP-7907. hadoop-tools JARs are not part of the distro. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
