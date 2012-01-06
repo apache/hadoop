@@ -30,6 +30,7 @@
   <modules>
     <module>hadoop-streaming</module>
     <module>hadoop-archives</module>
+    <module>hadoop-tools-dist</module>
   </modules>
 
   <build>

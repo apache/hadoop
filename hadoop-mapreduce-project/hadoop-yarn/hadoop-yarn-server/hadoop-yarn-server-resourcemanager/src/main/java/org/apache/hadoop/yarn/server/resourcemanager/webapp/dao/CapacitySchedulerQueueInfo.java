@@ -22,50 +22,54 @@ import java.util.ArrayList;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
-import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
+@XmlSeeAlso({CapacitySchedulerLeafQueueInfo.class})
 public class CapacitySchedulerQueueInfo {
 
   @XmlTransient
-  protected String queuePath;
-  @XmlTransient
-  protected Boolean isParent = false;
+  static final float EPSILON = 1e-8f;
 
-  // bit odd to store this but makes html easier for now
   @XmlTransient
-  protected CSQueue queue;
+  protected String queuePath;
 
   protected float capacity;
   protected float usedCapacity;
   protected float maxCapacity;
+  protected float absoluteCapacity;
+  protected float absoluteMaxCapacity;
+  protected float utilization;
+  protected int numApplications;
+  protected String usedResources;
   protected String queueName;
-  protected QueueState state;
+  protected String state;
   protected ArrayList<CapacitySchedulerQueueInfo> subQueues;
 
   CapacitySchedulerQueueInfo() {
   };
 
-  CapacitySchedulerQueueInfo(float cap, float used, float max, String name,
-      QueueState state, String path) {
-    this.capacity = cap;
-    this.usedCapacity = used;
-    this.maxCapacity = max;
-    this.queueName = name;
-    this.state = state;
-    this.queuePath = path;
-  }
+  CapacitySchedulerQueueInfo(CSQueue q) {
+    queuePath = q.getQueuePath();
+    capacity = q.getCapacity() * 100;
+    usedCapacity = q.getUsedCapacity() * 100;
 
-  public Boolean isParent() {
-    return this.isParent;
-  }
+    maxCapacity = q.getMaximumCapacity();
+    if (maxCapacity < EPSILON || maxCapacity > 1f)
+      maxCapacity = 1f;
+    maxCapacity *= 100;
 
-  public CSQueue getQueue() {
-    return this.queue;
+    absoluteCapacity = cap(q.getAbsoluteCapacity(), 0f, 1f) * 100;
+    absoluteMaxCapacity = cap(q.getAbsoluteMaximumCapacity(), 0f, 1f) * 100;
+    utilization = q.getUtilization() * 100;
+    numApplications = q.getNumApplications();
+    usedResources = q.getUsedResources().toString();
+    queueName = q.getQueueName();
+    state = q.getState().toString();
   }
 
   public float getCapacity() {
@@ -80,12 +84,32 @@ public class CapacitySchedulerQueueInfo {
     return this.maxCapacity;
   }
 
+  public float getAbsoluteCapacity() {
+    return absoluteCapacity;
+  }
+
+  public float getAbsoluteMaxCapacity() {
+    return absoluteMaxCapacity;
+  }
+
+  public float getUtilization() {
+    return utilization;
+  }
+
+  public int getNumApplications() {
+    return numApplications;
+  }
+
+  public String getUsedResources() {
+    return usedResources;
+  }
+
   public String getQueueName() {
     return this.queueName;
   }
 
   public String getQueueState() {
-    return this.state.toString();
+    return this.state;
   }
 
   public String getQueuePath() {
@@ -96,4 +120,14 @@ public class CapacitySchedulerQueueInfo {
     return this.subQueues;
   }
 
+  /**
+   * Limit a value to a specified range.
+   * @param val the value to be capped
+   * @param low the lower bound of the range (inclusive)
+   * @param hi the upper bound of the range (inclusive)
+   * @return the capped value
+   */
+  static float cap(float val, float low, float hi) {
+    return Math.min(Math.max(val, low), hi);
+  }
 }

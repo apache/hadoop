@@ -270,11 +270,11 @@
 
     <plugins>
       <plugin>
-	<!-- workaround for filtered/unfiltered resources in same directory -->
-	<!-- remove when maven-eclipse-plugin 2.9 is available -->
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-eclipse-plugin</artifactId>
-	<version>2.6</version>
+        <!-- workaround for filtered/unfiltered resources in same directory -->
+        <!-- remove when maven-eclipse-plugin 2.9 is available -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-eclipse-plugin</artifactId>
+        <version>2.6</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

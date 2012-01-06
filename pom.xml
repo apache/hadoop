@@ -108,9 +108,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
           <version>3.0</version>
-          <configuration>
-            <generateReports>true</generateReports>
-          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -164,7 +161,7 @@
           </includes>
         </configuration>
       </plugin>
-            <plugin>
+      <plugin>
         <artifactId>maven-site-plugin</artifactId>
         <version>3.0</version>
         <executions>
@@ -173,6 +170,9 @@
             <goals>
               <goal>attach-descriptor</goal>
             </goals>
+            <configuration>
+              <generateReports>true</generateReports>
+            </configuration>
           </execution>
         </executions>
       </plugin>

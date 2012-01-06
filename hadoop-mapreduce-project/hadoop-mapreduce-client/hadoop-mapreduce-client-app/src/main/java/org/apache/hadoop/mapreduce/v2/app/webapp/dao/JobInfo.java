@@ -30,6 +30,7 @@ import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -51,12 +52,12 @@ public class JobInfo {
   protected String id;
   protected String name;
   protected String user;
-  protected String state;
+  protected JobState state;
   protected int mapsTotal;
   protected int mapsCompleted;
-  protected float mapProgress;
   protected int reducesTotal;
   protected int reducesCompleted;
+  protected float mapProgress;
   protected float reduceProgress;
 
   @XmlTransient
@@ -83,18 +84,12 @@ public class JobInfo {
   protected int successfulMapAttempts = 0;
   protected ArrayList<ConfEntryInfo> acls;
 
-  @XmlTransient
-  protected int numMaps;
-  @XmlTransient
-  protected int numReduces;
-
   public JobInfo() {
   }
 
   public JobInfo(Job job, Boolean hasAccess) {
     this.id = MRApps.toString(job.getID());
     JobReport report = job.getReport();
-    countTasksAndAttempts(job);
     this.startTime = report.getStartTime();
     this.finishTime = report.getFinishTime();
     this.elapsedTime = Times.elapsed(this.startTime, this.finishTime);
@@ -103,7 +98,7 @@ public class JobInfo {
     }
     this.name = job.getName().toString();
     this.user = job.getUserName();
-    this.state = job.getState().toString();
+    this.state = job.getState();
     this.mapsTotal = job.getTotalMaps();
     this.mapsCompleted = job.getCompletedMaps();
     this.mapProgress = report.getMapProgress() * 100;
@@ -115,6 +110,9 @@ public class JobInfo {
 
     this.acls = new ArrayList<ConfEntryInfo>();
     if (hasAccess) {
+      this.diagnostics = "";
+      countTasksAndAttempts(job);
+
       this.uberized = job.isUber();
 
       List<String> diagnostics = job.getDiagnostics();
@@ -213,7 +211,7 @@ public class JobInfo {
   }
 
   public String getState() {
-    return this.state;
+    return this.state.toString();
   }
 
   public String getUser() {
@@ -267,13 +265,11 @@ public class JobInfo {
   /**
    * Go through a job and update the member variables with counts for
    * information to output in the page.
-   * 
+   *
    * @param job
    *          the job to get counts for.
    */
   private void countTasksAndAttempts(Job job) {
-    numReduces = 0;
-    numMaps = 0;
     final Map<TaskId, Task> tasks = job.getTasks();
     if (tasks == null) {
       return;

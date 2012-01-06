@@ -210,17 +210,21 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         Element qElem = (Element) queues.item(j);
         String qName = WebServicesTestUtils.getXmlString(qElem, "queueName");
         String q = CapacitySchedulerConfiguration.ROOT + "." + qName;
-        verifySubQueueXML(qElem, q);
+        verifySubQueueXML(qElem, q, 100);
       }
     }
   }
 
-  public void verifySubQueueXML(Element qElem, String q) throws Exception {
-
+  public void verifySubQueueXML(Element qElem, String q, float parentAbsCapacity)
+      throws Exception {
+    float absCapacity = WebServicesTestUtils.getXmlFloat(qElem, "absoluteCapacity");
     verifySubQueueGeneric(q,
         WebServicesTestUtils.getXmlFloat(qElem, "usedCapacity"),
         WebServicesTestUtils.getXmlFloat(qElem, "capacity"),
         WebServicesTestUtils.getXmlFloat(qElem, "maxCapacity"),
+        absCapacity,
+        WebServicesTestUtils.getXmlFloat(qElem, "absoluteMaxCapacity"),
+        parentAbsCapacity,
         WebServicesTestUtils.getXmlString(qElem, "queueName"),
         WebServicesTestUtils.getXmlString(qElem, "state"));
 
@@ -230,8 +234,12 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         Element subqElem = (Element) queues.item(j);
         String qName = WebServicesTestUtils.getXmlString(subqElem, "queueName");
         String q2 = q + "." + qName;
-        verifySubQueueXML(subqElem, q2);
+        verifySubQueueXML(subqElem, q2, absCapacity);
       }
+    } else {
+      verifyLeafQueueGeneric(q,
+          WebServicesTestUtils.getXmlInt(qElem, "userLimit"),
+          WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor"));
     }
   }
 
@@ -254,7 +262,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     for (int i = 0; i < arr.length(); i++) {
       JSONObject obj = arr.getJSONObject(i);
       String q = CapacitySchedulerConfiguration.ROOT + "." + obj.getString("queueName");
-      verifySubQueue(obj, q);
+      verifySubQueue(obj, q, 100);
     }
   }
 
@@ -268,31 +276,46 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     assertTrue("queueName doesn't match", "root".matches(queueName));
   }
 
-  private void verifySubQueue(JSONObject info, String q) throws JSONException,
-      Exception {
-    if (info.has("subQueues")) {
-      assertEquals("incorrect number of elements", 6, info.length());
-    } else {
-      assertEquals("incorrect number of elements", 5, info.length());
+  private void verifySubQueue(JSONObject info, String q, float parentAbsCapacity)
+      throws JSONException, Exception {
+    int numExpectedElements = 11;
+    boolean isParentQueue = true;
+    if (!info.has("subQueues")) {
+      numExpectedElements = 20;
+      isParentQueue = false;
     }
+    assertEquals("incorrect number of elements", numExpectedElements, info.length());
+
+    float absCapacity = (float) info.getDouble("absoluteCapacity");
+
     verifySubQueueGeneric(q, (float) info.getDouble("usedCapacity"),
         (float) info.getDouble("capacity"),
-        (float) info.getDouble("maxCapacity"), info.getString("queueName"),
+        (float) info.getDouble("maxCapacity"),
+        absCapacity,
+        (float) info.getDouble("absoluteMaxCapacity"),
+        parentAbsCapacity,
+        info.getString("queueName"),
         info.getString("state"));
 
-    if (info.has("subQueues")) {
+    if (isParentQueue) {
       JSONArray arr = info.getJSONArray("subQueues");
       // test subqueues
       for (int i = 0; i < arr.length(); i++) {
         JSONObject obj = arr.getJSONObject(i);
         String q2 = q + "." + obj.getString("queueName");
-        verifySubQueue(obj, q2);
+        verifySubQueue(obj, q2, absCapacity);
       }
+    } else {
+      verifyLeafQueueGeneric(q, info.getInt("userLimit"),
+          (float) info.getDouble("userLimitFactor"));
     }
   }
 
   private void verifySubQueueGeneric(String q, float usedCapacity,
-      float capacity, float maxCapacity, String qname, String state)
+      float capacity, float maxCapacity,
+      float absCapacity, float absMaxCapacity,
+      float parentAbsCapacity,
+      String qname, String state)
       throws Exception {
     String[] qArr = q.split("\\.");
     assertTrue("q name invalid: " + q, qArr.length > 1);
@@ -302,15 +325,28 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     assertEquals("capacity doesn't match", csConf.getCapacity(q), capacity,
         1e-3f);
     float expectCapacity = csConf.getMaximumCapacity(q);
+    float expectAbsMaxCapacity = parentAbsCapacity * (maxCapacity/100);
     if (CapacitySchedulerConfiguration.UNDEFINED == expectCapacity) {
       expectCapacity = 100;
+      expectAbsMaxCapacity = 100;
     }
     assertEquals("maxCapacity doesn't match", expectCapacity, maxCapacity,
         1e-3f);
+    assertEquals("absoluteCapacity doesn't match",
+        parentAbsCapacity * (capacity/100), absCapacity, 1e-3f);
+    assertEquals("absoluteMaxCapacity doesn't match",
+        expectAbsMaxCapacity, absMaxCapacity, 1e-3f);
     assertTrue("queueName doesn't match, got: " + qname + " expected: " + q,
         qshortName.matches(qname));
     assertTrue("state doesn't match",
         (csConf.getState(q).toString()).matches(state));
 
+  }
+
+  private void verifyLeafQueueGeneric(String q, int userLimit,
+      float userLimitFactor) throws Exception {
+    assertEquals("userLimit doesn't match", csConf.getUserLimit(q), userLimit);
+    assertEquals("userLimitFactor doesn't match",
+        csConf.getUserLimitFactor(q), userLimitFactor, 1e-3f);
   }
 }

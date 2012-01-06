@@ -92,6 +92,7 @@ public class JobInfo {
     this.user = job.getUserName();
     this.state = job.getState().toString();
     this.uberized = job.isUber();
+    this.diagnostics = "";
     List<String> diagnostics = job.getDiagnostics();
     if (diagnostics != null && !diagnostics.isEmpty()) {
       StringBuffer b = new StringBuffer();

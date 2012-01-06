@@ -27,7 +27,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CounterInfo {
 
-  protected String counterName;
+  protected String name;
   protected long totalCounterValue;
   protected long mapCounterValue;
   protected long reduceCounterValue;
@@ -36,7 +36,7 @@ public class CounterInfo {
   }
 
   public CounterInfo(Counter counter, Counter mc, Counter rc) {
-    this.counterName = counter.getName();
+    this.name = counter.getName();
     this.totalCounterValue = counter.getValue();
     this.mapCounterValue = mc == null ? 0 : mc.getValue();
     this.reduceCounterValue = rc == null ? 0 : rc.getValue();

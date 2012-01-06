@@ -73,28 +73,6 @@ Trunk (unreleased changes)
     findBugs, correct links to findBugs artifacts and no links to the
     artifacts when there are no warnings. (Tom White via vinodkv).
 
-    MAPREDUCE-3183. hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml 
-    missing license header. (Hitesh Shah via tucu).
-
-    MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
-
-    MAPREDUCE-3204. mvn site:site fails on MapReduce. (tucu)
-
-    MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
-    by default. (tucu)
-
-    MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
-
-    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
-
-    MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
-    classpath from the build machine. (tucu)
-
-    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be added as 
-    ivy dependency. (tucu)
-
-    MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives dependency. 
-    (tucu)
 
 Release 0.23.1 - Unreleased
 
@@ -413,6 +391,39 @@ Release 0.23.1 - Unreleased
     performance reasons. (vinodkv via acmurthy) 
 
     MAPREDUCE-3615. Fix some ant test failures. (Thomas Graves via sseth)
+
+    MAPREDUCE-3326. Added detailed information about queue's to the
+    CapacityScheduler web-ui. (Jason Lowe via acmurthy) 
+
+    MAPREDUCE-3548. Added more unit tests for MR AM & JHS web-services.
+    (Thomas Graves via acmurthy) 
+
+    MAPREDUCE-3617. Removed wrong default value for
+    yarn.resourcemanager.principal and yarn.nodemanager.principal. (Jonathan
+    Eagles via acmurthy) 
+
+    MAPREDUCE-3183. hadoop-assemblies/src/main/resources/assemblies/hadoop-mapreduce-dist.xml 
+    missing license header. (Hitesh Shah via tucu).
+
+    MAPREDUCE-3003. Publish MR JARs to Maven snapshot repository. (tucu)
+
+    MAPREDUCE-3204. mvn site:site fails on MapReduce. (tucu)
+
+    MAPREDUCE-3014. Rename and invert logic of '-cbuild' profile to 'native' and off 
+    by default. (tucu)
+
+    MAPREDUCE-3477. Hadoop site documentation cannot be built anymore. (jeagles via tucu)
+
+    MAPREDUCE-3500. MRJobConfig creates an LD_LIBRARY_PATH using the platform ARCH. (tucu)
+
+    MAPREDUCE-3389. MRApps loads the 'mrapp-generated-classpath' file with 
+    classpath from the build machine. (tucu)
+
+    MAPREDUCE-3544. gridmix build is broken, requires hadoop-archives to be added as 
+    ivy dependency. (tucu)
+
+    MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives dependency. 
+    (tucu)
 
 Release 0.23.0 - 2011-11-01 
 

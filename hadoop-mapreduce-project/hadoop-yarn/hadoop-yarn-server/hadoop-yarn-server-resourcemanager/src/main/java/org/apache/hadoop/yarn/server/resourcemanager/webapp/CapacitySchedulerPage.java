@@ -20,18 +20,22 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 
+import java.util.ArrayList;
+
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerLeafQueueInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
+import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.UL;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
@@ -45,23 +49,61 @@ class CapacitySchedulerPage extends RmView {
   static final float EPSILON = 1e-8f;
 
   @RequestScoped
-  static class Parent {
-    CSQueue queue;
+  static class CSQInfo {
+    CapacitySchedulerInfo csinfo;
+    CapacitySchedulerQueueInfo qinfo;
+  }
+
+  static class LeafQueueInfoBlock extends HtmlBlock {
+    final CapacitySchedulerLeafQueueInfo lqinfo;
+
+    @Inject LeafQueueInfoBlock(ViewContext ctx, CSQInfo info) {
+      super(ctx);
+      lqinfo = (CapacitySchedulerLeafQueueInfo) info.qinfo;
+    }
+
+    @Override
+    protected void render(Block html) {
+      ResponseInfo ri = info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status").
+          _("Queue State:", lqinfo.getQueueState()).
+          _("Capacity:", percent(lqinfo.getCapacity() / 100)).
+          _("Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
+          _("Used Capacity:", percent(lqinfo.getUsedCapacity() / 100)).
+          _("Absolute Capacity:", percent(lqinfo.getAbsoluteCapacity() / 100)).
+          _("Absolute Max Capacity:", percent(lqinfo.getAbsoluteMaxCapacity() / 100)).
+          _("Utilization:", percent(lqinfo.getUtilization() / 100)).
+          _("Used Resources:", lqinfo.getUsedResources().toString()).
+          _("Num Active Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
+          _("Num Pending Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
+          _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
+          _("Max Applications:", Integer.toString(lqinfo.getMaxApplications())).
+          _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
+          _("Max Active Applications:", Integer.toString(lqinfo.getMaxActiveApplications())).
+          _("Max Active Applications Per User:", Integer.toString(lqinfo.getMaxActiveApplicationsPerUser())).
+          _("User Limit:", Integer.toString(lqinfo.getUserLimit()) + "%").
+          _("User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor()));
+
+      html._(InfoBlock.class);
+
+      // clear the info contents so this queue's info doesn't accumulate into another queue's info
+      ri.clear();
+    }
   }
 
   public static class QueueBlock extends HtmlBlock {
-    final Parent parent;
-    final CapacitySchedulerInfo sinfo;
+    final CSQInfo csqinfo;
 
-    @Inject QueueBlock(Parent parent) {
-      this.parent = parent;
-      sinfo = new CapacitySchedulerInfo(parent.queue);
+    @Inject QueueBlock(CSQInfo info) {
+      csqinfo = info;
     }
 
     @Override
     public void render(Block html) {
+      ArrayList<CapacitySchedulerQueueInfo> subQueues =
+          (csqinfo.qinfo == null) ? csqinfo.csinfo.getSubQueues()
+              : csqinfo.qinfo.getSubQueues();
       UL<Hamlet> ul = html.ul();
-      for (CapacitySchedulerQueueInfo info : sinfo.getSubQueues()) {
+      for (CapacitySchedulerQueueInfo info : subQueues) {
         float used = info.getUsedCapacity() / 100;
         float set = info.getCapacity() / 100;
         float delta = Math.abs(set - used) + 0.001f;
@@ -76,11 +118,12 @@ class CapacitySchedulerPage extends RmView {
                 used > set ? OVER : UNDER, ';',
                 used > set ? left(set/max) : left(used/max)))._('.')._().
               span(".q", info.getQueuePath().substring(5))._();
-        if (info.getQueue() instanceof ParentQueue) {
-          // this could be optimized better
-          parent.queue = info.getQueue();
-          li.
-            _(QueueBlock.class);
+
+        csqinfo.qinfo = info;
+        if (info.getSubQueues() == null) {
+          li.ul("#lq").li()._(LeafQueueInfoBlock.class)._()._();
+        } else {
+          li._(QueueBlock.class);
         }
         li._();
       }
@@ -91,11 +134,11 @@ class CapacitySchedulerPage extends RmView {
 
   static class QueuesBlock extends HtmlBlock {
     final CapacityScheduler cs;
-    final Parent parent;
+    final CSQInfo csqinfo;
 
-    @Inject QueuesBlock(ResourceManager rm, Parent parent) {
+    @Inject QueuesBlock(ResourceManager rm, CSQInfo info) {
       cs = (CapacityScheduler) rm.getResourceScheduler();
-      this.parent = parent;
+      csqinfo = info;
     }
 
     @Override
@@ -115,8 +158,10 @@ class CapacitySchedulerPage extends RmView {
               span(".q", "default")._()._();
       } else {
         CSQueue root = cs.getRootQueue();
-        parent.queue = root;
-        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(parent.queue);
+        CapacitySchedulerInfo sinfo = new CapacitySchedulerInfo(root);
+        csqinfo.csinfo = sinfo;
+        csqinfo.qinfo = null;
+
         float used = sinfo.getUsedCapacity() / 100;
         float set = sinfo.getCapacity() / 100;
         float delta = Math.abs(set - used) + 0.001f;
@@ -144,13 +189,16 @@ class CapacitySchedulerPage extends RmView {
           "#cs ul { list-style: none }",
           "#cs a { font-weight: normal; margin: 2px; position: relative }",
           "#cs a span { font-weight: normal; font-size: 80% }",
-          "#cs-wrapper .ui-widget-header { padding: 0.2em 0.5em }")._().
+          "#cs-wrapper .ui-widget-header { padding: 0.2em 0.5em }",
+          "table.info tr th {width: 50%}")._(). // to center info table
       script("/static/jt/jquery.jstree.js").
       script().$type("text/javascript").
         _("$(function() {",
           "  $('#cs a span').addClass('ui-corner-all').css('position', 'absolute');",
           "  $('#cs').bind('loaded.jstree', function (e, data) {",
-          "    data.inst.open_all(); }).",
+          "    data.inst.open_all();",
+          "    data.inst.close_node('#lq', true);",
+          "   }).",
           "    jstree({",
           "    core: { animation: 188, html_titles: true },",
           "    plugins: ['themeroller', 'html_data', 'ui'],",
@@ -160,8 +208,9 @@ class CapacitySchedulerPage extends RmView {
           "  });",
           "  $('#cs').bind('select_node.jstree', function(e, data) {",
           "    var q = $('.q', data.rslt.obj).first().text();",
-            "    if (q == 'root') q = '';",
-          "    $('#apps').dataTable().fnFilter(q, 3);",
+          "    if (q == 'root') q = '';",
+          "    else q = '^' + q.substr(q.lastIndexOf('.') + 1) + '$';",
+          "    $('#apps').dataTable().fnFilter(q, 3, true);",
           "  });",
           "  $('#cs').show();",
           "});")._();
