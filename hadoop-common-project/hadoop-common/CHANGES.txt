@@ -86,6 +86,8 @@ Trunk (unreleased changes)
     HADOOP-7957. Classes deriving GetGroupsBase should be able to override 
     proxy creation. (jitendra)
 
+    HADOOP-4515. Configuration#getBoolean must not be case sensitive. (Sho Shimauchi via harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
