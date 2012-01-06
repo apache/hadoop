@@ -16,22 +16,34 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
+    <artifactId>hadoop-project-dist</artifactId>
     <version>0.23.1-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-tools</artifactId>
+  <artifactId>hadoop-tools-dist</artifactId>
   <version>0.23.1-SNAPSHOT</version>
-  <description>Apache Hadoop Tools</description>
-  <name>Apache Hadoop Tools</name>
-  <packaging>pom</packaging>
+  <description>Apache Hadoop Tools Dist</description>
+  <name>Apache Hadoop Tools Dist</name>
+  <packaging>jar</packaging>
 
-  <modules>
-    <module>hadoop-streaming</module>
-    <module>hadoop-archives</module>
-    <module>hadoop-tools-dist</module>
-  </modules>
+  <properties>
+    <hadoop.component>tools</hadoop.component>
+    <is.hadoop.component>false</is.hadoop.component>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-streaming</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-archives</artifactId>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>

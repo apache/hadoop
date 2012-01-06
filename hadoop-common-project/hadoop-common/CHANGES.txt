@@ -117,6 +117,8 @@ Release 0.23.1 - Unreleased
    HADOOP-7949. Updated maxIdleTime default in the code to match
    core-default.xml (eli)
 
+   HADOOP-7907. hadoop-tools JARs are not part of the distro. (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
