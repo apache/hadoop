@@ -110,7 +110,6 @@ if [ ! -d "$HADOOP_CONF_DIR" ]; then
 fi
 
 CLASSPATH="${HADOOP_CONF_DIR}:${YARN_CONF_DIR}:${CLASSPATH}"
-CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH
 if [ -d "$YARN_HOME/yarn-api/target/classes" ]; then

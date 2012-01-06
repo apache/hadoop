@@ -425,6 +425,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3557. MR1 test fail to compile because of missing hadoop-archives dependency. 
     (tucu)
 
+    MAPREDUCE-3624. Remove unnecessary dependency on JDK's tools.jar. (mahadev
+    via acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
