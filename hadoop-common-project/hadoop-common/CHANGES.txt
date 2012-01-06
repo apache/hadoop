@@ -867,6 +867,9 @@ Release 0.22.1 - Unreleased
 
   BUG FIXES
 
+    HADOOP-7937. Forward port SequenceFile#syncFs and friends from Hadoop 1.x.
+    (tomwhite)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
