@@ -893,7 +893,7 @@ public abstract class Server {
     private InetAddress addr;
     
     ConnectionHeader header = new ConnectionHeader();
-    Class<?> protocol;
+    String protocolName;
     boolean useSasl;
     SaslServer saslServer;
     private AuthMethod authMethod;
@@ -1284,15 +1284,8 @@ public abstract class Server {
       DataInputStream in =
         new DataInputStream(new ByteArrayInputStream(buf));
       header.readFields(in);
-      try {
-        String protocolClassName = header.getProtocol();
-        if (protocolClassName != null) {
-          protocol = getProtocolClass(header.getProtocol(), conf);
-          rpcDetailedMetrics.init(protocol);
-        }
-      } catch (ClassNotFoundException cnfe) {
-        throw new IOException("Unknown protocol: " + header.getProtocol());
-      }
+      protocolName = header.getProtocol();
+
       
       UserGroupInformation protocolUser = header.getUgi();
       if (!useSasl) {
@@ -1481,7 +1474,7 @@ public abstract class Server {
             // Make the call as the user via Subject.doAs, thus associating
             // the call with the Subject
             if (call.connection.user == null) {
-              value = call(call.connection.protocol, call.param, 
+              value = call(call.connection.protocolName, call.param, 
                            call.timestamp);
             } else {
               value = 
@@ -1490,7 +1483,7 @@ public abstract class Server {
                      @Override
                      public Writable run() throws Exception {
                        // make the call
-                       return call(call.connection.protocol, 
+                       return call(call.connection.protocolName, 
                                    call.param, call.timestamp);
 
                      }
@@ -1758,7 +1751,7 @@ public abstract class Server {
   
   /** 
    * Called for each call. 
-   * @deprecated Use {@link #call(Class, Writable, long)} instead
+   * @deprecated Use {@link #call(String, Writable, long)} instead
    */
   @Deprecated
   public Writable call(Writable param, long receiveTime) throws IOException {
@@ -1766,7 +1759,7 @@ public abstract class Server {
   }
   
   /** Called for each call. */
-  public abstract Writable call(Class<?> protocol,
+  public abstract Writable call(String protocol,
                                Writable param, long receiveTime)
   throws IOException;
   

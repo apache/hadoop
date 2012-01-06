@@ -62,6 +62,20 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class RPC {
   static final Log LOG = LogFactory.getLog(RPC.class);
+  
+  
+  /**
+   * Get the protocol name.
+   *  If the protocol class has a ProtocolAnnotation, then get the protocol
+   *  name from the annotation; otherwise the class name is the protocol name.
+   */
+  static public String getProtocolName(Class<?> protocol) {
+    if (protocol == null) {
+      return null;
+    }
+    ProtocolInfo anno = (ProtocolInfo) protocol.getAnnotation(ProtocolInfo.class);
+    return  (anno == null) ? protocol.getName() : anno.protocolName();
+  }
 
   private RPC() {}                                  // no public ctor
 
@@ -553,8 +567,10 @@ public class RPC {
   }
 
   /** Construct a server for a protocol implementation instance. */
-  public static Server getServer(Class<?> protocol,
-                                 Object instance, String bindAddress, int port,
+
+  public static <PROTO extends VersionedProtocol, IMPL extends PROTO> 
+        Server getServer(Class<PROTO> protocol,
+                                 IMPL instance, String bindAddress, int port,
                                  int numHandlers, int numReaders, int queueSizePerHandler,
                                  boolean verbose, Configuration conf,
                                  SecretManager<? extends TokenIdentifier> secretManager) 
@@ -575,6 +591,18 @@ public class RPC {
                      SecretManager<? extends TokenIdentifier> secretManager) throws IOException {
       super(bindAddress, port, paramClass, handlerCount, numReaders, queueSizePerHandler,
             conf, serverName, secretManager);
+    }
+    
+    /**
+     * Add a protocol to the existing server.
+     * @param protocolClass - the protocol class
+     * @param protocolImpl - the impl of the protocol that will be called
+     * @return the server (for convenience)
+     */
+    public <PROTO extends VersionedProtocol, IMPL extends PROTO>
+      Server addProtocol(Class<PROTO> protocolClass, IMPL protocolImpl
+    ) throws IOException {
+      throw new IOException("addProtocol Not Implemented");
     }
   }
 
