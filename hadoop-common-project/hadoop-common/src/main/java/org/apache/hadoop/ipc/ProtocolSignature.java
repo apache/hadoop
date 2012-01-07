@@ -199,7 +199,7 @@ public class ProtocolSignature implements Writable {
    * @param protocol protocol
    * @return the server's protocol signature
    */
-  static ProtocolSignature getProtocolSignature(
+  public static ProtocolSignature getProtocolSignature(
       int clientMethodsHashCode,
       long serverVersion,
       Class<? extends VersionedProtocol> protocol) {
