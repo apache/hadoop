@@ -1524,7 +1524,7 @@ public class BlockManager {
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getStorageID(), block)) {
       assert storedBlock.findDatanode(dn) < 0 : "Block " + block
-        + " in recentInvalidatesSet should not appear in DN " + dn;
+        + " in invalidated blocks set should not appear in DN " + dn;
       return storedBlock;
     }
 
@@ -1752,7 +1752,7 @@ public class BlockManager {
    * Invalidate corrupt replicas.
    * <p>
    * This will remove the replicas from the block's location list,
-   * add them to {@link #recentInvalidateSets} so that they could be further
+   * add them to {@link #invalidateBlocks} so that they could be further
    * deleted from the respective data-nodes,
    * and remove the block from corruptReplicasMap.
    * <p>
@@ -1981,7 +1981,7 @@ public class BlockManager {
       //
       addToInvalidates(b, cur);
       NameNode.stateChangeLog.info("BLOCK* chooseExcessReplicates: "
-                +"("+cur.getName()+", "+b+") is added to recentInvalidateSets");
+                +"("+cur.getName()+", "+b+") is added to invalidated blocks set.");
     }
   }
 
@@ -2375,7 +2375,7 @@ public class BlockManager {
 
   /**
    * Get blocks to invalidate for <i>nodeId</i>
-   * in {@link #recentInvalidateSets}.
+   * in {@link #invalidateBlocks}.
    *
    * @return number of blocks scheduled for removal during this iteration.
    */

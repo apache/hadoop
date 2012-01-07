@@ -661,7 +661,14 @@ public class StringUtils {
       if (Character.isDigit(lastchar))
         return Long.parseLong(s);
       else {
-        long prefix = TraditionalBinaryPrefix.valueOf(lastchar).value;
+        long prefix;
+        try {
+          prefix = TraditionalBinaryPrefix.valueOf(lastchar).value;
+        } catch (IllegalArgumentException e) {
+          throw new IllegalArgumentException("Invalid size prefix '" + lastchar
+              + "' in '" + s
+              + "'. Allowed prefixes are k, m, g, t, p, e(case insensitive)");
+        }
         long num = Long.parseLong(s.substring(0, lastpos));
         if (num > (Long.MAX_VALUE/prefix) || num < (Long.MIN_VALUE/prefix)) {
           throw new IllegalArgumentException(s + " does not fit in a Long");

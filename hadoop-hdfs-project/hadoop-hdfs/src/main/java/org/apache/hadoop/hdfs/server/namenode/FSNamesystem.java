@@ -483,7 +483,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
     
     this.serverDefaults = new FsServerDefaults(
-        conf.getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT),
+        conf.getLongBytes(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT),
         conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY, DFS_BYTES_PER_CHECKSUM_DEFAULT),
         conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY, DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT),
         (short) conf.getInt(DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT),

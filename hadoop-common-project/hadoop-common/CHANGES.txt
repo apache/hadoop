@@ -11,6 +11,8 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7657. Add support for LZ4 compression. (Binglin Chang via todd)
 
+    HADOOP-7910. Add Configuration.getLongBytes to handle human readable byte size values. (Sho Shimauchi via harsh)
+
   IMPROVEMENTS
 
     HADOOP-7801. HADOOP_PREFIX cannot be overriden. (Bruno Mahé via tomwhite)

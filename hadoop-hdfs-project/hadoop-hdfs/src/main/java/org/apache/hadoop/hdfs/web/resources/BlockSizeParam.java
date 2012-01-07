@@ -55,6 +55,6 @@ public class BlockSizeParam extends LongParam {
   /** @return the value or, if it is null, return the default from conf. */
   public long getValue(final Configuration conf) {
     return getValue() != null? getValue()
-        : conf.getLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
+        : conf.getLongBytes(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
   }
 }

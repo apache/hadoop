@@ -180,7 +180,7 @@ public class DFSClient implements java.io.Closeable {
       /** dfs.write.packet.size is an internal config variable */
       writePacketSize = conf.getInt(DFS_CLIENT_WRITE_PACKET_SIZE_KEY,
           DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT);
-      defaultBlockSize = conf.getLong(DFS_BLOCK_SIZE_KEY,
+      defaultBlockSize = conf.getLongBytes(DFS_BLOCK_SIZE_KEY,
           DFS_BLOCK_SIZE_DEFAULT);
       defaultReplication = (short) conf.getInt(
           DFS_REPLICATION_KEY, DFS_REPLICATION_DEFAULT);
