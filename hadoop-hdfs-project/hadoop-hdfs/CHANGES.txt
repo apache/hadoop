@@ -9,6 +9,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2223. Untangle depencencies between NN components (todd)
 
+    HDFS-2351 Change Namenode and Datanode to register each of their protocols seperately (Sanjay Radia)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
