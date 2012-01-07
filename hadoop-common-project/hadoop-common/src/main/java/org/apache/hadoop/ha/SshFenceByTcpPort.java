@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.ha;
+package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.net.InetAddress;
