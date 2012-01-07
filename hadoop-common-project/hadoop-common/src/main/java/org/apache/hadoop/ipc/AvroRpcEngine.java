@@ -131,7 +131,7 @@ public class AvroRpcEngine implements RpcEngine {
     }
 
     public void close() throws IOException {
-      ENGINE.stopProxy(tunnel);
+      RPC.stopProxy(tunnel);
     }
   }
 
@@ -150,15 +150,6 @@ public class AvroRpcEngine implements RpcEngine {
          new Class[] { protocol },
          new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout)),
        false);
-  }
-
-  /** Stop this proxy. */
-  public void stopProxy(Object proxy) {
-    try {
-      ((Invoker)Proxy.getInvocationHandler(proxy)).close();
-    } catch (IOException e) {
-      LOG.warn("Error while stopping "+proxy, e);
-    }
   }
 
   private class Invoker implements InvocationHandler, Closeable {

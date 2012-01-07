@@ -2,7 +2,11 @@ Hadoop Change Log
 
 Release 0.23-PB - Unreleased
 
-  HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+  IMPROVEMENTS
+
+    HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
+    HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
 Release 0.23.1 - Unreleased
 
