@@ -224,7 +224,7 @@ class Checkpointer extends Daemon {
         
         LOG.info("Loading image with txid " + sig.mostRecentCheckpointTxId);
         File file = bnStorage.findImageFile(sig.mostRecentCheckpointTxId);
-        bnImage.reloadFromImageFile(file);
+        bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
       }
       
       lastApplied = bnImage.getLastAppliedTxId();
@@ -238,11 +238,11 @@ class Checkpointer extends Daemon {
             backupNode.nnHttpAddress, log, bnStorage);
       }
   
-      rollForwardByApplyingLogs(manifest, bnImage);
+      rollForwardByApplyingLogs(manifest, bnImage, backupNode.getNamesystem());
     }
 
     long txid = bnImage.getLastAppliedTxId();
-    bnImage.saveFSImageInAllDirs(txid);
+    bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
     bnStorage.writeAll();
 
     if(cpCmd.needToReturnImage()) {
@@ -272,7 +272,8 @@ class Checkpointer extends Daemon {
 
   static void rollForwardByApplyingLogs(
       RemoteEditLogManifest manifest,
-      FSImage dstImage) throws IOException {
+      FSImage dstImage,
+      FSNamesystem dstNamesystem) throws IOException {
     NNStorage dstStorage = dstImage.getStorage();
   
     List<EditLogInputStream> editsStreams = Lists.newArrayList();    
@@ -286,6 +287,6 @@ class Checkpointer extends Daemon {
     }
     LOG.info("Checkpointer about to load edits from " +
         editsStreams.size() + " stream(s).");
-    dstImage.loadEdits(editsStreams);
+    dstImage.loadEdits(editsStreams, dstNamesystem);
   }
 }

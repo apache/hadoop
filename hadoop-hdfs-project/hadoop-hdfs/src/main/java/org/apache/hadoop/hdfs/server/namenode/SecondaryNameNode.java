@@ -124,6 +124,8 @@ public class SecondaryNameNode implements Runnable {
   /** checkpoint once every this many transactions, regardless of time */
   private long checkpointTxnCount;
 
+  private FSNamesystem namesystem;
+
 
   /** {@inheritDoc} */
   public String toString() {
@@ -227,6 +229,8 @@ public class SecondaryNameNode implements Runnable {
                                   "/tmp/hadoop/dfs/namesecondary");    
     checkpointImage = new CheckpointStorage(conf, checkpointDirs, checkpointEditsDirs);
     checkpointImage.recoverCreate(commandLineOpts.shouldFormat());
+    
+    namesystem = new FSNamesystem(conf, checkpointImage);
 
     // Initialize other scheduling parameters from the configuration
     checkpointCheckPeriod = conf.getLong(
@@ -527,7 +531,7 @@ public class SecondaryNameNode implements Runnable {
 
     boolean loadImage = downloadCheckpointFiles(
         fsName, checkpointImage, sig, manifest);   // Fetch fsimage and edits
-    doMerge(sig, manifest, loadImage, checkpointImage);
+    doMerge(sig, manifest, loadImage, checkpointImage, namesystem);
     
     //
     // Upload the new image into the NameNode. Then tell the Namenode
@@ -757,8 +761,7 @@ public class SecondaryNameNode implements Runnable {
     CheckpointStorage(Configuration conf, 
                       Collection<URI> imageDirs,
                       Collection<URI> editsDirs) throws IOException {
-      super(conf, (FSNamesystem)null, imageDirs, editsDirs);
-      setFSNamesystem(new FSNamesystem(this, conf));
+      super(conf, imageDirs, editsDirs);
       
       // the 2NN never writes edits -- it only downloads them. So
       // we shouldn't have any editLog instance. Setting to null
@@ -844,7 +847,8 @@ public class SecondaryNameNode implements Runnable {
     
   static void doMerge(
       CheckpointSignature sig, RemoteEditLogManifest manifest,
-      boolean loadImage, FSImage dstImage) throws IOException {   
+      boolean loadImage, FSImage dstImage, FSNamesystem dstNamesystem)
+      throws IOException {   
     NNStorage dstStorage = dstImage.getStorage();
     
     dstStorage.setStorageInfo(sig);
@@ -855,11 +859,11 @@ public class SecondaryNameNode implements Runnable {
             sig.mostRecentCheckpointTxId + " even though it should have " +
             "just been downloaded");
       }
-      dstImage.reloadFromImageFile(file);
+      dstImage.reloadFromImageFile(file, dstNamesystem);
     }
     
-    Checkpointer.rollForwardByApplyingLogs(manifest, dstImage);
-    dstImage.saveFSImageInAllDirs(dstImage.getLastAppliedTxId());
+    Checkpointer.rollForwardByApplyingLogs(manifest, dstImage, dstNamesystem);
+    dstImage.saveFSImageInAllDirs(dstNamesystem, dstImage.getLastAppliedTxId());
     dstStorage.writeAll();
   }
 }

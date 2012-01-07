@@ -1216,7 +1216,7 @@ public class TestCheckpoint extends TestCase {
       CheckpointStorage spyImage1 = spyOnSecondaryImage(secondary1);
       DelayAnswer delayer = new DelayAnswer(LOG);
       Mockito.doAnswer(delayer).when(spyImage1)
-        .saveFSImageInAllDirs(Mockito.anyLong());
+        .saveFSImageInAllDirs(Mockito.<FSNamesystem>any(), Mockito.anyLong());
 
       // Set up a thread to do a checkpoint from the first 2NN
       DoCheckpointThread checkpointThread = new DoCheckpointThread(secondary1);

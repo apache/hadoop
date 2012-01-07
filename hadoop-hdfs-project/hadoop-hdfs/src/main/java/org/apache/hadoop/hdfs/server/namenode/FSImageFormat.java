@@ -556,8 +556,13 @@ class FSImageFormat {
       DataOutputStream out = new DataOutputStream(fos);
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
-        out.writeInt(sourceNamesystem.getFSImage()
-                     .getStorage().getNamespaceID()); // TODO bad dependency
+        // We use the non-locked version of getNamespaceInfo here since
+        // the coordinating thread of saveNamespace already has read-locked
+        // the namespace for us. If we attempt to take another readlock
+        // from the actual saver thread, there's a potential of a
+        // fairness-related deadlock. See the comments on HDFS-2223.
+        out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
+            .getNamespaceID());
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
         out.writeLong(txid);

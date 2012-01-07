@@ -1,5 +1,14 @@
 Hadoop HDFS Change Log
 
+Release 0.23-PB - Unreleased
+
+  OPTIMIZATIONS
+
+    HDFS-2018. Move all journal stream management code into one place.
+               (Ivan Kelly via jitendra)
+
+    HDFS-2223. Untangle depencencies between NN components (todd)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -81,9 +90,6 @@ Release 0.23.1 - UNRELEASED
     HDFS-2246. Enable reading a block directly from local file system
     for a client on the same node as the block file.  (Andrew Purtell,
     Suresh Srinivas and Jitendra Nath Pandey via szetszwo)
-
-    HDFS-2018. Move all journal stream management code into one place.
-               (Ivan Kelly via jitendra)
 
   BUG FIXES
 

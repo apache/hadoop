@@ -80,6 +80,8 @@ public class BackupImage extends FSImage {
    * {@see #freezeNamespaceAtNextRoll()}
    */
   private boolean stopApplyingEditsOnNextRoll = false;
+  
+  private FSNamesystem namesystem;
 
   /**
    * Construct a backup image.
@@ -90,6 +92,10 @@ public class BackupImage extends FSImage {
     super(conf);
     storage.setDisablePreUpgradableLayoutCheck(true);
     bnState = BNState.DROP_UNTIL_NEXT_ROLL;
+  }
+  
+  void setNamesystem(FSNamesystem fsn) {
+    this.namesystem = fsn;
   }
 
   /**
@@ -139,7 +145,7 @@ public class BackupImage extends FSImage {
    * and create empty edits.
    */
   void saveCheckpoint() throws IOException {
-    saveNamespace();
+    saveNamespace(namesystem);
   }
 
   /**
@@ -222,7 +228,7 @@ public class BackupImage extends FSImage {
       }
       lastAppliedTxId += numTxns;
       
-      getFSNamesystem().dir.updateCountForINodeWithQuota(); // inefficient!
+      namesystem.dir.updateCountForINodeWithQuota(); // inefficient!
     } finally {
       backupInputStream.clear();
     }
@@ -271,7 +277,7 @@ public class BackupImage extends FSImage {
           editStreams.add(s);
         }
       }
-      loadEdits(editStreams);
+      loadEdits(editStreams, namesystem);
     }
     
     // now, need to load the in-progress file
