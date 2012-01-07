@@ -43,6 +43,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 /** Unit tests for AvroRpc. */
 public class TestAvroRpc extends TestCase {
@@ -56,6 +57,9 @@ public class TestAvroRpc extends TestCase {
 
   public TestAvroRpc(String name) { super(name); }
 	
+  public static interface EmptyProtocol {}
+  public static class EmptyImpl implements EmptyProtocol {}
+
   public static class TestImpl implements AvroTestProtocol {
 
     public void ping() {}
@@ -93,10 +97,12 @@ public class TestAvroRpc extends TestCase {
       sm = new TestTokenSecretManager();
     }
     UserGroupInformation.setConfiguration(conf);
+    RPC.setProtocolEngine(conf, EmptyProtocol.class, AvroRpcEngine.class);
     RPC.setProtocolEngine(conf, AvroTestProtocol.class, AvroRpcEngine.class);
-    Server server = RPC.getServer(AvroTestProtocol.class,
-                                  new TestImpl(), ADDRESS, 0, 5, true, 
-                                  conf, sm);
+    RPC.Server server = RPC.getServer(EmptyProtocol.class, new EmptyImpl(),
+                                      ADDRESS, 0, 5, true, conf, sm);
+    server.addProtocol(AvroTestProtocol.class, new TestImpl());
+
     try {
       server.start();
       InetSocketAddress addr = NetUtils.getConnectAddress(server);

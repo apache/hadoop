@@ -10,6 +10,9 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7687 Make getProtocolSignature public  (sanjay)
 
+    HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
+    interface introduced in HADOOP-7524.  (cutting)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES

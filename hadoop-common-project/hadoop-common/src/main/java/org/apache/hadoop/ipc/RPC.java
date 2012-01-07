@@ -605,7 +605,7 @@ public class RPC {
      * @param protocolImpl - the impl of the protocol that will be called
      * @return the server (for convenience)
      */
-    public <PROTO extends VersionedProtocol, IMPL extends PROTO>
+    public <PROTO, IMPL extends PROTO>
       Server addProtocol(Class<PROTO> protocolClass, IMPL protocolImpl
     ) throws IOException {
       throw new IOException("addProtocol Not Implemented");
