@@ -1,8 +1,12 @@
 Hadoop MapReduce Change Log
 
-Release 0.23.1 - Unreleased
+Release 0.23-PB - Unreleased
 
-  INCOMPATIBLE CHANGES
+  IMPROVEMENTS
+
+    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
+
+Release 0.23.1 - Unreleased
 
   NEW FEATURES                                                                    
 
