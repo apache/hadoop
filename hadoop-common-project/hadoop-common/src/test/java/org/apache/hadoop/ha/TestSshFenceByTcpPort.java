@@ -15,14 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.ha;
+package org.apache.hadoop.ha;
 
 import static org.junit.Assert.*;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.server.namenode.ha.SshFenceByTcpPort.Args;
+import org.apache.hadoop.ha.SshFenceByTcpPort.Args;
 import org.apache.log4j.Level;
 import org.junit.Assume;
 import org.junit.Test;
