@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,7 +61,6 @@ public class TestShellCommandFencer {
     assertFalse(fencer.tryFence("xxxxxxxxxxxx"));
   }
   
-  
   @Test
   public void testCheckArgs() {
     try {
@@ -70,8 +69,9 @@ public class TestShellCommandFencer {
       new NodeFencer(conf);
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
-      GenericTestUtils.assertExceptionContains(
-          "No argument passed", confe);
+      assertTrue(
+        "Unexpected exception:" + StringUtils.stringifyException(confe),
+        confe.getMessage().contains("No argument passed"));    
     }
   }
   

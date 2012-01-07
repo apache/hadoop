@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.jcraft.jsch.ChannelExec;
@@ -36,11 +35,11 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 
 /**
- * This fencing implementation sshes to the target node and uses <code>fuser</code>
- * to kill the process listening on the NameNode's TCP port. This is
- * more accurate than using "jps" since it doesn't require parsing,
- * and will work even if there are multiple NameNodes running on the
- * same machine.<p>
+ * This fencing implementation sshes to the target node and uses 
+ * <code>fuser</code> to kill the process listening on the service's
+ * TCP port. This is more accurate than using "jps" since it doesn't 
+ * require parsing, and will work even if there are multiple service
+ * processes running on the same machine.<p>
  * It returns a successful status code if:
  * <ul>
  * <li><code>fuser</code> indicates it successfully killed a process, <em>or</em>
@@ -49,7 +48,7 @@ import com.jcraft.jsch.Session;
  * <p>
  * This fencing mechanism is configured as following in the fencing method
  * list:
- * <code>sshfence([username@]nnhost[:ssh-port][, target-nn-port])</code>
+ * <code>sshfence([username@]nnhost[:ssh-port], target-port)</code>
  * where the first argument specifies the username, host, and port to ssh
  * into, and the second argument specifies the port on which the target
  * NN process is listening on.
@@ -57,9 +56,6 @@ import com.jcraft.jsch.Session;
  * For example, <code>sshfence(other-nn, 8020)<code> will SSH into
  * <code>other-nn<code> as the current user on the standard SSH port,
  * then kill whatever process is listening on port 8020.
- * <p>
- * If no <code>target-nn-port</code> is specified, it is assumed that the
- * target NameNode is listening on the same port as the local NameNode.
  * <p>
  * In order to achieve passwordless SSH, the operator must also configure
  * <code>dfs.namenode.ha.fencing.ssh.private-key-files<code> to point to an
@@ -117,10 +113,8 @@ public class SshFenceByTcpPort extends Configured
     }
     LOG.info("Connected to " + args.host);
 
-    int targetPort = args.targetPort != null ?
-        args.targetPort : getDefaultNNPort();
     try {
-      return doFence(session, targetPort);
+      return doFence(session, args.targetPort);
     } catch (JSchException e) {
       LOG.warn("Unable to achieve fencing on remote host", e);
       return false;
@@ -142,14 +136,14 @@ public class SshFenceByTcpPort extends Configured
     return session;
   }
 
-  private boolean doFence(Session session, int nnPort) throws JSchException {
+  private boolean doFence(Session session, int port) throws JSchException {
     try {
-      LOG.info("Looking for process running on port " + nnPort);
+      LOG.info("Looking for process running on port " + port);
       int rc = execCommand(session,
-          "PATH=$PATH:/sbin:/usr/sbin fuser -v -k -n tcp " + nnPort);
+          "PATH=$PATH:/sbin:/usr/sbin fuser -v -k -n tcp " + port);
       if (rc == 0) {
         LOG.info("Successfully killed process that was " +
-            "listening on port " + nnPort);
+            "listening on port " + port);
         // exit code 0 indicates the process was successfully killed.
         return true;
       } else if (rc == 1) {
@@ -157,7 +151,7 @@ public class SshFenceByTcpPort extends Configured
         // or that fuser didn't have root privileges in order to find it
         // (eg running as a different user)
         LOG.info(
-            "Indeterminate response from trying to kill NameNode. " +
+            "Indeterminate response from trying to kill service. " +
             "Verifying whether it is running using nc...");
         rc = execCommand(session, "nc -z localhost 8020");
         if (rc == 0) {
@@ -234,10 +228,6 @@ public class SshFenceByTcpPort extends Configured
     return getConf().getTrimmedStringCollection(CONF_IDENTITIES_KEY);
   }
   
-  private int getDefaultNNPort() {
-    return NameNode.getAddress(getConf()).getPort();
-  }
-
   /**
    * Container for the parsed arg line for this fencing method.
    */
@@ -251,8 +241,7 @@ public class SshFenceByTcpPort extends Configured
     final String user;
     final String host;
     final int sshPort;
-    
-    final Integer targetPort;
+    final int targetPort;
     
     public Args(String args) throws BadFencingConfigurationException {
       if (args == null) {
@@ -260,7 +249,7 @@ public class SshFenceByTcpPort extends Configured
             "Must specify args for ssh fencing configuration");
       }
       String[] argList = args.split(",\\s*");
-      if (argList.length > 2 || argList.length == 0) {
+      if (argList.length != 2) {
         throw new BadFencingConfigurationException(
             "Incorrect number of arguments: " + args);
       }
@@ -287,11 +276,7 @@ public class SshFenceByTcpPort extends Configured
       }
       
       // Parse target port.
-      if (argList.length > 1) {
-        targetPort = parseConfiggedPort(argList[1]);
-      } else {
-        targetPort = null;
-      }
+      targetPort = parseConfiggedPort(argList[1]);
     }
 
     private Integer parseConfiggedPort(String portStr)

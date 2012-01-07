@@ -61,37 +61,37 @@ public class TestSshFenceByTcpPort {
     SshFenceByTcpPort fence = new SshFenceByTcpPort();
     fence.setConf(conf);
     // Connect to Google's DNS server - not running ssh!
-    assertFalse(fence.tryFence("8.8.8.8"));
+    assertFalse(fence.tryFence("8.8.8.8, 1234"));
   }
   
   @Test
   public void testArgsParsing() throws BadFencingConfigurationException {
-    Args args = new SshFenceByTcpPort.Args("foo@bar.com:1234");
+    Args args = new SshFenceByTcpPort.Args("foo@bar.com:1234, 5678");
     assertEquals("foo", args.user);
     assertEquals("bar.com", args.host);
     assertEquals(1234, args.sshPort);
-    assertNull(args.targetPort);
+    assertEquals(5678, args.targetPort);
 
-    args = new SshFenceByTcpPort.Args("foo@bar.com");
+    args = new SshFenceByTcpPort.Args("foo@bar.com, 1234");
     assertEquals("foo", args.user);
     assertEquals("bar.com", args.host);
     assertEquals(22, args.sshPort);
-    assertNull(args.targetPort);
+    assertEquals(1234, args.targetPort);
     
-    args = new SshFenceByTcpPort.Args("bar.com");
+    args = new SshFenceByTcpPort.Args("bar.com, 1234");
     assertEquals(System.getProperty("user.name"), args.user);
     assertEquals("bar.com", args.host);
     assertEquals(22, args.sshPort);
-    assertNull(args.targetPort);
+    assertEquals(1234, args.targetPort);
     
     args = new SshFenceByTcpPort.Args("bar.com:1234, 12345");
     assertEquals(System.getProperty("user.name"), args.user);
     assertEquals("bar.com", args.host);
     assertEquals(1234, args.sshPort);
-    assertEquals(Integer.valueOf(12345), args.targetPort);
+    assertEquals(12345, args.targetPort);
     
     args = new SshFenceByTcpPort.Args("bar, 8020");
-    assertEquals(Integer.valueOf(8020), args.targetPort);    
+    assertEquals(8020, args.targetPort);    
   }
   
   @Test
@@ -101,6 +101,8 @@ public class TestSshFenceByTcpPort {
     assertBadArgs("bar.com:");
     assertBadArgs("bar.com:x");
     assertBadArgs("foo.com, x");
+    assertBadArgs("foo.com,");
+    assertBadArgs("foo.com, ");
   }
   
   private void assertBadArgs(String argStr) {
