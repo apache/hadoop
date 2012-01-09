@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -61,9 +62,6 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -99,7 +97,6 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -109,9 +106,12 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 /** Implementation of Job interface. Maintains the state machines of Job.
  * The read and write calls use ReadWriteLock for concurrency.
  */
-@SuppressWarnings({ "rawtypes", "deprecation" })
+@SuppressWarnings({ "rawtypes", "deprecation", "unchecked" })
 public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job, 
   EventHandler<JobEvent> {
+
+  private static final TaskAttemptCompletionEvent[]
+    EMPTY_TASK_ATTEMPT_COMPLETION_EVENTS = new TaskAttemptCompletionEvent[0];
 
   private static final Log LOG = LogFactory.getLog(JobImpl.class);
 
@@ -152,7 +152,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
   private boolean lazyTasksCopyNeeded = false;
   volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
-  private Counters jobCounters = newCounters();
+  private Counters jobCounters = new Counters();
     // FIXME:  
     //
     // Can then replace task-level uber counters (MR-2424) with job-level ones
@@ -475,88 +475,29 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
 
   @Override
-  public Counters getCounters() {
-    Counters counters = newCounters();
+  public Counters getAllCounters() {
+    Counters counters = new Counters();
     readLock.lock();
     try {
-      incrAllCounters(counters, jobCounters);
+      counters.incrAllCounters(jobCounters);
       return incrTaskCounters(counters, tasks.values());
     } finally {
       readLock.unlock();
     }
   }
 
-  private Counters getTypeCounters(Set<TaskId> taskIds) {
-    Counters counters = newCounters();
-    for (TaskId taskId : taskIds) {
-      Task task = tasks.get(taskId);
-      incrAllCounters(counters, task.getCounters());
-    }
-    return counters;
-  }
-
-  private Counters getMapCounters() {
-    readLock.lock();
-    try {
-      return getTypeCounters(mapTasks);
-    } finally {
-      readLock.unlock();
-    }
-  }
-  
-  private Counters getReduceCounters() {
-    readLock.lock();
-    try {
-      return getTypeCounters(reduceTasks);
-    } finally {
-      readLock.unlock();
-    }
-  }
-  
-  public static Counters newCounters() {
-    Counters counters = RecordFactoryProvider.getRecordFactory(null)
-        .newRecordInstance(Counters.class);
-    return counters;
-  }
-
-  public static Counters incrTaskCounters(Counters counters,
-                                          Collection<Task> tasks) {
+  public static Counters incrTaskCounters(
+      Counters counters, Collection<Task> tasks) {
     for (Task task : tasks) {
-      incrAllCounters(counters, task.getCounters());
+      counters.incrAllCounters(task.getCounters());
     }
     return counters;
-  }
-
-  public static void incrAllCounters(Counters counters, Counters other) {
-    if (other != null) {
-      for (CounterGroup otherGroup: other.getAllCounterGroups().values()) {
-        CounterGroup group = counters.getCounterGroup(otherGroup.getName());
-        if (group == null) {
-          group = RecordFactoryProvider.getRecordFactory(null)
-              .newRecordInstance(CounterGroup.class);
-          group.setName(otherGroup.getName());
-          counters.setCounterGroup(group.getName(), group);
-        }
-        group.setDisplayName(otherGroup.getDisplayName());
-        for (Counter otherCounter : otherGroup.getAllCounters().values()) {
-          Counter counter = group.getCounter(otherCounter.getName());
-          if (counter == null) {
-            counter = RecordFactoryProvider.getRecordFactory(null)
-                .newRecordInstance(Counter.class);
-            counter.setName(otherCounter.getName());
-            group.setCounter(counter.getName(), counter);
-          }
-          counter.setDisplayName(otherCounter.getDisplayName());
-          counter.setValue(counter.getValue() + otherCounter.getValue());
-        }
-      }
-    }
   }
 
   @Override
   public TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
       int fromEventId, int maxEvents) {
-    TaskAttemptCompletionEvent[] events = new TaskAttemptCompletionEvent[0];
+    TaskAttemptCompletionEvent[] events = EMPTY_TASK_ATTEMPT_COMPLETION_EVENTS;
     readLock.lock();
     try {
       if (taskAttemptCompletionEvents.size() > fromEventId) {
@@ -1204,13 +1145,24 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   // area. May need to create a new event type for this if JobFinished should 
   // not be generated for KilledJobs, etc.
   private static JobFinishedEvent createJobFinishedEvent(JobImpl job) {
+
+    Counters mapCounters = new Counters();
+    Counters reduceCounters = new Counters();
+    for (Task t : job.tasks.values()) {
+      Counters counters = t.getCounters();
+      switch (t.getType()) {
+        case MAP:     mapCounters.incrAllCounters(counters);     break;
+        case REDUCE:  reduceCounters.incrAllCounters(counters);  break;
+      }
+    }
+
     JobFinishedEvent jfe = new JobFinishedEvent(
         job.oldJobId, job.finishTime,
         job.succeededMapTaskCount, job.succeededReduceTaskCount,
         job.failedMapTaskCount, job.failedReduceTaskCount,
-        TypeConverter.fromYarn(job.getMapCounters()),
-        TypeConverter.fromYarn(job.getReduceCounters()),
-        TypeConverter.fromYarn(job.getCounters()));
+        mapCounters,
+        reduceCounters,
+        job.getAllCounters());
     return jfe;
   }
 
@@ -1450,7 +1402,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       JobCounterUpdateEvent jce = (JobCounterUpdateEvent) event;
       for (JobCounterUpdateEvent.CounterIncrementalUpdate ci : jce
           .getCounterUpdates()) {
-        job.jobCounters.incrCounter(ci.getCounterKey(), ci.getIncrementValue());
+        job.jobCounters.findCounter(ci.getCounterKey()).increment(
+          ci.getIncrementValue());
       }
     }
   }

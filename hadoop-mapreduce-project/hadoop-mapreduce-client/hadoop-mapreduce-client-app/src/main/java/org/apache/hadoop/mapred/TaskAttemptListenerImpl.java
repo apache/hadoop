@@ -325,9 +325,11 @@ public class TaskAttemptListenerImpl extends CompositeService
     taskAttemptStatus.outputSize = taskStatus.getOutputSize();
     // Task sends the updated phase to the TT.
     taskAttemptStatus.phase = TypeConverter.toYarn(taskStatus.getPhase());
-    // Counters are updated by the task.
-    taskAttemptStatus.counters =
-        TypeConverter.toYarn(taskStatus.getCounters());
+    // Counters are updated by the task. Convert counters into new format as
+    // that is the primary storage format inside the AM to avoid multiple
+    // conversions and unnecessary heap usage.
+    taskAttemptStatus.counters = new org.apache.hadoop.mapreduce.Counters(
+      taskStatus.getCounters());
 
     // Map Finish time set by the task (map only)
     if (taskStatus.getIsMap() && taskStatus.getMapFinishTime() != 0) {

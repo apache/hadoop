@@ -24,8 +24,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.CounterGroup;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -37,11 +37,11 @@ public class TaskCounterGroupInfo {
   public TaskCounterGroupInfo() {
   }
 
-  public TaskCounterGroupInfo(String name, CounterGroup g) {
+  public TaskCounterGroupInfo(String name, CounterGroup group) {
     this.counterGroupName = name;
     this.counter = new ArrayList<TaskCounterInfo>();
 
-    for (Counter c : g.getAllCounters().values()) {
+    for (Counter c : group) {
       TaskCounterInfo cinfo = new TaskCounterInfo(c.getName(), c.getValue());
       this.counter.add(cinfo);
     }

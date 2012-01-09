@@ -18,25 +18,32 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_TABLE;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
+
 import java.util.Map;
 
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.CounterGroup;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
-import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.*;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.THEAD;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import com.google.inject.Inject;
 
 public class CountersBlock extends HtmlBlock {
   Job job;
@@ -62,8 +69,7 @@ public class CountersBlock extends HtmlBlock {
       return;
     }
     
-    if(total == null || total.getAllCounterGroups() == null || 
-        total.getAllCounterGroups().size() <= 0) {
+    if(total == null || total.getGroupNames() == null) {
       String type = $(TASK_ID);
       if(type == null || type.isEmpty()) {
         type = $(JOB_ID, "the job");
@@ -93,9 +99,9 @@ public class CountersBlock extends HtmlBlock {
             th(".group.ui-state-default", "Counter Group").
             th(".ui-state-default", "Counters")._()._().
         tbody();
-    for (CounterGroup g : total.getAllCounterGroups().values()) {
-      CounterGroup mg = map == null ? null : map.getCounterGroup(g.getName());
-      CounterGroup rg = reduce == null ? null : reduce.getCounterGroup(g.getName());
+    for (CounterGroup g : total) {
+      CounterGroup mg = map == null ? null : map.getGroup(g.getName());
+      CounterGroup rg = reduce == null ? null : reduce.getGroup(g.getName());
       ++numGroups;
       // This is mostly for demonstration :) Typically we'd introduced
       // a CounterGroup block to reduce the verbosity. OTOH, this
@@ -116,7 +122,7 @@ public class CountersBlock extends HtmlBlock {
       TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>> group = groupHeadRow.
             th(map == null ? "Value" : "Total")._()._().
         tbody();
-      for (Counter counter : g.getAllCounters().values()) {
+      for (Counter counter : g) {
         // Ditto
         TR<TBODY<TABLE<TD<TR<TBODY<TABLE<DIV<Hamlet>>>>>>>> groupRow = group.
           tr();
@@ -130,8 +136,8 @@ public class CountersBlock extends HtmlBlock {
             _();
           }
         if (map != null) {
-          Counter mc = mg == null ? null : mg.getCounter(counter.getName());
-          Counter rc = rg == null ? null : rg.getCounter(counter.getName());
+          Counter mc = mg == null ? null : mg.findCounter(counter.getName());
+          Counter rc = rg == null ? null : rg.findCounter(counter.getName());
           groupRow.
             td(mc == null ? "0" : String.valueOf(mc.getValue())).
             td(rc == null ? "0" : String.valueOf(rc.getValue()));
@@ -173,14 +179,14 @@ public class CountersBlock extends HtmlBlock {
     }
     // Get all types of counters
     Map<TaskId, Task> tasks = job.getTasks();
-    total = job.getCounters();
-    map = JobImpl.newCounters();
-    reduce = JobImpl.newCounters();
+    total = job.getAllCounters();
+    map = new Counters();
+    reduce = new Counters();
     for (Task t : tasks.values()) {
       Counters counters = t.getCounters();
       switch (t.getType()) {
-        case MAP:     JobImpl.incrAllCounters(map, counters);     break;
-        case REDUCE:  JobImpl.incrAllCounters(reduce, counters);  break;
+        case MAP:     map.incrAllCounters(counters);     break;
+        case REDUCE:  reduce.incrAllCounters(counters);  break;
       }
     }
   }

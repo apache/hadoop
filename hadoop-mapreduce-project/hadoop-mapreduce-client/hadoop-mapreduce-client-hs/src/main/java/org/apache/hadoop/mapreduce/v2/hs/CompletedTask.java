@@ -24,10 +24,10 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
@@ -60,7 +60,7 @@ public class CompletedTask implements Task {
     this.finishTime = taskInfo.getFinishTime();
     this.type = TypeConverter.toYarn(taskInfo.getTaskType());
     if (taskInfo.getCounters() != null)
-      this.counters = TypeConverter.toYarn(taskInfo.getCounters());
+      this.counters = taskInfo.getCounters();
     if (taskInfo.getTaskStatus() != null) {
       this.state = TaskState.valueOf(taskInfo.getTaskStatus());
     } else {
@@ -86,7 +86,7 @@ public class CompletedTask implements Task {
     report.setFinishTime(finishTime);
     report.setTaskState(state);
     report.setProgress(getProgress());
-    report.setCounters(getCounters());
+    report.setCounters(TypeConverter.toYarn(getCounters()));
     report.addAllRunningAttempts(new ArrayList<TaskAttemptId>(attempts.keySet()));
   }
 

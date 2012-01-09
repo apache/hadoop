@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.ShuffleHandler;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobCounter;
@@ -37,7 +38,6 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -144,7 +144,7 @@ public class MockJobs extends MockApps {
     report.setFinishTime(System.currentTimeMillis()
         + (int) (Math.random() * DT) + 1);
     report.setProgress((float) Math.random());
-    report.setCounters(newCounters());
+    report.setCounters(TypeConverter.toYarn(newCounters()));
     report.setTaskState(TASK_STATES.next());
     return report;
   }
@@ -159,13 +159,12 @@ public class MockJobs extends MockApps {
     report.setPhase(PHASES.next());
     report.setTaskAttemptState(TASK_ATTEMPT_STATES.next());
     report.setProgress((float) Math.random());
-    report.setCounters(newCounters());
+    report.setCounters(TypeConverter.toYarn(newCounters()));
     return report;
   }
 
-  @SuppressWarnings("deprecation")
   public static Counters newCounters() {
-    org.apache.hadoop.mapred.Counters hc = new org.apache.hadoop.mapred.Counters();
+    Counters hc = new Counters();
     for (JobCounter c : JobCounter.values()) {
       hc.findCounter(c).setValue((long) (Math.random() * 1000));
     }
@@ -183,7 +182,7 @@ public class MockJobs extends MockApps {
       hc.findCounter(USER_COUNTER_GROUPS.next(), USER_COUNTERS.next())
           .setValue((long) (Math.random() * 100000));
     }
-    return TypeConverter.toYarn(hc);
+    return hc;
   }
 
   public static Map<TaskAttemptId, TaskAttempt> newTaskAttempts(TaskId tid,
@@ -231,7 +230,10 @@ public class MockJobs extends MockApps {
 
       @Override
       public Counters getCounters() {
-        return report.getCounters();
+        if (report != null && report.getCounters() != null) {
+          return new Counters(TypeConverter.fromYarn(report.getCounters()));
+        }
+        return null;
       }
 
       @Override
@@ -327,7 +329,8 @@ public class MockJobs extends MockApps {
 
       @Override
       public Counters getCounters() {
-        return report.getCounters();
+        return new Counters(
+          TypeConverter.fromYarn(report.getCounters()));
       }
 
       @Override
@@ -373,8 +376,9 @@ public class MockJobs extends MockApps {
     };
   }
 
-  public static Counters getCounters(Collection<Task> tasks) {
-    Counters counters = JobImpl.newCounters();
+  public static Counters getCounters(
+      Collection<Task> tasks) {
+    Counters counters = new Counters();
     return JobImpl.incrTaskCounters(counters, tasks);
   }
 
@@ -419,7 +423,8 @@ public class MockJobs extends MockApps {
     final JobReport report = newJobReport(id);
     final Map<TaskId, Task> tasks = newTasks(id, n, m);
     final TaskCount taskCount = getTaskCount(tasks.values());
-    final Counters counters = getCounters(tasks.values());
+    final Counters counters = getCounters(tasks
+      .values());
     final Path configFile = confFile;
 
     Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
@@ -457,7 +462,7 @@ public class MockJobs extends MockApps {
       }
 
       @Override
-      public Counters getCounters() {
+      public Counters getAllCounters() {
         return counters;
       }
 

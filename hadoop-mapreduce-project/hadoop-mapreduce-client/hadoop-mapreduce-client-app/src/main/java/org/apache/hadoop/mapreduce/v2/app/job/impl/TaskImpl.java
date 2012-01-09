@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -40,7 +41,6 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskFailedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskStartedEvent;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEventStatus;
@@ -329,7 +329,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       report.setFinishTime(getFinishTime());
       report.setTaskState(getState());
       report.setProgress(getProgress());
-      report.setCounters(getCounters());
 
       for (TaskAttempt attempt : attempts.values()) {
         if (TaskAttemptState.RUNNING.equals(attempt.getState())) {
@@ -346,6 +345,11 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           
         }
       }
+
+      // Add a copy of counters as the last step so that their lifetime on heap
+      // is as small as possible.
+      report.setCounters(TypeConverter.toYarn(getCounters()));
+
       return report;
     } finally {
       readLock.unlock();
@@ -361,7 +365,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       if (bestAttempt != null) {
         counters = bestAttempt.getCounters();
       } else {
-        counters = recordFactory.newRecordInstance(Counters.class);
+        counters = TaskAttemptImpl.EMPTY_COUNTERS;
 //        counters.groups = new HashMap<CharSequence, CounterGroup>();
       }
       return counters;
@@ -595,7 +599,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         task.getFinishTime(task.successfulAttempt),
         TypeConverter.fromYarn(task.taskId.getTaskType()),
         taskState.toString(),
-        TypeConverter.fromYarn(task.getCounters()));
+        task.getCounters());
     return tfe;
   }
   

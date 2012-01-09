@@ -36,10 +36,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -62,6 +63,8 @@ public class JobHistoryEventHandler extends AbstractService
 
   private final AppContext context;
   private final int startCount;
+
+  private int eventCounter;
 
   //TODO Does the FS object need to be different ? 
   private FileSystem stagingDirFS; // log Dir FileSystem
@@ -210,6 +213,16 @@ public class JobHistoryEventHandler extends AbstractService
       public void run() {
         JobHistoryEvent event = null;
         while (!stopped && !Thread.currentThread().isInterrupted()) {
+
+          // Log the size of the history-event-queue every so often.
+          if (eventCounter % 1000 == 0) {
+            eventCounter = 0;
+            LOG.info("Size of the JobHistory event queue is "
+                + eventQueue.size());
+          } else {
+            eventCounter++;
+          }
+
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
@@ -238,7 +251,8 @@ public class JobHistoryEventHandler extends AbstractService
 
   @Override
   public void stop() {
-    LOG.info("Stopping JobHistoryEventHandler");
+    LOG.info("Stopping JobHistoryEventHandler. "
+        + "Size of the outstanding queue size is " + eventQueue.size());
     stopped = true;
     //do not interrupt while event handling is in progress
     synchronized(lock) {
@@ -483,7 +497,7 @@ public class JobHistoryEventHandler extends AbstractService
                 .toString());
       // TODO JOB_FINISHED does not have state. Effectively job history does not
       // have state about the finished job.
-      setSummarySlotSeconds(summary, jobId);
+      setSummarySlotSeconds(summary, jfe.getTotalCounters());
       break;
     case JOB_FAILED:
     case JOB_KILLED:
@@ -492,21 +506,21 @@ public class JobHistoryEventHandler extends AbstractService
       summary.setNumFinishedMaps(context.getJob(jobId).getTotalMaps());
       summary.setNumFinishedReduces(context.getJob(jobId).getTotalReduces());
       summary.setJobFinishTime(juce.getFinishTime());
-      setSummarySlotSeconds(summary, jobId);
+      setSummarySlotSeconds(summary, context.getJob(jobId).getAllCounters());
       break;
     }
   }
 
-  private void setSummarySlotSeconds(JobSummary summary, JobId jobId) {
-    Counter slotMillisMapCounter =
-        context.getJob(jobId).getCounters()
-            .getCounter(JobCounter.SLOTS_MILLIS_MAPS);
+  private void setSummarySlotSeconds(JobSummary summary, Counters allCounters) {
+
+    Counter slotMillisMapCounter = allCounters
+      .findCounter(JobCounter.SLOTS_MILLIS_MAPS);
     if (slotMillisMapCounter != null) {
       summary.setMapSlotSeconds(slotMillisMapCounter.getValue());
     }
-    Counter slotMillisReduceCounter =
-        context.getJob(jobId).getCounters()
-            .getCounter(JobCounter.SLOTS_MILLIS_REDUCES);
+
+    Counter slotMillisReduceCounter = allCounters
+      .findCounter(JobCounter.SLOTS_MILLIS_REDUCES);
     if (slotMillisReduceCounter != null) {
       summary.setMapSlotSeconds(slotMillisReduceCounter.getValue());
     }
