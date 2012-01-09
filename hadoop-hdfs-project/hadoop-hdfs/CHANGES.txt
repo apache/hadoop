@@ -90,8 +90,6 @@ Trunk (unreleased changes)
     HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
     (Hari Mankude via eli)
 
-    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
-
     HDFS-2410. Further cleanup of hardcoded configuration keys and values.
     (suresh)
 
@@ -110,12 +108,6 @@ Trunk (unreleased changes)
 
     HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
 
-    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
-
-    HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
-
-    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
-
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
@@ -125,8 +117,6 @@ Trunk (unreleased changes)
 
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
-
-    HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
 
   BUG FIXES
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
@@ -147,9 +137,6 @@ Trunk (unreleased changes)
 
     HDFS-2373. Commands using WebHDFS and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
-
-    HDFS-2349. Corruption detected during block transfers between DNs
-    should log a WARN instead of INFO. (harsh)
 
     HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
     than NNStorage. (Ivan Kelly via jitendra)
@@ -175,6 +162,8 @@ Trunk (unreleased changes)
 
     HDFS-2700. Fix failing TestDataNodeMultipleRegistrations in trunk
     (Uma Maheswara Rao G via todd)
+
+    HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
 
 Release 0.23.1 - UNRELEASED
 
@@ -251,6 +240,19 @@ Release 0.23.1 - UNRELEASED
     fetched. (tucu)
 
     HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
+
+    HDFS-2349. Corruption detected during block transfers between DNs
+    should log a WARN instead of INFO. (harsh)
+
+    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
+
+    HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
+
+    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
+
+    HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
+
+    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
 
   OPTIMIZATIONS
 

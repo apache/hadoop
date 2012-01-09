@@ -12,8 +12,6 @@ Trunk (unreleased changes)
     HADOOP-7875. Add helper class to unwrap protobuf ServiceException.
     (suresh)
 
-    HADOOP-7910. Add Configuration.getLongBytes to handle human readable byte size values. (Sho Shimauchi via harsh)
-
   IMPROVEMENTS
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
@@ -154,6 +152,9 @@ Release 0.23.1 - Unreleased
     that can offer extra topology information. (stevel)
 
     HADOOP-7657. Add support for LZ4 compression. (Binglin Chang via todd)
+
+    HADOOP-7910. Add Configuration.getLongBytes to handle human readable byte size values. (Sho Shimauchi via harsh)
+
 
   IMPROVEMENTS
 
