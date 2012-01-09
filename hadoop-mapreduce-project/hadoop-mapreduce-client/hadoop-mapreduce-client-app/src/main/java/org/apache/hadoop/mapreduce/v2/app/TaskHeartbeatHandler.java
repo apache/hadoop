@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
  * not hear from it for a long time.
  * 
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class TaskHeartbeatHandler extends AbstractService {
 
   private static final Log LOG = LogFactory.getLog(TaskHeartbeatHandler.class);
@@ -48,7 +50,8 @@ public class TaskHeartbeatHandler extends AbstractService {
   //received from a task.
   private Thread lostTaskCheckerThread;
   private volatile boolean stopped;
-  private int taskTimeOut = 5*60*1000;//5 mins
+  private int taskTimeOut = 5 * 60 * 1000;// 5 mins
+  private int taskTimeOutCheckInterval = 30 * 1000; // 30 seconds.
 
   private final EventHandler eventHandler;
   private final Clock clock;
@@ -64,8 +67,10 @@ public class TaskHeartbeatHandler extends AbstractService {
 
   @Override
   public void init(Configuration conf) {
-   super.init(conf);
-   taskTimeOut = conf.getInt("mapreduce.task.timeout", 5*60*1000);
+    super.init(conf);
+    taskTimeOut = conf.getInt(MRJobConfig.TASK_TIMEOUT, 5 * 60 * 1000);
+    taskTimeOutCheckInterval =
+        conf.getInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 30 * 1000);
   }
 
   @Override
@@ -125,7 +130,7 @@ public class TaskHeartbeatHandler extends AbstractService {
           }
         }
         try {
-          Thread.sleep(taskTimeOut);
+          Thread.sleep(taskTimeOutCheckInterval);
         } catch (InterruptedException e) {
           LOG.info("TaskHeartbeatHandler thread interrupted");
           break;
