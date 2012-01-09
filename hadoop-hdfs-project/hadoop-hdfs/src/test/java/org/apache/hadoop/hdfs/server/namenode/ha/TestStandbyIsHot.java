@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -91,7 +90,7 @@ public class TestStandbyIsHot {
       nn2.getNamesystem().getEditLogTailer().setSleepTime(250);
       nn2.getNamesystem().getEditLogTailer().interrupt();
       
-      FileSystem fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       
       Thread.sleep(1000);
       System.err.println("==================================");

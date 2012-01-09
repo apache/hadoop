@@ -41,13 +41,12 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.namenode.ha.TestEditLogTailer.CouldNotCatchUpException;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil.CouldNotCatchUpException;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -84,9 +83,9 @@ public class TestFailureToReadEdits {
       nn2.getNamesystem().getEditLogTailer().interrupt();
       nn2.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
       
-      FileSystem fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       fs.mkdirs(new Path(TEST_DIR1));
-      TestEditLogTailer.waitForStandbyToCatchUp(nn1, nn2);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
       
       // If these two ops are applied twice, the first op will throw an
       // exception the second time its replayed.
@@ -107,9 +106,9 @@ public class TestFailureToReadEdits {
       nn2.getNamesystem().getEditLogTailer().setEditLog(spyEditLog);
       
       try {
-        TestEditLogTailer.waitForStandbyToCatchUp(nn1, nn2);
+        HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
         fail("Standby fully caught up, but should not have been able to");
-      } catch (CouldNotCatchUpException e) {
+      } catch (HATestUtil.CouldNotCatchUpException e) {
         verify(mockRuntime, times(0)).exit(anyInt());
       }
       
@@ -125,7 +124,7 @@ public class TestFailureToReadEdits {
       
       // Now let the standby read ALL the edits.
       answer.setThrowExceptionOnRead(false);
-      TestEditLogTailer.waitForStandbyToCatchUp(nn1, nn2);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
       
       // Null because it was deleted.
       assertNull(NameNodeAdapter.getFileInfo(nn2,

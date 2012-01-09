@@ -18,14 +18,12 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+
 import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -46,7 +45,6 @@ public class TestDFSClientFailover {
   
   private Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
-  private static final String LOGICAL_HOSTNAME = "ha-nn-uri-%d";
   
   @Before
   public void setUpCluster() throws IOException {
@@ -83,7 +81,7 @@ public class TestDFSClientFailover {
     out1.close();
     out2.close();
         
-    FileSystem fs = configureFailoverFs(cluster, conf);
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
     
     AppendTestUtil.check(fs, TEST_FILE, FILE_LENGTH_TO_VERIFY);
     cluster.getNameNode(0).stop();
@@ -92,7 +90,7 @@ public class TestDFSClientFailover {
     // Check that it functions even if the URL becomes canonicalized
     // to include a port number.
     Path withPort = new Path("hdfs://" +
-        getLogicalHostname(cluster) + ":" +
+        HATestUtil.getLogicalHostname(cluster) + ":" +
         NameNode.DEFAULT_PORT + "/" + TEST_FILE.toUri().getPath());
     FileSystem fs2 = withPort.getFileSystem(fs.getConf());
     assertTrue(fs2.exists(withPort));
@@ -117,38 +115,4 @@ public class TestDFSClientFailover {
           "does not use port information", ioe);
     }
   }
-
-  public static FileSystem configureFailoverFs(MiniDFSCluster cluster, Configuration conf)
-  throws IOException, URISyntaxException {
-    InetSocketAddress nnAddr1 = cluster.getNameNode(0).getNameNodeAddress();
-    InetSocketAddress nnAddr2 = cluster.getNameNode(1).getNameNodeAddress();
-
-    String nsId = "nameserviceId1";
-    
-    String nameNodeId1 = "nn1";
-    String nameNodeId2 = "nn2";
-    String logicalName = getLogicalHostname(cluster);
-    
-    conf = new Configuration(conf);
-    String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();
-    String address2 = "hdfs://" + nnAddr2.getHostName() + ":" + nnAddr2.getPort();
-    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
-        nsId, nameNodeId1), address1);
-    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
-        nsId, nameNodeId2), address2);
-    
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nsId);
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, nsId),
-        nameNodeId1 + "," + nameNodeId2);
-    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
-        ConfiguredFailoverProxyProvider.class.getName());
-    
-    FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
-    return fs;
-  }
-
-  private static String getLogicalHostname(MiniDFSCluster cluster) {
-    return String.format(LOGICAL_HOSTNAME, cluster.getInstanceId());
-  }
-
 }

@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -72,7 +71,7 @@ public class TestStandbyCheckpoints {
     
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
-    fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+    fs = HATestUtil.configureFailoverFs(cluster, conf);
 
     nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
     nn1.getNamesystem().getEditLogTailer().interrupt();
@@ -91,7 +90,7 @@ public class TestStandbyCheckpoints {
   public void testSBNCheckpoints() throws Exception {
     doEdits(0, 10);
     
-    TestEditLogTailer.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
     // Once the standby catches up, it should notice that it needs to
     // do a checkpoint and save one to its local directories.
     waitForCheckpoint(1, ImmutableList.of(0, 12));
@@ -162,7 +161,7 @@ public class TestStandbyCheckpoints {
       .saveNamespace((FSNamesystem) Mockito.anyObject());
  
     // Roll the primary and wait for the standby to catch up
-    TestEditLogTailer.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
     Thread.sleep(2000);
     
     // We should make exactly one checkpoint at this new txid. 

@@ -34,15 +34,14 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.log4j.Level;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class TestEditLogTailer {
   
   private static final String DIR_PREFIX = "/dir";
   private static final int DIRS_TO_MAKE = 20;
-  private static final long SLEEP_TIME = 1000;
-  private static final long NN_LAG_TIMEOUT = 10 * 1000;
+  static final long SLEEP_TIME = 1000;
+  static final long NN_LAG_TIMEOUT = 10 * 1000;
   
   static {
     ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
@@ -74,7 +73,7 @@ public class TestEditLogTailer {
             true);
       }
       
-      waitForStandbyToCatchUp(nn1, nn2);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
       
       for (int i = 0; i < DIRS_TO_MAKE / 2; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
@@ -87,7 +86,7 @@ public class TestEditLogTailer {
             true);
       }
       
-      waitForStandbyToCatchUp(nn1, nn2);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
       
       for (int i = DIRS_TO_MAKE / 2; i < DIRS_TO_MAKE; i++) {
         assertTrue(NameNodeAdapter.getFileInfo(nn2,
@@ -100,46 +99,5 @@ public class TestEditLogTailer {
   
   private static String getDirPath(int suffix) {
     return DIR_PREFIX + suffix;
-  }
-
-  /**
-   * Trigger an edits log roll on the active and then wait for the standby to
-   * catch up to all the edits done by the active. This method will check
-   * repeatedly for up to NN_LAG_TIMEOUT milliseconds, and then fail throwing
-   * {@link CouldNotCatchUpException}.
-   * 
-   * @param active active NN
-   * @param standby standby NN which should catch up to active
-   * @throws IOException if an error occurs rolling the edit log
-   * @throws CouldNotCatchUpException if the standby doesn't catch up to the
-   *         active in NN_LAG_TIMEOUT milliseconds
-   */
-  static void waitForStandbyToCatchUp(NameNode active,
-      NameNode standby) throws InterruptedException, IOException, CouldNotCatchUpException {
-    
-    long activeTxId = active.getNamesystem().getFSImage().getEditLog()
-      .getLastWrittenTxId();
-    
-    active.getRpcServer().rollEditLog();
-    
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < NN_LAG_TIMEOUT) {
-      long nn2HighestTxId = standby.getNamesystem().getFSImage()
-        .getLastAppliedTxId();
-      if (nn2HighestTxId >= activeTxId) {
-        return;
-      }
-      Thread.sleep(SLEEP_TIME);
-    }
-    throw new CouldNotCatchUpException("Standby did not catch up to txid " +
-        activeTxId + " (currently at " +
-        standby.getNamesystem().getFSImage().getLastAppliedTxId() + ")");
-  }
-  
-  public static class CouldNotCatchUpException extends IOException {
-
-    public CouldNotCatchUpException(String message) {
-      super(message);
-    }
   }
 }

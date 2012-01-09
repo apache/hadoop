@@ -25,7 +25,6 @@ import java.io.StringWriter;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -48,7 +46,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -111,7 +108,7 @@ public class TestDNFencing {
     cluster.triggerBlockReports();
     nn2.getNamesystem().getEditLogTailer().setSleepTime(250);
     nn2.getNamesystem().getEditLogTailer().interrupt();
-    fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+    fs = HATestUtil.configureFailoverFs(cluster, conf);
   }
   
   @After
@@ -172,7 +169,7 @@ public class TestDNFencing {
     BlockManagerTestUtil.computeInvalidationWork(
         nn2.getNamesystem().getBlockManager());
     cluster.triggerHeartbeats();
-    waitForDNDeletions(cluster);
+    HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
     assertEquals(0, nn2.getNamesystem().getUnderReplicatedBlocks());
     assertEquals(0, nn2.getNamesystem().getPendingReplicationBlocks());
@@ -258,9 +255,9 @@ public class TestDNFencing {
     BlockManagerTestUtil.computeInvalidationWork(
         nn2.getNamesystem().getBlockManager());
 
-    waitForNNToIssueDeletions(nn2);
+    HATestUtil.waitForNNToIssueDeletions(nn2);
     cluster.triggerHeartbeats();
-    waitForDNDeletions(cluster);
+    HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
     assertEquals(0, nn2.getNamesystem().getUnderReplicatedBlocks());
     assertEquals(0, nn2.getNamesystem().getPendingReplicationBlocks());
@@ -283,7 +280,7 @@ public class TestDNFencing {
     DFSTestUtil.createFile(fs, TEST_FILE_PATH, 30*SMALL_BLOCK, (short)1, 1L);
 
     banner("rolling NN1's edit log, forcing catch-up");
-    TestEditLogTailer.waitForStandbyToCatchUp(nn1, nn2);
+    HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
     
     // Get some new replicas reported so that NN2 now considers
     // them over-replicated and schedules some more deletions
@@ -353,9 +350,9 @@ public class TestDNFencing {
     BlockManagerTestUtil.computeInvalidationWork(
         nn2.getNamesystem().getBlockManager());
 
-    waitForNNToIssueDeletions(nn2);
+    HATestUtil.waitForNNToIssueDeletions(nn2);
     cluster.triggerHeartbeats();
-    waitForDNDeletions(cluster);
+    HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
     assertEquals(0, nn2.getNamesystem().getUnderReplicatedBlocks());
     assertEquals(0, nn2.getNamesystem().getPendingReplicationBlocks());
@@ -408,33 +405,6 @@ public class TestDNFencing {
       }
     }
     return count;
-  }
-
-  static void waitForDNDeletions(final MiniDFSCluster cluster)
-      throws TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        for (DataNode dn : cluster.getDataNodes()) {
-          if (DataNodeAdapter.getPendingAsyncDeletions(dn) > 0) {
-            return false;
-          }
-        }
-        return true;
-      }
-    }, 1000, 10000);
-    
-  }
-
-  static void waitForNNToIssueDeletions(final NameNode nn)
-      throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        LOG.info("Waiting for NN to issue block deletions to DNs");
-        return nn.getNamesystem().getBlockManager().getPendingDeletionBlocksCount() == 0;
-      }
-    }, 250, 10000);
   }
 
   /**

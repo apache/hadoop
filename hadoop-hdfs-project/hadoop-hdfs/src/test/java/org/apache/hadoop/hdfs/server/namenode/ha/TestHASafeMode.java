@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -68,7 +67,7 @@ public class TestHASafeMode {
     
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
-    fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+    fs = HATestUtil.configureFailoverFs(cluster, conf);
     
     nn0.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
 
@@ -126,7 +125,7 @@ public class TestHASafeMode {
             "The reported blocks 0 needs additional 3 blocks to reach"));
 
     banner("Waiting for standby to catch up to active namespace");
-    TestEditLogTailer.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 
     status = nn1.getNamesystem().getSafemode();
     assertTrue("Bad safemode status: '" + status + "'",
@@ -167,7 +166,7 @@ public class TestHASafeMode {
 
     
     banner("Waiting for standby to catch up to active namespace");
-    TestEditLogTailer.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 
     status = nn1.getNamesystem().getSafemode();
     assertTrue("Bad safemode status: '" + status + "'",
@@ -221,7 +220,7 @@ public class TestHASafeMode {
             "The reported blocks 0 needs additional 5 blocks to reach"));
     
     banner("Waiting for standby to catch up to active namespace");
-    TestEditLogTailer.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
     status = nn1.getNamesystem().getSafemode();
     assertTrue("Bad safemode status: '" + status + "'",
         status.startsWith(
@@ -265,7 +264,7 @@ public class TestHASafeMode {
     
     banner("Triggering deletions on DNs and Deletion Reports");
     cluster.triggerHeartbeats();
-    TestDNFencing.waitForDNDeletions(cluster);
+    HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
 
     status = nn1.getNamesystem().getSafemode();
@@ -275,7 +274,7 @@ public class TestHASafeMode {
             "The reported blocks 0 needs additional 10 blocks"));
 
     banner("Waiting for standby to catch up to active namespace");
-    TestEditLogTailer.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 
     status = nn1.getNamesystem().getSafemode();
     assertTrue("Bad safemode status: '" + status + "'",

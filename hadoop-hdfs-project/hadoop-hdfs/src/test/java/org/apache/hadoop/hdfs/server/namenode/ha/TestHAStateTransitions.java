@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
@@ -110,7 +109,7 @@ public class TestHAStateTransitions {
       cluster.transitionToActive(0);
       
       LOG.info("Starting with NN 0 active");
-      FileSystem fs = TestDFSClientFailover.configureFailoverFs(cluster, conf);
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       fs.mkdirs(TEST_DIR);
 
       LOG.info("Failing over to NN 1");
@@ -161,7 +160,7 @@ public class TestHAStateTransitions {
       Mockito.doAnswer(new GenericTestUtils.SleepAnswer(50))
         .when(spyLock).writeLock();
       
-      final FileSystem fs = TestDFSClientFailover.configureFailoverFs(
+      final FileSystem fs = HATestUtil.configureFailoverFs(
           cluster, conf);
       
       TestContext ctx = new TestContext();

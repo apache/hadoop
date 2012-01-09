@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.TestDFSClientFailover;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
@@ -132,7 +131,7 @@ public class TestDNFencingWithReplication {
       nn2.getNamesystem().getEditLogTailer().setSleepTime(250);
       nn2.getNamesystem().getEditLogTailer().interrupt();
       
-      FileSystem fs = TestDFSClientFailover.configureFailoverFs(
+      FileSystem fs = HATestUtil.configureFailoverFs(
           cluster, conf);
       TestContext togglers = new TestContext();
       for (int i = 0; i < NUM_THREADS; i++) {
