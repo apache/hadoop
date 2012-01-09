@@ -123,6 +123,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7936. There's a Hoop README in the root dir of the tarball. (tucu)
 
+   HADOOP-7963. Fix ViewFS to catch a null canonical service-name and pass
+   tests TestViewFileSystem* (Siddharth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

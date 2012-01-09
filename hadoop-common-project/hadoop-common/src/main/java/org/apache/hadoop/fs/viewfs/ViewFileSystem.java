@@ -514,7 +514,7 @@ public class ViewFileSystem extends FileSystem {
     for (int i = 0; i < mountPoints.size(); ++i) {
       String serviceName =
           mountPoints.get(i).target.targetFileSystem.getCanonicalServiceName();
-      if (seenServiceNames.contains(serviceName)) {
+      if (serviceName == null || seenServiceNames.contains(serviceName)) {
         continue;
       }
       seenServiceNames.add(serviceName);
