@@ -76,8 +76,8 @@ public class ContainerLauncherImpl extends AbstractService implements
   int nmTimeOut;
 
   private AppContext context;
-  private ThreadPoolExecutor launcherPool;
-  private static final int INITIAL_POOL_SIZE = 10;
+  protected ThreadPoolExecutor launcherPool;
+  protected static final int INITIAL_POOL_SIZE = 10;
   private int limitOnPoolSize;
   private Thread eventHandlingThread;
   private BlockingQueue<ContainerLauncherEvent> eventQueue =
@@ -102,6 +102,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     this.limitOnPoolSize = conf.getInt(
         MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT,
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT);
+    LOG.info("Upper limit on the thread pool size is " + this.limitOnPoolSize);
     this.nmTimeOut = conf.getInt(ContainerLauncher.MR_AM_NM_COMMAND_TIMEOUT,
         ContainerLauncher.DEFAULT_NM_COMMAND_TIMEOUT);
     this.rpc = YarnRPC.create(conf);
@@ -141,20 +142,21 @@ public class ContainerLauncherImpl extends AbstractService implements
             int numNodes = allNodes.size();
             int idealPoolSize = Math.min(limitOnPoolSize, numNodes);
 
-            if (poolSize <= idealPoolSize) {
+            if (poolSize < idealPoolSize) {
               // Bump up the pool size to idealPoolSize+INITIAL_POOL_SIZE, the
               // later is just a buffer so we are not always increasing the
               // pool-size
-              int newPoolSize = idealPoolSize + INITIAL_POOL_SIZE;
-              LOG.info("Setting ContainerLauncher pool size to "
-                  + newPoolSize);
+              int newPoolSize = Math.min(limitOnPoolSize, idealPoolSize
+                  + INITIAL_POOL_SIZE);
+              LOG.info("Setting ContainerLauncher pool size to " + newPoolSize
+                  + " as number-of-nodes to talk to is " + numNodes);
               launcherPool.setCorePoolSize(newPoolSize);
             }
           }
 
           // the events from the queue are handled in parallel
           // using a thread pool
-          launcherPool.execute(new EventProcessor(event));
+          launcherPool.execute(createEventProcessor(event));
 
           // TODO: Group launching of multiple containers to a single
           // NodeManager into a single connection
@@ -172,13 +174,15 @@ public class ContainerLauncherImpl extends AbstractService implements
     super.stop();
   }
 
+  protected EventProcessor createEventProcessor(ContainerLauncherEvent event) {
+    return new EventProcessor(event);
+  }
+
   protected ContainerManager getCMProxy(ContainerId containerID,
       final String containerManagerBindAddr, ContainerToken containerToken)
       throws IOException {
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
-
-    this.allNodes.add(containerManagerBindAddr);
 
     if (UserGroupInformation.isSecurityEnabled()) {
       Token<ContainerTokenIdentifier> token = new Token<ContainerTokenIdentifier>(
@@ -244,7 +248,7 @@ public class ContainerLauncherImpl extends AbstractService implements
   /**
    * Setup and start the container on remote nodemanager.
    */
-  private class EventProcessor implements Runnable {
+  class EventProcessor implements Runnable {
     private ContainerLauncherEvent event;
 
     EventProcessor(ContainerLauncherEvent event) {
@@ -280,7 +284,7 @@ public class ContainerLauncherImpl extends AbstractService implements
           proxy = getCMProxy(containerID, containerManagerBindAddr,
               containerToken);
 
-          // Interruped during getProxy, but that didn't throw exception
+          // Interrupted during getProxy, but that didn't throw exception
           if (Thread.interrupted()) {
             // The timer cancelled the command in the mean while.
             String message = "Container launch failed for " + containerID
@@ -438,6 +442,7 @@ public class ContainerLauncherImpl extends AbstractService implements
   public void handle(ContainerLauncherEvent event) {
     try {
       eventQueue.put(event);
+      this.allNodes.add(event.getContainerMgrAddress());
     } catch (InterruptedException e) {
       throw new YarnException(e);
     }
