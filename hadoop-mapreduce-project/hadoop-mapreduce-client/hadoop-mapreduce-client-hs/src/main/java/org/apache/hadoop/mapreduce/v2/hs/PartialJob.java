@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -95,7 +95,7 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   }
 
   @Override
-  public Counters getCounters() {
+  public Counters getAllCounters() {
     return null;
   }
 

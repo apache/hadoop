@@ -22,9 +22,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -44,7 +44,15 @@ public interface Job {
   String getName();
   JobState getState();
   JobReport getReport();
-  Counters getCounters();
+
+  /**
+   * Get all the counters of this job. This includes job-counters aggregated
+   * together with the counters of each task. This creates a clone of the
+   * Counters, so use this judiciously.  
+   * @return job-counters and aggregate task-counters
+   */
+  Counters getAllCounters();
+
   Map<TaskId,Task> getTasks();
   Map<TaskId,Task> getTasks(TaskType taskType);
   Task getTask(TaskId taskID);

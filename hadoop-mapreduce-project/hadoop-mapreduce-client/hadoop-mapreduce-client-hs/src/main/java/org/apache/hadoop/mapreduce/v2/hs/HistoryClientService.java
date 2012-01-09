@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -190,7 +191,7 @@ public class HistoryClientService extends AbstractService {
       JobId jobId = request.getJobId();
       Job job = verifyAndGetJob(jobId);
       GetCountersResponse response = recordFactory.newRecordInstance(GetCountersResponse.class);
-      response.setCounters(job.getCounters());
+      response.setCounters(TypeConverter.toYarn(job.getAllCounters()));
       return response;
     }
 

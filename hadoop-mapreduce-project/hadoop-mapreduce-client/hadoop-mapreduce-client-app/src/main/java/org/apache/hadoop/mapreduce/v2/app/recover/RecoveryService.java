@@ -92,7 +92,6 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 
 //TODO:
 //task cleanup for all non completed tasks
-
 public class RecoveryService extends CompositeService implements Recovery {
 
   private static final Log LOG = LogFactory.getLog(RecoveryService.class);
@@ -411,8 +410,7 @@ public class RecoveryService extends CompositeService implements Recovery {
       if (cntrs == null) {
         taskAttemptStatus.counters = null;
       } else {
-        taskAttemptStatus.counters = TypeConverter.toYarn(attemptInfo
-            .getCounters());
+        taskAttemptStatus.counters = cntrs;
       }
       actualHandler.handle(new TaskAttemptStatusUpdateEvent(
           taskAttemptStatus.id, taskAttemptStatus));

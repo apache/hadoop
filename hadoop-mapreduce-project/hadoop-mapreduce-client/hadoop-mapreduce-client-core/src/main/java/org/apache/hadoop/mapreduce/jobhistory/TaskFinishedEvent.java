@@ -18,15 +18,12 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.io.IOException;
-
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
-
-import org.apache.avro.util.Utf8;
 
 /**
  * Event to record the successful completion of a task
@@ -35,7 +32,14 @@ import org.apache.avro.util.Utf8;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TaskFinishedEvent implements HistoryEvent {
-  private TaskFinished datum = new TaskFinished();
+
+  private TaskFinished datum = null;
+
+  private TaskID taskid;
+  private long finishTime;
+  private TaskType taskType;
+  private String status;
+  private Counters counters;
   
   /**
    * Create an event to record the successful completion of a task
@@ -48,32 +52,48 @@ public class TaskFinishedEvent implements HistoryEvent {
   public TaskFinishedEvent(TaskID id, long finishTime,
                            TaskType taskType,
                            String status, Counters counters) {
-    datum.taskid = new Utf8(id.toString());
-    datum.finishTime = finishTime;
-    datum.counters = EventWriter.toAvro(counters);
-    datum.taskType = new Utf8(taskType.name());
-    datum.status = new Utf8(status);
+    this.taskid = id;
+    this.finishTime = finishTime;
+    this.taskType = taskType;
+    this.status = status;
+    this.counters = counters;
   }
   
   TaskFinishedEvent() {}
 
-  public Object getDatum() { return datum; }
-  public void setDatum(Object datum) {
-    this.datum = (TaskFinished)datum;
+  public Object getDatum() {
+    if (datum == null) {
+      datum = new TaskFinished();
+      datum.taskid = new Utf8(taskid.toString());
+      datum.finishTime = finishTime;
+      datum.counters = EventWriter.toAvro(counters);
+      datum.taskType = new Utf8(taskType.name());
+      datum.status = new Utf8(status);
+    }
+    return datum;
+  }
+
+  public void setDatum(Object oDatum) {
+    this.datum = (TaskFinished)oDatum;
+    this.taskid = TaskID.forName(datum.taskid.toString());
+    this.finishTime = datum.finishTime;
+    this.taskType = TaskType.valueOf(datum.taskType.toString());
+    this.status = datum.status.toString();
+    this.counters = EventReader.fromAvro(datum.counters);
   }
 
   /** Get task id */
-  public TaskID getTaskId() { return TaskID.forName(datum.taskid.toString()); }
+  public TaskID getTaskId() { return TaskID.forName(taskid.toString()); }
   /** Get the task finish time */
-  public long getFinishTime() { return datum.finishTime; }
+  public long getFinishTime() { return finishTime; }
   /** Get task counters */
-  public Counters getCounters() { return EventReader.fromAvro(datum.counters); }
+  public Counters getCounters() { return counters; }
   /** Get task type */
   public TaskType getTaskType() {
-    return TaskType.valueOf(datum.taskType.toString());
+    return TaskType.valueOf(taskType.toString());
   }
   /** Get task status */
-  public String getTaskStatus() { return datum.status.toString(); }
+  public String getTaskStatus() { return status.toString(); }
   /** Get event type */
   public EventType getEventType() {
     return EventType.TASK_FINISHED;

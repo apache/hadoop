@@ -34,8 +34,25 @@ import org.apache.hadoop.mapreduce.TaskType;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ReduceAttemptFinishedEvent  implements HistoryEvent {
-  private ReduceAttemptFinished datum =
-    new ReduceAttemptFinished();
+
+  private ReduceAttemptFinished datum = null;
+
+  private TaskAttemptID attemptId;
+  private TaskType taskType;
+  private String taskStatus;
+  private long shuffleFinishTime;
+  private long sortFinishTime;
+  private long finishTime;
+  private String hostname;
+  private String rackName;
+  private int port;
+  private String state;
+  private Counters counters;
+  int[][] allSplits;
+  int[] clockSplits;
+  int[] cpuUsages;
+  int[] vMemKbytes;
+  int[] physMemKbytes;
 
   /**
    * Create an event to record completion of a reduce attempt
@@ -60,33 +77,22 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
      long shuffleFinishTime, long sortFinishTime, long finishTime,
      String hostname, int port,  String rackName, String state, 
      Counters counters, int[][] allSplits) {
-    datum.taskid = new Utf8(id.getTaskID().toString());
-    datum.attemptId = new Utf8(id.toString());
-    datum.taskType = new Utf8(taskType.name());
-    datum.taskStatus = new Utf8(taskStatus);
-    datum.shuffleFinishTime = shuffleFinishTime;
-    datum.sortFinishTime = sortFinishTime;
-    datum.finishTime = finishTime;
-    datum.hostname = new Utf8(hostname);
-    datum.port = port;
-    if (rackName != null) {
-      datum.rackname = new Utf8(rackName);
-    }
-    datum.state = new Utf8(state);
-    datum.counters = EventWriter.toAvro(counters);
-
-    datum.clockSplits 
-      = AvroArrayUtils.toAvro
-           (ProgressSplitsBlock.arrayGetWallclockTime(allSplits));
-    datum.cpuUsages 
-      = AvroArrayUtils.toAvro
-           (ProgressSplitsBlock.arrayGetCPUTime(allSplits));
-    datum.vMemKbytes 
-      = AvroArrayUtils.toAvro
-           (ProgressSplitsBlock.arrayGetVMemKbytes(allSplits));
-    datum.physMemKbytes 
-      = AvroArrayUtils.toAvro
-           (ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits));
+    this.attemptId = id;
+    this.taskType = taskType;
+    this.taskStatus = taskStatus;
+    this.shuffleFinishTime = shuffleFinishTime;
+    this.sortFinishTime = sortFinishTime;
+    this.finishTime = finishTime;
+    this.hostname = hostname;
+    this.rackName = rackName;
+    this.port = port;
+    this.state = state;
+    this.counters = counters;
+    this.allSplits = allSplits;
+    this.clockSplits = ProgressSplitsBlock.arrayGetWallclockTime(allSplits);
+    this.cpuUsages = ProgressSplitsBlock.arrayGetCPUTime(allSplits);
+    this.vMemKbytes = ProgressSplitsBlock.arrayGetVMemKbytes(allSplits);
+    this.physMemKbytes = ProgressSplitsBlock.arrayGetPhysMemKbytes(allSplits);
   }
 
   /**
@@ -117,43 +123,87 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
 
   ReduceAttemptFinishedEvent() {}
 
-  public Object getDatum() { return datum; }
-  public void setDatum(Object datum) {
-    this.datum = (ReduceAttemptFinished)datum;
+  public Object getDatum() {
+    if (datum == null) {
+      datum = new ReduceAttemptFinished();
+      datum.taskid = new Utf8(attemptId.getTaskID().toString());
+      datum.attemptId = new Utf8(attemptId.toString());
+      datum.taskType = new Utf8(taskType.name());
+      datum.taskStatus = new Utf8(taskStatus);
+      datum.shuffleFinishTime = shuffleFinishTime;
+      datum.sortFinishTime = sortFinishTime;
+      datum.finishTime = finishTime;
+      datum.hostname = new Utf8(hostname);
+      datum.port = port;
+      if (rackName != null) {
+        datum.rackname = new Utf8(rackName);
+      }
+      datum.state = new Utf8(state);
+      datum.counters = EventWriter.toAvro(counters);
+
+      datum.clockSplits = AvroArrayUtils.toAvro(ProgressSplitsBlock
+        .arrayGetWallclockTime(allSplits));
+      datum.cpuUsages = AvroArrayUtils.toAvro(ProgressSplitsBlock
+        .arrayGetCPUTime(allSplits));
+      datum.vMemKbytes = AvroArrayUtils.toAvro(ProgressSplitsBlock
+        .arrayGetVMemKbytes(allSplits));
+      datum.physMemKbytes = AvroArrayUtils.toAvro(ProgressSplitsBlock
+        .arrayGetPhysMemKbytes(allSplits));
+    }
+    return datum;
+  }
+
+  public void setDatum(Object oDatum) {
+    this.datum = (ReduceAttemptFinished)oDatum;
+    this.attemptId = TaskAttemptID.forName(datum.attemptId.toString());
+    this.taskType = TaskType.valueOf(datum.taskType.toString());
+    this.taskStatus = datum.taskStatus.toString();
+    this.shuffleFinishTime = datum.shuffleFinishTime;
+    this.sortFinishTime = datum.sortFinishTime;
+    this.finishTime = datum.finishTime;
+    this.hostname = datum.hostname.toString();
+    this.rackName = datum.rackname.toString();
+    this.port = datum.port;
+    this.state = datum.state.toString();
+    this.counters = EventReader.fromAvro(datum.counters);
+    this.clockSplits = AvroArrayUtils.fromAvro(datum.clockSplits);
+    this.cpuUsages = AvroArrayUtils.fromAvro(datum.cpuUsages);
+    this.vMemKbytes = AvroArrayUtils.fromAvro(datum.vMemKbytes);
+    this.physMemKbytes = AvroArrayUtils.fromAvro(datum.physMemKbytes);
   }
 
   /** Get the Task ID */
-  public TaskID getTaskId() { return TaskID.forName(datum.taskid.toString()); }
+  public TaskID getTaskId() { return attemptId.getTaskID(); }
   /** Get the attempt id */
   public TaskAttemptID getAttemptId() {
-    return TaskAttemptID.forName(datum.attemptId.toString());
+    return TaskAttemptID.forName(attemptId.toString());
   }
   /** Get the task type */
   public TaskType getTaskType() {
-    return TaskType.valueOf(datum.taskType.toString());
+    return TaskType.valueOf(taskType.toString());
   }
   /** Get the task status */
-  public String getTaskStatus() { return datum.taskStatus.toString(); }
+  public String getTaskStatus() { return taskStatus.toString(); }
   /** Get the finish time of the sort phase */
-  public long getSortFinishTime() { return datum.sortFinishTime; }
+  public long getSortFinishTime() { return sortFinishTime; }
   /** Get the finish time of the shuffle phase */
-  public long getShuffleFinishTime() { return datum.shuffleFinishTime; }
+  public long getShuffleFinishTime() { return shuffleFinishTime; }
   /** Get the finish time of the attempt */
-  public long getFinishTime() { return datum.finishTime; }
+  public long getFinishTime() { return finishTime; }
   /** Get the name of the host where the attempt ran */
-  public String getHostname() { return datum.hostname.toString(); }
+  public String getHostname() { return hostname.toString(); }
   /** Get the tracker rpc port */
-  public int getPort() { return datum.port; }
+  public int getPort() { return port; }
   
   /** Get the rack name of the node where the attempt ran */
   public String getRackName() {
-    return datum.rackname == null ? null : datum.rackname.toString();
+    return rackName == null ? null : rackName.toString();
   }
   
   /** Get the state string */
-  public String getState() { return datum.state.toString(); }
+  public String getState() { return state.toString(); }
   /** Get the counters for the attempt */
-  Counters getCounters() { return EventReader.fromAvro(datum.counters); }
+  Counters getCounters() { return counters; }
   /** Get the event type */
   public EventType getEventType() {
     return EventType.REDUCE_ATTEMPT_FINISHED;
@@ -161,16 +211,16 @@ public class ReduceAttemptFinishedEvent  implements HistoryEvent {
 
 
   public int[] getClockSplits() {
-    return AvroArrayUtils.fromAvro(datum.clockSplits);
+    return clockSplits;
   }
   public int[] getCpuUsages() {
-    return AvroArrayUtils.fromAvro(datum.cpuUsages);
+    return cpuUsages;
   }
   public int[] getVMemKbytes() {
-    return AvroArrayUtils.fromAvro(datum.vMemKbytes);
+    return vMemKbytes;
   }
   public int[] getPhysMemKbytes() {
-    return AvroArrayUtils.fromAvro(datum.physMemKbytes);
+    return physMemKbytes;
   }
 
 }

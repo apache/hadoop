@@ -25,8 +25,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
+import org.apache.hadoop.mapreduce.CounterGroup;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 
@@ -49,7 +49,7 @@ public class JobTaskAttemptCounterInfo {
     total = taskattempt.getCounters();
     taskAttemptCounterGroup = new ArrayList<TaskCounterGroupInfo>();
     if (total != null) {
-      for (CounterGroup g : total.getAllCounterGroups().values()) {
+      for (CounterGroup g : total) {
         if (g != null) {
           TaskCounterGroupInfo cginfo = new TaskCounterGroupInfo(g.getName(), g);
           if (cginfo != null) {
