@@ -79,6 +79,14 @@ public class VersionInfo {
   public static String getUrl() {
     return version != null ? version.url() : "Unknown";
   }
+
+  /**
+   * Get the checksum of the source files from which Hadoop was
+   * built.
+   **/
+  public static String getSrcChecksum() {
+    return version != null ? version.srcChecksum() : "Unknown";
+  }
   
   /**
    * Returns the buildVersion which includes version, 
@@ -88,12 +96,14 @@ public class VersionInfo {
     return VersionInfo.getVersion() + 
     " from " + VersionInfo.getRevision() +
     " by " + VersionInfo.getUser() + 
-    " on " + VersionInfo.getDate();
+    " source checksum " + VersionInfo.getSrcChecksum();
   }
   
   public static void main(String[] args) {
     System.out.println("Hadoop " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());
     System.out.println("Compiled by " + getUser() + " on " + getDate());
+    System.out.println("From source with checksum " + getSrcChecksum());
+
   }
 }
