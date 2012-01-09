@@ -376,6 +376,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3624. Remove unnecessary dependency on JDK's tools.jar. (mahadev
     via acmurthy)
 
+    MAPREDUCE-3616. Thread pool for launching containers in MR AM not
+    expanding as expected. (vinodkv via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

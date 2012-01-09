@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -181,23 +182,31 @@ public class MRApps extends Apps {
       String mrAppGeneratedClasspathFile = "mrapp-generated-classpath";
       classpathFileStream =
           thisClassLoader.getResourceAsStream(mrAppGeneratedClasspathFile);
-      // Put the file itself on classpath for tasks.
-      String classpathElement = thisClassLoader.getResource(mrAppGeneratedClasspathFile).getFile();
-      if (classpathElement.contains("!")) {
-        classpathElement = classpathElement.substring(0, classpathElement.indexOf("!"));
-      }
-      else {
-        classpathElement = new File(classpathElement).getParent();
-      }
-      Apps.addToEnvironment(
-          environment,
-          Environment.CLASSPATH.name(), classpathElement);
 
-      reader = new BufferedReader(new InputStreamReader(classpathFileStream));
-      String cp = reader.readLine();
-      if (cp != null) {
-        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), cp.trim());
-      }      
+      // Put the file itself on classpath for tasks.
+      URL classpathResource = thisClassLoader
+        .getResource(mrAppGeneratedClasspathFile);
+      if (classpathResource != null) {
+        String classpathElement = classpathResource.getFile();
+        if (classpathElement.contains("!")) {
+          classpathElement = classpathElement.substring(0,
+            classpathElement.indexOf("!"));
+        } else {
+          classpathElement = new File(classpathElement).getParent();
+        }
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
+          classpathElement);
+      }
+
+      if (classpathFileStream != null) {
+        reader = new BufferedReader(new InputStreamReader(classpathFileStream));
+        String cp = reader.readLine();
+        if (cp != null) {
+          Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
+            cp.trim());
+        }
+      }
+
       // Add standard Hadoop classes
       for (String c : ApplicationConstants.APPLICATION_CLASSPATH) {
         Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c);
