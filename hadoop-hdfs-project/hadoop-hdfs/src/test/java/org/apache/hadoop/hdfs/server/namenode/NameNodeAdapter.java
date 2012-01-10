@@ -52,7 +52,7 @@ public class NameNodeAdapter {
    * @return rpc server
    */
   public static Server getRpcServer(NameNode namenode) {
-    return ((NameNodeRpcServer)namenode.getRpcServer()).server;
+    return ((NameNodeRpcServer)namenode.getRpcServer()).clientRpcServer;
   }
 
   public static DelegationTokenSecretManager getDtSecretManager(
