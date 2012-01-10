@@ -24,6 +24,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)
 
+    HDFS-2497 Fix TestBackupNode failure. (suresh)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -82,13 +82,13 @@ public class NamenodeRegistrationWritable implements Writable {
     rpcAddress = Text.readString(in);
     httpAddress = Text.readString(in);
     role = NamenodeRole.valueOf(Text.readString(in));
+    storageInfo = new StorageInfoWritable();
     storageInfo.readFields(in);
   }
 
   public static NamenodeRegistrationWritable convert(NamenodeRegistration reg) {
     return new NamenodeRegistrationWritable(reg.getAddress(),
-        reg.getHttpAddress(), reg.getRole(),
-        reg);
+        reg.getHttpAddress(), reg.getRole(), reg);
   }
 
   public NamenodeRegistration convert() {
