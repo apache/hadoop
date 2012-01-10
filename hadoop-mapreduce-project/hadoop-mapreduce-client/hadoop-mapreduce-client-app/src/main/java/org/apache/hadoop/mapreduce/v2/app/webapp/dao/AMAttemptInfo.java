@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.v2.hs.webapp.dao;
+package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -41,14 +40,11 @@ public class AMAttemptInfo {
   protected String containerId;
   protected String logsLink;
 
-  @XmlTransient
-  protected String shortLogsLink;
-
   public AMAttemptInfo() {
   }
 
-  public AMAttemptInfo(AMInfo amInfo, String jobId, String user, String host,
-      String pathPrefix) {
+  public AMAttemptInfo(AMInfo amInfo, String jobId, String user) {
+
     this.nodeHttpAddress = "";
     this.nodeId = "";
     String nmHost = amInfo.getNodeManagerHost();
@@ -64,14 +60,11 @@ public class AMAttemptInfo {
     this.startTime = amInfo.getStartTime();
     this.containerId = "";
     this.logsLink = "";
-    this.shortLogsLink = "";
     ContainerId containerId = amInfo.getContainerId();
     if (containerId != null) {
       this.containerId = containerId.toString();
-      this.logsLink = join(host, pathPrefix,
-          ujoin("logs", this.nodeId, this.containerId, jobId, user));
-      this.shortLogsLink = ujoin("logs", this.nodeId, this.containerId,
-          jobId, user);
+      this.logsLink = join("http://" + nodeHttpAddress,
+          ujoin("node", "containerlogs", this.containerId));
     }
   }
 
@@ -97,10 +90,6 @@ public class AMAttemptInfo {
 
   public String getLogsLink() {
     return this.logsLink;
-  }
-
-  public String getShortLogsLink() {
-    return this.shortLogsLink;
   }
 
 }

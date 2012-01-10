@@ -229,7 +229,7 @@ public class HsWebServices {
   }
 
   @GET
-  @Path("/mapreduce/jobs/{jobid}/attempts")
+  @Path("/mapreduce/jobs/{jobid}/jobattempts")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
 

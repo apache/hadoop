@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.mapreduce.v2.hs.webapp.dao;
+package org.apache.hadoop.mapreduce.v2.app.webapp.dao;
 
 import java.util.ArrayList;
 
