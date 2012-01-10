@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security.token.block;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.security.token.block.BlockKey;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -31,19 +33,18 @@ import org.apache.hadoop.io.WritableFactory;
  * Object for passing block keys
  */
 @InterfaceAudience.Private
-public class ExportedBlockKeys implements Writable {
-  public static final ExportedBlockKeys DUMMY_KEYS = new ExportedBlockKeys();
+public class ExportedBlockKeysWritable implements Writable {
   private boolean isBlockTokenEnabled;
   private long keyUpdateInterval;
   private long tokenLifetime;
   private BlockKey currentKey;
   private BlockKey[] allKeys;
 
-  public ExportedBlockKeys() {
+  public ExportedBlockKeysWritable() {
     this(false, 0, 0, new BlockKey(), new BlockKey[0]);
   }
 
-  public ExportedBlockKeys(boolean isBlockTokenEnabled, long keyUpdateInterval,
+  ExportedBlockKeysWritable(boolean isBlockTokenEnabled, long keyUpdateInterval,
       long tokenLifetime, BlockKey currentKey, BlockKey[] allKeys) {
     this.isBlockTokenEnabled = isBlockTokenEnabled;
     this.keyUpdateInterval = keyUpdateInterval;
@@ -52,40 +53,19 @@ public class ExportedBlockKeys implements Writable {
     this.allKeys = allKeys == null ? new BlockKey[0] : allKeys;
   }
 
-  public boolean isBlockTokenEnabled() {
-    return isBlockTokenEnabled;
-  }
-
-  public long getKeyUpdateInterval() {
-    return keyUpdateInterval;
-  }
-
-  public long getTokenLifetime() {
-    return tokenLifetime;
-  }
-
-  public BlockKey getCurrentKey() {
-    return currentKey;
-  }
-
-  public BlockKey[] getAllKeys() {
-    return allKeys;
-  }
-  
   // ///////////////////////////////////////////////
   // Writable
   // ///////////////////////////////////////////////
   static { // register a ctor
-    WritableFactories.setFactory(ExportedBlockKeys.class,
+    WritableFactories.setFactory(ExportedBlockKeysWritable.class,
         new WritableFactory() {
           public Writable newInstance() {
-            return new ExportedBlockKeys();
+            return new ExportedBlockKeysWritable();
           }
         });
   }
 
-  /**
-   */
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeBoolean(isBlockTokenEnabled);
     out.writeLong(keyUpdateInterval);
@@ -97,8 +77,7 @@ public class ExportedBlockKeys implements Writable {
     }
   }
 
-  /**
-   */
+  @Override
   public void readFields(DataInput in) throws IOException {
     isBlockTokenEnabled = in.readBoolean();
     keyUpdateInterval = in.readLong();
@@ -111,4 +90,15 @@ public class ExportedBlockKeys implements Writable {
     }
   }
 
+  public static ExportedBlockKeysWritable convert(ExportedBlockKeys blockKeys) {
+    if (blockKeys == null) return null;
+    return new ExportedBlockKeysWritable(blockKeys.isBlockTokenEnabled(),
+        blockKeys.getKeyUpdateInterval(), blockKeys.getTokenLifetime(),
+        blockKeys.getCurrentKey(), blockKeys.getAllKeys());
+  }
+  
+  public ExportedBlockKeys convert() {
+    return new ExportedBlockKeys(isBlockTokenEnabled, keyUpdateInterval,
+        tokenLifetime, currentKey, allKeys);
+  }
 }

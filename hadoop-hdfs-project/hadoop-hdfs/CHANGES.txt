@@ -17,6 +17,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2459. Separate datatypes for Journal Protocol. (suresh)
 
+    HDFS-2480. Separate datatypes for NamenodeProtocol. (suresh)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
