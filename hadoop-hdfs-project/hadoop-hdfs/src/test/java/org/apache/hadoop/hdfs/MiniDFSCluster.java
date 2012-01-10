@@ -632,7 +632,7 @@ public class MiniDFSCluster {
         
         nnCounterForFormat++;
         if (formatThisOne) {
-          NameNode.format(conf);
+          DFSTestUtil.formatNameNode(conf);
         }
         prevNNDirs = FSNamesystem.getNamespaceDirs(conf);
       }
