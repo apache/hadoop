@@ -960,6 +960,12 @@
 </property>
 
 <property>
+  <description>Network ACL to AM closed.</description>
+  <name>mapreduce.job.am-access-disabled</name>
+  <value>false</value>
+</property>
+
+<property>
   <name>mapreduce.job.acl-modify-job</name>
   <value> </value>
   <description> Job specific access-control list for 'modifying' the job. It

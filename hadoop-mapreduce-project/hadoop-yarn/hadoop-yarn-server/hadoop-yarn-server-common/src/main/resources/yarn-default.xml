@@ -117,12 +117,6 @@
   </property>
 
   <property>
-    <description>Network ACL to AM closed.</description>
-    <name>yarn.resourcemanager.am.acl.disabled</name>
-    <value>false</value>
-  </property> 
-
-  <property>
     <description>The address of the RM admin interface.</description>
     <name>yarn.resourcemanager.admin.address</name>
     <value>0.0.0.0:8141</value>
