@@ -384,6 +384,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3616. Thread pool for launching containers in MR AM not
     expanding as expected. (vinodkv via sseth)
 
+    MAPREDUCE-3639. Fixed TokenCache to work with absent FileSystem canonical
+    service-names. (Siddharth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
