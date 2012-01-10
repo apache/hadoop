@@ -36,9 +36,11 @@ public interface HAServiceProtocol extends VersionedProtocol {
   public static final long versionID = 1L;
 
   /**
-   * An HA service may be in active or standby state.
+   * An HA service may be in active or standby state. During
+   * startup, it is in an unknown INITIALIZING state.
    */
   public enum HAServiceState {
+    INITIALIZING("initializing"),
     ACTIVE("active"),
     STANDBY("standby");
 

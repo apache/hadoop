@@ -926,6 +926,9 @@ public class NameNode {
   }
 
   synchronized HAServiceState getServiceState() {
+    if (state == null) {
+      return HAServiceState.INITIALIZING;
+    }
     return state.getServiceState();
   }
 

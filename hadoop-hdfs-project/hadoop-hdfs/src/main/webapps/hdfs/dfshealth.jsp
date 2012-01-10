@@ -31,7 +31,7 @@
   NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
   FSNamesystem fsn = nn.getNamesystem();
   String namenodeRole = nn.getRole().toString();
-  String namenodeState = HAServiceState.ACTIVE.equals(nn.getServiceState()) ? "active" : "standby";
+  String namenodeState = nn.getServiceState().toString();
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
 %>
 
