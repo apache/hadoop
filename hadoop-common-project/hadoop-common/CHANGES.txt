@@ -59,6 +59,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7934. Normalize dependencies versions across all modules. (tucu)
 
+    HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead.
+    (XieXianshan via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
