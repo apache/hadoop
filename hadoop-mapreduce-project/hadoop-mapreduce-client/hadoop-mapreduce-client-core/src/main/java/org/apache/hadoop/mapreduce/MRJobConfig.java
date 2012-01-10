@@ -501,6 +501,9 @@ public interface MRJobConfig {
   public static final String MR_JOB_END_NOTIFICATION_URL =
     "mapreduce.job.end-notification.url";
 
+  public static final String MR_JOB_END_NOTIFICATION_PROXY =
+    "mapreduce.job.end-notification.proxy";
+
   public static final String MR_JOB_END_RETRY_ATTEMPTS =
     "mapreduce.job.end-notification.retry.attempts";
 

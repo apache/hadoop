@@ -20,9 +20,11 @@ package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.Proxy;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -49,9 +51,11 @@ public class JobEndNotifier implements Configurable {
 
   private Configuration conf;
   protected String userUrl;
+  protected String proxyConf;
   protected int numTries; //Number of tries to attempt notification
   protected int waitInterval; //Time to wait between retrying notification
   protected URL urlToNotify; //URL to notify read from the config
+  protected Proxy proxyToUse = Proxy.NO_PROXY; //Proxy to use for notification
 
   /**
    * Parse the URL that needs to be notified of the end of the job, along
@@ -73,6 +77,34 @@ public class JobEndNotifier implements Configurable {
     waitInterval = (waitInterval < 0) ? 5 : waitInterval;
 
     userUrl = conf.get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL);
+
+    proxyConf = conf.get(MRJobConfig.MR_JOB_END_NOTIFICATION_PROXY);
+
+    //Configure the proxy to use if its set. It should be set like
+    //proxyType@proxyHostname:port
+    if(proxyConf != null && !proxyConf.equals("") &&
+         proxyConf.lastIndexOf(":") != -1) {
+      int typeIndex = proxyConf.indexOf("@");
+      Proxy.Type proxyType = Proxy.Type.HTTP;
+      if(typeIndex != -1 &&
+        proxyConf.substring(0, typeIndex).compareToIgnoreCase("socks") == 0) {
+        proxyType = Proxy.Type.SOCKS;
+      }
+      String hostname = proxyConf.substring(typeIndex + 1,
+        proxyConf.lastIndexOf(":"));
+      String portConf = proxyConf.substring(proxyConf.lastIndexOf(":") + 1);
+      try {
+        int port = Integer.parseInt(portConf);
+        proxyToUse = new Proxy(proxyType,
+          new InetSocketAddress(hostname, port));
+        Log.info("Job end notification using proxy type \"" + proxyType + 
+        "\" hostname \"" + hostname + "\" and port \"" + port + "\"");
+      } catch(NumberFormatException nfe) {
+        Log.warn("Job end notification couldn't parse configured proxy's port "
+          + portConf + ". Not going to use a proxy");
+      }
+    }
+
   }
 
   public Configuration getConf() {
@@ -87,7 +119,7 @@ public class JobEndNotifier implements Configurable {
     boolean success = false;
     try {
       Log.info("Job end notification trying " + urlToNotify);
-      URLConnection conn = urlToNotify.openConnection();
+      URLConnection conn = urlToNotify.openConnection(proxyToUse);
       conn.setConnectTimeout(5*1000);
       conn.setReadTimeout(5*1000);
       conn.setAllowUserInteraction(false);
