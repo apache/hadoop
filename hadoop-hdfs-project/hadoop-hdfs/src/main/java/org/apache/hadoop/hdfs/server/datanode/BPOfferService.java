@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -699,7 +700,7 @@ class BPOfferService implements Runnable {
       }
       break;
     case DatanodeProtocol.DNA_FINALIZE:
-      String bp = ((DatanodeCommand.Finalize) cmd).getBlockPoolId(); 
+      String bp = ((FinalizeCommand) cmd).getBlockPoolId(); 
       assert getBlockPoolId().equals(bp) :
         "BP " + getBlockPoolId() + " received DNA_FINALIZE " +
         "for other block pool " + bp;

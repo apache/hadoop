@@ -19,6 +19,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2480. Separate datatypes for NamenodeProtocol. (suresh)
 
+    HDFS-2489. Move Finalize and Register to separate file out of
+    DatanodeCommand.java. (suresh)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -799,7 +800,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     namesystem.getBlockManager().processReport(nodeReg, poolId, blist);
     if (nn.getFSImage().isUpgradeFinalized())
-      return new DatanodeCommand.Finalize(poolId);
+      return new FinalizeCommand(poolId);
     return null;
   }
 

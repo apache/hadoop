@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.junit.After;
 import org.junit.Test;
 
@@ -128,7 +129,7 @@ public class TestDeadDatanode {
     // that asks datanode to register again
     DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, 0, 0, 0, 0, 0, 0, 0);
     Assert.assertEquals(1, cmd.length);
-    Assert.assertEquals(cmd[0].getAction(), DatanodeCommand.REGISTER
+    Assert.assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());
   }
 }
