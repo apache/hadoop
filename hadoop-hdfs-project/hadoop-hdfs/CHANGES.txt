@@ -12,6 +12,8 @@ Release 0.23-PB - Unreleased
     HDFS-2351 Change Namenode and Datanode to register each of their protocols seperately (Sanjay Radia)
 
     HDFS-2337. DFSClient shouldn't keep multiple RPC proxy references (atm)
+ 
+    HDFS-2181. Separate HDFS Client wire protocol data types (sanjay)
 
 Release 0.23.1 - UNRELEASED
 

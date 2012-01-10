@@ -41,11 +41,12 @@ import java.util.Random;
 import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.SocketFactory;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -626,25 +627,29 @@ public class DFSUtil {
 
 
   /** Create a {@link NameNode} proxy */
-  public static ClientProtocol createNamenode(Configuration conf) throws IOException {
+  public static ClientProtocol createNamenode(Configuration conf)
+      throws IOException {
     return createNamenode(NameNode.getAddress(conf), conf);
   }
 
   /** Create a {@link NameNode} proxy */
   public static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
-      Configuration conf) throws IOException {
-    return createNamenode(createRPCNamenode(nameNodeAddr, conf,
-        UserGroupInformation.getCurrentUser()));
-    
+      Configuration conf) throws IOException {   
+    return createNamenode(nameNodeAddr, conf,
+        UserGroupInformation.getCurrentUser());
   }
-
+    
   /** Create a {@link NameNode} proxy */
-  static ClientProtocol createRPCNamenode(InetSocketAddress nameNodeAddr,
-      Configuration conf, UserGroupInformation ugi) 
-    throws IOException {
-    return (ClientProtocol)RPC.getProxy(ClientProtocol.class,
-        ClientProtocol.versionID, nameNodeAddr, ugi, conf,
-        NetUtils.getSocketFactory(conf, ClientProtocol.class));
+  public static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
+      Configuration conf, UserGroupInformation ugi) throws IOException {
+    /** 
+     * Currently we have simply burnt-in support for a SINGLE
+     * protocol - protocolR23Compatible. This will be replaced
+     * by a way to pick the right protocol based on the 
+     * version of the target server.  
+     */
+    return new org.apache.hadoop.hdfs.protocolR23Compatible.
+        ClientNamenodeProtocolTranslatorR23(nameNodeAddr, conf, ugi);
   }
 
   /** Create a {@link NameNode} proxy */
@@ -690,31 +695,18 @@ public class DFSUtil {
   /** Create a {@link ClientDatanodeProtocol} proxy */
   public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
-      LocatedBlock locatedBlock)
-      throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(
-      datanodeid.getHost() + ":" + datanodeid.getIpcPort());
-    if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
-      ClientDatanodeProtocol.LOG.debug("ClientDatanodeProtocol addr=" + addr);
-    }
-    
-    // Since we're creating a new UserGroupInformation here, we know that no
-    // future RPC proxies will be able to re-use the same connection. And
-    // usages of this proxy tend to be one-off calls.
-    //
-    // This is a temporary fix: callers should really achieve this by using
-    // RPC.stopProxy() on the resulting object, but this is currently not
-    // working in trunk. See the discussion on HDFS-1965.
-    Configuration confWithNoIpcIdle = new Configuration(conf);
-    confWithNoIpcIdle.setInt(CommonConfigurationKeysPublic
-        .IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 0);
-
-    UserGroupInformation ticket = UserGroupInformation
-        .createRemoteUser(locatedBlock.getBlock().getLocalBlock().toString());
-    ticket.addToken(locatedBlock.getBlockToken());
-    return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
-        ClientDatanodeProtocol.versionID, addr, ticket, confWithNoIpcIdle,
-        NetUtils.getDefaultSocketFactory(conf), socketTimeout);
+      LocatedBlock locatedBlock) throws IOException {
+    return new org.apache.hadoop.hdfs.protocolR23Compatible.
+        ClientDatanodeProtocolTranslatorR23(datanodeid, conf, socketTimeout,
+             locatedBlock);
+  }
+  
+  /** Create a {@link ClientDatanodeProtocol} proxy */
+  public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
+      InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+      SocketFactory factory) throws IOException {
+    return new org.apache.hadoop.hdfs.protocolR23Compatible.
+        ClientDatanodeProtocolTranslatorR23(addr, ticket, conf, factory);
   }
   
   /**

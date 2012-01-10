@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -36,13 +35,13 @@ import org.apache.avro.reflect.Nullable;
 /** Interface that represents the over the wire information for a file.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class HdfsFileStatus implements Writable {
+@InterfaceStability.Stable
+public class HdfsFileStatusWritable implements Writable {
   static {                                      // register a ctor
     WritableFactories.setFactory
-      (HdfsFileStatus.class,
+      (HdfsFileStatusWritable.class,
        new WritableFactory() {
-         public Writable newInstance() { return new HdfsFileStatus(); }
+         public Writable newInstance() { return new HdfsFileStatusWritable(); }
        });
   }
 
@@ -55,16 +54,71 @@ public class HdfsFileStatus implements Writable {
   private long blocksize;
   private long modification_time;
   private long access_time;
-  private FsPermission permission;
+  private FsPermissionWritable permission;
   private String owner;
   private String group;
   
   public static final byte[] EMPTY_NAME = new byte[0];
 
+  static public org.apache.hadoop.hdfs.protocol.HdfsFileStatus
+    convertHdfsFileStatus(HdfsFileStatusWritable fs) {
+    if (fs == null) return null;
+    return new org.apache.hadoop.hdfs.protocol.HdfsFileStatus(fs.getLen(),
+        fs.isDir(), fs.getReplication(), fs.getBlockSize(),
+        fs.getModificationTime(), fs.getAccessTime(), 
+        FsPermissionWritable.convertPermission(fs.getPermission()),
+        fs.getOwner(), fs.getGroup(), fs.getSymlinkInBytes(),
+        fs.getLocalNameInBytes());
+  }
+  
+  static public HdfsFileStatusWritable[] convertHdfsFileStatus(org.apache.hadoop.hdfs.protocol.HdfsFileStatus[] fs) {
+    if (fs == null) return null;
+    final int len = fs.length;
+    HdfsFileStatusWritable[] result = new HdfsFileStatusWritable[len];
+    for (int i = 0; i < len; ++i) {
+      if (fs[i] instanceof org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus) {
+        result[i] = 
+            HdfsLocatedFileStatusWritable.convertLocatedHdfsFileStatus(
+                (org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus)fs[i]);
+      } else {
+        result[i] = HdfsFileStatusWritable.convertHdfsFileStatus(fs[i]);
+      }
+    }
+    return result;
+  }
+  
+
+  public static org.apache.hadoop.hdfs.protocol.HdfsFileStatus[] convertHdfsFileStatus(
+      HdfsFileStatusWritable[] fs) {
+    if (fs == null) return null;
+    final int len = fs.length;
+    org.apache.hadoop.hdfs.protocol.HdfsFileStatus[] result = 
+        new org.apache.hadoop.hdfs.protocol.HdfsFileStatus[len];
+    for (int i = 0; i < len; ++i) {
+      if (fs[i] instanceof HdfsLocatedFileStatusWritable) {
+        result[i] = 
+            HdfsLocatedFileStatusWritable.convertLocatedHdfsFileStatus((HdfsLocatedFileStatusWritable)fs[i]);
+      } else {
+        result[i] = convertHdfsFileStatus(fs[i]);
+      }
+    }
+    return result;
+  }
+ 
+  public static HdfsFileStatusWritable convertHdfsFileStatus(org.apache.hadoop.hdfs.protocol.HdfsFileStatus fs) {
+    if (fs == null) return null;
+    return new HdfsFileStatusWritable(fs.getLen(), fs.isDir(), fs.getReplication(),
+       fs.getBlockSize(),  fs.getModificationTime(),  fs.getAccessTime(),
+       org.apache.hadoop.hdfs.protocolR23Compatible.FsPermissionWritable.
+         convertPermission(fs.getPermission()),
+       fs.getOwner(),  fs.getGroup(), 
+       fs.getSymlinkInBytes(), fs.getLocalNameInBytes());
+  }
+  
   /**
    * default constructor
    */
-  public HdfsFileStatus() { 
+  public HdfsFileStatusWritable() { 
     this(0, false, 0, 0, 0, 0, null, null, null, null, null); 
   }
   
@@ -81,9 +135,9 @@ public class HdfsFileStatus implements Writable {
    * @param group the group of the path
    * @param path the local name in java UTF8 encoding the same as that in-memory
    */
-  public HdfsFileStatus(long length, boolean isdir, int block_replication,
+  public HdfsFileStatusWritable(long length, boolean isdir, int block_replication,
                     long blocksize, long modification_time, long access_time,
-                    FsPermission permission, String owner, String group, 
+                    FsPermissionWritable permission, String owner, String group, 
                     byte[] symlink, byte[] path) {
     this.length = length;
     this.isdir = isdir;
@@ -91,8 +145,7 @@ public class HdfsFileStatus implements Writable {
     this.blocksize = blocksize;
     this.modification_time = modification_time;
     this.access_time = access_time;
-    this.permission = (permission == null) ? 
-                      FsPermission.getDefault() : permission;
+    this.permission = (permission == null) ? FsPermissionWritable.getDefault() : permission;
     this.owner = (owner == null) ? "" : owner;
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
@@ -122,7 +175,7 @@ public class HdfsFileStatus implements Writable {
   public boolean isSymlink() {
     return symlink != null;
   }
-  
+   
   /**
    * Get the block size of the file.
    * @return the number of bytes
@@ -159,7 +212,7 @@ public class HdfsFileStatus implements Writable {
    * Get FsPermission associated with the file.
    * @return permssion
    */
-  final public FsPermission getPermission() {
+  final public FsPermissionWritable getPermission() {
     return permission;
   }
   
@@ -245,10 +298,12 @@ public class HdfsFileStatus implements Writable {
   final public byte[] getSymlinkInBytes() {
     return symlink;
   }
+  
 
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(path.length);
     out.write(path);
@@ -268,6 +323,7 @@ public class HdfsFileStatus implements Writable {
     }
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     int numOfBytes = in.readInt();
     if (numOfBytes == 0) {
@@ -291,4 +347,5 @@ public class HdfsFileStatus implements Writable {
       in.readFully(symlink);
     }
   }
+
 }

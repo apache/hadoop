@@ -15,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol;
+package org.apache.hadoop.hdfs.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Date;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -30,11 +29,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 
 import org.apache.avro.reflect.Nullable;
 
@@ -44,8 +41,8 @@ import org.apache.avro.reflect.Nullable;
  * Datanode Protocol and the Client Protocol.
  */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class DatanodeInfo extends DatanodeID implements Node {
+@InterfaceStability.Stable
+public class DatanodeInfoWritable extends DatanodeIDWritable  {
   protected long capacity;
   protected long dfsUsed;
   protected long remaining;
@@ -62,9 +59,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
   
   // administrative states of a datanode
   public enum AdminStates {
-    NORMAL("In Service"), 
-    DECOMMISSION_INPROGRESS("Decommission In Progress"), 
-    DECOMMISSIONED("Decommissioned");
+    NORMAL(org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.NORMAL.toString()), 
+    DECOMMISSION_INPROGRESS(org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.DECOMMISSION_INPROGRESS.toString()), 
+    DECOMMISSIONED(org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.DECOMMISSIONED.toString());
 
     final String value;
 
@@ -80,20 +77,53 @@ public class DatanodeInfo extends DatanodeID implements Node {
       for (AdminStates as : AdminStates.values()) {
         if (as.value.equals(value)) return as;
       }
-      return NORMAL;
+      throw new HadoopIllegalArgumentException("Unknown Admin State" + value);
     }
   }
 
   @Nullable
   protected AdminStates adminState;
+  
+  static public org.apache.hadoop.hdfs.protocol.DatanodeInfo convertDatanodeInfo(DatanodeInfoWritable di) {
+    if (di == null) return null;
+    return new org.apache.hadoop.hdfs.protocol.DatanodeInfo(
+        new org.apache.hadoop.hdfs.protocol.DatanodeID(di.getName(), di.getStorageID(), di.getInfoPort(), di.getIpcPort()),
+        di.getNetworkLocation(), di.getHostName(),
+         di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
+        di.getBlockPoolUsed()  ,  di.getLastUpdate() , di.getXceiverCount() ,
+        org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates.fromValue(di.getAdminState().value)); 
+  }
+  
+  
+  static public org.apache.hadoop.hdfs.protocol.DatanodeInfo[] convertDatanodeInfo(DatanodeInfoWritable di[]) {
+    if (di == null) return null;
+    org.apache.hadoop.hdfs.protocol.DatanodeInfo[] result = new org.apache.hadoop.hdfs.protocol.DatanodeInfo[di.length];
+    for (int i = 0; i < di.length; i++) {
+      result[i] = convertDatanodeInfo(di[i]);
+    }    
+    return result;
+  }
+  
+  static public DatanodeInfoWritable[] convertDatanodeInfo(org.apache.hadoop.hdfs.protocol.DatanodeInfo[] di) {
+    if (di == null) return null;
+    DatanodeInfoWritable[] result = new DatanodeInfoWritable[di.length];
+    for (int i = 0; i < di.length; i++) {
+      result[i] = new DatanodeInfoWritable(new DatanodeIDWritable(di[i].getName(), di[i].getStorageID(), di[i].getInfoPort(), di[i].getIpcPort()),
+          di[i].getNetworkLocation(), di[i].getHostName(),
+          di[i].getCapacity(),  di[i].getDfsUsed(),  di[i].getRemaining(),
+          di[i].getBlockPoolUsed()  ,  di[i].getLastUpdate() , di[i].getXceiverCount() ,
+          AdminStates.fromValue(di[i].getAdminState().toString()));
+    }    
+    return result;
+    
+  }
 
-
-  public DatanodeInfo() {
+  public DatanodeInfoWritable() {
     super();
     adminState = null;
   }
   
-  public DatanodeInfo(DatanodeInfo from) {
+  public DatanodeInfoWritable(DatanodeInfoWritable from) {
     super(from);
     this.capacity = from.getCapacity();
     this.dfsUsed = from.getDfsUsed();
@@ -106,7 +136,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.hostName = from.hostName;
   }
 
-  public DatanodeInfo(DatanodeID nodeID) {
+  public DatanodeInfoWritable(DatanodeIDWritable nodeID) {
     super(nodeID);
     this.capacity = 0L;
     this.dfsUsed = 0L;
@@ -117,38 +147,23 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.adminState = null;    
   }
   
-  public DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
+  protected DatanodeInfoWritable(DatanodeIDWritable nodeID, String location, String hostName) {
     this(nodeID);
     this.location = location;
     this.hostName = hostName;
   }
   
-  public DatanodeInfo(DatanodeID nodeID, String location, String hostName,
+  public DatanodeInfoWritable(DatanodeIDWritable nodeID, String location, String hostName,
       final long capacity, final long dfsUsed, final long remaining,
       final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
       final AdminStates adminState) {
-    this(nodeID.getName(), nodeID.getStorageID(), nodeID.getInfoPort(), nodeID
-        .getIpcPort(), capacity, dfsUsed, remaining, blockPoolUsed, lastUpdate,
-        xceiverCount, location, hostName, adminState);
-  }
-
-  /** Constructor */
-  public DatanodeInfo(final String name, final String storageID,
-      final int infoPort, final int ipcPort,
-      final long capacity, final long dfsUsed, final long remaining,
-      final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
-      final String networkLocation, final String hostName,
-      final AdminStates adminState) {
-    super(name, storageID, infoPort, ipcPort);
-
+    this(nodeID, location, hostName);
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
     this.remaining = remaining;
     this.blockPoolUsed = blockPoolUsed;
     this.lastUpdate = lastUpdate;
     this.xceiverCount = xceiverCount;
-    this.location = networkLocation;
-    this.hostName = hostName;
     this.adminState = adminState;
   }
   
@@ -222,10 +237,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /** rack name */
-  public synchronized String getNetworkLocation() {return location;}
+  public String getNetworkLocation() {return location;}
     
   /** Sets the rack name */
-  public synchronized void setNetworkLocation(String location) {
+  public void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
   
@@ -235,105 +250,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   
   public void setHostName(String host) {
     hostName = host;
-  }
-  
-  /** A formatted string for reporting the status of the DataNode. */
-  public String getDatanodeReport() {
-    StringBuilder buffer = new StringBuilder();
-    long c = getCapacity();
-    long r = getRemaining();
-    long u = getDfsUsed();
-    long nonDFSUsed = getNonDfsUsed();
-    float usedPercent = getDfsUsedPercent();
-    float remainingPercent = getRemainingPercent();
-    String hostName = NetUtils.getHostNameOfIP(name);
-
-    buffer.append("Name: "+ name);
-    if(hostName != null)
-      buffer.append(" (" + hostName + ")");
-    buffer.append("\n");
-
-    if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
-      buffer.append("Rack: "+location+"\n");
-    }
-    buffer.append("Decommission Status : ");
-    if (isDecommissioned()) {
-      buffer.append("Decommissioned\n");
-    } else if (isDecommissionInProgress()) {
-      buffer.append("Decommission in progress\n");
-    } else {
-      buffer.append("Normal\n");
-    }
-    buffer.append("Configured Capacity: "+c+" ("+StringUtils.byteDesc(c)+")"+"\n");
-    buffer.append("DFS Used: "+u+" ("+StringUtils.byteDesc(u)+")"+"\n");
-    buffer.append("Non DFS Used: "+nonDFSUsed+" ("+StringUtils.byteDesc(nonDFSUsed)+")"+"\n");
-    buffer.append("DFS Remaining: " +r+ " ("+StringUtils.byteDesc(r)+")"+"\n");
-    buffer.append("DFS Used%: "+StringUtils.limitDecimalTo2(usedPercent)+"%\n");
-    buffer.append("DFS Remaining%: "+StringUtils.limitDecimalTo2(remainingPercent)+"%\n");
-    buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
-    return buffer.toString();
-  }
-
-  /** A formatted string for printing the status of the DataNode. */
-  public String dumpDatanode() {
-    StringBuilder buffer = new StringBuilder();
-    long c = getCapacity();
-    long r = getRemaining();
-    long u = getDfsUsed();
-    buffer.append(name);
-    if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
-      buffer.append(" "+location);
-    }
-    if (isDecommissioned()) {
-      buffer.append(" DD");
-    } else if (isDecommissionInProgress()) {
-      buffer.append(" DP");
-    } else {
-      buffer.append(" IN");
-    }
-    buffer.append(" " + c + "(" + StringUtils.byteDesc(c)+")");
-    buffer.append(" " + u + "(" + StringUtils.byteDesc(u)+")");
-    buffer.append(" " + StringUtils.limitDecimalTo2(((1.0*u)/c)*100)+"%");
-    buffer.append(" " + r + "(" + StringUtils.byteDesc(r)+")");
-    buffer.append(" " + new Date(lastUpdate));
-    return buffer.toString();
-  }
-
-  /**
-   * Start decommissioning a node.
-   * old state.
-   */
-  public void startDecommission() {
-    adminState = AdminStates.DECOMMISSION_INPROGRESS;
-  }
-
-  /**
-   * Stop decommissioning a node.
-   * old state.
-   */
-  public void stopDecommission() {
-    adminState = null;
-  }
-
-  /**
-   * Returns true if the node is in the process of being decommissioned
-   */
-  public boolean isDecommissionInProgress() {
-    return adminState == AdminStates.DECOMMISSION_INPROGRESS;
-  }
-
-  /**
-   * Returns true if the node has been decommissioned.
-   */
-  public boolean isDecommissioned() {
-    return adminState == AdminStates.DECOMMISSIONED;
-  }
-
-  /**
-   * Sets the admin state to indicate that decommission is complete.
-   */
-  public void setDecommissioned() {
-    adminState = AdminStates.DECOMMISSIONED;
   }
 
   /**
@@ -358,35 +274,21 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
   }
 
-  private transient int level; //which level of the tree the node resides
-  private transient Node parent; //its parent
-
-  /** Return this node's parent */
-  public Node getParent() { return parent; }
-  public void setParent(Node parent) {this.parent = parent;}
-   
-  /** Return this node's level in the tree.
-   * E.g. the root of a tree returns 0 and its children return 1
-   */
-  public int getLevel() { return level; }
-  public void setLevel(int level) {this.level = level;}
-
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
   static {                                      // register a ctor
     WritableFactories.setFactory
-      (DatanodeInfo.class,
+      (DatanodeInfoWritable.class,
        new WritableFactory() {
-         public Writable newInstance() { return new DatanodeInfo(); }
+         public Writable newInstance() { return new DatanodeInfoWritable(); }
        });
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
-    //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
     out.writeShort(ipcPort);
 
     out.writeLong(capacity);
@@ -396,15 +298,14 @@ public class DatanodeInfo extends DatanodeID implements Node {
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
     Text.writeString(out, location);
-    Text.writeString(out, hostName == null? "": hostName);
+    Text.writeString(out, hostName == null? "" : hostName);
     WritableUtils.writeEnum(out, getAdminState());
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 
-    //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
     this.ipcPort = in.readShort() & 0x0000ffff;
 
     this.capacity = in.readLong();
@@ -419,22 +320,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /** Read a DatanodeInfo */
-  public static DatanodeInfo read(DataInput in) throws IOException {
-    final DatanodeInfo d = new DatanodeInfo();
+  public static DatanodeInfoWritable read(DataInput in) throws IOException {
+    final DatanodeInfoWritable d = new DatanodeInfoWritable();
     d.readFields(in);
     return d;
-  }
-
-  @Override
-  public int hashCode() {
-    // Super implementation is sufficient
-    return super.hashCode();
-  }
-  
-  @Override
-  public boolean equals(Object obj) {
-    // Sufficient to use super equality as datanodes are uniquely identified
-    // by DatanodeID
-    return (this == obj) || super.equals(obj);
   }
 }

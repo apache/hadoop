@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -290,7 +291,7 @@ public class DFSClient implements java.io.Closeable {
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     if (nameNodeAddr != null && rpcNamenode == null) {
-      this.namenode = DFSUtil.createNamenode(nameNodeAddr, conf);
+      this.namenode = DFSUtil.createNamenode(nameNodeAddr, conf, ugi);
     } else if (nameNodeAddr == null && rpcNamenode != null) {
       //This case is used for testing.
       this.namenode = rpcNamenode;
@@ -378,12 +379,31 @@ public class DFSClient implements java.io.Closeable {
       namenode.renewLease(clientName);
     }
   }
-
+  
+  /**
+   * Close connections the Namenode.
+   * The namenode variable is either a rpcProxy passed by a test or 
+   * created using the protocolTranslator which is closeable.
+   * If closeable then call close, else close using RPC.stopProxy().
+   */
+  void closeConnectionToNamenode() {
+    if (namenode instanceof Closeable) {
+      try {
+        ((Closeable) namenode).close();
+        return;
+      } catch (IOException e) {
+        // fall through - lets try the stopProxy
+        LOG.warn("Exception closing namenode, stopping the proxy");
+      }     
+    }
+    RPC.stopProxy(namenode);
+  }
+  
   /** Abort and release resources held.  Ignore all errors. */
   void abort() {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
-    RPC.stopProxy(namenode); // close connections to the namenode
+    closeConnectionToNamenode();
   }
 
   /** Close/abort all files being written. */
@@ -423,7 +443,7 @@ public class DFSClient implements java.io.Closeable {
       clientRunning = false;
       leaserenewer.closeClient(this);
       // close connections to the namenode
-      RPC.stopProxy(namenode);
+      closeConnectionToNamenode();
     }
   }
 
@@ -604,7 +624,7 @@ public class DFSClient implements java.io.Closeable {
       LOG.info("Renewing " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = 
-        DFSUtil.createRPCNamenode
+        DFSUtil.createNamenode
            (NameNode.getAddress(token.getService().toString()),
             conf, UserGroupInformation.getCurrentUser());
       try {
@@ -622,7 +642,7 @@ public class DFSClient implements java.io.Closeable {
           (Token<DelegationTokenIdentifier>) token;
       LOG.info("Cancelling " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
-      ClientProtocol nn = DFSUtil.createRPCNamenode(
+      ClientProtocol nn = DFSUtil.createNamenode(
           NameNode.getAddress(token.getService().toString()), conf,
           UserGroupInformation.getCurrentUser());
       try {
