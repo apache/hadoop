@@ -172,10 +172,14 @@ public class TokenCache {
   @InterfaceAudience.Private
   public static Token<DelegationTokenIdentifier> getDelegationToken(
       Credentials credentials, String namenode) {
+    //No fs specific tokens issues by this fs. It may however issue tokens
+    // for other filesystems - which would be keyed by that filesystems name.
+    if (namenode == null)  
+      return null;
     return (Token<DelegationTokenIdentifier>) credentials.getToken(new Text(
         namenode));
   }
-  
+
   /**
    * load job token from a file
    * @param conf
