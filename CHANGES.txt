@@ -81,6 +81,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2728. Remove dfsadmin -printTopology from branch-1 docs since it does not exist. (harsh)
 
+    HDFS-1910. NameNode should not save fsimage twice. (shv)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)

@@ -1113,6 +1113,8 @@ public class FSImage extends Storage {
                                                               it.hasNext();) {
       StorageDirectory sd = it.next();
       try {
+        if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE_AND_EDITS))
+          continue; // this has already been saved as IMAGE directory
         saveCurrent(sd);
       } catch(IOException ie) {
         LOG.error("Unable to save edits for " + sd.getRoot(), ie);
