@@ -108,6 +108,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3299. Added AMInfo table to the MR AM job pages to list all the
     job-attempts when AM restarts and recovers. (Jonathan Eagles via vinodkv)
 
+    MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR AM.
+    Improved the earlier patch to not to JobHistoryServer repeatedly.
+    (Anupam Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
