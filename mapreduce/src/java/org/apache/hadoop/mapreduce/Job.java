@@ -1039,7 +1039,7 @@ public class Job extends JobContextImpl implements JobContext {
     connect();
     final JobSubmitter submitter = new JobSubmitter(cluster.getFileSystem(),
         cluster.getClient());
-    status = ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
+    status = this.cluster.getUgi().doAs(new PrivilegedExceptionAction<JobStatus>() {
       public JobStatus run() throws IOException, InterruptedException, 
       ClassNotFoundException {
         return submitter.submitJobInternal(Job.this, cluster);

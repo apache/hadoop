@@ -397,4 +397,13 @@ public class Cluster {
     }
   }
 
+  /**
+   * Get the UGI set for the cluster at the time of 
+   * constructing the cluster object with the conf.
+   * @return UserGroupInformation 
+   */
+  public UserGroupInformation getUgi() {
+    return ugi;
+  }
+
 }
