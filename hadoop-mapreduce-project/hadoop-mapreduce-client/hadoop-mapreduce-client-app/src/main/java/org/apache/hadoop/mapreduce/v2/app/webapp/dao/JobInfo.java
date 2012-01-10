@@ -214,7 +214,7 @@ public class JobInfo {
     return this.state.toString();
   }
 
-  public String getUser() {
+  public String getUserName() {
     return this.user;
   }
 

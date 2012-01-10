@@ -105,6 +105,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3382. Enhanced MR AM to use a proxy to ping the job-end
     notification URL. (Ravi Prakash via vinodkv)
 
+    MAPREDUCE-3299. Added AMInfo table to the MR AM job pages to list all the
+    job-attempts when AM restarts and recovers. (Jonathan Eagles via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar

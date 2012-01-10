@@ -33,6 +33,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -42,6 +43,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
@@ -208,6 +211,21 @@ public class AMWebServices {
       @PathParam("jobid") String jid) {
     Job job = getJobFromJobIdString(jid, appCtx);
     return new JobInfo(job, hasAccess(job, hsr));
+  }
+
+  @GET
+  @Path("/jobs/{jobid}/jobattempts")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
+
+    Job job = getJobFromJobIdString(jid, appCtx);
+    AMAttemptsInfo amAttempts = new AMAttemptsInfo();
+    for (AMInfo amInfo : job.getAMInfos()) {
+      AMAttemptInfo attempt = new AMAttemptInfo(amInfo, MRApps.toString(
+            job.getID()), job.getUserName());
+      amAttempts.add(attempt);
+    }
+    return amAttempts;
   }
 
   @GET

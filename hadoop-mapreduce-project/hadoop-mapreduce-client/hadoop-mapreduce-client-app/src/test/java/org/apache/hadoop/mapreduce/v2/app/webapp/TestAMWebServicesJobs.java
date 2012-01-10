@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -33,6 +34,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -44,6 +46,7 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
@@ -76,6 +79,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  * /ws/v1/mapreduce/jobs
  * /ws/v1/mapreduce/jobs/{jobid}
  * /ws/v1/mapreduce/jobs/{jobid}/counters
+ * /ws/v1/mapreduce/jobs/{jobid}/jobattempts
  */
 public class TestAMWebServicesJobs extends JerseyTest {
 
@@ -775,6 +779,138 @@ public class TestAMWebServicesJobs extends JerseyTest {
         }
       }
     }
+  }
+
+  @Test
+  public void testJobAttempts() throws JSONException, Exception {
+    WebResource r = resource();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+
+      ClientResponse response = r.path("ws").path("v1")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject info = json.getJSONObject("jobAttempts");
+      verifyJobAttempts(info, jobsMap.get(id));
+    }
+  }
+
+  @Test
+  public void testJobAttemptsSlash() throws JSONException, Exception {
+    WebResource r = resource();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+
+      ClientResponse response = r.path("ws").path("v1")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts/")
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject info = json.getJSONObject("jobAttempts");
+      verifyJobAttempts(info, jobsMap.get(id));
+    }
+  }
+
+  @Test
+  public void testJobAttemptsDefault() throws JSONException, Exception {
+    WebResource r = resource();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+
+      ClientResponse response = r.path("ws").path("v1")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject info = json.getJSONObject("jobAttempts");
+      verifyJobAttempts(info, jobsMap.get(id));
+    }
+  }
+
+  @Test
+  public void testJobAttemptsXML() throws Exception {
+    WebResource r = resource();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+
+      ClientResponse response = r.path("ws").path("v1")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
+          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+      String xml = response.getEntity(String.class);
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+      DocumentBuilder db = dbf.newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(xml));
+      Document dom = db.parse(is);
+      NodeList attempts = dom.getElementsByTagName("jobAttempts");
+      assertEquals("incorrect number of elements", 1, attempts.getLength());
+      NodeList info = dom.getElementsByTagName("jobAttempt");
+      verifyJobAttemptsXML(info, jobsMap.get(id));
+    }
+  }
+
+  public void verifyJobAttempts(JSONObject info, Job job)
+      throws JSONException {
+
+    JSONArray attempts = info.getJSONArray("jobAttempt");
+    assertEquals("incorrect number of elements", 2, attempts.length());
+    for (int i = 0; i < attempts.length(); i++) {
+      JSONObject attempt = attempts.getJSONObject(i);
+      verifyJobAttemptsGeneric(job, attempt.getString("nodeHttpAddress"),
+          attempt.getString("nodeId"), attempt.getInt("id"),
+          attempt.getLong("startTime"), attempt.getString("containerId"),
+          attempt.getString("logsLink"));
+    }
+  }
+
+  public void verifyJobAttemptsXML(NodeList nodes, Job job) {
+
+    assertEquals("incorrect number of elements", 2, nodes.getLength());
+    for (int i = 0; i < nodes.getLength(); i++) {
+      Element element = (Element) nodes.item(i);
+      verifyJobAttemptsGeneric(job,
+          WebServicesTestUtils.getXmlString(element, "nodeHttpAddress"),
+          WebServicesTestUtils.getXmlString(element, "nodeId"),
+          WebServicesTestUtils.getXmlInt(element, "id"),
+          WebServicesTestUtils.getXmlLong(element, "startTime"),
+          WebServicesTestUtils.getXmlString(element, "containerId"),
+          WebServicesTestUtils.getXmlString(element, "logsLink"));
+    }
+  }
+
+  public void verifyJobAttemptsGeneric(Job job, String nodeHttpAddress,
+      String nodeId, int id, long startTime, String containerId, String logsLink) {
+    boolean attemptFound = false;
+    for (AMInfo amInfo : job.getAMInfos()) {
+      if (amInfo.getAppAttemptId().getAttemptId() == id) {
+        attemptFound = true;
+        String nmHost = amInfo.getNodeManagerHost();
+        int nmHttpPort = amInfo.getNodeManagerHttpPort();
+        int nmPort = amInfo.getNodeManagerPort();
+        WebServicesTestUtils.checkStringMatch("nodeHttpAddress", nmHost + ":"
+            + nmHttpPort, nodeHttpAddress);
+        WebServicesTestUtils.checkStringMatch("nodeId",
+            BuilderUtils.newNodeId(nmHost, nmPort).toString(), nodeId);
+        assertTrue("startime not greater than 0", startTime > 0);
+        WebServicesTestUtils.checkStringMatch("containerId", amInfo
+            .getContainerId().toString(), containerId);
+
+        String localLogsLink = ujoin("node", "containerlogs", containerId);
+
+        assertTrue("logsLink", logsLink.contains(localLogsLink));
+      }
+    }
+    assertTrue("attempt: " + id + " was not found", attemptFound);
   }
 
 }

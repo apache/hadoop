@@ -30,6 +30,8 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptInfo;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
@@ -54,22 +56,22 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
   private JAXBContext context;
   private final Set<Class> types;
-    
+
   // you have to specify all the dao classes here
-  private final Class[] cTypes = {AppInfo.class, CounterInfo.class,
-      JobTaskAttemptCounterInfo.class, JobTaskCounterInfo.class,
-      TaskCounterGroupInfo.class, ConfInfo.class, JobCounterInfo.class,
-      TaskCounterInfo.class, CounterGroupInfo.class, JobInfo.class, 
-      JobsInfo.class, ReduceTaskAttemptInfo.class, TaskAttemptInfo.class,
-      TaskInfo.class, TasksInfo.class, TaskAttemptsInfo.class,
-      ConfEntryInfo.class};
-    
+  private final Class[] cTypes = {AMAttemptInfo.class, AMAttemptsInfo.class,
+    AppInfo.class, CounterInfo.class, JobTaskAttemptCounterInfo.class,
+    JobTaskCounterInfo.class, TaskCounterGroupInfo.class, ConfInfo.class,
+    JobCounterInfo.class, TaskCounterInfo.class, CounterGroupInfo.class,
+    JobInfo.class, JobsInfo.class, ReduceTaskAttemptInfo.class,
+    TaskAttemptInfo.class, TaskInfo.class, TasksInfo.class,
+    TaskAttemptsInfo.class, ConfEntryInfo.class};
+
   public JAXBContextResolver() throws Exception {
     this.types = new HashSet<Class>(Arrays.asList(cTypes));
     this.context = new JSONJAXBContext(JSONConfiguration.natural().
         rootUnwrapping(false).build(), cTypes);
   }
-    
+
   @Override
   public JAXBContext getContext(Class<?> objectType) {
     return (types.contains(objectType)) ? context : null;
