@@ -46,6 +46,11 @@ public class ContainerRemoteLaunchEvent extends ContainerLauncherEvent {
   public Task getRemoteTask() {
     return this.task;
   }
+  
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 
   @Override
   public boolean equals(Object obj) {

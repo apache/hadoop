@@ -164,7 +164,7 @@ public class ShuffleHandler extends AbstractService
    * @param port the port to be sent to the ApplciationMaster
    * @return the serialized form of the port.
    */
-  static ByteBuffer serializeMetaData(int port) throws IOException {
+  public static ByteBuffer serializeMetaData(int port) throws IOException {
     //TODO these bytes should be versioned
     DataOutputBuffer port_dob = new DataOutputBuffer();
     port_dob.writeInt(port);
