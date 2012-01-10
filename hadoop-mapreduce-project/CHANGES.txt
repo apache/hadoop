@@ -102,6 +102,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3312. Modified MR AM to not send a stop-container request for
     a container that isn't launched at all. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3382. Enhanced MR AM to use a proxy to ping the job-end
+    notification URL. (Ravi Prakash via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
