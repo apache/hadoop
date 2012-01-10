@@ -42,6 +42,7 @@ public class BlockWritable implements Writable {
        });
   }
 
+
   private long blockId;
   private long numBytes;
   private long generationStamp;
@@ -78,5 +79,17 @@ public class BlockWritable implements Writable {
 
   public Block convert() {
     return new Block(blockId, numBytes, generationStamp);
+  }
+  
+  public long getBlockId() {
+    return blockId;
+  }
+
+  public long getNumBytes() {
+    return numBytes;
+  }
+
+  public long getGenerationStamp() {
+    return generationStamp;
   }
 }
