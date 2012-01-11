@@ -42,6 +42,9 @@ Release 0.23-PB - Unreleased
     HDFS-2499. RPC client is created incorrectly introduced in HDFS-2459.
     (suresh)
 
+    HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
+               reference to rpcProxyWithoutRetry (atm)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
