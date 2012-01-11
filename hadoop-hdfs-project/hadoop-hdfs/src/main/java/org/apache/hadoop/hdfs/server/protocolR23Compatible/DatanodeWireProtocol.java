@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.server.protocolR23Compatible;
 
-import java.io.*;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
-import org.apache.hadoop.hdfs.server.protocolR23Compatible.DatanodeWireProtocol;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.security.KerberosInfo;
+import java.io.IOException;
 
 import org.apache.avro.reflect.Nullable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
+import org.apache.hadoop.hdfs.protocolR23Compatible.DatanodeIDWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ExtendedBlockWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.LocatedBlockWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.NamespaceInfoWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
+import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
@@ -44,16 +46,10 @@ import org.apache.avro.reflect.Nullable;
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, 
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface DatanodeProtocol extends VersionedProtocol {
+public interface DatanodeWireProtocol extends VersionedProtocol {
   /**
-   * This class is used by both the Namenode (client) and BackupNode (server) 
-   * to insulate from the protocol serialization.
-   * 
-   * If you are adding/changing DN's interface then you need to 
-   * change both this class and ALSO
-   * {@link DatanodeWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link ClientNamenodeWireProtocol}
+   * The  rules for changing this protocol are the same as that for
+   * {@link ClientNamenodeWireProtocol} - see that java file for details.
    */
   public static final long versionID = 28L;
   
@@ -76,18 +72,15 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
-
+  
   /** 
    * Register Datanode.
-   *
-   * @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem#registerDatanode(DatanodeRegistration)
-   * 
-   * @return updated {@link org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration}, which contains 
+   * @return updated {@link DatanodeRegistrationWritable}, which contains 
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-  public DatanodeRegistration registerDatanode(DatanodeRegistration registration
-                                       ) throws IOException;
+  public DatanodeRegistrationWritable registerDatanode(
+      DatanodeRegistrationWritable registration) throws IOException;
   /**
    * sendHeartbeat() tells the NameNode that the DataNode is still
    * alive and well.  Includes some status info, too. 
@@ -106,13 +99,10 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @throws IOException on error
    */
   @Nullable
-  public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
-                                       long capacity,
-                                       long dfsUsed, long remaining,
-                                       long blockPoolUsed,
-                                       int xmitsInProgress,
-                                       int xceiverCount,
-                                       int failedVolumes) throws IOException;
+  public DatanodeCommandWritable[] sendHeartbeat(
+      DatanodeRegistrationWritable registration, long capacity, long dfsUsed,
+      long remaining, long blockPoolUsed, int xmitsInProgress,
+      int xceiverCount, int failedVolumes) throws IOException;
 
   /**
    * blockReport() tells the NameNode about all the locally-stored blocks.
@@ -129,9 +119,9 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @return - the next command for DN to process.
    * @throws IOException
    */
-  public DatanodeCommand blockReport(DatanodeRegistration registration,
-                                     String poolId,
-                                     long[] blocks) throws IOException;
+  public DatanodeCommandWritable blockReport(
+      DatanodeRegistrationWritable registration, String poolId, long[] blocks)
+      throws IOException;
     
   /**
    * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about
@@ -143,20 +133,19 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * writes a new Block here, or another DataNode copies a Block to
    * this DataNode, it will call blockReceived().
    */
-  public void blockReceivedAndDeleted(DatanodeRegistration registration,
-                            String poolId,
-                            ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks)
-                            throws IOException;
+  public void blockReceivedAndDeleted(
+      DatanodeRegistrationWritable registration, String poolId,
+      ReceivedDeletedBlockInfoWritable[] receivedAndDeletedBlocks)
+      throws IOException;
 
   /**
    * errorReport() tells the NameNode about something that has gone
    * awry.  Useful for debugging.
    */
-  public void errorReport(DatanodeRegistration registration,
-                          int errorCode, 
-                          String msg) throws IOException;
+  public void errorReport(DatanodeRegistrationWritable registration,
+      int errorCode, String msg) throws IOException;
     
-  public NamespaceInfo versionRequest() throws IOException;
+  public NamespaceInfoWritable versionRequest() throws IOException;
 
   /**
    * This is a very general way to send a command to the name-node during
@@ -168,19 +157,27 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * 
    * @return a reply in the form of an upgrade command
    */
-  UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException;
+  UpgradeCommandWritable processUpgradeCommand(UpgradeCommandWritable comm)
+      throws IOException;
   
   /**
-   * same as {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#reportBadBlocks(LocatedBlock[])}
+   * same as {@link ClientProtocol#reportBadBlocks(LocatedBlock[])}
    * }
    */
-  public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
+  public void reportBadBlocks(LocatedBlockWritable[] blocks) throws IOException;
   
   /**
    * Commit block synchronization in lease recovery
    */
-  public void commitBlockSynchronization(ExtendedBlock block,
-      long newgenerationstamp, long newlength,
-      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
-      ) throws IOException;
+  public void commitBlockSynchronization(ExtendedBlockWritable block,
+      long newgenerationstamp, long newlength, boolean closeFile,
+      boolean deleteblock, DatanodeIDWritable[] newtargets) throws IOException;
+  
+  /**
+   * This method is defined to get the protocol signature using 
+   * the R23 protocol - hence we have added the suffix of 2 the method name
+   * to avoid conflict.
+   */
+  public ProtocolSignatureWritable getProtocolSignature2(String protocol,
+      long clientVersion, int clientMethodsHash) throws IOException;
 }

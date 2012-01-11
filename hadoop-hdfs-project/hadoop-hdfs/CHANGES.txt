@@ -29,6 +29,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2488. Separate datatypes for InterDatanodeProtocol. (suresh)
 
+    HDFS-2496. Separate datatypes for DatanodeProtocol. (suresh)
+
   BUG FIXES
  
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)

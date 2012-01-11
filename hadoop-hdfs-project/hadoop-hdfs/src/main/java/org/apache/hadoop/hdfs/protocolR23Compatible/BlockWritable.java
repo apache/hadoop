@@ -92,4 +92,20 @@ public class BlockWritable implements Writable {
   public long getGenerationStamp() {
     return generationStamp;
   }
+  
+  public static Block[] convert(BlockWritable[] blocks) {
+    Block[] ret = new Block[blocks.length];
+    for (int i = 0; i < blocks.length; i++) {
+      ret[i] = blocks[i].convert();
+    }
+    return ret;
+  }
+  
+  public static BlockWritable[] convert(Block[] blocks) {
+    BlockWritable[] ret = new BlockWritable[blocks.length];
+    for (int i = 0; i < blocks.length; i++) {
+      ret[i] = BlockWritable.convert(blocks[i]);
+    }
+    return ret;
+  }
 }

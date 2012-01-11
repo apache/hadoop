@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.protocol;
+package org.apache.hadoop.hdfs.server.protocolR23Compatible;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -26,25 +26,26 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocolR23Compatible.BlockWritable;
+import org.apache.hadoop.hdfs.protocolR23Compatible.DatanodeInfoWritable;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
-
 /****************************************************
- * A BlockCommand is an instruction to a datanode 
- * regarding some blocks under its control.  It tells
- * the DataNode to either invalidate a set of indicated
- * blocks, or to copy a set of indicated blocks to 
- * another DataNode.
+ * A BlockCommand is an instruction to a datanode regarding some blocks under
+ * its control. It tells the DataNode to either invalidate a set of indicated
+ * blocks, or to copy a set of indicated blocks to another DataNode.
  * 
  ****************************************************/
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class BlockCommand extends DatanodeCommand {
-  
+public class BlockCommandWritable extends DatanodeCommandWritable {
+
   /**
    * This constant is used to indicate that the block deletion does not need
    * explicit ACK from the datanode. When a block is put into the list of blocks
@@ -53,75 +54,40 @@ public class BlockCommand extends DatanodeCommand {
    * with such size. Positive number is used for compatibility reasons.
    */
   public static final long NO_ACK = Long.MAX_VALUE;
-  
+
   String poolId;
-  Block blocks[];
-  DatanodeInfo targets[][];
+  BlockWritable blocks[];
+  DatanodeInfoWritable targets[][];
 
-  public BlockCommand() {}
-
-  /**
-   * Create BlockCommand for transferring blocks to another datanode
-   * @param blocktargetlist    blocks to be transferred 
-   */
-  public BlockCommand(int action, String poolId,
-      List<BlockTargetPair> blocktargetlist) {
-    super(action);
-    this.poolId = poolId;
-    blocks = new Block[blocktargetlist.size()]; 
-    targets = new DatanodeInfo[blocks.length][];
-    for(int i = 0; i < blocks.length; i++) {
-      BlockTargetPair p = blocktargetlist.get(i);
-      blocks[i] = p.block;
-      targets[i] = p.targets;
-    }
-  }
-
-  private static final DatanodeInfo[][] EMPTY_TARGET = {};
-
-  /**
-   * Create BlockCommand for the given action
-   * @param blocks blocks related to the action
-   */
-  public BlockCommand(int action, String poolId, Block blocks[]) {
-    this(action, poolId, blocks, EMPTY_TARGET);
+  public BlockCommandWritable() {
   }
 
   /**
    * Create BlockCommand for the given action
+   * 
    * @param blocks blocks related to the action
    */
-  public BlockCommand(int action, String poolId, Block[] blocks,
-      DatanodeInfo[][] targets) {
+  public BlockCommandWritable(int action, String poolId, BlockWritable[] blocks,
+      DatanodeInfoWritable[][] targets) {
     super(action);
     this.poolId = poolId;
     this.blocks = blocks;
     this.targets = targets;
   }
-  
-  public String getBlockPoolId() {
-    return poolId;
-  }
-  
-  public Block[] getBlocks() {
-    return blocks;
-  }
 
-  public DatanodeInfo[][] getTargets() {
-    return targets;
-  }
-
-  ///////////////////////////////////////////
+  // /////////////////////////////////////////
   // Writable
-  ///////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (BlockCommand.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new BlockCommand(); }
-       });
+  // /////////////////////////////////////////
+  static { // register a ctor
+    WritableFactories.setFactory(BlockCommandWritable.class,
+        new WritableFactory() {
+          public Writable newInstance() {
+            return new BlockCommandWritable();
+          }
+        });
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
     Text.writeString(out, poolId);
@@ -138,22 +104,44 @@ public class BlockCommand extends DatanodeCommand {
     }
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     this.poolId = Text.readString(in);
-    this.blocks = new Block[in.readInt()];
+    this.blocks = new BlockWritable[in.readInt()];
     for (int i = 0; i < blocks.length; i++) {
-      blocks[i] = new Block();
+      blocks[i] = new BlockWritable();
       blocks[i].readFields(in);
     }
 
-    this.targets = new DatanodeInfo[in.readInt()][];
+    this.targets = new DatanodeInfoWritable[in.readInt()][];
     for (int i = 0; i < targets.length; i++) {
-      this.targets[i] = new DatanodeInfo[in.readInt()];
+      this.targets[i] = new DatanodeInfoWritable[in.readInt()];
       for (int j = 0; j < targets[i].length; j++) {
-        targets[i][j] = new DatanodeInfo();
+        targets[i][j] = new DatanodeInfoWritable();
         targets[i][j].readFields(in);
       }
     }
+  }
+
+  @Override
+  public BlockCommand convert() {
+    DatanodeInfo[][] dinfo = new DatanodeInfo[targets.length][];
+    for (int i = 0; i < targets.length; i++) {
+      dinfo[i] = DatanodeInfoWritable.convertDatanodeInfo(targets[i]);
+    }
+    return new BlockCommand(getAction(), poolId, BlockWritable.convert(blocks),
+        dinfo);
+  }
+
+  public static BlockCommandWritable convert(BlockCommand cmd) {
+    if (cmd == null) return null;
+    DatanodeInfo[][] targets = cmd.getTargets();
+    DatanodeInfoWritable[][] dinfo = new DatanodeInfoWritable[targets.length][];
+    for (int i = 0; i < targets.length; i++) {
+      dinfo[i] = DatanodeInfoWritable.convertDatanodeInfo(targets[i]);
+    }
+    return new BlockCommandWritable(cmd.getAction(), cmd.getBlockPoolId(),
+        BlockWritable.convert(cmd.getBlocks()), dinfo);
   }
 }
