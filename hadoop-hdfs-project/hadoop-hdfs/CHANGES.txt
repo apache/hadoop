@@ -9,6 +9,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
 
+    HDFS-2518. Add protobuf service for NamenodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
