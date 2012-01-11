@@ -165,6 +165,8 @@ Trunk (unreleased changes)
 
     HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
 
+    HDFS-2739. SecondaryNameNode doesn't start up. (jitendra)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
