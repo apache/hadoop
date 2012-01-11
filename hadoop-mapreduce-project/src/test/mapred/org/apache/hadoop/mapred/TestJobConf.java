@@ -33,7 +33,7 @@ import static org.junit.Assert.*;
 public class TestJobConf {
   private static final String JAR_RELATIVE_PATH =
     "build/test/mapred/testjar/testjob.jar";
-  private static final String CLASSNAME = "ClassWithNoPackage";
+  private static final String CLASSNAME = "testjar.ClassWordCount";
 
   private static String TEST_DIR_WITH_SPECIAL_CHARS =
     System.getProperty("test.build.data","/tmp") +
