@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.OutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.net.HttpURLConnection;
 
 import junit.framework.TestCase;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +42,10 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.TaskType;
 
 public class TestTaskFail extends TestCase {
+
+  private static final Log LOG = LogFactory.getLog(
+      TestTaskFail.class);
+
   private static String taskLog = "Task attempt log";
   static String cleanupLog = "cleanup attempt log";
 
@@ -92,6 +101,29 @@ public class TestTaskFail extends TestCase {
     }
   }
 
+  /** access a url, ignoring some IOException such as the page does not exist */
+  static int getHttpStatusCode(String urlstring, String userName,
+      String method) throws IOException {
+    LOG.info("Accessing " + urlstring + " as user " + userName);
+    URL url = new URL(urlstring + "&user.name=" + userName);
+    HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+    connection.setRequestMethod(method);
+    if (method.equals("POST")) {
+      String encodedData = "action=kill&user.name=" + userName;
+      connection.setRequestProperty("Content-Type",
+                                    "application/x-www-form-urlencoded");
+      connection.setRequestProperty("Content-Length",
+                                    Integer.toString(encodedData.length()));
+      connection.setDoOutput(true);
+
+      OutputStream os = connection.getOutputStream();
+      os.write(encodedData.getBytes());
+    }
+    connection.connect();
+
+    return connection.getResponseCode();
+  }
+
   public RunningJob launchJob(JobConf conf,
                               Path inDir,
                               Path outDir,
@@ -142,8 +174,8 @@ public class TestTaskFail extends TestCase {
     String tasklogUrl = TaskLogServlet.getTaskLogUrl("localhost",
         String.valueOf(ttStatus.getHttpPort()), attemptId.toString()) +
         "&filter=STDERR";
-    assertEquals(HttpURLConnection.HTTP_OK, TestWebUIAuthorization
-        .getHttpStatusCode(tasklogUrl, tip.getUser(), "GET"));
+    assertEquals(HttpURLConnection.HTTP_OK, 
+        getHttpStatusCode(tasklogUrl, tip.getUser(), "GET"));
     if (containsCleanupLog) {
       // validate task logs: tasklog should contain both task logs
       // and cleanup logs
@@ -160,8 +192,8 @@ public class TestTaskFail extends TestCase {
       String cleanupTasklogUrl = TaskLogServlet.getTaskLogUrl("localhost",
           String.valueOf(ttStatus.getHttpPort()), attemptId.toString())
           + "&filter=STDERR&cleanup=true";
-      assertEquals(HttpURLConnection.HTTP_OK, TestWebUIAuthorization
-          .getHttpStatusCode(cleanupTasklogUrl, tip.getUser(), "GET"));
+      assertEquals(HttpURLConnection.HTTP_OK, 
+          getHttpStatusCode(cleanupTasklogUrl, tip.getUser(), "GET"));
       
       // Task-cleanup task should not be scheduled on the node that the task just failed
       if (jt.taskTrackers().size() >= 2) {
