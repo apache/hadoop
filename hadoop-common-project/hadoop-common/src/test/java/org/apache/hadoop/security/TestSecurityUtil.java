@@ -225,7 +225,7 @@ public class TestSecurityUtil {
     assertTrue(!addr.isUnresolved());
     // don't know what the standard resolver will return for hostname.
     // should be host for host; host or ip for ip is ambiguous
-    if (!SecurityUtil.getTokenServiceUseIp()) {
+    if (!SecurityUtil.useIpForTokenService) {
       assertEquals(host, addr.getHostName());
       assertEquals(host, addr.getAddress().getHostName());
     }
