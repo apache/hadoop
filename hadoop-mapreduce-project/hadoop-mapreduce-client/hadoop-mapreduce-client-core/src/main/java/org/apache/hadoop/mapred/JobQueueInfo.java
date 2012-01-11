@@ -105,7 +105,7 @@ public class JobQueueInfo extends QueueInfo {
   public List<JobQueueInfo> getChildren() {
     List<JobQueueInfo> list = new ArrayList<JobQueueInfo>();
     for (QueueInfo q : super.getQueueChildren()) {
-      list.add(new JobQueueInfo(q));
+      list.add((JobQueueInfo)q);
     }
     return list;
   }
