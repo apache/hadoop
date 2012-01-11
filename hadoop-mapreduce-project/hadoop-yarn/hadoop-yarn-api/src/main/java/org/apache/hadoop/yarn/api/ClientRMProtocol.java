@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.api;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
@@ -43,6 +45,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -229,5 +232,20 @@ public interface ClientRMProtocol {
    */
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) 
+  throws YarnRemoteException;
+  
+  /**
+   * <p>The interface used by clients to get delegation token, enabling the 
+   * containers to be able to talk to the service using those tokens.
+   * 
+   *  <p> The <code>ResourceManager</code> responds with the delegation token
+   *  {@link DelegationToken} that can be used by the client to speak to this
+   *  service.
+   * @param request request to get a delegation token for the client.
+   * @return delegation token that can be used to talk to this service
+   * @throws YarnRemoteException
+   */
+  public GetDelegationTokenResponse getDelegationToken(
+      GetDelegationTokenRequest request) 
   throws YarnRemoteException;
 }

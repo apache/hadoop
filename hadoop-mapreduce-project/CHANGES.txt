@@ -400,6 +400,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3639. Fixed TokenCache to work with absent FileSystem canonical
     service-names. (Siddharth Seth via vinodkv)
 
+    MAPREDUCE-3380. Token infrastructure for running clients which are not kerberos 
+    authenticated. (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

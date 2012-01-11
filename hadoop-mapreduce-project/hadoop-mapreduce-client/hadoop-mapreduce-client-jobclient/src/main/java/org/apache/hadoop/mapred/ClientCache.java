@@ -70,7 +70,15 @@ public class ClientCache {
     return client;
   }
 
-  private MRClientProtocol instantiateHistoryProxy()
+  protected synchronized MRClientProtocol getInitializedHSProxy()
+      throws IOException {
+    if (this.hsProxy == null) {
+      hsProxy = instantiateHistoryProxy();
+    }
+    return this.hsProxy;
+  }
+  
+  protected MRClientProtocol instantiateHistoryProxy()
       throws IOException {
     final String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS);
     if (StringUtils.isEmpty(serviceAddr)) {

@@ -140,7 +140,20 @@ import org.apache.hadoop.util.ToolRunner;
 public class JobClient extends CLI {
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
-
+  /* notes that get delegation token was called. Again this is hack for oozie 
+   * to make sure we add history server delegation tokens to the credentials
+   *  for the job. Since the api only allows one delegation token to be returned, 
+   *  we have to add this hack.
+   */
+  private boolean getDelegationTokenCalled = false;
+  /* notes the renewer that will renew the delegation token */
+  private Text dtRenewer = null;
+  /* do we need a HS delegation token for this client */
+  static final String HS_DELEGATION_TOKEN_REQUIRED 
+      = "mapreduce.history.server.delegationtoken.required";
+  static final String HS_DELEGATION_TOKEN_RENEWER 
+      = "mapreduce.history.server.delegationtoken.renewer";
+  
   static{
     ConfigUtil.loadResources();
   }
@@ -584,6 +597,12 @@ public class JobClient extends CLI {
     try {
       conf.setBooleanIfUnset("mapred.mapper.new-api", false);
       conf.setBooleanIfUnset("mapred.reducer.new-api", false);
+      if (getDelegationTokenCalled) {
+        conf.setBoolean(HS_DELEGATION_TOKEN_REQUIRED, getDelegationTokenCalled);
+        getDelegationTokenCalled = false;
+        conf.set(HS_DELEGATION_TOKEN_RENEWER, dtRenewer.toString());
+        dtRenewer = null;
+      }
       Job job = clientUgi.doAs(new PrivilegedExceptionAction<Job> () {
         @Override
         public Job run() throws IOException, ClassNotFoundException, 
@@ -1168,6 +1187,8 @@ public class JobClient extends CLI {
    */
   public Token<DelegationTokenIdentifier> 
     getDelegationToken(final Text renewer) throws IOException, InterruptedException {
+    getDelegationTokenCalled = true;
+    dtRenewer = renewer;
     return clientUgi.doAs(new 
         PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
       public Token<DelegationTokenIdentifier> run() throws IOException, 

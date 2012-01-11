@@ -189,10 +189,26 @@ public class YarnConfiguration extends Configuration {
   /** The class to use as the resource scheduler.*/
   public static final String RM_SCHEDULER = 
     RM_PREFIX + "scheduler.class";
+ 
+
+  //Delegation token related keys
+  public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
+    RM_PREFIX + "delegation.key.update-interval";
+  public static final long    DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT = 
+    24*60*60*1000; // 1 day
+  public static final String  DELEGATION_TOKEN_RENEW_INTERVAL_KEY = 
+    RM_PREFIX + "delegation.token.renew-interval";
+  public static final long    DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT = 
+    24*60*60*1000;  // 1 day
+  public static final String  DELEGATION_TOKEN_MAX_LIFETIME_KEY = 
+     RM_PREFIX + "delegation.token.max-lifetime";
+  public static final long    DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT = 
+    7*24*60*60*1000; // 7 days
+  
   
   /** The class to use as the persistent store.*/
   public static final String RM_STORE = RM_PREFIX + "store.class";
-  
+ 
   /** The address of the zookeeper instance to use with ZK store.*/
   public static final String RM_ZK_STORE_ADDRESS = 
     RM_PREFIX + "zookeeper-store.address";

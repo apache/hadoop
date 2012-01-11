@@ -18,18 +18,34 @@
 
 package org.apache.hadoop.mapreduce;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.when;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.ResourceMgrDelegate;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
 
 public class TestYarnClientProtocolProvider extends TestCase {
-
+  
+  private static final RecordFactory recordFactory = RecordFactoryProvider.
+      getRecordFactory(null);
+  
   @Test
   public void testClusterWithYarnClientProtocolProvider() throws Exception {
 
@@ -68,7 +84,24 @@ public class TestYarnClientProtocolProvider extends TestCase {
       conf = new Configuration();
       conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       cluster = new Cluster(conf);
-      cluster.getDelegationToken(new Text(" "));
+      YARNRunner yrunner = (YARNRunner) cluster.getClient();
+      GetDelegationTokenResponse getDTResponse = 
+          recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
+      DelegationToken rmDTToken = recordFactory.newRecordInstance(
+          DelegationToken.class);
+      rmDTToken.setIdentifier(ByteBuffer.wrap(new byte[2]));
+      rmDTToken.setKind("Testclusterkind");
+      rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));
+      rmDTToken.setService("0.0.0.0:8040");
+      getDTResponse.setRMDelegationToken(rmDTToken);
+      ClientRMProtocol cRMProtocol = mock(ClientRMProtocol.class);
+      when(cRMProtocol.getDelegationToken(any(
+          GetDelegationTokenRequest.class))).thenReturn(getDTResponse);
+      ResourceMgrDelegate rmgrDelegate = new ResourceMgrDelegate(
+          new YarnConfiguration(conf), cRMProtocol);
+      yrunner.setResourceMgrDelegate(rmgrDelegate);
+      Token t = cluster.getDelegationToken(new Text(" "));
+      assertTrue("Testclusterkind".equals(t.getKind().toString()));
     } finally {
       if (cluster != null) {
         cluster.close();

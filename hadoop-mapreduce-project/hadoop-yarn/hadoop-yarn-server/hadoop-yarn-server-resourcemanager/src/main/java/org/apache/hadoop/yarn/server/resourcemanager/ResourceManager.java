@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
@@ -41,12 +41,13 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
+import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -66,16 +67,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
-import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
+import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -107,7 +108,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private EventHandler<SchedulerEvent> schedulerDispatcher;
   protected RMAppManager rmAppManager;
   protected ApplicationACLsManager applicationACLsManager;
-
+  protected RMDelegationTokenSecretManager rmDTSecretManager;
   private WebApp webApp;
   private RMContext rmContext;
   private final Store store;
@@ -193,7 +194,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     // Register event handler for RMAppManagerEvents
     this.rmDispatcher.register(RMAppManagerEventType.class,
         this.rmAppManager);
-
+    this.rmDTSecretManager = createRMDelegationTokenSecretManager();
     clientRM = createClientRMService();
     addService(clientRM);
     
@@ -435,7 +436,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     startWepApp();
     DefaultMetricsSystem.initialize("ResourceManager");
-
+    try {
+      rmDTSecretManager.startThreads();
+    } catch(IOException ie) {
+      throw new YarnException("Failed to start secret manager threads", ie);
+    }
+    
     super.start();
 
     /*synchronized(shutdown) {
@@ -459,6 +465,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     if (webApp != null) {
       webApp.stop();
     }
+    rmDTSecretManager.stopThreads();
 
     /*synchronized(shutdown) {
       shutdown.set(true);
@@ -475,9 +482,25 @@ public class ResourceManager extends CompositeService implements Recoverable {
         this.nmLivelinessMonitor, this.containerTokenSecretManager);
   }
 
+  protected RMDelegationTokenSecretManager
+               createRMDelegationTokenSecretManager() {
+    long secretKeyInterval = 
+        conf.getLong(YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_KEY, 
+            YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+    long tokenMaxLifetime =
+        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+            YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+    long tokenRenewInterval =
+        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 
+            YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+
+    return new RMDelegationTokenSecretManager(secretKeyInterval, 
+        tokenMaxLifetime, tokenRenewInterval, 3600000);
+  }
+
   protected ClientRMService createClientRMService() {
     return new ClientRMService(this.rmContext, scheduler, this.rmAppManager,
-        this.applicationACLsManager);
+        this.applicationACLsManager, this.rmDTSecretManager);
   }
 
   protected ApplicationMasterService createApplicationMasterService() {

@@ -35,10 +35,13 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
@@ -68,13 +71,17 @@ import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
@@ -92,11 +99,14 @@ public class HistoryClientService extends AbstractService {
   private WebApp webApp;
   private InetSocketAddress bindAddress;
   private HistoryContext history;
-
-  public HistoryClientService(HistoryContext history) {
+  private JHSDelegationTokenSecretManager jhsDTSecretManager;
+  
+  public HistoryClientService(HistoryContext history,
+      JHSDelegationTokenSecretManager jhsDTSecretManager) {
     super("HistoryClientService");
     this.history = history;
     this.protocolHandler = new MRClientProtocolHandler();
+    this.jhsDTSecretManager = jhsDTSecretManager;
   }
 
   public void start() {
@@ -110,14 +120,15 @@ public class HistoryClientService extends AbstractService {
       JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
     InetAddress hostNameResolved = null;
     try {
-      hostNameResolved = InetAddress.getLocalHost(); //address.getAddress().getLocalHost();
+      hostNameResolved = InetAddress.getLocalHost(); 
+      //address.getAddress().getLocalHost();
     } catch (UnknownHostException e) {
       throw new YarnException(e);
     }
 
     server =
         rpc.getServer(MRClientProtocol.class, protocolHandler, address,
-            conf, null,
+            conf, jhsDTSecretManager,
             conf.getInt(JHAdminConfig.MR_HISTORY_CLIENT_THREAD_COUNT,
                 JHAdminConfig.DEFAULT_MR_HISTORY_CLIENT_THREAD_COUNT));
 
@@ -277,6 +288,38 @@ public class HistoryClientService extends AbstractService {
         response.addTaskReport(task.getReport());
       }
       return response;
+    }
+    
+    @Override
+    public GetDelegationTokenResponse getDelegationToken(
+        GetDelegationTokenRequest request) throws YarnRemoteException {
+
+      try {
+      // Verify that the connection is kerberos authenticated
+      AuthenticationMethod authMethod = UserGroupInformation
+        .getRealAuthenticationMethod(UserGroupInformation.getCurrentUser());
+      if (UserGroupInformation.isSecurityEnabled()
+          && (authMethod != AuthenticationMethod.KERBEROS)) {
+       throw new IOException(
+          "Delegation Token can be issued only with kerberos authentication");
+      }
+
+      GetDelegationTokenResponse response = recordFactory.newRecordInstance(
+          GetDelegationTokenResponse.class);
+      MRDelegationTokenIdentifier tokenIdentifier =
+          new MRDelegationTokenIdentifier();
+      Token<MRDelegationTokenIdentifier> realJHSToken =
+          new Token<MRDelegationTokenIdentifier>(tokenIdentifier,
+              jhsDTSecretManager);
+      DelegationToken mrDToken = BuilderUtils.newDelegationToken(
+        realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
+        realJHSToken.getPassword(), bindAddress.getAddress().getHostAddress()
+            + ":" + bindAddress.getPort());
+      response.setDelegationToken(mrDToken);
+      return response;
+      } catch (IOException i) {
+        throw RPCUtil.getRemoteException(i);
+      }
     }
 
     private void checkAccess(Job job, JobACL jobOperation)

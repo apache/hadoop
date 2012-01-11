@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -101,7 +102,7 @@ public class TokenCache {
     String delegTokenRenewer = Master.getMasterPrincipal(conf);
     if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
       throw new IOException(
-          "Can't get JobTracker Kerberos principal for use as renewer");
+          "Can't get Master Kerberos principal for use as renewer");
     }
     boolean readFile = true;
 
@@ -112,7 +113,7 @@ public class TokenCache {
       if (readFile) {
         readFile = false;
         String binaryTokenFilename =
-          conf.get("mapreduce.job.credentials.binary");
+          conf.get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
         if (binaryTokenFilename != null) {
           Credentials binary;
           try {
