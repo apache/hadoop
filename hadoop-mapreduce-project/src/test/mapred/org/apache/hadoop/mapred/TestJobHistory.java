@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
@@ -520,12 +521,13 @@ public class TestJobHistory extends TestCase {
                      attempt.getHttpPort());
 
           if (attempt.getTaskStatus().equals("SUCCEEDED")) {
-            String ttHostname = jt.getNode(ttStatus.getHost()).toString();
+            Node node = jt.getNode(ttStatus.getHost());
+            String ttHostname = node.getName();
 
             // check if hostname is valid
-            assertTrue("Host name of task attempt " + attemptId +
+            assertTrue("Host name : " + attempt.getHostname() + " of task attempt " + attemptId +
                        " obtained from" +
-                       " history file did not match the expected value",
+                       " history file did not match the expected value " + ttHostname,
                        ttHostname.equals(attempt.getHostname()));
           }
         }
