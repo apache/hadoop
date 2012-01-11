@@ -23,6 +23,11 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7776 Make the Ipc-Header in a RPC-Payload an explicit header (sanjay)
 
+  BUG FIXES
+
+    HADOOP-7833. Fix findbugs warnings in protobuf generated code.
+    (John Lee via suresh)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
