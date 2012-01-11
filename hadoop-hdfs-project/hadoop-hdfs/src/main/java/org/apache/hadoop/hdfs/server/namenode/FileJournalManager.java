@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.JournalManager.CorruptionException;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -192,10 +193,13 @@ class FileJournalManager implements JournalManager {
   }
 
   @Override
-  synchronized public EditLogInputStream getInputStream(long fromTxId)
-      throws IOException {
+  synchronized public EditLogInputStream getInputStream(long fromTxId,
+      boolean inProgressOk) throws IOException {
     for (EditLogFile elf : getLogFiles(fromTxId)) {
       if (elf.containsTxId(fromTxId)) {
+        if (!inProgressOk && elf.isInProgress()) {
+          continue;
+        }
         if (elf.isInProgress()) {
           elf.validateLog();
         }
@@ -219,7 +223,7 @@ class FileJournalManager implements JournalManager {
   }
 
   @Override
-  public long getNumberOfTransactions(long fromTxId) 
+  public long getNumberOfTransactions(long fromTxId, boolean inProgressOk)
       throws IOException, CorruptionException {
     long numTxns = 0L;
     
@@ -232,6 +236,10 @@ class FileJournalManager implements JournalManager {
             + fromTxId + " - " + (elf.getFirstTxId() - 1));
         break;
       } else if (elf.containsTxId(fromTxId)) {
+        if (!inProgressOk && elf.isInProgress()) {
+          break;
+        }
+        
         if (elf.isInProgress()) {
           elf.validateLog();
         } 
@@ -253,7 +261,7 @@ class FileJournalManager implements JournalManager {
                 + " txns from " + fromTxId);
     }
 
-    long max = findMaxTransaction();
+    long max = findMaxTransaction(inProgressOk);
     
     // fromTxId should be greater than max, as it points to the next 
     // transaction we should expect to find. If it is less than or equal
@@ -276,7 +284,7 @@ class FileJournalManager implements JournalManager {
     
     // make sure journal is aware of max seen transaction before moving corrupt 
     // files aside
-    findMaxTransaction();
+    findMaxTransaction(true);
 
     for (EditLogFile elf : allLogFiles) {
       if (elf.getFile().equals(currentInProgress)) {
@@ -318,9 +326,13 @@ class FileJournalManager implements JournalManager {
    * tranaction id in the case that it was the maximum transaction in
    * the journal.
    */
-  private long findMaxTransaction()
+  private long findMaxTransaction(boolean inProgressOk)
       throws IOException {
     for (EditLogFile elf : getLogFiles(0)) {
+      if (elf.isInProgress() && !inProgressOk) {
+        continue;
+      }
+      
       if (elf.isInProgress()) {
         maxSeenTransaction = Math.max(elf.getFirstTxId(), maxSeenTransaction);
         elf.validateLog();

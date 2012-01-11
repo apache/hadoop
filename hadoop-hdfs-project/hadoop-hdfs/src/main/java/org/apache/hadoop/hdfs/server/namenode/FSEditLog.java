@@ -252,7 +252,7 @@ public class FSEditLog  {
     long segmentTxId = getLastWrittenTxId() + 1;
     // Safety check: we should never start a segment if there are
     // newer txids readable.
-    EditLogInputStream s = journalSet.getInputStream(segmentTxId);
+    EditLogInputStream s = journalSet.getInputStream(segmentTxId, true);
     try {
       Preconditions.checkState(s == null,
           "Cannot start writing at txid %s when there is a stream " +
@@ -1071,19 +1071,19 @@ public class FSEditLog  {
   public Collection<EditLogInputStream> selectInputStreams(long fromTxId,
       long toAtLeastTxId, boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    EditLogInputStream stream = journalSet.getInputStream(fromTxId);
+    EditLogInputStream stream = journalSet.getInputStream(fromTxId, inProgressOk);
     while (stream != null) {
-      if (inProgressOk || !stream.isInProgress()) {
-        streams.add(stream);
-      }
+      streams.add(stream);
       // We're now looking for a higher range, so reset the fromTxId
       fromTxId = stream.getLastTxId() + 1;
-      stream = journalSet.getInputStream(fromTxId);
+      stream = journalSet.getInputStream(fromTxId, inProgressOk);
     }
+    
     if (fromTxId <= toAtLeastTxId) {
       closeAllStreams(streams);
-      throw new IOException("No non-corrupt logs for txid " 
-                            + fromTxId);
+      throw new IOException(String.format("Gap in transactions. Expected to "
+          + "be able to read up until at least txid %d but unable to find any "
+          + "edit logs containing txid %d", toAtLeastTxId, fromTxId));
     }
     return streams;
   }

@@ -585,9 +585,12 @@ public class FSImage implements Closeable {
 
     if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, 
                                getLayoutVersion())) {
+      // If we're open for write, we're either non-HA or we're the active NN, so
+      // we better be able to load all the edits. If we're the standby NN, it's
+      // OK to not be able to read all of edits right now.
+      long toAtLeastTxId = editLog.isOpenForWrite() ? inspector.getMaxSeenTxId() : 0;
       editStreams = editLog.selectInputStreams(imageFile.getCheckpointTxId() + 1,
-                                               inspector.getMaxSeenTxId(),
-                                               false);
+          toAtLeastTxId, false);
     } else {
       editStreams = FSImagePreTransactionalStorageInspector
         .getEditLogStreams(storage);

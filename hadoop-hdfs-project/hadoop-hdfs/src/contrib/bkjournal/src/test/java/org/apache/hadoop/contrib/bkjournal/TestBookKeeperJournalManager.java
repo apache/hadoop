@@ -195,7 +195,7 @@ public class TestBookKeeperJournalManager {
     out.close();
     bkjm.finalizeLogSegment(1, 100);
 
-    long numTrans = bkjm.getNumberOfTransactions(1);
+    long numTrans = bkjm.getNumberOfTransactions(1, true);
     assertEquals(100, numTrans);
   }
 
@@ -218,17 +218,17 @@ public class TestBookKeeperJournalManager {
     }
     zkc.delete(bkjm.finalizedLedgerZNode(DEFAULT_SEGMENT_SIZE+1, DEFAULT_SEGMENT_SIZE*2), -1);
     
-    long numTrans = bkjm.getNumberOfTransactions(1);
+    long numTrans = bkjm.getNumberOfTransactions(1, true);
     assertEquals(DEFAULT_SEGMENT_SIZE, numTrans);
     
     try {
-      numTrans = bkjm.getNumberOfTransactions(DEFAULT_SEGMENT_SIZE+1);
+      numTrans = bkjm.getNumberOfTransactions(DEFAULT_SEGMENT_SIZE+1, true);
       fail("Should have thrown corruption exception by this point");
     } catch (JournalManager.CorruptionException ce) {
       // if we get here, everything is going good
     }
 
-    numTrans = bkjm.getNumberOfTransactions((DEFAULT_SEGMENT_SIZE*2)+1);
+    numTrans = bkjm.getNumberOfTransactions((DEFAULT_SEGMENT_SIZE*2)+1, true);
     assertEquals(DEFAULT_SEGMENT_SIZE, numTrans);
   }
 
@@ -262,7 +262,7 @@ public class TestBookKeeperJournalManager {
     out.abort();
     out.close();
     
-    long numTrans = bkjm.getNumberOfTransactions(1);
+    long numTrans = bkjm.getNumberOfTransactions(1, true);
     assertEquals((txid-1), numTrans);
   }
 
@@ -357,7 +357,7 @@ public class TestBookKeeperJournalManager {
     bkjm.finalizeLogSegment(1, numTransactions);
 
      
-    EditLogInputStream in = bkjm.getInputStream(1);
+    EditLogInputStream in = bkjm.getInputStream(1, true);
     try {
       assertEquals(numTransactions, 
                    FSEditLogTestUtil.countTransactionsInStream(in));

@@ -312,8 +312,10 @@ public class BookKeeperJournalManager implements JournalManager {
     }
   }
 
+  // TODO(HA): Handle inProgressOk
   @Override
-  public EditLogInputStream getInputStream(long fromTxnId) throws IOException {
+  public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     for (EditLogLedgerMetadata l : getLedgerList()) {
       if (l.getFirstTxId() == fromTxnId) {
         try {
@@ -329,8 +331,10 @@ public class BookKeeperJournalManager implements JournalManager {
     throw new IOException("No ledger for fromTxnId " + fromTxnId + " found.");
   }
 
+  // TODO(HA): Handle inProgressOk
   @Override
-  public long getNumberOfTransactions(long fromTxnId) throws IOException {
+  public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     long count = 0;
     long expectedStart = 0;
     for (EditLogLedgerMetadata l : getLedgerList()) {

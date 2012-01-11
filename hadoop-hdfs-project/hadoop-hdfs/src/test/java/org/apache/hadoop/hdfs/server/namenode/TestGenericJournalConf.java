@@ -144,13 +144,13 @@ public class TestGenericJournalConf {
     }
 
     @Override
-    public EditLogInputStream getInputStream(long fromTxnId)
+    public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
         throws IOException {
       return null;
     }
 
     @Override
-    public long getNumberOfTransactions(long fromTxnId)
+    public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
         throws IOException {
       return 0;
     }

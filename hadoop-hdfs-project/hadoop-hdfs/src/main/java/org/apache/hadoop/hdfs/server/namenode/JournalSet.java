@@ -198,7 +198,8 @@ public class JournalSet implements JournalManager {
    *         or null if no more exist
    */
   @Override
-  public EditLogInputStream getInputStream(long fromTxnId) throws IOException {
+  public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     JournalManager bestjm = null;
     long bestjmNumTxns = 0;
     CorruptionException corruption = null;
@@ -209,7 +210,8 @@ public class JournalSet implements JournalManager {
       JournalManager candidate = jas.getManager();
       long candidateNumTxns = 0;
       try {
-        candidateNumTxns = candidate.getNumberOfTransactions(fromTxnId);
+        candidateNumTxns = candidate.getNumberOfTransactions(fromTxnId,
+            inProgressOk);
       } catch (CorruptionException ce) {
         corruption = ce;
       } catch (IOException ioe) {
@@ -232,18 +234,20 @@ public class JournalSet implements JournalManager {
         return null;
       }
     }
-    return bestjm.getInputStream(fromTxnId);
+    return bestjm.getInputStream(fromTxnId, inProgressOk);
   }
   
   @Override
-  public long getNumberOfTransactions(long fromTxnId) throws IOException {
+  public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     long num = 0;
     for (JournalAndStream jas: journals) {
       if (jas.isDisabled()) {
         LOG.info("Skipping jas " + jas + " since it's disabled");
         continue;
       } else {
-        long newNum = jas.getManager().getNumberOfTransactions(fromTxnId);
+        long newNum = jas.getManager().getNumberOfTransactions(fromTxnId,
+            inProgressOk);
         if (newNum > num) {
           num = newNum;
         }

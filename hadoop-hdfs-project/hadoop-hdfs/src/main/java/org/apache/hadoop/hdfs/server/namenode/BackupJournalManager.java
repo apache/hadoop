@@ -58,7 +58,7 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
-  public long getNumberOfTransactions(long fromTxnId) 
+  public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
       throws IOException, CorruptionException {
     // This JournalManager is never used for input. Therefore it cannot
     // return any transactions
@@ -66,7 +66,8 @@ class BackupJournalManager implements JournalManager {
   }
   
   @Override
-  public EditLogInputStream getInputStream(long fromTxnId) throws IOException {
+  public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     // This JournalManager is never used for input. Therefore it cannot
     // return any transactions
     throw new IOException("Unsupported operation");

@@ -936,11 +936,11 @@ public class TestEditLog extends TestCase {
    * 
    * @param editUris directories to create edit logs in
    * @param numrolls number of times to roll the edit log during setup
+   * @param closeOnFinish whether to close the edit log after setup
    * @param abortAtRolls Specifications for when to fail, see AbortSpec
    */
-  public static NNStorage setupEdits(List<URI> editUris, int numrolls, 
-                                     AbortSpec... abortAtRolls)
-      throws IOException {
+  public static NNStorage setupEdits(List<URI> editUris, int numrolls,
+      boolean closeOnFinish, AbortSpec... abortAtRolls) throws IOException {
     List<AbortSpec> aborts = new ArrayList<AbortSpec>(Arrays.asList(abortAtRolls));
     NNStorage storage = new NNStorage(new Configuration(),
                                       Collections.<URI>emptyList(),
@@ -979,16 +979,34 @@ public class TestEditLog extends TestCase {
       }
       editlog.logSync();
     }
-    editlog.close();
+    
+    if (closeOnFinish) {
+      editlog.close();
+    }
 
     FSImageTestUtil.logStorageContents(LOG, storage);
     return storage;
+  }
+    
+  /**
+   * Set up directories for tests. 
+   *
+   * Each rolled file is 10 txns long. 
+   * A failed file is 2 txns long.
+   * 
+   * @param editUris directories to create edit logs in
+   * @param numrolls number of times to roll the edit log during setup
+   * @param abortAtRolls Specifications for when to fail, see AbortSpec
+   */
+  public static NNStorage setupEdits(List<URI> editUris, int numrolls, 
+      AbortSpec... abortAtRolls) throws IOException {
+    return setupEdits(editUris, numrolls, true, abortAtRolls);
   }
 
   /** 
    * Test loading an editlog which has had both its storage fail
    * on alternating rolls. Two edit log directories are created.
-   * The first on fails on odd rolls, the second on even. Test
+   * The first one fails on odd rolls, the second on even. Test
    * that we are able to load the entire editlog regardless.
    */
   @Test
