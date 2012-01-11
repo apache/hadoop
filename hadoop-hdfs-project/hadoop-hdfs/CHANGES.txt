@@ -39,6 +39,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2497 Fix TestBackupNode failure. (suresh)
 
+    HDFS-2499. RPC client is created incorrectly introduced in HDFS-2459.
+    (suresh)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
