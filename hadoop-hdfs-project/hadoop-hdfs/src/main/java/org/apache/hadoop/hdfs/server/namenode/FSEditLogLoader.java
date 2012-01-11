@@ -467,7 +467,7 @@ public class FSEditLogLoader {
       BlockInfo oldBlock = oldBlocks[i];
       Block newBlock = addCloseOp.blocks[i];
       
-      boolean isLastBlock = i == oldBlocks.length - 1;
+      boolean isLastBlock = i == addCloseOp.blocks.length - 1;
       if (oldBlock.getBlockId() != newBlock.getBlockId() ||
           (oldBlock.getGenerationStamp() != newBlock.getGenerationStamp() && 
               !(isGenStampUpdate && isLastBlock))) {
@@ -504,7 +504,17 @@ public class FSEditLogLoader {
       // We're adding blocks
       for (int i = oldBlocks.length; i < addCloseOp.blocks.length; i++) {
         Block newBlock = addCloseOp.blocks[i];
-        BlockInfo newBI = new BlockInfoUnderConstruction(newBlock, file.getReplication());
+        BlockInfo newBI;
+        if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD){
+          newBI = new BlockInfoUnderConstruction(
+              newBlock, file.getReplication());
+        } else {
+          // OP_CLOSE should add finalized blocks. This code path
+          // is only executed when loading edits written by prior
+          // versions of Hadoop. Current versions always log
+          // OP_ADD operations as each block is allocated.
+          newBI = new BlockInfo(newBlock, file.getReplication());
+        }
         fsNamesys.getBlockManager().addINode(newBI, file);
         file.addBlock(newBI);
       }
