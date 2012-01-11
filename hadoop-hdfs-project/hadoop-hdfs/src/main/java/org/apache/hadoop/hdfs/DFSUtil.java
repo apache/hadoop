@@ -683,9 +683,6 @@ public class DFSUtil {
       throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getHost()
         + ":" + datanodeid.getIpcPort());
-    if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
-      ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
-    }
     return (ClientDatanodeProtocol) RPC.getProxy(ClientDatanodeProtocol.class,
         ClientDatanodeProtocol.versionID, addr,
         UserGroupInformation.getCurrentUser(), conf,
