@@ -88,7 +88,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public void init(Configuration conf) {
-   registerHeartbeatHandler();
+   registerHeartbeatHandler(conf);
    super.init(conf);
   }
 
@@ -98,9 +98,10 @@ public class TaskAttemptListenerImpl extends CompositeService
     super.start();
   }
 
-  protected void registerHeartbeatHandler() {
+  protected void registerHeartbeatHandler(Configuration conf) {
     taskHeartbeatHandler = new TaskHeartbeatHandler(context.getEventHandler(), 
-        context.getClock());
+        context.getClock(), conf.getInt(MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT, 
+            MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT));
     addService(taskHeartbeatHandler);
   }
 
