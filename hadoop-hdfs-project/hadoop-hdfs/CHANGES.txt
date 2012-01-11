@@ -7,6 +7,8 @@ Release 0.23-PB - Unreleased
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
                via hairong)
 
+    HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

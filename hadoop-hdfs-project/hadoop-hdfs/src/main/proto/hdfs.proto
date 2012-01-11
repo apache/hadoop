@@ -53,6 +53,12 @@ message DatanodeIDProto {
   required uint32 ipcPort = 4;   // the port where the ipc Server is running
 }
 
+/**
+ * DatanodeID array
+ */
+message DatanodeIDsProto {
+  repeated DatanodeIDProto datanodes = 1;
+}
 
 /**
  * The status of a Datanode
@@ -75,7 +81,6 @@ message DatanodeInfoProto {
 
   optional AdminState adminState = 10;
 }
-
 
 /**
  * Summary of a file or directory
@@ -152,10 +157,10 @@ message HdfsFileStatusProto {
   required string group = 6;
   required uint64 modification_time = 7;
   required uint64 access_time = 8;
-  //
+
   // Optional fields for symlink
-  optional bytes symlink = 9;         // if symlink, target encoded java UTF8 
-  //
+  optional bytes symlink = 9;             // if symlink, target encoded java UTF8 
+
   // Optional fields for file
   optional uint32 block_replication = 10; // Actually a short - only 16bits used
   optional uint64 blocksize = 11;
@@ -169,7 +174,7 @@ message FsServerDefaultsProto {
   required uint64 blockSize = 1;
   required uint32 bytesPerChecksum = 2;
   required uint32 writePacketSize = 3;
-  required uint32 replication = 4; // Actually a short - only 16bits used
+  required uint32 replication = 4; // Actually a short - only 16 bits used
   required uint32 fileBufferSize = 5;
 }
 
@@ -187,5 +192,156 @@ message DirectoryListingProto {
  */
 message UpgradeStatusReportProto {
   required uint32 version = 1;;
-  required uint32 upgradeStatus = 2; // Between 0 and 100 indicating the % complete
+  required uint32 upgradeStatus = 2; // % completed in range 0 & 100
 }
+
+/**
+ * Common node information shared by all the nodes in the cluster
+ */
+message StorageInfoProto {
+  required uint32 layoutVersion = 1; // Layout version of the file system
+  required uint32 namespceID = 2;    // File system namespace ID
+  required string clusterID = 3;     // ID of the cluster
+  required uint64 cTime = 4;         // File system creation time
+}
+
+/**
+ * Information sent by a namenode to identify itself to the primary namenode.
+ */
+message NamenodeRegistrationProto {
+  required string rpcAddress = 1;    // host:port of the namenode RPC address
+  required string httpAddress = 2;   // host:port of the namenode http server
+  enum NamenodeRoleProto {
+    NAMENODE = 1;
+    BACKUP = 2;
+    CHECKPOINT = 3;
+  }
+  required StorageInfoProto storageInfo = 3;  // Node information
+  optional NamenodeRoleProto role = 4;        // Namenode role
+}
+
+/**
+ * Unique signature to identify checkpoint transactions.
+ */
+message CheckpointSignatureProto {
+  required string blockPoolId = 1;
+  required uint64 mostRecentCheckpointTxId = 2;
+  required uint64 curSegmentTxId = 3;
+  required StorageInfoProto storageInfo = 4;
+}
+
+/**
+ * Command sent from one namenode to another namenode.
+ */
+message NamenodeCommandProto {
+  enum Type {
+    NamenodeCommand = 0;      // Base command
+    CheckPointCommand = 1;    // Check point command
+  }
+  required uint32 action = 1;
+  required Type type = 2;
+  optional CheckpointCommandProto checkpointCmd = 3;
+}
+
+/**
+ * Command returned from primary to checkpointing namenode.
+ * This command has checkpoint signature that identifies
+ * checkpoint transaction and is needed for further
+ * communication related to checkpointing.
+ */
+message CheckpointCommandProto {
+  // Unique signature to identify checkpoint transation
+  required CheckpointSignatureProto signature = 1; 
+
+  // If true, return transfer image to primary upon the completion of checkpoint
+  required bool needToReturnImage = 2;
+}
+
+/**
+ * Block information
+ */
+message BlockProto {
+  required uint64 blockId = 1;
+  required uint64 genStamp = 2;
+  optional uint64 numBytes = 3;
+}
+
+/**
+ * Block and datanodes where is it located
+ */
+message BlockWithLocationsProto {
+  required BlockProto block = 1;            // Block
+  repeated DatanodeIDProto datanodeIDs = 2; // Datanodes with replicas of the block
+}
+
+/**
+ * List of block with locations
+ */
+message BlocksWithLocationsProto {
+  repeated BlockWithLocationsProto blocks = 1;
+}
+
+/**
+ * Editlog information with available transactions
+ */
+message RemoteEditLogProto {
+  required uint64 startTxId = 1;  // Starting available edit log transaction
+  required uint64 endTxId = 2;    // Ending available edit log transaction
+}
+
+/**
+ * Enumeration of editlogs available on a remote namenode
+ */
+message RemoteEditLogManifestProto {
+  repeated RemoteEditLogProto logs = 1;
+}
+
+/**
+ * Namespace information that describes namespace on a namenode
+ */
+message NamespaceInfoProto {
+  required string buildVersion = 1;         // Software build version
+  required uint32 distUpgradeVersion = 2;   // Distributed upgrade version
+  required string blockPoolID = 3;          // block pool used by the namespace
+  required StorageInfoProto storageInfo = 4;// Noe information
+}
+
+/**
+ * Block access token information
+ */
+message BlockKeyProto {
+  required uint32 keyId = 1;      // Key identifier
+  required uint64 expiryDate = 2; // Expiry time in milliseconds
+  required bytes keyBytes = 3;    // Key secret
+}
+
+/**
+ * Current key and set of block keys at the namenode.
+ */
+message ExportedBlockKeysProto {
+  required bool isBlockTokenEnabled = 1;
+  required uint64 keyUpdateInterval = 2;
+  required uint64 tokenLifeTime = 3;
+  required BlockKeyProto currentKey = 4;
+  repeated BlockKeyProto allKeys = 5;
+}
+
+/**
+ * State of a block replica at a datanode
+ */
+enum ReplicaState {
+  FINALIZED = 0;  // State of a replica when it is not modified
+  RBW = 1;        // State of replica that is being written to
+  RWR = 2;        // State of replica that is waiting to be recovered
+  RUR = 3;        // State of replica that is under recovery
+  TEMPORARY = 4;  // State of replica that is created for replication
+}
+
+/**
+ * Block that needs to be recovered with at a given location
+ */
+message RecoveringBlockProto {
+  required uint64 newGenStamp = 1;      // New genstamp post recovery
+  required LocatedBlockProto block = 2; // Block to be recovered
+}
+
