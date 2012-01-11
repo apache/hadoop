@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
-@XmlRootElement(name = "amAttempt")
+@XmlRootElement(name = "jobAttempt")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AMAttemptInfo {
 
@@ -52,12 +52,14 @@ public class AMAttemptInfo {
     this.nodeHttpAddress = "";
     this.nodeId = "";
     String nmHost = amInfo.getNodeManagerHost();
-    int nmPort = amInfo.getNodeManagerHttpPort();
+    int nmHttpPort = amInfo.getNodeManagerHttpPort();
+    int nmPort = amInfo.getNodeManagerPort();
     if (nmHost != null) {
-      this.nodeHttpAddress = nmHost + ":" + nmPort;
+      this.nodeHttpAddress = nmHost + ":" + nmHttpPort;
       NodeId nodeId = BuilderUtils.newNodeId(nmHost, nmPort);
       this.nodeId = nodeId.toString();
     }
+
     this.id = amInfo.getAppAttemptId().getAttemptId();
     this.startTime = amInfo.getStartTime();
     this.containerId = "";

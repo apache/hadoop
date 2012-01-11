@@ -156,9 +156,27 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3547. Added a bunch of unit tests for the the RM/NM webservices.
     (Thomas Graves via acmurthy)
 
-    MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
+    MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block
+    size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
 
     MAPREDUCE-3478. Cannot build against ZooKeeper 3.4.0. (Tom White via mahadev)
+
+    MAPREDUCE-3528. Fixed TaskHeartBeatHandler to use a new configuration
+    for the thread loop interval separate from task-timeout configuration
+    property. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-3312. Modified MR AM to not send a stop-container request for
+    a container that isn't launched at all. (Robert Joseph Evans via vinodkv)
+
+    MAPREDUCE-3382. Enhanced MR AM to use a proxy to ping the job-end
+    notification URL. (Ravi Prakash via vinodkv)
+
+    MAPREDUCE-3299. Added AMInfo table to the MR AM job pages to list all the
+    job-attempts when AM restarts and recovers. (Jonathan Eagles via vinodkv)
+
+    MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR AM.
+    Improved the earlier patch to not to JobHistoryServer repeatedly.
+    (Anupam Seth via vinodkv)
 
   OPTIMIZATIONS
 
@@ -173,6 +191,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3569. TaskAttemptListener holds a global lock for all
     task-updates. (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-3511. Removed a multitude of cloned/duplicate counters in the AM
+    thereby reducing the AM heap size and preventing full GCs. (vinodkv)
+
+    MAPREDUCE-3618. Fixed TaskHeartbeatHandler to not hold a global lock for all
+    task-updates. (Siddarth Seth via vinodkv)
 
   BUG FIXES
 
@@ -428,6 +452,16 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3624. Remove unnecessary dependency on JDK's tools.jar. (mahadev
     via acmurthy)
 
+    MAPREDUCE-3616. Thread pool for launching containers in MR AM not
+    expanding as expected. (vinodkv via sseth)
+
+    MAPREDUCE-3639. Fixed TokenCache to work with absent FileSystem canonical
+    service-names. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-3380. Token infrastructure for running clients which are not kerberos 
+    authenticated. (mahadev)
+
+    MAPREDUCE-3648. TestJobConf failing. (Thomas Graves via mahadev)
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

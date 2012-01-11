@@ -92,46 +92,13 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   final private NamenodeProtocolPB rpcProxy;
 
-  private static NamenodeProtocolPB createNamenode(
-      InetSocketAddress nameNodeAddr, Configuration conf,
-      UserGroupInformation ugi) throws IOException {
-    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
-    return RPC.getProxy(NamenodeProtocolPB.class,
-        RPC.getProtocolVersion(NamenodeProtocolPB.class), nameNodeAddr, ugi,
-        conf, NetUtils.getSocketFactory(conf, NamenodeProtocolPB.class));
-  }
-
-  /** Create a {@link NameNode} proxy */
-  static NamenodeProtocolPB createNamenodeWithRetry(
-      NamenodeProtocolPB rpcNamenode) {
-    RetryPolicy createPolicy = RetryPolicies
-        .retryUpToMaximumCountWithFixedSleep(5,
-            HdfsConstants.LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
-    Map<Class<? extends Exception>, RetryPolicy> remoteExceptionToPolicyMap = 
-        new HashMap<Class<? extends Exception>, RetryPolicy>();
-    remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class,
-        createPolicy);
-
-    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap = 
-        new HashMap<Class<? extends Exception>, RetryPolicy>();
-    exceptionToPolicyMap.put(RemoteException.class, RetryPolicies
-        .retryByRemoteException(RetryPolicies.TRY_ONCE_THEN_FAIL,
-            remoteExceptionToPolicyMap));
-    RetryPolicy methodPolicy = RetryPolicies.retryByException(
-        RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
-    Map<String, RetryPolicy> methodNameToPolicyMap = 
-        new HashMap<String, RetryPolicy>();
-
-    methodNameToPolicyMap.put("create", methodPolicy);
-
-    return (NamenodeProtocolPB) RetryProxy.create(NamenodeProtocolPB.class,
-        rpcNamenode, methodNameToPolicyMap);
-  }
-
   public NamenodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
       Configuration conf, UserGroupInformation ugi) throws IOException {
-    rpcProxy = createNamenodeWithRetry(createNamenode(nameNodeAddr, conf, ugi));
+    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+    rpcProxy = RPC.getProxy(NamenodeProtocolPB.class,
+        RPC.getProtocolVersion(NamenodeProtocolPB.class), nameNodeAddr, ugi,
+        conf, NetUtils.getSocketFactory(conf, NamenodeProtocolPB.class));
   }
   
   public NamenodeProtocolTranslatorPB(NamenodeProtocolPB rpcProxy) {
@@ -182,7 +149,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   @Override
   public long getTransactionID() throws IOException {
     try {
-      return rpcProxy.getTransationId(NULL_CONTROLLER, GET_TRANSACTIONID)
+      return rpcProxy.getTransactionId(NULL_CONTROLLER, GET_TRANSACTIONID)
           .getTxId();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

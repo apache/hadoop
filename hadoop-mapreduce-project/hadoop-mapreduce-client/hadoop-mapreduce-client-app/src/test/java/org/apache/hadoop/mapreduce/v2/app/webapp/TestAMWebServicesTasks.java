@@ -774,7 +774,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
       assertTrue("name not set", (name != null && !name.isEmpty()));
       JSONArray counters = counterGroup.getJSONArray("counter");
       for (int j = 0; j < counters.length(); j++) {
-        JSONObject counter = counters.getJSONObject(i);
+        JSONObject counter = counters.getJSONObject(j);
         String counterName = counter.getString("name");
         assertTrue("name not set",
             (counterName != null && !counterName.isEmpty()));

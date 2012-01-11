@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
-import com.google.inject.Inject;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.COUNTER_GROUP;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.COUNTER_NAME;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
+
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.CounterGroup;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -40,8 +45,7 @@ import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
+import com.google.inject.Inject;
 
 public class SingleCounterBlock extends HtmlBlock {
   protected TreeMap<String, Long> values = new TreeMap<String, Long>(); 
@@ -122,10 +126,10 @@ public class SingleCounterBlock extends HtmlBlock {
         task.getAttempts().entrySet()) {
         long value = 0;
         Counters counters = entry.getValue().getCounters();
-        CounterGroup group = (counters != null)
-        		? counters.getCounterGroup($(COUNTER_GROUP)) : null;
+        CounterGroup group = (counters != null) ? counters
+          .getGroup($(COUNTER_GROUP)) : null;
         if(group != null)  {
-          Counter c = group.getCounter($(COUNTER_NAME));
+          Counter c = group.findCounter($(COUNTER_NAME));
           if(c != null) {
             value = c.getValue();
           }
@@ -140,9 +144,9 @@ public class SingleCounterBlock extends HtmlBlock {
     for(Map.Entry<TaskId, Task> entry : tasks.entrySet()) {
       long value = 0;
       CounterGroup group = entry.getValue().getCounters()
-      .getCounterGroup($(COUNTER_GROUP));
+        .getGroup($(COUNTER_GROUP));
       if(group != null)  {
-        Counter c = group.getCounter($(COUNTER_NAME));
+        Counter c = group.findCounter($(COUNTER_NAME));
         if(c != null) {
           value = c.getValue();
         }

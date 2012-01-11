@@ -146,6 +146,9 @@ Trunk (unreleased changes)
 
     HDFS-2497 Fix TestBackupNode failure. (suresh)
 
+    HDFS-2499. RPC client is created incorrectly introduced in HDFS-2459.
+    (suresh)
+
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
     reference to rpcProxyWithoutRetry (atm)
 
@@ -164,6 +167,8 @@ Trunk (unreleased changes)
     (Uma Maheswara Rao G via todd)
 
     HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
+
+    HDFS-2739. SecondaryNameNode doesn't start up. (jitendra)
 
 Release 0.23.1 - UNRELEASED
 

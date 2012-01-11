@@ -24,8 +24,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.CounterGroup;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.CounterGroup;
 
 @XmlRootElement(name = "counterGroup")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -38,14 +38,14 @@ public class CounterGroupInfo {
   public CounterGroupInfo() {
   }
 
-  public CounterGroupInfo(String name, CounterGroup g, CounterGroup mg,
+  public CounterGroupInfo(String name, CounterGroup group, CounterGroup mg,
       CounterGroup rg) {
     this.counterGroupName = name;
     this.counter = new ArrayList<CounterInfo>();
 
-    for (Counter c : g.getAllCounters().values()) {
-      Counter mc = mg == null ? null : mg.getCounter(c.getName());
-      Counter rc = rg == null ? null : rg.getCounter(c.getName());
+    for (Counter c : group) {
+      Counter mc = mg == null ? null : mg.findCounter(c.getName());
+      Counter rc = rg == null ? null : rg.findCounter(c.getName());
       CounterInfo cinfo = new CounterInfo(c, mc, rc);
       this.counter.add(cinfo);
     }

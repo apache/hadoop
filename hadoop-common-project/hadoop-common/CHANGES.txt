@@ -71,9 +71,6 @@ Trunk (unreleased changes)
     HADOOP-7574. Improve FSShell -stat, add user/group elements.
     (XieXianshan via harsh)
 
-    HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead.
-    (XieXianshan via harsh)
-
     HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
     core-default.xml file. (harsh)
 
@@ -203,6 +200,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7934. Normalize dependencies versions across all modules. (tucu)
 
+    HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead.
+    (XieXianshan via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -262,6 +262,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7907. hadoop-tools JARs are not part of the distro. (tucu)
 
    HADOOP-7936. There's a Hoop README in the root dir of the tarball. (tucu)
+
+   HADOOP-7963. Fix ViewFS to catch a null canonical service-name and pass
+   tests TestViewFileSystem* (Siddharth Seth via vinodkv)
 
 Release 0.23.0 - 2011-11-01 
 

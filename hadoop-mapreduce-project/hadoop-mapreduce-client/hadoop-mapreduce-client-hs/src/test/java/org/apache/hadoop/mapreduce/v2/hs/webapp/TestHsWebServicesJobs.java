@@ -77,7 +77,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
  *
  * /ws/v1/history/mapreduce/jobs /ws/v1/history/mapreduce/jobs/{jobid}
  * /ws/v1/history/mapreduce/jobs/{jobid}/counters
- * /ws/v1/history/mapreduce/jobs/{jobid}/attempts
+ * /ws/v1/history/mapreduce/jobs/{jobid}/jobattempts
  */
 public class TestHsWebServicesJobs extends JerseyTest {
 
@@ -626,12 +626,12 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String jobId = MRApps.toString(id);
 
       ClientResponse response = r.path("ws").path("v1").path("history")
-          .path("mapreduce").path("jobs").path(jobId).path("attempts")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
-      JSONObject info = json.getJSONObject("attempts");
+      JSONObject info = json.getJSONObject("jobAttempts");
       verifyHsJobAttempts(info, jobsMap.get(id));
     }
   }
@@ -644,12 +644,12 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String jobId = MRApps.toString(id);
 
       ClientResponse response = r.path("ws").path("v1").path("history")
-          .path("mapreduce").path("jobs").path(jobId).path("attempts/")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts/")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
-      JSONObject info = json.getJSONObject("attempts");
+      JSONObject info = json.getJSONObject("jobAttempts");
       verifyHsJobAttempts(info, jobsMap.get(id));
     }
   }
@@ -662,12 +662,12 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String jobId = MRApps.toString(id);
 
       ClientResponse response = r.path("ws").path("v1").path("history")
-          .path("mapreduce").path("jobs").path(jobId).path("attempts")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
           .get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("incorrect number of elements", 1, json.length());
-      JSONObject info = json.getJSONObject("attempts");
+      JSONObject info = json.getJSONObject("jobAttempts");
       verifyHsJobAttempts(info, jobsMap.get(id));
     }
   }
@@ -680,7 +680,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String jobId = MRApps.toString(id);
 
       ClientResponse response = r.path("ws").path("v1").path("history")
-          .path("mapreduce").path("jobs").path(jobId).path("attempts")
+          .path("mapreduce").path("jobs").path(jobId).path("jobattempts")
           .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
       assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
       String xml = response.getEntity(String.class);
@@ -689,9 +689,9 @@ public class TestHsWebServicesJobs extends JerseyTest {
       InputSource is = new InputSource();
       is.setCharacterStream(new StringReader(xml));
       Document dom = db.parse(is);
-      NodeList attempts = dom.getElementsByTagName("attempts");
+      NodeList attempts = dom.getElementsByTagName("jobAttempts");
       assertEquals("incorrect number of elements", 1, attempts.getLength());
-      NodeList info = dom.getElementsByTagName("attempt");
+      NodeList info = dom.getElementsByTagName("jobAttempt");
       verifyHsJobAttemptsXML(info, jobsMap.get(id));
     }
   }
@@ -699,7 +699,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
   public void verifyHsJobAttempts(JSONObject info, Job job)
       throws JSONException {
 
-    JSONArray attempts = info.getJSONArray("attempt");
+    JSONArray attempts = info.getJSONArray("jobAttempt");
     assertEquals("incorrect number of elements", 2, attempts.length());
     for (int i = 0; i < attempts.length(); i++) {
       JSONObject attempt = attempts.getJSONObject(i);
@@ -732,9 +732,10 @@ public class TestHsWebServicesJobs extends JerseyTest {
       if (amInfo.getAppAttemptId().getAttemptId() == id) {
         attemptFound = true;
         String nmHost = amInfo.getNodeManagerHost();
-        int nmPort = amInfo.getNodeManagerHttpPort();
+        int nmHttpPort = amInfo.getNodeManagerHttpPort();
+        int nmPort = amInfo.getNodeManagerPort();
         WebServicesTestUtils.checkStringMatch("nodeHttpAddress", nmHost + ":"
-            + nmPort, nodeHttpAddress);
+            + nmHttpPort, nodeHttpAddress);
         WebServicesTestUtils.checkStringMatch("nodeId",
             BuilderUtils.newNodeId(nmHost, nmPort).toString(), nodeId);
         assertTrue("startime not greater than 0", startTime > 0);

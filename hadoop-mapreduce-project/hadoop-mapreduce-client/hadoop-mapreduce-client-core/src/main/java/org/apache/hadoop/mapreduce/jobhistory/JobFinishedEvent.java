@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.mapreduce.jobhistory;
 
-import java.io.IOException;
-
+import org.apache.avro.util.Utf8;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
-
-import org.apache.avro.util.Utf8;
 
 /**
  * Event to record successful completion of job
@@ -34,7 +31,18 @@ import org.apache.avro.util.Utf8;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class JobFinishedEvent  implements HistoryEvent {
-  private JobFinished datum = new JobFinished();
+
+  private JobFinished datum = null;
+
+  private JobID jobId;
+  private long finishTime;
+  private int finishedMaps;
+  private int finishedReduces;
+  private int failedMaps;
+  private int failedReduces;
+  private Counters mapCounters;
+  private Counters reduceCounters;
+  private Counters totalCounters;
 
   /** 
    * Create an event to record successful job completion
@@ -53,50 +61,75 @@ public class JobFinishedEvent  implements HistoryEvent {
       int failedMaps, int failedReduces,
       Counters mapCounters, Counters reduceCounters,
       Counters totalCounters) {
-    datum.jobid = new Utf8(id.toString());
-    datum.finishTime = finishTime;
-    datum.finishedMaps = finishedMaps;
-    datum.finishedReduces = finishedReduces;
-    datum.failedMaps = failedMaps;
-    datum.failedReduces = failedReduces;
-    datum.mapCounters =
-      EventWriter.toAvro(mapCounters, "MAP_COUNTERS");
-    datum.reduceCounters =
-      EventWriter.toAvro(reduceCounters, "REDUCE_COUNTERS");
-    datum.totalCounters =
-      EventWriter.toAvro(totalCounters, "TOTAL_COUNTERS");
+    this.jobId = id;
+    this.finishTime = finishTime;
+    this.finishedMaps = finishedMaps;
+    this.finishedReduces = finishedReduces;
+    this.failedMaps = failedMaps;
+    this.failedReduces = failedReduces;
+    this.mapCounters = mapCounters;
+    this.reduceCounters = reduceCounters;
+    this.totalCounters = totalCounters;
   }
 
   JobFinishedEvent() {}
 
-  public Object getDatum() { return datum; }
-  public void setDatum(Object datum) { this.datum = (JobFinished)datum; }
+  public Object getDatum() {
+    if (datum == null) {
+      datum = new JobFinished();
+      datum.jobid = new Utf8(jobId.toString());
+      datum.finishTime = finishTime;
+      datum.finishedMaps = finishedMaps;
+      datum.finishedReduces = finishedReduces;
+      datum.failedMaps = failedMaps;
+      datum.failedReduces = failedReduces;
+      datum.mapCounters = EventWriter.toAvro(mapCounters, "MAP_COUNTERS");
+      datum.reduceCounters = EventWriter.toAvro(reduceCounters,
+        "REDUCE_COUNTERS");
+      datum.totalCounters = EventWriter.toAvro(totalCounters, "TOTAL_COUNTERS");
+    }
+    return datum;
+  }
+
+  public void setDatum(Object oDatum) {
+    this.datum = (JobFinished) oDatum;
+    this.jobId = JobID.forName(datum.jobid.toString());
+    this.finishTime = datum.finishTime;
+    this.finishedMaps = datum.finishedMaps;
+    this.finishedReduces = datum.finishedReduces;
+    this.failedMaps = datum.failedMaps;
+    this.failedReduces = datum.failedReduces;
+    this.mapCounters = EventReader.fromAvro(datum.mapCounters);
+    this.reduceCounters = EventReader.fromAvro(datum.reduceCounters);
+    this.totalCounters = EventReader.fromAvro(datum.totalCounters);
+  }
+
   public EventType getEventType() {
     return EventType.JOB_FINISHED;
   }
 
   /** Get the Job ID */
-  public JobID getJobid() { return JobID.forName(datum.jobid.toString()); }
+  public JobID getJobid() { return jobId; }
   /** Get the job finish time */
-  public long getFinishTime() { return datum.finishTime; }
+  public long getFinishTime() { return finishTime; }
   /** Get the number of finished maps for the job */
-  public int getFinishedMaps() { return datum.finishedMaps; }
+  public int getFinishedMaps() { return finishedMaps; }
   /** Get the number of finished reducers for the job */
-  public int getFinishedReduces() { return datum.finishedReduces; }
+  public int getFinishedReduces() { return finishedReduces; }
   /** Get the number of failed maps for the job */
-  public int getFailedMaps() { return datum.failedMaps; }
+  public int getFailedMaps() { return failedMaps; }
   /** Get the number of failed reducers for the job */
-  public int getFailedReduces() { return datum.failedReduces; }
+  public int getFailedReduces() { return failedReduces; }
   /** Get the counters for the job */
   public Counters getTotalCounters() {
-    return EventReader.fromAvro(datum.totalCounters);
+    return totalCounters;
   }
   /** Get the Map counters for the job */
   public Counters getMapCounters() {
-    return EventReader.fromAvro(datum.mapCounters);
+    return mapCounters;
   }
   /** Get the reduce counters for the job */
   public Counters getReduceCounters() {
-    return EventReader.fromAvro(datum.reduceCounters);
+    return reduceCounters;
   }
 }

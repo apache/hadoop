@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._EVEN;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
@@ -28,14 +29,22 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.util.Date;
+import java.util.List;
 
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -62,6 +71,11 @@ public class JobBlock extends HtmlBlock {
         p()._("Sorry, ", jid, " not found.")._();
       return;
     }
+
+    List<AMInfo> amInfos = job.getAMInfos();
+    String amString =
+        amInfos.size() == 1 ? "ApplicationMaster" : "ApplicationMasters"; 
+
     JobInfo jinfo = new JobInfo(job, true);
     info("Job Overview").
         _("Job Name:", jinfo.getName()).
@@ -69,10 +83,40 @@ public class JobBlock extends HtmlBlock {
         _("Uberized:", jinfo.isUberized()).
         _("Started:", new Date(jinfo.getStartTime())).
         _("Elapsed:", StringUtils.formatTime(jinfo.getElapsedTime()));
-    html.
+    DIV<Hamlet> div = html.
       _(InfoBlock.class).
-      div(_INFO_WRAP).
+      div(_INFO_WRAP);
 
+    // MRAppMasters Table
+    TABLE<DIV<Hamlet>> table = div.table("#job");
+    table.
+      tr().
+      th(amString).
+      _().
+      tr().
+      th(_TH, "Attempt Number").
+      th(_TH, "Start Time").
+      th(_TH, "Node").
+      th(_TH, "Logs").
+      _();
+    for (AMInfo amInfo : amInfos) {
+      AMAttemptInfo attempt = new AMAttemptInfo(amInfo,
+          jinfo.getId(), jinfo.getUserName());
+
+      table.tr().
+        td(String.valueOf(attempt.getAttemptId())).
+        td(new Date(attempt.getStartTime()).toString()).
+        td().a(".nodelink", url("http://", attempt.getNodeHttpAddress()), 
+            attempt.getNodeHttpAddress())._().
+        td().a(".logslink", url(attempt.getLogsLink()), 
+            "logs")._().
+        _();
+    }
+
+    table._();
+    div._();
+
+    html.div(_INFO_WRAP).        
       // Tasks table
         table("#job").
           tr().
