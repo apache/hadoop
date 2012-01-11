@@ -129,6 +129,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7963. Fix ViewFS to catch a null canonical service-name and pass
    tests TestViewFileSystem* (Siddharth Seth via vinodkv)
 
+   HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
+   (Daryn Sharp via suresh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
