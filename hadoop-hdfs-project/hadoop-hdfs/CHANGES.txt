@@ -13,6 +13,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
 
+    HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
