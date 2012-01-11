@@ -411,6 +411,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3651. TestQueueManagerRefresh fails. (Thomas Graves via mahadev)
 
     MAPREDUCE-3645. TestJobHistory fails. (Thomas Graves via mahadev)
+  
+    MAPREDUCE-3652. org.apache.hadoop.mapred.TestWebUIAuthorization.testWebUIAuthorization 
+    fails. (Thomas Graves via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 
