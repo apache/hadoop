@@ -43,7 +43,7 @@ public class TestTaskAttemptListenerImpl {
     }
     
     @Override
-    protected void registerHeartbeatHandler() {
+    protected void registerHeartbeatHandler(Configuration conf) {
       //Empty
     }
 

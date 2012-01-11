@@ -129,6 +129,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3511. Removed a multitude of cloned/duplicate counters in the AM
     thereby reducing the AM heap size and preventing full GCs. (vinodkv)
 
+    MAPREDUCE-3618. Fixed TaskHeartbeatHandler to not hold a global lock for all
+    task-updates. (Siddarth Seth via vinodkv)
+
   BUG FIXES
     MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
                     (Ravi Prakash and Ravi Gummadi via amarrk)
