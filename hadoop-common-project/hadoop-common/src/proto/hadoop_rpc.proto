@@ -1,0 +1,73 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * These are the messages used by Hadoop RPC to marshal the
+ * request and response in the RPC layer.
+ */
+option java_package = "org.apache.hadoop.ipc.protobuf";
+option java_outer_classname = "HadoopRpcProtos";
+option java_generate_equals_and_hash = true;
+
+/**
+ * Message used to marshal the client request
+ * from RPC client to the RPC server.
+ */
+message HadoopRpcRequestProto {
+  /** Name of the RPC method */
+  required string methodName = 1;
+
+  /** Bytes corresponding to the client protobuf request */
+  optional bytes request = 2;
+}
+
+/**
+ * At the RPC layer, this message is used to indicate
+ * the server side exception the the RPC client.
+ *
+ * Hadoop RPC client throws an exception indicated
+ * by exceptionName with the stackTrace.
+ */
+message HadoopRpcExceptionProto {
+  /** Class name of the exception thrown from the server */
+
+  optional string exceptionName = 1;
+  /** Exception stack trace from the server side */
+  optional string stackTrace = 2;
+}
+
+/**
+ * This message is used to marshal the response from
+ * RPC server to the client.
+ */
+message HadoopRpcResponseProto {
+  /** Status of IPC call */
+  enum ResponseStatus {
+    SUCCESS = 1;
+    ERRROR = 2;
+  }
+
+  required ResponseStatus status = 1;
+
+  // Protobuf response payload from the server, when status is SUCCESS.
+  optional bytes response = 2;
+
+  // Exception when status is ERROR or FATAL
+  optional HadoopRpcExceptionProto exception = 3;
+}
+

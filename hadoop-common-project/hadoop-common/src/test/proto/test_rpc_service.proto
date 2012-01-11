@@ -15,31 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ipc;
+option java_package = "org.apache.hadoop.ipc.protobuf";
+option java_outer_classname = "TestRpcServiceProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+
+import "test.proto";
+
 
 /**
- * Indicates an exception on the RPC server 
+ * A protobuf service for use in tests
  */
-public class RpcServerException extends RpcException {
-  private static final long serialVersionUID = 1L;
-
-  /**
-   * Constructs exception with the specified detail message.
-   * @param message detailed message.
-   */
-  public RpcServerException(final String message) {
-    super(message);
-  }
-  
-  /**
-   * Constructs exception with the specified detail message and cause.
-   * 
-   * @param message message.
-   * @param cause the cause (can be retried by the {@link #getCause()} method).
-   *          (A <tt>null</tt> value is permitted, and indicates that the cause
-   *          is nonexistent or unknown.)
-   */
-  public RpcServerException(final String message, final Throwable cause) {
-    super(message, cause);
-  }
+service TestProtobufRpcProto {
+  rpc ping(EmptyRequestProto) returns (EmptyResponseProto);
+  rpc echo(EchoRequestProto) returns (EchoResponseProto);
+  rpc error(EmptyRequestProto) returns (EmptyResponseProto);
 }
