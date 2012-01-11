@@ -23,6 +23,8 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportResponse;
@@ -44,6 +46,8 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.FailTaskAttemp
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.FailTaskAttemptResponsePBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetCountersRequestPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetCountersResponsePBImpl;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetDelegationTokenRequestPBImpl;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetDelegationTokenResponsePBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetDiagnosticsRequestPBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetDiagnosticsResponsePBImpl;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.GetJobReportRequestPBImpl;
@@ -66,6 +70,8 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.FailTaskAttemptReque
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.FailTaskAttemptResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetCountersRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetCountersResponseProto;
+import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenRequestProto;
+import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDiagnosticsRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetDiagnosticsResponseProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.GetJobReportRequestProto;
@@ -184,7 +190,20 @@ public class MRClientProtocolPBServiceImpl implements BlockingInterface {
       throw new ServiceException(e);
     }
   }
-
+  
+  @Override
+  public GetDelegationTokenResponseProto getDelegationToken(
+      RpcController controller, GetDelegationTokenRequestProto proto)
+      throws ServiceException {
+    GetDelegationTokenRequest request = new GetDelegationTokenRequestPBImpl(proto);
+    try {
+      GetDelegationTokenResponse response = real.getDelegationToken(request);
+      return ((GetDelegationTokenResponsePBImpl)response).getProto();
+    } catch (YarnRemoteException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
   @Override
   public KillJobResponseProto killJob(RpcController controller,
       KillJobRequestProto proto) throws ServiceException {

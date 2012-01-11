@@ -28,6 +28,7 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -54,6 +55,9 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.LogParams;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.Credentials;
@@ -68,6 +72,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -84,6 +89,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 /**
  * This class enables the current JobClient (0.22 hadoop) to run on YARN.
  */
+@SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
 public class YARNRunner implements ClientProtocol {
 
   private static final Log LOG = LogFactory.getLog(YARNRunner.class);
@@ -93,7 +99,15 @@ public class YARNRunner implements ClientProtocol {
   private ClientCache clientCache;
   private Configuration conf;
   private final FileContext defaultFileContext;
-
+  
+  /* usually is false unless the jobclient getdelegation token is 
+   *  called. This is a hack wherein we do return a token from RM 
+   *  on getDelegationtoken but due to the restricted api on jobclient
+   *  we just add a job history DT token when submitting a job.
+   */
+  private static final boolean DEFAULT_HS_DELEGATION_TOKEN_REQUIRED = 
+      false;
+  
   /**
    * Yarn runner incapsulates the client interface of
    * yarn
@@ -131,7 +145,16 @@ public class YARNRunner implements ClientProtocol {
       throw new RuntimeException("Error in instantiating YarnClient", ufe);
     }
   }
-
+  
+  @Private
+  /**
+   * Used for testing mostly.
+   * @param resMgrDelegate the resource manager delegate to set to.
+   */
+  public void setResourceMgrDelegate(ResourceMgrDelegate resMgrDelegate) {
+    this.resMgrDelegate = resMgrDelegate;
+  }
+  
   @Override
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
       throws IOException, InterruptedException {
@@ -161,10 +184,26 @@ public class YARNRunner implements ClientProtocol {
     return resMgrDelegate.getClusterMetrics();
   }
 
+  private Token<MRDelegationTokenIdentifier> getDelegationTokenFromHS(
+      MRClientProtocol hsProxy, Text renewer) throws IOException,
+      InterruptedException {
+    GetDelegationTokenRequest request = recordFactory
+      .newRecordInstance(GetDelegationTokenRequest.class);
+    request.setRenewer(renewer.toString());
+    DelegationToken mrDelegationToken = hsProxy.getDelegationToken(request)
+      .getDelegationToken();
+    return new Token<MRDelegationTokenIdentifier>(mrDelegationToken
+      .getIdentifier().array(), mrDelegationToken.getPassword().array(),
+      new Text(mrDelegationToken.getKind()), new Text(
+        mrDelegationToken.getService()));
+  }
+  
   @Override
-  public Token<DelegationTokenIdentifier> getDelegationToken(Text arg0)
+  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException, InterruptedException {
-    return resMgrDelegate.getDelegationToken(arg0);
+    // The token is only used for serialization. So the type information
+    // mismatch should be fine.
+    return resMgrDelegate.getDelegationToken(renewer);
   }
 
   @Override
@@ -224,7 +263,16 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public JobStatus submitJob(JobID jobId, String jobSubmitDir, Credentials ts)
   throws IOException, InterruptedException {
-
+    // JobClient will set this flag if getDelegationToken is called, if so, get
+    // the delegation tokens for the HistoryServer also.
+    if (conf.getBoolean(JobClient.HS_DELEGATION_TOKEN_REQUIRED, 
+        DEFAULT_HS_DELEGATION_TOKEN_REQUIRED)) {
+      Token hsDT = getDelegationTokenFromHS(clientCache.
+          getInitializedHSProxy(), new Text( 
+              conf.get(JobClient.HS_DELEGATION_TOKEN_RENEWER)));
+      ts.addToken(hsDT.getService(), hsDT);
+    }
+    
     // Upload only in security mode: TODO
     Path applicationTokensFile =
         new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);

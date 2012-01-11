@@ -37,6 +37,8 @@ import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -59,12 +61,14 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 
 // TODO: This should be part of something like yarn-client.
@@ -156,11 +160,20 @@ public class ResourceMgrDelegate {
   }
 
 
-  public Token<DelegationTokenIdentifier> getDelegationToken(Text arg0)
+  @SuppressWarnings("rawtypes")
+  public Token getDelegationToken(Text renewer)
       throws IOException, InterruptedException {
-    // TODO: Implement getDelegationToken
-    LOG.warn("getDelegationToken - Not Implemented");
-    return null;
+    /* get the token from RM */
+    org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest 
+    rmDTRequest = recordFactory.newRecordInstance(
+        org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest.class);
+    rmDTRequest.setRenewer(renewer.toString());
+    org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse 
+      response = applicationsManager.getDelegationToken(rmDTRequest);
+    DelegationToken yarnToken = response.getRMDelegationToken();
+    return new Token<RMDelegationTokenIdentifier>(yarnToken.getIdentifier().array(),
+        yarnToken.getPassword().array(), 
+        new Text(yarnToken.getKind()), new Text(yarnToken.getService()));
   }
 
 

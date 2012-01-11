@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 /**
  * Builder utilities to construct various objects.
@@ -221,6 +223,18 @@ public class BuilderUtils {
     return container;
   }
 
+  public static DelegationToken newDelegationToken(
+      byte[] identifier, String kind, byte[] password,
+      String service) {
+      DelegationToken delegationToken = recordFactory.newRecordInstance(
+          DelegationToken.class);
+      delegationToken.setIdentifier(ByteBuffer.wrap(identifier));
+      delegationToken.setKind(kind);
+      delegationToken.setPassword(ByteBuffer.wrap(password));
+      delegationToken.setService(service);
+      return delegationToken;
+  }
+  
   public static ContainerToken newContainerToken(NodeId nodeId,
       ByteBuffer password, ContainerTokenIdentifier tokenIdentifier) {
     ContainerToken containerToken = recordFactory
