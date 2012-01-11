@@ -2,6 +2,11 @@ Hadoop HDFS Change Log
 
 Release 0.23-PB - Unreleased
 
+  NEW FEATURES
+
+    HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+               via hairong)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

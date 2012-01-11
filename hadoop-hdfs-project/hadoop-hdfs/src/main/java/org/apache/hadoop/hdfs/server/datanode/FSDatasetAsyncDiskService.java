@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 
 /*
  * This class is a container of multiple thread pools, each for a volume,
@@ -46,6 +48,8 @@ import org.apache.commons.logging.LogFactory;
  * The FSDataset-specific logic should reside here. 
  */
 class FSDatasetAsyncDiskService {
+  
+  final FSDataset dataset;
   
   public static final Log LOG = LogFactory.getLog(FSDatasetAsyncDiskService.class);
   
@@ -70,8 +74,8 @@ class FSDatasetAsyncDiskService {
    * 
    * @param volumes The roots of the data volumes.
    */
-  FSDatasetAsyncDiskService(File[] volumes) {
-
+  FSDatasetAsyncDiskService(FSDataset dataset, File[] volumes) {
+    this.dataset = dataset;
     // Create one ThreadPool per volume
     for (int v = 0 ; v < volumes.length; v++) {
       final File vol = volumes[v];
@@ -147,13 +151,12 @@ class FSDatasetAsyncDiskService {
    * Delete the block file and meta file from the disk asynchronously, adjust
    * dfsUsed statistics accordingly.
    */
-  void deleteAsync(FSDataset.FSVolume volume, String bpid, File blockFile,
-      File metaFile, String blockName) {
-    DataNode.LOG.info("Scheduling block " + blockName + " file " + blockFile
-        + " for deletion");
-    ReplicaFileDeleteTask deletionTask = 
-        new ReplicaFileDeleteTask(volume, bpid, blockFile, metaFile,
-            blockName);
+  void deleteAsync(FSDataset.FSVolume volume, File blockFile, File metaFile,
+      ExtendedBlock block) {
+    DataNode.LOG.info("Scheduling block " + block.getLocalBlock().toString()
+        + " file " + blockFile + " for deletion");
+    ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(dataset,
+        volume, blockFile, metaFile, block);
     execute(volume.getCurrentDir(), deletionTask);
   }
   
@@ -161,19 +164,19 @@ class FSDatasetAsyncDiskService {
    *  as decrement the dfs usage of the volume. 
    */
   static class ReplicaFileDeleteTask implements Runnable {
+    final FSDataset dataset;
     final FSDataset.FSVolume volume;
-    final String blockPoolId;
     final File blockFile;
     final File metaFile;
-    final String blockName;
+    final ExtendedBlock block;
     
-    ReplicaFileDeleteTask(FSDataset.FSVolume volume, String bpid,
-        File blockFile, File metaFile, String blockName) {
+    ReplicaFileDeleteTask(FSDataset dataset, FSDataset.FSVolume volume, File blockFile,
+        File metaFile, ExtendedBlock block) {
+      this.dataset = dataset;
       this.volume = volume;
-      this.blockPoolId = bpid;
       this.blockFile = blockFile;
       this.metaFile = metaFile;
-      this.blockName = blockName;
+      this.block = block;
     }
     
     FSDataset.FSVolume getVolume() {
@@ -183,9 +186,9 @@ class FSDatasetAsyncDiskService {
     @Override
     public String toString() {
       // Called in AsyncDiskService.execute for displaying error messages.
-      return "deletion of block " + blockPoolId + " " + blockName
-          + " with block file " + blockFile + " and meta file " + metaFile
-          + " from volume " + volume;
+      return "deletion of block " + block.getBlockPoolId() + " "
+          + block.getLocalBlock().toString() + " with block file " + blockFile
+          + " and meta file " + metaFile + " from volume " + volume;
     }
 
     @Override
@@ -193,12 +196,15 @@ class FSDatasetAsyncDiskService {
       long dfsBytes = blockFile.length() + metaFile.length();
       if ( !blockFile.delete() || ( !metaFile.delete() && metaFile.exists() ) ) {
         DataNode.LOG.warn("Unexpected error trying to delete block "
-            + blockPoolId + " " + blockName + " at file " + blockFile
-            + ". Ignored.");
+            + block.getBlockPoolId() + " " + block.getLocalBlock().toString()
+            + " at file " + blockFile + ". Ignored.");
       } else {
-        volume.decDfsUsed(blockPoolId, dfsBytes);
-        DataNode.LOG.info("Deleted block " + blockPoolId + " " + blockName
-            + " at file " + blockFile);
+        if(block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK){
+          dataset.notifyNamenodeDeletedBlock(block);
+        }
+        volume.decDfsUsed(block.getBlockPoolId(), dfsBytes);
+        DataNode.LOG.info("Deleted block " + block.getBlockPoolId() + " "
+            + block.getLocalBlock().toString() + " at file " + blockFile);
       }
     }
   };

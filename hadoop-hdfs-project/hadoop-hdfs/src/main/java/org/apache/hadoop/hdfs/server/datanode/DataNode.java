@@ -129,6 +129,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolServerSideTranslatorR23;
 import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolTranslatorR23;
@@ -655,6 +656,17 @@ public class DataNode extends Configured
       bpos.notifyNamenodeReceivedBlock(block, delHint); 
     } else {
       LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
+          + block.getBlockPoolId());
+    }
+  }
+  
+  // calls specific to BP
+  protected void notifyNamenodeDeletedBlock(ExtendedBlock block) {
+    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
+    if (bpos != null) {
+      bpos.notifyNamenodeDeletedBlock(block);
+    } else {
+      LOG.warn("Cannot find BPOfferService for reporting block deleted for bpid="
           + block.getBlockPoolId());
     }
   }

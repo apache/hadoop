@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.junit.After;
 import org.junit.Test;
 
@@ -105,12 +106,12 @@ public class TestDeadDatanode {
 
     DatanodeProtocol dnp = cluster.getNameNodeRpc();
     
-    Block[] blocks = new Block[] { new Block(0) };
-    String[] delHints = new String[] { "" };
+    ReceivedDeletedBlockInfo[] blocks = { new ReceivedDeletedBlockInfo(
+        new Block(0), "") };
     
     // Ensure blockReceived call from dead datanode is rejected with IOException
     try {
-      dnp.blockReceived(reg, poolId, blocks, delHints);
+      dnp.blockReceivedAndDeleted(reg, poolId, blocks);
       Assert.fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
