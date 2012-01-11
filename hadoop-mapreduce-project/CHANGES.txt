@@ -406,6 +406,7 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3380. Token infrastructure for running clients which are not kerberos 
     authenticated. (mahadev)
 
+    MAPREDUCE-3648. TestJobConf failing. (Thomas Graves via mahadev)
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
