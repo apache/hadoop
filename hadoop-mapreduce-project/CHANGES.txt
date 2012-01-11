@@ -407,6 +407,9 @@ Release 0.23.1 - Unreleased
     authenticated. (mahadev)
 
     MAPREDUCE-3648. TestJobConf failing. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3651. TestQueueManagerRefresh fails. (Thomas Graves via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

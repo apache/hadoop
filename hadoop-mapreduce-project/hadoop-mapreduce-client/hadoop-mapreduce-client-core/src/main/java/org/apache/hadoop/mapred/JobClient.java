@@ -1031,11 +1031,25 @@ public class JobClient extends CLI {
     }
   }
 
-  private JobQueueInfo[] getJobQueueInfoArray(QueueInfo[] queues) 
-  throws IOException {
+  private JobQueueInfo getJobQueueInfo(QueueInfo queue) {
+    JobQueueInfo ret = new JobQueueInfo(queue);
+    // make sure to convert any children
+    if (queue.getQueueChildren().size() > 0) {
+      List<JobQueueInfo> childQueues = new ArrayList<JobQueueInfo>(queue
+          .getQueueChildren().size());
+      for (QueueInfo child : queue.getQueueChildren()) {
+        childQueues.add(getJobQueueInfo(child));
+      }
+      ret.setChildren(childQueues);
+    }
+    return ret;
+  }
+
+  private JobQueueInfo[] getJobQueueInfoArray(QueueInfo[] queues)
+      throws IOException {
     JobQueueInfo[] ret = new JobQueueInfo[queues.length];
     for (int i = 0; i < queues.length; i++) {
-      ret[i] = new JobQueueInfo(queues[i]);
+      ret[i] = getJobQueueInfo(queues[i]);
     }
     return ret;
   }
