@@ -146,6 +146,9 @@ Trunk (unreleased changes)
 
     HDFS-2497 Fix TestBackupNode failure. (suresh)
 
+    HDFS-2499. RPC client is created incorrectly introduced in HDFS-2459.
+    (suresh)
+
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
     reference to rpcProxyWithoutRetry (atm)
 
