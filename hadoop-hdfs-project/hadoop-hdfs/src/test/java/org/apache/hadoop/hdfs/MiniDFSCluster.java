@@ -48,8 +48,10 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol;
+import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
@@ -512,6 +514,8 @@ public class MiniDFSCluster {
       try {
         Class<?> rpcEngine = conf.getClassByName(rpcEngineName);
         setRpcEngine(conf, NamenodeProtocols.class, rpcEngine);
+        setRpcEngine(conf, ClientNamenodeWireProtocol.class, rpcEngine);
+        setRpcEngine(conf, ClientDatanodeWireProtocol.class, rpcEngine);
         setRpcEngine(conf, NamenodeProtocol.class, rpcEngine);
         setRpcEngine(conf, ClientProtocol.class, rpcEngine);
         setRpcEngine(conf, DatanodeProtocol.class, rpcEngine);
