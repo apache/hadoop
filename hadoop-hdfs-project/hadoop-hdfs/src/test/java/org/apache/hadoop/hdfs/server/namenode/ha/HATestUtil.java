@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -158,5 +160,22 @@ public abstract class HATestUtil {
 
   public static String getLogicalHostname(MiniDFSCluster cluster) {
     return String.format(LOGICAL_HOSTNAME, cluster.getInstanceId());
+  }
+  
+  public static void waitForCheckpoint(MiniDFSCluster cluster, int nnIdx,
+      List<Integer> txids) throws InterruptedException {
+    long start = System.currentTimeMillis();
+    while (true) {
+      try {
+        FSImageTestUtil.assertNNHasCheckpoints(cluster, nnIdx, txids);
+        return;
+      } catch (AssertionError err) {
+        if (System.currentTimeMillis() - start > 10000) {
+          throw err;
+        } else {
+          Thread.sleep(300);
+        }
+      }
+    }
   }
 }

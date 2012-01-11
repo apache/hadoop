@@ -99,3 +99,5 @@ HDFS-2753. Fix standby getting stuck in safemode when blocks are written while S
 HDFS-2773. Reading edit logs from an earlier version should not leave blocks in under-construction state. (todd)
 
 HDFS-2775. Fix TestStandbyCheckpoints.testBothNodesInStandbyState failing intermittently. (todd)
+
+HDFS-2766. Test for case where standby partially reads log and then performs checkpoint. (atm)

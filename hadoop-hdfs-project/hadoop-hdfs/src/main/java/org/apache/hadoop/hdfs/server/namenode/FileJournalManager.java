@@ -204,7 +204,13 @@ class FileJournalManager implements JournalManager {
         }
         EditLogFileInputStream elfis = new EditLogFileInputStream(elf.getFile(),
             elf.getFirstTxId(), elf.getLastTxId(), elf.isInProgress());
-        elfis.skipTransactions(fromTxId - elf.getFirstTxId());
+        long transactionsToSkip = fromTxId - elf.getFirstTxId();
+        if (transactionsToSkip > 0) {
+          LOG.info(String.format("Log begins at txid %d, but requested start "
+              + "txid is %d. Skipping %d edits.", elf.getFirstTxId(), fromTxId,
+              transactionsToSkip));
+          elfis.skipTransactions(transactionsToSkip);
+        }
         return elfis;
       }
     }

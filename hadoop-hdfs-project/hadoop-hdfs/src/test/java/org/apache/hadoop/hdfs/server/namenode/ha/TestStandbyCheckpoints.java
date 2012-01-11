@@ -93,10 +93,10 @@ public class TestStandbyCheckpoints {
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
     // Once the standby catches up, it should notice that it needs to
     // do a checkpoint and save one to its local directories.
-    waitForCheckpoint(1, ImmutableList.of(0, 12));
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(0, 12));
     
     // It should also upload it back to the active.
-    waitForCheckpoint(0, ImmutableList.of(0, 12));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 12));
   }
 
   /**
@@ -118,8 +118,8 @@ public class TestStandbyCheckpoints {
     // so the standby will catch up. Then, both will be in standby mode
     // with enough uncheckpointed txns to cause a checkpoint, and they
     // will each try to take a checkpoint and upload to each other.
-    waitForCheckpoint(1, ImmutableList.of(0, 12));
-    waitForCheckpoint(0, ImmutableList.of(0, 12));
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(0, 12));
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 12));
     
     assertEquals(12, nn0.getNamesystem().getFSImage()
         .getMostRecentCheckpointTxId());
@@ -211,7 +211,6 @@ public class TestStandbyCheckpoints {
     
     assertTrue(StandbyCheckpointer.getCanceledCount() > 0);
   }
-  
 
   private void doEdits(int start, int stop) throws IOException {
     for (int i = start; i < stop; i++) {
@@ -220,20 +219,4 @@ public class TestStandbyCheckpoints {
     }
   }
 
-  private void waitForCheckpoint(int nnIdx, List<Integer> txids)
-      throws InterruptedException {
-    long start = System.currentTimeMillis();
-    while (true) {
-      try {
-        FSImageTestUtil.assertNNHasCheckpoints(cluster, nnIdx, txids);
-        return;
-      } catch (AssertionError err) {
-        if (System.currentTimeMillis() - start > 10000) {
-          throw err;
-        } else {
-          Thread.sleep(300);
-        }
-      }
-    }
-  }
 }
