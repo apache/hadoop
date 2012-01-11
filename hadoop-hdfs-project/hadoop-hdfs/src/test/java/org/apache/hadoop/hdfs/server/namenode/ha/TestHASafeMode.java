@@ -192,7 +192,7 @@ public class TestHASafeMode {
    *    knows there should only be 90 blocks, but it's still in safemode.
    * 8. NN2 doesn't ever recheck whether it should leave safemode.
    * 
-   * This is essentially the inverse of {@link #testBlocksAddedWhileStandbyShutdown()}
+   * This is essentially the inverse of {@link #testBlocksAddedBeforeStandbyRestart()}
    */
   @Test
   public void testBlocksRemovedBeforeStandbyRestart() throws Exception {
@@ -326,6 +326,39 @@ public class TestHASafeMode {
             "Safe mode is ON." +
             "The reported blocks 5 has reached the threshold 0.9990 of " +
             "total blocks 5. Safe mode will be turned off automatically"));
+  }
+  
+  /**
+   * Regression test for HDFS-2753. In this bug, the following sequence was
+   * observed:
+   * - Some blocks are written to DNs while the SBN was down. This causes
+   *   the blockReceived messages to get queued in the BPServiceActor on the
+   *   DN.
+   * - When the SBN returns, the DN re-registers with the SBN, and then
+   *   flushes its blockReceived queue to the SBN before it sends its
+   *   first block report. This caused the first block report to be
+   *   incorrect ignored.
+   * - The SBN would become stuck in safemode.
+   */
+  @Test
+  public void testBlocksAddedWhileStandbyIsDown() throws Exception {
+    DFSTestUtil.createFile(fs, new Path("/test"), 3*BLOCK_SIZE, (short) 3, 1L);
+
+    banner("Stopping standby");
+    cluster.shutdownNameNode(1);
+    
+    DFSTestUtil.createFile(fs, new Path("/test2"), 3*BLOCK_SIZE, (short) 3, 1L);
+
+    banner("Rolling edit log so standby gets all edits on restart");
+    nn0.getRpcServer().rollEditLog();
+    
+    restartStandby();
+    String status = nn1.getNamesystem().getSafemode();
+    assertTrue("Bad safemode status: '" + status + "'",
+        status.startsWith(
+            "Safe mode is ON." +
+            "The reported blocks 6 has reached the threshold 0.9990 of " +
+            "total blocks 6. Safe mode will be turned off automatically"));    
   }
   
   /**

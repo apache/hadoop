@@ -151,6 +151,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
+  
+  /** Set to false after processing first block report */
+  private boolean firstBlockReport = true;
+  
   /** 
    * When set to true, the node is not in include list and is not allowed
    * to communicate with the namenode
@@ -608,6 +612,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     if (heartbeatedSinceFailover) {
       blockContentsStale = false;
     }
+    firstBlockReport = false;
+  }
+  
+  boolean isFirstBlockReport() {
+    return firstBlockReport;
   }
 
   @Override

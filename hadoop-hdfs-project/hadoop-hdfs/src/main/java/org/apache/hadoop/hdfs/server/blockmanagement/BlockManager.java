@@ -1361,7 +1361,7 @@ public class BlockManager {
 
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
-      if (namesystem.isInStartupSafeMode() && node.numBlocks() > 0) {
+      if (namesystem.isInStartupSafeMode() && !node.isFirstBlockReport()) {
         NameNode.stateChangeLog.info("BLOCK* processReport: "
             + "discarded non-initial block report from " + nodeID.getName()
             + " because namenode still in startup phase");

@@ -93,3 +93,5 @@ HDFS-2730. Refactor shared HA-related test code into HATestUtil class (todd)
 HDFS-2762. Fix TestCheckpoint timing out on HA branch. (Uma Maheswara Rao G via todd)
 
 HDFS-2724. NN web UI can throw NPE after startup, before standby state is entered. (todd)
+
+HDFS-2753. Fix standby getting stuck in safemode when blocks are written while SBN is down. (Hari Mankude and todd via todd)
