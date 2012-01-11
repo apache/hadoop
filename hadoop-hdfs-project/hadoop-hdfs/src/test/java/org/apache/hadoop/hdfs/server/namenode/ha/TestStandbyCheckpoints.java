@@ -121,9 +121,9 @@ public class TestStandbyCheckpoints {
     waitForCheckpoint(1, ImmutableList.of(0, 12));
     waitForCheckpoint(0, ImmutableList.of(0, 12));
     
-    assertEquals(12, nn0.getNamesystem().getFSImage().getStorage()
+    assertEquals(12, nn0.getNamesystem().getFSImage()
         .getMostRecentCheckpointTxId());
-    assertEquals(12, nn1.getNamesystem().getFSImage().getStorage()
+    assertEquals(12, nn1.getNamesystem().getFSImage()
         .getMostRecentCheckpointTxId());
     
     List<File> dirs = Lists.newArrayList();

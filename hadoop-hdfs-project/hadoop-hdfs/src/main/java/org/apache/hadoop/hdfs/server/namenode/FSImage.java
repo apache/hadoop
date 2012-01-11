@@ -1134,4 +1134,7 @@ public class FSImage implements Closeable {
     this.lastAppliedTxId = editLog.getLastWrittenTxId();
   }
 
+  public synchronized long getMostRecentCheckpointTxId() {
+    return storage.getMostRecentCheckpointTxId();
+  }
 }

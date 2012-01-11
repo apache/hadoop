@@ -97,3 +97,5 @@ HDFS-2724. NN web UI can throw NPE after startup, before standby state is entere
 HDFS-2753. Fix standby getting stuck in safemode when blocks are written while SBN is down. (Hari Mankude and todd via todd)
 
 HDFS-2773. Reading edit logs from an earlier version should not leave blocks in under-construction state. (todd)
+
+HDFS-2775. Fix TestStandbyCheckpoints.testBothNodesInStandbyState failing intermittently. (todd)
