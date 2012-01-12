@@ -53,6 +53,8 @@ Release 0.23-PB - Unreleased
     Move the support for multiple protocols to lower layer so that Writable,
     PB and Avro can all use it (Sanjay)
 
+    HDFS-2597 ClientNameNodeProtocol in Protocol Buffers (sanjay)
+
   BUG FIXES
  
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)
