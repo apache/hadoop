@@ -27,6 +27,16 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
@@ -37,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto.AdminState;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
@@ -57,15 +68,26 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
+import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 
@@ -337,10 +359,10 @@ class PBHelper {
   }
   
   public static DatanodeInfoProto convert(DatanodeInfo info) {
-    return DatanodeInfoProto.newBuilder()
-        .setAdminState(PBHelper.convert(info.getAdminState()))
-        .setBlockPoolUsed(info.getBlockPoolUsed())
-        .setCapacity(info.getCapacity())
+    DatanodeInfoProto.Builder builder = DatanodeInfoProto.newBuilder();
+    builder.setBlockPoolUsed(info.getBlockPoolUsed());
+    builder.setAdminState(PBHelper.convert(info.getAdminState()));
+    builder.setCapacity(info.getCapacity())
         .setDfsUsed(info.getDfsUsed())
         .setHostName(info.getHostName())
         .setId(PBHelper.convert((DatanodeID)info))
@@ -349,6 +371,7 @@ class PBHelper {
         .setRemaining(info.getRemaining())
         .setXceiverCount(info.getXceiverCount())
         .build();
+    return builder.build();
   }
 
   public static AdminStates convert(AdminState adminState) {
@@ -378,12 +401,24 @@ class PBHelper {
   public static LocatedBlockProto convert(LocatedBlock b) {
     Builder builder = LocatedBlockProto.newBuilder();
     DatanodeInfo[] locs = b.getLocations();
-    for(DatanodeInfo loc : locs) {
-      builder.addLocs(PBHelper.convert(loc));
+    for (int i = 0; i < locs.length; i++) {
+      builder.addLocs(i, PBHelper.convert(locs[i]));
     }
     return builder.setB(PBHelper.convert(b.getBlock()))
         .setBlockToken(PBHelper.convert(b.getBlockToken()))
         .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset()).build();
+  }
+  
+  public static LocatedBlock convert(LocatedBlockProto proto) {
+    List<DatanodeInfoProto> locs = proto.getLocsList();
+    DatanodeInfo[] targets = new DatanodeInfo[locs.size()];
+    for (int i = 0; i < locs.size(); i++) {
+      targets[i] = PBHelper.convert(locs.get(i));
+    }
+    LocatedBlock lb = new LocatedBlock(PBHelper.convert(proto.getB()), targets,
+        proto.getOffset(), proto.getCorrupt());
+    lb.setBlockToken(PBHelper.convert(proto.getBlockToken()));
+    return lb;
   }
 
   public static BlockTokenIdentifierProto convert(
@@ -416,5 +451,246 @@ class PBHelper {
     default:
       return ReplicaState.FINALIZED;
     }
+  }
+  
+  public static DatanodeRegistrationProto convert(
+      DatanodeRegistration registration) {
+    DatanodeRegistrationProto.Builder builder = DatanodeRegistrationProto
+        .newBuilder();
+    return builder.setDatanodeID(PBHelper.convert((DatanodeID) registration))
+        .setStorageInfo(PBHelper.convert(registration.storageInfo))
+        .setKeys(PBHelper.convert(registration.exportedKeys)).build();
+  }
+
+  public static DatanodeRegistration convert(DatanodeRegistrationProto proto) {
+    return new DatanodeRegistration(PBHelper.convert(proto.getDatanodeID()),
+        PBHelper.convert(proto.getStorageInfo()), PBHelper.convert(proto
+            .getKeys()));
+  }
+
+  public static DatanodeCommand convert(DatanodeCommandProto proto) {
+    switch (proto.getCmdType()) {
+    case BalancerBandwidthCommand:
+      return PBHelper.convert(proto.getBalancerCmd());
+    case BlockCommand:
+      return PBHelper.convert(proto.getBlkCmd());
+    case BlockRecoveryCommand:
+      return PBHelper.convert(proto.getRecoveryCmd());
+    case FinalizeCommand:
+      return PBHelper.convert(proto.getFinalizeCmd());
+    case KeyUpdateCommand:
+      return PBHelper.convert(proto.getKeyUpdateCmd());
+    case RegisterCommand:
+      return PBHelper.convert(proto.getRegisterCmd());
+    case UpgradeCommand:
+      return PBHelper.convert(proto.getUpgradeCmd());
+    }
+    return null;
+  }
+  
+  public static BalancerBandwidthCommandProto convert(
+      BalancerBandwidthCommand bbCmd) {
+    return BalancerBandwidthCommandProto.newBuilder()
+        .setBandwidth(bbCmd.getBalancerBandwidthValue()).build();
+  }
+
+  public static KeyUpdateCommandProto convert(KeyUpdateCommand cmd) {
+    return KeyUpdateCommandProto.newBuilder()
+        .setKeys(PBHelper.convert(cmd.getExportedKeys())).build();
+  }
+
+  public static BlockRecoveryCommandProto convert(BlockRecoveryCommand cmd) {
+    BlockRecoveryCommandProto.Builder builder = BlockRecoveryCommandProto
+        .newBuilder();
+    for (RecoveringBlock b : cmd.getRecoveringBlocks()) {
+      builder.addBlocks(PBHelper.convert(b));
+    }
+    return builder.build();
+  }
+
+  public static FinalizeCommandProto convert(FinalizeCommand cmd) {
+    return FinalizeCommandProto.newBuilder()
+        .setBlockPoolId(cmd.getBlockPoolId()).build();
+  }
+  
+  public static RegisterCommandProto convert(RegisterCommand cmd) {
+    return RegisterCommandProto.newBuilder().build();
+  }
+
+  public static BlockCommandProto convert(BlockCommand cmd) {
+    BlockCommandProto.Builder builder = BlockCommandProto.newBuilder()
+        .setBlockPoolId(cmd.getBlockPoolId());
+    switch (cmd.getAction()) {
+    case DatanodeProtocol.DNA_TRANSFER:
+      builder.setAction(BlockCommandProto.Action.TRANSFER);
+      break;
+    case DatanodeProtocol.DNA_INVALIDATE:
+      builder.setAction(BlockCommandProto.Action.INVALIDATE);
+      break;
+    }
+    Block[] blocks = cmd.getBlocks();
+    for (int i = 0; i < blocks.length; i++) {
+      builder.addBlocks(PBHelper.convert(blocks[i]));
+    }
+    DatanodeInfo[][] infos = cmd.getTargets();
+    for (int i = 0; i < infos.length; i++) {
+      builder.addTargets(PBHelper.convert(infos[i]));
+    }
+    return builder.build();
+  }
+
+  public static DatanodeInfosProto convert(DatanodeInfo[] datanodeInfos) {
+    DatanodeInfosProto.Builder builder = DatanodeInfosProto.newBuilder();
+    for (int i = 0; i < datanodeInfos.length; i++) {
+      builder.addDatanodes(PBHelper.convert(datanodeInfos[i]));
+    }
+    return builder.build();
+  }
+
+  public static DatanodeCommandProto convert(DatanodeCommand datanodeCommand) {
+    DatanodeCommandProto.Builder builder = DatanodeCommandProto.newBuilder();
+    switch (datanodeCommand.getAction()) {
+    case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
+      builder.setCmdType(DatanodeCommandProto.Type.BalancerBandwidthCommand)
+          .setBalancerCmd(
+              PBHelper.convert((BalancerBandwidthCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
+      builder
+          .setCmdType(DatanodeCommandProto.Type.KeyUpdateCommand)
+          .setKeyUpdateCmd(PBHelper.convert((KeyUpdateCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_RECOVERBLOCK:
+      builder.setCmdType(DatanodeCommandProto.Type.BlockRecoveryCommand)
+          .setRecoveryCmd(
+              PBHelper.convert((BlockRecoveryCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_FINALIZE:
+      builder.setCmdType(DatanodeCommandProto.Type.FinalizeCommand)
+          .setFinalizeCmd(PBHelper.convert((FinalizeCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_REGISTER:
+      builder.setCmdType(DatanodeCommandProto.Type.RegisterCommand)
+          .setRegisterCmd(PBHelper.convert((RegisterCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_TRANSFER:
+    case DatanodeProtocol.DNA_INVALIDATE:
+      builder.setCmdType(DatanodeCommandProto.Type.BlockCommand).setBlkCmd(
+          PBHelper.convert((BlockCommand) datanodeCommand));
+      break;
+    case DatanodeProtocol.DNA_SHUTDOWN: //Not expected
+    case DatanodeProtocol.DNA_UNKNOWN: //Not expected
+    }
+    return builder.build();
+  }
+
+  public static UpgradeCommand convert(UpgradeCommandProto upgradeCmd) {
+    int action = UpgradeCommand.UC_ACTION_UNKNOWN;
+    switch (upgradeCmd.getAction()) {
+    case REPORT_STATUS:
+      action = UpgradeCommand.UC_ACTION_REPORT_STATUS;
+      break;
+    case START_UPGRADE:
+      action = UpgradeCommand.UC_ACTION_START_UPGRADE;
+    }
+    return new UpgradeCommand(action, upgradeCmd.getVersion(),
+        (short) upgradeCmd.getUpgradeStatus());
+  }
+
+  public static RegisterCommand convert(RegisterCommandProto registerCmd) {
+    return new RegisterCommand();
+  }
+
+  public static KeyUpdateCommand convert(KeyUpdateCommandProto keyUpdateCmd) {
+    return new KeyUpdateCommand(PBHelper.convert(keyUpdateCmd.getKeys()));
+  }
+
+  public static FinalizeCommand convert(FinalizeCommandProto finalizeCmd) {
+    return new FinalizeCommand(finalizeCmd.getBlockPoolId());
+  }
+
+  public static BlockRecoveryCommand convert(
+      BlockRecoveryCommandProto recoveryCmd) {
+    List<RecoveringBlockProto> list = recoveryCmd.getBlocksList();
+    List<RecoveringBlock> recoveringBlocks = new ArrayList<RecoveringBlock>(
+        list.size());
+    for (int i = 0; i < list.size(); i++) {
+      recoveringBlocks.add(PBHelper.convert(list.get(0)));
+    }
+    return new BlockRecoveryCommand(recoveringBlocks);
+  }
+
+  public static BlockCommand convert(BlockCommandProto blkCmd) {
+    List<BlockProto> blockProtoList = blkCmd.getBlocksList();
+    List<DatanodeInfosProto> targetList = blkCmd.getTargetsList();
+    DatanodeInfo[][] targets = new DatanodeInfo[blockProtoList.size()][];
+    Block[] blocks = new Block[blockProtoList.size()];
+    for (int i = 0; i < blockProtoList.size(); i++) {
+      targets[i] = PBHelper.convert(targetList.get(i));
+      blocks[i] = PBHelper.convert(blockProtoList.get(i));
+    }
+    int action = DatanodeProtocol.DNA_UNKNOWN;
+    switch (blkCmd.getAction()) {
+    case TRANSFER:
+      action = DatanodeProtocol.DNA_TRANSFER;
+      break;
+    case INVALIDATE:
+      action = DatanodeProtocol.DNA_INVALIDATE;
+      break;
+    }
+    return new BlockCommand(action, blkCmd.getBlockPoolId(), blocks, targets);
+  }
+
+  public static DatanodeInfo[] convert(DatanodeInfosProto datanodeInfosProto) {
+    List<DatanodeInfoProto> proto = datanodeInfosProto.getDatanodesList();
+    DatanodeInfo[] infos = new DatanodeInfo[proto.size()];
+    for (int i = 0; i < infos.length; i++) {
+      infos[i] = PBHelper.convert(proto.get(i));
+    }
+    return infos;
+  }
+
+  public static BalancerBandwidthCommand convert(
+      BalancerBandwidthCommandProto balancerCmd) {
+    return new BalancerBandwidthCommand(balancerCmd.getBandwidth());
+  }
+
+  public static ReceivedDeletedBlockInfoProto convert(
+      ReceivedDeletedBlockInfo receivedDeletedBlockInfo) {
+    return ReceivedDeletedBlockInfoProto.newBuilder()
+        .setBlock(PBHelper.convert(receivedDeletedBlockInfo.getBlock()))
+        .setDeleteHint(receivedDeletedBlockInfo.getDelHints()).build();
+  }
+
+  public static UpgradeCommandProto convert(UpgradeCommand comm) {
+    UpgradeCommandProto.Builder builder = UpgradeCommandProto.newBuilder()
+        .setVersion(comm.getVersion())
+        .setUpgradeStatus(comm.getCurrentStatus());
+    switch (comm.getAction()) {
+    case UpgradeCommand.UC_ACTION_REPORT_STATUS:
+      builder.setAction(UpgradeCommandProto.Action.REPORT_STATUS);
+      break;
+    case UpgradeCommand.UC_ACTION_START_UPGRADE:
+      builder.setAction(UpgradeCommandProto.Action.START_UPGRADE);
+      break;
+    default:
+      builder.setAction(UpgradeCommandProto.Action.UNKNOWN);
+      break;
+    }
+    return builder.build();
+  }
+
+  public static ReceivedDeletedBlockInfo convert(
+      ReceivedDeletedBlockInfoProto proto) {
+    return new ReceivedDeletedBlockInfo(PBHelper.convert(proto.getBlock()),
+        proto.getDeleteHint());
+  }
+  
+  public static NamespaceInfoProto convert(NamespaceInfo info) {
+    return NamespaceInfoProto.newBuilder()
+        .setBlockPoolID(info.getBlockPoolID())
+        .setBuildVersion(info.getBuildVersion())
+        .setDistUpgradeVersion(info.getDistributedUpgradeVersion())
+        .setStorageInfo(PBHelper.convert((StorageInfo)info)).build();
   }
 }

@@ -22,28 +22,22 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.ipc.ProtocolInfo;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
-/**
- * Protocol that a secondary NameNode uses to communicate with the NameNode.
- * It's used to get part of the name node state
- * 
- * Note: This extends the protocolbuffer service based interface to
- * add annotations required for security.
- */
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
-    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
-@ProtocolInfo(protocolName = 
-    "org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol",
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, 
+    clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol", 
     protocolVersion = 1)
 @InterfaceAudience.Private
-public interface NamenodeProtocolPB extends
-    NamenodeProtocolService.BlockingInterface, VersionedProtocol {
+public interface DatanodeProtocolPB extends
+    DatanodeProtocolService.BlockingInterface, VersionedProtocol {
+  
   /**
    * This method is defined to get the protocol signature using 
    * the R23 protocol - hence we have added the suffix of 2 the method name

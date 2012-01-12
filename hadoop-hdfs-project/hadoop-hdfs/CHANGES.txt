@@ -23,6 +23,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2636. Implement protobuf service for ClientDatanodeProtocol. (suresh)
 
+    HDFS-2642. Protobuf translators for DatanodeProtocol. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

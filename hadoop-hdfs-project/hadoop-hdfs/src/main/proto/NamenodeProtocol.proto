@@ -85,19 +85,6 @@ message RollEditLogResponseProto {
 }
 
 /**
- * void request
- */
-message VersionRequestProto {
-}
-
-/**
- * void request
- */
-message VersionResponseProto {
-  required NamespaceInfoProto info = 1;
-}
-
-/**
  * registration - Namenode reporting the error
  * errorCode - error code indicating the error
  * msg - Free text description of the error
