@@ -329,7 +329,7 @@ message ExportedBlockKeysProto {
 /**
  * State of a block replica at a datanode
  */
-enum ReplicaState {
+enum ReplicaStateProto {
   FINALIZED = 0;  // State of a replica when it is not modified
   RBW = 1;        // State of replica that is being written to
   RWR = 2;        // State of replica that is waiting to be recovered

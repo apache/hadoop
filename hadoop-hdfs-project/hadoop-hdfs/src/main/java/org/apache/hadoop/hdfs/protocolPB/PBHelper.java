@@ -23,26 +23,41 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointSignatureProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto.AdminState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto.Builder;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamespaceInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto.NamenodeRoleProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -51,6 +66,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
 
@@ -155,7 +171,13 @@ class PBHelper {
   }
 
   public static BlocksWithLocations convert(BlocksWithLocationsProto blocks) {
-    return new BlocksWithLocations(convert(blocks.getBlocksList()));
+    List<BlockWithLocationsProto> b = blocks.getBlocksList();
+    BlockWithLocations[] ret = new BlockWithLocations[b.size()];
+    int i = 0;
+    for (BlockWithLocationsProto entry : b) {
+      ret[i++] = convert(entry);
+    }
+    return new BlocksWithLocations(ret);
   }
 
   public static BlockKeyProto convert(BlockKey key) {
@@ -247,15 +269,6 @@ class PBHelper {
     return NamenodeCommandProto.newBuilder().setAction(cmd.getAction()).build();
   }
 
-  public static BlockWithLocations[] convert(List<BlockWithLocationsProto> b) {
-    BlockWithLocations[] ret = new BlockWithLocations[b.size()];
-    int i = 0;
-    for (BlockWithLocationsProto entry : b) {
-      ret[i++] = convert(entry);
-    }
-    return ret;
-  }
-
   public static BlockKey[] convertBlockKeys(List<BlockKeyProto> list) {
     BlockKey[] ret = new BlockKey[list.size()];
     int i = 0;
@@ -279,6 +292,121 @@ class PBHelper {
           chkPt.getNeedToReturnImage());
     default:
       return new NamenodeCommand(cmd.getAction());
+    }
+  }
+
+  public static ExtendedBlockProto convert(ExtendedBlock b) {
+    return ExtendedBlockProto.newBuilder().setBlockId(b.getBlockId())
+        .setGenerationStamp(b.getGenerationStamp())
+        .setNumBytes(b.getNumBytes()).setPoolId(b.getBlockPoolId()).build();
+  }
+
+  public static ExtendedBlock convert(ExtendedBlockProto b) {
+    return new ExtendedBlock(b.getPoolId(), b.getBlockId(), b.getNumBytes(),
+        b.getGenerationStamp());
+  }
+
+  public static RecoveringBlockProto convert(RecoveringBlock b) {
+    LocatedBlockProto lb = PBHelper.convert((LocatedBlock)b);
+    return RecoveringBlockProto.newBuilder().setBlock(lb)
+        .setNewGenStamp(b.getNewGenerationStamp()).build();
+  }
+
+  public static RecoveringBlock convert(RecoveringBlockProto b) {
+    ExtendedBlock block = convert(b.getBlock().getB());
+    DatanodeInfo[] locs = convert(b.getBlock().getLocsList());
+    return new RecoveringBlock(block, locs, b.getNewGenStamp());
+  }
+
+  public static DatanodeInfo[] convert(List<DatanodeInfoProto> list) {
+    DatanodeInfo[] info = new DatanodeInfo[list.size()];
+    for (int i = 0; i < info.length; i++) {
+      info[i] = convert(list.get(i));
+    }
+    return info;
+  }
+
+  public static DatanodeInfo convert(DatanodeInfoProto info) {
+    DatanodeIDProto dnId = info.getId();
+    return new DatanodeInfo(dnId.getName(), dnId.getStorageID(),
+        dnId.getInfoPort(), dnId.getIpcPort(), info.getCapacity(),
+        info.getDfsUsed(), info.getRemaining(), info.getBlockPoolUsed(),
+        info.getLastUpdate(), info.getXceiverCount(), info.getLocation(),
+        info.getHostName(), convert(info.getAdminState()));
+  }
+  
+  public static DatanodeInfoProto convert(DatanodeInfo info) {
+    return DatanodeInfoProto.newBuilder()
+        .setAdminState(PBHelper.convert(info.getAdminState()))
+        .setBlockPoolUsed(info.getBlockPoolUsed())
+        .setCapacity(info.getCapacity())
+        .setDfsUsed(info.getDfsUsed())
+        .setHostName(info.getHostName())
+        .setId(PBHelper.convert((DatanodeID)info))
+        .setLastUpdate(info.getLastUpdate())
+        .setLocation(info.getNetworkLocation())
+        .setRemaining(info.getRemaining())
+        .setXceiverCount(info.getXceiverCount())
+        .build();
+  }
+
+  public static AdminStates convert(AdminState adminState) {
+    switch(adminState) {
+    case DECOMMISSION_INPROGRESS:
+      return AdminStates.DECOMMISSION_INPROGRESS;
+    case DECOMMISSIONED:
+      return AdminStates.DECOMMISSIONED;
+    case NORMAL:
+    default:
+      return AdminStates.NORMAL;
+    }
+  }
+  
+  public static AdminState convert(AdminStates adminState) {
+    switch(adminState) {
+    case DECOMMISSION_INPROGRESS:
+      return AdminState.DECOMMISSION_INPROGRESS;
+    case DECOMMISSIONED:
+      return AdminState.DECOMMISSIONED;
+    case NORMAL:
+    default:
+      return AdminState.NORMAL;
+    }
+  }
+
+  public static LocatedBlockProto convert(LocatedBlock b) {
+    Builder builder = LocatedBlockProto.newBuilder();
+    DatanodeInfo[] locs = b.getLocations();
+    for(DatanodeInfo loc : locs) {
+      builder.addLocs(PBHelper.convert(loc));
+    }
+    return builder.setB(PBHelper.convert(b.getBlock()))
+        .setBlockToken(PBHelper.convert(b.getBlockToken()))
+        .setCorrupt(b.isCorrupt()).setOffset(b.getStartOffset()).build();
+  }
+
+  public static BlockTokenIdentifierProto convert(
+      Token<BlockTokenIdentifier> token) {
+    ByteString tokenId = ByteString.copyFrom(token.getIdentifier());
+    ByteString password = ByteString.copyFrom(token.getPassword());
+    return BlockTokenIdentifierProto.newBuilder().setIdentifier(tokenId)
+        .setKind(token.getKind().toString()).setPassword(password)
+        .setService(token.getService().toString()).build();
+  }
+
+  public static ReplicaState convert(ReplicaStateProto state) {
+    switch (state) {
+    case RBW:
+      return ReplicaState.RBW;
+    case RUR:
+      return ReplicaState.RUR;
+    case RWR:
+      return ReplicaState.RWR;
+    case TEMPORARY:
+      return ReplicaState.TEMPORARY;
+    case FINALIZED:
+    default:
+      return ReplicaState.FINALIZED;
     }
   }
 }

@@ -20,12 +20,16 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentResponseProto;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InitReplicaRecoveryRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InitReplicaRecoveryResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.UpdateReplicaUnderRecoveryRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.UpdateReplicaUnderRecoveryResponseProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -35,52 +39,55 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Implementation for protobuf service that forwards requests
- * received on {@link JournalProtocolPB} to the 
- * {@link JournalProtocol} server implementation.
+ * received on {@link InterDatanodeProtocolPB} to the
+ * {@link InterDatanodeProtocol} server implementation.
  */
 @InterfaceAudience.Private
-public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB {
-  /** Server side implementation to delegate the requests to */
-  private final JournalProtocol impl;
+public class InterDatanodeProtocolServerSideTranslatorPB implements
+    InterDatanodeProtocolPB {
+  private final InterDatanodeProtocol impl;
 
-  public JournalProtocolServerSideTranslatorPB(JournalProtocol impl) {
+  public InterDatanodeProtocolServerSideTranslatorPB(InterDatanodeProtocol impl) {
     this.impl = impl;
   }
 
-  /** @see JournalProtocol#journal */
   @Override
-  public JournalResponseProto journal(RpcController unused,
-      JournalRequestProto req) throws ServiceException {
+  public InitReplicaRecoveryResponseProto initReplicaRecovery(
+      RpcController unused, InitReplicaRecoveryRequestProto request)
+      throws ServiceException {
+    RecoveringBlock b = PBHelper.convert(request.getBlock());
+    ReplicaRecoveryInfo r;
     try {
-      impl.journal(PBHelper.convert(req.getRegistration()),
-          req.getFirstTxnId(), req.getNumTxns(), req.getRecords()
-              .toByteArray());
+      r = impl.initReplicaRecovery(b);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return JournalResponseProto.newBuilder().build();
+    return InitReplicaRecoveryResponseProto.newBuilder()
+        .setBlock(PBHelper.convert(r)).build();
   }
 
-  /** @see JournalProtocol#startLogSegment */
   @Override
-  public StartLogSegmentResponseProto startLogSegment(RpcController controller,
-      StartLogSegmentRequestProto req) throws ServiceException {
+  public UpdateReplicaUnderRecoveryResponseProto updateReplicaUnderRecovery(
+      RpcController unused, UpdateReplicaUnderRecoveryRequestProto request)
+      throws ServiceException {
+    ExtendedBlock b;
     try {
-      impl.startLogSegment(PBHelper.convert(req.getRegistration()),
-          req.getTxid());
+      b = impl.updateReplicaUnderRecovery(PBHelper.convert(request.getBlock()),
+          request.getRecoveryId(), request.getNewLength());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return StartLogSegmentResponseProto.newBuilder().build();
+    return UpdateReplicaUnderRecoveryResponseProto.newBuilder()
+        .setBlock(PBHelper.convert(b)).build();
   }
 
   /** @see VersionedProtocol#getProtocolVersion */
   @Override
   public long getProtocolVersion(String protocol, long clientVersion)
       throws IOException {
-    return RPC.getProtocolVersion(JournalProtocolPB.class);
+    return RPC.getProtocolVersion(InterDatanodeProtocolPB.class);
   }
-
+  
   /**
    * The client side will redirect getProtocolSignature to
    * getProtocolSignature2.
@@ -89,24 +96,24 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
    * and possibly in the future getProtocolSignature. Hence we still implement
    * it even though the end client will never call this method.
    * 
-   * @see VersionedProtocol#getProtocolSignature(String, long, int)
+   * @see VersionedProtocol#getProtocolVersion
    */
   @Override
   public ProtocolSignature getProtocolSignature(String protocol,
       long clientVersion, int clientMethodsHash) throws IOException {
     /**
      * Don't forward this to the server. The protocol version and signature is
-     * that of {@link JournalProtocol}
+     * that of {@link InterDatanodeProtocol}
      */
-    if (!protocol.equals(RPC.getProtocolName(JournalProtocolPB.class))) {
+    if (!protocol.equals(RPC.getProtocolName(InterDatanodeProtocol.class))) {
       throw new IOException("Namenode Serverside implements " +
-          RPC.getProtocolName(JournalProtocolPB.class) +
+          RPC.getProtocolName(InterDatanodeProtocol.class) +
           ". The following requested protocol is unknown: " + protocol);
     }
 
     return ProtocolSignature.getProtocolSignature(clientMethodsHash,
-        RPC.getProtocolVersion(JournalProtocolPB.class),
-        JournalProtocolPB.class);
+        RPC.getProtocolVersion(InterDatanodeProtocolPB.class),
+        InterDatanodeProtocol.class);
   }
 
 
@@ -115,7 +122,7 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
       long clientVersion, int clientMethodsHash) throws IOException {
     /**
      * Don't forward this to the server. The protocol version and signature is
-     * that of {@link JournalPBProtocol}
+     * that of {@link InterDatanodeProtocol}
      */
     return ProtocolSignatureWritable.convert(
         this.getProtocolSignature(protocol, clientVersion, clientMethodsHash));
