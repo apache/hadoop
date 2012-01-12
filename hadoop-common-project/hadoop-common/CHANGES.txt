@@ -7,6 +7,9 @@ Release 0.23-PB - Unreleased
     HADOOP-7773. Add support for protocol buffer based RPC engine.
     (suresh)
 
+    HADOOP-7875. Add helper class to unwrap protobuf ServiceException.
+    (suresh)
+
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple versions of the same protocol (sanjay Radia)
