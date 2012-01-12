@@ -1,0 +1,62 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<head>
+   <title>Protocol Buffers based data types for NN protocols</title>
+</head>
+<body>
+<p>
+The Protocol Buffers data types for NN protocols that use PB go in this package.
+</p>
+<h1>Steps to add a new protocol</h1>
+<hr/>
+<ol>
+<li>Define the protobuf service for the protocol in &lt;ProtocolName&gt;.proto class. 
+<ul>
+<li>This file should include both the protobuf service definition and the types
+ used for request and response. For example see - NamenodeProtocol.proto
+<li>The naming convention for the protobuf service is &lt;ProtocolName&gt;Service.
+Example: NamenodeProtocolService.
+<li>Every RPC method takes a request and returns a response. The request 
+naming convention is &lt;MethodName&gt;RequestProto. The response naming convention 
+is &lt;MethodName&gt;ResponseProto.
+</ul>
+<li>Generate java files from the proto file using protoc tool.
+<li>Define server side interface that extends BlockingInterface from the 
+generated files (Example: NamenodeProtocolService.BlockingInterface) 
+and VersionedProtocol. See NamenodePBProtocol.java for example.
+<li>Define client side translator to translate the client protocol to 
+protobuf. See NamenodeProtocolTranslator.
+<li>Define server side implementation that implements the server side interface.
+This implementation receives the protobuf requests and delegates it to the 
+server side implementation. See NamenodePBProtocolImpl for example.
+<li>Make changes to register this protocol at the server. See the other 
+protocols on how this is done.
+</ol>
+<h1>Steps to make changes to the existing protocol in a compatible way</h1>
+<hr/>
+<ol>
+<li>Adding new methods is a compatible change.</li>
+<li>When modifying an existing method, do not change the required parameters 
+to optional or optional parameters to required. Only add optional parameters 
+to the request and response.</li>
+<li>When modifying an existing type, do not change the required parameters 
+to optional or optional parameters to require and optional parameters to 
+required. Only add optional parameters to the request and response.</li>
+</ol>
+

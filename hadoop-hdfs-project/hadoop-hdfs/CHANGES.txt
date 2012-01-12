@@ -5,7 +5,7 @@ Release 0.23-PB - Unreleased
   NEW FEATURES
 
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
-               via hairong)
+    via hairong)
 
     HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
 
@@ -14,6 +14,8 @@ Release 0.23-PB - Unreleased
     HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
 
     HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
+    HDFS-2581. Implement protobuf service for JournalProtocol. (suresh)
 
   IMPROVEMENTS
 
