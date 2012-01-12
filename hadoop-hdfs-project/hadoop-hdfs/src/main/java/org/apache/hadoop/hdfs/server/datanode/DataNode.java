@@ -142,6 +142,7 @@ import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
@@ -535,7 +536,7 @@ public class DataNode extends Configured
     InterDatanodeProtocolServerSideTranslatorR23 
         interDatanodeProtocolServerTranslator = 
           new InterDatanodeProtocolServerSideTranslatorR23(this);
-    ipcServer.addProtocol(InterDatanodeWireProtocol.class, 
+    ipcServer.addProtocol(RpcKind.RPC_WRITABLE, InterDatanodeWireProtocol.class, 
         interDatanodeProtocolServerTranslator);
     
     // set service-level authorization security policy

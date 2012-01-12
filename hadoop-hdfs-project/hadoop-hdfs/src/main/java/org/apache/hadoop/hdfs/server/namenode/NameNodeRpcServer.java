@@ -85,6 +85,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
@@ -147,13 +148,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
           dnSocketAddr.getHostName(), dnSocketAddr.getPort(), 
           serviceHandlerCount,
           false, conf, namesystem.getDelegationTokenSecretManager());
-      this.serviceRpcServer.addProtocol(DatanodeProtocol.class, this);
-      this.serviceRpcServer.addProtocol(NamenodeProtocol.class, this);
-      this.serviceRpcServer.addProtocol(
+      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+          DatanodeProtocol.class, this);
+      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+          NamenodeProtocol.class, this);
+      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           RefreshAuthorizationPolicyProtocol.class, this);
-      this.serviceRpcServer.addProtocol(
+      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           RefreshUserMappingsProtocol.class, this);
-      this.serviceRpcServer.addProtocol(GetUserMappingsProtocol.class, this);
+      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE, 
+          GetUserMappingsProtocol.class, this);
       
       this.serviceRPCAddress = this.serviceRpcServer.getListenerAddress();
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
@@ -168,12 +172,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
             clientProtocolServerTranslator, socAddr.getHostName(),
             socAddr.getPort(), handlerCount, false, conf,
             namesystem.getDelegationTokenSecretManager());
-    this.clientRpcServer.addProtocol(DatanodeProtocol.class, this);
-    this.clientRpcServer.addProtocol(NamenodeProtocol.class, this);
-    this.clientRpcServer.addProtocol(
+    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+        DatanodeProtocol.class, this);
+    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+        NamenodeProtocol.class, this);
+    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         RefreshAuthorizationPolicyProtocol.class, this);
-    this.clientRpcServer.addProtocol(RefreshUserMappingsProtocol.class, this);
-    this.clientRpcServer.addProtocol(GetUserMappingsProtocol.class, this);
+    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+        RefreshUserMappingsProtocol.class, this);
+    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
+        GetUserMappingsProtocol.class, this);
     
 
     // set service-level authorization security policy

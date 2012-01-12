@@ -45,6 +45,10 @@ Release 0.23-PB - Unreleased
 
     HDFS-2479 HDFS Client Data Types in Protocol Buffers (sanjay)
 
+    HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
+    Move the support for multiple protocols to lower layer so that Writable,
+    PB and Avro can all use it (Sanjay)
+
   BUG FIXES
  
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)

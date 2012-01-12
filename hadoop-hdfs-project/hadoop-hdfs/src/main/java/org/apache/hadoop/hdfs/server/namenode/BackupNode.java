@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -200,7 +201,7 @@ public class BackupNode extends NameNode {
       super(conf, nn);
       JournalProtocolServerSideTranslatorR23 journalProtocolTranslator = 
           new JournalProtocolServerSideTranslatorR23(this);
-      this.clientRpcServer.addProtocol(JournalWireProtocol.class,
+      this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE, JournalWireProtocol.class,
           journalProtocolTranslator);
       nnRpcAddress = nn.nnRpcAddress;
     }
