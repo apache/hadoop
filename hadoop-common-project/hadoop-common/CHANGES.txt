@@ -32,6 +32,8 @@ Release 0.23-PB - Unreleased
     HADOOP-7876. Provided access to encoded key in DelegationKey for
     use in protobuf based RPCs. (suresh)
 
+    HADOOP-7899. Generate proto java files as part of the build. (tucu)
+
   BUG FIXES
 
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
