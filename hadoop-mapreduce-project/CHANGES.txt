@@ -135,6 +135,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3618. Fixed TaskHeartbeatHandler to not hold a global lock for all
     task-updates. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3512. Batching JobHistory flushing to DFS so that we don't flush
+    for every event slowing down AM. (Siddarth Seth via vinodkv)
+
   BUG FIXES
     MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
                     (Ravi Prakash and Ravi Gummadi via amarrk)
