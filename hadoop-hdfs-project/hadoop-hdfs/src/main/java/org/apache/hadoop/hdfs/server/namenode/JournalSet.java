@@ -35,11 +35,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is
  * assumed that FSEditLog methods, that use this class, use proper
  * synchronization.
  */
+@InterfaceAudience.Private
 public class JournalSet implements JournalManager {
 
   static final Log LOG = LogFactory.getLog(FSEditLog.class);

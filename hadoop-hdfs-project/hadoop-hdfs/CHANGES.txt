@@ -170,6 +170,9 @@ Trunk (unreleased changes)
 
     HDFS-2739. SecondaryNameNode doesn't start up. (jitendra)
 
+    HDFS-2776. Missing interface annotation on JournalSet. 
+    (Brandon Li via jitendra)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
