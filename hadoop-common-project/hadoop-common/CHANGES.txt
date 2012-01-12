@@ -36,6 +36,9 @@ Release 0.23-PB - Unreleased
 
   BUG FIXES
 
+    HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
+                 error (atm)
+
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
     (John Lee via suresh)
 
