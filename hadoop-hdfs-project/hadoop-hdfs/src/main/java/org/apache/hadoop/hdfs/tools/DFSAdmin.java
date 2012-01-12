@@ -131,8 +131,9 @@ public class DFSAdmin extends FsShell {
       "\t\ton the number of names in the directory tree\n" +
       "\t\tFor each directory, attempt to set the quota. An error will be reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
-      "\t\t2. user is not an administrator, or\n" +
-      "\t\t3. the directory does not exist or is a file, or\n";
+      "\t\t2. User is not an administrator, or\n" +
+      "\t\t3. The directory does not exist or is a file.\n" +
+      "\t\tNote: A quota of 1 would force the directory to remain empty.\n";
 
     private final long quota; // the quota to be set
     
@@ -929,6 +930,7 @@ public class DFSAdmin extends FsShell {
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
     } else {
       System.err.println("Usage: java DFSAdmin");
+      System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
       System.err.println("           [-report]");
       System.err.println("           [-safemode enter | leave | get | wait]");
       System.err.println("           [-saveNamespace]");

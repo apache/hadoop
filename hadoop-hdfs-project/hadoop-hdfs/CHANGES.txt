@@ -81,6 +81,8 @@ Release 0.23.1 - UNRELEASED
  
     HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
 
+    HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
