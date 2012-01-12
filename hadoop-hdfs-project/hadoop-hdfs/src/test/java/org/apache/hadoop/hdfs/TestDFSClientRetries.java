@@ -637,7 +637,7 @@ public class TestDFSClientRetries extends TestCase {
       proxy = DFSUtil.createClientDatanodeProtocolProxy(
           fakeDnId, conf, 500, fakeBlock);
 
-      proxy.getReplicaVisibleLength(null);
+      proxy.getReplicaVisibleLength(new ExtendedBlock("bpid", 1));
       fail ("Did not get expected exception: SocketTimeoutException");
     } catch (SocketTimeoutException e) {
       LOG.info("Got the expected Exception: SocketTimeoutException");

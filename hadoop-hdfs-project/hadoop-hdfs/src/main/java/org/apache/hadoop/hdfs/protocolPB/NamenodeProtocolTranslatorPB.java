@@ -56,6 +56,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -91,11 +92,11 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   final private NamenodeProtocolPB rpcProxy;
 
-
-
   private static NamenodeProtocolPB createNamenode(
       InetSocketAddress nameNodeAddr, Configuration conf,
       UserGroupInformation ugi) throws IOException {
+    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
+        ProtobufRpcEngine.class);
     return RPC.getProxy(NamenodeProtocolPB.class,
         RPC.getProtocolVersion(NamenodeProtocolPB.class), nameNodeAddr, ugi,
         conf, NetUtils.getSocketFactory(conf, NamenodeProtocolPB.class));
@@ -107,17 +108,20 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     RetryPolicy createPolicy = RetryPolicies
         .retryUpToMaximumCountWithFixedSleep(5,
             HdfsConstants.LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
-    Map<Class<? extends Exception>, RetryPolicy> remoteExceptionToPolicyMap = new HashMap<Class<? extends Exception>, RetryPolicy>();
+    Map<Class<? extends Exception>, RetryPolicy> remoteExceptionToPolicyMap = 
+        new HashMap<Class<? extends Exception>, RetryPolicy>();
     remoteExceptionToPolicyMap.put(AlreadyBeingCreatedException.class,
         createPolicy);
 
-    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap = new HashMap<Class<? extends Exception>, RetryPolicy>();
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap = 
+        new HashMap<Class<? extends Exception>, RetryPolicy>();
     exceptionToPolicyMap.put(RemoteException.class, RetryPolicies
         .retryByRemoteException(RetryPolicies.TRY_ONCE_THEN_FAIL,
             remoteExceptionToPolicyMap));
     RetryPolicy methodPolicy = RetryPolicies.retryByException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
-    Map<String, RetryPolicy> methodNameToPolicyMap = new HashMap<String, RetryPolicy>();
+    Map<String, RetryPolicy> methodNameToPolicyMap = 
+        new HashMap<String, RetryPolicy>();
 
     methodNameToPolicyMap.put("create", methodPolicy);
 
@@ -128,6 +132,10 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   public NamenodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
       Configuration conf, UserGroupInformation ugi) throws IOException {
     rpcProxy = createNamenodeWithRetry(createNamenode(nameNodeAddr, conf, ugi));
+  }
+  
+  public NamenodeProtocolTranslatorPB(NamenodeProtocolPB rpcProxy) {
+    this.rpcProxy = rpcProxy;
   }
 
   public void close() {

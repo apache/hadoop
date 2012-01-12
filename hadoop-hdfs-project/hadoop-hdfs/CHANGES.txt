@@ -25,6 +25,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2642. Protobuf translators for DatanodeProtocol. (jitendra)
 
+    HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
+    ClientDatanodeProtocol, JournalProtocol, NamenodeProtocol. (suresh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

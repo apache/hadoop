@@ -21,6 +21,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import javax.net.SocketFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +39,7 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -54,13 +57,15 @@ public class InterDatanodeProtocolTranslatorPB implements
   private final static RpcController NULL_CONTROLLER = null;
   final private InterDatanodeProtocolPB rpcProxy;
 
-  public InterDatanodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
-      Configuration conf) throws IOException {
+  public InterDatanodeProtocolTranslatorPB(InetSocketAddress addr,
+      UserGroupInformation ugi, Configuration conf, SocketFactory factory,
+      int socketTimeout)
+      throws IOException {
     RPC.setProtocolEngine(conf, InterDatanodeProtocolPB.class,
         ProtobufRpcEngine.class);
     rpcProxy = RPC.getProxy(InterDatanodeProtocolPB.class,
-        RPC.getProtocolVersion(InterDatanodeProtocolPB.class), nameNodeAddr,
-        conf);
+        RPC.getProtocolVersion(InterDatanodeProtocolPB.class), addr, ugi, conf,
+        factory, socketTimeout);
   }
 
   @Override

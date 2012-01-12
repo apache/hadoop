@@ -103,9 +103,15 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ClientDatanodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DNTransferAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeProtocolServerSideTranslatorR23;
+import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InterDatanodeProtocolService;
+import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -131,18 +137,15 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
-import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolServerSideTranslatorR23;
-import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeProtocolTranslatorR23;
-import org.apache.hadoop.hdfs.server.protocolR23Compatible.InterDatanodeWireProtocol;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
@@ -166,6 +169,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Preconditions;
+import com.google.protobuf.BlockingService;
 
 
 /**********************************************************
@@ -523,21 +527,23 @@ public class DataNode extends Configured
         conf.get("dfs.datanode.ipc.address"));
     
     // Add all the RPC protocols that the Datanode implements    
-    ClientDatanodeProtocolServerSideTranslatorR23 
-        clientDatanodeProtocolServerTranslator = 
-          new ClientDatanodeProtocolServerSideTranslatorR23(this);
-    ipcServer = RPC.getServer(
-      org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol.class,
-      clientDatanodeProtocolServerTranslator, ipcAddr.getHostName(),
-                              ipcAddr.getPort(), 
-                              conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
-                                          DFS_DATANODE_HANDLER_COUNT_DEFAULT), 
-                              false, conf, blockPoolTokenSecretManager);
-    InterDatanodeProtocolServerSideTranslatorR23 
-        interDatanodeProtocolServerTranslator = 
-          new InterDatanodeProtocolServerSideTranslatorR23(this);
-    ipcServer.addProtocol(RpcKind.RPC_WRITABLE, InterDatanodeWireProtocol.class, 
-        interDatanodeProtocolServerTranslator);
+    RPC.setProtocolEngine(conf, ClientDatanodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+    ClientDatanodeProtocolServerSideTranslatorPB clientDatanodeProtocolXlator = 
+          new ClientDatanodeProtocolServerSideTranslatorPB(this);
+    BlockingService service = ClientDatanodeProtocolService
+        .newReflectiveBlockingService(clientDatanodeProtocolXlator);
+    ipcServer = RPC.getServer(ClientDatanodeProtocolPB.class, service, ipcAddr
+        .getHostName(), ipcAddr.getPort(), conf.getInt(
+        DFS_DATANODE_HANDLER_COUNT_KEY, DFS_DATANODE_HANDLER_COUNT_DEFAULT),
+        false, conf, blockPoolTokenSecretManager);
+    
+    InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
+        new InterDatanodeProtocolServerSideTranslatorPB(this);
+    service = InterDatanodeProtocolService
+        .newReflectiveBlockingService(interDatanodeProtocolXlator);
+    DFSUtil.addPBProtocol(conf, InterDatanodeProtocolPB.class, service,
+        ipcServer);
     
     // set service-level authorization security policy
     if (conf.getBoolean(
@@ -1027,7 +1033,7 @@ public class DataNode extends Configured
       return loginUgi
           .doAs(new PrivilegedExceptionAction<InterDatanodeProtocol>() {
             public InterDatanodeProtocol run() throws IOException {
-              return new InterDatanodeProtocolTranslatorR23(addr, loginUgi,
+              return new InterDatanodeProtocolTranslatorPB(addr, loginUgi,
                   conf, NetUtils.getDefaultSocketFactory(conf), socketTimeout);
             }
           });

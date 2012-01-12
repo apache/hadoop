@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocolR23Compatible.JournalProtocolTranslatorR23;
+import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -58,7 +58,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
       this.backupNode =
-          new JournalProtocolTranslatorR23(bnAddress, new HdfsConfiguration());
+          new JournalProtocolTranslatorPB(bnAddress, new HdfsConfiguration());
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;

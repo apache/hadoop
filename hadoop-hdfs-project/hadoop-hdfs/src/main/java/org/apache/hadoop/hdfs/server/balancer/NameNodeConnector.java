@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -46,6 +48,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -202,14 +205,15 @@ class NameNodeConnector {
     methodNameToPolicyMap.put("getBlocks", methodPolicy);
     methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
 
-    return (NamenodeProtocol) RetryProxy.create(NamenodeProtocol.class,
-        RPC.getProxy(NamenodeProtocol.class,
-            NamenodeProtocol.versionID,
-            address,
-            UserGroupInformation.getCurrentUser(),
-            conf,
-            NetUtils.getDefaultSocketFactory(conf)),
-        methodNameToPolicyMap);
+    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+    NamenodeProtocolPB proxy = RPC.getProxy(NamenodeProtocolPB.class,
+            RPC.getProtocolVersion(NamenodeProtocolPB.class), address,
+            UserGroupInformation.getCurrentUser(), conf,
+            NetUtils.getDefaultSocketFactory(conf));
+    NamenodeProtocolPB retryProxy = (NamenodeProtocolPB) RetryProxy.create(
+        NamenodeProtocolPB.class, proxy, methodNameToPolicyMap);
+    return new NamenodeProtocolTranslatorPB(retryProxy);
   }
 
   /**

@@ -96,7 +96,7 @@ import com.google.protobuf.ByteString;
 /**
  * Utilities for converting protobuf classes to and from implementation classes.
  */
-class PBHelper {
+public class PBHelper {
   private PBHelper() {
     /** Hidden constructor */
   }
@@ -170,7 +170,7 @@ class PBHelper {
   }
 
   public static Block convert(BlockProto b) {
-    return new Block(b.getBlockId(), b.getGenStamp(), b.getNumBytes());
+    return new Block(b.getBlockId(), b.getNumBytes(), b.getGenStamp());
   }
 
   public static BlockWithLocationsProto convert(BlockWithLocations blk) {
@@ -330,6 +330,9 @@ class PBHelper {
   }
 
   public static RecoveringBlockProto convert(RecoveringBlock b) {
+    if (b == null) {
+      return null;
+    }
     LocatedBlockProto lb = PBHelper.convert((LocatedBlock)b);
     return RecoveringBlockProto.newBuilder().setBlock(lb)
         .setNewGenStamp(b.getNewGenerationStamp()).build();
@@ -399,6 +402,9 @@ class PBHelper {
   }
 
   public static LocatedBlockProto convert(LocatedBlock b) {
+    if (b == null) {
+      return null;
+    }
     Builder builder = LocatedBlockProto.newBuilder();
     DatanodeInfo[] locs = b.getLocations();
     for (int i = 0; i < locs.length; i++) {
@@ -450,6 +456,22 @@ class PBHelper {
     case FINALIZED:
     default:
       return ReplicaState.FINALIZED;
+    }
+  }
+
+  public static ReplicaStateProto convert(ReplicaState state) {
+    switch (state) {
+    case RBW:
+      return ReplicaStateProto.RBW;
+    case RUR:
+      return ReplicaStateProto.RUR;
+    case RWR:
+      return ReplicaStateProto.RWR;
+    case TEMPORARY:
+      return ReplicaStateProto.TEMPORARY;
+    case FINALIZED:
+    default:
+      return ReplicaStateProto.FINALIZED;
     }
   }
   
