@@ -169,7 +169,7 @@ HDFS Federation
   </property>
   <property>
     <name>dfs.namenode.rpc-address.ns1</name>
-    <value>hdfs://nn-host1:rpc-port</value>
+    <value>nn-host1:rpc-port</value>
   </property>
   <property>
     <name>dfs.namenode.http-address.ns1</name>
@@ -181,7 +181,7 @@ HDFS Federation
   </property>
   <property>
     <name>dfs.namenode.rpc-address.ns2</name>
-    <value>hdfs://nn-host2:rpc-port</value>
+    <value>nn-host2:rpc-port</value>
   </property>
   <property>
     <name>dfs.namenode.http-address.ns2</name>

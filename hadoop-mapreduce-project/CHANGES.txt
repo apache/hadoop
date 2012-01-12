@@ -73,6 +73,8 @@ Trunk (unreleased changes)
     findBugs, correct links to findBugs artifacts and no links to the
     artifacts when there are no warnings. (Tom White via vinodkv).
 
+    MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
+    (Brandon Li via jitendra)
 
 Release 0.23.1 - Unreleased
 
