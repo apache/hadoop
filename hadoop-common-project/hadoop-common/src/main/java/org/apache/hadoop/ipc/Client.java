@@ -1003,17 +1003,19 @@ public class Client {
   }
 
   /**
-   * Same as {@link #call(RpcKind, Writable, ConnectionId)} for Writable
+   * Same as {@link #call(RpcPayloadHeader.RpcKind, Writable, ConnectionId)}
+   *  for RPC_BUILTIN
    */
   public Writable call(Writable param, InetSocketAddress address)
   throws InterruptedException, IOException {
-    return call(RpcKind.RPC_WRITABLE, param, address);
+    return call(RpcKind.RPC_BUILTIN, param, address);
     
   }
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception.
-   * @deprecated Use {@link #call(RpcKind, Writable, ConnectionId)} instead 
+   * @deprecated Use {@link #call(RpcPayloadHeader.RpcKind, Writable,
+   *  ConnectionId)} instead 
    */
   @Deprecated
   public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress address)
@@ -1026,7 +1028,8 @@ public class Client {
    * the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception.
-   * @deprecated Use {@link #call(RpcKind, Writable, ConnectionId)} instead 
+   * @deprecated Use {@link #call(RpcPayloadHeader.RpcKind, Writable, 
+   * ConnectionId)} instead 
    */
   @Deprecated
   public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
@@ -1043,7 +1046,8 @@ public class Client {
    * timeout, returning the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception. 
-   * @deprecated Use {@link #call(RpcKind, Writable, ConnectionId)} instead 
+   * @deprecated Use {@link #call(RpcPayloadHeader.RpcKind, Writable,
+   *  ConnectionId)} instead 
    */
   @Deprecated
   public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
@@ -1057,7 +1061,7 @@ public class Client {
 
   
   /**
-   * Same as {@link #call(RpcKind, Writable, InetSocketAddress, 
+   * Same as {@link #call(RpcPayloadHeader.RpcKind, Writable, InetSocketAddress, 
    * Class, UserGroupInformation, int, Configuration)}
    * except that rpcKind is writable.
    */
@@ -1067,7 +1071,7 @@ public class Client {
       throws InterruptedException, IOException {
         ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
-        return call(RpcKind.RPC_WRITABLE, param, remoteId);
+    return call(RpcKind.RPC_BUILTIN, param, remoteId);
   }
   
   /**
@@ -1088,21 +1092,28 @@ public class Client {
   }
   
   /**
-   * Same as {link {@link #call(RpcKind, Writable, ConnectionId)}
-   * except the rpcKind is RPC_WRITABLE
+   * Same as {link {@link #call(RpcPayloadHeader.RpcKind, Writable, ConnectionId)}
+   * except the rpcKind is RPC_BUILTIN
    */
   public Writable call(Writable param, ConnectionId remoteId)  
       throws InterruptedException, IOException {
-     return call(RpcKind.RPC_WRITABLE, param, remoteId);
+     return call(RpcKind.RPC_BUILTIN, param, remoteId);
   }
   
-  /** Make a call, passing <code>param</code>, to the IPC server defined by
-   * <code>remoteId</code>, returning the value.  
+  /** 
+   * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
+   * <code>remoteId</code>, returning the rpc respond.
+   * 
+   * @param rpcKind
+   * @param rpcRequest -  contains serialized method and method parameters
+   * @param remoteId - the target rpc server
+   * @returns the rpc response
    * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception. */
-  public Writable call(RpcKind rpcKind, Writable param, ConnectionId remoteId)  
-      throws InterruptedException, IOException {
-    Call call = new Call(rpcKind, param);
+   * threw an exception.
+   */
+  public Writable call(RpcKind rpcKind, Writable rpcRequest,
+      ConnectionId remoteId) throws InterruptedException, IOException {
+    Call call = new Call(rpcKind, rpcRequest);
     Connection connection = getConnection(remoteId, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;

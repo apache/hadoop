@@ -31,6 +31,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -56,6 +57,8 @@ public class TestRPCCompatibility {
     String echo(String value) throws IOException;
   }
 
+  
+  // TestProtocol2 is a compatible impl of TestProtocol1 - hence use its name
   @ProtocolInfo(protocolName=
       "org.apache.hadoop.ipc.TestRPCCompatibility$TestProtocol1")
   public interface TestProtocol2 extends TestProtocol1 {
@@ -114,9 +117,11 @@ public class TestRPCCompatibility {
   public void tearDown() throws IOException {
     if (proxy != null) {
       RPC.stopProxy(proxy.getProxy());
+      proxy = null;
     }
     if (server != null) {
       server.stop();
+      server = null;
     }
   }
   
@@ -126,7 +131,7 @@ public class TestRPCCompatibility {
     TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class,
                             impl, ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(TestProtocol0.class, impl);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -170,8 +175,10 @@ public class TestRPCCompatibility {
     
     public int echo(int value) throws IOException, NumberFormatException {
       if (serverInfo.isMethodSupported("echo", int.class)) {
+System.out.println("echo int is supported");
         return -value;  // use version 3 echo long
       } else { // server is version 2
+System.out.println("echo int is NOT supported");
         return Integer.parseInt(proxy2.echo(String.valueOf(value)));
       }
     }
@@ -191,7 +198,7 @@ public class TestRPCCompatibility {
     TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class,
                               impl, ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(TestProtocol0.class, impl);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -207,11 +214,12 @@ public class TestRPCCompatibility {
   
   @Test // equal version client and server
   public void testVersion2ClientVersion2Server() throws Exception {
+    ProtocolSignature.resetCache();
     // create a server with two handlers
     TestImpl2 impl = new TestImpl2();
     server = RPC.getServer(TestProtocol2.class,
                              impl, ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(TestProtocol0.class, impl);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 

@@ -23,6 +23,9 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7776 Make the Ipc-Header in a RPC-Payload an explicit header (sanjay)
 
+    HADOOP-7862  Move the support for multiple protocols to lower layer so
+    that Writable, PB and Avro can all use it (Sanjay)
+
   BUG FIXES
 
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
