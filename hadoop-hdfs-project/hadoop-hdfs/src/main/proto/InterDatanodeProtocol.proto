@@ -38,7 +38,7 @@ message InitReplicaRecoveryRequestProto {
  * Repica recovery information
  */
 message InitReplicaRecoveryResponseProto {
-  required ReplicaStateProto state = 1; // State fo the replica
+  required ReplicaStateProto state = 1; // State of the replica
   required BlockProto block = 2;   // block information
 }
 

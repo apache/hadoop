@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.protobuf.ByteString;
@@ -392,6 +393,13 @@ class PBHelper {
     return BlockTokenIdentifierProto.newBuilder().setIdentifier(tokenId)
         .setKind(token.getKind().toString()).setPassword(password)
         .setService(token.getService().toString()).build();
+  }
+  
+  public static Token<BlockTokenIdentifier> convert(
+      BlockTokenIdentifierProto blockToken) {
+    return new Token<BlockTokenIdentifier>(blockToken.getIdentifier()
+        .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
+        blockToken.getKind()), new Text(blockToken.getService()));
   }
 
   public static ReplicaState convert(ReplicaStateProto state) {

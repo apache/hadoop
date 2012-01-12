@@ -21,6 +21,7 @@ import static junit.framework.Assert.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockTokenIdentifierProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlocksWithLocationsProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CheckpointCommandProto;
@@ -43,7 +45,9 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestPro
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
@@ -54,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 import org.junit.Test;
 
 /**
@@ -279,6 +284,11 @@ public class TestPBHelper {
     ExtendedBlockProto bProto = PBHelper.convert(b);
     ExtendedBlock b1 = PBHelper.convert(bProto);
     assertEquals(b, b1);
+    
+    b.setBlockId(-1);
+    bProto = PBHelper.convert(b);
+    b1 = PBHelper.convert(bProto);
+    assertEquals(b, b1);
   }
   
   @Test
@@ -301,5 +311,18 @@ public class TestPBHelper {
     String s = t.toString();
     Text t1 = new Text(s);
     assertEquals(t, t1);
+  }
+  
+  @Test
+  public void testBlockTokenIdentifier() {
+    Token<BlockTokenIdentifier> token = new Token<BlockTokenIdentifier>(
+        "identifier".getBytes(), "password".getBytes(), new Text("kind"),
+        new Text("service"));
+    BlockTokenIdentifierProto tokenProto = PBHelper.convert(token);
+    Token<BlockTokenIdentifier> token2 = PBHelper.convert(tokenProto);
+    assertTrue(Arrays.equals(token.getIdentifier(), token2.getIdentifier()));
+    assertTrue(Arrays.equals(token.getPassword(), token2.getPassword()));
+    assertEquals(token.getKind(), token2.getKind());
+    assertEquals(token.getService(), token2.getService());
   }
 }
