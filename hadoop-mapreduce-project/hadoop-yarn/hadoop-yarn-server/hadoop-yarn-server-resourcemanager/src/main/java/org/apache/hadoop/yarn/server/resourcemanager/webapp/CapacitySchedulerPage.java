@@ -42,11 +42,12 @@ import com.google.inject.servlet.RequestScoped;
 
 class CapacitySchedulerPage extends RmView {
   static final String _Q = ".ui-state-default.ui-corner-all";
-  static final float WIDTH_F = 0.8f;
+  static final float Q_MAX_WIDTH = 0.8f;
+  static final float Q_STATS_POS = Q_MAX_WIDTH + 0.05f;
   static final String Q_END = "left:101%";
-  static final String OVER = "font-size:1px;background:rgba(255, 140, 0, 0.8)";
-  static final String UNDER = "font-size:1px;background:rgba(50, 205, 50, 0.8)";
-  static final float EPSILON = 1e-8f;
+  static final String Q_GIVEN = "left:0%;background:none;border:1px dashed rgba(0,0,0,0.25)";
+  static final String Q_OVER = "background:rgba(255, 140, 0, 0.8)";
+  static final String Q_UNDER = "background:rgba(50, 205, 50, 0.8)";
 
   @RequestScoped
   static class CSQInfo {
@@ -106,18 +107,20 @@ class CapacitySchedulerPage extends RmView {
       for (CapacitySchedulerQueueInfo info : subQueues) {
         float used = info.getUsedCapacity() / 100;
         float set = info.getCapacity() / 100;
-        float delta = Math.abs(set - used) + 0.001f;
         float max = info.getMaxCapacity() / 100;
         LI<UL<Hamlet>> li = ul.
           li().
-            a(_Q).$style(width(max * WIDTH_F)).
-              $title(join("used:", percent(used), " set:", percent(set),
-                          " max:", percent(max))).
-              //span().$style(Q_END)._(absMaxPct)._().
-              span().$style(join(width(delta/max), ';',
-                used > set ? OVER : UNDER, ';',
-                used > set ? left(set/max) : left(used/max)))._('.')._().
-              span(".q", info.getQueuePath().substring(5))._();
+            a(_Q).$style(width(max * Q_MAX_WIDTH)).
+              $title(join("capacity:", percent(set), " used:", percent(used),
+                          " max capacity:", percent(max))).
+              span().$style(join(Q_GIVEN, ";font-size:1px;", width(set/max))).
+                _('.')._().
+              span().$style(join(width(used*set/max),
+                ";font-size:1px;left:0%;", used > 1 ? Q_OVER : Q_UNDER)).
+                _('.')._().
+              span(".q", info.getQueuePath().substring(5))._().
+            span().$class("qstats").$style(left(Q_STATS_POS)).
+              _(join(percent(used), " used"))._();
 
         csqinfo.qinfo = info;
         if (info.getSubQueues() == null) {
@@ -153,7 +156,7 @@ class CapacitySchedulerPage extends RmView {
       if (cs == null) {
         ul.
           li().
-            a(_Q).$style(width(WIDTH_F)).
+            a(_Q).$style(width(Q_MAX_WIDTH)).
               span().$style(Q_END)._("100% ")._().
               span(".q", "default")._()._();
       } else {
@@ -163,16 +166,26 @@ class CapacitySchedulerPage extends RmView {
         csqinfo.qinfo = null;
 
         float used = sinfo.getUsedCapacity() / 100;
-        float set = sinfo.getCapacity() / 100;
-        float delta = Math.abs(set - used) + 0.001f;
         ul.
+          li().$style("margin-bottom: 1em").
+            span().$style("font-weight: bold")._("Legend:")._().
+            span().$class("qlegend ui-corner-all").$style(Q_GIVEN).
+              _("Capacity")._().
+            span().$class("qlegend ui-corner-all").$style(Q_UNDER).
+              _("Used")._().
+            span().$class("qlegend ui-corner-all").$style(Q_OVER).
+              _("Used (over capacity)")._().
+            span().$class("qlegend ui-corner-all ui-state-default").
+              _("Max Capacity")._().
+          _().
           li().
-            a(_Q).$style(width(WIDTH_F)).
+            a(_Q).$style(width(Q_MAX_WIDTH)).
               $title(join("used:", percent(used))).
-              span().$style(Q_END)._("100%")._().
-              span().$style(join(width(delta), ';', used > set ? OVER : UNDER,
-                ';', used > set ? left(set) : left(used)))._(".")._().
+              span().$style(join(width(used), ";left:0%;",
+                  used > 1 ? Q_OVER : Q_UNDER))._(".")._().
               span(".q", "root")._().
+            span().$class("qstats").$style(left(Q_STATS_POS)).
+              _(join(percent(used), " used"))._().
             _(QueueBlock.class)._();
       }
       ul._()._().
@@ -190,6 +203,8 @@ class CapacitySchedulerPage extends RmView {
           "#cs a { font-weight: normal; margin: 2px; position: relative }",
           "#cs a span { font-weight: normal; font-size: 80% }",
           "#cs-wrapper .ui-widget-header { padding: 0.2em 0.5em }",
+          ".qstats { font-weight: normal; font-size: 80%; position: absolute }",
+          ".qlegend { font-weight: normal; padding: 0 1em; margin: 1em }",
           "table.info tr th {width: 50%}")._(). // to center info table
       script("/static/jt/jquery.jstree.js").
       script().$type("text/javascript").
