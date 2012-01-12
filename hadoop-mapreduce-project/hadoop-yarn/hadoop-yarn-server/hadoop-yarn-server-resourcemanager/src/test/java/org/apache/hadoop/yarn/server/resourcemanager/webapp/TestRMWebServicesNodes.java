@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.StringReader;
@@ -404,18 +405,82 @@ public class TestRMWebServicesNodes extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils
-          .checkStringMatch("exception message",
-              "java.lang.Exception: nodeId, node_invalid:99, is not found",
-              message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "NotFoundException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
+      verifyNonexistNodeException(message, type, classname);
 
     } finally {
       rm.stop();
     }
+  }
+
+  // test that the exception output defaults to JSON
+  @Test
+  public void testNonexistNodeDefault() throws JSONException, Exception {
+    rm.registerNode("h1:1234", 5120);
+    rm.registerNode("h2:1235", 5121);
+    WebResource r = resource();
+    try {
+      r.path("ws").path("v1").path("cluster").path("nodes")
+          .path("node_invalid:99").get(JSONObject.class);
+
+      fail("should have thrown exception on non-existent nodeid");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      verifyNonexistNodeException(message, type, classname);
+    } finally {
+      rm.stop();
+    }
+  }
+
+  // test that the exception output works in XML
+  @Test
+  public void testNonexistNodeXML() throws JSONException, Exception {
+    rm.registerNode("h1:1234", 5120);
+    rm.registerNode("h2:1235", 5121);
+    WebResource r = resource();
+    try {
+      r.path("ws").path("v1").path("cluster").path("nodes")
+          .path("node_invalid:99").accept(MediaType.APPLICATION_XML)
+          .get(JSONObject.class);
+
+      fail("should have thrown exception on non-existent nodeid");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+      String msg = response.getEntity(String.class);
+      System.out.println(msg);
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+      DocumentBuilder db = dbf.newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(msg));
+      Document dom = db.parse(is);
+      NodeList nodes = dom.getElementsByTagName("RemoteException");
+      Element element = (Element) nodes.item(0);
+      String message = WebServicesTestUtils.getXmlString(element, "message");
+      String type = WebServicesTestUtils.getXmlString(element, "exception");
+      String classname = WebServicesTestUtils.getXmlString(element,
+          "javaClassName");
+      verifyNonexistNodeException(message, type, classname);
+    } finally {
+      rm.stop();
+    }
+  }
+
+  private void verifyNonexistNodeException(String message, String type, String classname) {
+    assertTrue("exception message incorrect",
+        "java.lang.Exception: nodeId, node_invalid:99, is not found"
+            .matches(message));
+    assertTrue("exception type incorrect", "NotFoundException".matches(type));
+    assertTrue("exception className incorrect",
+        "org.apache.hadoop.yarn.webapp.NotFoundException".matches(classname));
   }
 
   @Test

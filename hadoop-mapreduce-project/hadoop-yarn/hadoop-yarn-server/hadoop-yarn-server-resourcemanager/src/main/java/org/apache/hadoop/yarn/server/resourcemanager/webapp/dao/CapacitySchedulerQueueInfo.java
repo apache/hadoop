@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 
 @XmlRootElement
@@ -47,7 +48,7 @@ public class CapacitySchedulerQueueInfo {
   protected int numApplications;
   protected String usedResources;
   protected String queueName;
-  protected String state;
+  protected QueueState state;
   protected ArrayList<CapacitySchedulerQueueInfo> subQueues;
 
   CapacitySchedulerQueueInfo() {
@@ -69,7 +70,7 @@ public class CapacitySchedulerQueueInfo {
     numApplications = q.getNumApplications();
     usedResources = q.getUsedResources().toString();
     queueName = q.getQueueName();
-    state = q.getState().toString();
+    state = q.getState();
   }
 
   public float getCapacity() {
@@ -109,7 +110,7 @@ public class CapacitySchedulerQueueInfo {
   }
 
   public String getQueueState() {
-    return this.state;
+    return this.state.toString();
   }
 
   public String getQueuePath() {

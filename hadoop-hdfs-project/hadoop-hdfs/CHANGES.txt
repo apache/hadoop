@@ -170,6 +170,9 @@ Trunk (unreleased changes)
 
     HDFS-2739. SecondaryNameNode doesn't start up. (jitendra)
 
+    HDFS-2776. Missing interface annotation on JournalSet. 
+    (Brandon Li via jitendra)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -258,6 +261,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
 
     HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
+
+    HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
 
   OPTIMIZATIONS
 

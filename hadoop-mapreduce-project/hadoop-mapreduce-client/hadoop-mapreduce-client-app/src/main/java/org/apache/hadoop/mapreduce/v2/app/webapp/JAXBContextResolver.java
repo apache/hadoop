@@ -49,6 +49,7 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterGroupInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TasksInfo;
+import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 
 @Singleton
 @Provider
@@ -64,7 +65,7 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     JobCounterInfo.class, TaskCounterInfo.class, CounterGroupInfo.class,
     JobInfo.class, JobsInfo.class, ReduceTaskAttemptInfo.class,
     TaskAttemptInfo.class, TaskInfo.class, TasksInfo.class,
-    TaskAttemptsInfo.class, ConfEntryInfo.class};
+    TaskAttemptsInfo.class, ConfEntryInfo.class, RemoteExceptionData.class};
 
   public JAXBContextResolver() throws Exception {
     this.types = new HashSet<Class>(Arrays.asList(cTypes));

@@ -178,6 +178,9 @@ Release 0.23.1 - Unreleased
     Improved the earlier patch to not to JobHistoryServer repeatedly.
     (Anupam Seth via vinodkv)
 
+    MAPREDUCE-3553. Add support for data returned when exceptions thrown from web 
+    service apis to be in either xml or in JSON. (Thomas Graves via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -197,6 +200,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3618. Fixed TaskHeartbeatHandler to not hold a global lock for all
     task-updates. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3512. Batching JobHistory flushing to DFS so that we don't flush
+    for every event slowing down AM. (Siddarth Seth via vinodkv)
 
   BUG FIXES
 
@@ -462,6 +468,17 @@ Release 0.23.1 - Unreleased
     authenticated. (mahadev)
 
     MAPREDUCE-3648. TestJobConf failing. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3651. TestQueueManagerRefresh fails. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3645. TestJobHistory fails. (Thomas Graves via mahadev)
+  
+    MAPREDUCE-3652. org.apache.hadoop.mapred.TestWebUIAuthorization.testWebUIAuthorization 
+    fails. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3625. CapacityScheduler web-ui display of queue's used capacity is broken.
+    (Jason Lowe via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

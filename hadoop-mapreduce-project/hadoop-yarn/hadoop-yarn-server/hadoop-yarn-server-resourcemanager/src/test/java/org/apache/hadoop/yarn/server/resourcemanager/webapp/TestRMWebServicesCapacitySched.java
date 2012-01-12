@@ -62,6 +62,31 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
   private static MockRM rm;
   private CapacitySchedulerConfiguration csConf;
 
+  private class QueueInfo {
+    float capacity;
+    float usedCapacity;
+    float maxCapacity;
+    float absoluteCapacity;
+    float absoluteMaxCapacity;
+    float utilization;
+    int numApplications;
+    String usedResources;
+    String queueName;
+    String state;
+  }
+
+  private class LeafQueueInfo extends QueueInfo {
+    int numActiveApplications;
+    int numPendingApplications;
+    int numContainers;
+    int maxApplications;
+    int maxApplicationsPerUser;
+    int maxActiveApplications;
+    int maxActiveApplicationsPerUser;
+    int userLimit;
+    float userLimitFactor;
+  }
+
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
@@ -217,29 +242,51 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
 
   public void verifySubQueueXML(Element qElem, String q, float parentAbsCapacity)
       throws Exception {
-    float absCapacity = WebServicesTestUtils.getXmlFloat(qElem, "absoluteCapacity");
-    verifySubQueueGeneric(q,
-        WebServicesTestUtils.getXmlFloat(qElem, "usedCapacity"),
-        WebServicesTestUtils.getXmlFloat(qElem, "capacity"),
-        WebServicesTestUtils.getXmlFloat(qElem, "maxCapacity"),
-        absCapacity,
-        WebServicesTestUtils.getXmlFloat(qElem, "absoluteMaxCapacity"),
-        parentAbsCapacity,
-        WebServicesTestUtils.getXmlString(qElem, "queueName"),
-        WebServicesTestUtils.getXmlString(qElem, "state"));
-
     NodeList queues = qElem.getElementsByTagName("subQueues");
+    QueueInfo qi = (queues != null) ? new QueueInfo() : new LeafQueueInfo();
+    qi.capacity = WebServicesTestUtils.getXmlFloat(qElem, "capacity");
+    qi.usedCapacity =
+        WebServicesTestUtils.getXmlFloat(qElem, "usedCapacity");
+    qi.maxCapacity = WebServicesTestUtils.getXmlFloat(qElem, "maxCapacity");
+    qi.absoluteCapacity = WebServicesTestUtils.getXmlFloat(qElem, "absoluteCapacity");
+    qi.absoluteMaxCapacity =
+        WebServicesTestUtils.getXmlFloat(qElem, "absoluteMaxCapacity");
+    qi.utilization = WebServicesTestUtils.getXmlFloat(qElem, "utilization");
+    qi.numApplications =
+        WebServicesTestUtils.getXmlInt(qElem, "numApplications");
+    qi.usedResources =
+        WebServicesTestUtils.getXmlString(qElem, "usedResources");
+    qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
+    qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
+    verifySubQueueGeneric(q, qi, parentAbsCapacity);
+
     if (queues != null) {
       for (int j = 0; j < queues.getLength(); j++) {
         Element subqElem = (Element) queues.item(j);
         String qName = WebServicesTestUtils.getXmlString(subqElem, "queueName");
         String q2 = q + "." + qName;
-        verifySubQueueXML(subqElem, q2, absCapacity);
+        verifySubQueueXML(subqElem, q2, qi.absoluteCapacity);
       }
     } else {
-      verifyLeafQueueGeneric(q,
-          WebServicesTestUtils.getXmlInt(qElem, "userLimit"),
-          WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor"));
+      LeafQueueInfo lqi = (LeafQueueInfo) qi;
+      lqi.numActiveApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "numActiveApplications");
+      lqi.numPendingApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "numPendingApplications");
+      lqi.numContainers =
+          WebServicesTestUtils.getXmlInt(qElem, "numContainers");
+      lqi.maxApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "maxApplications");
+      lqi.maxApplicationsPerUser =
+          WebServicesTestUtils.getXmlInt(qElem, "maxApplicationsPerUser");
+      lqi.maxActiveApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "maxActiveApplications");
+      lqi.maxActiveApplicationsPerUser =
+          WebServicesTestUtils.getXmlInt(qElem, "maxActiveApplicationsPerUser");
+      lqi.userLimit = WebServicesTestUtils.getXmlInt(qElem, "userLimit");
+      lqi.userLimitFactor =
+          WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor");
+      verifyLeafQueueGeneric(q, lqi);
     }
   }
 
@@ -286,16 +333,19 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
 
-    float absCapacity = (float) info.getDouble("absoluteCapacity");
+    QueueInfo qi = isParentQueue ? new QueueInfo() : new LeafQueueInfo();
+    qi.capacity = (float) info.getDouble("capacity");
+    qi.usedCapacity = (float) info.getDouble("usedCapacity");
+    qi.maxCapacity = (float) info.getDouble("maxCapacity");
+    qi.absoluteCapacity = (float) info.getDouble("absoluteCapacity");
+    qi.absoluteMaxCapacity = (float) info.getDouble("absoluteMaxCapacity");
+    qi.utilization = (float) info.getDouble("utilization");
+    qi.numApplications = info.getInt("numApplications");
+    qi.usedResources = info.getString("usedResources");
+    qi.queueName = info.getString("queueName");
+    qi.state = info.getString("state");
 
-    verifySubQueueGeneric(q, (float) info.getDouble("usedCapacity"),
-        (float) info.getDouble("capacity"),
-        (float) info.getDouble("maxCapacity"),
-        absCapacity,
-        (float) info.getDouble("absoluteMaxCapacity"),
-        parentAbsCapacity,
-        info.getString("queueName"),
-        info.getString("state"));
+    verifySubQueueGeneric(q, qi, parentAbsCapacity);
 
     if (isParentQueue) {
       JSONArray arr = info.getJSONArray("subQueues");
@@ -303,50 +353,84 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       for (int i = 0; i < arr.length(); i++) {
         JSONObject obj = arr.getJSONObject(i);
         String q2 = q + "." + obj.getString("queueName");
-        verifySubQueue(obj, q2, absCapacity);
+        verifySubQueue(obj, q2, qi.absoluteCapacity);
       }
     } else {
-      verifyLeafQueueGeneric(q, info.getInt("userLimit"),
-          (float) info.getDouble("userLimitFactor"));
+      LeafQueueInfo lqi = (LeafQueueInfo) qi;
+      lqi.numActiveApplications = info.getInt("numActiveApplications");
+      lqi.numPendingApplications = info.getInt("numPendingApplications");
+      lqi.numContainers = info.getInt("numContainers");
+      lqi.maxApplications = info.getInt("maxApplications");
+      lqi.maxApplicationsPerUser = info.getInt("maxApplicationsPerUser");
+      lqi.maxActiveApplications = info.getInt("maxActiveApplications");
+      lqi.maxActiveApplicationsPerUser = info.getInt("maxActiveApplicationsPerUser");
+      lqi.userLimit = info.getInt("userLimit");
+      lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
+      verifyLeafQueueGeneric(q, lqi);
     }
   }
 
-  private void verifySubQueueGeneric(String q, float usedCapacity,
-      float capacity, float maxCapacity,
-      float absCapacity, float absMaxCapacity,
-      float parentAbsCapacity,
-      String qname, String state)
-      throws Exception {
+  private void verifySubQueueGeneric(String q, QueueInfo info,
+      float parentAbsCapacity) throws Exception {
     String[] qArr = q.split("\\.");
     assertTrue("q name invalid: " + q, qArr.length > 1);
     String qshortName = qArr[qArr.length - 1];
 
-    assertEquals("usedCapacity doesn't match", 0, usedCapacity, 1e-3f);
-    assertEquals("capacity doesn't match", csConf.getCapacity(q), capacity,
-        1e-3f);
+    assertEquals("usedCapacity doesn't match", 0, info.usedCapacity, 1e-3f);
+    assertEquals("capacity doesn't match", csConf.getCapacity(q),
+        info.capacity, 1e-3f);
     float expectCapacity = csConf.getMaximumCapacity(q);
-    float expectAbsMaxCapacity = parentAbsCapacity * (maxCapacity/100);
+    float expectAbsMaxCapacity = parentAbsCapacity * (info.maxCapacity/100);
     if (CapacitySchedulerConfiguration.UNDEFINED == expectCapacity) {
       expectCapacity = 100;
       expectAbsMaxCapacity = 100;
     }
-    assertEquals("maxCapacity doesn't match", expectCapacity, maxCapacity,
-        1e-3f);
+    assertEquals("maxCapacity doesn't match", expectCapacity,
+        info.maxCapacity, 1e-3f);
     assertEquals("absoluteCapacity doesn't match",
-        parentAbsCapacity * (capacity/100), absCapacity, 1e-3f);
+        parentAbsCapacity * (info.capacity/100), info.absoluteCapacity, 1e-3f);
     assertEquals("absoluteMaxCapacity doesn't match",
-        expectAbsMaxCapacity, absMaxCapacity, 1e-3f);
-    assertTrue("queueName doesn't match, got: " + qname + " expected: " + q,
-        qshortName.matches(qname));
+        expectAbsMaxCapacity, info.absoluteMaxCapacity, 1e-3f);
+    assertEquals("utilization doesn't match", 0, info.utilization, 1e-3f);
+    assertEquals("numApplications doesn't match", 0, info.numApplications);
+    assertTrue("usedResources doesn't match",
+        info.usedResources.matches("memory: 0"));
+    assertTrue("queueName doesn't match, got: " + info.queueName
+        + " expected: " + q, qshortName.matches(info.queueName));
     assertTrue("state doesn't match",
-        (csConf.getState(q).toString()).matches(state));
+        (csConf.getState(q).toString()).matches(info.state));
 
   }
 
-  private void verifyLeafQueueGeneric(String q, int userLimit,
-      float userLimitFactor) throws Exception {
-    assertEquals("userLimit doesn't match", csConf.getUserLimit(q), userLimit);
+  private void verifyLeafQueueGeneric(String q, LeafQueueInfo info)
+      throws Exception {
+    assertEquals("numActiveApplications doesn't match",
+        0, info.numActiveApplications);
+    assertEquals("numPendingApplications doesn't match",
+        0, info.numPendingApplications);
+    assertEquals("numContainers doesn't match",
+        0, info.numContainers);
+
+    int maxSystemApps = csConf.getMaximumSystemApplications();
+    int expectedMaxApps = (int)(maxSystemApps * (info.absoluteCapacity/100));
+    int expectedMaxAppsPerUser =
+      (int)(expectedMaxApps * (info.userLimit/100.0f) * info.userLimitFactor);
+
+    // TODO: would like to use integer comparisons here but can't due to
+    //       roundoff errors in absolute capacity calculations
+    assertEquals("maxApplications doesn't match",
+        (float)expectedMaxApps, (float)info.maxApplications, 1.0f);
+    assertEquals("maxApplicationsPerUser doesn't match",
+        (float)expectedMaxAppsPerUser,
+        (float)info.maxApplicationsPerUser, info.userLimitFactor);
+
+    assertTrue("maxActiveApplications doesn't match",
+        info.maxActiveApplications > 0);
+    assertTrue("maxActiveApplicationsPerUser doesn't match",
+        info.maxActiveApplicationsPerUser > 0);
+    assertEquals("userLimit doesn't match", csConf.getUserLimit(q),
+        info.userLimit);
     assertEquals("userLimitFactor doesn't match",
-        csConf.getUserLimitFactor(q), userLimitFactor, 1e-3f);
+        csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
   }
 }
