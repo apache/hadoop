@@ -394,6 +394,31 @@ public class TestHsWebServicesJobs extends JerseyTest {
 
     try {
       r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+          .path("job_foo").accept(MediaType.APPLICATION_JSON)
+          .get(JSONObject.class);
+      fail("should have thrown exception on invalid uri");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      verifyJobIdInvalid(message, type, classname);
+
+    }
+  }
+
+  // verify the exception output default is JSON
+  @Test
+  public void testJobIdInvalidDefault() throws JSONException, Exception {
+    WebResource r = resource();
+
+    try {
+      r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
           .path("job_foo").get(JSONObject.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
@@ -406,13 +431,48 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils.checkStringMatch("exception message",
-          "For input string: \"foo\"", message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "NumberFormatException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "java.lang.NumberFormatException", classname);
+      verifyJobIdInvalid(message, type, classname);
     }
+  }
+
+  // test that the exception output works in XML
+  @Test
+  public void testJobIdInvalidXML() throws JSONException, Exception {
+    WebResource r = resource();
+
+    try {
+      r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
+          .path("job_foo").accept(MediaType.APPLICATION_XML)
+          .get(JSONObject.class);
+      fail("should have thrown exception on invalid uri");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+      String msg = response.getEntity(String.class);
+      System.out.println(msg);
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+      DocumentBuilder db = dbf.newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(msg));
+      Document dom = db.parse(is);
+      NodeList nodes = dom.getElementsByTagName("RemoteException");
+      Element element = (Element) nodes.item(0);
+      String message = WebServicesTestUtils.getXmlString(element, "message");
+      String type = WebServicesTestUtils.getXmlString(element, "exception");
+      String classname = WebServicesTestUtils.getXmlString(element,
+          "javaClassName");
+      verifyJobIdInvalid(message, type, classname);
+    }
+  }
+
+  private void verifyJobIdInvalid(String message, String type, String classname) {
+    WebServicesTestUtils.checkStringMatch("exception message",
+        "For input string: \"foo\"", message);
+    WebServicesTestUtils.checkStringMatch("exception type",
+        "NumberFormatException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+        "java.lang.NumberFormatException", classname);
   }
 
   @Test

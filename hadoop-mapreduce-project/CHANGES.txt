@@ -112,6 +112,9 @@ Release 0.23.1 - Unreleased
     Improved the earlier patch to not to JobHistoryServer repeatedly.
     (Anupam Seth via vinodkv)
 
+    MAPREDUCE-3553. Add support for data returned when exceptions thrown from web 
+    service apis to be in either xml or in JSON. (Thomas Graves via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
