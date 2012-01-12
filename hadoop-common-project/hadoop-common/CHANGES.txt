@@ -37,6 +37,9 @@ Release 0.23-PB - Unreleased
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
     (John Lee via suresh)
 
+    HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
+    consistent with WritableRpcEngine. (suresh)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
