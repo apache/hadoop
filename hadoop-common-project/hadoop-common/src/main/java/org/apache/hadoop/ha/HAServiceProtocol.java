@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
+import java.io.IOException;
+
 /**
  * Protocol interface that provides High Availability related primitives to
  * monitor and fail-over the service.
@@ -69,8 +71,11 @@ public interface HAServiceProtocol extends VersionedProtocol {
    * 
    * @throws HealthCheckFailedException
    *           if the health check of a service fails.
+   * @throws IOException
+   *           if other errors happen
    */
-  public void monitorHealth() throws HealthCheckFailedException;
+  public void monitorHealth() throws HealthCheckFailedException,
+                                     IOException;
 
   /**
    * Request service to transition to active state. No operation, if the
@@ -78,8 +83,11 @@ public interface HAServiceProtocol extends VersionedProtocol {
    * 
    * @throws ServiceFailedException
    *           if transition from standby to active fails.
+   * @throws IOException
+   *           if other errors happen
    */
-  public void transitionToActive() throws ServiceFailedException;
+  public void transitionToActive() throws ServiceFailedException,
+                                          IOException;
 
   /**
    * Request service to transition to standby state. No operation, if the
@@ -87,11 +95,17 @@ public interface HAServiceProtocol extends VersionedProtocol {
    * 
    * @throws ServiceFailedException
    *           if transition from active to standby fails.
+   * @throws IOException
+   *           if other errors happen
    */
-  public void transitionToStandby() throws ServiceFailedException;
+  public void transitionToStandby() throws ServiceFailedException,
+                                           IOException;
 
   /**
    * Return the current state of the service.
+   * 
+   * @throws IOException
+   *           if other errors happen
    */
-  public HAServiceState getServiceState();
+  public HAServiceState getServiceState() throws IOException;
 }

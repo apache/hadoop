@@ -551,9 +551,6 @@ public class NameNode {
     } catch (HadoopIllegalArgumentException e) {
       this.stop();
       throw e;
-    } catch (ServiceFailedException e) {
-      this.stop();
-      throw new IOException("Service failed to start", e);
     }
   }
 

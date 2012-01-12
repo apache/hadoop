@@ -28,3 +28,6 @@ HADOOP-7932. Make client connection retries on socket time outs configurable.
 HADOOP-7924.  FailoverController for client-based configuration (eli)
 
 HADOOP-7961. Move HA fencing to common. (eli)
+
+HADOOP-7970. HAServiceProtocol methods must throw IOException.
+(Hari Mankude via suresh).

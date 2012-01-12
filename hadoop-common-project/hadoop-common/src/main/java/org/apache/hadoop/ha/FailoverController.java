@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ha;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -51,7 +53,7 @@ public class FailoverController {
     HAServiceState toSvcState;
     try {
       toSvcState = toSvc.getServiceState();
-    } catch (Exception e) {
+    } catch (IOException e) {
       String msg = "Unable to get service state for " + toSvcName;
       LOG.error(msg, e);
       throw new FailoverFailedException(msg, e);
@@ -65,6 +67,9 @@ public class FailoverController {
     } catch (HealthCheckFailedException hce) {
       throw new FailoverFailedException(
           "Can't failover to an unhealthy service", hce);
+    } catch (IOException e) {
+      throw new FailoverFailedException(
+          "Got an io exception", e);
     }
     // TODO(HA): ask toSvc if it's capable. Eg not in SM.
   }
