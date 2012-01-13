@@ -430,6 +430,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3656. Fixed a race condition in MR AM which is failing the sort
     benchmark consistently. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3532. Modified NM to report correct http address when an ephemeral
+    web port is configured. (Bhallamudi Venkata Siva Kamesh via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
