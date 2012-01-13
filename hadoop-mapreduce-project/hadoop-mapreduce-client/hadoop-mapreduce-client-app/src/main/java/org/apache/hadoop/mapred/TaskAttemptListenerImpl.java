@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -77,6 +79,9 @@ public class TaskAttemptListenerImpl extends CompositeService
   private ConcurrentMap<WrappedJvmID, org.apache.hadoop.mapred.Task>
     jvmIDToActiveAttemptMap
       = new ConcurrentHashMap<WrappedJvmID, org.apache.hadoop.mapred.Task>();
+  private Set<WrappedJvmID> launchedJVMs = Collections
+      .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>()); 
+  
   private JobTokenSecretManager jobTokenSecretManager = null;
   
   public TaskAttemptListenerImpl(AppContext context,
@@ -412,22 +417,28 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     // Try to look up the task. We remove it directly as we don't give
     // multiple tasks to a JVM
-    org.apache.hadoop.mapred.Task task = jvmIDToActiveAttemptMap
-        .remove(wJvmID);
-    if (task != null) {
-      LOG.info("JVM with ID: " + jvmId + " given task: " + task.getTaskID());
-      jvmTask = new JvmTask(task, false);
-
-      // remove the task as it is no more needed and free up the memory
-      // Also we have already told the JVM to process a task, so it is no
-      // longer pending, and further request should ask it to exit.
-    } else {
+    if (!jvmIDToActiveAttemptMap.containsKey(wJvmID)) {
       LOG.info("JVM with ID: " + jvmId + " is invalid and will be killed.");
       jvmTask = TASK_FOR_INVALID_JVM;
+    } else {
+      if (!launchedJVMs.contains(wJvmID)) {
+        jvmTask = null;
+        LOG.info("JVM with ID: " + jvmId
+            + " asking for task before AM launch registered. Given null task");
+      } else {
+        // remove the task as it is no more needed and free up the memory.
+        // Also we have already told the JVM to process a task, so it is no
+        // longer pending, and further request should ask it to exit.
+        org.apache.hadoop.mapred.Task task =
+            jvmIDToActiveAttemptMap.remove(wJvmID);
+        launchedJVMs.remove(wJvmID);
+        LOG.info("JVM with ID: " + jvmId + " given task: " + task.getTaskID());
+        jvmTask = new JvmTask(task, false);
+      }
     }
     return jvmTask;
   }
-  
+
   @Override
   public void registerPendingTask(
       org.apache.hadoop.mapred.Task task, WrappedJvmID jvmID) {
@@ -440,13 +451,12 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public void registerLaunchedTask(
-      org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID) {
+      org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID,
+      WrappedJvmID jvmId) {
+    // The AM considers the task to be launched (Has asked the NM to launch it)
+    // The JVM will only be given a task after this registartion.
+    launchedJVMs.add(jvmId);
 
-    // The task is launched. Register this for expiry-tracking.
-
-    // Timing can cause this to happen after the real JVM launches and gets a
-    // task which is still fine as we will only be tracking for expiry a little
-    // late than usual.
     taskHeartbeatHandler.register(attemptID);
   }
 
@@ -459,7 +469,12 @@ public class TaskAttemptListenerImpl extends CompositeService
     // registration. Events are ordered at TaskAttempt, so unregistration will
     // always come after registration.
 
-    // remove the mapping if not already removed
+    // Remove from launchedJVMs before jvmIDToActiveAttemptMap to avoid
+    // synchronization issue with getTask(). getTask should be checking
+    // jvmIDToActiveAttemptMap before it checks launchedJVMs.
+ 
+    // remove the mappings if not already removed
+    launchedJVMs.remove(jvmID);
     jvmIDToActiveAttemptMap.remove(jvmID);
 
     //unregister this attempt

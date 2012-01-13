@@ -45,8 +45,9 @@ public interface TaskAttemptListener {
    * 
    * @param attemptID
    *          the id of the attempt for this JVM.
+   * @param jvmID the ID of the JVM.
    */
-  void registerLaunchedTask(TaskAttemptId attemptID);
+  void registerLaunchedTask(TaskAttemptId attemptID, WrappedJvmID jvmID);
 
   /**
    * Unregister the JVM and the attempt associated with it.  This should be 
