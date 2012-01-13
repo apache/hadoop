@@ -258,7 +258,7 @@ public class MRAppMaster extends CompositeService {
     dispatcher.register(TaskAttemptEventType.class, 
         new TaskAttemptEventDispatcher());
     dispatcher.register(TaskCleaner.EventType.class, taskCleaner);
-    
+   
     if (conf.getBoolean(MRJobConfig.MAP_SPECULATIVE, false)
         || conf.getBoolean(MRJobConfig.REDUCE_SPECULATIVE, false)) {
       //optional service to speculate on task attempts' progress
@@ -881,9 +881,31 @@ public class MRAppMaster extends CompositeService {
     }
     @Override
     public void handle(SpeculatorEvent event) {
-      if (!disabled && 
-          (conf.getBoolean(MRJobConfig.MAP_SPECULATIVE, false)
-          || conf.getBoolean(MRJobConfig.REDUCE_SPECULATIVE, false))) {
+      if (disabled) {
+        return;
+      }
+
+      TaskId tId = event.getTaskID();
+      TaskType tType = null;
+      /* event's TaskId will be null if the event type is JOB_CREATE or
+       * ATTEMPT_STATUS_UPDATE
+       */
+      if (tId != null) {
+        tType = tId.getTaskType(); 
+      }
+      boolean shouldMapSpec =
+              conf.getBoolean(MRJobConfig.MAP_SPECULATIVE, false);
+      boolean shouldReduceSpec =
+              conf.getBoolean(MRJobConfig.REDUCE_SPECULATIVE, false);
+
+      /* The point of the following is to allow the MAP and REDUCE speculative
+       * config values to be independent:
+       * IF spec-exec is turned on for maps AND the task is a map task
+       * OR IF spec-exec is turned on for reduces AND the task is a reduce task
+       * THEN call the speculator to handle the event.
+       */
+      if ( (shouldMapSpec && (tType == null || tType == TaskType.MAP))
+        || (shouldReduceSpec && (tType == null || tType == TaskType.REDUCE))) {
         // Speculator IS enabled, direct the event to there.
         speculator.handle(event);
       }
