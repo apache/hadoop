@@ -30,8 +30,6 @@ import org.apache.hadoop.hdfs.server.protocolR23Compatible.DatanodeWireProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
-import org.apache.avro.reflect.Nullable;
-
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
  * It's used to upload current load information and block reports.
@@ -107,7 +105,6 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @param failedVolumes number of failed volumes
    * @throws IOException on error
    */
-  @Nullable
   public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
                                        long capacity,
                                        long dfsUsed, long remaining,

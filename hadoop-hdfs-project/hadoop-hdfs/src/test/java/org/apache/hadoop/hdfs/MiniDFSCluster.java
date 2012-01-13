@@ -507,31 +507,6 @@ public class MiniDFSCluster {
     this.federation = federation;
     this.waitSafeMode = waitSafeMode;
     
-    // use alternate RPC engine if spec'd
-    String rpcEngineName = System.getProperty("hdfs.rpc.engine");
-    if (rpcEngineName != null && !"".equals(rpcEngineName)) {
-      
-      LOG.info("HDFS using RPCEngine: " + rpcEngineName);
-      try {
-        Class<?> rpcEngine = conf.getClassByName(rpcEngineName);
-        setRpcEngine(conf, NamenodeProtocols.class, rpcEngine);
-        setRpcEngine(conf, ClientNamenodeWireProtocol.class, rpcEngine);
-        setRpcEngine(conf, ClientDatanodeProtocolPB.class, rpcEngine);
-        setRpcEngine(conf, NamenodeProtocolPB.class, rpcEngine);
-        setRpcEngine(conf, ClientProtocol.class, rpcEngine);
-        setRpcEngine(conf, DatanodeProtocolPB.class, rpcEngine);
-        setRpcEngine(conf, RefreshAuthorizationPolicyProtocol.class, rpcEngine);
-        setRpcEngine(conf, RefreshUserMappingsProtocol.class, rpcEngine);
-        setRpcEngine(conf, GetUserMappingsProtocol.class, rpcEngine);
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException(e);
-      }
-
-      // disable service authorization, as it does not work with tunnelled RPC
-      conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
-                      false);
-    }
-    
     int replication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
