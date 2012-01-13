@@ -424,6 +424,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3625. CapacityScheduler web-ui display of queue's used capacity is broken.
     (Jason Lowe via mahadev)
 
+    MAPREDUCE-3596. Fix scheduler to handle cleaned up containers, which NMs
+    may subsequently report as running. (Vinod Kumar Vavilapalli via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

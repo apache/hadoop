@@ -205,6 +205,17 @@ public class BuilderUtils {
     return nodeId;
   }
 
+  public static ContainerStatus newContainerStatus(ContainerId containerId,
+      ContainerState containerState, String diagnostics, int exitStatus) {
+    ContainerStatus containerStatus = recordFactory
+      .newRecordInstance(ContainerStatus.class);
+    containerStatus.setState(containerState);
+    containerStatus.setContainerId(containerId);
+    containerStatus.setDiagnostics(diagnostics);
+    containerStatus.setExitStatus(exitStatus);
+    return containerStatus;
+  }
+
   public static Container newContainer(ContainerId containerId,
       NodeId nodeId, String nodeHttpAddress,
       Resource resource, Priority priority, ContainerToken containerToken) {
