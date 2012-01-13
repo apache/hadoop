@@ -47,6 +47,8 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
 
+    HADOOP-7892. IPC logs too verbose after "RpcKind" introduction (todd)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
