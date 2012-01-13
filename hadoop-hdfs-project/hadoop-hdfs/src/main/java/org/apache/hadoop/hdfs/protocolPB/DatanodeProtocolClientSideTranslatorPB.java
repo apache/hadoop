@@ -72,8 +72,8 @@ import com.google.protobuf.ServiceException;
 
 /**
  * This class is the client side translator to translate the requests made on
- * {@link DatanodeProtocolProtocol} interfaces to the RPC server implementing
- * {@link DatanodeProtocolProtocolPB}.
+ * {@link DatanodeProtocol} interfaces to the RPC server implementing
+ * {@link DatanodeProtocolPB}.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable

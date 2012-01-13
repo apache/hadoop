@@ -325,7 +325,8 @@ public interface ClientNamenodeWireProtocol extends VersionedProtocol {
    * The specification of this method matches that of
    * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String)}
    */
-  public boolean restoreFailedStorage(String arg) throws AccessControlException;
+  public boolean restoreFailedStorage(String arg) 
+      throws AccessControlException, IOException;
 
   /**
    * The specification of this method matches that of

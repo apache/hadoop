@@ -60,6 +60,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2597 ClientNameNodeProtocol in Protocol Buffers (sanjay)
 
+    HDFS-2651 ClientNameNodeProtocol Translators for Protocol Buffers (sanjay)
+
   BUG FIXES
  
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)

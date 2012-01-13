@@ -49,7 +49,7 @@ message GetServerDefaultsResponseProto {
   required FsServerDefaultsProto serverDefaults = 1;
 }
 
-enum CreateFlag {
+enum CreateFlagProto {
   CREATE = 0x01;    // Create a file
   OVERWRITE = 0x02; // Truncate/overwrite a file. Same as POSIX O_TRUNC
   APPEND = 0x04;    // Append to a file
@@ -234,14 +234,14 @@ message GetFsStatsResponseProto {
   required uint64 missing_blocks = 6;
 }
 
-enum DatanodeReportType {  // type of the datanode report
+enum DatanodeReportTypeProto {  // type of the datanode report
   ALL = 1;
-  LIVE = 3;
+  LIVE = 2;
   DEAD = 3;
 }
 
 message GetDatanodeReportRequestProto {
-  required DatanodeReportType type = 1;
+  required DatanodeReportTypeProto type = 1;
 }
 
 message GetDatanodeReportResponseProto {
@@ -256,14 +256,14 @@ message GetPreferredBlockSizeResponseProto {
   required uint64 bsize = 1;
 }
 
-enum SafeModeAction {
+enum SafeModeActionProto {
   SAFEMODE_LEAVE = 1;
   SAFEMODE_ENTER = 2;
   SAFEMODE_GET = 3;
 }
 
 message SetSafeModeRequestProto {
-  required SafeModeAction action = 1;
+  required SafeModeActionProto action = 1;
 }
 
 message SetSafeModeResponseProto {
@@ -296,14 +296,14 @@ message FinalizeUpgradeRequestProto { // no parameters
 message FinalizeUpgradeResponseProto { // void response
 }
 
-enum UpgradeAction {
+enum UpgradeActionProto {
   GET_STATUS = 1;
   DETAILED_STATUS = 2;
   FORCE_PROCEED = 3;
 }
 
 message DistributedUpgradeProgressRequestProto {
-  required UpgradeAction action = 1;
+  required UpgradeActionProto action = 1;
 }
 message DistributedUpgradeProgressResponseProto {
   required UpgradeStatusReportProto report = 1;
