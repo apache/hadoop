@@ -2,6 +2,10 @@ Hadoop MapReduce Change Log
 
 Release 0.23-PB - Unreleased
 
+  INCOMPATIBLE CHANGES
+
+    MAPREDUCE-3545. Remove Avro RPC. (suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols

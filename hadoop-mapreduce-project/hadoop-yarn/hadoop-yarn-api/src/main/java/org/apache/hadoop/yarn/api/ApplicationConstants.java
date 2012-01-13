@@ -24,7 +24,6 @@ import org.apache.hadoop.security.UserGroupInformation;
  * This is the API for the applications comprising of constants that YARN sets
  * up for the applications and the containers.
  * 
- * TODO: Should also be defined in avro/pb IDLs
  * TODO: Investigate the semantics and security of each cross-boundary refs.
  */
 public interface ApplicationConstants {
