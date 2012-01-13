@@ -164,8 +164,7 @@ public class TestResourceTrackerService {
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
 
     nodeHeartbeat = nm2.nodeHeartbeat(
-        new HashMap<ApplicationId, List<ContainerStatus>>(), true,
-        recordFactory.newRecordInstance(NodeId.class));
+      new HashMap<ApplicationId, List<ContainerStatus>>(), true);
     Assert.assertTrue(NodeAction.REBOOT.equals(nodeHeartbeat.getNodeAction()));
     checkRebootedNMCount(rm, ++initialMetricCount);
   }

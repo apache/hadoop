@@ -89,7 +89,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* set of containers that have just launched */
   private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
     new HashMap<ContainerId, ContainerStatus>();
-  
 
   /* set of containers that need to be cleaned */
   private final Set<ContainerId> containersToClean = new TreeSet<ContainerId>(
@@ -248,54 +247,38 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   @Override
-  public List<ApplicationId> pullAppsToCleanup() {
-    this.writeLock.lock();
-
-    try {
-      List<ApplicationId> lastfinishedApplications = new ArrayList<ApplicationId>();
-      lastfinishedApplications.addAll(this.finishedApplications);
-      this.finishedApplications.clear();
-      return lastfinishedApplications;
-    } finally {
-      this.writeLock.unlock();
-    }
-
-  }
-
-  @Private
-  public List<ContainerId> getContainersToCleanUp() {
+  public List<ApplicationId> getAppsToCleanup() {
     this.readLock.lock();
+
     try {
-      return new ArrayList<ContainerId>(containersToClean);
+      return new ArrayList<ApplicationId>(this.finishedApplications);
     } finally {
       this.readLock.unlock();
     }
+
   }
   
   @Override
-  public List<ContainerId> pullContainersToCleanUp() {
+  public List<ContainerId> getContainersToCleanUp() {
 
-    this.writeLock.lock();
+    this.readLock.lock();
 
     try {
-      List<ContainerId> containersToCleanUp = new ArrayList<ContainerId>();
-      containersToCleanUp.addAll(this.containersToClean);
-      this.containersToClean.clear();
-      return containersToCleanUp;
+      return new ArrayList<ContainerId>(this.containersToClean);
     } finally {
-      this.writeLock.unlock();
+      this.readLock.unlock();
     }
   };
 
   @Override
   public HeartbeatResponse getLastHeartBeatResponse() {
 
-    this.writeLock.lock();
+    this.readLock.lock();
 
     try {
       return this.latestHeartBeatResponse;
     } finally {
-      this.writeLock.unlock();
+      this.readLock.unlock();
     }
   }
 
@@ -407,14 +390,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       for (ContainerStatus remoteContainer : statusEvent.getContainers()) {
         ContainerId containerId = remoteContainer.getContainerId();
         
-        // Don't bother with containers already scheduled for cleanup,
-        // the scheduler doens't need to know any more about this container
+        // Don't bother with containers already scheduled for cleanup, or for
+        // applications already killed. The scheduler doens't need to know any
+        // more about this container
         if (rmNode.containersToClean.contains(containerId)) {
           LOG.info("Container " + containerId + " already scheduled for " +
           		"cleanup, no further processing");
           continue;
         }
-        
+        if (rmNode.finishedApplications.contains(containerId
+            .getApplicationAttemptId().getApplicationId())) {
+          LOG.info("Container " + containerId
+              + " belongs to an application that is already killed,"
+              + " no further processing");
+          continue;
+        }
+
         // Process running containers
         if (remoteContainer.getState() == ContainerState.RUNNING) {
           if (!rmNode.justLaunchedContainers.containsKey(containerId)) {
@@ -435,6 +426,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       
       rmNode.context.getDelegationTokenRenewer().updateKeepAliveApplications(
           statusEvent.getKeepAliveAppIds());
+
+      // HeartBeat processing from our end is done, as node pulls the following
+      // lists before sending status-updates. Clear data-structures
+      rmNode.containersToClean.clear();
+      rmNode.finishedApplications.clear();
+
       return RMNodeState.RUNNING;
     }
   }

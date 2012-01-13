@@ -67,16 +67,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRen
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
+import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 import org.apache.hadoop.yarn.webapp.WebApps.Builder;
-import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
-import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
-import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
 
 /**
  * The ResourceManager is the main class that is a set of components.
@@ -256,7 +256,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Private
-  public static final class SchedulerEventDispatcher extends AbstractService
+  public static class SchedulerEventDispatcher extends AbstractService
       implements EventHandler<SchedulerEvent> {
 
     private final ResourceScheduler scheduler;

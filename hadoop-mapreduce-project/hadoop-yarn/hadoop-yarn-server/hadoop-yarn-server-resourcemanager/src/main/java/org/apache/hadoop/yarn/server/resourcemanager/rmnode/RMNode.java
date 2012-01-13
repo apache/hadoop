@@ -101,9 +101,9 @@ public interface RMNode {
   
   public RMNodeState getState();
 
-  public List<ContainerId> pullContainersToCleanUp();
+  public List<ContainerId> getContainersToCleanUp();
 
-  public List<ApplicationId> pullAppsToCleanup();
+  public List<ApplicationId> getAppsToCleanup();
 
   public HeartbeatResponse getLastHeartBeatResponse();
 }

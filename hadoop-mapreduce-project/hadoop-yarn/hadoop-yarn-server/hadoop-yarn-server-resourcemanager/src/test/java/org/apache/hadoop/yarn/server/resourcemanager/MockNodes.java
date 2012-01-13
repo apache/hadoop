@@ -152,13 +152,13 @@ public class MockNodes {
       }
 
       @Override
-      public List<ApplicationId> pullAppsToCleanup() {
+      public List<ApplicationId> getAppsToCleanup() {
         // TODO Auto-generated method stub
         return null;
       }
 
       @Override
-      public List<ContainerId> pullContainersToCleanUp() {
+      public List<ContainerId> getContainersToCleanUp() {
         // TODO Auto-generated method stub
         return null;
       }
