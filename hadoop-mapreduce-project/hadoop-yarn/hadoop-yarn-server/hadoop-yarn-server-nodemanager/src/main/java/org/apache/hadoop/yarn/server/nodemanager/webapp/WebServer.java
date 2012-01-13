@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +66,9 @@ public class WebServer extends AbstractService {
       this.webApp =
           WebApps.$for("node", Context.class, this.nmContext, "ws")
               .at(bindAddress).with(getConfig()).start(this.nmWebApp);
+      int port = this.webApp.httpServer().getPort();
+      String webAddress = StringUtils.split(bindAddress, ':')[0] + ":" + port;
+      getConfig().set(YarnConfiguration.NM_WEBAPP_ADDRESS, webAddress);
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);
