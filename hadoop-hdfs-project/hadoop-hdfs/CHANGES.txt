@@ -33,6 +33,8 @@ Release 0.23-PB - Unreleased
     HDFS-2663. Optional protobuf parameters are not handled correctly.
     (suresh)
 
+    HDFS-2661. Enable protobuf RPC for DatanodeProtocol. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

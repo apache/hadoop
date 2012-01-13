@@ -168,7 +168,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements DatanodeProtocol,
       throws IOException {
     HeartbeatRequestProto req = HeartbeatRequestProto.newBuilder()
         .setRegistration(PBHelper.convert(registration)).setCapacity(capacity)
-        .setCapacity(dfsUsed).setRemaining(remaining)
+        .setDfsUsed(dfsUsed).setRemaining(remaining)
         .setBlockPoolUsed(blockPoolUsed).setXmitsInProgress(xmitsInProgress)
         .setXceiverCount(xceiverCount).setFailedVolumes(failedVolumes).build();
     HeartbeatResponseProto resp;
@@ -194,7 +194,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements DatanodeProtocol,
         .setBlockPoolId(poolId);
     if (blocks != null) {
       for (int i = 0; i < blocks.length; i++) {
-        builder.setBlocks(i, blocks[i]);
+        builder.addBlocks(blocks[i]);
       }
     }
     BlockReportRequestProto req = builder.build();
@@ -217,7 +217,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements DatanodeProtocol,
         .setBlockPoolId(poolId);
     if (receivedAndDeletedBlocks != null) {
       for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
-        builder.setBlocks(i, PBHelper.convert(receivedAndDeletedBlocks[i]));
+        builder.addBlocks(PBHelper.convert(receivedAndDeletedBlocks[i]));
       }
     }
     BlockReceivedAndDeletedRequestProto req = builder.build();
@@ -290,7 +290,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements DatanodeProtocol,
         .setNewLength(newlength).setCloseFile(closeFile)
         .setDeleteBlock(deleteblock);
     for (int i = 0; i < newtargets.length; i++) {
-      builder.setNewTaragets(i, PBHelper.convert(newtargets[i]));
+      builder.addNewTaragets(PBHelper.convert(newtargets[i]));
     }
     CommitBlockSynchronizationRequestProto req = builder.build();
     try {

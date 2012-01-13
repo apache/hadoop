@@ -60,6 +60,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
@@ -143,6 +146,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     clientProtocolServerTranslator = 
         new ClientNamenodeProtocolServerSideTranslatorR23(this);
     
+    DatanodeProtocolServerSideTranslatorPB dnProtoPbTranslator = 
+        new DatanodeProtocolServerSideTranslatorPB(this);
+    BlockingService dnProtoPbService = DatanodeProtocolService
+        .newReflectiveBlockingService(dnProtoPbTranslator);
+
     NamenodeProtocolServerSideTranslatorPB namenodeProtocolXlator = 
         new NamenodeProtocolServerSideTranslatorPB(this);
     BlockingService service = NamenodeProtocolService
@@ -161,14 +169,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
           serviceHandlerCount,
           false, conf, namesystem.getDelegationTokenSecretManager());
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
-          DatanodeProtocol.class, this);
-      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           RefreshAuthorizationPolicyProtocol.class, this);
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
           RefreshUserMappingsProtocol.class, this);
       this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE, 
           GetUserMappingsProtocol.class, this);
       DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, service,
+          serviceRpcServer);
+      DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
           serviceRpcServer);
       
       this.serviceRPCAddress = this.serviceRpcServer.getListenerAddress();
@@ -185,8 +193,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
             socAddr.getPort(), handlerCount, false, conf,
             namesystem.getDelegationTokenSecretManager());
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
-        DatanodeProtocol.class, this);
-    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         RefreshAuthorizationPolicyProtocol.class, this);
     this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
         RefreshUserMappingsProtocol.class, this);
@@ -194,7 +200,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         GetUserMappingsProtocol.class, this);
     DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, service,
         clientRpcServer);
-    
+    DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
+        clientRpcServer);
 
     // set service-level authorization security policy
     if (serviceAuthEnabled =

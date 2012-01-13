@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -518,7 +519,7 @@ public class MiniDFSCluster {
         setRpcEngine(conf, ClientDatanodeProtocolPB.class, rpcEngine);
         setRpcEngine(conf, NamenodeProtocolPB.class, rpcEngine);
         setRpcEngine(conf, ClientProtocol.class, rpcEngine);
-        setRpcEngine(conf, DatanodeProtocol.class, rpcEngine);
+        setRpcEngine(conf, DatanodeProtocolPB.class, rpcEngine);
         setRpcEngine(conf, RefreshAuthorizationPolicyProtocol.class, rpcEngine);
         setRpcEngine(conf, RefreshUserMappingsProtocol.class, rpcEngine);
         setRpcEngine(conf, GetUserMappingsProtocol.class, rpcEngine);
