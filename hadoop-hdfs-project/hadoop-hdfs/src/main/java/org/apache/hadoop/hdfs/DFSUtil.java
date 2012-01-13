@@ -649,12 +649,12 @@ public class DFSUtil {
       Configuration conf, UserGroupInformation ugi) throws IOException {
     /** 
      * Currently we have simply burnt-in support for a SINGLE
-     * protocol - protocolR23Compatible. This will be replaced
+     * protocol - protocolPB. This will be replaced
      * by a way to pick the right protocol based on the 
      * version of the target server.  
      */
-    return new org.apache.hadoop.hdfs.protocolR23Compatible.
-        ClientNamenodeProtocolTranslatorR23(nameNodeAddr, conf, ugi);
+    return new org.apache.hadoop.hdfs.protocolPB.
+        ClientNamenodeProtocolTranslatorPB(nameNodeAddr, conf, ugi);
   }
 
   /** Create a {@link NameNode} proxy */

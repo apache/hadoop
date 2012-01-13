@@ -974,6 +974,13 @@ public class PBHelper {
     if ((flag & CreateFlagProto.APPEND_VALUE) == CreateFlagProto.APPEND_VALUE) {
       result.add(CreateFlag.APPEND);
     }
+    if ((flag & CreateFlagProto.CREATE_VALUE) == CreateFlagProto.CREATE_VALUE) {
+      result.add(CreateFlag.CREATE);
+    }
+    if ((flag & CreateFlagProto.OVERWRITE_VALUE) 
+        == CreateFlagProto.OVERWRITE_VALUE) {
+      result.add(CreateFlag.OVERWRITE);
+    }
     return new EnumSetWritable<CreateFlag>(result);
   }
   
@@ -1005,7 +1012,7 @@ public class PBHelper {
   public static HdfsFileStatusProto convert(HdfsFileStatus fs) {
     if (fs == null)
       return null;
-    FileType fType = FileType.IS_DIR;;
+    FileType fType = FileType.IS_FILE;
     if (fs.isDir()) {
       fType = FileType.IS_DIR;
     } else if (fs.isSymlink()) {
@@ -1024,8 +1031,7 @@ public class PBHelper {
       setOwner(fs.getOwner()).
       setGroup(fs.getGroup()).
       setPath(ByteString.copyFrom(fs.getLocalNameInBytes()));
-    
-    if (fs.getSymlink() != null) {
+    if (fs.isSymlink())  {
       builder.setSymlink(ByteString.copyFrom(fs.getSymlinkInBytes()));
     }
     if (fs instanceof HdfsLocatedFileStatus) {
@@ -1052,7 +1058,7 @@ public class PBHelper {
     final int len = fs.length;
     HdfsFileStatus[] result = new HdfsFileStatus[len];
     for (int i = 0; i < len; ++i) {
-      PBHelper.convert(fs[i]);
+      result[i] = PBHelper.convert(fs[i]);
     }
     return result;
   }
@@ -1060,9 +1066,11 @@ public class PBHelper {
   public static DirectoryListing convert(DirectoryListingProto dl) {
     if (dl == null)
       return null;
-    return new DirectoryListing(
-        PBHelper.convert((HdfsFileStatusProto[]) 
-            dl.getPartialListingList().toArray()),
+    List<HdfsFileStatusProto> partList =  dl.getPartialListingList();
+    return new DirectoryListing( 
+        partList.isEmpty() ? new HdfsFileStatus[0] 
+          : PBHelper.convert(
+              partList.toArray(new HdfsFileStatusProto[partList.size()])),
         dl.getRemainingEntries());
   }
 
