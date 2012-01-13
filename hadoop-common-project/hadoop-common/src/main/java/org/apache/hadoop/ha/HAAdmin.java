@@ -92,7 +92,7 @@ public class HAAdmin extends Configured implements Tool {
     }
     
     HAServiceProtocol proto = getProtocol(argv[1]);
-    proto.transitionToActive();
+    HAServiceProtocolHelper.transitionToActive(proto);
     return 0;
   }
 
@@ -105,7 +105,7 @@ public class HAAdmin extends Configured implements Tool {
     }
     
     HAServiceProtocol proto = getProtocol(argv[1]);
-    proto.transitionToStandby();
+    HAServiceProtocolHelper.transitionToStandby(proto);
     return 0;
   }
 
@@ -139,7 +139,7 @@ public class HAAdmin extends Configured implements Tool {
     
     HAServiceProtocol proto = getProtocol(argv[1]);
     try {
-      proto.monitorHealth();
+      HAServiceProtocolHelper.monitorHealth(proto);
     } catch (HealthCheckFailedException e) {
       errOut.println("Health check failed: " + e.getLocalizedMessage());
       return 1;

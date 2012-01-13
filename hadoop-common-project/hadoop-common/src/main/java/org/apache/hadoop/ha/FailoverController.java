@@ -63,7 +63,7 @@ public class FailoverController {
           "Can't failover to an active service");
     }
     try {
-      toSvc.monitorHealth();
+      HAServiceProtocolHelper.monitorHealth(toSvc);
     } catch (HealthCheckFailedException hce) {
       throw new FailoverFailedException(
           "Can't failover to an unhealthy service", hce);
@@ -91,7 +91,7 @@ public class FailoverController {
 
     // Try to make fromSvc standby
     try {
-      fromSvc.transitionToStandby();
+      HAServiceProtocolHelper.transitionToStandby(fromSvc);
     } catch (ServiceFailedException sfe) {
       LOG.warn("Unable to make " + fromSvcName + " standby (" +
           sfe.getMessage() + ")");
@@ -105,7 +105,7 @@ public class FailoverController {
     boolean failed = false;
     Throwable cause = null;
     try {
-      toSvc.transitionToActive();
+      HAServiceProtocolHelper.transitionToActive(toSvc);
     } catch (ServiceFailedException sfe) {
       LOG.error("Unable to make " + toSvcName + " active (" +
           sfe.getMessage() + "). Failing back");
@@ -122,7 +122,7 @@ public class FailoverController {
     if (failed) {
       String msg = "Unable to failover to " + toSvcName;
       try {
-        fromSvc.transitionToActive();
+        HAServiceProtocolHelper.transitionToActive(fromSvc);
       } catch (ServiceFailedException sfe) {
         msg = "Failback to " + fromSvcName + " failed (" +
               sfe.getMessage() + ")";

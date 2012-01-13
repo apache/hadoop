@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocolHelper;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -1590,12 +1591,12 @@ public class MiniDFSCluster {
   
   public void transitionToActive(int nnIndex) throws IOException,
       ServiceFailedException {
-    getHaServiceClient(nnIndex).transitionToActive();
+    HAServiceProtocolHelper.transitionToActive(getHaServiceClient(nnIndex));
   }
   
   public void transitionToStandby(int nnIndex) throws IOException,
       ServiceFailedException {
-    getHaServiceClient(nnIndex).transitionToStandby();
+    HAServiceProtocolHelper.transitionToStandby(getHaServiceClient(nnIndex));
   }
   
   
