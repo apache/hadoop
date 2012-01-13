@@ -325,7 +325,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         int numReaders, int queueSizePerHandler, boolean verbose,
         SecretManager<? extends TokenIdentifier> secretManager)
         throws IOException {
-      super(bindAddress, port, RpcRequestWritable.class, numHandlers,
+      super(bindAddress, port, null, numHandlers,
           numReaders, queueSizePerHandler, conf, classNameBase(protocolImpl
               .getClass().getName()), secretManager);
       this.verbose = verbose;  

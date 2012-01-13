@@ -45,6 +45,8 @@ Release 0.23-PB - Unreleased
     HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
     consistent with WritableRpcEngine. (suresh)
 
+    HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
