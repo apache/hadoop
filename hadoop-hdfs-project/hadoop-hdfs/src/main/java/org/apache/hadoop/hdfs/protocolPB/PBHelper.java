@@ -339,16 +339,19 @@ public class PBHelper {
 
   public static CheckpointCommandProto convert(CheckpointCommand cmd) {
     return CheckpointCommandProto.newBuilder()
-        .setSignature(convert(cmd.getSignature())).build();
+        .setSignature(convert(cmd.getSignature()))
+        .setNeedToReturnImage(cmd.needToReturnImage()).build();
   }
 
   public static NamenodeCommandProto convert(NamenodeCommand cmd) {
     if (cmd instanceof CheckpointCommand) {
       return NamenodeCommandProto.newBuilder().setAction(cmd.getAction())
-          .setType(NamenodeCommandProto.Type.NamenodeCommand)
+          .setType(NamenodeCommandProto.Type.CheckPointCommand)
           .setCheckpointCmd(convert((CheckpointCommand) cmd)).build();
     }
-    return NamenodeCommandProto.newBuilder().setAction(cmd.getAction()).build();
+    return NamenodeCommandProto.newBuilder()
+        .setType(NamenodeCommandProto.Type.NamenodeCommand)
+        .setAction(cmd.getAction()).build();
   }
 
   public static BlockKey[] convertBlockKeys(List<BlockKeyProto> list) {

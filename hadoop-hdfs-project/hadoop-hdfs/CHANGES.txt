@@ -28,6 +28,8 @@ Release 0.23-PB - Unreleased
     HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
     ClientDatanodeProtocol, JournalProtocol, NamenodeProtocol. (suresh)
 
+    HDFS-2666. Fix TestBackupNode failure. (suresh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
