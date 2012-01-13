@@ -96,6 +96,9 @@ Release 0.23-PB - Unreleased
     HDFS-2687. Tests failing with ClassCastException post protobuf RPC
     changes. (suresh)
 
+    HDFS-2700. Fix failing TestDataNodeMultipleRegistrations in trunk
+    (Uma Maheswara Rao G via todd)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
