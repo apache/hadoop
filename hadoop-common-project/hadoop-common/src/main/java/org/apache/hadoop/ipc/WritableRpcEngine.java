@@ -48,17 +48,38 @@ import org.apache.hadoop.conf.*;
 public class WritableRpcEngine implements RpcEngine {
   private static final Log LOG = LogFactory.getLog(RPC.class);
   
-  static { // Register the rpcRequest deserializer for WritableRpcEngine 
-    org.apache.hadoop.ipc.Server.registerProtocolEngine(RpcKind.RPC_WRITABLE,
-        Invocation.class, new Server.WritableRpcInvoker());
-  }
-
-  
   //writableRpcVersion should be updated if there is a change
   //in format of the rpc messages.
   
   // 2L - added declared class to Invocation
-  public static final long writableRpcVersion = 2L; 
+  public static final long writableRpcVersion = 2L;
+  
+  /**
+   * Whether or not this class has been initialized.
+   */
+  private static boolean isInitialized = false;
+  
+  static { 
+    ensureInitialized();
+  }
+  
+  /**
+   * Initialize this class if it isn't already.
+   */
+  public static synchronized void ensureInitialized() {
+    if (!isInitialized) {
+      initialize();
+    }
+  }
+  
+  /**
+   * Register the rpcRequest deserializer for WritableRpcEngine
+   */
+  private static synchronized void initialize() {
+    org.apache.hadoop.ipc.Server.registerProtocolEngine(RpcKind.RPC_WRITABLE,
+        Invocation.class, new Server.WritableRpcInvoker());
+    isInitialized = true;
+  }
 
   
   /** A method invocation, including the method name and its parameters.*/

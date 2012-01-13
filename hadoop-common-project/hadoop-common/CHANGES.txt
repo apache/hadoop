@@ -50,6 +50,9 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7892. IPC logs too verbose after "RpcKind" introduction (todd)
 
+    HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
+                 initialization (atm)
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
