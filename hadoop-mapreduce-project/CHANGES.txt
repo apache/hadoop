@@ -10,6 +10,10 @@ Release 0.23-PB - Unreleased
     MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
                     process (atm)
 
+    HADOOP-7862   MR changes to work with HADOOP 7862: 
+    Move the support for multiple protocols to lower layer so that Writable,
+    PB and Avro can all use it (Sanjay)
+
 Release 0.23.1 - Unreleased
 
   NEW FEATURES                                                                    
