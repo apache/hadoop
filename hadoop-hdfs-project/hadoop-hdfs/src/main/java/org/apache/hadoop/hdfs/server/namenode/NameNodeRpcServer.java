@@ -95,6 +95,7 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ipc.WritableRpcEngine;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.AccessControlException;
@@ -161,6 +162,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         new NamenodeProtocolServerSideTranslatorPB(this);
 	  BlockingService NNPbService = NamenodeProtocolService
           .newReflectiveBlockingService(namenodeProtocolXlator);
+    
+    WritableRpcEngine.ensureInitialized();
     
     InetSocketAddress dnSocketAddr = nn.getServiceRpcServerAddress(conf);
     if (dnSocketAddr != null) {

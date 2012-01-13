@@ -91,6 +91,8 @@ Release 0.23-PB - Unreleased
     HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
     via todd)
 
+    HDFS-2694. Removal of Avro broke non-PB NN services. (atm)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
