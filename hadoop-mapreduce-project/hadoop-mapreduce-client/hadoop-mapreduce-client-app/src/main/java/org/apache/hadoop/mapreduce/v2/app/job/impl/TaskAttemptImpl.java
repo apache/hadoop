@@ -1201,7 +1201,7 @@ public abstract class TaskAttemptImpl implements
 
       // register it to TaskAttemptListener so that it can start monitoring it.
       taskAttempt.taskAttemptListener
-        .registerLaunchedTask(taskAttempt.attemptId);
+        .registerLaunchedTask(taskAttempt.attemptId, taskAttempt.jvmID);
       //TODO Resolve to host / IP in case of a local address.
       InetSocketAddress nodeHttpInetAddr =
           NetUtils.createSocketAddr(taskAttempt.nodeHttpAddress); // TODO:

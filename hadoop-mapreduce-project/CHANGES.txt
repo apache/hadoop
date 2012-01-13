@@ -427,6 +427,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3596. Fix scheduler to handle cleaned up containers, which NMs
     may subsequently report as running. (Vinod Kumar Vavilapalli via sseth)
 
+    MAPREDUCE-3656. Fixed a race condition in MR AM which is failing the sort
+    benchmark consistently. (Siddarth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
