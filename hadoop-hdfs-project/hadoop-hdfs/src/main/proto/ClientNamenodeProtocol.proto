@@ -39,7 +39,7 @@ message GetBlockLocationsRequestProto {
 }
 
 message GetBlockLocationsResponseProto {
-  required LocatedBlocksProto locations = 1;
+  optional LocatedBlocksProto locations = 1;
 }
 
 message GetServerDefaultsRequestProto { // No parameters
@@ -115,7 +115,7 @@ message AbandonBlockResponseProto { // void response
 message AddBlockRequestProto {
   required string src = 1;
   required string clientName = 2;
-  required ExtendedBlockProto previous = 3;
+  optional ExtendedBlockProto previous = 3;
   repeated DatanodeInfoProto excludeNodes = 4;
 }
 
@@ -306,7 +306,7 @@ message DistributedUpgradeProgressRequestProto {
   required UpgradeActionProto action = 1;
 }
 message DistributedUpgradeProgressResponseProto {
-  required UpgradeStatusReportProto report = 1;
+  optional UpgradeStatusReportProto report = 1;
 }
 
 message ListCorruptFileBlocksRequestProto {
@@ -330,7 +330,7 @@ message GetFileInfoRequestProto {
 }
 
 message GetFileInfoResponseProto {
-  required HdfsFileStatusProto fs = 1;
+  optional HdfsFileStatusProto fs = 1;
 }
 
 message GetFileLinkInfoRequestProto {

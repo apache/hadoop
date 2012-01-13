@@ -30,7 +30,8 @@ message ExtendedBlockProto {
   required string poolId = 1;   // Block pool id - gloablly unique across clusters
   required uint64 blockId = 2;  // the local id within a pool
   required uint64 generationStamp = 3;
-  optional uint64 numBytes = 4;  // block len does not belong in ebid - here for historical reasons
+  optional uint64 numBytes = 4 [default = 0];  // len does not belong in ebid 
+                                               // here for historical reasons
 }
 
 /**
@@ -65,12 +66,12 @@ message DatanodeInfosProto {
  */
 message DatanodeInfoProto {
   required DatanodeIDProto id = 1;
-  optional uint64 capacity = 2;
-  optional uint64 dfsUsed = 3;
-  optional uint64 remaining = 4;
-  optional uint64 blockPoolUsed = 5;
-  optional uint64 lastUpdate = 6;
-  optional uint32 xceiverCount = 7;
+  optional uint64 capacity = 2 [default = 0];
+  optional uint64 dfsUsed = 3 [default = 0];
+  optional uint64 remaining = 4 [default = 0];
+  optional uint64 blockPoolUsed = 5 [default = 0];
+  optional uint64 lastUpdate = 6 [default = 0];
+  optional uint32 xceiverCount = 7 [default = 0];
   optional string location = 8;
   optional string hostName = 9;
   enum AdminState {
@@ -79,7 +80,7 @@ message DatanodeInfoProto {
     DECOMMISSIONED = 2;
   }
 
-  optional AdminState adminState = 10;
+  optional AdminState adminState = 10 [default = NORMAL];
 }
 
 /**
@@ -162,8 +163,8 @@ message HdfsFileStatusProto {
   optional bytes symlink = 9;             // if symlink, target encoded java UTF8 
 
   // Optional fields for file
-  optional uint32 block_replication = 10; // Actually a short - only 16bits used
-  optional uint64 blocksize = 11;
+  optional uint32 block_replication = 10 [default = 0]; // only 16bits used
+  optional uint64 blocksize = 11 [default = 0];
   optional LocatedBlocksProto locations = 12;  // suppled only if asked by client
 } 
 
@@ -218,7 +219,7 @@ message NamenodeRegistrationProto {
     CHECKPOINT = 3;
   }
   required StorageInfoProto storageInfo = 3;  // Node information
-  optional NamenodeRoleProto role = 4;        // Namenode role
+  optional NamenodeRoleProto role = 4 [default = NAMENODE];        // Namenode role
 }
 
 /**
@@ -264,7 +265,7 @@ message CheckpointCommandProto {
 message BlockProto {
   required uint64 blockId = 1;
   required uint64 genStamp = 2;
-  optional uint64 numBytes = 3;
+  optional uint64 numBytes = 3 [default = 0];
 }
 
 /**
@@ -313,7 +314,7 @@ message NamespaceInfoProto {
 message BlockKeyProto {
   required uint32 keyId = 1;      // Key identifier
   required uint64 expiryDate = 2; // Expiry time in milliseconds
-  required bytes keyBytes = 3;    // Key secret
+  optional bytes keyBytes = 3;    // Key secret
 }
 
 /**

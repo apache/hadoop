@@ -30,6 +30,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2666. Fix TestBackupNode failure. (suresh)
 
+    HDFS-2663. Optional protobuf parameters are not handled correctly.
+    (suresh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
