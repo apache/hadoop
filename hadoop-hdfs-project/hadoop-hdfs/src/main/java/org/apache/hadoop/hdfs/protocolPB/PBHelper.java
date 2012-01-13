@@ -988,25 +988,15 @@ public class PBHelper {
   public static HdfsFileStatus convert(HdfsFileStatusProto fs) {
     if (fs == null)
       return null;
-    if (fs.hasLocations()) {
-      return new HdfsLocatedFileStatus(
-          fs.getLength(), fs.getFileType().equals(FileType.IS_DIR), 
-          fs.getBlockReplication(), fs.getBlocksize(),
-          fs.getModificationTime(), fs.getAccessTime(),
-          PBHelper.convert(fs.getPermission()), fs.getOwner(), fs.getGroup(), 
-          fs.getFileType().equals(FileType.IS_SYMLINK) ? 
-              fs.getSymlink().toByteArray() : null,
-          fs.getPath().toByteArray(),
-          PBHelper.convert(fs.hasLocations() ? fs.getLocations() : null));
-    }
-    return new HdfsFileStatus(
-      fs.getLength(), fs.getFileType().equals(FileType.IS_DIR), 
-      fs.getBlockReplication(), fs.getBlocksize(),
-      fs.getModificationTime(), fs.getAccessTime(),
-      PBHelper.convert(fs.getPermission()), fs.getOwner(), fs.getGroup(), 
-      fs.getFileType().equals(FileType.IS_SYMLINK) ? 
-          fs.getSymlink().toByteArray() : null,
-      fs.getPath().toByteArray());
+    return new HdfsLocatedFileStatus(
+        fs.getLength(), fs.getFileType().equals(FileType.IS_DIR), 
+        fs.getBlockReplication(), fs.getBlocksize(),
+        fs.getModificationTime(), fs.getAccessTime(),
+        PBHelper.convert(fs.getPermission()), fs.getOwner(), fs.getGroup(), 
+        fs.getFileType().equals(FileType.IS_SYMLINK) ? 
+            fs.getSymlink().toByteArray() : null,
+        fs.getPath().toByteArray(),
+        fs.hasLocations() ? PBHelper.convert(fs.getLocations()) : null);
   }
 
   public static HdfsFileStatusProto convert(HdfsFileStatus fs) {
@@ -1068,7 +1058,7 @@ public class PBHelper {
       return null;
     List<HdfsFileStatusProto> partList =  dl.getPartialListingList();
     return new DirectoryListing( 
-        partList.isEmpty() ? new HdfsFileStatus[0] 
+        partList.isEmpty() ? new HdfsLocatedFileStatus[0] 
           : PBHelper.convert(
               partList.toArray(new HdfsFileStatusProto[partList.size()])),
         dl.getRemainingEntries());
@@ -1214,7 +1204,8 @@ public class PBHelper {
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {
     if (c == null)
       return null;
-    return new CorruptFileBlocks((String[]) c.getFilesList().toArray(),
+    List<String> fileList = c.getFilesList();
+    return new CorruptFileBlocks(fileList.toArray(new String[fileList.size()]),
         c.getCookie());
   }
 

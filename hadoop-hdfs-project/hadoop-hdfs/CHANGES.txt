@@ -93,6 +93,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2694. Removal of Avro broke non-PB NN services. (atm)
 
+    HDFS-2687. Tests failing with ClassCastException post protobuf RPC
+    changes. (suresh)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
