@@ -3,6 +3,7 @@ Hadoop Change Log
 Release 0.23-PB - Unreleased
 
   NEW FEATURES                                                                    
+    HADOOP-7920. Remove Avro Rpc. (suresh)
 
     HADOOP-7773. Add support for protocol buffer based RPC engine.
     (suresh)
