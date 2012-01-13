@@ -64,6 +64,8 @@ Release 0.23-PB - Unreleased
 
     HDFS-2651 ClientNameNodeProtocol Translators for Protocol Buffers (sanjay)
 
+    HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh).
+
   BUG FIXES
  
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)
@@ -74,10 +76,10 @@ Release 0.23-PB - Unreleased
     (suresh)
 
     HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
-               reference to rpcProxyWithoutRetry (atm)
+    reference to rpcProxyWithoutRetry (atm)
 
     HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
-               via todd)
+    via todd)
 
 Release 0.23.1 - UNRELEASED
 

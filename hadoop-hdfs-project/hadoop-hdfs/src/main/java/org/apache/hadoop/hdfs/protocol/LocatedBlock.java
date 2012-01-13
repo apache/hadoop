@@ -159,7 +159,7 @@ public class LocatedBlock implements Writable {
     return lb;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     return getClass().getSimpleName() + "{" + b
         + "; getBlockSize()=" + getBlockSize()

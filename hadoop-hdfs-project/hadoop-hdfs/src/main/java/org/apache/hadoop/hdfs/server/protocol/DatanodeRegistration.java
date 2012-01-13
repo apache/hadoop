@@ -113,7 +113,7 @@ implements Writable, NodeRegistration {
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
@@ -124,7 +124,7 @@ implements Writable, NodeRegistration {
     exportedKeys.write(out);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 

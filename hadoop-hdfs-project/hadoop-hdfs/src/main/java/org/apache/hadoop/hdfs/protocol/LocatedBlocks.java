@@ -225,7 +225,6 @@ public class LocatedBlocks implements Writable {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName());
