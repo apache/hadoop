@@ -149,6 +149,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2707. HttpFS should read the hadoop-auth secret from a file instead 
     inline from the configuration. (tucu)
 
+    HDFS-2790. FSNamesystem.setTimes throws exception with wrong
+    configuration name in the message. (Arpit Gupta via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
