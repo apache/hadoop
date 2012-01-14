@@ -83,6 +83,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
 
+    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code (eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
