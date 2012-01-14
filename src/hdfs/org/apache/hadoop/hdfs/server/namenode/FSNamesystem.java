@@ -1040,7 +1040,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public synchronized void setTimes(String src, long mtime, long atime) throws IOException {
     if (!isAccessTimeSupported() && atime != -1) {
       throw new IOException("Access time for hdfs is not configured. " +
-                            " Please set dfs.support.accessTime configuration parameter.");
+                            " Please set dfs.access.time.precision configuration parameter.");
     }
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot set accesstimes  for " + src, safeMode);

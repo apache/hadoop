@@ -83,6 +83,9 @@ Release 1.1.0 - unreleased
 
     HDFS-1910. NameNode should not save fsimage twice. (shv)
 
+    HDFS-2790. FSNamesystem.setTimes throws exception with wrong
+    configuration name in the message. (Arpit Gupta via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
