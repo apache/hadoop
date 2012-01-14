@@ -103,3 +103,5 @@ HDFS-2775. Fix TestStandbyCheckpoints.testBothNodesInStandbyState failing interm
 HDFS-2766. Test for case where standby partially reads log and then performs checkpoint. (atm)
 
 HDFS-2738. FSEditLog.selectinputStreams is reading through in-progress streams even when non-in-progress are requested. (atm)
+
+HDFS-2789. TestHAAdmin.testFailover is failing (eli)

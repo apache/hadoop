@@ -26,6 +26,7 @@ import java.io.PrintStream;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -102,6 +103,7 @@ public class TestHAAdmin {
 
   @Test
   public void testFailover() throws Exception {
+    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
     assertEquals(0, runTool("-failover", "xxx", "yyy"));
   }
 
