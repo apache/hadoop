@@ -62,6 +62,8 @@ Release 0.23.1 - Unreleased
     HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead.
     (XieXianshan via harsh)
 
+    HADOOP-7975. Add LZ4 as an entry in the default codec list, missed by HADOOP-7657 (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
