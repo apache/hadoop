@@ -134,6 +134,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
    (Daryn Sharp via suresh)
 
+   HADOOP-7974. TestViewFsTrash incorrectly determines the user's home
+   directory. (harsh via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
