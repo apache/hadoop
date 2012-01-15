@@ -83,6 +83,8 @@ Trunk (unreleased changes)
 
     HADOOP-4515. Configuration#getBoolean must not be case sensitive. (Sho Shimauchi via harsh)
 
+    HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol (Sho Shimauchi via harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
