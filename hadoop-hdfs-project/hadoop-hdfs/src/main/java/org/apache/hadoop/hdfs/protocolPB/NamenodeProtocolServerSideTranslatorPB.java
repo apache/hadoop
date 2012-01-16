@@ -97,7 +97,7 @@ public class NamenodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetTransactionIdResponseProto getTransationId(RpcController unused,
+  public GetTransactionIdResponseProto getTransactionId(RpcController unused,
       GetTransactionIdRequestProto request) throws ServiceException {
     long txid;
     try {

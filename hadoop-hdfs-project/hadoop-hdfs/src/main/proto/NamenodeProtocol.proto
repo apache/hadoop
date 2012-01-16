@@ -185,7 +185,7 @@ service NamenodeProtocolService {
   /**
    * Get the transaction ID of the most recently persisted editlog record
    */
-  rpc getTransationId(GetTransactionIdRequestProto) 
+  rpc getTransactionId(GetTransactionIdRequestProto) 
       returns(GetTransactionIdResponseProto);
 
   /**
