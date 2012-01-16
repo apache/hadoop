@@ -105,3 +105,5 @@ HDFS-2766. Test for case where standby partially reads log and then performs che
 HDFS-2738. FSEditLog.selectinputStreams is reading through in-progress streams even when non-in-progress are requested. (atm)
 
 HDFS-2789. TestHAAdmin.testFailover is failing (eli)
+
+HDFS-2747. Entering safe mode after starting SBN can NPE. (Uma Maheswara Rao G via todd)

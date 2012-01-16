@@ -3774,21 +3774,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void enterSafeMode(boolean resourcesLow) throws IOException {
     writeLock();
     try {
-    // Ensure that any concurrent operations have been fully synced
-    // before entering safe mode. This ensures that the FSImage
-    // is entirely stable on disk as soon as we're in safe mode.
-    getEditLog().logSyncAll();
-    if (!isInSafeMode()) {
-      safeMode = new SafeModeInfo(resourcesLow);
-      return;
-    }
-    if (resourcesLow) {
-      safeMode.setResourcesLow();
-    }
-    safeMode.setManual();
-    getEditLog().logSyncAll();
-    NameNode.stateChangeLog.info("STATE* Safe mode is ON. " 
-                                + safeMode.getTurnOffTip());
+      // Ensure that any concurrent operations have been fully synced
+      // before entering safe mode. This ensures that the FSImage
+      // is entirely stable on disk as soon as we're in safe mode.
+      boolean isEditlogOpenForWrite = getEditLog().isOpenForWrite();
+      // Before Editlog is in OpenForWrite mode, editLogStream will be null. So,
+      // logSyncAll call can be called only when Edlitlog is in OpenForWrite mode
+      if (isEditlogOpenForWrite) {
+        getEditLog().logSyncAll();
+      }
+      if (!isInSafeMode()) {
+        safeMode = new SafeModeInfo(resourcesLow);
+        return;
+      }
+      if (resourcesLow) {
+        safeMode.setResourcesLow();
+      }
+      safeMode.setManual();
+      if (isEditlogOpenForWrite) {
+        getEditLog().logSyncAll();
+      }
+      NameNode.stateChangeLog.info("STATE* Safe mode is ON. "
+          + safeMode.getTurnOffTip());
     } finally {
       writeUnlock();
     }

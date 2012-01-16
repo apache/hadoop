@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
@@ -93,6 +94,68 @@ public class TestHASafeMode {
     nn1 = cluster.getNameNode(1);
     nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
     nn1.getNamesystem().getEditLogTailer().interrupt();
+  }
+  
+  /**
+   * Test case for enter safemode in active namenode, when it is already in startup safemode.
+   * It is a regression test for HDFS-2747.
+   */
+  @Test
+  public void testEnterSafeModeInANNShouldNotThrowNPE() throws Exception {
+    banner("Restarting active");
+    restartActive();
+    FSNamesystem namesystem = nn0.getNamesystem();
+    String status = namesystem.getSafemode();
+    assertTrue("Bad safemode status: '" + status + "'", status
+        .startsWith("Safe mode is ON."));
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    assertTrue("Failed to enter into safemode in active", namesystem
+        .isInSafeMode());
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    assertTrue("Failed to enter into safemode in active", namesystem
+        .isInSafeMode());
+  }
+
+  /**
+   * Test case for enter safemode in standby namenode, when it is already in startup safemode.
+   * It is a regression test for HDFS-2747.
+   */
+  @Test
+  public void testEnterSafeModeInSBNShouldNotThrowNPE() throws Exception {
+    banner("Starting with NN0 active and NN1 standby, creating some blocks");
+    DFSTestUtil
+        .createFile(fs, new Path("/test"), 3 * BLOCK_SIZE, (short) 3, 1L);
+    // Roll edit log so that, when the SBN restarts, it will load
+    // the namespace during startup and enter safemode.
+    nn0.getRpcServer().rollEditLog();
+    banner("Creating some blocks that won't be in the edit log");
+    DFSTestUtil.createFile(fs, new Path("/test2"), 5 * BLOCK_SIZE, (short) 3,
+        1L);
+    banner("Deleting the original blocks");
+    fs.delete(new Path("/test"), true);
+    banner("Restarting standby");
+    restartStandby();
+    FSNamesystem namesystem = nn1.getNamesystem();
+    String status = namesystem.getSafemode();
+    assertTrue("Bad safemode status: '" + status + "'", status
+        .startsWith("Safe mode is ON."));
+    NameNodeAdapter.enterSafeMode(nn1, false);
+    assertTrue("Failed to enter into safemode in standby", namesystem
+        .isInSafeMode());
+    NameNodeAdapter.enterSafeMode(nn1, false);
+    assertTrue("Failed to enter into safemode in standby", namesystem
+        .isInSafeMode());
+  }
+
+  private void restartActive() throws IOException {
+    cluster.shutdownNameNode(0);
+    // Set the safemode extension to be lengthy, so that the tests
+    // can check the safemode message after the safemode conditions
+    // have been achieved, without being racy.
+    cluster.getConfiguration(0).setInt(
+        DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 30000);
+    cluster.restartNameNode(0);
+    nn0 = cluster.getNameNode(0);
   }
   
   /**
