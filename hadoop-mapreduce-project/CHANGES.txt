@@ -481,6 +481,24 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3625. CapacityScheduler web-ui display of queue's used capacity is broken.
     (Jason Lowe via mahadev)
 
+    MAPREDUCE-3596. Fix scheduler to handle cleaned up containers, which NMs
+    may subsequently report as running. (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-3656. Fixed a race condition in MR AM which is failing the sort
+    benchmark consistently. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3532. Modified NM to report correct http address when an ephemeral
+    web port is configured. (Bhallamudi Venkata Siva Kamesh via vinodkv)
+
+    MAPREDUCE-3404. Corrected MR AM to honor speculative configuration and enable
+    speculating either maps or reduces. (Eric Payne via vinodkv)
+
+    MAPREDUCE-3649. Job End notification gives an error on calling back.
+    (Ravi Prakash via mahadev)
+
+    MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
+    via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

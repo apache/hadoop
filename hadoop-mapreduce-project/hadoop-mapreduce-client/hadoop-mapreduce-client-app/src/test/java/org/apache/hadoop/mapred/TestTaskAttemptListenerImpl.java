@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -79,21 +80,21 @@ public class TestTaskAttemptListenerImpl {
     assertNotNull(result);
     assertTrue(result.shouldDie);
 
-    // Verify ask after registration but before launch
+    // Verify ask after registration but before launch. 
+    // Don't kill, should be null.
     TaskAttemptId attemptID = mock(TaskAttemptId.class);
     Task task = mock(Task.class);
     //Now put a task with the ID
     listener.registerPendingTask(task, wid);
     result = listener.getTask(context);
-    assertNotNull(result);
-    assertFalse(result.shouldDie);
+    assertNull(result);
     // Unregister for more testing.
     listener.unregister(attemptID, wid);
 
     // Verify ask after registration and launch
     //Now put a task with the ID
     listener.registerPendingTask(task, wid);
-    listener.registerLaunchedTask(attemptID);
+    listener.registerLaunchedTask(attemptID, wid);
     verify(hbHandler).register(attemptID);
     result = listener.getTask(context);
     assertNotNull(result);

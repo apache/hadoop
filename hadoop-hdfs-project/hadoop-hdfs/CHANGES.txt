@@ -264,6 +264,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
 
+    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code (eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -326,6 +328,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2707. HttpFS should read the hadoop-auth secret from a file 
     instead inline from the configuration. (tucu)
+
+    HDFS-2790. FSNamesystem.setTimes throws exception with wrong
+    configuration name in the message. (Arpit Gupta via eli)
 
 Release 0.23.0 - 2011-11-01 
 

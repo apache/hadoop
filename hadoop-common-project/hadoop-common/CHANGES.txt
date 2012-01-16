@@ -83,6 +83,8 @@ Trunk (unreleased changes)
 
     HADOOP-4515. Configuration#getBoolean must not be case sensitive. (Sho Shimauchi via harsh)
 
+    HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol (Sho Shimauchi via harsh)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
@@ -203,6 +205,8 @@ Release 0.23.1 - Unreleased
     HADOOP-7348. Change 'addnl' in getmerge util to be a flag '-nl' instead.
     (XieXianshan via harsh)
 
+    HADOOP-7975. Add LZ4 as an entry in the default codec list, missed by HADOOP-7657 (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -268,6 +272,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
    (Daryn Sharp via suresh)
+
+   HADOOP-7974. TestViewFsTrash incorrectly determines the user's home
+   directory. (harsh via eli)
 
 Release 0.23.0 - 2011-11-01 
 

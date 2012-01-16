@@ -324,7 +324,9 @@ public class MRApp extends MRAppMaster {
         return NetUtils.createSocketAddr("localhost:54321");
       }
       @Override
-      public void registerLaunchedTask(TaskAttemptId attemptID) {}
+      public void registerLaunchedTask(TaskAttemptId attemptID,
+          WrappedJvmID jvmID) {
+      }
       @Override
       public void unregister(TaskAttemptId attemptID, WrappedJvmID jvmID) {
       }
@@ -463,6 +465,7 @@ public class MRApp extends MRAppMaster {
       return localStateMachine;
     }
 
+    @SuppressWarnings("rawtypes")
     public TestJob(JobId jobId, ApplicationAttemptId applicationAttemptId,
         Configuration conf, EventHandler eventHandler,
         TaskAttemptListener taskAttemptListener, Clock clock,

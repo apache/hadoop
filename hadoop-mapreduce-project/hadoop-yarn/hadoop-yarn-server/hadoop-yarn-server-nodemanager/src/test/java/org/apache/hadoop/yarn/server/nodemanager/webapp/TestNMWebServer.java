@@ -26,6 +26,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -71,6 +73,45 @@ public class TestNMWebServer {
   public void tearDown() {
     FileUtil.fullyDelete(testRootDir);
     FileUtil.fullyDelete(testLogDir);
+  }
+  
+  private String startNMWebAppServer(String webAddr) {
+    Context nmContext = new NodeManager.NMContext();
+    ResourceView resourceView = new ResourceView() {
+      @Override
+      public long getVmemAllocatedForContainers() {
+        return 0;
+      }
+      @Override
+      public long getPmemAllocatedForContainers() {
+        return 0;
+      }
+    };
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, testLogDir.getAbsolutePath());
+    NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
+    healthChecker.init(conf);
+    LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
+    conf.set(YarnConfiguration.NM_WEBAPP_ADDRESS, webAddr);
+    WebServer server = new WebServer(nmContext, resourceView,
+        new ApplicationACLsManager(conf), dirsHandler);
+    server.init(conf);
+    server.start();
+    String webAppAddr = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS);
+    return StringUtils.split(webAppAddr, ':')[1];
+  }
+  
+  @Test
+  public void testNMWebAppWithOutPort() throws IOException {
+    String port = startNMWebAppServer("0.0.0.0");
+    Assert.assertTrue("Port is not updated", Integer.parseInt(port) > 0);
+  }
+  
+  @Test
+  public void testNMWebAppWithEphemeralPort() throws IOException {
+    String port = startNMWebAppServer("0.0.0.0:0"); 
+    Assert.assertTrue("Port is not updated", Integer.parseInt(port) > 0);
   }
 
   @Test

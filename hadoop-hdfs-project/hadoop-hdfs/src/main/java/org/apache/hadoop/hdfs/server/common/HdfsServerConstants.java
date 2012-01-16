@@ -86,7 +86,6 @@ public final class HdfsServerConstants {
   public static int READ_TIMEOUT_EXTENSION = 5 * 1000;
   public static int WRITE_TIMEOUT = 8 * 60 * 1000;
   public static int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
-  public static int DN_KEEPALIVE_TIMEOUT = 5 * 1000;
 
   /**
    * Defines the NameNode role.
