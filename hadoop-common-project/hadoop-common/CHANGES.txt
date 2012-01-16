@@ -38,6 +38,8 @@ Release 0.23-PB - Unreleased
     HADOOP-7957. Classes deriving GetGroupsBase should be able to override 
     proxy creation. (jitendra)
 
+    HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol (Sho Shimauchi via harsh)
+
   BUG FIXES
 
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging

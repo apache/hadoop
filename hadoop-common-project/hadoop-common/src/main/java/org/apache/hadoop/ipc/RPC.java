@@ -791,7 +791,10 @@ public class RPC {
        String protocolName) {    
      Long highestVersion = 0L;
      ProtoClassProtoImpl highest = null;
- System.out.println("Size of protoMap for " + rpcKind + " =" + getProtocolImplMap(rpcKind).size());
+     if (LOG.isDebugEnabled()) {
+       LOG.debug("Size of protoMap for " + rpcKind + " ="
+           + getProtocolImplMap(rpcKind).size());
+     }
      for (Map.Entry<ProtoNameVer, ProtoClassProtoImpl> pv : 
            getProtocolImplMap(rpcKind).entrySet()) {
        if (pv.getKey().protocol.equals(protocolName)) {
