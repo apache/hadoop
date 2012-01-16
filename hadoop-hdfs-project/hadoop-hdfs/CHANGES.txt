@@ -38,6 +38,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2661. Enable protobuf RPC for DatanodeProtocol. (jitendra)
 
+    HDFS-2697. Move RefreshAuthPolicy, RefreshUserMappings, GetUserMappings 
+    protocol to protocol buffers. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

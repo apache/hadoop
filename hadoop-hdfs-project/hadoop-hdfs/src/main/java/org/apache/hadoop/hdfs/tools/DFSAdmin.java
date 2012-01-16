@@ -43,14 +43,14 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -791,13 +791,9 @@ public class DFSAdmin extends FsShell {
         conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
 
     // Create the client
-    RefreshAuthorizationPolicyProtocol refreshProtocol = 
-      (RefreshAuthorizationPolicyProtocol) 
-      RPC.getProxy(RefreshAuthorizationPolicyProtocol.class, 
-                   RefreshAuthorizationPolicyProtocol.versionID, 
-                   NameNode.getAddress(conf), getUGI(), conf,
-                   NetUtils.getSocketFactory(conf, 
-                                             RefreshAuthorizationPolicyProtocol.class));
+    RefreshAuthorizationPolicyProtocolClientSideTranslatorPB refreshProtocol = 
+        new RefreshAuthorizationPolicyProtocolClientSideTranslatorPB(
+        NameNode.getAddress(conf), getUGI(), conf);
     
     // Refresh the authorization policy in-effect
     refreshProtocol.refreshServiceAcl();
@@ -821,13 +817,9 @@ public class DFSAdmin extends FsShell {
         conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
  
     // Create the client
-    RefreshUserMappingsProtocol refreshProtocol = 
-      (RefreshUserMappingsProtocol) 
-      RPC.getProxy(RefreshUserMappingsProtocol.class, 
-          RefreshUserMappingsProtocol.versionID, 
-          NameNode.getAddress(conf), getUGI(), conf,
-          NetUtils.getSocketFactory(conf, 
-              RefreshUserMappingsProtocol.class));
+    RefreshUserMappingsProtocolClientSideTranslatorPB refreshProtocol = 
+        new RefreshUserMappingsProtocolClientSideTranslatorPB(
+        NameNode.getAddress(conf), getUGI(), conf);
 
     // Refresh the user-to-groups mappings
     refreshProtocol.refreshUserToGroupsMappings();
@@ -852,13 +844,9 @@ public class DFSAdmin extends FsShell {
         conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
 
     // Create the client
-    RefreshUserMappingsProtocol refreshProtocol = 
-      (RefreshUserMappingsProtocol) 
-      RPC.getProxy(RefreshUserMappingsProtocol.class, 
-          RefreshUserMappingsProtocol.versionID, 
-          NameNode.getAddress(conf), getUGI(), conf,
-          NetUtils.getSocketFactory(conf, 
-              RefreshUserMappingsProtocol.class));
+    RefreshUserMappingsProtocolClientSideTranslatorPB refreshProtocol = 
+        new RefreshUserMappingsProtocolClientSideTranslatorPB(
+        NameNode.getAddress(conf), getUGI(), conf);
 
     // Refresh the user-to-groups mappings
     refreshProtocol.refreshSuperUserGroupsConfiguration();
