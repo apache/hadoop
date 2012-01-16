@@ -106,9 +106,30 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3547. Added a bunch of unit tests for the the RM/NM webservices.
     (Thomas Graves via acmurthy)
 
-    MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
+    MAPREDUCE-3610. Remove use of the 'dfs.block.size' config for default block
+    size fetching. Use FS#getDefaultBlocksize instead. (Sho Shimauchi via harsh)
 
     MAPREDUCE-3478. Cannot build against ZooKeeper 3.4.0. (Tom White via mahadev)
+
+    MAPREDUCE-3528. Fixed TaskHeartBeatHandler to use a new configuration
+    for the thread loop interval separate from task-timeout configuration
+    property. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-3312. Modified MR AM to not send a stop-container request for
+    a container that isn't launched at all. (Robert Joseph Evans via vinodkv)
+
+    MAPREDUCE-3382. Enhanced MR AM to use a proxy to ping the job-end
+    notification URL. (Ravi Prakash via vinodkv)
+
+    MAPREDUCE-3299. Added AMInfo table to the MR AM job pages to list all the
+    job-attempts when AM restarts and recovers. (Jonathan Eagles via vinodkv)
+
+    MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR AM.
+    Improved the earlier patch to not to JobHistoryServer repeatedly.
+    (Anupam Seth via vinodkv)
+
+    MAPREDUCE-3553. Add support for data returned when exceptions thrown from web 
+    service apis to be in either xml or in JSON. (Thomas Graves via mahadev)
 
   OPTIMIZATIONS
 
@@ -123,6 +144,15 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3569. TaskAttemptListener holds a global lock for all
     task-updates. (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-3511. Removed a multitude of cloned/duplicate counters in the AM
+    thereby reducing the AM heap size and preventing full GCs. (vinodkv)
+
+    MAPREDUCE-3618. Fixed TaskHeartbeatHandler to not hold a global lock for all
+    task-updates. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3512. Batching JobHistory flushing to DFS so that we don't flush
+    for every event slowing down AM. (Siddarth Seth via vinodkv)
 
   BUG FIXES
     MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
@@ -372,6 +402,55 @@ Release 0.23.1 - Unreleased
     performance reasons. (vinodkv via acmurthy) 
 
     MAPREDUCE-3615. Fix some ant test failures. (Thomas Graves via sseth)
+
+    MAPREDUCE-1744. DistributedCache creates its own FileSytem instance when 
+    adding a file/archive to the path. (Dick King via tucu)
+
+    MAPREDUCE-3326. Added detailed information about queue's to the
+    CapacityScheduler web-ui. (Jason Lowe via acmurthy) 
+
+    MAPREDUCE-3548. Added more unit tests for MR AM & JHS web-services.
+    (Thomas Graves via acmurthy) 
+
+    MAPREDUCE-3617. Removed wrong default value for
+    yarn.resourcemanager.principal and yarn.nodemanager.principal. (Jonathan
+    Eagles via acmurthy) 
+
+    MAPREDUCE-3624. Remove unnecessary dependency on JDK's tools.jar. (mahadev
+    via acmurthy)
+
+    MAPREDUCE-3616. Thread pool for launching containers in MR AM not
+    expanding as expected. (vinodkv via sseth)
+
+    MAPREDUCE-3639. Fixed TokenCache to work with absent FileSystem canonical
+    service-names. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-3380. Token infrastructure for running clients which are not kerberos 
+    authenticated. (mahadev)
+
+    MAPREDUCE-3648. TestJobConf failing. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3651. TestQueueManagerRefresh fails. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3645. TestJobHistory fails. (Thomas Graves via mahadev)
+  
+    MAPREDUCE-3652. org.apache.hadoop.mapred.TestWebUIAuthorization.testWebUIAuthorization 
+    fails. (Thomas Graves via mahadev)
+
+    MAPREDUCE-3625. CapacityScheduler web-ui display of queue's used capacity is broken.
+    (Jason Lowe via mahadev)
+
+    MAPREDUCE-3596. Fix scheduler to handle cleaned up containers, which NMs
+    may subsequently report as running. (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-3656. Fixed a race condition in MR AM which is failing the sort
+    benchmark consistently. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3532. Modified NM to report correct http address when an ephemeral
+    web port is configured. (Bhallamudi Venkata Siva Kamesh via vinodkv)
+
+    MAPREDUCE-3404. Corrected MR AM to honor speculative configuration and enable
+    speculating either maps or reduces. (Eric Payne via vinodkv)
 
 Release 0.23.0 - 2011-11-01 
 

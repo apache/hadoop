@@ -78,17 +78,16 @@ public class TestViewFsTrash {
     // set up viewfs's home dir root to point to home dir root on target
     // But home dir is different on linux, mac etc.
     // Figure it out by calling home dir on target
-    
-   String homeDir = fsTarget.getHomeDirectory().toUri().getPath();
-   int indexOf2ndSlash = homeDir.indexOf('/', 1);
-   String homeDirRoot = homeDir.substring(0, indexOf2ndSlash);
-   ConfigUtil.addLink(conf, homeDirRoot,
-       fsTarget.makeQualified(new Path(homeDirRoot)).toUri()); 
-   ConfigUtil.setHomeDirConf(conf, homeDirRoot);
-   Log.info("Home dir base " + homeDirRoot);
-    
+
+    String homeDirRoot = fsTarget.getHomeDirectory()
+        .getParent().toUri().getPath();
+    ConfigUtil.addLink(conf, homeDirRoot,
+        fsTarget.makeQualified(new Path(homeDirRoot)).toUri());
+    ConfigUtil.setHomeDirConf(conf, homeDirRoot);
+    Log.info("Home dir base " + homeDirRoot);
+
     fsView = ViewFileSystemTestSetup.setupForViewFs(conf, fsTarget);
-    
+
     // set working dir so that relative paths
     //fsView.setWorkingDirectory(new Path(fsTarget.getWorkingDirectory().toUri().getPath()));
     conf.set("fs.defaultFS", FsConstants.VIEWFS_URI.toString());

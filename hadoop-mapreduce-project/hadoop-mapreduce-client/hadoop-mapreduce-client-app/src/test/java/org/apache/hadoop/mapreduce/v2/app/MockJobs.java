@@ -1,41 +1,43 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.ShuffleHandler;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -48,7 +50,6 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -63,33 +64,38 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 public class MockJobs extends MockApps {
-  static final Iterator<JobState> JOB_STATES = Iterators.cycle(
-      JobState.values());
-  static final Iterator<TaskState> TASK_STATES = Iterators.cycle(
-      TaskState.values());
-  static final Iterator<TaskAttemptState> TASK_ATTEMPT_STATES = Iterators.cycle(
-      TaskAttemptState.values());
-  static final Iterator<TaskType> TASK_TYPES = Iterators.cycle(
-      TaskType.values());
-  static final Iterator<JobCounter> JOB_COUNTERS = Iterators.cycle(
-      JobCounter.values());
-  static final Iterator<FileSystemCounter> FS_COUNTERS = Iterators.cycle(
-      FileSystemCounter.values());
-  static final Iterator<TaskCounter> TASK_COUNTERS = Iterators.cycle(
-      TaskCounter.values());
+  static final Iterator<JobState> JOB_STATES = Iterators.cycle(JobState
+      .values());
+  static final Iterator<TaskState> TASK_STATES = Iterators.cycle(TaskState
+      .values());
+  static final Iterator<TaskAttemptState> TASK_ATTEMPT_STATES = Iterators
+      .cycle(TaskAttemptState.values());
+  static final Iterator<TaskType> TASK_TYPES = Iterators.cycle(TaskType
+      .values());
+  static final Iterator<JobCounter> JOB_COUNTERS = Iterators.cycle(JobCounter
+      .values());
+  static final Iterator<FileSystemCounter> FS_COUNTERS = Iterators
+      .cycle(FileSystemCounter.values());
+  static final Iterator<TaskCounter> TASK_COUNTERS = Iterators
+      .cycle(TaskCounter.values());
   static final Iterator<String> FS_SCHEMES = Iterators.cycle("FILE", "HDFS",
       "LAFS", "CEPH");
-  static final Iterator<String> USER_COUNTER_GROUPS = Iterators.cycle(
-      "com.company.project.subproject.component.subcomponent.UserDefinedSpecificSpecialTask$Counters",
-      "PigCounters");
-  static final Iterator<String> USER_COUNTERS = Iterators.cycle(
-      "counter1", "counter2", "counter3");
+  static final Iterator<String> USER_COUNTER_GROUPS = Iterators
+      .cycle(
+          "com.company.project.subproject.component.subcomponent.UserDefinedSpecificSpecialTask$Counters",
+          "PigCounters");
+  static final Iterator<String> USER_COUNTERS = Iterators.cycle("counter1",
+      "counter2", "counter3");
   static final Iterator<Phase> PHASES = Iterators.cycle(Phase.values());
   static final Iterator<String> DIAGS = Iterators.cycle(
       "Error: java.lang.OutOfMemoryError: Java heap space",
       "Lost task tracker: tasktracker.domain/127.0.0.1:40879");
-  
+
   public static final String NM_HOST = "localhost";
   public static final int NM_PORT = 1234;
   public static final int NM_HTTP_PORT = 9999;
@@ -101,8 +107,7 @@ public class MockJobs extends MockApps {
   }
 
   public static Map<JobId, Job> newJobs(ApplicationId appID, int numJobsPerApp,
-                                        int numTasksPerJob,
-                                        int numAttemptsPerTask) {
+      int numTasksPerJob, int numAttemptsPerTask) {
     Map<JobId, Job> map = Maps.newHashMap();
     for (int j = 0; j < numJobsPerApp; ++j) {
       Job job = newJob(appID, j, numTasksPerJob, numAttemptsPerTask);
@@ -121,10 +126,12 @@ public class MockJobs extends MockApps {
   public static JobReport newJobReport(JobId id) {
     JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(id);
-    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * DT));
-    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * DT) + 1);
-    report.setMapProgress((float)Math.random());
-    report.setReduceProgress((float)Math.random());
+    report
+        .setStartTime(System.currentTimeMillis() - (int) (Math.random() * DT));
+    report.setFinishTime(System.currentTimeMillis()
+        + (int) (Math.random() * DT) + 1);
+    report.setMapProgress((float) Math.random());
+    report.setReduceProgress((float) Math.random());
     report.setJobState(JOB_STATES.next());
     return report;
   }
@@ -132,10 +139,12 @@ public class MockJobs extends MockApps {
   public static TaskReport newTaskReport(TaskId id) {
     TaskReport report = Records.newRecord(TaskReport.class);
     report.setTaskId(id);
-    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * DT));
-    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * DT) + 1);
-    report.setProgress((float)Math.random());
-    report.setCounters(newCounters());
+    report
+        .setStartTime(System.currentTimeMillis() - (int) (Math.random() * DT));
+    report.setFinishTime(System.currentTimeMillis()
+        + (int) (Math.random() * DT) + 1);
+    report.setProgress((float) Math.random());
+    report.setCounters(TypeConverter.toYarn(newCounters()));
     report.setTaskState(TASK_STATES.next());
     return report;
   }
@@ -143,41 +152,41 @@ public class MockJobs extends MockApps {
   public static TaskAttemptReport newTaskAttemptReport(TaskAttemptId id) {
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     report.setTaskAttemptId(id);
-    report.setStartTime(System.currentTimeMillis() - (int)(Math.random() * DT));
-    report.setFinishTime(System.currentTimeMillis() + (int)(Math.random() * DT) + 1);
+    report
+        .setStartTime(System.currentTimeMillis() - (int) (Math.random() * DT));
+    report.setFinishTime(System.currentTimeMillis()
+        + (int) (Math.random() * DT) + 1);
     report.setPhase(PHASES.next());
     report.setTaskAttemptState(TASK_ATTEMPT_STATES.next());
-    report.setProgress((float)Math.random());
-    report.setCounters(newCounters());
+    report.setProgress((float) Math.random());
+    report.setCounters(TypeConverter.toYarn(newCounters()));
     return report;
   }
 
-  @SuppressWarnings("deprecation")
   public static Counters newCounters() {
-    org.apache.hadoop.mapred.Counters hc =
-        new org.apache.hadoop.mapred.Counters();
+    Counters hc = new Counters();
     for (JobCounter c : JobCounter.values()) {
-      hc.findCounter(c).setValue((long)(Math.random() * 1000));
+      hc.findCounter(c).setValue((long) (Math.random() * 1000));
     }
     for (TaskCounter c : TaskCounter.values()) {
-      hc.findCounter(c).setValue((long)(Math.random() * 1000));
+      hc.findCounter(c).setValue((long) (Math.random() * 1000));
     }
     int nc = FileSystemCounter.values().length * 4;
     for (int i = 0; i < nc; ++i) {
       for (FileSystemCounter c : FileSystemCounter.values()) {
-        hc.findCounter(FS_SCHEMES.next(), c).
-            setValue((long)(Math.random() * DT));
+        hc.findCounter(FS_SCHEMES.next(), c).setValue(
+            (long) (Math.random() * DT));
       }
     }
     for (int i = 0; i < 2 * 3; ++i) {
-      hc.findCounter(USER_COUNTER_GROUPS.next(), USER_COUNTERS.next()).
-          setValue((long)(Math.random() * 100000));
+      hc.findCounter(USER_COUNTER_GROUPS.next(), USER_COUNTERS.next())
+          .setValue((long) (Math.random() * 100000));
     }
-    return TypeConverter.toYarn(hc);
+    return hc;
   }
 
   public static Map<TaskAttemptId, TaskAttempt> newTaskAttempts(TaskId tid,
-                                                                int m) {
+      int m) {
     Map<TaskAttemptId, TaskAttempt> map = Maps.newHashMap();
     for (int i = 0; i < m; ++i) {
       TaskAttempt ta = newTaskAttempt(tid, i);
@@ -221,7 +230,10 @@ public class MockJobs extends MockApps {
 
       @Override
       public Counters getCounters() {
-        return report.getCounters();
+        if (report != null && report.getCounters() != null) {
+          return new Counters(TypeConverter.fromYarn(report.getCounters()));
+        }
+        return null;
       }
 
       @Override
@@ -237,9 +249,10 @@ public class MockJobs extends MockApps {
       @Override
       public boolean isFinished() {
         switch (report.getTaskAttemptState()) {
-          case SUCCEEDED:
-          case FAILED:
-          case KILLED: return true;
+        case SUCCEEDED:
+        case FAILED:
+        case KILLED:
+          return true;
         }
         return false;
       }
@@ -247,8 +260,8 @@ public class MockJobs extends MockApps {
       @Override
       public ContainerId getAssignedContainerID() {
         ContainerId id = Records.newRecord(ContainerId.class);
-        ApplicationAttemptId appAttemptId = 
-            Records.newRecord(ApplicationAttemptId.class);
+        ApplicationAttemptId appAttemptId = Records
+            .newRecord(ApplicationAttemptId.class);
         appAttemptId.setApplicationId(taid.getTaskId().getJobId().getAppId());
         appAttemptId.setAttemptId(0);
         id.setApplicationAttemptId(appAttemptId);
@@ -280,10 +293,10 @@ public class MockJobs extends MockApps {
         return 0;
       }
 
-	@Override
-	public String getNodeRackName() {
-		return "/default-rack";
-	}
+      @Override
+      public String getNodeRackName() {
+        return "/default-rack";
+      }
     };
   }
 
@@ -316,7 +329,8 @@ public class MockJobs extends MockApps {
 
       @Override
       public Counters getCounters() {
-        return report.getCounters();
+        return new Counters(
+          TypeConverter.fromYarn(report.getCounters()));
       }
 
       @Override
@@ -342,9 +356,10 @@ public class MockJobs extends MockApps {
       @Override
       public boolean isFinished() {
         switch (report.getTaskState()) {
-          case SUCCEEDED:
-          case KILLED:
-          case FAILED: return true;
+        case SUCCEEDED:
+        case KILLED:
+        case FAILED:
+          return true;
         }
         return false;
       }
@@ -361,8 +376,9 @@ public class MockJobs extends MockApps {
     };
   }
 
-  public static Counters getCounters(Collection<Task> tasks) {
-    Counters counters = JobImpl.newCounters();
+  public static Counters getCounters(
+      Collection<Task> tasks) {
+    Counters counters = new Counters();
     return JobImpl.incrTaskCounters(counters, tasks);
   }
 
@@ -398,12 +414,27 @@ public class MockJobs extends MockApps {
   }
 
   public static Job newJob(ApplicationId appID, int i, int n, int m) {
+    return newJob(appID, i, n, m, null);
+  }
+
+  public static Job newJob(ApplicationId appID, int i, int n, int m, Path confFile) {
     final JobId id = newJobID(appID, i);
     final String name = newJobName();
     final JobReport report = newJobReport(id);
     final Map<TaskId, Task> tasks = newTasks(id, n, m);
     final TaskCount taskCount = getTaskCount(tasks.values());
-    final Counters counters = getCounters(tasks.values());
+    final Counters counters = getCounters(tasks
+      .values());
+    final Path configFile = confFile;
+
+    Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
+    Configuration conf = new Configuration();
+    conf.set(JobACL.VIEW_JOB.getAclName(), "testuser");
+    conf.setBoolean(MRConfig.MR_ACLS_ENABLED, true);
+
+    JobACLsManager aclsManager = new JobACLsManager(conf);
+    tmpJobACLs = aclsManager.constructJobACLs(conf);
+    final Map<JobACL, AccessControlList> jobACLs = tmpJobACLs;
     return new Job() {
       @Override
       public JobId getID() {
@@ -431,7 +462,7 @@ public class MockJobs extends MockApps {
       }
 
       @Override
-      public Counters getCounters() {
+      public Counters getAllCounters() {
         return counters;
       }
 
@@ -483,7 +514,7 @@ public class MockJobs extends MockApps {
 
       @Override
       public List<String> getDiagnostics() {
-        return Collections.<String>emptyList();
+        return Collections.<String> emptyList();
       }
 
       @Override
@@ -504,12 +535,12 @@ public class MockJobs extends MockApps {
 
       @Override
       public Path getConfFile() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        return configFile;
       }
 
       @Override
       public Map<JobACL, AccessControlList> getJobACLs() {
-        return Collections.<JobACL, AccessControlList>emptyMap();
+        return jobACLs;
       }
 
       @Override
@@ -521,11 +552,10 @@ public class MockJobs extends MockApps {
       }
     };
   }
-  
+
   private static AMInfo createAMInfo(int attempt) {
-    ApplicationAttemptId appAttemptId =
-        BuilderUtils.newApplicationAttemptId(
-            BuilderUtils.newApplicationId(100, 1), attempt);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+        BuilderUtils.newApplicationId(100, 1), attempt);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
     return MRBuilderUtils.newAMInfo(appAttemptId, System.currentTimeMillis(),
         containerId, NM_HOST, NM_PORT, NM_HTTP_PORT);

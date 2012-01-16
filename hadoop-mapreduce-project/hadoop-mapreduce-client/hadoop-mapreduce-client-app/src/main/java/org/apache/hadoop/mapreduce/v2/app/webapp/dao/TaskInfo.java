@@ -24,6 +24,7 @@ import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -39,7 +40,7 @@ public class TaskInfo {
   protected long elapsedTime;
   protected float progress;
   protected String id;
-  protected String state;
+  protected TaskState state;
   protected String type;
   protected String successfulAttempt;
 
@@ -62,7 +63,7 @@ public class TaskInfo {
     if (this.elapsedTime == -1) {
       this.elapsedTime = 0;
     }
-    this.state = report.getTaskState().toString();
+    this.state = report.getTaskState();
     this.progress = report.getProgress() * 100;
     this.id = MRApps.toString(task.getID());
     this.taskNum = task.getID().getId();
@@ -79,7 +80,7 @@ public class TaskInfo {
   }
 
   public String getState() {
-    return this.state;
+    return this.state.toString();
   }
 
   public String getId() {

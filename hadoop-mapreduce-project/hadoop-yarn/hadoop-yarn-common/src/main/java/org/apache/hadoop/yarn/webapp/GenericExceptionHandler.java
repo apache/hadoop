@@ -19,12 +19,9 @@ package org.apache.hadoop.yarn.webapp;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Map;
-import java.util.TreeMap;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
@@ -33,19 +30,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.mortbay.util.ajax.JSON;
 
 import com.google.inject.Singleton;
 
 /**
- * Handle webservices jersey exceptions and create json response in the format:
- * { "RemoteException" :
- *   {
- *     "exception" : <exception type>,
- *     "javaClassName" : <classname of exception>,
- *     "message" : <error message from exception>
- *   }
- * }
+ * Handle webservices jersey exceptions and create json or xml response
+ * with the ExceptionData.
  */
 @Singleton
 @Provider
@@ -100,16 +90,11 @@ public class GenericExceptionHandler implements ExceptionMapper<Exception> {
       s = Response.Status.INTERNAL_SERVER_ERROR;
     }
 
-    // convert to json
-    final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("exception", e.getClass().getSimpleName());
-    m.put("message", e.getMessage());
-    m.put("javaClassName", e.getClass().getName());
-    final Map<String, Object> m2 = new TreeMap<String, Object>();
-    m2.put(RemoteException.class.getSimpleName(), m);
-    final String js = JSON.toString(m2);
+    // let jaxb handle marshalling data out in the same format requested
+    RemoteExceptionData exception = new RemoteExceptionData(e.getClass().getSimpleName(),
+       e.getMessage(), e.getClass().getName());
 
-    return Response.status(s).type(MediaType.APPLICATION_JSON).entity(js)
+    return Response.status(s).entity(exception)
         .build();
   }
 }

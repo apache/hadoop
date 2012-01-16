@@ -54,7 +54,6 @@
       <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>
-        <version>1.5.3</version>
         <executions>
           <execution>
             <phase>generate-sources</phase>

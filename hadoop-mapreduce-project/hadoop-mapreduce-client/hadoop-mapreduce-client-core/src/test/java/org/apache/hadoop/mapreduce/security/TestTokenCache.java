@@ -130,7 +130,7 @@ public class TestTokenCache {
   private FileSystem setupMultiFs(final FileSystem singleFs,
       final String renewer, final Credentials credentials) throws Exception {
     FileSystem mockFs = mock(FileSystem.class);
-    when(mockFs.getCanonicalServiceName()).thenReturn("multifs");
+    when(mockFs.getCanonicalServiceName()).thenReturn(null);
     when(mockFs.getUri()).thenReturn(new URI("multifs:///"));
 
     when(mockFs.getDelegationTokens(any(String.class))).thenThrow(

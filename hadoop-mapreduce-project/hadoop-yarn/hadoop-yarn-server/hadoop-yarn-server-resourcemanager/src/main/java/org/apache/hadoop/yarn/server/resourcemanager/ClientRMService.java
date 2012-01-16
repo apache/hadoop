@@ -1,20 +1,20 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
@@ -28,12 +28,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
@@ -43,6 +46,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
@@ -53,8 +58,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -67,6 +72,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -78,6 +85,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 
 /**
@@ -97,18 +105,22 @@ public class ClientRMService extends AbstractService implements
 
   private String clientServiceBindAddress;
   private Server server;
+  private RMDelegationTokenSecretManager rmDTSecretManager;
+
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   InetSocketAddress clientBindAddress;
 
   private final ApplicationACLsManager applicationsACLsManager;
-  
+
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
-      RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager) {
+      RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
+      RMDelegationTokenSecretManager rmDTSecretManager) {
     super(ClientRMService.class.getName());
     this.scheduler = scheduler;
     this.rmContext = rmContext;
     this.rmAppManager = rmAppManager;
     this.applicationsACLsManager = applicationACLsManager;
+    this.rmDTSecretManager = rmDTSecretManager;
   }
   
   @Override
@@ -118,21 +130,19 @@ public class ClientRMService extends AbstractService implements
           YarnConfiguration.DEFAULT_RM_ADDRESS);
     clientBindAddress =
       NetUtils.createSocketAddr(clientServiceBindAddress,
-        YarnConfiguration.DEFAULT_RM_PORT,
-        YarnConfiguration.RM_ADDRESS);
+          YarnConfiguration.DEFAULT_RM_PORT,
+          YarnConfiguration.RM_ADDRESS);
     super.init(conf);
   }
   
   @Override
   public void start() {
-    // All the clients to appsManager are supposed to be authenticated via
-    // Kerberos if security is enabled, so no secretManager.
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =   
       rpc.getServer(ClientRMProtocol.class, this,
             clientBindAddress,
-            conf, null,
+            conf, this.rmDTSecretManager,
             conf.getInt(YarnConfiguration.RM_CLIENT_THREAD_COUNT, 
                 YarnConfiguration.DEFAULT_RM_CLIENT_THREAD_COUNT));
     
@@ -421,6 +431,49 @@ public class ClientRMService extends AbstractService implements
       recordFactory.newRecordInstance(GetQueueUserAclsInfoResponse.class);
     response.setUserAclsInfoList(scheduler.getQueueUserAclInfo());
     return response;
+  }
+
+
+  @Override
+  public GetDelegationTokenResponse getDelegationToken(
+      GetDelegationTokenRequest request) throws YarnRemoteException {
+    try {
+
+      // Verify that the connection is kerberos authenticated
+      AuthenticationMethod authMethod = UserGroupInformation
+        .getRealAuthenticationMethod(UserGroupInformation.getCurrentUser());
+      if (UserGroupInformation.isSecurityEnabled()
+          && (authMethod != AuthenticationMethod.KERBEROS)) {
+        throw new IOException(
+          "Delegation Token can be issued only with kerberos authentication");
+      }
+
+      GetDelegationTokenResponse response =
+          recordFactory.newRecordInstance(GetDelegationTokenResponse.class);
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      Text owner = new Text(ugi.getUserName());
+      Text realUser = null;
+      if (ugi.getRealUser() != null) {
+        realUser = new Text(ugi.getRealUser().getUserName());
+      }
+      RMDelegationTokenIdentifier tokenIdentifier =
+          new RMDelegationTokenIdentifier(owner, new Text(request.getRenewer()), 
+              realUser);
+      Token<RMDelegationTokenIdentifier> realRMDTtoken =
+          new Token<RMDelegationTokenIdentifier>(tokenIdentifier,
+              this.rmDTSecretManager);
+      response.setRMDelegationToken(
+          BuilderUtils.newDelegationToken(
+              realRMDTtoken.getIdentifier(),
+              realRMDTtoken.getKind().toString(),
+              realRMDTtoken.getPassword(),
+              clientBindAddress.getAddress().getHostAddress() + ":"
+              + clientBindAddress.getPort()
+              ));
+      return response;
+    } catch(IOException io) {
+      throw RPCUtil.getRemoteException(io);
+    }
   }
 
   void refreshServiceAcls(Configuration configuration, 

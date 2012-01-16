@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
@@ -40,6 +42,7 @@ import org.apache.hadoop.yarn.service.AbstractService;
  * not hear from it for a long time.
  * 
  */
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class TaskHeartbeatHandler extends AbstractService {
 
   private static final Log LOG = LogFactory.getLog(TaskHeartbeatHandler.class);
@@ -48,24 +51,29 @@ public class TaskHeartbeatHandler extends AbstractService {
   //received from a task.
   private Thread lostTaskCheckerThread;
   private volatile boolean stopped;
-  private int taskTimeOut = 5*60*1000;//5 mins
+  private int taskTimeOut = 5 * 60 * 1000;// 5 mins
+  private int taskTimeOutCheckInterval = 30 * 1000; // 30 seconds.
 
   private final EventHandler eventHandler;
   private final Clock clock;
 
-  private Map<TaskAttemptId, Long> runningAttempts 
-    = new HashMap<TaskAttemptId, Long>();
+  private ConcurrentMap<TaskAttemptId, Long> runningAttempts;
 
-  public TaskHeartbeatHandler(EventHandler eventHandler, Clock clock) {
+  public TaskHeartbeatHandler(EventHandler eventHandler, Clock clock,
+      int numThreads) {
     super("TaskHeartbeatHandler");
     this.eventHandler = eventHandler;
     this.clock = clock;
+    runningAttempts =
+      new ConcurrentHashMap<TaskAttemptId, Long>(16, 0.75f, numThreads);
   }
 
   @Override
   public void init(Configuration conf) {
-   super.init(conf);
-   taskTimeOut = conf.getInt("mapreduce.task.timeout", 5*60*1000);
+    super.init(conf);
+    taskTimeOut = conf.getInt(MRJobConfig.TASK_TIMEOUT, 5 * 60 * 1000);
+    taskTimeOutCheckInterval =
+        conf.getInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 30 * 1000);
   }
 
   @Override
@@ -83,18 +91,17 @@ public class TaskHeartbeatHandler extends AbstractService {
     super.stop();
   }
 
-  public synchronized void receivedPing(TaskAttemptId attemptID) {
-    //only put for the registered attempts
-    if (runningAttempts.containsKey(attemptID)) {
-      runningAttempts.put(attemptID, clock.getTime());
-    }
+  public void receivedPing(TaskAttemptId attemptID) {
+  //only put for the registered attempts
+    //TODO throw an exception if the task isn't registered.
+    runningAttempts.replace(attemptID, clock.getTime());
   }
 
-  public synchronized void register(TaskAttemptId attemptID) {
+  public void register(TaskAttemptId attemptID) {
     runningAttempts.put(attemptID, clock.getTime());
   }
 
-  public synchronized void unregister(TaskAttemptId attemptID) {
+  public void unregister(TaskAttemptId attemptID) {
     runningAttempts.remove(attemptID);
   }
 
@@ -103,36 +110,40 @@ public class TaskHeartbeatHandler extends AbstractService {
     @Override
     public void run() {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
-        synchronized (TaskHeartbeatHandler.this) {
-          Iterator<Map.Entry<TaskAttemptId, Long>> iterator = 
+        Iterator<Map.Entry<TaskAttemptId, Long>> iterator =
             runningAttempts.entrySet().iterator();
 
-          //avoid calculating current time everytime in loop
-          long currentTime = clock.getTime();
+        // avoid calculating current time everytime in loop
+        long currentTime = clock.getTime();
 
-          while (iterator.hasNext()) {
-            Map.Entry<TaskAttemptId, Long> entry = iterator.next();
-            if (currentTime > entry.getValue() + taskTimeOut) {
-              //task is lost, remove from the list and raise lost event
+        while (iterator.hasNext()) {
+          Map.Entry<TaskAttemptId, Long> entry = iterator.next();
+          if (currentTime > entry.getValue() + taskTimeOut) {
+
+            //In case the iterator isn't picking up the latest.
+            // Extra lookup outside of the iterator - but only if the task
+            // is considered to be timed out.
+            Long taskTime = runningAttempts.get(entry.getKey());
+            if (taskTime != null && currentTime > taskTime + taskTimeOut) {
+              // task is lost, remove from the list and raise lost event
               iterator.remove();
-              eventHandler.handle(
-                  new TaskAttemptDiagnosticsUpdateEvent(entry.getKey(),
-                      "AttemptID:" + entry.getKey().toString() + 
-                      " Timed out after " + taskTimeOut/1000 + " secs"));
-              eventHandler.handle(new TaskAttemptEvent(entry
-                  .getKey(), TaskAttemptEventType.TA_TIMED_OUT));
+              eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(entry
+                  .getKey(), "AttemptID:" + entry.getKey().toString()
+                  + " Timed out after " + taskTimeOut / 1000 + " secs"));
+              eventHandler.handle(new TaskAttemptEvent(entry.getKey(),
+                  TaskAttemptEventType.TA_TIMED_OUT));
             }
+
           }
         }
         try {
-          Thread.sleep(taskTimeOut);
+          Thread.sleep(taskTimeOutCheckInterval);
         } catch (InterruptedException e) {
           LOG.info("TaskHeartbeatHandler thread interrupted");
           break;
         }
       }
     }
-    
   }
 
 }

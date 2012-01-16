@@ -167,6 +167,23 @@ Release 0.23.1 - UNRELEASED
     HDFS-2710. Add HDFS tests related to HADOOP-7933. (Siddarth Seth via
     suresh)
 
+    HDFS-2349. Corruption detected during block transfers between DNs
+               should log a WARN instead of INFO. (harsh)
+
+    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
+
+    HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
+ 
+    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
+
+    HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
+ 
+    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
+
+    HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
+
+    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code (eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -230,6 +247,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2707. HttpFS should read the hadoop-auth secret from a file instead 
     inline from the configuration. (tucu)
+
+    HDFS-2790. FSNamesystem.setTimes throws exception with wrong
+    configuration name in the message. (Arpit Gupta via eli)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
@@ -41,6 +42,7 @@ public class JobHistoryServer extends CompositeService {
   private HistoryContext historyContext;
   private HistoryClientService clientService;
   private JobHistory jobHistoryService;
+  private JHSDelegationTokenSecretManager jhsDTSecretManager;
 
   public JobHistoryServer() {
     super(JobHistoryServer.class.getName());
@@ -56,17 +58,52 @@ public class JobHistoryServer extends CompositeService {
     }
     jobHistoryService = new JobHistory();
     historyContext = (HistoryContext)jobHistoryService;
-    clientService = new HistoryClientService(historyContext);
+    this.jhsDTSecretManager = createJHSSecretManager(conf);
+    clientService = new HistoryClientService(historyContext, 
+        this.jhsDTSecretManager);
     addService(jobHistoryService);
     addService(clientService);
     super.init(config);
   }
 
+  protected JHSDelegationTokenSecretManager createJHSSecretManager(
+      Configuration conf) {
+    long secretKeyInterval = 
+        conf.getLong(MRConfig.DELEGATION_KEY_UPDATE_INTERVAL_KEY, 
+                     MRConfig.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
+      long tokenMaxLifetime =
+        conf.getLong(MRConfig.DELEGATION_TOKEN_MAX_LIFETIME_KEY,
+                     MRConfig.DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
+      long tokenRenewInterval =
+        conf.getLong(MRConfig.DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 
+                     MRConfig.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
+      
+    return new JHSDelegationTokenSecretManager(secretKeyInterval, 
+        tokenMaxLifetime, tokenRenewInterval, 3600000);
+  }
+  
   protected void doSecureLogin(Configuration conf) throws IOException {
     SecurityUtil.login(conf, JHAdminConfig.MR_HISTORY_KEYTAB,
         JHAdminConfig.MR_HISTORY_PRINCIPAL);
   }
 
+  @Override
+  public void start() {
+    try {
+      jhsDTSecretManager.startThreads();
+    } catch(IOException io) {
+      LOG.error("Error while starting the Secret Manager threads", io);
+      throw new RuntimeException(io);
+    }
+    super.start();
+  }
+  
+  @Override
+  public void stop() {
+    jhsDTSecretManager.stopThreads();
+    super.stop();
+  }
+  
   public static void main(String[] args) {
     StringUtils.startupShutdownMessage(JobHistoryServer.class, args, LOG);
     try {

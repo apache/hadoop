@@ -30,6 +30,8 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
@@ -123,28 +125,24 @@ public class TestRPCFactories {
     @Override
     public GetJobReportResponse getJobReport(GetJobReportRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetTaskReportResponse getTaskReport(GetTaskReportRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetTaskAttemptReportResponse getTaskAttemptReport(
         GetTaskAttemptReportRequest request) throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetCountersResponse getCounters(GetCountersRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
@@ -152,51 +150,49 @@ public class TestRPCFactories {
     public GetTaskAttemptCompletionEventsResponse getTaskAttemptCompletionEvents(
         GetTaskAttemptCompletionEventsRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetTaskReportsResponse getTaskReports(GetTaskReportsRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public GetDiagnosticsResponse getDiagnostics(GetDiagnosticsRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public KillJobResponse killJob(KillJobRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public KillTaskResponse killTask(KillTaskRequest request)
         throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public KillTaskAttemptResponse killTaskAttempt(
         KillTaskAttemptRequest request) throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
 
     @Override
     public FailTaskAttemptResponse failTaskAttempt(
         FailTaskAttemptRequest request) throws YarnRemoteException {
-      // TODO Auto-generated method stub
       return null;
     }
-    
+
+    @Override
+    public GetDelegationTokenResponse getDelegationToken(
+        GetDelegationTokenRequest request) throws YarnRemoteException {
+      return null;
+    }   
   }
 }

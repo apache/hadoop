@@ -31,14 +31,13 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.webapp.AMWebServices;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobCounterInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobTaskAttemptCounterInfo;
@@ -131,7 +130,7 @@ public class HsWebServices {
       try {
         sBegin = Long.parseLong(startedBegin);
       } catch (NumberFormatException e) {
-        throw new BadRequestException(e.getMessage());
+        throw new BadRequestException("Invalid number format: " + e.getMessage());
       }
       if (sBegin < 0) {
         throw new BadRequestException("startedTimeBegin must be greater than 0");
@@ -142,7 +141,7 @@ public class HsWebServices {
       try {
         sEnd = Long.parseLong(startedEnd);
       } catch (NumberFormatException e) {
-        throw new BadRequestException(e.getMessage());
+        throw new BadRequestException("Invalid number format: " + e.getMessage());
       }
       if (sEnd < 0) {
         throw new BadRequestException("startedTimeEnd must be greater than 0");
@@ -158,10 +157,10 @@ public class HsWebServices {
       try {
         fBegin = Long.parseLong(finishBegin);
       } catch (NumberFormatException e) {
-        throw new BadRequestException(e.getMessage());
+        throw new BadRequestException("Invalid number format: " + e.getMessage());
       }
       if (fBegin < 0) {
-        throw new BadRequestException("finishTimeBegin must be greater than 0");
+        throw new BadRequestException("finishedTimeBegin must be greater than 0");
       }
     }
     if (finishEnd != null && !finishEnd.isEmpty()) {
@@ -169,15 +168,15 @@ public class HsWebServices {
       try {
         fEnd = Long.parseLong(finishEnd);
       } catch (NumberFormatException e) {
-        throw new BadRequestException(e.getMessage());
+        throw new BadRequestException("Invalid number format: " + e.getMessage());
       }
       if (fEnd < 0) {
-        throw new BadRequestException("finishTimeEnd must be greater than 0");
+        throw new BadRequestException("finishedTimeEnd must be greater than 0");
       }
     }
     if (fBegin > fEnd) {
       throw new BadRequestException(
-          "finishTimeEnd must be greater than finishTimeBegin");
+          "finishedTimeEnd must be greater than finishedTimeBegin");
     }
 
     for (Job job : appCtx.getAllJobs().values()) {
@@ -200,7 +199,7 @@ public class HsWebServices {
       }
 
       if (userQuery != null && !userQuery.isEmpty()) {
-        if (!jobInfo.getName().equals(userQuery)) {
+        if (!jobInfo.getUserName().equals(userQuery)) {
           continue;
         }
       }
@@ -224,29 +223,17 @@ public class HsWebServices {
   @Path("/mapreduce/jobs/{jobid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobInfo getJob(@PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
     return new JobInfo(job);
   }
 
   @GET
-  @Path("/mapreduce/jobs/{jobid}/attempts")
+  @Path("/mapreduce/jobs/{jobid}/jobattempts")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
     AMAttemptsInfo amAttempts = new AMAttemptsInfo();
     for (AMInfo amInfo : job.getAMInfos()) {
       AMAttemptInfo attempt = new AMAttemptInfo(amInfo, MRApps.toString(job
@@ -261,53 +248,17 @@ public class HsWebServices {
   @Path("/mapreduce/jobs/{jobid}/counters")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobCounterInfo getJobCounters(@PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    return new JobCounterInfo(this.appCtx, job);
-  }
 
-  @GET
-  @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}/counters")
-  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public JobTaskCounterInfo getSingleTaskCounters(
-      @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = this.appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    return new JobTaskCounterInfo(task);
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
+    return new JobCounterInfo(this.appCtx, job);
   }
 
   @GET
   @Path("/mapreduce/jobs/{jobid}/conf")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ConfInfo getJobConf(@PathParam("jobid") String jid) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
     ConfInfo info;
     try {
       info = new ConfInfo(job, this.conf);
@@ -315,7 +266,6 @@ public class HsWebServices {
       throw new NotFoundException("unable to load configuration for job: "
           + jid);
     }
-
     return info;
   }
 
@@ -324,10 +274,8 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TasksInfo getJobTasks(@PathParam("jobid") String jid,
       @QueryParam("type") String type) {
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
     TasksInfo allTasks = new TasksInfo();
     for (Task task : job.getTasks().values()) {
       TaskType ttype = null;
@@ -351,10 +299,20 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TaskInfo getJobTask(@PathParam("jobid") String jid,
       @PathParam("taskid") String tid) {
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
+    Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
+    return new TaskInfo(task);
+
+  }
+
+  @GET
+  @Path("/mapreduce/jobs/{jobid}/tasks/{taskid}/counters")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public JobTaskCounterInfo getSingleTaskCounters(
+      @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
     TaskId taskID = MRApps.toTaskID(tid);
     if (taskID == null) {
       throw new NotFoundException("taskid " + tid + " not found or invalid");
@@ -363,8 +321,7 @@ public class HsWebServices {
     if (task == null) {
       throw new NotFoundException("task not found with id " + tid);
     }
-    return new TaskInfo(task);
-
+    return new JobTaskCounterInfo(task);
   }
 
   @GET
@@ -372,19 +329,10 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TaskAttemptsInfo getJobTaskAttempts(@PathParam("jobid") String jid,
       @PathParam("taskid") String tid) {
+
     TaskAttemptsInfo attempts = new TaskAttemptsInfo();
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
+    Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
     for (TaskAttempt ta : task.getAttempts().values()) {
       if (ta != null) {
         if (task.getType() == TaskType.REDUCE) {
@@ -402,28 +350,11 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TaskAttemptInfo getJobTaskAttemptId(@PathParam("jobid") String jid,
       @PathParam("taskid") String tid, @PathParam("attemptid") String attId) {
-    Job job = this.appCtx.getJob(MRApps.toJobID(jid));
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    TaskAttemptId attemptId = MRApps.toTaskAttemptID(attId);
-    if (attemptId == null) {
-      throw new NotFoundException("task attempt id " + attId
-          + " not found or invalid");
-    }
-    TaskAttempt ta = task.getAttempt(attemptId);
-    if (ta == null) {
-      throw new NotFoundException("Error getting info on task attempt id "
-          + attId);
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
+    Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
+    TaskAttempt ta = AMWebServices.getTaskAttemptFromTaskAttemptString(attId,
+        task);
     if (task.getType() == TaskType.REDUCE) {
       return new ReduceTaskAttemptInfo(ta, task.getType());
     } else {
@@ -437,32 +368,11 @@ public class HsWebServices {
   public JobTaskAttemptCounterInfo getJobTaskAttemptIdCounters(
       @PathParam("jobid") String jid, @PathParam("taskid") String tid,
       @PathParam("attemptid") String attId) {
-    JobId jobId = MRApps.toJobID(jid);
-    if (jobId == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    Job job = this.appCtx.getJob(jobId);
-    if (job == null) {
-      throw new NotFoundException("job, " + jid + ", is not found");
-    }
-    TaskId taskID = MRApps.toTaskID(tid);
-    if (taskID == null) {
-      throw new NotFoundException("taskid " + tid + " not found or invalid");
-    }
-    Task task = job.getTask(taskID);
-    if (task == null) {
-      throw new NotFoundException("task not found with id " + tid);
-    }
-    TaskAttemptId attemptId = MRApps.toTaskAttemptID(attId);
-    if (attemptId == null) {
-      throw new NotFoundException("task attempt id " + attId
-          + " not found or invalid");
-    }
-    TaskAttempt ta = task.getAttempt(attemptId);
-    if (ta == null) {
-      throw new NotFoundException("Error getting info on task attempt id "
-          + attId);
-    }
+
+    Job job = AMWebServices.getJobFromJobIdString(jid, appCtx);
+    Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
+    TaskAttempt ta = AMWebServices.getTaskAttemptFromTaskAttemptString(attId,
+        task);
     return new JobTaskAttemptCounterInfo(ta);
   }
 

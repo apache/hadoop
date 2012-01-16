@@ -1056,7 +1056,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
       } catch (IOException ie) {
 
-        DFSClient.LOG.info("Exception in createBlockOutputStream " + ie);
+        DFSClient.LOG.info("Exception in createBlockOutputStream", ie);
 
         // find the datanode that matches
         if (firstBadLink.length() != 0) {

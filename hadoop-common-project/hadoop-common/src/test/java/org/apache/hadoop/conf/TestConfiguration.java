@@ -405,12 +405,16 @@ public class TestConfiguration extends TestCase {
     conf.addResource(fileResource);
     assertEquals(20, conf.getInt("test.int1", 0));
     assertEquals(20, conf.getLong("test.int1", 0));
+    assertEquals(20, conf.getLongBytes("test.int1", 0));
     assertEquals(20, conf.getInt("test.int2", 0));
     assertEquals(20, conf.getLong("test.int2", 0));
+    assertEquals(20, conf.getLongBytes("test.int2", 0));
     assertEquals(-20, conf.getInt("test.int3", 0));
     assertEquals(-20, conf.getLong("test.int3", 0));
+    assertEquals(-20, conf.getLongBytes("test.int3", 0));
     assertEquals(-20, conf.getInt("test.int4", 0));
     assertEquals(-20, conf.getLong("test.int4", 0));
+    assertEquals(-20, conf.getLongBytes("test.int4", 0));
     try {
       conf.getInt("test.int5", 0);
       fail("Property had invalid int value, but was read successfully.");
@@ -419,6 +423,26 @@ public class TestConfiguration extends TestCase {
     }
   }
   
+  public void testHumanReadableValues() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.humanReadableValue1", "1m");
+    appendProperty("test.humanReadableValue2", "1M");
+    appendProperty("test.humanReadableValue5", "1MBCDE");
+
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(1048576, conf.getLongBytes("test.humanReadableValue1", 0));
+    assertEquals(1048576, conf.getLongBytes("test.humanReadableValue2", 0));
+    try {
+      conf.getLongBytes("test.humanReadableValue5", 0);
+      fail("Property had invalid human readable value, but was read successfully.");
+    } catch (NumberFormatException e) {
+      // pass
+    }
+  }
+
   public void testBooleanValues() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

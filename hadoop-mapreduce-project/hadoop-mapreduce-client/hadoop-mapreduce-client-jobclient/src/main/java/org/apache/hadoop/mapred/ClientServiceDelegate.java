@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -68,7 +69,6 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -93,6 +93,8 @@ public class ClientServiceDelegate {
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static String UNKNOWN_USER = "Unknown User";
   private String trackingUrl;
+
+  private boolean amAclDisabledStatusLogged = false;
 
   public ClientServiceDelegate(Configuration conf, ResourceMgrDelegate rm,
       JobID jobId, MRClientProtocol historyServerProxy) {
@@ -157,7 +159,7 @@ public class ClientServiceDelegate {
           application = rm.getApplicationReport(appId);
           continue;
         }
-        if(!conf.getBoolean(YarnConfiguration.RM_AM_NETWORK_ACL_CLOSED, false)) {
+        if(!conf.getBoolean(MRJobConfig.JOB_AM_ACCESS_DISABLED, false)) {
           UserGroupInformation newUgi = UserGroupInformation.createRemoteUser(
               UserGroupInformation.getCurrentUser().getUserName());
           serviceAddr = application.getHost() + ":" + application.getRpcPort();
@@ -182,12 +184,14 @@ public class ClientServiceDelegate {
               return instantiateAMProxy(tempStr);
             }
           });
-	} else {
-           logApplicationReportInfo(application); 
-           LOG.info("Network ACL closed to AM for job " + jobId
-             + ". Redirecting to job history server.");
-           return checkAndGetHSProxy(null, JobState.RUNNING);
-        }  
+        } else {
+          if (!amAclDisabledStatusLogged) {
+            LOG.info("Network ACL closed to AM for job " + jobId
+                + ". Not going to try to reach the AM.");
+            amAclDisabledStatusLogged = true;
+          }
+          return getNotRunningJob(null, JobState.RUNNING);
+        }
         return realProxy;
       } catch (IOException e) {
         //possibly the AM has crashed
@@ -248,55 +252,10 @@ public class ClientServiceDelegate {
     return realProxy;
   }
 
-  private void logApplicationReportInfo(ApplicationReport application) {
-    if(application == null) {
-      return;
-    }
-    LOG.info("AppId: " + application.getApplicationId()
-      + " # reserved containers: " 
-      + application.getApplicationResourceUsageReport().getNumReservedContainers()
-      + " # used containers: " 
-      + application.getApplicationResourceUsageReport().getNumUsedContainers()
-      + " Needed resources (memory): "
-      + application.getApplicationResourceUsageReport().getNeededResources().getMemory()
-      + " Reserved resources (memory): "
-      + application.getApplicationResourceUsageReport().getReservedResources().getMemory()
-      + " Used resources (memory): "
-      + application.getApplicationResourceUsageReport().getUsedResources().getMemory()
-      + " Diagnostics: " 
-      + application.getDiagnostics()
-      + " Start time: "
-      + application.getStartTime()
-      + " Finish time: "
-      + application.getFinishTime()
-      + " Host: "
-      + application.getHost()
-      + " Name: "
-      + application.getName()
-      + " Orig. tracking url: "
-      + application.getOriginalTrackingUrl()
-      + " Queue: "
-      + application.getQueue()
-      + " RPC port: "
-      + application.getRpcPort()
-      + " Tracking url: "
-      + application.getTrackingUrl()
-      + " User: "
-      + application.getUser()
-      + " Client token: "
-      + application.getClientToken()
-      + " Final appl. status: "
-      + application.getFinalApplicationStatus()
-      + " Yarn appl. state: "
-      + application.getYarnApplicationState()
-    );
-  }
-
   private MRClientProtocol checkAndGetHSProxy(
       ApplicationReport applicationReport, JobState state) {
     if (null == historyServerProxy) {
-      LOG.warn("Job History Server is not configured or " +
-      		"job information not yet available on History Server.");
+      LOG.warn("Job History Server is not configured.");
       return getNotRunningJob(applicationReport, state);
     }
     return historyServerProxy;

@@ -47,6 +47,8 @@ import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskAttemptContextImpl;
 import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapred.WrappedProgressSplitsBlock;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -60,8 +62,6 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
@@ -132,6 +132,7 @@ public abstract class TaskAttemptImpl implements
     org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt,
       EventHandler<TaskAttemptEvent> {
 
+  static final Counters EMPTY_COUNTERS = new Counters();
   private static final Log LOG = LogFactory.getLog(TaskAttemptImpl.class);
   private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
   private static final int MAP_MEMORY_MB_DEFAULT = 1024;
@@ -846,7 +847,7 @@ public abstract class TaskAttemptImpl implements
       result.setDiagnosticInfo(StringUtils.join(LINE_SEPARATOR, getDiagnostics()));
       result.setPhase(reportedStatus.phase);
       result.setStateString(reportedStatus.stateString);
-      result.setCounters(getCounters());
+      result.setCounters(TypeConverter.toYarn(getCounters()));
       result.setContainerId(this.getAssignedContainerID());
       result.setNodeManagerHost(trackerName);
       result.setNodeManagerHttpPort(httpPort);
@@ -877,7 +878,7 @@ public abstract class TaskAttemptImpl implements
     try {
       Counters counters = reportedStatus.counters;
       if (counters == null) {
-        counters = recordFactory.newRecordInstance(Counters.class);
+        counters = EMPTY_COUNTERS;
 //        counters.groups = new HashMap<String, CounterGroup>();
       }
       return counters;
@@ -1031,22 +1032,21 @@ public abstract class TaskAttemptImpl implements
             (int) (now - start));
       }
 
-      Counter cpuCounter = counters.getCounter(
-          TaskCounter.CPU_MILLISECONDS);
+      Counter cpuCounter = counters.findCounter(TaskCounter.CPU_MILLISECONDS);
       if (cpuCounter != null && cpuCounter.getValue() <= Integer.MAX_VALUE) {
         splitsBlock.getProgressCPUTime().extend(newProgress,
-            (int) cpuCounter.getValue());
+            (int) cpuCounter.getValue()); // long to int? TODO: FIX. Same below
       }
 
-      Counter virtualBytes = counters.getCounter(
-          TaskCounter.VIRTUAL_MEMORY_BYTES);
+      Counter virtualBytes = counters
+        .findCounter(TaskCounter.VIRTUAL_MEMORY_BYTES);
       if (virtualBytes != null) {
         splitsBlock.getProgressVirtualMemoryKbytes().extend(newProgress,
             (int) (virtualBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
       }
 
-      Counter physicalBytes = counters.getCounter(
-          TaskCounter.PHYSICAL_MEMORY_BYTES);
+      Counter physicalBytes = counters
+        .findCounter(TaskCounter.PHYSICAL_MEMORY_BYTES);
       if (physicalBytes != null) {
         splitsBlock.getProgressPhysicalMemoryKbytes().extend(newProgress,
             (int) (physicalBytes.getValue() / (MEMORY_SPLITS_RESOLUTION)));
@@ -1201,7 +1201,7 @@ public abstract class TaskAttemptImpl implements
 
       // register it to TaskAttemptListener so that it can start monitoring it.
       taskAttempt.taskAttemptListener
-        .registerLaunchedTask(taskAttempt.attemptId);
+        .registerLaunchedTask(taskAttempt.attemptId, taskAttempt.jvmID);
       //TODO Resolve to host / IP in case of a local address.
       InetSocketAddress nodeHttpInetAddr =
           NetUtils.createSocketAddr(taskAttempt.nodeHttpAddress); // TODO:
@@ -1343,7 +1343,7 @@ public abstract class TaskAttemptImpl implements
          this.containerNodeId == null ? -1 : this.containerNodeId.getPort(),
          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
          this.reportedStatus.stateString,
-         TypeConverter.fromYarn(getCounters()),
+         getCounters(),
          getProgressSplitBlock().burst());
          eventHandler.handle(
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), mfe));
@@ -1360,7 +1360,7 @@ public abstract class TaskAttemptImpl implements
          this.containerNodeId == null ? -1 : this.containerNodeId.getPort(),
          this.nodeRackName == null ? "UNKNOWN" : this.nodeRackName,
          this.reportedStatus.stateString,
-         TypeConverter.fromYarn(getCounters()),
+         getCounters(),
          getProgressSplitBlock().burst());
          eventHandler.handle(
            new JobHistoryEvent(attemptId.getTaskId().getJobId(), rfe));
@@ -1498,8 +1498,8 @@ public abstract class TaskAttemptImpl implements
     result.phase = Phase.STARTING;
     result.stateString = "NEW";
     result.taskState = TaskAttemptState.NEW;
-    Counters counters = recordFactory.newRecordInstance(Counters.class);
-//    counters.groups = new HashMap<String, CounterGroup>();
+    Counters counters = EMPTY_COUNTERS;
+    //    counters.groups = new HashMap<String, CounterGroup>();
     result.counters = counters;
   }
 

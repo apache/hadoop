@@ -27,14 +27,6 @@
         <include>*</include>
       </includes>
     </fileSet>
-    <!-- Readme, licenses, etc. -->
-    <fileSet>
-      <directory>${basedir}</directory>
-      <outputDirectory>/</outputDirectory>
-      <includes>
-        <include>*.txt</include>
-      </includes>
-    </fileSet>
     <fileSet>
       <directory>${basedir}/src/main/sbin</directory>
       <outputDirectory>/sbin</outputDirectory>

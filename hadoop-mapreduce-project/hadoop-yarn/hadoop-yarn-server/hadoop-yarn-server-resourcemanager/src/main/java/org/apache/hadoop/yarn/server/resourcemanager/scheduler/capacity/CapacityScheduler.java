@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -76,6 +77,7 @@ import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 
 @LimitedPrivate("yarn")
 @Evolving
+@SuppressWarnings("unchecked")
 public class CapacityScheduler 
 implements ResourceScheduler, CapacitySchedulerContext {
 
@@ -588,10 +590,12 @@ implements ResourceScheduler, CapacitySchedulerContext {
       LOG.info("Unknown application: " + applicationAttemptId + 
           " launched container " + containerId +
           " on node: " + node);
+      this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMNodeCleanContainerEvent(node.getNodeID(), containerId));
       return;
     }
     
-    application.containerLaunchedOnNode(containerId);
+    application.containerLaunchedOnNode(containerId, node.getNodeID());
   }
 
   @Override

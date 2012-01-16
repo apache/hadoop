@@ -33,7 +33,6 @@
       <groupId>javax.servlet</groupId>
       <artifactId>servlet-api</artifactId>
       <scope>compile</scope>
-      <version>2.5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

@@ -31,11 +31,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersResponse;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDiagnosticsResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
@@ -223,7 +226,7 @@ public class MRClientService extends AbstractService
       Job job = verifyAndGetJob(jobId, false);
       GetCountersResponse response =
         recordFactory.newRecordInstance(GetCountersResponse.class);
-      response.setCounters(job.getCounters());
+      response.setCounters(TypeConverter.toYarn(job.getAllCounters()));
       return response;
     }
     
@@ -237,8 +240,7 @@ public class MRClientService extends AbstractService
       response.setJobReport(job.getReport());
       return response;
     }
-    
-    
+
     @Override
     public GetTaskAttemptReportResponse getTaskAttemptReport(
         GetTaskAttemptReportRequest request) throws YarnRemoteException {
@@ -356,6 +358,8 @@ public class MRClientService extends AbstractService
       return response;
     }
 
+    private final Object getTaskReportsLock = new Object();
+
     @Override
     public GetTaskReportsResponse getTaskReports(
         GetTaskReportsRequest request) throws YarnRemoteException {
@@ -366,13 +370,26 @@ public class MRClientService extends AbstractService
         recordFactory.newRecordInstance(GetTaskReportsResponse.class);
       
       Job job = verifyAndGetJob(jobId, false);
-      LOG.info("Getting task report for " + taskType + "   " + jobId);
       Collection<Task> tasks = job.getTasks(taskType).values();
-      LOG.info("Getting task report size " + tasks.size());
-      for (Task task : tasks) {
-        response.addTaskReport(task.getReport());
-	  }
+      LOG.info("Getting task report for " + taskType + "   " + jobId
+          + ". Report-size will be " + tasks.size());
+
+      // Take lock to allow only one call, otherwise heap will blow up because
+      // of counters in the report when there are multiple callers.
+      synchronized (getTaskReportsLock) {
+        for (Task task : tasks) {
+          response.addTaskReport(task.getReport());
+        }
+      }
+
       return response;
+    }
+
+    @Override
+    public GetDelegationTokenResponse getDelegationToken(
+        GetDelegationTokenRequest request) throws YarnRemoteException {
+      throw RPCUtil.getRemoteException("MR AM not authorized to issue delegation" +
+      		" token");
     }
   }
 }

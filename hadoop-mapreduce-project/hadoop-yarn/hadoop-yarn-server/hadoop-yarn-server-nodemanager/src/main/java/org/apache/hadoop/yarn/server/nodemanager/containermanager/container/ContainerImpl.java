@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class ContainerImpl implements Container {
@@ -370,13 +371,8 @@ public class ContainerImpl implements Container {
   public ContainerStatus cloneAndGetContainerStatus() {
     this.readLock.lock();
     try {
-      ContainerStatus containerStatus =
-          recordFactory.newRecordInstance(ContainerStatus.class);
-      containerStatus.setState(getCurrentState());
-      containerStatus.setContainerId(this.launchContext.getContainerId());
-      containerStatus.setDiagnostics(diagnostics.toString());
-  	  containerStatus.setExitStatus(exitCode);
-      return containerStatus;
+      return BuilderUtils.newContainerStatus(this.getContainerID(),
+        getCurrentState(), diagnostics.toString(), exitCode);
     } finally {
       this.readLock.unlock();
     }

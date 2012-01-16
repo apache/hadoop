@@ -21,13 +21,13 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.mapreduce.v2.api.records.Counter;
+import org.apache.hadoop.mapreduce.Counter;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
 public class CounterInfo {
 
-  protected String counterName;
+  protected String name;
   protected long totalCounterValue;
   protected long mapCounterValue;
   protected long reduceCounterValue;
@@ -35,9 +35,9 @@ public class CounterInfo {
   public CounterInfo() {
   }
 
-  public CounterInfo(Counter counter, Counter mc, Counter rc) {
-    this.counterName = counter.getName();
-    this.totalCounterValue = counter.getValue();
+  public CounterInfo(Counter c, Counter mc, Counter rc) {
+    this.name = c.getName();
+    this.totalCounterValue = c.getValue();
     this.mapCounterValue = mc == null ? 0 : mc.getValue();
     this.reduceCounterValue = rc == null ? 0 : rc.getValue();
   }

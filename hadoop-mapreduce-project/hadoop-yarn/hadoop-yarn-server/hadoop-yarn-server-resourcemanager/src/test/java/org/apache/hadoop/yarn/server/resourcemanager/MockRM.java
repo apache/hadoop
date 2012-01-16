@@ -178,7 +178,7 @@ public class MockRM extends ResourceManager {
   @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
-        rmAppManager, applicationACLsManager) {
+        rmAppManager, applicationACLsManager, null) {
       @Override
       public void start() {
         // override to not start rpc handler

@@ -50,6 +50,9 @@ public class WebServicesTestUtils {
   public static String getXmlString(Element element, String name) {
     NodeList id = element.getElementsByTagName(name);
     Element line = (Element) id.item(0);
+    if (line == null) {
+      return null;
+    }
     Node first = line.getFirstChild();
     // handle empty <key></key>
     if (first == null) {

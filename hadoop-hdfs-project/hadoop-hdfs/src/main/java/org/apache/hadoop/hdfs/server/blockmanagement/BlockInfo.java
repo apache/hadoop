@@ -141,9 +141,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
      * happen only when replication is manually increased by the user. */
     Object[] old = triplets;
     triplets = new Object[(last+num)*3];
-    for(int i=0; i < last*3; i++) {
-      triplets[i] = old[i];
-    }
+    System.arraycopy(old, 0, triplets, 0, last*3);
     return last;
   }
 

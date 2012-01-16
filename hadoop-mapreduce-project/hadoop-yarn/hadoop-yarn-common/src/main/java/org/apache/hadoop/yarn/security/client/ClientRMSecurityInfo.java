@@ -23,7 +23,9 @@ import java.lang.annotation.Annotation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.ClientRMProtocol;
 
@@ -56,7 +58,22 @@ public class ClientRMSecurityInfo extends SecurityInfo {
 
   @Override
   public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    return null;
-  }
+    if (!protocol
+        .equals(ClientRMProtocol.ClientRMProtocolService.BlockingInterface.class)) {
+      return null;
+    }
+    return new TokenInfo() {
 
+      @Override
+      public Class<? extends Annotation> annotationType() {
+        return null;
+      }
+
+      @Override
+      public Class<? extends TokenSelector<? extends TokenIdentifier>>
+          value() {
+        return RMTokenSelector.class;
+      }
+    };
+  }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainerInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.ContainersInfo;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NodeInfo;
+import org.apache.hadoop.yarn.webapp.RemoteExceptionData;
 
 @Singleton
 @Provider
@@ -42,19 +43,20 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
   private JAXBContext context;
   private final Set<Class> types;
-    
+
   // you have to specify all the dao classes here
-  private final Class[] cTypes = {AppInfo.class, AppsInfo.class, 
-      ContainerInfo.class, ContainersInfo.class, NodeInfo.class};
-    
+  private final Class[] cTypes = {AppInfo.class, AppsInfo.class,
+      ContainerInfo.class, ContainersInfo.class, NodeInfo.class,
+      RemoteExceptionData.class};
+
   public JAXBContextResolver() throws Exception {
     this.types = new HashSet<Class>(Arrays.asList(cTypes));
-    // sets the json configuration so that the json output looks like 
+    // sets the json configuration so that the json output looks like
     // the xml output
     this.context = new JSONJAXBContext(JSONConfiguration.natural().
         rootUnwrapping(false).build(), cTypes);
   }
-    
+
   @Override
   public JAXBContext getContext(Class<?> objectType) {
     return (types.contains(objectType)) ? context : null;

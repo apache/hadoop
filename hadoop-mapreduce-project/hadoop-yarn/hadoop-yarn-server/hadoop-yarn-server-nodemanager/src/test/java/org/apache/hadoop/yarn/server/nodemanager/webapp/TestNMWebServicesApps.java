@@ -38,8 +38,6 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.MockApp;
-import org.apache.hadoop.yarn.server.nodemanager.MockContainer;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.ResourceView;
@@ -384,16 +382,89 @@ public class TestNMWebServicesApps extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      WebServicesTestUtils
-          .checkStringMatch(
-              "exception message",
-              "No enum const class org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState.FOO_STATE",
-              message);
-      WebServicesTestUtils.checkStringMatch("exception type",
-          "IllegalArgumentException", type);
-      WebServicesTestUtils.checkStringMatch("exception classname",
-          "java.lang.IllegalArgumentException", classname);
+      verifyStatInvalidException(message, type, classname);
     }
+  }
+
+  // verify the exception object default format is JSON
+  @Test
+  public void testNodeAppsStateInvalidDefault() throws JSONException, Exception {
+    WebResource r = resource();
+    Application app = new MockApp(1);
+    nmContext.getApplications().put(app.getAppId(), app);
+    addAppContainers(app);
+    Application app2 = new MockApp("foo", 1234, 2);
+    nmContext.getApplications().put(app2.getAppId(), app2);
+    addAppContainers(app2);
+
+    try {
+      r.path("ws").path("v1").path("node").path("apps")
+          .queryParam("state", "FOO_STATE").get(JSONObject.class);
+      fail("should have thrown exception on invalid user query");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+
+      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      verifyStatInvalidException(message, type, classname);
+    }
+  }
+
+  // test that the exception output also returns XML
+  @Test
+  public void testNodeAppsStateInvalidXML() throws JSONException, Exception {
+    WebResource r = resource();
+    Application app = new MockApp(1);
+    nmContext.getApplications().put(app.getAppId(), app);
+    addAppContainers(app);
+    Application app2 = new MockApp("foo", 1234, 2);
+    nmContext.getApplications().put(app2.getAppId(), app2);
+    addAppContainers(app2);
+
+    try {
+      r.path("ws").path("v1").path("node").path("apps")
+          .queryParam("state", "FOO_STATE").accept(MediaType.APPLICATION_XML)
+          .get(JSONObject.class);
+      fail("should have thrown exception on invalid user query");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+
+      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+      String msg = response.getEntity(String.class);
+
+      DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+      DocumentBuilder db = dbf.newDocumentBuilder();
+      InputSource is = new InputSource();
+      is.setCharacterStream(new StringReader(msg));
+      Document dom = db.parse(is);
+      NodeList nodes = dom.getElementsByTagName("RemoteException");
+      Element element = (Element) nodes.item(0);
+      String message = WebServicesTestUtils.getXmlString(element, "message");
+      String type = WebServicesTestUtils.getXmlString(element, "exception");
+      String classname = WebServicesTestUtils.getXmlString(element,
+          "javaClassName");
+      verifyStatInvalidException(message, type, classname);
+    }
+  }
+
+  private void verifyStatInvalidException(String message, String type,
+      String classname) {
+    WebServicesTestUtils
+        .checkStringMatch(
+            "exception message",
+            "No enum const class org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState.FOO_STATE",
+            message);
+    WebServicesTestUtils.checkStringMatch("exception type",
+        "IllegalArgumentException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+        "java.lang.IllegalArgumentException", classname);
   }
 
   @Test

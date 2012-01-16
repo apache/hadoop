@@ -19,7 +19,12 @@
 package org.apache.hadoop.mapred;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -165,7 +171,7 @@ public class TestClientServiceDelegate {
     ClientServiceDelegate clientServiceDelegate = getClientServiceDelegate(                       
         historyServerProxy, rm);
 
-    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);                           
+    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     Assert.assertNotNull(jobStatus);
     Assert.assertEquals("TestJobFilePath", jobStatus.getJobFile());                               
     Assert.assertEquals("http://TestTrackingUrl", jobStatus.getTrackingUrl());                    
@@ -254,6 +260,58 @@ public class TestClientServiceDelegate {
         any(String.class));
   }
   
+  @Test
+  public void testAMAccessDisabled() throws IOException {
+    //test only applicable when AM not reachable
+    if(isAMReachableFromClient) {
+      return;
+    }
+
+    MRClientProtocol historyServerProxy = mock(MRClientProtocol.class);
+    when(historyServerProxy.getJobReport(getJobReportRequest())).thenReturn(                      
+        getJobReportResponseFromHistoryServer());                                                 
+
+    ResourceMgrDelegate rmDelegate = mock(ResourceMgrDelegate.class);
+    when(rmDelegate.getApplicationReport(jobId.getAppId())).thenReturn(
+        getRunningApplicationReport("am1", 78)).thenReturn(
+          getRunningApplicationReport("am1", 78)).thenReturn(
+            getRunningApplicationReport("am1", 78)).thenReturn(
+        getFinishedApplicationReport());
+
+    ClientServiceDelegate clientServiceDelegate = spy(getClientServiceDelegate(
+        historyServerProxy, rmDelegate));
+
+    JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("N/A", jobStatus.getJobName());
+    
+    verify(clientServiceDelegate, times(0)).instantiateAMProxy(
+        any(String.class));
+
+    // Should not reach AM even for second and third times too.
+    jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("N/A", jobStatus.getJobName());    
+    verify(clientServiceDelegate, times(0)).instantiateAMProxy(
+        any(String.class));
+    jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus);
+    Assert.assertEquals("N/A", jobStatus.getJobName());    
+    verify(clientServiceDelegate, times(0)).instantiateAMProxy(
+        any(String.class));
+
+    // The third time around, app is completed, so should go to JHS
+    JobStatus jobStatus1 = clientServiceDelegate.getJobStatus(oldJobId);
+    Assert.assertNotNull(jobStatus1);
+    Assert.assertEquals("TestJobFilePath", jobStatus1.getJobFile());                               
+    Assert.assertEquals("http://TestTrackingUrl", jobStatus1.getTrackingUrl());                    
+    Assert.assertEquals(1.0f, jobStatus1.getMapProgress());                                        
+    Assert.assertEquals(1.0f, jobStatus1.getReduceProgress());
+    
+    verify(clientServiceDelegate, times(0)).instantiateAMProxy(
+        any(String.class));
+  }
+  
   private GetJobReportRequest getJobReportRequest() {
     GetJobReportRequest request = Records.newRecord(GetJobReportRequest.class);
     request.setJobId(jobId);
@@ -300,7 +358,7 @@ public class TestClientServiceDelegate {
       MRClientProtocol historyServerProxy, ResourceMgrDelegate rm) {
     Configuration conf = new YarnConfiguration();
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    conf.setBoolean(YarnConfiguration.RM_AM_NETWORK_ACL_CLOSED, !isAMReachableFromClient);
+    conf.setBoolean(MRJobConfig.JOB_AM_ACCESS_DISABLED, !isAMReachableFromClient);
     ClientServiceDelegate clientServiceDelegate = new ClientServiceDelegate(
         conf, rm, oldJobId, historyServerProxy);
     return clientServiceDelegate;

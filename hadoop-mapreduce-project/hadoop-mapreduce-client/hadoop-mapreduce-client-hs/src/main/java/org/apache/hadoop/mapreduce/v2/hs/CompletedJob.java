@@ -32,13 +32,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.Counters;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -89,7 +89,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     
     loadFullHistoryData(loadTasks, historyFile);
     user = userName;
-    counters = TypeConverter.toYarn(jobInfo.getTotalCounters());
+    counters = jobInfo.getTotalCounters();
     diagnostics.add(jobInfo.getErrorInfo());
     report =
         RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
@@ -121,7 +121,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
-  public Counters getCounters() {
+  public Counters getAllCounters() {
     return counters;
   }
 

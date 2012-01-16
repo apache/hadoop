@@ -628,8 +628,11 @@
                   <tr>
                     <td>conf/hdfs-site.xml</td>
                     <td>dfs.blocksize</td>
-                    <td>134217728</td>
-                    <td>HDFS blocksize of 128MB for large file-systems.</td>
+                    <td>128m</td>
+                    <td>
+                        HDFS blocksize of 128 MB for large file-systems. Sizes can be provided
+                        in size-prefixed values (10k, 128m, 1g, etc.) or simply in bytes (134217728 for 128 MB, etc.).
+                    </td>
                   </tr>
                   <tr>
                     <td>conf/hdfs-site.xml</td>
