@@ -442,6 +442,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3649. Job End notification gives an error on calling back.
     (Ravi Prakash via mahadev)
 
+    MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
+    via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
