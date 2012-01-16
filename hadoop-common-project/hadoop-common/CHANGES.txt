@@ -35,6 +35,9 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7899. Generate proto java files as part of the build. (tucu)
 
+    HADOOP-7957. Classes deriving GetGroupsBase should be able to override 
+    proxy creation. (jitendra)
+
   BUG FIXES
 
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
