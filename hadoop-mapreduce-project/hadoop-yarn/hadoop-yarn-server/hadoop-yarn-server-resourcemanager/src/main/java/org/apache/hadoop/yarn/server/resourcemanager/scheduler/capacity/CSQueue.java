@@ -155,9 +155,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * Assign containers to applications in the queue or it's children (if any).
    * @param clusterResource the resource of the cluster.
    * @param node node on which resources are available
-   * @return the resource that is being assigned.
+   * @return the assignment
    */
-  public Resource assignContainers(Resource clusterResource, SchedulerNode node);
+  public CSAssignment assignContainers(
+      Resource clusterResource, SchedulerNode node);
   
   /**
    * A container assigned to the queue has completed.
