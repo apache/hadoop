@@ -30,17 +30,20 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Collection;
 import java.util.LinkedList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.namenode.EditLogInputException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
@@ -55,6 +58,9 @@ import org.mockito.stubbing.Answer;
 import com.google.common.collect.ImmutableList;
 
 public class TestFailureToReadEdits {
+  
+  private static final Log LOG = LogFactory.getLog(TestFailureToReadEdits.class);
+  
   private static final String TEST_DIR1 = "/test1";
   private static final String TEST_DIR2 = "/test2";
   private static final String TEST_DIR3 = "/test3";
@@ -219,6 +225,47 @@ public class TestFailureToReadEdits {
     } finally {
       if (fs0 != null)
         fs0.close();
+    }
+  }
+
+  /**
+   * Ensure that the standby fails to become active if it cannot read all
+   * available edits in the shared edits dir when it is transitioning to active
+   * state.
+   */
+  @Test
+  public void testFailureToReadEditsOnTransitionToActive() throws Exception {
+    assertTrue(fs.mkdirs(new Path(TEST_DIR1)));
+    
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+    
+    // It should also upload it back to the active.
+    HATestUtil.waitForCheckpoint(cluster, 0, ImmutableList.of(0, 3));
+    
+    causeFailureOnEditLogRead();
+    
+    assertTrue(fs.mkdirs(new Path(TEST_DIR2)));
+    assertTrue(fs.mkdirs(new Path(TEST_DIR3)));
+    
+    try {
+      HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+      fail("Standby fully caught up, but should not have been able to");
+    } catch (HATestUtil.CouldNotCatchUpException e) {
+      verify(mockRuntime, times(0)).exit(anyInt());
+    }
+    
+    // Shutdown the active NN.
+    cluster.shutdownNameNode(0);
+    
+    try {
+      // Transition the standby to active.
+      cluster.transitionToActive(1);
+      fail("Standby transitioned to active, but should not have been able to");
+    } catch (ServiceFailedException sfe) {
+      LOG.info("got expected exception: " + sfe.toString(), sfe);
+      assertTrue("Standby failed to catch up for some reason other than "
+          + "failure to read logs", sfe.toString().contains(
+              EditLogInputException.class.getName()));
     }
   }
   

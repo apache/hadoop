@@ -144,11 +144,13 @@ public class EditLogTailer {
       try {
         editsLoaded = image.loadEdits(streams, namesystem);
       } catch (EditLogInputException elie) {
-        LOG.warn("Error while reading edits from disk. Will try again.", elie);
         editsLoaded = elie.getNumEditsLoaded();
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("editsLoaded: " + editsLoaded);
+        throw elie;
+      } finally {
+        if (editsLoaded > 0) {
+          LOG.info(String.format("Loaded %d edits starting from txid %d ",
+              editsLoaded, lastTxnId));
+        }
       }
     } finally {
       namesystem.writeUnlock();
@@ -180,12 +182,14 @@ public class EditLogTailer {
       while (shouldRun) {
         try {
           doTailEdits();
+        } catch (EditLogInputException elie) {
+          LOG.warn("Error while reading edits from disk. Will try again.", elie);
         } catch (InterruptedException ie) {
           // interrupter should have already set shouldRun to false
           continue;
         } catch (Throwable t) {
-          LOG.error("Error encountered while tailing edits. Shutting down " +
-              "standby NN.", t);
+          LOG.error("Unknown error encountered while tailing edits. " +
+              "Shutting down standby NN.", t);
           runtime.exit(1);
         }
 
