@@ -493,6 +493,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3404. Corrected MR AM to honor speculative configuration and enable
     speculating either maps or reduces. (Eric Payne via vinodkv)
 
+    MAPREDUCE-3649. Job End notification gives an error on calling back.
+    (Ravi Prakash via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

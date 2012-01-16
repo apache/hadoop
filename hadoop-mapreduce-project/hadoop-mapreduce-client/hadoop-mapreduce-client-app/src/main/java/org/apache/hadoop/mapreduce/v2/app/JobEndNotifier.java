@@ -19,12 +19,11 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.Proxy;
+import java.net.URL;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -40,7 +39,8 @@ import org.mortbay.log.Log;
  * User can specify number of retry attempts and a time interval at which to
  * attempt retries</li><li>
  * Cluster administrators can set final parameters to set maximum number of
- * tries (0 would disable job end notification) and max time interval</li><li>
+ * tries (0 would disable job end notification) and max time interval and a
+ * proxy if needed</li><li>
  * The URL may contain sentinels which will be replaced by jobId and jobStatus 
  * (eg. SUCCEEDED/KILLED/FAILED) </li> </ul>
  * </p>
@@ -59,8 +59,8 @@ public class JobEndNotifier implements Configurable {
 
   /**
    * Parse the URL that needs to be notified of the end of the job, along
-   * with the number of retries in case of failure and the amount of time to
-   * wait between retries
+   * with the number of retries in case of failure, the amount of time to
+   * wait between retries and proxy settings
    * @param conf the configuration 
    */
   public void setConf(Configuration conf) {
@@ -119,15 +119,19 @@ public class JobEndNotifier implements Configurable {
     boolean success = false;
     try {
       Log.info("Job end notification trying " + urlToNotify);
-      URLConnection conn = urlToNotify.openConnection(proxyToUse);
+      HttpURLConnection conn = (HttpURLConnection) urlToNotify.openConnection();
       conn.setConnectTimeout(5*1000);
       conn.setReadTimeout(5*1000);
       conn.setAllowUserInteraction(false);
-      InputStream is = conn.getInputStream();
-      conn.getContent();
-      is.close();
-      success = true;
-      Log.info("Job end notification to " + urlToNotify + " succeeded");
+      if(conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+        Log.warn("Job end notification to " + urlToNotify +" failed with code: "
+        + conn.getResponseCode() + " and message \"" + conn.getResponseMessage()
+        +"\"");
+      }
+      else {
+        success = true;
+        Log.info("Job end notification to " + urlToNotify + " succeeded");
+      }
     } catch(IOException ioe) {
       Log.warn("Job end notification to " + urlToNotify + " failed", ioe);
     }
@@ -135,8 +139,8 @@ public class JobEndNotifier implements Configurable {
   }
 
   /**
-   * Notify a server of the completion of a submitted job. The server must have
-   * configured MRConfig.JOB_END_NOTIFICATION_URLS
+   * Notify a server of the completion of a submitted job. The user must have
+   * configured MRJobConfig.MR_JOB_END_NOTIFICATION_URL
    * @param jobReport JobReport used to read JobId and JobStatus
    * @throws InterruptedException
    */
