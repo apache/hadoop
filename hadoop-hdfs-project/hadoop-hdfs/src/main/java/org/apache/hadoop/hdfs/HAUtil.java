@@ -18,13 +18,23 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-
+import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
-import java.util.Collection;
+import java.net.URI;
 import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient.Conf;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.retry.FailoverProxyProvider;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.common.base.Preconditions;
 
 public class HAUtil {
   private HAUtil() { /* Hidden constructor */ }
@@ -110,5 +120,84 @@ public class HAUtil {
   public static void setAllowStandbyReads(Configuration conf, boolean val) {
     conf.setBoolean("dfs.ha.allow.stale.reads", val);
   }
+ 
+  /** Creates the Failover proxy provider instance*/
+  @SuppressWarnings("unchecked")
+  public static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
+      Configuration conf, Class<FailoverProxyProvider<?>> failoverProxyProviderClass,
+      Class xface) throws IOException {
+    Preconditions.checkArgument(
+        xface.isAssignableFrom(NamenodeProtocols.class),
+        "Interface %s is not a NameNode protocol", xface);
+    try {
+      Constructor<FailoverProxyProvider<?>> ctor = failoverProxyProviderClass
+          .getConstructor(Class.class);
+      FailoverProxyProvider<?> provider = ctor.newInstance(xface);
+      ReflectionUtils.setConf(provider, conf);
+      return (FailoverProxyProvider<T>) provider;
+    } catch (Exception e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException) e.getCause();
+      } else {
+        throw new IOException(
+            "Couldn't create proxy provider " + failoverProxyProviderClass, e);
+      }
+    }
+  }
 
+  /** Gets the configured Failover proxy provider's class */
+  public static <T> Class<FailoverProxyProvider<T>> getFailoverProxyProviderClass(
+      Configuration conf, URI nameNodeUri, Class<T> xface) throws IOException {
+    if (nameNodeUri == null) {
+      return null;
+    }
+    String host = nameNodeUri.getHost();
+
+    String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "."
+        + host;
+    try {
+      @SuppressWarnings("unchecked")
+      Class<FailoverProxyProvider<T>> ret = (Class<FailoverProxyProvider<T>>) conf
+          .getClass(configKey, null, FailoverProxyProvider.class);
+      if (ret != null) {
+        // If we found a proxy provider, then this URI should be a logical NN.
+        // Given that, it shouldn't have a non-default port number.
+        int port = nameNodeUri.getPort();
+        if (port > 0 && port != NameNode.DEFAULT_PORT) {
+          throw new IOException("Port " + port + " specified in URI "
+              + nameNodeUri + " but host '" + host
+              + "' is a logical (HA) namenode"
+              + " and does not use port information.");
+        }
+      }
+      return ret;
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof ClassNotFoundException) {
+        throw new IOException("Could not load failover proxy provider class "
+            + conf.get(configKey) + " which is configured for authority "
+            + nameNodeUri, e);
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  /** Creates the namenode proxy with the passed Protocol */
+  @SuppressWarnings("unchecked")
+  public static Object createFailoverProxy(Configuration conf, URI nameNodeUri,
+      Class xface) throws IOException {
+    Class<FailoverProxyProvider<?>> failoverProxyProviderClass = HAUtil
+        .getFailoverProxyProviderClass(conf, nameNodeUri, xface);
+    if (failoverProxyProviderClass != null) {
+      FailoverProxyProvider<?> failoverProxyProvider = HAUtil
+          .createFailoverProxyProvider(conf, failoverProxyProviderClass, xface);
+      Conf config = new Conf(conf);
+      return RetryProxy.create(xface, failoverProxyProvider, RetryPolicies
+          .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
+              config.maxFailoverAttempts, config.failoverSleepBaseMillis,
+              config.failoverSleepMaxMillis));
+    }
+    return null;
+  }
+  
 }

@@ -109,3 +109,5 @@ HDFS-2789. TestHAAdmin.testFailover is failing (eli)
 HDFS-2747. Entering safe mode after starting SBN can NPE. (Uma Maheswara Rao G via todd)
 
 HDFS-2772. On transition to active, standby should not swallow ELIE. (atm)
+
+HDFS-2767. ConfiguredFailoverProxyProvider should support NameNodeProtocol. (Uma Maheswara Rao G via todd)

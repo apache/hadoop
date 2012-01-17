@@ -28,10 +28,12 @@ import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.StringTokenizer;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
 
@@ -47,7 +49,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
@@ -807,6 +814,32 @@ public class DFSUtil {
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(addr, ticket, conf, factory);
+  }
+  
+  /**
+   * Build a NamenodeProtocol connection to the namenode and set up the retry
+   * policy
+   */
+  public static NamenodeProtocolTranslatorPB createNNProxyWithNamenodeProtocol(
+      InetSocketAddress address, Configuration conf, UserGroupInformation ugi)
+      throws IOException {
+    RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(5, 200,
+        TimeUnit.MILLISECONDS);
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap 
+        = new HashMap<Class<? extends Exception>, RetryPolicy>();
+    RetryPolicy methodPolicy = RetryPolicies.retryByException(timeoutPolicy,
+        exceptionToPolicyMap);
+    Map<String, RetryPolicy> methodNameToPolicyMap = new HashMap<String, RetryPolicy>();
+    methodNameToPolicyMap.put("getBlocks", methodPolicy);
+    methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
+    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+    NamenodeProtocolPB proxy = RPC.getProxy(NamenodeProtocolPB.class, RPC
+        .getProtocolVersion(NamenodeProtocolPB.class), address, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf));
+    NamenodeProtocolPB retryProxy = (NamenodeProtocolPB) RetryProxy.create(
+        NamenodeProtocolPB.class, proxy, methodNameToPolicyMap);
+    return new NamenodeProtocolTranslatorPB(retryProxy);
   }
   
   /**

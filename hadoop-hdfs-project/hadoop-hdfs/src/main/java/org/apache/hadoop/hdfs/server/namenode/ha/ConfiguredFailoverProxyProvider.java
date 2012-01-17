@@ -32,52 +32,75 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
+
+import com.google.common.base.Preconditions;
 
 /**
  * A FailoverProxyProvider implementation which allows one to configure two URIs
  * to connect to during fail-over. The first configured address is tried first,
  * and on a fail-over event the other address is tried.
  */
-public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
-    Configurable {
+public class ConfiguredFailoverProxyProvider<T> implements
+    FailoverProxyProvider<T>, Configurable {
   
   private static final Log LOG =
       LogFactory.getLog(ConfiguredFailoverProxyProvider.class);
   
   private Configuration conf;
   private int currentProxyIndex = 0;
-  private List<AddressRpcProxyPair> proxies = new ArrayList<AddressRpcProxyPair>();
+  private List<AddressRpcProxyPair<T>> proxies = new ArrayList<AddressRpcProxyPair<T>>();
   private UserGroupInformation ugi;
+  private final Class<T> xface;
 
+  public ConfiguredFailoverProxyProvider(Class<T> xface) {
+    Preconditions.checkArgument(
+        xface.isAssignableFrom(NamenodeProtocols.class),
+        "Interface class %s is not a valid NameNode protocol!");
+    this.xface = xface;
+  }
+    
   @Override
-  public Class<?> getInterface() {
-    return ClientProtocol.class;
+  public Class<T> getInterface() {
+    return xface;
   }
 
   /**
    * Lazily initialize the RPC proxy object.
    */
+  @SuppressWarnings("unchecked")
   @Override
-  public synchronized Object getProxy() {
+  public synchronized T getProxy() {
     AddressRpcProxyPair current = proxies.get(currentProxyIndex);
     if (current.namenode == null) {
       try {
-        // TODO(HA): This will create a NN proxy with an underlying retry
-        // proxy. We don't want this.
-        current.namenode = DFSUtil.createNamenode(current.address, conf, ugi);
+        if (NamenodeProtocol.class.equals(xface)) {
+          current.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(
+              current.address, conf, ugi);
+        } else if (ClientProtocol.class.equals(xface)) {
+          // TODO(HA): This will create a NN proxy with an underlying retry
+          // proxy. We don't want this.
+          current.namenode = DFSUtil.createNamenode(current.address, conf, ugi);
+        } else {
+          throw new IllegalStateException(
+              "Upsupported protocol found when creating the proxy conection to NameNode. "
+                  + ((xface != null) ? xface.getClass().getName() : xface)
+                  + " is not supported by " + this.getClass().getName());
+        }
       } catch (IOException e) {
         LOG.error("Failed to create RPC proxy to NameNode", e);
         throw new RuntimeException(e);
       }
     }
-    return current.namenode;
+    return (T)current.namenode;
   }
 
   @Override
-  public synchronized void performFailover(Object currentProxy) {
+  public synchronized void performFailover(T currentProxy) {
     currentProxyIndex = (currentProxyIndex + 1) % proxies.size();
   }
 
@@ -113,7 +136,7 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
       Map<String, InetSocketAddress> addressesInNN = map.get(nsId);
       
       for (InetSocketAddress address : addressesInNN.values()) {
-        proxies.add(new AddressRpcProxyPair(address));
+        proxies.add(new AddressRpcProxyPair<T>(address));
       }
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -124,9 +147,9 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
    * A little pair object to store the address and connected RPC proxy object to
    * an NN. Note that {@link AddressRpcProxyPair#namenode} may be null.
    */
-  private static class AddressRpcProxyPair {
+  private static class AddressRpcProxyPair<T> {
     public InetSocketAddress address;
-    public ClientProtocol namenode;
+    public T namenode;
     
     public AddressRpcProxyPair(InetSocketAddress address) {
       this.address = address;
@@ -139,7 +162,7 @@ public class ConfiguredFailoverProxyProvider implements FailoverProxyProvider,
    */
   @Override
   public synchronized void close() throws IOException {
-    for (AddressRpcProxyPair proxy : proxies) {
+    for (AddressRpcProxyPair<T> proxy : proxies) {
       if (proxy.namenode != null) {
         if (proxy.namenode instanceof Closeable) {
           ((Closeable)proxy.namenode).close();

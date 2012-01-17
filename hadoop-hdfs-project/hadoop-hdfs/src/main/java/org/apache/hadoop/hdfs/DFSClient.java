@@ -94,9 +94,6 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.FailoverProxyProvider;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -109,7 +106,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -312,20 +308,10 @@ public class DFSClient implements java.io.Closeable {
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
-    
-    Class<?> failoverProxyProviderClass = getFailoverProxyProviderClass(
-        nameNodeUri, conf);
-    
-    if (nameNodeUri != null && failoverProxyProviderClass != null) {
-      FailoverProxyProvider failoverProxyProvider = (FailoverProxyProvider)
-          ReflectionUtils.newInstance(failoverProxyProviderClass, conf);
-      this.namenode = (ClientProtocol)RetryProxy.create(ClientProtocol.class,
-          failoverProxyProvider,
-          RetryPolicies.failoverOnNetworkException(
-              RetryPolicies.TRY_ONCE_THEN_FAIL,
-              dfsClientConf.maxFailoverAttempts,
-              dfsClientConf.failoverSleepBaseMillis,
-              dfsClientConf.failoverSleepMaxMillis));
+    ClientProtocol failoverNNProxy = (ClientProtocol) HAUtil
+        .createFailoverProxy(conf, nameNodeUri, ClientProtocol.class);
+    if (nameNodeUri != null && failoverNNProxy != null) {
+      this.namenode = failoverNNProxy;
       nnAddress = null;
     } else if (nameNodeUri != null && rpcNamenode == null) {
       this.namenode = DFSUtil.createNamenode(NameNode.getAddress(nameNodeUri), conf);
@@ -351,39 +337,6 @@ public class DFSClient implements java.io.Closeable {
         DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Short circuit read is " + shortCircuitLocalReads);
-    }
-  }
-  
-  private Class<?> getFailoverProxyProviderClass(URI nameNodeUri, Configuration conf)
-      throws IOException {
-    if (nameNodeUri == null) {
-      return null;
-    }
-    String host = nameNodeUri.getHost();
-
-    String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + host;
-    try {
-      Class<?> ret = conf.getClass(configKey, null);
-      if (ret != null) {
-        // If we found a proxy provider, then this URI should be a logical NN.
-        // Given that, it shouldn't have a non-default port number.
-        int port = nameNodeUri.getPort();
-        if (port > 0 && port != NameNode.DEFAULT_PORT) {
-          throw new IOException(
-              "Port " + port + " specified in URI " + nameNodeUri +
-              " but host '" + host + "' is a logical (HA) namenode" +
-              " and does not use port information.");
-        }
-      }
-      return ret;
-    } catch (RuntimeException e) {
-      if (e.getCause() instanceof ClassNotFoundException) {
-        throw new IOException("Could not load failover proxy provider class "
-            + conf.get(configKey) + " which is configured for authority " + nameNodeUri,
-            e);
-      } else {
-        throw e;
-      }
     }
   }
 

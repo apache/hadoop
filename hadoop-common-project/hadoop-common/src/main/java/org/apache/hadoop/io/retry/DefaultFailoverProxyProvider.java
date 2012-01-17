@@ -27,28 +27,28 @@ import org.apache.hadoop.ipc.RPC;
  * event of failover, and always returns the same proxy object. 
  */
 @InterfaceStability.Evolving
-public class DefaultFailoverProxyProvider implements FailoverProxyProvider {
+public class DefaultFailoverProxyProvider<T> implements FailoverProxyProvider<T> {
   
-  private Object proxy;
-  private Class<?> iface;
+  private T proxy;
+  private Class<T> iface;
   
-  public DefaultFailoverProxyProvider(Class<?> iface, Object proxy) {
+  public DefaultFailoverProxyProvider(Class<T> iface, T proxy) {
     this.proxy = proxy;
     this.iface = iface;
   }
 
   @Override
-  public Class<?> getInterface() {
+  public Class<T> getInterface() {
     return iface;
   }
 
   @Override
-  public Object getProxy() {
+  public T getProxy() {
     return proxy;
   }
 
   @Override
-  public void performFailover(Object currentProxy) {
+  public void performFailover(T currentProxy) {
     // Nothing to do.
   }
 

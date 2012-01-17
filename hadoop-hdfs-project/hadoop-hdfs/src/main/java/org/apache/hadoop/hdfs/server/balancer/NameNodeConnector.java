@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -58,7 +57,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 /**
@@ -88,7 +86,8 @@ class NameNodeConnector {
     InetSocketAddress nn = Lists.newArrayList(haNNs).get(0);
     // TODO(HA): need to deal with connecting to HA NN pair here
     this.namenodeAddress = nn;
-    this.namenode = createNamenode(nn, conf);
+    this.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(nn, conf,
+        UserGroupInformation.getCurrentUser());
     this.client = DFSUtil.createNamenode(conf);
     this.fs = FileSystem.get(NameNode.getUri(nn), conf);
 
@@ -194,33 +193,6 @@ class NameNodeConnector {
     return getClass().getSimpleName() + "[namenodeAddress=" + namenodeAddress
         + ", id=" + blockpoolID
         + "]";
-  }
-
-  /** Build a NamenodeProtocol connection to the namenode and
-   * set up the retry policy
-   */ 
-  private static NamenodeProtocol createNamenode(InetSocketAddress address,
-      Configuration conf) throws IOException {
-    RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
-        5, 200, TimeUnit.MILLISECONDS);
-    Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
-        new HashMap<Class<? extends Exception>, RetryPolicy>();
-    RetryPolicy methodPolicy = RetryPolicies.retryByException(
-        timeoutPolicy, exceptionToPolicyMap);
-    Map<String,RetryPolicy> methodNameToPolicyMap =
-        new HashMap<String, RetryPolicy>();
-    methodNameToPolicyMap.put("getBlocks", methodPolicy);
-    methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
-
-    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
-    NamenodeProtocolPB proxy = RPC.getProxy(NamenodeProtocolPB.class,
-            RPC.getProtocolVersion(NamenodeProtocolPB.class), address,
-            UserGroupInformation.getCurrentUser(), conf,
-            NetUtils.getDefaultSocketFactory(conf));
-    NamenodeProtocolPB retryProxy = (NamenodeProtocolPB) RetryProxy.create(
-        NamenodeProtocolPB.class, proxy, methodNameToPolicyMap);
-    return new NamenodeProtocolTranslatorPB(retryProxy);
   }
 
   /**

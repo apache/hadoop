@@ -28,19 +28,20 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.util.ThreadUtil;
 import org.junit.Test;
 
+@SuppressWarnings("unchecked")
 public class TestFailoverProxy {
 
-  public static class FlipFlopProxyProvider implements FailoverProxyProvider {
+  public static class FlipFlopProxyProvider<T> implements FailoverProxyProvider<T> {
     
-    private Class<?> iface;
-    private Object currentlyActive;
-    private Object impl1;
-    private Object impl2;
+    private Class<T> iface;
+    private T currentlyActive;
+    private T impl1;
+    private T impl2;
     
     private int failoversOccurred = 0;
     
-    public FlipFlopProxyProvider(Class<?> iface, Object activeImpl,
-        Object standbyImpl) {
+    public FlipFlopProxyProvider(Class<T> iface, T activeImpl,
+        T standbyImpl) {
       this.iface = iface;
       this.impl1 = activeImpl;
       this.impl2 = standbyImpl;
@@ -48,7 +49,7 @@ public class TestFailoverProxy {
     }
     
     @Override
-    public Object getProxy() {
+    public T getProxy() {
       return currentlyActive;
     }
 
@@ -59,7 +60,7 @@ public class TestFailoverProxy {
     }
 
     @Override
-    public Class<?> getInterface() {
+    public Class<T> getInterface() {
       return iface;
     }
 
