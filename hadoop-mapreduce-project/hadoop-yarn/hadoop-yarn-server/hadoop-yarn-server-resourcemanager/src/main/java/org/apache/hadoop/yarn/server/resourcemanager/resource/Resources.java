@@ -26,8 +26,26 @@ import org.apache.hadoop.yarn.util.Records;
 @Private
 @Evolving
 public class Resources {
+  
   // Java doesn't have const :(
-  private static final Resource NONE = createResource(0);
+  private static final Resource NONE = new Resource() {
+
+    @Override
+    public int getMemory() {
+      return 0;
+    }
+
+    @Override
+    public void setMemory(int memory) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    public int compareTo(Resource o) {
+      return (0 - o.getMemory());
+    }
+    
+  };
 
   public static Resource createResource(int memory) {
     Resource resource = Records.newRecord(Resource.class);
@@ -36,7 +54,6 @@ public class Resources {
   }
 
   public static Resource none() {
-    assert NONE.getMemory() == 0 : "NONE should be empty";
     return NONE;
   }
 

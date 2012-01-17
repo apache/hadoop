@@ -109,6 +109,7 @@
                 </goals>
                 <configuration>
                   <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
+		  <classpathScope>compile</classpathScope>
                   <arguments>
                     <argument>NodeManager</argument>
                     <argument>org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl,

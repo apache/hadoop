@@ -189,6 +189,10 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code (eli)
 
+    HDFS-362.  FSEditLog should not writes long and short as UTF8, and should
+    not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
+    via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

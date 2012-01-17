@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
@@ -92,11 +93,18 @@ public class TestParentQueue {
   private void stubQueueAllocation(final CSQueue queue, 
       final Resource clusterResource, final SchedulerNode node, 
       final int allocation) {
+    stubQueueAllocation(queue, clusterResource, node, allocation, 
+        NodeType.NODE_LOCAL);
+  }
+  
+  private void stubQueueAllocation(final CSQueue queue, 
+      final Resource clusterResource, final SchedulerNode node, 
+      final int allocation, final NodeType type) {
     
     // Simulate the queue allocation
-    doAnswer(new Answer<Resource>() {
+    doAnswer(new Answer<CSAssignment>() {
       @Override
-      public Resource answer(InvocationOnMock invocation) throws Throwable {
+      public CSAssignment answer(InvocationOnMock invocation) throws Throwable {
         try {
           throw new Exception();
         } catch (Exception e) {
@@ -115,8 +123,8 @@ public class TestParentQueue {
         
         // Next call - nothing
         if (allocation > 0) {
-          doReturn(Resources.none()).when(queue).assignContainers(
-              eq(clusterResource), eq(node));
+          doReturn(new CSAssignment(Resources.none(), type)).
+            when(queue).assignContainers(eq(clusterResource), eq(node));
 
           // Mock the node's resource availability
           Resource available = node.getAvailableResource();
@@ -124,7 +132,7 @@ public class TestParentQueue {
           when(node).getAvailableResource();
         }
 
-        return allocatedResource;
+        return new CSAssignment(allocatedResource, type);
       }
     }).
     when(queue).assignContainers(eq(clusterResource), eq(node));
@@ -399,6 +407,78 @@ public class TestParentQueue {
         c.getUtilization(), delta);
     reset(a); reset(b); reset(c);
     
+  }
+  
+  @Test
+  public void testOffSwitchScheduling() throws Exception {
+    // Setup queue configs
+    setupSingleLevelQueues(csConf);
+    
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueue root = 
+        CapacityScheduler.parseQueue(csContext, csConf, null, 
+            CapacitySchedulerConfiguration.ROOT, queues, queues, 
+            CapacityScheduler.queueComparator, 
+            CapacityScheduler.applicationComparator,
+            TestUtils.spyHook);
+
+    // Setup some nodes
+    final int memoryPerNode = 10;
+    final int numNodes = 2;
+    
+    SchedulerNode node_0 = 
+        TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
+    SchedulerNode node_1 = 
+        TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
+    
+    final Resource clusterResource = 
+        Resources.createResource(numNodes * (memoryPerNode*GB));
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    // Start testing
+    LeafQueue a = (LeafQueue)queues.get(A);
+    LeafQueue b = (LeafQueue)queues.get(B);
+    final float delta = 0.0001f;
+    
+    // Simulate B returning a container on node_0
+    stubQueueAllocation(a, clusterResource, node_0, 0*GB, NodeType.OFF_SWITCH);
+    stubQueueAllocation(b, clusterResource, node_0, 1*GB, NodeType.OFF_SWITCH);
+    root.assignContainers(clusterResource, node_0);
+    assertEquals(0.0f, a.getUtilization(), delta);
+    assertEquals(computeQueueUtilization(b, 1*GB, clusterResource), 
+        b.getUtilization(), delta);
+    
+    // Now, A should get the scheduling opportunity since A=0G/6G, B=1G/14G
+    // also, B gets a scheduling opportunity since A allocates RACK_LOCAL
+    stubQueueAllocation(a, clusterResource, node_1, 2*GB, NodeType.RACK_LOCAL);
+    stubQueueAllocation(b, clusterResource, node_1, 1*GB, NodeType.OFF_SWITCH);
+    root.assignContainers(clusterResource, node_1);
+    InOrder allocationOrder = inOrder(a, b);
+    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
+        any(SchedulerNode.class));
+    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
+        any(SchedulerNode.class));
+    assertEquals(computeQueueUtilization(a, 2*GB, clusterResource), 
+        a.getUtilization(), delta);
+    assertEquals(computeQueueUtilization(b, 2*GB, clusterResource), 
+        b.getUtilization(), delta);
+    
+    // Now, B should get the scheduling opportunity 
+    // since A has 2/6G while B has 2/14G, 
+    // However, since B returns off-switch, A won't get an opportunity
+    stubQueueAllocation(a, clusterResource, node_0, 1*GB, NodeType.NODE_LOCAL);
+    stubQueueAllocation(b, clusterResource, node_0, 2*GB, NodeType.OFF_SWITCH);
+    root.assignContainers(clusterResource, node_0);
+    allocationOrder = inOrder(b, a);
+    allocationOrder.verify(b).assignContainers(eq(clusterResource), 
+        any(SchedulerNode.class));
+    allocationOrder.verify(a).assignContainers(eq(clusterResource), 
+        any(SchedulerNode.class));
+    assertEquals(computeQueueUtilization(a, 2*GB, clusterResource), 
+        a.getUtilization(), delta);
+    assertEquals(computeQueueUtilization(b, 4*GB, clusterResource), 
+        b.getUtilization(), delta);
+
   }
   
   @After

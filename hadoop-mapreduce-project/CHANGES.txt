@@ -131,6 +131,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3553. Add support for data returned when exceptions thrown from web 
     service apis to be in either xml or in JSON. (Thomas Graves via mahadev)
 
+    MAPREDUCE-3641. Making CapacityScheduler more conservative so as to 
+    assign only one off-switch container in a single scheduling
+    iteration. (Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -451,6 +455,15 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3404. Corrected MR AM to honor speculative configuration and enable
     speculating either maps or reduces. (Eric Payne via vinodkv)
+
+    MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
+    (Brandon Li via jitendra)
+
+    MAPREDUCE-3649. Job End notification gives an error on calling back.
+    (Ravi Prakash via mahadev)
+
+    MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
+    via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -147,6 +147,7 @@
                 </goals>
                 <configuration>
                   <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
+		  <classpathScope>compile</classpathScope>
                   <arguments>
                     <argument>ResourceManager</argument>
                     <argument>org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl,
