@@ -22,11 +22,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -34,11 +32,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -46,13 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
@@ -83,13 +74,24 @@ class NameNodeConnector {
 
   NameNodeConnector(Collection<InetSocketAddress> haNNs,
       Configuration conf) throws IOException {
-    InetSocketAddress nn = Lists.newArrayList(haNNs).get(0);
-    // TODO(HA): need to deal with connecting to HA NN pair here
-    this.namenodeAddress = nn;
-    this.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(nn, conf,
-        UserGroupInformation.getCurrentUser());
-    this.client = DFSUtil.createNamenode(conf);
-    this.fs = FileSystem.get(NameNode.getUri(nn), conf);
+    this.namenodeAddress = Lists.newArrayList(haNNs).get(0);
+    URI nameNodeUri = NameNode.getUri(this.namenodeAddress);
+    NamenodeProtocol failoverNamenode = (NamenodeProtocol) HAUtil
+        .createFailoverProxy(conf, nameNodeUri, NamenodeProtocol.class);
+    if (null != failoverNamenode) {
+      this.namenode = failoverNamenode;
+    } else {
+      this.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(
+          this.namenodeAddress, conf, UserGroupInformation.getCurrentUser());
+    }
+    ClientProtocol failOverClient = (ClientProtocol) HAUtil
+        .createFailoverProxy(conf, nameNodeUri, ClientProtocol.class);
+    if (null != failOverClient) {
+      this.client = failOverClient;
+    } else {
+      this.client = DFSUtil.createNamenode(conf);
+    }
+    this.fs = FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();

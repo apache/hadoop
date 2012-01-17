@@ -113,3 +113,5 @@ HDFS-2772. On transition to active, standby should not swallow ELIE. (atm)
 HDFS-2767. ConfiguredFailoverProxyProvider should support NameNodeProtocol. (Uma Maheswara Rao G via todd)
 
 HDFS-2795. Standby NN takes a long time to recover from a dead DN starting up. (todd)
+
+HDFS-2592. Balancer support for HA namenodes. (Uma Maheswara Rao G via todd)

@@ -329,7 +329,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IllegalArgumentException(
         "Unexpected not positive size: "+size);
     }
-
+    namesystem.checkOperation(OperationCategory.READ);
     return namesystem.getBlockManager().getBlocks(datanode, size); 
   }
 
