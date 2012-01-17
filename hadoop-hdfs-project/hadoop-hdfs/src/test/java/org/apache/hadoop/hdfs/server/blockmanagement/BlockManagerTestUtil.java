@@ -24,8 +24,11 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
+import org.junit.Assert;
 
 public class BlockManagerTestUtil {
   public static void setNodeReplicationLimit(final BlockManager blockManager,
@@ -143,5 +146,35 @@ public class BlockManagerTestUtil {
     int work = computeInvalidationWork(bm);
     work += bm.computeReplicationWork(Integer.MAX_VALUE);
     return work;
+  }
+
+  /**
+   * Ensure that the given NameNode marks the specified DataNode as
+   * entirely dead/expired.
+   * @param nn the NameNode to manipulate
+   * @param dnName the name of the DataNode
+   */
+  public static void noticeDeadDatanode(NameNode nn, String dnName) {
+    FSNamesystem namesystem = nn.getNamesystem();
+    namesystem.writeLock();
+    try {
+      DatanodeManager dnm = namesystem.getBlockManager().getDatanodeManager();
+      HeartbeatManager hbm = dnm.getHeartbeatManager();
+      DatanodeDescriptor[] dnds = hbm.getDatanodes();
+      DatanodeDescriptor theDND = null;
+      for (DatanodeDescriptor dnd : dnds) {
+        if (dnd.getName().equals(dnName)) {
+          theDND = dnd;
+        }
+      }
+      Assert.assertNotNull("Could not find DN with name: " + dnName, theDND);
+      
+      synchronized (hbm) {
+        theDND.setLastUpdate(0);
+        hbm.heartbeatCheck();
+      }
+    } finally {
+      namesystem.writeUnlock();
+    }
   }
 }

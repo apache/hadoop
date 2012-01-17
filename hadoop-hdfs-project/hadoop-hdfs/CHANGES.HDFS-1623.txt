@@ -111,3 +111,5 @@ HDFS-2747. Entering safe mode after starting SBN can NPE. (Uma Maheswara Rao G v
 HDFS-2772. On transition to active, standby should not swallow ELIE. (atm)
 
 HDFS-2767. ConfiguredFailoverProxyProvider should support NameNodeProtocol. (Uma Maheswara Rao G via todd)
+
+HDFS-2795. Standby NN takes a long time to recover from a dead DN starting up. (todd)

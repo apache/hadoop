@@ -2502,6 +2502,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       final int curReplicasDelta, int expectedReplicasDelta) {
     namesystem.writeLock();
     try {
+      if (!namesystem.isPopulatingReplQueues()) {
+        return;
+      }
       NumberReplicas repl = countNodes(block);
       int curExpectedReplicas = getReplication(block);
       if (isNeededReplication(block, curExpectedReplicas, repl.liveReplicas())) {
