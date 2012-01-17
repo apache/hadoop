@@ -452,6 +452,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-2450. Fixed a corner case with interrupted communication threads
     leading to a long timeout in Task. (Rajesh Balamohan via acmurthy)
 
+    MAPREDUCE-3669. Allow clients to talk to MR HistoryServer using both
+    delegation tokens and kerberos. (mahadev via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
