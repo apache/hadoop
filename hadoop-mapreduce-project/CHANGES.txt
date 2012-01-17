@@ -449,6 +449,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
     via mahadev)
 
+    MAPREDUCE-2450. Fixed a corner case with interrupted communication threads
+    leading to a long timeout in Task. (Rajesh Balamohan via acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
