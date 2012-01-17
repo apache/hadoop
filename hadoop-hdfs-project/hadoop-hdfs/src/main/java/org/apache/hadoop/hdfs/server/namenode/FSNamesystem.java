@@ -3681,7 +3681,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override
   public boolean isPopulatingReplQueues() {
-    if (!haContext.getState().shouldPopulateReplQueues()) {
+    if (haContext != null && // null during startup!
+        !haContext.getState().shouldPopulateReplQueues()) {
       return false;
     }
     // safeMode is volatile, and may be set to null at any time
