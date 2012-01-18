@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -500,10 +501,12 @@ public class ParentQueue implements CSQueue {
   }
 
   @Override
-  public synchronized Resource assignContainers(
+  public synchronized CSAssignment assignContainers(
       Resource clusterResource, SchedulerNode node) {
-    Resource assigned = Resources.createResource(0);
-
+    CSAssignment assignment = 
+        new CSAssignment(Resources.createResource(0), NodeType.NODE_LOCAL);
+    boolean assignedOffSwitch = false;
+    
     while (canAssign(node)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Trying to assign containers to child-queue of "
@@ -516,16 +519,18 @@ public class ParentQueue implements CSQueue {
       }
       
       // Schedule
-      Resource assignedToChild = 
+      CSAssignment assignedToChild = 
           assignContainersToChildQueues(clusterResource, node);
+      assignedOffSwitch = (assignedToChild.getType() == NodeType.OFF_SWITCH);
       
       // Done if no child-queue assigned anything
-      if (Resources.greaterThan(assignedToChild, Resources.none())) {
+      if (Resources.greaterThan(assignedToChild.getResource(), 
+              Resources.none())) {
         // Track resource utilization for the parent-queue
-        allocateResource(clusterResource, assignedToChild);
+        allocateResource(clusterResource, assignedToChild.getResource());
         
         // Track resource utilization in this pass of the scheduler
-        Resources.addTo(assigned, assignedToChild);
+        Resources.addTo(assignment.getResource(), assignedToChild.getResource());
         
         LOG.info("assignedContainer" +
             " queue=" + getQueueName() + 
@@ -539,17 +544,26 @@ public class ParentQueue implements CSQueue {
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("ParentQ=" + getQueueName()
-          + " assignedSoFarInThisIteration=" + assigned
+          + " assignedSoFarInThisIteration=" + assignment.getResource()
           + " utilization=" + getUtilization());
       }
 
       // Do not assign more than one container if this isn't the root queue
-      if (!rootQueue) {
+      // or if we've already assigned an off-switch container
+      if (rootQueue) {
+        if (assignedOffSwitch) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Not assigning more than one off-switch container," +
+            		" assignments so far: " + assignment);
+          }
+          break;
+        }
+      } else {
         break;
       }
     } 
     
-    return assigned;
+    return assignment;
   }
 
   private synchronized boolean assignToQueue(Resource clusterResource) {
@@ -573,9 +587,10 @@ public class ParentQueue implements CSQueue {
                                      minimumAllocation);
   }
   
-  synchronized Resource assignContainersToChildQueues(Resource cluster, 
+  synchronized CSAssignment assignContainersToChildQueues(Resource cluster, 
       SchedulerNode node) {
-    Resource assigned = Resources.createResource(0);
+    CSAssignment assignment = 
+        new CSAssignment(Resources.createResource(0), NodeType.NODE_LOCAL);
     
     printChildQueues();
 
@@ -586,25 +601,28 @@ public class ParentQueue implements CSQueue {
         LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
           + " stats: " + childQueue);
       }
-      assigned = childQueue.assignContainers(cluster, node);
+      assignment = childQueue.assignContainers(cluster, node);
       if(LOG.isDebugEnabled()) {
-        LOG.debug("Assignedto queue: " + childQueue.getQueuePath()
-          + " stats: " + childQueue + " --> " + assigned.getMemory());
+        LOG.debug("Assigned to queue: " + childQueue.getQueuePath() +
+          " stats: " + childQueue + " --> " + 
+          assignment.getResource().getMemory() + ", " + assignment.getType());
       }
 
       // If we do assign, remove the queue and re-insert in-order to re-sort
-      if (Resources.greaterThan(assigned, Resources.none())) {
+      if (Resources.greaterThan(assignment.getResource(), Resources.none())) {
         // Remove and re-insert to sort
         iter.remove();
         LOG.info("Re-sorting queues since queue: " + childQueue.getQueuePath() + 
             " stats: " + childQueue);
         childQueues.add(childQueue);
-        printChildQueues();
+        if (LOG.isDebugEnabled()) {
+          printChildQueues();
+        }
         break;
       }
     }
     
-    return assigned;
+    return assignment;
   }
 
   String getChildQueuesToPrint() {

@@ -30,7 +30,9 @@
   <modules>
     <module>hadoop-streaming</module>
     <module>hadoop-archives</module>
+    <module>hadoop-rumen</module>
     <module>hadoop-tools-dist</module>
+    <module>hadoop-extras</module>
   </modules>
 
   <build>

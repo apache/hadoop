@@ -43,6 +43,16 @@
       <artifactId>hadoop-archives</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-rumen</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-extras</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>

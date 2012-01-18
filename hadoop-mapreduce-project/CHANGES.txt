@@ -183,6 +183,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3553. Add support for data returned when exceptions thrown from web 
     service apis to be in either xml or in JSON. (Thomas Graves via mahadev)
 
+    MAPREDUCE-3641. Making CapacityScheduler more conservative so as to 
+    assign only one off-switch container in a single scheduling
+    iteration. (Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -498,6 +502,18 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
     via mahadev)
+
+    MAPREDUCE-2450. Fixed a corner case with interrupted communication threads
+    leading to a long timeout in Task. (Rajesh Balamohan via acmurthy)
+
+    MAPREDUCE-3669. Allow clients to talk to MR HistoryServer using both
+    delegation tokens and kerberos. (mahadev via acmurthy)
+
+    MAPREDUCE-3684. LocalDistributedCacheManager does not shut down its thread
+    pool (tomwhite)
+
+    MAPREDUCE-3582. Move successfully passing MR1 tests to MR2 maven tree.
+    (ahmed via tucu)
 
 Release 0.23.0 - 2011-11-01 
 
