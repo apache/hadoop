@@ -453,7 +453,10 @@ Release 0.23.1 - Unreleased
     leading to a long timeout in Task. (Rajesh Balamohan via acmurthy)
 
     MAPREDUCE-3669. Allow clients to talk to MR HistoryServer using both
-    delegation tokens and kerberos. (mahadev via acmurthy) 
+    delegation tokens and kerberos. (mahadev via acmurthy)
+
+    MAPREDUCE-3684. LocalDistributedCacheManager does not shut down its thread
+    pool (tomwhite)
 
 Release 0.23.0 - 2011-11-01 
 
