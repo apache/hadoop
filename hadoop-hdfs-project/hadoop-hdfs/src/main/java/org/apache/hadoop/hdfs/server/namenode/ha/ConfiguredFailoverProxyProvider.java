@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,22 +47,59 @@ import com.google.common.base.Preconditions;
  * and on a fail-over event the other address is tried.
  */
 public class ConfiguredFailoverProxyProvider<T> implements
-    FailoverProxyProvider<T>, Configurable {
+    FailoverProxyProvider<T> {
   
   private static final Log LOG =
       LogFactory.getLog(ConfiguredFailoverProxyProvider.class);
   
-  private Configuration conf;
-  private int currentProxyIndex = 0;
-  private List<AddressRpcProxyPair<T>> proxies = new ArrayList<AddressRpcProxyPair<T>>();
-  private UserGroupInformation ugi;
+  private final Configuration conf;
+  private final List<AddressRpcProxyPair<T>> proxies =
+      new ArrayList<AddressRpcProxyPair<T>>();
+  private final UserGroupInformation ugi;
   private final Class<T> xface;
+  
+  private int currentProxyIndex = 0;
 
-  public ConfiguredFailoverProxyProvider(Class<T> xface) {
+  public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
+      Class<T> xface) {
     Preconditions.checkArgument(
         xface.isAssignableFrom(NamenodeProtocols.class),
         "Interface class %s is not a valid NameNode protocol!");
     this.xface = xface;
+    
+    this.conf = new Configuration(conf);
+    int maxRetries = this.conf.getInt(
+        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_KEY,
+        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_DEFAULT);
+    this.conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+        maxRetries);
+    
+    int maxRetriesOnSocketTimeouts = this.conf.getInt(
+        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT);
+    this.conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+        maxRetriesOnSocketTimeouts);
+    
+    try {
+      ugi = UserGroupInformation.getCurrentUser();
+      
+      Map<String, Map<String, InetSocketAddress>> map = DFSUtil.getHaNnRpcAddresses(
+          conf);
+      Map<String, InetSocketAddress> addressesInNN = map.get(uri.getHost());
+      
+      if (addressesInNN == null || addressesInNN.size() == 0) {
+        throw new RuntimeException("Could not find any configured addresses " +
+            "for URI " + uri);
+      }
+      
+      for (InetSocketAddress address : addressesInNN.values()) {
+        proxies.add(new AddressRpcProxyPair<T>(address));
+      }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
     
   @Override
@@ -102,45 +140,6 @@ public class ConfiguredFailoverProxyProvider<T> implements
   @Override
   public synchronized void performFailover(T currentProxy) {
     currentProxyIndex = (currentProxyIndex + 1) % proxies.size();
-  }
-
-  @Override
-  public synchronized Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public synchronized void setConf(Configuration conf) {
-    this.conf = new Configuration(conf);
-    int maxRetries = this.conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_KEY,
-        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_DEFAULT);
-    this.conf.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
-        maxRetries);
-    
-    int maxRetriesOnSocketTimeouts = this.conf.getInt(
-        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
-        DFSConfigKeys.DFS_CLIENT_FAILOVER_CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT);
-    this.conf.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
-        maxRetriesOnSocketTimeouts);
-    try {
-      ugi = UserGroupInformation.getCurrentUser();
-      
-      Map<String, Map<String, InetSocketAddress>> map = DFSUtil.getHaNnRpcAddresses(
-          conf);
-      // TODO(HA): currently hardcoding the nameservice used by MiniDFSCluster.
-      // We need to somehow communicate this into the proxy provider.
-      String nsId = "nameserviceId1";
-      Map<String, InetSocketAddress> addressesInNN = map.get(nsId);
-      
-      for (InetSocketAddress address : addressesInNN.values()) {
-        proxies.add(new AddressRpcProxyPair<T>(address));
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   /**

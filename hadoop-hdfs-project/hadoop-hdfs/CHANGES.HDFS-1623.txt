@@ -115,3 +115,5 @@ HDFS-2767. ConfiguredFailoverProxyProvider should support NameNodeProtocol. (Uma
 HDFS-2795. Standby NN takes a long time to recover from a dead DN starting up. (todd)
 
 HDFS-2592. Balancer support for HA namenodes. (Uma Maheswara Rao G via todd)
+
+HDFS-2367. Enable the configuration of multiple HA cluster addresses. (atm)

@@ -125,15 +125,15 @@ public class HAUtil {
   @SuppressWarnings("unchecked")
   public static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
       Configuration conf, Class<FailoverProxyProvider<?>> failoverProxyProviderClass,
-      Class xface) throws IOException {
+      Class xface, URI nameNodeUri) throws IOException {
     Preconditions.checkArgument(
         xface.isAssignableFrom(NamenodeProtocols.class),
         "Interface %s is not a NameNode protocol", xface);
     try {
       Constructor<FailoverProxyProvider<?>> ctor = failoverProxyProviderClass
-          .getConstructor(Class.class);
-      FailoverProxyProvider<?> provider = ctor.newInstance(xface);
-      ReflectionUtils.setConf(provider, conf);
+          .getConstructor(Configuration.class, URI.class, Class.class);
+      FailoverProxyProvider<?> provider = ctor.newInstance(conf, nameNodeUri,
+          xface);
       return (FailoverProxyProvider<T>) provider;
     } catch (Exception e) {
       if (e.getCause() instanceof IOException) {
@@ -190,7 +190,8 @@ public class HAUtil {
         .getFailoverProxyProviderClass(conf, nameNodeUri, xface);
     if (failoverProxyProviderClass != null) {
       FailoverProxyProvider<?> failoverProxyProvider = HAUtil
-          .createFailoverProxyProvider(conf, failoverProxyProviderClass, xface);
+          .createFailoverProxyProvider(conf, failoverProxyProviderClass, xface,
+              nameNodeUri);
       Conf config = new Conf(conf);
       return RetryProxy.create(xface, failoverProxyProvider, RetryPolicies
           .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,

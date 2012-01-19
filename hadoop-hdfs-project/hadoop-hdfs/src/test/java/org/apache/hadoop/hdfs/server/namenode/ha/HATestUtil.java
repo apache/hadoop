@@ -130,7 +130,7 @@ public abstract class HATestUtil {
   
   /** Gets the filesystem instance by setting the failover configurations */
   public static FileSystem configureFailoverFs(MiniDFSCluster cluster, Configuration conf)
-  throws IOException, URISyntaxException {
+      throws IOException, URISyntaxException {
     conf = new Configuration(conf);
     String logicalName = getLogicalHostname(cluster);
     setFailoverConfigurations(cluster, conf, logicalName);
@@ -143,17 +143,17 @@ public abstract class HATestUtil {
       Configuration conf, String logicalName) {
     InetSocketAddress nnAddr1 = cluster.getNameNode(0).getNameNodeAddress();
     InetSocketAddress nnAddr2 = cluster.getNameNode(1).getNameNodeAddress();
-    String nsId = "nameserviceId1";
     String nameNodeId1 = "nn1";
     String nameNodeId2 = "nn2";
     String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();
     String address2 = "hdfs://" + nnAddr2.getHostName() + ":" + nnAddr2.getPort();
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
-        nsId, nameNodeId1), address1);
+        logicalName, nameNodeId1), address1);
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
-        nsId, nameNodeId2), address2);
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nsId);
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, nsId),
+        logicalName, nameNodeId2), address2);
+    
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, logicalName);
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, logicalName),
         nameNodeId1 + "," + nameNodeId2);
     conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
         ConfiguredFailoverProxyProvider.class.getName());
