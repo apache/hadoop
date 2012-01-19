@@ -632,7 +632,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
    * The only entry point to change the Job.
    */
   public void handle(JobEvent event) {
-    LOG.info("Processing " + event.getJobId() + " of type " + event.getType());
+    LOG.debug("Processing " + event.getJobId() + " of type " + event.getType());
     try {
       writeLock.lock();
       JobState oldState = getState();

@@ -181,7 +181,7 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       this.writeLock.lock();
 
       Path resourcePath = event.getLocalResourceRequest().getPath();
-      LOG.info("Processing " + resourcePath + " of type " + event.getType());
+      LOG.debug("Processing " + resourcePath + " of type " + event.getType());
 
       ResourceState oldState = this.stateMachine.getCurrentState();
       ResourceState newState = null;

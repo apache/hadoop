@@ -468,7 +468,7 @@ public class RMAppAttemptImpl implements RMAppAttempt {
 
     try {
       ApplicationAttemptId appAttemptID = event.getApplicationAttemptId();
-      LOG.info("Processing event for " + appAttemptID + " of type "
+      LOG.debug("Processing event for " + appAttemptID + " of type "
           + event.getType());
       final RMAppAttemptState oldState = getAppAttemptState();
       try {

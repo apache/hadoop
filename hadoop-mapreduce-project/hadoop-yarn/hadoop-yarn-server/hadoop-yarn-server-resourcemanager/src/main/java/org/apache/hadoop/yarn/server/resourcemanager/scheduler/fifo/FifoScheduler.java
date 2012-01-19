@@ -575,12 +575,12 @@ public class FifoScheduler implements ResourceScheduler {
 
     if (Resources.greaterThanOrEqual(node.getAvailableResource(),
         minimumAllocation)) {
-      LOG.info("Node heartbeat " + rmNode.getNodeID() + 
+      LOG.debug("Node heartbeat " + rmNode.getNodeID() + 
           " available resource = " + node.getAvailableResource());
       
       assignContainers(node);
 
-      LOG.info("Node after allocation " + rmNode.getNodeID() + " resource = "
+      LOG.debug("Node after allocation " + rmNode.getNodeID() + " resource = "
           + node.getAvailableResource());
     }
     
