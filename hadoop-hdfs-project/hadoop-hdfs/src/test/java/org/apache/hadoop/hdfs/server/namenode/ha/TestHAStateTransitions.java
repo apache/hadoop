@@ -24,15 +24,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
+import org.apache.tools.ant.taskdefs.WaitFor;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -45,6 +49,7 @@ public class TestHAStateTransitions {
       TestStandbyIsHot.class);
   private static final Path TEST_DIR = new Path("/test");
   private static final Path TEST_FILE_PATH = new Path(TEST_DIR, "foo");
+  private static final String TEST_FILE_STR = TEST_FILE_PATH.toUri().getPath();
   private static final String TEST_FILE_DATA =
     "Hello state transitioning world";
 
@@ -188,6 +193,61 @@ public class TestHAStateTransitions {
       ctx.waitFor(20000);
       ctx.stop();
     } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Test for HDFS-2812. Since lease renewals go from the client
+   * only to the active NN, the SBN will have out-of-date lease
+   * info when it becomes active. We need to make sure we don't
+   * accidentally mark the leases as expired when the failover
+   * proceeds.
+   */
+  @Test(timeout=120000)
+  public void testLeasesRenewedOnTransition() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleHATopology())
+      .numDataNodes(1)
+      .build();
+    FSDataOutputStream stm = null;
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    NameNode nn0 = cluster.getNameNode(0);
+    NameNode nn1 = cluster.getNameNode(1);
+    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
+    nn1.getNamesystem().getEditLogTailer().interrupt();
+
+    try {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+      
+      LOG.info("Starting with NN 0 active");
+
+      stm = fs.create(TEST_FILE_PATH);
+      long nn0t0 = NameNodeAdapter.getLeaseRenewalTime(nn0, TEST_FILE_STR);
+      assertTrue(nn0t0 > 0);
+      long nn1t0 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
+      assertEquals("Lease should not yet exist on nn1",
+          -1, nn1t0);
+      
+      Thread.sleep(5); // make sure time advances!
+
+      HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+      long nn1t1 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
+      assertTrue("Lease should have been created on standby. Time was: " +
+          nn1t1, nn1t1 > nn0t0);
+          
+      Thread.sleep(5); // make sure time advances!
+      
+      LOG.info("Failing over to NN 1");
+      cluster.transitionToStandby(0);
+      cluster.transitionToActive(1);
+      long nn1t2 = NameNodeAdapter.getLeaseRenewalTime(nn1, TEST_FILE_STR);
+      assertTrue("Lease should have been renewed by failover process",
+          nn1t2 > nn1t1);
+    } finally {
+      IOUtils.closeStream(stm);
       cluster.shutdown();
     }
   }

@@ -337,6 +337,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   private HAContext haContext;
 
+  private boolean haEnabled;
+
   private final Configuration conf;
   
   PendingDataNodeMessages getPendingDataNodeMessages() {
@@ -545,6 +547,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (UserGroupInformation.isSecurityEnabled()) {
         startSecretManager();
       }
+      if (haEnabled) {
+        // Renew all of the leases before becoming active.
+        // This is because, while we were in standby mode,
+        // the leases weren't getting renewed on this NN.
+        // Give them all a fresh start here.
+        leaseManager.renewAllLeases();
+      }
       leaseManager.startMonitor();
     } finally {
       writeUnlock();
@@ -737,8 +746,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // block allocation has to be persisted in HA using a shared edits directory
     // so that the standby has up-to-date namespace information
     String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
-    this.persistBlocks |= HAUtil.isHAEnabled(conf, nameserviceId) &&
-        HAUtil.usesSharedEditsDir(conf);
+    this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);  
+    this.persistBlocks |= haEnabled && HAUtil.usesSharedEditsDir(conf);
 
     short filePermission = (short)conf.getInt(DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
                                               DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);

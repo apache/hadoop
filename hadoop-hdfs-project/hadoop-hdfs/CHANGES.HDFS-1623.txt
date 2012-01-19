@@ -117,3 +117,5 @@ HDFS-2795. Standby NN takes a long time to recover from a dead DN starting up. (
 HDFS-2592. Balancer support for HA namenodes. (Uma Maheswara Rao G via todd)
 
 HDFS-2367. Enable the configuration of multiple HA cluster addresses. (atm)
+
+HDFS-2812. When becoming active, the NN should treat all leases as freshly renewed. (todd)

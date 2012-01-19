@@ -200,6 +200,15 @@ public class LeaseManager {
     }
   }
 
+  /**
+   * Renew all of the currently open leases.
+   */
+  synchronized void renewAllLeases() {
+    for (Lease l : leases.values()) {
+      renewLease(l);
+    }
+  }
+
   /************************************************************
    * A Lease governs all the locks held by a single client.
    * For each client there's a corresponding lease, whose
@@ -305,6 +314,11 @@ public class LeaseManager {
     void replacePath(String oldpath, String newpath) {
       paths.remove(oldpath);
       paths.add(newpath);
+    }
+    
+    @VisibleForTesting
+    long getLastUpdate() {
+      return lastUpdate;
     }
   }
 

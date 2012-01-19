@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
+import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
@@ -124,6 +125,19 @@ public class NameNodeAdapter {
 
   public static String getLeaseHolderForPath(NameNode namenode, String path) {
     return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
+  }
+
+  /**
+   * @return the timestamp of the last renewal of the given lease,
+   *   or -1 in the case that the lease doesn't exist.
+   */
+  public static long getLeaseRenewalTime(NameNode nn, String path) {
+    LeaseManager lm = nn.getNamesystem().leaseManager;
+    Lease l = lm.getLeaseByPath(path);
+    if (l == null) {
+      return -1;
+    }
+    return l.getLastUpdate();
   }
 
   /**
