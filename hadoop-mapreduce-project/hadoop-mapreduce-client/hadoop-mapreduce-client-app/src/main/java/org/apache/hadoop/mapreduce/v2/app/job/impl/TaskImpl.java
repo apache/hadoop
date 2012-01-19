@@ -537,7 +537,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   @Override
   public void handle(TaskEvent event) {
-    LOG.info("Processing " + event.getTaskID() + " of type " + event.getType());
+    LOG.debug("Processing " + event.getTaskID() + " of type " + event.getType());
     try {
       writeLock.lock();
       TaskState oldState = getState();

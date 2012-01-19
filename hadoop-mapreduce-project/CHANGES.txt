@@ -119,6 +119,8 @@ Release 0.23.1 - Unreleased
     assign only one off-switch container in a single scheduling
     iteration. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3692. yarn-resourcemanager out and log files can get big. (eli)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
