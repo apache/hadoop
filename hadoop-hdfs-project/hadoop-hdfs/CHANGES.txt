@@ -89,6 +89,9 @@ Release 0.23.1 - UNRELEASED
     not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
     via szetszwo)
 
+    HDFS-2803. Add logging to LeaseRenewer for better lease expiration debugging.
+    (Jimmy Xiang via todd)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
