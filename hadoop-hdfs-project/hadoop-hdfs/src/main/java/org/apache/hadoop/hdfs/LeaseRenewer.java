@@ -292,6 +292,10 @@ class LeaseRenewer {
           @Override
           public void run() {
             try {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Lease renewer daemon for " + clientsString()
+                    + " with renew id " + id + " started");
+              }
               LeaseRenewer.this.run(id);
             } catch(InterruptedException e) {
               if (LOG.isDebugEnabled()) {
@@ -301,6 +305,10 @@ class LeaseRenewer {
             } finally {
               synchronized(LeaseRenewer.this) {
                 Factory.INSTANCE.remove(LeaseRenewer.this);
+              }
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Lease renewer daemon for " + clientsString()
+                    + " with renew id " + id + " exited");
               }
             }
           }
@@ -401,6 +409,9 @@ class LeaseRenewer {
       if (!c.getClientName().equals(previousName)) {
         c.renewLease();
         previousName = c.getClientName();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Lease renewed for client " + previousName);
+        }
       }
     }
   }
@@ -416,6 +427,10 @@ class LeaseRenewer {
       if (System.currentTimeMillis() - lastRenewed >= getRenewalTime()) {
         try {
           renew();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Lease renewer daemon for " + clientsString()
+                + " with renew id " + id + " executed");
+          }
           lastRenewed = System.currentTimeMillis();
         } catch (SocketTimeoutException ie) {
           LOG.warn("Failed to renew lease for " + clientsString() + " for "
@@ -435,6 +450,15 @@ class LeaseRenewer {
 
       synchronized(this) {
         if (id != currentId || isRenewerExpired()) {
+          if (LOG.isDebugEnabled()) {
+            if (id != currentId) {
+              LOG.debug("Lease renewer daemon for " + clientsString()
+                  + " with renew id " + id + " is not current");
+            } else {
+               LOG.debug("Lease renewer daemon for " + clientsString()
+                  + " with renew id " + id + " expired");
+            }
+          }
           //no longer the current daemon or expired
           return;
         }
