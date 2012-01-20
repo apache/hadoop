@@ -143,6 +143,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7982. UserGroupInformation fails to login if thread's context
    classloader can't load HadoopLoginModule. (todd)
 
+   HADOOP-7986. Adding config for MapReduce History Server protocol in
+   hadoop-policy.xml for service level authorization. (Mahadev Konar via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
