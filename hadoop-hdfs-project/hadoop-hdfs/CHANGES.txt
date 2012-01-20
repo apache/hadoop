@@ -169,6 +169,9 @@ Trunk (unreleased changes)
     HDFS-2776. Missing interface annotation on JournalSet. 
     (Brandon Li via jitendra)
 
+    HDFS-2768. BackupNode stop can not close proxy connections because
+    it is not a proxy instance. (Uma Maheswara Rao G via eli)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -334,6 +337,11 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2790. FSNamesystem.setTimes throws exception with wrong
     configuration name in the message. (Arpit Gupta via eli)
+
+    HDFS-2810. Leases not getting renewed properly by clients (todd)
+
+    HDFS-2751. Datanode may incorrectly drop OS cache behind reads
+    even for short reads. (todd)
 
 Release 0.23.0 - 2011-11-01 
 

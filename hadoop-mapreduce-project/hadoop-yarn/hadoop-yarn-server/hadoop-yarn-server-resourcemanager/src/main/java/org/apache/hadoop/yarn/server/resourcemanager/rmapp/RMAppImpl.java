@@ -413,7 +413,7 @@ public class RMAppImpl implements RMApp {
 
     try {
       ApplicationId appID = event.getApplicationId();
-      LOG.info("Processing event for " + appID + " of type "
+      LOG.debug("Processing event for " + appID + " of type "
           + event.getType());
       final RMAppState oldState = getState();
       try {
