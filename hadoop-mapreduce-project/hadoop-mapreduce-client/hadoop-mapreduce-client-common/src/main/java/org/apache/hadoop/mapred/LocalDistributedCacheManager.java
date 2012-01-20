@@ -39,6 +39,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,6 +57,8 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.FSDownload;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * A helper class for managing the distributed cache for {@link LocalJobRunner}.
@@ -111,43 +114,52 @@ class LocalDistributedCacheManager {
     FileContext localFSFileContext = FileContext.getLocalFSFileContext();
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     
-    Map<LocalResource, Future<Path>> resourcesToPaths = Maps.newHashMap();
-    ExecutorService exec = Executors.newCachedThreadPool();
-    Path destPath = localDirAllocator.getLocalPathForWrite(".", conf);
-    for (LocalResource resource : localResources.values()) {
-      Callable<Path> download = new FSDownload(localFSFileContext, ugi, conf,
-          destPath, resource, new Random());
-      Future<Path> future = exec.submit(download);
-      resourcesToPaths.put(resource, future);
-    }
-    for (LocalResource resource : localResources.values()) {
-      Path path;
-      try {
-        path = resourcesToPaths.get(resource).get();
-      } catch (InterruptedException e) {
-        throw new IOException(e);
-      } catch (ExecutionException e) {
-        throw new IOException(e);
+    ExecutorService exec = null;
+    try {
+      ThreadFactory tf = new ThreadFactoryBuilder()
+      .setNameFormat("LocalDistributedCacheManager Downloader #%d")
+      .build();
+      exec = Executors.newCachedThreadPool(tf);
+      Path destPath = localDirAllocator.getLocalPathForWrite(".", conf);
+      Map<LocalResource, Future<Path>> resourcesToPaths = Maps.newHashMap();
+      for (LocalResource resource : localResources.values()) {
+        Callable<Path> download = new FSDownload(localFSFileContext, ugi, conf,
+            destPath, resource, new Random());
+        Future<Path> future = exec.submit(download);
+        resourcesToPaths.put(resource, future);
       }
-      String pathString = path.toUri().toString();
-      if (resource.getType() == LocalResourceType.ARCHIVE) {
-        localArchives.add(pathString);
-      } else if (resource.getType() == LocalResourceType.FILE) {
-        localFiles.add(pathString);
+      for (LocalResource resource : localResources.values()) {
+        Path path;
+        try {
+          path = resourcesToPaths.get(resource).get();
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        } catch (ExecutionException e) {
+          throw new IOException(e);
+        }
+        String pathString = path.toUri().toString();
+        if (resource.getType() == LocalResourceType.ARCHIVE) {
+          localArchives.add(pathString);
+        } else if (resource.getType() == LocalResourceType.FILE) {
+          localFiles.add(pathString);
+        }
+        Path resourcePath;
+        try {
+          resourcePath = ConverterUtils.getPathFromYarnURL(resource.getResource());
+        } catch (URISyntaxException e) {
+          throw new IOException(e);
+        }
+        LOG.info(String.format("Localized %s as %s", resourcePath, path));
+        String cp = resourcePath.toUri().getPath();
+        if (classpaths.keySet().contains(cp)) {
+          localClasspaths.add(path.toUri().getPath().toString());
+        }
       }
-      Path resourcePath;
-      try {
-        resourcePath = ConverterUtils.getPathFromYarnURL(resource.getResource());
-      } catch (URISyntaxException e) {
-        throw new IOException(e);
+    } finally {
+      if (exec != null) {
+        exec.shutdown();
       }
-      LOG.info(String.format("Localized %s as %s", resourcePath, path));
-      String cp = resourcePath.toUri().getPath();
-      if (classpaths.keySet().contains(cp)) {
-        localClasspaths.add(path.toUri().getPath().toString());
-      }
-    }
-    
+    }    
     // Update the configuration object with localized data.
     if (!localArchives.isEmpty()) {
       conf.set(MRJobConfig.CACHE_LOCALARCHIVES, StringUtils
@@ -171,7 +183,7 @@ class LocalDistributedCacheManager {
     }
     setupCalled = true;
   }
-
+  
   /** 
    * Are the resources that should be added to the classpath? 
    * Should be called after setup().

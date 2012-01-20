@@ -283,7 +283,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   public void handle(RMNodeEvent event) {
-    LOG.info("Processing " + event.getNodeId() + " of type " + event.getType());
+    LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
     try {
       writeLock.lock();
       RMNodeState oldState = getState();

@@ -195,6 +195,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7974. TestViewFsTrash incorrectly determines the user's home
    directory. (harsh via eli)
 
+   HADOOP-7971. Adding back job/pipes/queue commands to bin/hadoop for
+   backward compatibility. (Prashath Sharma via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

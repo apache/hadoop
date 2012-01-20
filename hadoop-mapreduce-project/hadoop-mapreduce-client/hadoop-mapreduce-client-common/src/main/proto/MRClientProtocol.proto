@@ -22,6 +22,7 @@ option java_generic_services = true;
 
 import "mr_service_protos.proto";
 
+/* If making changes to this, please edit HSClientProtocolService */
 service MRClientProtocolService {
   rpc getJobReport (GetJobReportRequestProto) returns (GetJobReportResponseProto);
   rpc getTaskReport (GetTaskReportRequestProto) returns (GetTaskReportResponseProto);

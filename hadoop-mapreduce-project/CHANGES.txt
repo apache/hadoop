@@ -135,6 +135,8 @@ Release 0.23.1 - Unreleased
     assign only one off-switch container in a single scheduling
     iteration. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3692. yarn-resourcemanager out and log files can get big. (eli)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -464,6 +466,15 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3657. State machine visualize build fails. (Jason Lowe 
     via mahadev)
+
+    MAPREDUCE-2450. Fixed a corner case with interrupted communication threads
+    leading to a long timeout in Task. (Rajesh Balamohan via acmurthy)
+
+    MAPREDUCE-3669. Allow clients to talk to MR HistoryServer using both
+    delegation tokens and kerberos. (mahadev via acmurthy)
+
+    MAPREDUCE-3684. LocalDistributedCacheManager does not shut down its thread
+    pool (tomwhite)
 
 Release 0.23.0 - 2011-11-01 
 

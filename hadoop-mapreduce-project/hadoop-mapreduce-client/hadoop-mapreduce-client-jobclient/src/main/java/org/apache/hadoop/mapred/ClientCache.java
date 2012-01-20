@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -91,7 +92,7 @@ public class ClientCache {
     return currentUser.doAs(new PrivilegedAction<MRClientProtocol>() {
       @Override
       public MRClientProtocol run() {
-        return (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
+        return (MRClientProtocol) rpc.getProxy(HSClientProtocol.class,
             NetUtils.createSocketAddr(serviceAddr), conf);
       }
     });
