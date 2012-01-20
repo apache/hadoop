@@ -57,6 +57,11 @@ public class TestFailoverProxy {
     public Class<?> getInterface() {
       return iface;
     }
+
+    @Override
+    public void close() throws IOException {
+      // Nothing to do.
+    }
     
   }
   

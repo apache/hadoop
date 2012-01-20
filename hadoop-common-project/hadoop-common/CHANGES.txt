@@ -17,6 +17,9 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
+    HADOOP-7635. RetryInvocationHandler should release underlying resources on
+    close (atm)
+
     HADOOP-7687 Make getProtocolSignature public  (sanjay)
 
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
