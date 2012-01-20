@@ -67,7 +67,6 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int rpcTimeout) throws IOException {
-
     return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(protocol
         .getClassLoader(), new Class[] { protocol }, new Invoker(protocol,
         addr, ticket, conf, factory, rpcTimeout)), false);

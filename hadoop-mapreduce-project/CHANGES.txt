@@ -469,6 +469,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3582. Move successfully passing MR1 tests to MR2 maven tree.
     (ahmed via tucu)
 
+    MAPREDUCE-3698. Client cannot talk to the history server in secure mode.
+    (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
