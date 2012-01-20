@@ -374,11 +374,17 @@ public class DFSClient implements java.io.Closeable {
     return clientRunning;
   }
 
-  /** Renew leases */
-  void renewLease() throws IOException {
+  /**
+   * Renew leases.
+   * @return true if lease was renewed. May return false if this
+   * client has been closed or has no files open.
+   **/
+  boolean renewLease() throws IOException {
     if (clientRunning && !isFilesBeingWrittenEmpty()) {
       namenode.renewLease(clientName);
+      return true;
     }
+    return false;
   }
 
   /** Abort and release resources held.  Ignore all errors. */

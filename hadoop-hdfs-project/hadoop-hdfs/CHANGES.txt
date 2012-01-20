@@ -159,6 +159,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2790. FSNamesystem.setTimes throws exception with wrong
     configuration name in the message. (Arpit Gupta via eli)
 
+    HDFS-2810. Leases not getting renewed properly by clients (todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
