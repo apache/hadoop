@@ -86,6 +86,9 @@ Release 1.1.0 - unreleased
     HDFS-2790. FSNamesystem.setTimes throws exception with wrong
     configuration name in the message. (Arpit Gupta via eli)
 
+    HADOOP-7982. UserGroupInformation fails to login if thread's context
+    classloader can't load HadoopLoginModule. (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
