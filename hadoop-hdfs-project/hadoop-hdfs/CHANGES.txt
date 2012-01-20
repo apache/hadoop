@@ -164,6 +164,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2751. Datanode may incorrectly drop OS cache behind reads
     even for short reads. (todd)
 
+    HDFS-2816. Fix missing license header in httpfs findbugsExcludeFile.xml.
+    (hitesh via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
