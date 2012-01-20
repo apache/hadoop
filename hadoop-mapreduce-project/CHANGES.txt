@@ -472,6 +472,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3698. Client cannot talk to the history server in secure mode.
     (mahadev)
 
+    MAPREDUCE-3689. RM web UI doesn't handle newline in job name.
+    (Thomas Graves via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

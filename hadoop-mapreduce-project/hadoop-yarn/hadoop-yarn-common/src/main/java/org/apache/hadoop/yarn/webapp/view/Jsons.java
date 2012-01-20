@@ -40,7 +40,7 @@ public class Jsons {
 
   public static PrintWriter appendProgressBar(PrintWriter out,
                                                   float progress) {
-    return appendProgressBar(out, String.format("%.1f", progress * 100));
+    return appendProgressBar(out, String.format("%.1f", progress));
   }
 
   public static PrintWriter appendSortable(PrintWriter out, Object value) {

@@ -66,7 +66,7 @@ class AppsList implements ToJSON {
       appendLink(out, appInfo.getAppId(), rc.prefix(), "app",
           appInfo.getAppId()).append(_SEP).
           append(escapeHtml(appInfo.getUser())).append(_SEP).
-          append(escapeHtml(appInfo.getName())).append(_SEP).
+          append(escapeJavaScript(escapeHtml(appInfo.getName()))).append(_SEP).
           append(escapeHtml(appInfo.getQueue())).append(_SEP).
           append(appInfo.getState()).append(_SEP).
           append(appInfo.getFinalStatus()).append(_SEP);
