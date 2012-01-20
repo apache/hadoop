@@ -161,6 +161,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2810. Leases not getting renewed properly by clients (todd)
 
+    HDFS-2751. Datanode may incorrectly drop OS cache behind reads
+    even for short reads. (todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
