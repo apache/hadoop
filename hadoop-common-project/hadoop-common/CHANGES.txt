@@ -140,6 +140,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7971. Adding back job/pipes/queue commands to bin/hadoop for
    backward compatibility. (Prashath Sharma via acmurthy) 
 
+   HADOOP-7982. UserGroupInformation fails to login if thread's context
+   classloader can't load HadoopLoginModule. (todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
