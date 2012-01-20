@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -68,7 +69,7 @@ public class BackupNode extends NameNode {
   private static final String BN_SERVICE_RPC_ADDRESS_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY;
 
   /** Name-node proxy */
-  NamenodeProtocol namenode;
+  NamenodeProtocolTranslatorPB namenode;
   /** Name-node RPC address */
   String nnRpcAddress;
   /** Name-node HTTP address */
@@ -184,7 +185,7 @@ public class BackupNode extends NameNode {
     }
     // Stop the RPC client
     if (namenode != null) {
-      RPC.stopProxy(namenode);
+      IOUtils.cleanup(LOG, namenode);
     }
     namenode = null;
     // Stop the checkpoint manager

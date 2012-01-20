@@ -104,6 +104,9 @@ Release 0.23-PB - Unreleased
 
     HDFS-2739. SecondaryNameNode doesn't start up. (jitendra)
 
+    HDFS-2768. BackupNode stop can not close proxy connections because
+    it is not a proxy instance. (Uma Maheswara Rao G via eli)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
