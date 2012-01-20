@@ -961,11 +961,11 @@ public class TestRumenJobTraces {
 
     for (LoggedNetworkTopology rack : racks) {
       List<LoggedNetworkTopology> nodes = rack.getChildren();
-      if (rack.getName().endsWith(".64")) {
+      if (rack.getName().getValue().endsWith(".64")) {
         assertEquals("The singleton rack has the wrong number of elements", 1,
             nodes.size());
         sawSingleton = true;
-      } else if (rack.getName().endsWith(".80")) {
+      } else if (rack.getName().getValue().endsWith(".80")) {
         assertEquals("The doubleton rack has the wrong number of elements", 2,
             nodes.size());
         sawDoubleton = true;

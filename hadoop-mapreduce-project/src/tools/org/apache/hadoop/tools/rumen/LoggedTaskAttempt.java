@@ -30,9 +30,11 @@ import org.codehaus.jackson.annotate.JsonAnySetter;
 //                the Jackson implementation of JSON doesn't handle a 
 //                superclass-valued field.
 
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounter;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounterGroup;
 import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
+import org.apache.hadoop.tools.rumen.datatypes.NodeName;
 
 /**
  * A {@link LoggedTaskAttempt} represents an attempt to run an hadoop task in a
@@ -44,11 +46,11 @@ import org.apache.hadoop.mapreduce.jobhistory.JhCounters;
  */
 public class LoggedTaskAttempt implements DeepCompare {
 
-  String attemptID;
+  TaskAttemptID attemptID;
   Pre21JobHistoryConstants.Values result;
   long startTime = -1L;
   long finishTime = -1L;
-  String hostName;
+  NodeName hostName;
 
   long hdfsBytesRead = -1L;
   long hdfsBytesWritten = -1L;
@@ -188,7 +190,6 @@ public class LoggedTaskAttempt implements DeepCompare {
   static private Set<String> alreadySeenAnySetterAttributes =
       new TreeSet<String>();
 
-  @SuppressWarnings("unused")
   // for input parameter ignored.
   @JsonAnySetter
   public void setUnknownAttribute(String attributeName, Object ignored) {
@@ -213,7 +214,7 @@ public class LoggedTaskAttempt implements DeepCompare {
     for (int i = 0; i < clockSplits.length; ++i) {
       result.add(clockSplits[i]);
     }
-                 
+
     this.clockSplits = result;
   }
 
@@ -231,7 +232,7 @@ public class LoggedTaskAttempt implements DeepCompare {
     for (int i = 0; i < cpuUsages.length; ++i) {
       result.add(cpuUsages[i]);
     }
-                 
+
     this.cpuUsages = result;
   }
 
@@ -249,7 +250,7 @@ public class LoggedTaskAttempt implements DeepCompare {
     for (int i = 0; i < vMemKbytes.length; ++i) {
       result.add(vMemKbytes[i]);
     }
-                 
+
     this.vMemKbytes = result;
   }
 
@@ -267,7 +268,7 @@ public class LoggedTaskAttempt implements DeepCompare {
     for (int i = 0; i < physMemKbytes.length; ++i) {
       result.add(physMemKbytes[i]);
     }
-                 
+
     this.physMemKbytes = result;
   }
 
@@ -292,12 +293,12 @@ public class LoggedTaskAttempt implements DeepCompare {
     this.sortFinished = sortFinished;
   }
 
-  public String getAttemptID() {
+  public TaskAttemptID getAttemptID() {
     return attemptID;
   }
 
   void setAttemptID(String attemptID) {
-    this.attemptID = attemptID;
+    this.attemptID = TaskAttemptID.forName(attemptID);
   }
 
   public Pre21JobHistoryConstants.Values getResult() {
@@ -324,15 +325,17 @@ public class LoggedTaskAttempt implements DeepCompare {
     this.finishTime = finishTime;
   }
 
-  public String getHostName() {
+  public NodeName getHostName() {
     return hostName;
   }
 
+  // This is needed for JSON deserialization
   void setHostName(String hostName) {
-    this.hostName = hostName;
+    this.hostName = hostName == null ? null : new NodeName(hostName);
   }
-  
-  // hostName is saved in the format rackName/NodeName
+
+  // In job-history, hostName is saved in the format rackName/NodeName
+  //TODO this is a hack! The '/' handling needs fixing.
   void setHostName(String hostName, String rackName) {
     if (hostName == null || hostName.length() == 0) {
       throw new RuntimeException("Invalid entry! Missing hostname");
@@ -649,6 +652,20 @@ public class LoggedTaskAttempt implements DeepCompare {
     }
   }
 
+  private void compare1(NodeName c1, NodeName c2, TreePath loc, String eltname)
+  throws DeepInequalityException {
+    if (c1 == null && c2 == null) {
+      return;
+    }
+
+    if (c1 == null || c2 == null) {
+      throw new DeepInequalityException(eltname + " miscompared", new TreePath(
+          loc, eltname));
+    }
+
+    compare1(c1.getValue(), c2.getValue(), new TreePath(loc, eltname), "value");
+  }
+
   private void compare1(long c1, long c2, TreePath loc, String eltname)
       throws DeepInequalityException {
     if (c1 != c2) {
@@ -709,7 +726,7 @@ public class LoggedTaskAttempt implements DeepCompare {
 
     LoggedTaskAttempt other = (LoggedTaskAttempt) comparand;
 
-    compare1(attemptID, other.attemptID, loc, "attemptID");
+    compare1(attemptID.toString(), other.attemptID.toString(), loc, "attemptID");
     compare1(result, other.result, loc, "result");
     compare1(startTime, other.startTime, loc, "startTime");
     compare1(finishTime, other.finishTime, loc, "finishTime");

@@ -73,6 +73,11 @@
             computed for the total number of successful tasks for every attempt.
             
         </li>
+        <li>Anonymized traces enables sharing of production traces of large 
+            scale Hadoop deployments. Sharing of traces will foster 
+            collaboration within the Hadoop community. It can also be used to 
+            supplement interesting research findings.
+        </li>
       </ul>
     </section>
 
@@ -102,6 +107,11 @@
             Increasing the trace runtime might involve adding some dummy jobs to
             the resulting trace and scaling up the runtime of individual jobs.
        </li>
+       <li><em>Anonymizer</em> : 
+            A utility to anonymize Hadoop job and cluster topology traces by 
+            masking certain sensitive fields but retaining important workload 
+            characteristics.    
+        </li>
                  
       </ul>
       <p></p><p></p><p></p>
@@ -128,10 +138,11 @@
           <code>output-duration</code>, <code>concentration</code> etc.
     </note>
        
-    <p><em>Rumen</em> provides 2 basic commands</p>
+    <p><em>Rumen</em> provides 3 basic commands</p>
      <ul>
        <li><code>TraceBuilder</code></li>
        <li><code>Folder</code></li>
+       <li><code>Anonymizer</code></li>
      </ul>
        
     <p>Firstly, we need to generate the <em>Gold Trace</em>. Hence the first 
@@ -139,8 +150,9 @@
        The output of the <code>TraceBuilder</code> is a job-trace file (and an 
        optional cluster-topology file). In case we want to scale the output, we 
        can use the <code>Folder</code> utility to fold the current trace to the 
-       desired length. The remaining part of this section explains these 
-       utilities in detail.
+       desired length. For anonymizing the trace, use the 
+       <code>Anonymizer</code> utility. The remaining part of this section 
+       explains these utilities in detail.
     </p>
     
     <note>Examples in this section assumes that certain libraries are present 
@@ -426,8 +438,156 @@
         </p>
       </section>
     </section>
+    <p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p>
+    <p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p>
+    <p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p>
+    <p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p><p></p>
+    <p></p><p></p><p></p><p></p>
+    
     </section>
-    <p></p><p></p><p></p>
+    
+    <!--
+     Anonymizer command
+    -->
+    <section>
+      <title>Anonymizer</title>
+      
+      <p><code>Command:</code></p>
+      <source>java org.apache.hadoop.tools.rumen.Anonymizer [options] [-trace &lt;jobtrace-input&gt; &lt;jobtrace-output&gt;] [-topology &lt;topology-input&gt; &lt;topology-output&gt;]</source>
+
+      <p>This command invokes the <em>Anonymizer</em> utility of 
+         <em>Rumen</em>. It anonymizes sensitive information from the 
+         <code>&lt;jobtrace-input&gt;</code> file and outputs the anonymized 
+         content into the <code>&lt;jobtrace-output&gt;</code>
+         file. It also anonymizes the cluster layout (topology) from the
+         <code>&lt;topology-input&gt;</code> and outputs it in
+         the <code>&lt;topology-output&gt;</code> file.
+         <code>&lt;job-input&gt;</code> represents the job trace file obtained 
+         using <code>TraceBuilder</code> or <code>Folder</code>. 
+         <code>&lt;topology-input&gt;</code> represents the cluster topology 
+         file obtained using <code>TraceBuilder</code>.
+      </p>
+         
+      <p><code>Options :</code></p>
+      <table>
+        <tr>
+          <th>Parameter</th>
+          <th>Description</th>
+          <th>Notes</th>
+        </tr>
+        <tr>
+          <td><code>-trace</code></td>
+          <td>Anonymizes job traces.</td>
+          <td>Anonymizes sensitive fields like user-name, job-name, queue-name
+              host-names, job configuration parameters etc.</td>
+        </tr>
+        <tr>
+          <td><code>-topology</code></td>
+          <td>Anonymizes cluster topology</td>
+          <td>Anonymizes rack-names and host-names.</td>
+        </tr>
+      </table>
+      
+      <section id="anonymizerconf">
+      <title><em>Anonymizer</em> Configuration Parameters</title>
+      <p>The Rumen anonymizer can be configured using the following 
+         configuration parameters:
+      </p>
+      <table>
+        <tr>
+          <th>Parameter</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>
+            <code>rumen.data-types.classname.preserve</code>
+          </td>
+          <td>A comma separated list of prefixes that the <em>Anonymizer</em> 
+              will not anonymize while processing classnames. If 
+              <code>rumen.data-types.classname.preserve</code> is set to 
+              <code>'org.apache,com.hadoop.'</code> then 
+              classnames starting with <code>'org.apache'</code> or 
+              <code>'com.hadoop.'</code> will not be anonymized. 
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <code>rumen.datatypes.jobproperties.parsers</code>
+          </td>
+          <td>A comma separated list of job properties parsers. These parsers 
+              decide how the job configuration parameters 
+              (i.e &lt;key,value&gt; pairs)  should be processed. Default is 
+              <code>MapReduceJobPropertiesParser</code>. The default parser will
+              only parse framework-level MapReduce specific job configuration 
+              properties. Users can add custom parsers by implementing the 
+              <code>JobPropertiesParser</code> interface. Rumen also provides an
+              all-pass (i.e no filter) parser called 
+              <code>DefaultJobPropertiesParser</code>.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <code>rumen.anonymization.states.dir</code>
+          </td>
+          <td>Set this to a location (on LocalFileSystem or HDFS) for enabling
+              state persistence and/or reload. This parameter is not set by 
+              default. Reloading and persistence of states depend on the state 
+              directory. Note that the state directory will contain the latest 
+              as well as previous states.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <code>rumen.anonymization.states.persist</code>
+          </td>
+          <td>Set this to <code>'true'</code> to persist the current state. 
+              Default value is <code>'false'</code>. Note that the states will 
+              be persisted to the state manager's state directory 
+              specified using the <code>rumen.anonymization.states.dir</code> 
+              parameter.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <code>rumen.anonymization.states.reload</code>
+          </td>
+          <td>Set this to <code>'true'</code> to enable reuse of previously 
+              persisted state. The default value is <code>'false'</code>. The 
+              previously persisted state will be reloaded from the state 
+              manager's state directory specified using the 
+              <code>rumen.anonymization.states.dir</code> parameter. Note that 
+              the <em>Anonymizer</em> will bail out if it fails to find any 
+              previously persisted state in the state directory or if the state
+              directory is not set. If the user wishes to retain/reuse the 
+              states across multiple invocations of the <em>Anonymizer</em>, 
+              then the very first invocation of the <em>Anonymizer</em> should
+              have <code>rumen.anonymization.states.reload</code> set to 
+              <code>'false'</code> and 
+              <code>rumen.anonymization.states.persist</code> set to 
+              <code>'true'</code>. Subsequent invocations of the 
+              <em>Anonymizer</em> can then have 
+              <code>rumen.anonymization.states.reload</code> set to 
+              <code>'true'</code>.
+          </td>
+        </tr>
+      </table>
+    </section>
+    
+      <section>
+        <title>Example</title>
+        <source>java org.apache.hadoop.tools.rumen.Anonymizer -trace file:///home/user/job-trace.json file:///home/user/job-trace-anonymized.json -topology file:///home/user/cluster-topology.json file:///home/user/cluster-topology-anonymized.json</source>
+        <p></p>
+        <p>This will anonymize the job details from
+           <code>file:///home/user/job-trace.json</code> and output it to
+           <code>file:///home/user/job-trace-anonymized.json</code>. 
+           It will also anonymize the cluster topology layout from 
+           <code>file:///home/user/cluster-topology.json</code> and output it to
+           <code>file:///home/user/cluster-topology-anonymized.json</code>.
+           Note that the <code>Anonymizer</code> also supports input and output 
+           files on HDFS.
+        </p>
+      </section>
+    </section>
   </section>
   
   <!--
@@ -452,8 +612,8 @@
         <li><code>Hadoop Common</code> (<code>hadoop-common-{hadoop-version}.jar</code>)</li>
         <li><code>Apache Commons Logging</code> (<code>commons-logging-1.1.1.jar</code>)</li>
         <li><code>Apache Commons CLI</code> (<code>commons-cli-1.2.jar</code>)</li>
-        <li><code>Jackson Mapper</code> (<code>jackson-mapper-asl-1.4.2.jar</code>)</li>
-        <li><code>Jackson Core</code> (<code>jackson-core-asl-1.4.2.jar</code>)</li>
+        <li><code>Jackson Mapper</code> (<code>jackson-mapper-asl-1.8.2.jar</code>)</li>
+        <li><code>Jackson Core</code> (<code>jackson-core-asl-1.8.2.jar</code>)</li>
       </ul>
       
       <note>One simple way to run Rumen is to use '$HADOOP_PREFIX/bin/hadoop jar' 

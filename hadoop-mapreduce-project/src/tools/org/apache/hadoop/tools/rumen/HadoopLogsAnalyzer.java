@@ -56,12 +56,7 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.Decompressor;
 
-import org.codehaus.jackson.JsonEncoding;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.JsonProcessingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
 
 /**
  * This is the main class for rumen log mining functionality.
@@ -126,7 +121,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
    */
   private boolean omitTaskDetails = false;
 
-  private JsonGenerator jobTraceGen = null;
+  private Outputter<LoggedJob> jobTraceGen = null;
 
   private boolean prettyprintTrace = true;
 
@@ -148,7 +143,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
 
   private int[] attemptTimesPercentiles;
 
-  private JsonGenerator topologyGen = null;
+  private Outputter<LoggedNetworkTopology> topologyGen = null;
 
   private HashSet<ParsedHost> allHosts = new HashSet<ParsedHost>();
 
@@ -502,28 +497,12 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     }
 
     if (jobTraceFilename != null) {
-      ObjectMapper jmapper = new ObjectMapper();
-      jmapper.configure(
-          SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
-      JsonFactory jfactory = jmapper.getJsonFactory();
-      FileSystem jobFS = jobTraceFilename.getFileSystem(getConf());
-      jobTraceGen =
-          jfactory.createJsonGenerator(jobFS.create(jobTraceFilename),
-              JsonEncoding.UTF8);
-      if (prettyprintTrace) {
-        jobTraceGen.useDefaultPrettyPrinter();
-      }
+      jobTraceGen = new DefaultOutputter<LoggedJob>();
+      jobTraceGen.init(jobTraceFilename, getConf());
 
       if (topologyFilename != null) {
-        ObjectMapper tmapper = new ObjectMapper();
-        tmapper.configure(
-            SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
-        JsonFactory tfactory = tmapper.getJsonFactory();
-        FileSystem topoFS = topologyFilename.getFileSystem(getConf());
-        topologyGen =
-            tfactory.createJsonGenerator(topoFS.create(topologyFilename),
-                JsonEncoding.UTF8);
-        topologyGen.useDefaultPrettyPrinter();
+        topologyGen = new DefaultOutputter<LoggedNetworkTopology>();
+        topologyGen.init(topologyFilename, getConf());
       }
     }
 
@@ -795,8 +774,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
          */
         if (jobID != null
             && jobTraceGen != null
-            && (jobBeingTraced == null || !jobID.equals(jobBeingTraced
-                .getJobID()))) {
+            && (jobBeingTraced == null 
+                || !jobID.equals(jobBeingTraced.getJobID().toString()))) {
           // push out the old job if there is one, even though it did't get
           // mated
           // with a conf.
@@ -1621,7 +1600,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
 
   private void maybeMateJobAndConf() throws IOException {
     if (jobBeingTraced != null && jobconf != null
-        && jobBeingTraced.getJobID().equals(jobconf.jobID)) {
+        && jobBeingTraced.getJobID().toString().equals(jobconf.jobID)) {
       jobBeingTraced.setHeapMegabytes(jobconf.heapMegabytes);
 
       jobBeingTraced.setQueue(jobconf.queue);
@@ -1698,9 +1677,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         jobBeingTraced.setMapperTriesToSucceed(null);
       }
 
-      jobTraceGen.writeObject(jobBeingTraced);
-
-      jobTraceGen.writeRaw("\n");
+      jobTraceGen.output(jobBeingTraced);
 
       jobBeingTraced = null;
     }
@@ -1798,7 +1775,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     if (topologyGen != null) {
       LoggedNetworkTopology topo =
           new LoggedNetworkTopology(allHosts, "<root>", 0);
-      topologyGen.writeObject(topo);
+      topologyGen.output(topo);
       topologyGen.close();
     }
 

@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+import org.apache.hadoop.tools.rumen.datatypes.NodeName;
 import org.codehaus.jackson.annotate.JsonAnySetter;
 
 /**
@@ -40,7 +41,7 @@ import org.codehaus.jackson.annotate.JsonAnySetter;
  * 
  */
 public class LoggedNetworkTopology implements DeepCompare {
-  String name;
+  NodeName name;
   List<LoggedNetworkTopology> children = new ArrayList<LoggedNetworkTopology>();
 
   static private Set<String> alreadySeenAnySetterAttributes =
@@ -50,7 +51,6 @@ public class LoggedNetworkTopology implements DeepCompare {
     super();
   }
 
-  @SuppressWarnings("unused")
   // for input parameter ignored.
   @JsonAnySetter
   public void setUnknownAttribute(String attributeName, Object ignored) {
@@ -70,7 +70,7 @@ public class LoggedNetworkTopology implements DeepCompare {
    */
   static class TopoSort implements Comparator<LoggedNetworkTopology> {
     public int compare(LoggedNetworkTopology t1, LoggedNetworkTopology t2) {
-      return t1.name.compareTo(t2.name);
+      return t1.name.getValue().compareTo(t2.name.getValue());
     }
   }
 
@@ -83,8 +83,11 @@ public class LoggedNetworkTopology implements DeepCompare {
    *          the level number
    */
   LoggedNetworkTopology(Set<ParsedHost> hosts, String name, int level) {
-
-    this.name = name;
+    if (name == null) {
+      this.name = NodeName.ROOT;
+    } else {
+      this.name = new NodeName(name);
+    }
     this.children = null;
 
     if (level < ParsedHost.numberOfDistances() - 1) {
@@ -120,15 +123,15 @@ public class LoggedNetworkTopology implements DeepCompare {
   }
 
   LoggedNetworkTopology(Set<ParsedHost> hosts) {
-    this(hosts, "<root>", 0);
+    this(hosts, null, 0);
   }
 
-  public String getName() {
+  public NodeName getName() {
     return name;
   }
 
   void setName(String name) {
-    this.name = name;
+    this.name = new NodeName(name);
   }
 
   public List<LoggedNetworkTopology> getChildren() {

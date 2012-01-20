@@ -35,22 +35,11 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.compress.CodecPool;
-import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.io.compress.CompressionCodecFactory;
-import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import org.codehaus.jackson.JsonEncoding;
-import org.codehaus.jackson.JsonFactory;
-import org.codehaus.jackson.JsonGenerator;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
 
 public class Folder extends Configured implements Tool {
   private long outputDuration = -1;
@@ -66,7 +55,7 @@ public class Folder extends Configured implements Tool {
   static final private Log LOG = LogFactory.getLog(Folder.class);
 
   private DeskewedJobTraceReader reader = null;
-  private JsonGenerator outGen = null;
+  private Outputter<LoggedJob> outGen = null;
 
   private List<Path> tempPaths = new LinkedList<Path>();
 
@@ -171,25 +160,8 @@ public class Folder extends Configured implements Tool {
               skewBufferLength, !allowMissorting);
       Path outPath = new Path(outputPathName);
 
-      ObjectMapper outMapper = new ObjectMapper();
-      outMapper.configure(
-          SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
-      JsonFactory outFactory = outMapper.getJsonFactory();
-      FileSystem outFS = outPath.getFileSystem(conf);
-
-      CompressionCodec codec =
-          new CompressionCodecFactory(conf).getCodec(outPath);
-      OutputStream output;
-      Compressor compressor = null;
-      if (codec != null) {
-        compressor = CodecPool.getCompressor(codec);
-        output = codec.createOutputStream(outFS.create(outPath), compressor);
-      } else {
-        output = outFS.create(outPath);
-      }
-
-      outGen = outFactory.createJsonGenerator(output, JsonEncoding.UTF8);
-      outGen.useDefaultPrettyPrinter();
+      outGen = new DefaultOutputter<LoggedJob>();
+      outGen.init(outPath, conf);
 
       tempDir =
           tempDirName == null ? outPath.getParent() : new Path(tempDirName);
@@ -258,11 +230,6 @@ public class Folder extends Configured implements Tool {
       }
     }
 
-    ObjectMapper outMapper = new ObjectMapper();
-    outMapper.configure(
-        SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
-    JsonFactory outFactory = outMapper.getJsonFactory();
-
     // we initialize an empty heap so if we take an error before establishing
     // a real one the finally code goes through
     Queue<Pair<LoggedJob, JobTraceReader>> heap =
@@ -310,8 +277,7 @@ public class Folder extends Configured implements Tool {
       long currentIntervalEnd = Long.MIN_VALUE;
 
       Path nextSegment = null;
-      OutputStream tempUncompOut = null;
-      JsonGenerator tempGen = null;
+      Outputter<LoggedJob> tempGen = null;
 
       if (debug) {
         LOG.debug("The first job has a submit time of " + firstJobSubmitTime);
@@ -333,7 +299,9 @@ public class Folder extends Configured implements Tool {
             if (tempGen != null) {
               tempGen.close();
             }
-            for (int i = 0; i < 3 && tempUncompOut == null; ++i) {
+            
+            nextSegment = null;
+            for (int i = 0; i < 3 && nextSegment == null; ++i) {
               try {
                 nextSegment =
                     new Path(tempDir, "segment-" + tempNameGenerator.nextLong()
@@ -347,7 +315,7 @@ public class Folder extends Configured implements Tool {
 
                 try {
                   if (!fs.exists(nextSegment)) {
-                    tempUncompOut = fs.create(nextSegment, false);
+                    break;
                   }
 
                   continue;
@@ -360,6 +328,10 @@ public class Folder extends Configured implements Tool {
               }
             }
 
+            if (nextSegment == null) {
+              throw new RuntimeException("Failed to create a new file!");
+            }
+            
             if (debug) {
               LOG.debug("Creating " + nextSegment
                   + " for a job with a submit time of " + job.getSubmitTime());
@@ -369,23 +341,8 @@ public class Folder extends Configured implements Tool {
 
             tempPaths.add(nextSegment);
 
-            CompressionCodec codec =
-                new CompressionCodecFactory(conf).getCodec(nextSegment);
-            OutputStream output;
-            Compressor compressor = null;
-            if (codec != null) {
-              compressor = CodecPool.getCompressor(codec);
-              output = codec.createOutputStream(tempUncompOut, compressor);
-            } else {
-              output = tempUncompOut;
-            }
-
-            tempUncompOut = null;
-
-            tempGen = outFactory.createJsonGenerator(output, JsonEncoding.UTF8);
-            if (debug) {
-              tempGen.useDefaultPrettyPrinter();
-            }
+            tempGen = new DefaultOutputter<LoggedJob>();
+            tempGen.init(nextSegment, conf);
 
             long currentIntervalNumber =
                 (job.getSubmitTime() - firstJobSubmitTime) / inputCycle;
@@ -396,7 +353,9 @@ public class Folder extends Configured implements Tool {
 
           // the temp files contain UDadjusted times, but each temp file's
           // content is in the same input cycle interval.
-          tempGen.writeObject(job);
+          if (tempGen != null) {
+            tempGen.output(job);
+          }
 
           job = reader.nextJob();
         }
@@ -541,11 +500,11 @@ public class Folder extends Configured implements Tool {
 
   private void maybeOutput(LoggedJob job) throws IOException {
     for (int i = 0; i < transcriptionRateInteger; ++i) {
-      outGen.writeObject(job);
+      outGen.output(job);
     }
 
     if (random.nextDouble() < transcriptionRateFraction) {
-      outGen.writeObject(job);
+      outGen.output(job);
     }
   }
 

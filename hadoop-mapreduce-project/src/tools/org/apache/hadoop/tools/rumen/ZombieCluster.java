@@ -124,15 +124,16 @@ public class ZombieCluster extends AbstractClusterStory {
       int level = levelMapping.get(n);
       Node current;
       if (level == leafLevel) { // a machine node
-        MachineNode.Builder builder = new MachineNode.Builder(n.getName(), level);
+        MachineNode.Builder builder = 
+          new MachineNode.Builder(n.getName().getValue(), level);
         if (defaultNode != null) {
           builder.cloneFrom(defaultNode);
         }
         current = builder.build();
       } else {
         current = (level == leafLevel - 1) 
-          ? new RackNode(n.getName(), level) : 
-            new Node(n.getName(), level);
+          ? new RackNode(n.getName().getValue(), level) : 
+            new Node(n.getName().getValue(), level);
         path[level] = current;
         // Add all children to the front of the queue.
         for (LoggedNetworkTopology child : n.getChildren()) {

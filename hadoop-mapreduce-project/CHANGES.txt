@@ -4,7 +4,8 @@ Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
 
-  NEW FEATURES                                                                    
+  NEW FEATURES
+    MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
 
     MAPREDUCE-3121. NodeManager should handle disk-failures (Ravi Gummadi via mahadev)
 
@@ -13,6 +14,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3251. Network ACLs can prevent some clients to talk to MR ApplicationMaster.
     (Anupam Seth via mahadev)
+
+    MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
 
   IMPROVEMENTS
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests.

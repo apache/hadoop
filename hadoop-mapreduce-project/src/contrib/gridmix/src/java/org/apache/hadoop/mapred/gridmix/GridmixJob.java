@@ -26,8 +26,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -49,6 +47,7 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
+import static org.apache.hadoop.tools.rumen.datatypes.util.MapReduceJobPropertiesParser.extractMaxHeapOpts;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -92,8 +91,6 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
   // configuration key to enable/disable task jvm options
   static final String GRIDMIX_TASK_JVM_OPTIONS_ENABLE = 
     "gridmix.task.jvm-options.enable";
-  private static final Pattern maxHeapPattern = 
-    Pattern.compile("-Xmx[0-9]+[kKmMgGtT]?+");
 
   private static void setJobQueue(Job job, String queue) {
     if (queue != null) {
@@ -222,18 +219,6 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
         
         // set the final heap opts 
         destConf.set(key, newHeapOpts.toString().trim());
-      }
-    }
-  }
-  
-  private static void extractMaxHeapOpts(String javaOptions,  
-      List<String> maxOpts,  List<String> others) {
-    for (String opt : javaOptions.split(" ")) {
-      Matcher matcher = maxHeapPattern.matcher(opt);
-      if (matcher.find()) {
-        maxOpts.add(opt);
-      } else {
-        others.add(opt);
       }
     }
   }
