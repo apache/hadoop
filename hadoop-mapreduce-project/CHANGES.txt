@@ -466,6 +466,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3684. LocalDistributedCacheManager does not shut down its thread
     pool (tomwhite)
 
+    MAPREDUCE-3582. Move successfully passing MR1 tests to MR2 maven tree.
+    (ahmed via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
