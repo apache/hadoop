@@ -93,7 +93,9 @@ import com.google.protobuf.ServiceException;
 
 public class MRClientProtocolPBClientImpl implements MRClientProtocol {
 
-  private MRClientProtocolService.BlockingInterface proxy;
+  protected MRClientProtocolService.BlockingInterface proxy;
+  
+  public MRClientProtocolPBClientImpl() {};
   
   public MRClientProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, MRClientProtocolService.BlockingInterface.class, ProtoOverHadoopRpcEngine.class);
