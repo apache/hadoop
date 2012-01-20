@@ -475,6 +475,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3689. RM web UI doesn't handle newline in job name.
     (Thomas Graves via mahadev)
 
+    MAPREDUCE-3701. Delete HadoopYarnRPC from 0.23 branch.
+    (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
