@@ -92,6 +92,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2803. Add logging to LeaseRenewer for better lease expiration debugging.
     (Jimmy Xiang via todd)
 
+    HDFS-2817. Combine the two TestSafeMode test suites. (todd)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
