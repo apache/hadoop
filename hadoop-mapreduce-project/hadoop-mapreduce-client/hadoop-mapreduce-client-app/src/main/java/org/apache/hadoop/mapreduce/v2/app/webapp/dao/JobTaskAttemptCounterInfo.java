@@ -30,7 +30,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 
-@XmlRootElement(name = "JobTaskAttemptCounters")
+@XmlRootElement(name = "jobTaskAttemptCounters")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class JobTaskAttemptCounterInfo {
 

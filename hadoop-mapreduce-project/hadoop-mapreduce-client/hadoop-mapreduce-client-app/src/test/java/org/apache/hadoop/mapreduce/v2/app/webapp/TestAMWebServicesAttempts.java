@@ -629,7 +629,7 @@ public class TestAMWebServicesAttempts extends JerseyTest {
           assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
           JSONObject json = response.getEntity(JSONObject.class);
           assertEquals("incorrect number of elements", 1, json.length());
-          JSONObject info = json.getJSONObject("JobTaskAttemptCounters");
+          JSONObject info = json.getJSONObject("jobTaskAttemptCounters");
           verifyAMJobTaskAttemptCounters(info, att);
         }
       }
@@ -661,7 +661,7 @@ public class TestAMWebServicesAttempts extends JerseyTest {
           InputSource is = new InputSource();
           is.setCharacterStream(new StringReader(xml));
           Document dom = db.parse(is);
-          NodeList nodes = dom.getElementsByTagName("JobTaskAttemptCounters");
+          NodeList nodes = dom.getElementsByTagName("jobTaskAttemptCounters");
 
           verifyAMTaskCountersXML(nodes, att);
         }

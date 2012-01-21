@@ -478,6 +478,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3701. Delete HadoopYarnRPC from 0.23 branch.
     (mahadev)
 
+    MAPREDUCE-3549. write api documentation for web service apis for RM, NM, 
+    mapreduce app master, and job history server (Thomas Graves via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
