@@ -70,6 +70,8 @@
    </dependency>
    <dependency org="org.apache.hadoop" name="hadoop-archives" 
                rev="${hadoop-common.version}" conf="common->default"/> 
+   <dependency org="org.apache.hadoop" name="hadoop-rumen" 
+               rev="${hadoop-common.version}" conf="common->default"/> 
    <dependency org="commons-logging"
       name="commons-logging"
       rev="${commons-logging.version}"
