@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -32,9 +34,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.util.ReflectionUtils;
-
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 public class HAUtil {
   private HAUtil() { /* Hidden constructor */ }
@@ -107,6 +109,39 @@ public class HAUtil {
       return ids[1];
     }
     return null;
+  }
+
+  /**
+   * Given the configuration for this node, return a Configuration object for
+   * the other node in an HA setup.
+   * 
+   * @param myConf the configuration of this node
+   * @return the configuration of the other node in an HA setup
+   */
+  public static Configuration getConfForOtherNode(
+      Configuration myConf) {
+    
+    String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
+    Collection<String> nnIds = DFSUtil.getNameNodeIds(myConf, nsId);
+    String myNNId = myConf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);
+    Preconditions.checkArgument(nnIds != null,
+        "Could not determine namenode ids in namespace '%s'",
+        nsId);
+    Preconditions.checkArgument(nnIds.size() == 2,
+        "Expected exactly 2 NameNodes in this namespace. Instead, got: '%s'",
+        Joiner.on("','").join(nnIds));
+    Preconditions.checkState(myNNId != null && !myNNId.isEmpty(),
+        "Could not determine own NN ID");
+
+    ArrayList<String> nnSet = Lists.newArrayList(nnIds);
+    nnSet.remove(myNNId);
+    assert nnSet.size() == 1;
+    String activeNN = nnSet.get(0);
+    
+    // Look up the address of the active NN.
+    Configuration confForOtherNode = new Configuration(myConf);
+    NameNode.initializeGenericKeys(confForOtherNode, nsId, activeNN);
+    return confForOtherNode;
   }
 
   /**

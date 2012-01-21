@@ -90,10 +90,11 @@ public class TestHASafeMode {
     // have been achieved, without being racy.
     cluster.getConfiguration(1).setInt(
         DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 30000);
+    cluster.getConfiguration(1).setInt(
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
     cluster.restartNameNode(1);
     nn1 = cluster.getNameNode(1);
-    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn1.getNamesystem().getEditLogTailer().interrupt();
   }
   
   /**

@@ -20,20 +20,17 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ServiceFailedException;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointConf;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.net.NetUtils;
@@ -41,9 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 /**
  * Thread which runs inside the NN when it's in Standby state,
@@ -79,37 +74,19 @@ public class StandbyCheckpointer {
    * as well as our own HTTP address from the configuration.
    */
   private void setNameNodeAddresses(Configuration conf) {
-    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
-    Collection<String> nnIds = DFSUtil.getNameNodeIds(conf, nsId);
-    String myNNId = conf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);
-    Preconditions.checkArgument(nnIds != null,
-        "Could not determine namenode ids in namespace '%s'",
-        nsId);
-    Preconditions.checkArgument(nnIds.size() == 2,
-        "Expected exactly 2 NameNodes in this namespace. Instead, got: '%s'",
-        Joiner.on("','").join(nnIds));
-    Preconditions.checkState(myNNId != null && !myNNId.isEmpty(),
-        "Could not determine own NN ID");
-
-    ArrayList<String> nnSet = Lists.newArrayList(nnIds);
-    nnSet.remove(myNNId);
-    assert nnSet.size() == 1;
-    String activeNN = nnSet.get(0);
-    
-    // Look up the address of the active NN.
-    Configuration confForActive = new Configuration(conf);
-    NameNode.initializeGenericKeys(confForActive, nsId, activeNN);
-    activeNNAddress = DFSUtil.getInfoServer(null, confForActive, true);
-    
     // Look up our own address.
     String myAddrString = DFSUtil.getInfoServer(null, conf, true);
+
+    // Look up the active node's address
+    Configuration confForActive = HAUtil.getConfForOtherNode(conf);
+    activeNNAddress = DFSUtil.getInfoServer(null, confForActive, true);
+    
     
     // Sanity-check.
     Preconditions.checkArgument(checkAddress(activeNNAddress),
         "Bad address for active NN: %s", activeNNAddress);
-    Preconditions.checkArgument(checkAddress(activeNNAddress),
-        "Bad address for standby NN: %s", myNNAddress);
-    
+    Preconditions.checkArgument(checkAddress(myAddrString),
+        "Bad address for standby NN: %s", myAddrString);
     myNNAddress = NetUtils.createSocketAddr(myAddrString);
   }
   

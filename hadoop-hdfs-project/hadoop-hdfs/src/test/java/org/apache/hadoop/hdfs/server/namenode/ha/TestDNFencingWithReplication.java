@@ -115,9 +115,11 @@ public class TestDNFencingWithReplication {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     // Increase max streams so that we re-replicate quickly.
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 1000);
 
+    
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(3)
@@ -128,8 +130,6 @@ public class TestDNFencingWithReplication {
       
       final NameNode nn1 = cluster.getNameNode(0);
       final NameNode nn2 = cluster.getNameNode(1);
-      nn2.getNamesystem().getEditLogTailer().setSleepTime(250);
-      nn2.getNamesystem().getEditLogTailer().interrupt();
       
       FileSystem fs = HATestUtil.configureFailoverFs(
           cluster, conf);

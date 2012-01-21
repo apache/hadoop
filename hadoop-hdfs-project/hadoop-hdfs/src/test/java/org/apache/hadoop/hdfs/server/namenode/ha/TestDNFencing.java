@@ -94,6 +94,7 @@ public class TestDNFencing {
     // See RandomDeleterPolicy javadoc.
     conf.setClass("dfs.block.replicator.classname", RandomDeleterPolicy.class,
         BlockPlacementPolicy.class); 
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(3)
@@ -106,8 +107,6 @@ public class TestDNFencing {
     // Trigger block reports so that the first NN trusts all
     // of the DNs, and will issue deletions
     cluster.triggerBlockReports();
-    nn2.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn2.getNamesystem().getEditLogTailer().interrupt();
     fs = HATestUtil.configureFailoverFs(cluster, conf);
   }
   

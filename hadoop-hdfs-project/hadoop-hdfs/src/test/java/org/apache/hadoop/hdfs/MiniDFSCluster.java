@@ -548,6 +548,12 @@ public class MiniDFSCluster {
           "since no HTTP ports have been specified.");
       conf.setBoolean(DFS_HA_STANDBY_CHECKPOINTS_KEY, false);
     }
+    if (!nnTopology.allIpcPortsSpecified() &&
+        nnTopology.isHA()) {
+      LOG.info("MiniDFSCluster disabling log-roll triggering in the "
+          + "Standby node since no IPC ports have been specified.");
+      conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, -1);
+    }
     
     federation = nnTopology.isFederated();
     createNameNodesAndSetConf(

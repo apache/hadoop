@@ -134,7 +134,6 @@ public class NamenodeProtocolTranslatorR23 implements
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public CheckpointSignature rollEditLog() throws IOException {
     return rpcProxy.rollEditLog().convert();
   }

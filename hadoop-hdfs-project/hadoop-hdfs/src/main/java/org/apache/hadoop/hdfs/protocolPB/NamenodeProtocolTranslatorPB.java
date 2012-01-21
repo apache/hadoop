@@ -157,7 +157,6 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public CheckpointSignature rollEditLog() throws IOException {
     try {
       return PBHelper.convert(rpcProxy.rollEditLog(NULL_CONTROLLER,

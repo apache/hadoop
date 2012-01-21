@@ -57,7 +57,8 @@ public class TestStandbyCheckpoints {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
-    
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf(null)
         .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
@@ -72,9 +73,6 @@ public class TestStandbyCheckpoints {
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
     fs = HATestUtil.configureFailoverFs(cluster, conf);
-
-    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn1.getNamesystem().getEditLogTailer().interrupt();
 
     cluster.transitionToActive(0);
   }
@@ -150,8 +148,6 @@ public class TestStandbyCheckpoints {
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 0);
     cluster.restartNameNode(1);
     nn1 = cluster.getNameNode(1);
-    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn1.getNamesystem().getEditLogTailer().interrupt();
  
     FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nn1);
     
@@ -195,8 +191,6 @@ public class TestStandbyCheckpoints {
         DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 0);
     cluster.restartNameNode(1);
     nn1 = cluster.getNameNode(1);
-    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn1.getNamesystem().getEditLogTailer().interrupt();
 
     cluster.transitionToActive(0);    
     

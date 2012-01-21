@@ -19,20 +19,33 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.ipc.RPC;
+
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+
 
 /**
  * EditLogTailer represents a thread which periodically reads from edits
@@ -50,13 +63,87 @@ public class EditLogTailer {
   private FSEditLog editLog;
   
   private volatile Runtime runtime = Runtime.getRuntime();
+
+  private InetSocketAddress activeAddr;
+  private NamenodeProtocol cachedActiveProxy = null;
+
+  /**
+   * The last transaction ID at which an edit log roll was initiated.
+   */
+  private long lastRollTriggerTxId = HdfsConstants.INVALID_TXID;
+  
+  /**
+   * The highest transaction ID loaded by the Standby.
+   */
+  private long lastLoadedTxnId = HdfsConstants.INVALID_TXID;
+
+  /**
+   * The last time we successfully loaded a non-zero number of edits from the
+   * shared directory.
+   */
+  private long lastLoadTimestamp;
+
+  /**
+   * How often the Standby should roll edit logs. Since the Standby only reads
+   * from finalized log segments, the Standby will only be as up-to-date as how
+   * often the logs are rolled.
+   */
+  private long logRollPeriodMs;
+
+  /**
+   * How often the Standby should check if there are new finalized segment(s)
+   * available to be read from.
+   */
+  private long sleepTimeMs;
   
   public EditLogTailer(FSNamesystem namesystem) {
     this.tailerThread = new EditLogTailerThread();
     this.namesystem = namesystem;
     this.editLog = namesystem.getEditLog();
+    
+
+    Configuration conf = namesystem.getConf();
+    lastLoadTimestamp = now();
+
+    logRollPeriodMs = conf.getInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
+        DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_DEFAULT) * 1000;
+    if (logRollPeriodMs >= 0) {
+      this.activeAddr = getActiveNodeAddress();
+      Preconditions.checkArgument(activeAddr.getPort() > 0,
+          "Active NameNode must have an IPC port configured. " +
+          "Got address '%s'", activeAddr);
+      LOG.info("Will roll logs on active node at " + activeAddr + " every " +
+          (logRollPeriodMs / 1000) + " seconds.");
+    } else {
+      LOG.info("Not going to trigger log rolls on active node because " +
+          DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY + " is negative.");
+    }
+    
+    sleepTimeMs = conf.getInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_DEFAULT) * 1000;
+    
+    LOG.debug("logRollPeriodMs=" + logRollPeriodMs +
+        " sleepTime=" + sleepTimeMs);
   }
   
+  private InetSocketAddress getActiveNodeAddress() {
+    Configuration conf = namesystem.getConf();
+    Configuration activeConf = HAUtil.getConfForOtherNode(conf);
+    return NameNode.getServiceAddress(activeConf, true);
+  }
+  
+  private NamenodeProtocol getActiveNodeProxy() throws IOException {
+    if (cachedActiveProxy == null) {
+      Configuration conf = namesystem.getConf();
+      NamenodeProtocolPB proxy = 
+        RPC.waitForProxy(NamenodeProtocolPB.class,
+            RPC.getProtocolVersion(NamenodeProtocolPB.class), activeAddr, conf);
+      cachedActiveProxy = new NamenodeProtocolTranslatorPB(proxy);
+    }
+    assert cachedActiveProxy != null;
+    return cachedActiveProxy;
+  }
+
   public void start() {
     tailerThread.start();
   }
@@ -70,16 +157,6 @@ public class EditLogTailer {
       LOG.warn("Edit log tailer thread exited with an exception");
       throw new IOException(e);
     }
-  }
-
-  @VisibleForTesting
-  public void setSleepTime(long sleepTime) {
-    tailerThread.setSleepTime(sleepTime);
-  }
-  
-  @VisibleForTesting
-  public void interrupt() {
-    tailerThread.interrupt();
   }
   
   @VisibleForTesting
@@ -152,8 +229,34 @@ public class EditLogTailer {
               editsLoaded, lastTxnId));
         }
       }
+
+      if (editsLoaded > 0) {
+        lastLoadTimestamp = now();
+      }
+      lastLoadedTxnId = image.getLastAppliedTxId();
     } finally {
       namesystem.writeUnlock();
+    }
+  }
+
+  /**
+   * @return true if the configured log roll period has elapsed.
+   */
+  private boolean tooLongSinceLastLoad() {
+    return logRollPeriodMs >= 0 && 
+      (now() - lastLoadTimestamp) > logRollPeriodMs ;
+  }
+
+  /**
+   * Trigger the active node to roll its logs.
+   */
+  private void triggerActiveLogRoll() {
+    LOG.info("Triggering log roll on remote NameNode " + activeAddr);
+    try {
+      getActiveNodeProxy().rollEditLog();
+      lastRollTriggerTxId = lastLoadedTxnId;
+    } catch (IOException ioe) {
+      LOG.warn("Unable to trigger a roll of the active NN", ioe);
     }
   }
 
@@ -163,7 +266,6 @@ public class EditLogTailer {
    */
   private class EditLogTailerThread extends Thread {
     private volatile boolean shouldRun = true;
-    private long sleepTime = 60 * 1000;
     
     private EditLogTailerThread() {
       super("Edit log tailer");
@@ -173,14 +275,26 @@ public class EditLogTailer {
       this.shouldRun = shouldRun;
     }
     
-    private void setSleepTime(long sleepTime) {
-      this.sleepTime = sleepTime;
-    }
-    
     @Override
     public void run() {
       while (shouldRun) {
         try {
+          // There's no point in triggering a log roll if the Standby hasn't
+          // read any more transactions since the last time a roll was
+          // triggered. 
+          if (tooLongSinceLastLoad() &&
+              lastRollTriggerTxId < lastLoadedTxnId) {
+            triggerActiveLogRoll();
+          }
+          /**
+           * Check again in case someone calls {@link EditLogTailer#stop} while
+           * we're triggering an edit log roll, since ipc.Client catches and
+           * ignores {@link InterruptedException} in a few places. This fixes
+           * the bug described in HDFS-2823.
+           */
+          if (!shouldRun) {
+            break;
+          }
           doTailEdits();
         } catch (EditLogInputException elie) {
           LOG.warn("Error while reading edits from disk. Will try again.", elie);
@@ -194,7 +308,7 @@ public class EditLogTailer {
         }
 
         try {
-          Thread.sleep(sleepTime);
+          Thread.sleep(sleepTimeMs);
         } catch (InterruptedException e) {
           LOG.warn("Edit log tailer interrupted", e);
         }

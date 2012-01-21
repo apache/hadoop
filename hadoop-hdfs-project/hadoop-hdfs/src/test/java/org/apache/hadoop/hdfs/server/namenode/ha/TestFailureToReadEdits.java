@@ -78,6 +78,7 @@ public class TestFailureToReadEdits {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY, 10);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     HAUtil.setAllowStandbyReads(conf, true);
     
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
@@ -93,8 +94,6 @@ public class TestFailureToReadEdits {
     
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
-    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn1.getNamesystem().getEditLogTailer().interrupt();
     nn1.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
     
     cluster.transitionToActive(0);

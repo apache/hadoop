@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,13 +31,12 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -77,6 +75,7 @@ public class TestStandbyIsHot {
     Configuration conf = new Configuration();
     // We read from the standby to watch block locations
     HAUtil.setAllowStandbyReads(conf, true);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(3)
@@ -90,8 +89,6 @@ public class TestStandbyIsHot {
       NameNode nn2 = cluster.getNameNode(1);
       
       nn2.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
-      nn2.getNamesystem().getEditLogTailer().setSleepTime(250);
-      nn2.getNamesystem().getEditLogTailer().interrupt();
       
       FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       
@@ -151,6 +148,7 @@ public class TestStandbyIsHot {
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
     // We read from the standby to watch block locations
     HAUtil.setAllowStandbyReads(conf, true);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(1)
@@ -158,8 +156,6 @@ public class TestStandbyIsHot {
     try {
       NameNode nn0 = cluster.getNameNode(0);
       NameNode nn1 = cluster.getNameNode(1);
-      nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-      nn1.getNamesystem().getEditLogTailer().interrupt();
 
       cluster.transitionToActive(0);
       

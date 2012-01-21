@@ -690,6 +690,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
     return Util.stringCollectionAsURIs(dirNames);
   }
+  
+  public Configuration getConf() {
+    return conf;
+  }
 
   @Override
   public void readLock() {
@@ -3846,6 +3850,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   CheckpointSignature rollEditLog() throws IOException {
     writeLock();
     try {
+      checkOperation(OperationCategory.JOURNAL);
       if (isInSafeMode()) {
         throw new SafeModeException("Log not rolled", safeMode);
       }

@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
@@ -207,6 +208,7 @@ public class TestHAStateTransitions {
   @Test(timeout=120000)
   public void testLeasesRenewedOnTransition() throws Exception {
     Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(1)
@@ -215,8 +217,6 @@ public class TestHAStateTransitions {
     FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
     NameNode nn0 = cluster.getNameNode(0);
     NameNode nn1 = cluster.getNameNode(1);
-    nn1.getNamesystem().getEditLogTailer().setSleepTime(250);
-    nn1.getNamesystem().getEditLogTailer().interrupt();
 
     try {
       cluster.waitActive();

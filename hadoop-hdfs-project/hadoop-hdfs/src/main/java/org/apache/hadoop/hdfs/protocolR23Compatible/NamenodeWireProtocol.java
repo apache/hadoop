@@ -84,10 +84,7 @@ public interface NamenodeWireProtocol extends VersionedProtocol {
    * call fails if the file system is in SafeMode.
    * @throws IOException
    * @return a unique token to identify this transaction.
-   * @deprecated 
-   *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
    */
-  @Deprecated
   public CheckpointSignatureWritable rollEditLog() throws IOException;
 
   /**

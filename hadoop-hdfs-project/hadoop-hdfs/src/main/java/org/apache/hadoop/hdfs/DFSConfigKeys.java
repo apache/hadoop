@@ -333,4 +333,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_HA_NAMENODE_ID_KEY = "dfs.ha.namenode.id";
   public static final String  DFS_HA_STANDBY_CHECKPOINTS_KEY = "dfs.ha.standby.checkpoints";
   public static final boolean DFS_HA_STANDBY_CHECKPOINTS_DEFAULT = true;
+  public static final String DFS_HA_LOGROLL_PERIOD_KEY = "dfs.ha.log-roll.period";
+  public static final int DFS_HA_LOGROLL_PERIOD_DEFAULT = 2 * 60; // 2m
+  public static final String DFS_HA_TAILEDITS_PERIOD_KEY = "dfs.ha.tail-edits.period";
+  public static final int DFS_HA_TAILEDITS_PERIOD_DEFAULT = 60; // 1m
 }

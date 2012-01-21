@@ -738,7 +738,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
-    // TODO:HA decide on OperationCategory for this
     return namesystem.rollEditLog();
   }
   

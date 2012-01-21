@@ -134,6 +134,21 @@ public class MiniDFSNNTopology {
     }
     return true;
   }
+  
+  /**
+   * @return true if all of the NNs in the cluster have their IPC
+   * port specified to be non-ephemeral.
+   */
+  public boolean allIpcPortsSpecified() {
+    for (NSConf ns : nameservices) {
+      for (NNConf nn : ns.getNNs()) {
+        if (nn.getIpcPort() == 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   public List<NSConf> getNameservices() {
     return nameservices;
