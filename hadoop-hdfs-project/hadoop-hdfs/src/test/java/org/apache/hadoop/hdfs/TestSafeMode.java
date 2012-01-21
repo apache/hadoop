@@ -113,6 +113,21 @@ public class TestSafeMode {
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE));
   }
 
+  /**
+   * Test that, if there are no blocks in the filesystem,
+   * the NameNode doesn't enter the "safemode extension" period.
+   */
+  @Test(timeout=45000)
+  public void testNoExtensionIfNoBlocks() throws IOException {
+    cluster.getConfiguration(0).setInt(
+        DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 60000);
+    cluster.restartNameNode();
+    // Even though we have safemode extension set high, we should immediately
+    // exit safemode on startup because there are no blocks in the namespace.
+    String status = cluster.getNameNode().getNamesystem().getSafemode();
+    assertEquals("", status);
+  }
+
   public interface FSRun {
     public abstract void run(FileSystem fs) throws IOException;
   }
@@ -193,5 +208,37 @@ public class TestSafeMode {
     assertFalse("Could not leave SM",
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE));
   }
-  
+
+  /**
+   * Verify that the NameNode stays in safemode when dfs.safemode.datanode.min
+   * is set to a number greater than the number of live datanodes.
+   */
+  @Test
+  public void testDatanodeThreshold() throws IOException {
+    cluster.shutdown();
+    Configuration conf = cluster.getConfiguration(0);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
+
+    cluster.restartNameNode();
+    fs = (DistributedFileSystem)cluster.getFileSystem();
+
+    String tipMsg = cluster.getNamesystem().getSafemode();
+    assertTrue("Safemode tip message looks right: " + tipMsg,
+               tipMsg.contains("The number of live datanodes 0 needs an additional " +
+                               "2 live datanodes to reach the minimum number 1. " +
+                               "Safe mode will be turned off automatically."));
+
+    // Start a datanode
+    cluster.startDataNodes(conf, 1, true, null, null);
+
+    // Wait long enough for safemode check to refire
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException ignored) {}
+
+    // We now should be out of safe mode.
+    assertEquals("", cluster.getNamesystem().getSafemode());
+  }
+
 }
