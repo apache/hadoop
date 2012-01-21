@@ -62,6 +62,14 @@
       <item name="Writing Yarn Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
     </menu>
+
+    <menu name="YARN REST API's" inherit="top">
+      <item name="Introduction" href="hadoop-yarn/hadoop-yarn-site/WebServicesIntro.html"/>
+      <item name="Resource Manager" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html"/>
+      <item name="Node Manager" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html"/>
+      <item name="Mapreduce Application Master" href="hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html"/>
+      <item name="History Server" href="hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html"/>
+    </menu>
     
     <menu name="Auth" inherit="top">
       <item name="Overview" href="hadoop-auth/index.html"/>

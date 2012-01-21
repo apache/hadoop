@@ -199,6 +199,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2803. Add logging to LeaseRenewer for better lease expiration debugging.
     (Jimmy Xiang via todd)
 
+    HDFS-2817. Combine the two TestSafeMode test suites. (todd)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -265,6 +267,14 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2790. FSNamesystem.setTimes throws exception with wrong
     configuration name in the message. (Arpit Gupta via eli)
+
+    HDFS-2810. Leases not getting renewed properly by clients (todd)
+
+    HDFS-2751. Datanode may incorrectly drop OS cache behind reads
+    even for short reads. (todd)
+
+    HDFS-2816. Fix missing license header in httpfs findbugsExcludeFile.xml.
+    (hitesh via tucu)
 
 Release 0.23.0 - 2011-11-01 
 

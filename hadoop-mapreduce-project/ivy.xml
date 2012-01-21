@@ -99,6 +99,8 @@
                rev="${yarn.version}" conf="compile->default">
      <artifact name="hadoop-mapreduce-client-jobclient" type="tests" ext="jar" m:classifier="tests"/>
    </dependency>
+   <dependency org="org.apache.hadoop" name="hadoop-rumen" 
+               rev="${hadoop-common.version}" conf="compile->default"/> 
    <dependency org="org.apache.hadoop" name="hadoop-archives"
                rev="${hadoop-common.version}" conf="compile->default"/>
 
@@ -139,6 +141,13 @@
    <dependency org="org.vafer" name="jdeb" rev="${jdeb.version}" conf="package->master"/>
    <dependency org="org.mortbay.jetty" name="jetty-servlet-tester" rev="${jetty.version}"
                conf="test->default"/>
+
+   <!-- dependency for rumen anonymization -->
+   <dependency org="org.codehaus.jackson" name="jackson-core-asl" rev="${jackson.version}"
+               conf="compile->default"/>
+   <dependency org="org.codehaus.jackson" name="jackson-mapper-asl" rev="${jackson.version}"
+               conf="compile->default"/>
+
    <!-- dependency addition for the fault injection -->
    <dependency org="org.aspectj" name="aspectjrt" rev="${aspectj.version}"
                conf="compile->default"/>

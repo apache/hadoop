@@ -35,6 +35,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +50,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
@@ -86,6 +88,9 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   private static final Log LOG = LogFactory.getLog(JobHistory.class);
 
   private static final Log SUMMARY_LOG = LogFactory.getLog(JobSummary.class);
+  public static final Pattern CONF_FILENAME_REGEX =
+    Pattern.compile("(" + JobID.JOBID_REGEX + ")_conf.xml(?:\\.[0-9]+\\.old)?");
+  public static final String OLD_SUFFIX = ".old";
 
   private static String DONE_BEFORE_SERIAL_TAIL = 
     JobHistoryUtils.doneSubdirsBeforeSerialTail();

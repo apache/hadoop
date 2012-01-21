@@ -315,7 +315,7 @@ class BlockSender implements java.io.Closeable {
    * close opened files.
    */
   public void close() throws IOException {
-    if (blockInFd != null && shouldDropCacheBehindRead) {
+    if (blockInFd != null && shouldDropCacheBehindRead && isLongRead()) {
       // drop the last few MB of the file from cache
       try {
         NativeIO.posixFadviseIfPossible(

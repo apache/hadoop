@@ -209,4 +209,14 @@
     A special value of "*" means all users are allowed.</description>
   </property>
 
+   <property>
+      <name>security.mrhs.client.protocol.acl</name>
+      <value>*</value>
+      <description>ACL for HSClientProtocol, used by job clients to
+       communciate with the MR History Server job status etc. 
+       The ACL is a comma-separated list of user and group names. The user and
+       group list is separated by a blank. For e.g. "alice,bob users,wheel".
+       A special value of "*" means all users are allowed.</description>
+    </property>
+
 </configuration>

@@ -67,7 +67,7 @@ import org.apache.hadoop.util.StringUtils;
  * </p>
  */
 class LeaseRenewer {
-  private static final Log LOG = LogFactory.getLog(LeaseRenewer.class);
+  static final Log LOG = LogFactory.getLog(LeaseRenewer.class);
 
   static final long LEASE_RENEWER_GRACE_DEFAULT = 60*1000L;
   static final long LEASE_RENEWER_SLEEP_DEFAULT = 1000L;
@@ -407,7 +407,13 @@ class LeaseRenewer {
       final DFSClient c = copies.get(i);
       //skip if current client name is the same as the previous name.
       if (!c.getClientName().equals(previousName)) {
-        c.renewLease();
+        if (!c.renewLease()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Did not renew lease for client " +
+                c);
+          }
+          continue;
+        }
         previousName = c.getClientName();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Lease renewed for client " + previousName);
