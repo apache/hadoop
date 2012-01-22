@@ -94,6 +94,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2817. Combine the two TestSafeMode test suites. (todd)
 
+    HDFS-2818. Fix a missing space issue in HDFS webapps' title tags. (Devaraj K via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
