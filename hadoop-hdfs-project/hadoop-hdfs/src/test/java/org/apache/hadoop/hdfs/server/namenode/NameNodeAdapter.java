@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.ipc.Server;
 
@@ -96,5 +97,29 @@ public class NameNodeAdapter {
     } finally {
       ns.readUnlock();
     }
+  }
+  
+  /**
+   * @return the number of blocks marked safe by safemode, or -1
+   * if safemode is not running.
+   */
+  public static int getSafeModeSafeBlocks(NameNode nn) {
+    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
+    if (smi == null) {
+      return -1;
+    }
+    return smi.blockSafe;
+  }
+  
+  /**
+   * @return true if safemode is not running, or if safemode has already
+   * initialized the replication queues
+   */
+  public static boolean safeModeInitializedReplQueues(NameNode nn) {
+    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
+    if (smi == null) {
+      return true;
+    }
+    return smi.initializedReplQueues;
   }
 }
