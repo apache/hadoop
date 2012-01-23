@@ -490,6 +490,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3702. internal server error trying access application master 
     via proxy with filter enabled (Thomas Graves via mahadev)
 
+    MAPREDUCE-3646. Remove redundant URL info from "mapred job" output.
+    (Jonathan Eagles via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
