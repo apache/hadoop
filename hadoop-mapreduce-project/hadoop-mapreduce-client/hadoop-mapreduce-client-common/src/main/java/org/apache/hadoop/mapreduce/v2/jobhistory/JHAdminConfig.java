@@ -111,4 +111,9 @@ public class JHAdminConfig {
   public static final int DEFAULT_MR_HISTORY_WEBAPP_PORT = 19888;
   public static final String DEFAULT_MR_HISTORY_WEBAPP_ADDRESS =
     "0.0.0.0:" + DEFAULT_MR_HISTORY_WEBAPP_PORT;
+  /*
+   * HS Service Authorization
+   */
+  public static final String MR_HS_SECURITY_SERVICE_AUTHORIZATION =
+      "security.mrhs.client.protocol.acl";
 }

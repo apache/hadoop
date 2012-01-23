@@ -99,6 +99,8 @@
                rev="${yarn.version}" conf="compile->default">
      <artifact name="hadoop-mapreduce-client-jobclient" type="tests" ext="jar" m:classifier="tests"/>
    </dependency>
+   <dependency org="org.apache.hadoop" name="hadoop-rumen" 
+               rev="${hadoop-common.version}" conf="compile->default"/> 
    <dependency org="org.apache.hadoop" name="hadoop-archives"
                rev="${hadoop-common.version}" conf="compile->default"/>
 

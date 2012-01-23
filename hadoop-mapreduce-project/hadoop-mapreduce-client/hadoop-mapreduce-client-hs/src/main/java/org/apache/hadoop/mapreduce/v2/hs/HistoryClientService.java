@@ -66,7 +66,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
+import org.apache.hadoop.mapreduce.v2.app.security.authorize.ClientHSPolicyProvider;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.HsWebApp;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -136,9 +136,9 @@ public class HistoryClientService extends AbstractService {
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
         false)) {
-      server.refreshServiceAcl(conf, new MRAMPolicyProvider());
+      server.refreshServiceAcl(conf, new ClientHSPolicyProvider());
     }
-
+    
     server.start();
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
