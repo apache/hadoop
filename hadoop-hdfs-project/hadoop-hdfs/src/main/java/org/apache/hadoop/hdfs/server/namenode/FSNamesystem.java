@@ -752,6 +752,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
     this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);  
     this.persistBlocks |= haEnabled && HAUtil.usesSharedEditsDir(conf);
+    
+    // Sanity check the HA-related config.
+    if (nameserviceId != null) {
+      LOG.info("Determined nameservice ID: " + nameserviceId);
+    }
+    LOG.info("HA Enabled: " + haEnabled);
+    if (!haEnabled && HAUtil.usesSharedEditsDir(conf)) {
+      LOG.warn("Configured NNs:\n" + DFSUtil.nnAddressesAsString(conf));
+      throw new IOException("Invalid configuration: a shared edits dir " +
+          "must not be specified if HA is not enabled.");
+    }
 
     short filePermission = (short)conf.getInt(DFS_NAMENODE_UPGRADE_PERMISSION_KEY,
                                               DFS_NAMENODE_UPGRADE_PERMISSION_DEFAULT);

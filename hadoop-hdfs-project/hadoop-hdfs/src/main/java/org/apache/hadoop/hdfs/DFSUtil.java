@@ -569,6 +569,12 @@ public class DFSUtil {
     }
     return b.toString();
   }
+  
+  public static String nnAddressesAsString(Configuration conf) {
+    Map<String, Map<String, InetSocketAddress>> addresses =
+      getHaNnRpcAddresses(conf);
+    return addressMapToString(addresses);
+  }
 
   /**
    * Represent one of the NameNodes configured in the cluster.
