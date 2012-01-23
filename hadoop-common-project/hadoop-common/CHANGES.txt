@@ -146,6 +146,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7986. Adding config for MapReduce History Server protocol in
    hadoop-policy.xml for service level authorization. (Mahadev Konar via vinodkv)
 
+   HADOOP-7981. Improve documentation for org.apache.hadoop.io.compress.
+   Decompressor.getRemaining (Jonathan Eagles via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

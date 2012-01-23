@@ -49,7 +49,7 @@ public interface Decompressor {
   public void setInput(byte[] b, int off, int len);
   
   /**
-   * Returns true if the input data buffer is empty and 
+   * Returns <code>true</code> if the input data buffer is empty and 
    * {@link #setInput(byte[], int, int)} should be called to
    * provide more input. 
    * 
@@ -76,8 +76,11 @@ public interface Decompressor {
   public boolean needsDictionary();
 
   /**
-   * Returns true if the end of the decompressed 
-   * data output stream has been reached.
+   * Returns <code>true</code> if the end of the decompressed 
+   * data output stream has been reached. Indicates a concatenated data stream
+   * when finished() returns <code>true</code> and {@link #getRemaining()}
+   * returns a positive value. finished() will be reset with the
+   * {@link #reset()} method.
    * @return <code>true</code> if the end of the decompressed
    * data output stream has been reached.
    */
@@ -98,15 +101,23 @@ public interface Decompressor {
   public int decompress(byte[] b, int off, int len) throws IOException;
 
   /**
-   * Returns the number of bytes remaining in the compressed-data buffer;
-   * typically called after the decompressor has finished decompressing
-   * the current gzip stream (a.k.a. "member").
+   * Returns the number of bytes remaining in the compressed data buffer.
+   * Indicates a concatenated data stream if {@link #finished()} returns
+   * <code>true</code> and getRemaining() returns a positive value. If
+   * {@link #finished()} returns <code>true</code> and getRemaining() returns
+   * a zero value, indicates that the end of data stream has been reached and
+   * is not a concatenated data stream. 
+   * @return The number of bytes remaining in the compressed data buffer.
    */
   public int getRemaining();
 
   /**
    * Resets decompressor and input and output buffers so that a new set of
-   * input data can be processed.
+   * input data can be processed. If {@link #finished()}} returns
+   * <code>true</code> and {@link #getRemaining()} returns a positive value,
+   * reset() is called before processing of the next data stream in the
+   * concatenated data stream. {@link #finished()} will be reset and will
+   * return <code>false</code> when reset() is called.
    */
   public void reset();
 
