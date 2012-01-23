@@ -848,6 +848,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return fsRunning;
   }
 
+  private boolean isInStandbyState() {
+    if (haContext == null || haContext.getState() == null) {
+      // We're still starting up. In this case, if HA is
+      // on for the cluster, we always start in standby. Otherwise
+      // start in active.
+      return haEnabled;
+    }
+  
+    return haContext.getState() instanceof StandbyState;
+  }
+
   /**
    * Dump all metadata into specified file
    */
@@ -3345,8 +3356,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           return;
         }
       }
-      // if not done yet, initialize replication queues
-      if (!isPopulatingReplQueues()) {
+      // if not done yet, initialize replication queues.
+      // In the standby, do not populate repl queues
+      if (!isPopulatingReplQueues() && !isInStandbyState()) {
         initializeReplQueues();
       }
       long timeInSafemode = now() - systemStart;
@@ -3389,7 +3401,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * initializing replication queues.
      */
     private synchronized boolean canInitializeReplQueues() {
-      return blockSafe >= blockReplQueueThreshold;
+      return !isInStandbyState() && blockSafe >= blockReplQueueThreshold;
     }
       
     /** 
@@ -3705,8 +3717,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   @Override
   public boolean isPopulatingReplQueues() {
-    if (haContext != null && // null during startup!
-        !haContext.getState().shouldPopulateReplQueues()) {
+    if (isInStandbyState()) {
       return false;
     }
     // safeMode is volatile, and may be set to null at any time

@@ -125,3 +125,5 @@ HDFS-2737. Automatically trigger log rolls periodically on the active NN. (todd 
 HDFS-2820. Add a simple sanity check for HA config (todd)
 
 HDFS-2688. Add tests for quota tracking in an HA cluster. (todd)
+
+HDFS-2804. Should not mark blocks under-replicated when exiting safemode (todd)

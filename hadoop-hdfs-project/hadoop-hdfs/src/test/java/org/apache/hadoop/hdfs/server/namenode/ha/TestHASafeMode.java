@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -32,15 +33,20 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.base.Supplier;
 
 /**
  * Tests that exercise safemode in an HA cluster.
@@ -59,6 +65,8 @@ public class TestHASafeMode {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(3)
@@ -423,6 +431,44 @@ public class TestHASafeMode {
             "Safe mode is ON." +
             "The reported blocks 6 has reached the threshold 0.9990 of " +
             "total blocks 6. Safe mode will be turned off automatically"));    
+  }
+  
+  /**
+   * Regression test for HDFS-2804: standby should not populate replication
+   * queues when exiting safe mode.
+   */
+  @Test
+  public void testNoPopulatingReplQueuesWhenExitingSafemode() throws Exception {
+    DFSTestUtil.createFile(fs, new Path("/test"), 15*BLOCK_SIZE, (short)3, 1L);
+    
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+    
+    // get some blocks in the SBN's image
+    nn1.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    NameNodeAdapter.saveNamespace(nn1);
+    nn1.getRpcServer().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+    // and some blocks in the edit logs
+    DFSTestUtil.createFile(fs, new Path("/test2"), 15*BLOCK_SIZE, (short)3, 1L);
+    nn0.getRpcServer().rollEditLog();
+    
+    cluster.stopDataNode(1);
+    cluster.shutdownNameNode(1);
+
+    //Configuration sbConf = cluster.getConfiguration(1);
+    //sbConf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 1);
+    cluster.restartNameNode(1, false);
+    nn1 = cluster.getNameNode(1);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        return !nn1.isInSafeMode();
+      }
+    }, 100, 10000);
+    
+    BlockManagerTestUtil.updateState(nn1.getNamesystem().getBlockManager());
+    assertEquals(0L, nn1.getNamesystem().getUnderReplicatedBlocks());
+    assertEquals(0L, nn1.getNamesystem().getPendingReplicationBlocks());
   }
   
   /**
