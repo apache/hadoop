@@ -57,7 +57,7 @@ public class AmIpFilter implements Filter {
     proxyUriBase = conf.getInitParameter(PROXY_URI_BASE);
   }
   
-  private Set<String> getProxyAddresses() throws ServletException {
+  protected Set<String> getProxyAddresses() throws ServletException {
     long now = System.currentTimeMillis();
     synchronized(this) {
       if(proxyAddresses == null || (lastUpdate + updateInterval) >= now) {
@@ -97,10 +97,13 @@ public class AmIpFilter implements Filter {
     }
     
     String user = null;
-    for(Cookie c: httpReq.getCookies()) {
-      if(WebAppProxyServlet.PROXY_USER_COOKIE_NAME.equals(c.getName())){
-        user = c.getValue();
-        break;
+    
+    if (httpReq.getCookies() != null) {
+      for(Cookie c: httpReq.getCookies()) {
+        if(WebAppProxyServlet.PROXY_USER_COOKIE_NAME.equals(c.getName())){
+          user = c.getValue();
+          break;
+        }
       }
     }
     if(user == null) {

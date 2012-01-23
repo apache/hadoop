@@ -483,6 +483,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3705. ant build fails on 0.23 branch. (Thomas Graves via
     mahadev)
+ 
+    MAPREDUCE-3691. webservices add support to compress response.
+    (Thomas Graves via mahadev)
+
+    MAPREDUCE-3702. internal server error trying access application master 
+    via proxy with filter enabled (Thomas Graves via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

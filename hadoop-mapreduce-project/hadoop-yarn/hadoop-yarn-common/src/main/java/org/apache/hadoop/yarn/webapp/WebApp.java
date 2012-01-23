@@ -36,6 +36,7 @@ import com.google.common.collect.Lists;
 import com.google.inject.Provides;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.ServletModule;
+import com.sun.jersey.api.container.filter.GZIPContentEncodingFilter;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.core.util.FeaturesAndProperties;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -160,6 +161,8 @@ public abstract class WebApp extends ServletModule {
       params.put(ResourceConfig.FEATURE_IMPLICIT_VIEWABLES, "true");
       params.put(ServletContainer.FEATURE_FILTER_FORWARD_ON_404, "true");
       params.put(FeaturesAndProperties.FEATURE_XMLROOTELEMENT_PROCESSING, "true");
+      params.put(ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS, GZIPContentEncodingFilter.class.getName());
+      params.put(ResourceConfig.PROPERTY_CONTAINER_RESPONSE_FILTERS, GZIPContentEncodingFilter.class.getName());
       filter("/*").through(GuiceContainer.class, params);
     }
 
