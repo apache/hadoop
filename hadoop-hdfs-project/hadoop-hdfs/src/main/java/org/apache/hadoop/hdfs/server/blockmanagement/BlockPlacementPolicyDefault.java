@@ -38,6 +38,8 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /** The class is responsible for choosing the desired number of targets
  * for placing block replicas.
  * The replica placement strategy is that if the writer is on a datanode,
@@ -49,6 +51,7 @@ import org.apache.hadoop.net.NodeBase;
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   private boolean considerLoad; 
+  private boolean preferLocalNode = true;
   private NetworkTopology clusterMap;
   private FSClusterStats stats;
   static final String enableDebugLogging = "For more information, please enable"
@@ -224,17 +227,17 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (localMachine == null)
       return chooseRandom(NodeBase.ROOT, excludedNodes, 
                           blocksize, maxNodesPerRack, results);
-      
-    // otherwise try local machine first
-    Node oldNode = excludedNodes.put(localMachine, localMachine);
-    if (oldNode == null) { // was not in the excluded list
-      if (isGoodTarget(localMachine, blocksize,
-                       maxNodesPerRack, false, results)) {
-        results.add(localMachine);
-        return localMachine;
-      }
-    } 
-      
+    if (preferLocalNode) {
+      // otherwise try local machine first
+      Node oldNode = excludedNodes.put(localMachine, localMachine);
+      if (oldNode == null) { // was not in the excluded list
+        if (isGoodTarget(localMachine, blocksize,
+                         maxNodesPerRack, false, results)) {
+          results.add(localMachine);
+          return localMachine;
+        }
+      } 
+    }      
     // try a node on local rack
     return chooseLocalRack(localMachine, excludedNodes, 
                            blocksize, maxNodesPerRack, results);
@@ -568,6 +571,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
     }
     return cur;
+  }
+  
+  @VisibleForTesting
+  void setPreferLocalNode(boolean prefer) {
+    this.preferLocalNode = prefer;
   }
 }
 
