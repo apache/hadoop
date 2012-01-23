@@ -171,6 +171,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2816. Fix missing license header in httpfs findbugsExcludeFile.xml.
     (hitesh via tucu)
 
+    HDFS-2822. processMisReplicatedBlock incorrectly identifies
+    under-construction blocks as under-replicated. (todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
