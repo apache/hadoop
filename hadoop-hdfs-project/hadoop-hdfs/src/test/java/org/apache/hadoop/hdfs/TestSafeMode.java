@@ -19,22 +19,30 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.io.IOUtils;
 
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
 
+import com.google.common.collect.Lists;
+
 /**
  * Tests to verify safe mode correctness.
  */
 public class TestSafeMode {
+  private static final int BLOCK_SIZE = 1024;
   Configuration conf; 
   MiniDFSCluster cluster;
   FileSystem fs;
@@ -43,6 +51,7 @@ public class TestSafeMode {
   @Before
   public void startUp() throws IOException {
     conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();      
     fs = cluster.getFileSystem();
@@ -126,6 +135,46 @@ public class TestSafeMode {
     // exit safemode on startup because there are no blocks in the namespace.
     String status = cluster.getNameNode().getNamesystem().getSafemode();
     assertEquals("", status);
+  }
+
+  /**
+   * Test that, when under-replicated blocks are processed at the end of
+   * safe-mode, blocks currently under construction are not considered
+   * under-construction or missing. Regression test for HDFS-2822.
+   */
+  @Test
+  public void testRbwBlocksNotConsideredUnderReplicated() throws IOException {
+    List<FSDataOutputStream> stms = Lists.newArrayList();
+    try {
+      // Create some junk blocks so that the NN doesn't just immediately
+      // exit safemode on restart.
+      DFSTestUtil.createFile(fs, new Path("/junk-blocks"),
+          BLOCK_SIZE*4, (short)1, 1L);
+      // Create several files which are left open. It's important to
+      // create several here, because otherwise the first iteration of the
+      // replication monitor will pull them off the replication queue and
+      // hide this bug from the test!
+      for (int i = 0; i < 10; i++) {
+        FSDataOutputStream stm = fs.create(
+            new Path("/append-" + i), true, BLOCK_SIZE, (short) 1, BLOCK_SIZE);
+        stms.add(stm);
+        stm.write(1);
+        stm.hflush();
+      }
+
+      cluster.restartNameNode();
+      FSNamesystem ns = cluster.getNameNode(0).getNamesystem();
+      BlockManagerTestUtil.updateState(ns.getBlockManager());
+      assertEquals(0, ns.getPendingReplicationBlocks());
+      assertEquals(0, ns.getCorruptReplicaBlocks());
+      assertEquals(0, ns.getMissingBlocksCount());
+
+    } finally {
+      for (FSDataOutputStream stm : stms) {
+        IOUtils.closeStream(stm);
+      }
+      cluster.shutdown();
+    }
   }
 
   public interface FSRun {

@@ -1759,7 +1759,8 @@ public class BlockManager {
   public void processMisReplicatedBlocks() {
     assert namesystem.hasWriteLock();
 
-    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0;
+    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0,
+         nrUnderConstruction = 0;
     neededReplications.clear();
     for (BlockInfo block : blocksMap.getBlocks()) {
       INodeFile fileINode = block.getINode();
@@ -1767,6 +1768,12 @@ public class BlockManager {
         // block does not belong to any file
         nrInvalid++;
         addToInvalidates(block);
+        continue;
+      }
+      if (!block.isComplete()) {
+        // Incomplete blocks are never considered mis-replicated --
+        // they'll be reached when they are completed or recovered.
+        nrUnderConstruction++;
         continue;
       }
       // calculate current replication
@@ -1792,6 +1799,7 @@ public class BlockManager {
     LOG.info("Number of invalid blocks          = " + nrInvalid);
     LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
     LOG.info("Number of  over-replicated blocks = " + nrOverReplicated);
+    LOG.info("Number of blocks being written    = " + nrUnderConstruction);
   }
 
   /** Set replication for the blocks. */
