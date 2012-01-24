@@ -182,6 +182,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2822. processMisReplicatedBlock incorrectly identifies
     under-construction blocks as under-replicated. (todd)
 
+    HDFS-442. dfsthroughput in test jar throws NPE (harsh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
