@@ -422,6 +422,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
    */
   public static Path[] getInputPaths(JobContext context) {
     String dirs = context.getConfiguration().get("mapred.input.dir", "");
+    System.out.println("****" + dirs);
     String [] list = StringUtils.split(dirs);
     Path[] result = new Path[list.length];
     for (int i = 0; i < list.length; i++) {

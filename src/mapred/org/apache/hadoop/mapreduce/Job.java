@@ -262,6 +262,41 @@ public class Job extends JobContext {
     ensureState(JobState.DEFINE);
     conf.setJobName(name);
   }
+  
+  /**
+   * Turn speculative execution on or off for this job. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on, else <code>false</code>.
+   */
+  public void setSpeculativeExecution(boolean speculativeExecution) {
+    ensureState(JobState.DEFINE);
+    conf.setSpeculativeExecution(speculativeExecution);
+  }
+
+  /**
+   * Turn speculative execution on or off for this job for map tasks. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on for map tasks,
+   *                             else <code>false</code>.
+   */
+  public void setMapSpeculativeExecution(boolean speculativeExecution) {
+    ensureState(JobState.DEFINE);
+    conf.setMapSpeculativeExecution(speculativeExecution);
+  }
+
+  /**
+   * Turn speculative execution on or off for this job for reduce tasks. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on for reduce tasks,
+   *                             else <code>false</code>.
+   */
+  public void setReduceSpeculativeExecution(boolean speculativeExecution) {
+    ensureState(JobState.DEFINE);
+    conf.setReduceSpeculativeExecution(speculativeExecution);
+  }
 
   /**
    * Get the URL where some job progress information will be displayed.
