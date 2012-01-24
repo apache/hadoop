@@ -501,6 +501,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3505. yarn APPLICATION_CLASSPATH needs to be overridable. 
     (ahmed via tucu)
 
+    MAPREDUCE-3714. Fixed EventFetcher and Fetcher threads to shut-down properly
+    so that reducers don't hang in corner cases. (vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

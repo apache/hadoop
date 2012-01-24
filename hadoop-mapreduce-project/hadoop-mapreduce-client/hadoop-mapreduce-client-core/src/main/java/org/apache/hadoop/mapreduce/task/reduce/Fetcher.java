@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
+@SuppressWarnings({"deprecation"})
 class Fetcher<K,V> extends Thread {
   
   private static final Log LOG = LogFactory.getLog(Fetcher.class);
@@ -87,6 +88,8 @@ class Fetcher<K,V> extends Thread {
   private final CompressionCodec codec;
   private final Decompressor decompressor;
   private final SecretKey jobTokenSecret;
+
+  private volatile boolean stopped = false;
 
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
                  ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
@@ -135,7 +138,7 @@ class Fetcher<K,V> extends Thread {
   
   public void run() {
     try {
-      while (true && !Thread.currentThread().isInterrupted()) {
+      while (!stopped && !Thread.currentThread().isInterrupted()) {
         MapHost host = null;
         try {
           // If merge is on, block
@@ -160,7 +163,17 @@ class Fetcher<K,V> extends Thread {
       exceptionReporter.reportException(t);
     }
   }
-  
+
+  public void shutDown() throws InterruptedException {
+    this.stopped = true;
+    interrupt();
+    try {
+      join(5000);
+    } catch (InterruptedException ie) {
+      LOG.warn("Got interrupt while joining " + getName(), ie);
+    }
+  }
+
   /**
    * The crux of the matter...
    * 
