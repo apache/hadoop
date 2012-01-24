@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -31,13 +33,17 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
-import org.apache.tools.ant.taskdefs.WaitFor;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -248,6 +254,43 @@ public class TestHAStateTransitions {
           nn1t2 > nn1t1);
     } finally {
       IOUtils.closeStream(stm);
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Test that delegation tokens continue to work after the failover.
+   */
+  @Test
+  public void testDelegationTokensAfterFailover() throws IOException,
+      URISyntaxException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(0)
+        .build();
+    try {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+      NameNode nn1 = cluster.getNameNode(0);
+      NameNode nn2 = cluster.getNameNode(1);
+      NameNodeAdapter.getDtSecretManager(nn1.getNamesystem()).startThreads();
+
+      String renewer = UserGroupInformation.getLoginUser().getUserName();
+      Token<DelegationTokenIdentifier> token = nn1.getRpcServer()
+          .getDelegationToken(new Text(renewer));
+
+      LOG.info("Failing over to NN 1");
+      cluster.transitionToStandby(0);
+      cluster.transitionToActive(1);
+      // Need to explicitly start threads because security is not enabled.
+      NameNodeAdapter.getDtSecretManager(nn2.getNamesystem()).startThreads();
+
+      nn2.getRpcServer().renewDelegationToken(token);
+      nn2.getRpcServer().cancelDelegationToken(token);
+      token = nn2.getRpcServer().getDelegationToken(new Text(renewer));
+      Assert.assertTrue(token != null);
+    } finally {
       cluster.shutdown();
     }
   }
