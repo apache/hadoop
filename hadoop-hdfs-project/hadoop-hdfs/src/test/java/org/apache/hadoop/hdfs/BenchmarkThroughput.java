@@ -193,6 +193,10 @@ public class BenchmarkThroughput extends Configured implements Tool {
     BUFFER_SIZE = conf.getInt("dfsthroughput.buffer.size", 4 * 1024);
 
     String localDir = conf.get("mapred.temp.dir");
+    if (localDir == null) {
+      localDir = conf.get("hadoop.tmp.dir");
+      conf.set("mapred.temp.dir", localDir);
+    }
     dir = new LocalDirAllocator("mapred.temp.dir");
 
     System.setProperty("test.build.data", localDir);
