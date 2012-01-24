@@ -289,8 +289,10 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         }
         
         if (bytesRemaining != 0) {
-          splits.add(makeSplit(path, length-bytesRemaining, bytesRemaining, 
-                     blkLocations[blkLocations.length-1].getHosts()));
+          String[] splitHosts = getSplitHosts(blkLocations, length
+              - bytesRemaining, bytesRemaining, clusterMap);
+          splits.add(makeSplit(path, length - bytesRemaining, bytesRemaining,
+              splitHosts));
         }
       } else if (length != 0) {
         String[] splitHosts = getSplitHosts(blkLocations,0,length,clusterMap);

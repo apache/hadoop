@@ -127,6 +127,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3692. yarn-resourcemanager out and log files can get big. (eli)
 
+    MAPREDUCE-3710. Improved FileInputFormat to return better locality for the
+    last split. (Siddarth Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
