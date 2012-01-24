@@ -19,7 +19,9 @@ package org.apache.hadoop.ha;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.KerberosInfo;
 
 import java.io.IOException;
 
@@ -29,6 +31,8 @@ import java.io.IOException;
  * 
  * This interface could be used by HA frameworks to manage the service.
  */
+@KerberosInfo(
+    serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface HAServiceProtocol extends VersionedProtocol {

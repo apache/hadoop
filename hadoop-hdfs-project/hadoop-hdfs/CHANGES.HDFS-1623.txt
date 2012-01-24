@@ -127,3 +127,5 @@ HDFS-2820. Add a simple sanity check for HA config (todd)
 HDFS-2688. Add tests for quota tracking in an HA cluster. (todd)
 
 HDFS-2804. Should not mark blocks under-replicated when exiting safemode (todd)
+
+HDFS-2807. Service level authorizartion for HAServiceProtocol. (jitendra)
