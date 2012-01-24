@@ -89,6 +89,9 @@ Release 1.1.0 - unreleased
     HADOOP-7982. UserGroupInformation fails to login if thread's context
     classloader can't load HadoopLoginModule. (todd)
 
+    HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
+    (Daryn Sharp via suresh)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)

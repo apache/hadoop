@@ -33,6 +33,7 @@ import java.net.UnknownHostException;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;

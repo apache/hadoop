@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.net;
+package org.apache.hadoop.security;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -25,7 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.net.NetUtils.QualifiedHostResolver;
+import org.apache.hadoop.security.SecurityUtil.QualifiedHostResolver;
 
 /**
  * provides a dummy dns search resolver with a configurable search path
@@ -41,7 +41,7 @@ public class NetUtilsTestResolver extends QualifiedHostResolver {
     resolver.addResolvedHost("host.a.b.", "1.1.1.1");
     resolver.addResolvedHost("b-host.b.", "2.2.2.2");
     resolver.addResolvedHost("simple.", "3.3.3.3");    
-    NetUtils.setHostResolver(resolver);
+    SecurityUtil.hostResolver = resolver;
     return resolver;
   }
 
@@ -56,7 +56,8 @@ public class NetUtilsTestResolver extends QualifiedHostResolver {
     resolvedHosts.put(host, addr);
   }
 
-  InetAddress getInetAddressByName(String host) throws UnknownHostException {
+  @Override
+  public InetAddress getInetAddressByName(String host) throws UnknownHostException {
     hostSearches.add(host);
     if (!resolvedHosts.containsKey(host)) {
       throw new UnknownHostException(host);
@@ -64,11 +65,21 @@ public class NetUtilsTestResolver extends QualifiedHostResolver {
     return resolvedHosts.get(host);
   }
 
-  String[] getHostSearches() {
+  @Override
+  public InetAddress getByExactName(String host) {
+    return super.getByExactName(host);
+  }
+  
+  @Override
+  public InetAddress getByNameWithSearch(String host) {
+    return super.getByNameWithSearch(host);
+  }
+  
+  public String[] getHostSearches() {
     return hostSearches.toArray(new String[0]);
   }
 
-  void reset() {
+  public void reset() {
     hostSearches.clear();
   }
 }

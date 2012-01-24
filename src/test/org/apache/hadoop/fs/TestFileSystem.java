@@ -60,7 +60,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.NetUtilsTestResolver;
+import org.apache.hadoop.security.NetUtilsTestResolver;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
