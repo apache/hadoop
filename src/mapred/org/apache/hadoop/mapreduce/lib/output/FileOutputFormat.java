@@ -39,6 +39,9 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 
 /** A base class for {@link OutputFormat}s that read from {@link FileSystem}s.*/
 public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
+  
+  protected static final String BASE_OUTPUT_NAME = "mapreduce.output.basename";
+  protected static final String PART = "part";
 
   public static enum Counter { 
     BYTES_WRITTEN
@@ -263,8 +266,22 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
                                  String extension) throws IOException{
     FileOutputCommitter committer = 
       (FileOutputCommitter) getOutputCommitter(context);
-    return new Path(committer.getWorkPath(), getUniqueFile(context, "part", 
-                                                           extension));
+    return new Path(committer.getWorkPath(), getUniqueFile(context, 
+        getOutputName(context), extension));
+  }
+  
+  /**
+   * Get the base output name for the output file.
+   */
+  protected static String getOutputName(JobContext job) {
+    return job.getConfiguration().get(BASE_OUTPUT_NAME, PART);
+  }
+
+  /**
+   * Set the base output name for output file to be created.
+   */
+  protected static void setOutputName(JobContext job, String name) {
+    job.getConfiguration().set(BASE_OUTPUT_NAME, name);
   }
 
   public synchronized 

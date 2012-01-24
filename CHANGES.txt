@@ -89,9 +89,6 @@ Release 1.1.0 - unreleased
     HADOOP-7982. UserGroupInformation fails to login if thread's context
     classloader can't load HadoopLoginModule. (todd)
 
-    HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
-    (Daryn Sharp via suresh)
-
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
@@ -150,6 +147,19 @@ Release 1.1.0 - unreleased
     MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
 
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
+
+Release 1.0.1 - unreleased
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-3607. Port missing new API mapreduce lib classes to 1.x. (tomwhite)
+
+  BUG FIXES
+
+    HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
+    (Daryn Sharp via suresh)
 
 Release 1.0.0 - unreleased
 
