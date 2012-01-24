@@ -87,7 +87,6 @@ import com.google.common.collect.ImmutableList;
  * primary NameNode.
  *
  **********************************************************/
-@Deprecated // use BackupNode with -checkpoint argument instead.
 @InterfaceAudience.Private
 public class SecondaryNameNode implements Runnable {
     
