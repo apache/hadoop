@@ -138,10 +138,32 @@ public class TestParentQueue {
     when(queue).assignContainers(eq(clusterResource), eq(node));
   }
   
+  private float computeQueueUsedCapacity(CSQueue queue, 
+      int expectedMemory, Resource clusterResource) {
+    return (
+        ((float)expectedMemory / clusterResource.getMemory()) *
+        queue.getParent().getAbsoluteCapacity()
+      );
+  }
+  
   private float computeQueueUtilization(CSQueue queue, 
       int expectedMemory, Resource clusterResource) {
     return (expectedMemory / 
         (clusterResource.getMemory() * queue.getAbsoluteCapacity()));
+  }
+  
+  final static float DELTA = 0.0001f;
+  private void verifyQueueMetrics(CSQueue queue, 
+      int expectedMemory, Resource clusterResource) {
+    assertEquals(
+        computeQueueUtilization(queue, expectedMemory, clusterResource), 
+        queue.getUtilization(), 
+        DELTA);
+    assertEquals(
+        computeQueueUsedCapacity(queue, expectedMemory, clusterResource), 
+        queue.getUsedCapacity(), 
+        DELTA);
+
   }
   
   @Test
@@ -173,15 +195,13 @@ public class TestParentQueue {
     // Start testing
     LeafQueue a = (LeafQueue)queues.get(A);
     LeafQueue b = (LeafQueue)queues.get(B);
-    final float delta = 0.0001f;
     
     // Simulate B returning a container on node_0
     stubQueueAllocation(a, clusterResource, node_0, 0*GB);
     stubQueueAllocation(b, clusterResource, node_0, 1*GB);
     root.assignContainers(clusterResource, node_0);
-    assertEquals(0.0f, a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 1*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 0*GB, clusterResource);
+    verifyQueueMetrics(b, 1*GB, clusterResource);
     
     // Now, A should get the scheduling opportunity since A=0G/6G, B=1G/14G
     stubQueueAllocation(a, clusterResource, node_1, 2*GB);
@@ -192,10 +212,8 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 2*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 2*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 2*GB, clusterResource);
+    verifyQueueMetrics(b, 2*GB, clusterResource);
 
     // Now, B should get the scheduling opportunity 
     // since A has 2/6G while B has 2/14G
@@ -207,10 +225,8 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 3*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 4*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 3*GB, clusterResource);
+    verifyQueueMetrics(b, 4*GB, clusterResource);
 
     // Now, B should still get the scheduling opportunity 
     // since A has 3/6G while B has 4/14G
@@ -222,10 +238,8 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 3*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 8*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 3*GB, clusterResource);
+    verifyQueueMetrics(b, 8*GB, clusterResource);
 
     // Now, A should get the scheduling opportunity 
     // since A has 3/6G while B has 8/14G
@@ -237,10 +251,8 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 4*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 9*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 4*GB, clusterResource);
+    verifyQueueMetrics(b, 9*GB, clusterResource);
   }
 
   private static final String C = "c";
@@ -323,22 +335,16 @@ public class TestParentQueue {
     CSQueue b2 = queues.get(B2);
     CSQueue b3 = queues.get(B3);
 
-    final float delta = 0.0001f;
-    
     // Simulate C returning a container on node_0
     stubQueueAllocation(a, clusterResource, node_0, 0*GB);
     stubQueueAllocation(b, clusterResource, node_0, 0*GB);
     stubQueueAllocation(c, clusterResource, node_0, 1*GB);
     stubQueueAllocation(d, clusterResource, node_0, 0*GB);
     root.assignContainers(clusterResource, node_0);
-    assertEquals(computeQueueUtilization(a, 0*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 0*GB, clusterResource), 
-        b.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(c, 1*GB, clusterResource), 
-        c.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(d, 0*GB, clusterResource), 
-        d.getUtilization(), delta);
+    verifyQueueMetrics(a, 0*GB, clusterResource);
+    verifyQueueMetrics(b, 0*GB, clusterResource);
+    verifyQueueMetrics(c, 1*GB, clusterResource);
+    verifyQueueMetrics(d, 0*GB, clusterResource);
     reset(a); reset(b); reset(c);
 
     // Now get B2 to allocate
@@ -347,12 +353,9 @@ public class TestParentQueue {
     stubQueueAllocation(b2, clusterResource, node_1, 4*GB);
     stubQueueAllocation(c, clusterResource, node_1, 0*GB);
     root.assignContainers(clusterResource, node_1);
-    assertEquals(computeQueueUtilization(a, 0*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 4*GB, clusterResource), 
-        b.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(c, 1*GB, clusterResource), 
-        c.getUtilization(), delta);
+    verifyQueueMetrics(a, 0*GB, clusterResource);
+    verifyQueueMetrics(b, 4*GB, clusterResource);
+    verifyQueueMetrics(c, 1*GB, clusterResource);
     reset(a); reset(b); reset(c);
     
     // Now get both A1, C & B3 to allocate in right order
@@ -368,12 +371,9 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 1*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 6*GB, clusterResource), 
-        b.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(c, 3*GB, clusterResource), 
-        c.getUtilization(), delta);
+    verifyQueueMetrics(a, 1*GB, clusterResource);
+    verifyQueueMetrics(b, 6*GB, clusterResource);
+    verifyQueueMetrics(c, 3*GB, clusterResource);
     reset(a); reset(b); reset(c);
     
     // Now verify max-capacity
@@ -399,16 +399,12 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(c).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 3*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 8*GB, clusterResource), 
-        b.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(c, 4*GB, clusterResource), 
-        c.getUtilization(), delta);
+    verifyQueueMetrics(a, 3*GB, clusterResource);
+    verifyQueueMetrics(b, 8*GB, clusterResource);
+    verifyQueueMetrics(c, 4*GB, clusterResource);
     reset(a); reset(b); reset(c);
-    
   }
-  
+
   @Test
   public void testOffSwitchScheduling() throws Exception {
     // Setup queue configs
@@ -438,15 +434,13 @@ public class TestParentQueue {
     // Start testing
     LeafQueue a = (LeafQueue)queues.get(A);
     LeafQueue b = (LeafQueue)queues.get(B);
-    final float delta = 0.0001f;
     
     // Simulate B returning a container on node_0
     stubQueueAllocation(a, clusterResource, node_0, 0*GB, NodeType.OFF_SWITCH);
     stubQueueAllocation(b, clusterResource, node_0, 1*GB, NodeType.OFF_SWITCH);
     root.assignContainers(clusterResource, node_0);
-    assertEquals(0.0f, a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 1*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 0*GB, clusterResource);
+    verifyQueueMetrics(b, 1*GB, clusterResource);
     
     // Now, A should get the scheduling opportunity since A=0G/6G, B=1G/14G
     // also, B gets a scheduling opportunity since A allocates RACK_LOCAL
@@ -458,10 +452,8 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 2*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 2*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 2*GB, clusterResource);
+    verifyQueueMetrics(b, 2*GB, clusterResource);
     
     // Now, B should get the scheduling opportunity 
     // since A has 2/6G while B has 2/14G, 
@@ -474,10 +466,8 @@ public class TestParentQueue {
         any(SchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
         any(SchedulerNode.class));
-    assertEquals(computeQueueUtilization(a, 2*GB, clusterResource), 
-        a.getUtilization(), delta);
-    assertEquals(computeQueueUtilization(b, 4*GB, clusterResource), 
-        b.getUtilization(), delta);
+    verifyQueueMetrics(a, 2*GB, clusterResource);
+    verifyQueueMetrics(b, 4*GB, clusterResource);
 
   }
   

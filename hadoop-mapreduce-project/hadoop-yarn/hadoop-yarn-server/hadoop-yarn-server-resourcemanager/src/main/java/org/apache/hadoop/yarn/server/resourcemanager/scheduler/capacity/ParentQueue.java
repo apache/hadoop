@@ -333,10 +333,15 @@ public class ParentQueue implements CSQueue {
   }
 
   public String toString() {
-    return queueName + ":" + capacity + ":" + absoluteCapacity + ":" + 
-      getUsedCapacity() + ":" + getUtilization() + ":" + 
-      getNumApplications() + ":" + getNumContainers() + ":" + 
-      childQueues.size() + " child-queues";
+    return queueName + ": " +
+        "numChildQueue= " + childQueues.size() + ", " + 
+        "capacity=" + capacity + ", " +  
+        "absoluteCapacity=" + absoluteCapacity + ", " +
+        "usedResources=" + usedResources.getMemory() + "MB, " + 
+        "usedCapacity=" + getUsedCapacity() + ", " + 
+        "utilization=" + getUtilization() + ", " +
+        "numApps=" + getNumApplications() + ", " + 
+        "numContainers=" + getNumContainers();
   }
   
   @Override
@@ -688,11 +693,13 @@ public class ParentQueue implements CSQueue {
   }
   
   private synchronized void updateResource(Resource clusterResource) {
-    float queueLimit = clusterResource.getMemory() * absoluteCapacity; 
+    float queueLimit = clusterResource.getMemory() * absoluteCapacity;
+    float parentAbsoluteCapacity = 
+        (rootQueue) ? 1.0f : parent.getAbsoluteCapacity();
     setUtilization(usedResources.getMemory() / queueLimit);
-    setUsedCapacity(
-        usedResources.getMemory() / (clusterResource.getMemory() * capacity));
-    
+    setUsedCapacity(usedResources.getMemory() 
+        / (clusterResource.getMemory() * parentAbsoluteCapacity));
+  
     Resource resourceLimit = 
       Resources.createResource((int)queueLimit);
     metrics.setAvailableResourcesToQueue(
