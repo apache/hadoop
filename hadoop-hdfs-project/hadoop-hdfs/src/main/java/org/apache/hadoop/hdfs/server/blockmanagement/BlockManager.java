@@ -1877,7 +1877,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   public void processMisReplicatedBlocks() {
     assert namesystem.hasWriteLock();
 
-    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0, nrPostponed = 0;
+    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0, nrPostponed = 0,
+         nrUnderConstruction = 0;
     neededReplications.clear();
     for (BlockInfo block : blocksMap.getBlocks()) {
       MisReplicationResult res = processMisReplicatedBlock(block);
@@ -1896,6 +1897,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         nrPostponed++;
         postponeBlock(block);
         break;
+      case UNDER_CONSTRUCTION:
+        nrUnderConstruction++;
+        break;
       case OK:
         break;
       default:
@@ -1908,6 +1912,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
     LOG.info("Number of  over-replicated blocks = " + nrOverReplicated +
         ((nrPostponed > 0) ? ( " (" + nrPostponed + " postponed)") : ""));
+    LOG.info("Number of blocks being written    = " + nrUnderConstruction);
   }
 
   /**
@@ -1921,6 +1926,11 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       // block does not belong to any file
       addToInvalidates(block);
       return MisReplicationResult.INVALID;
+    }
+    if (!block.isComplete()) {
+      // Incomplete blocks are never considered mis-replicated --
+      // they'll be reached when they are completed or recovered.
+      return MisReplicationResult.UNDER_CONSTRUCTION;
     }
     // calculate current replication
     short expectedReplication = fileINode.getReplication();
@@ -2797,6 +2807,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     OVER_REPLICATED,
     /** A decision can't currently be made about this block. */
     POSTPONE,
+    /** The block is under construction, so should be ignored */
+    UNDER_CONSTRUCTION,
     /** The block is properly replicated */
     OK
   }

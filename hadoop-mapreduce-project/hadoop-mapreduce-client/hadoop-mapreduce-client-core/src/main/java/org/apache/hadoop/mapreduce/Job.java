@@ -1216,6 +1216,7 @@ public class Job extends JobContextImpl implements JobContext {
       }
     });
     state = JobState.RUNNING;
+    LOG.info("The url to track the job: " + getTrackingURL());
    }
   
   /**

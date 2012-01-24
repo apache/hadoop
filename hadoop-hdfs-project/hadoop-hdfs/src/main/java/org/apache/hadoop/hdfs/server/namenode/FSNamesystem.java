@@ -196,6 +196,8 @@ import org.mortbay.util.ajax.JSON;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
  * DataNode.
@@ -3251,7 +3253,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     /** Total number of blocks. */
     int blockTotal; 
     /** Number of safe blocks. */
-    private int blockSafe;
+    int blockSafe;
     /** Number of blocks needed to satisfy safe mode threshold condition */
     private int blockThreshold;
     /** Number of blocks needed before populating replication queues */
@@ -3259,7 +3261,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     /** time of the last status printout */
     private long lastStatusReport = 0;
     /** flag indicating whether replication queues have been initialized */
-    private boolean initializedReplQueues = false;
+    boolean initializedReplQueues = false;
     /** Was safemode entered automatically because available resources were low. */
     private boolean resourcesLow = false;
     
@@ -3384,9 +3386,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      */
     private synchronized void initializeReplQueues() {
       LOG.info("initializing replication queues");
-      if (isPopulatingReplQueues()) {
-        LOG.warn("Replication queues already initialized.");
-      }
+      assert !isPopulatingReplQueues() : "Already initialized repl queues";
       long startTimeMisReplicatedScan = now();
       blockManager.processMisReplicatedBlocks();
       initializedReplQueues = true;
@@ -4974,5 +4974,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   ReentrantReadWriteLock getFsLockForTests() {
     return fsLock;
+  }
+
+  @VisibleForTesting
+  public SafeModeInfo getSafeModeInfoForTests() {
+    return safeMode;
   }
 }

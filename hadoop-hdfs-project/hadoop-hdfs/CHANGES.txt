@@ -290,6 +290,12 @@ Release 0.23.1 - UNRELEASED
     for a client on the same node as the block file.  (Andrew Purtell,
     Suresh Srinivas and Jitendra Nath Pandey via szetszwo)
 
+    HDFS-2825. Add test hook to turn off the writer preferring its local
+    DN. (todd)
+
+    HDFS-2826. Add test case for HDFS-1476 (safemode can initialize
+    replication queues before exiting) (todd)
+
   BUG FIXES
 
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
@@ -349,6 +355,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2816. Fix missing license header in httpfs findbugsExcludeFile.xml.
     (hitesh via tucu)
+
+    HDFS-2822. processMisReplicatedBlock incorrectly identifies
+    under-construction blocks as under-replicated. (todd)
 
 Release 0.23.0 - 2011-11-01 
 
