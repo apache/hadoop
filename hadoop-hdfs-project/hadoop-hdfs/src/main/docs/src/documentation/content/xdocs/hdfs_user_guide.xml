@@ -112,17 +112,18 @@
     		problems.
     	</li>
     	<li>
-    		Secondary NameNode (deprecated): performs periodic checkpoints of the 
+    		Secondary NameNode: performs periodic checkpoints of the 
     		namespace and helps keep the size of file containing log of HDFS 
     		modifications within certain limits at the NameNode.
-    		Replaced by Checkpoint node.
     	</li>
+
     	<li>
     		Checkpoint node: performs periodic checkpoints of the namespace and
     		helps minimize the size of the log stored at the NameNode 
     		containing changes to the HDFS.
-    		Replaces the role previously filled by the Secondary NameNode. 
-    		NameNode allows multiple Checkpoint nodes simultaneously, 
+    		Replaces the role previously filled by the Secondary NameNode,
+                though is not yet battle hardened.
+    		The NameNode allows multiple Checkpoint nodes simultaneously, 
     		as long as there are no Backup nodes registered with the system.
     	</li>
     	<li>
@@ -132,6 +133,7 @@
     		which is always in sync with the active NameNode namespace state.
     		Only one Backup node may be registered with the NameNode at once.
     	</li>
+
       </ul>
     </li>
     </ul>
@@ -234,12 +236,6 @@
    
    </section> 
 	<section> <title>Secondary NameNode</title>
-   <note>
-   The Secondary NameNode has been deprecated. 
-   Instead, consider using the 
-   <a href="hdfs_user_guide.html#Checkpoint+node">Checkpoint Node</a> or 
-   <a href="hdfs_user_guide.html#Backup+node">Backup Node</a>.
-   </note>
    <p>	
      The NameNode stores modifications to the file system as a log
      appended to a native file system file, <code>edits</code>. 
@@ -287,7 +283,9 @@
      <a href="http://hadoop.apache.org/common/docs/current/commands_manual.html#secondarynamenode">secondarynamenode</a>.
    </p>
    
-   </section><section> <title> Checkpoint Node </title>
+   </section>
+
+   <section> <title> Checkpoint Node </title>
    <p>NameNode persists its namespace using two files: <code>fsimage</code>,
       which is the latest checkpoint of the namespace and <code>edits</code>,
       a journal (log) of changes to the namespace since the checkpoint.

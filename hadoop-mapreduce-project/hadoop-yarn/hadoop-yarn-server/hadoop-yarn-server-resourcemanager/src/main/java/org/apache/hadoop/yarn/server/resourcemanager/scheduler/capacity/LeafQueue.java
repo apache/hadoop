@@ -272,9 +272,9 @@ public class LeafQueue implements CSQueue {
         "maxActiveApplicationsPerUser = " + maxActiveApplicationsPerUser +
         " [= (int)(maxActiveApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
         "utilization = " + utilization +
-        " [= usedResourcesMemory / queueLimit ]" + "\n" +
+        " [= usedResourcesMemory /  (clusterResourceMemory * absoluteCapacity)]" + "\n" +
         "usedCapacity = " + usedCapacity +
-        " [= usedResourcesMemory / (clusterResourceMemory * capacity) ]" + "\n" +
+        " [= usedResourcesMemory / (clusterResourceMemory * parent.absoluteCapacity)]" + "\n" +
         "maxAMResourcePercent = " + maxAMResourcePercent +
         " [= configuredMaximumAMResourcePercent ]" + "\n" +
         "minimumAllocationFactor = " + minimumAllocationFactor +
@@ -502,9 +502,14 @@ public class LeafQueue implements CSQueue {
   }
 
   public String toString() {
-    return queueName + ":" + capacity + ":" + absoluteCapacity + ":" + 
-    getUsedCapacity() + ":" + getUtilization() + ":" + 
-    getNumApplications() + ":" + getNumContainers();
+    return queueName + ": " + 
+        "capacity=" + capacity + ", " + 
+        "absoluteCapacity=" + absoluteCapacity + ", " + 
+        "usedResources=" + usedResources.getMemory() + "MB, " + 
+        "usedCapacity=" + getUsedCapacity() + ", " + 
+        "utilization=" + getUtilization() + ", " + 
+        "numApps=" + getNumApplications() + ", " + 
+        "numContainers=" + getNumContainers();  
   }
 
   private synchronized User getUser(String userName) {
@@ -1316,11 +1321,11 @@ public class LeafQueue implements CSQueue {
   }
   
   private synchronized void updateResource(Resource clusterResource) {
-    float queueLimit = clusterResource.getMemory() * absoluteCapacity; 
+    float queueLimit = clusterResource.getMemory() * absoluteCapacity;
     setUtilization(usedResources.getMemory() / queueLimit);
-    setUsedCapacity(
-        usedResources.getMemory() / (clusterResource.getMemory() * capacity));
-    
+    setUsedCapacity(usedResources.getMemory()
+        / (clusterResource.getMemory() * parent.getAbsoluteCapacity()));
+
     Resource resourceLimit = 
       Resources.createResource(roundUp((int)queueLimit));
     metrics.setAvailableResourcesToQueue(
