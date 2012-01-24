@@ -30,7 +30,6 @@ import org.junit.Test;
 
 public class TestSecondaryWebUi {
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testSecondaryWebUi() throws IOException {
     Configuration conf = new Configuration();

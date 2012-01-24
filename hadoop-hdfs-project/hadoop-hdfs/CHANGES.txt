@@ -96,6 +96,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2818. Fix a missing space issue in HDFS webapps' title tags. (Devaraj K via harsh)
 
+    HDFS-2397. Undeprecate SecondaryNameNode (eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

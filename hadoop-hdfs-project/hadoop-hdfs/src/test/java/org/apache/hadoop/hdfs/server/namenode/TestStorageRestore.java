@@ -153,7 +153,6 @@ public class TestStorageRestore {
    * 7. run doCheckpoint
    * 8. verify that all the image and edits files are the same.
    */
-  @SuppressWarnings("deprecation")
   @Test
   public void testStorageRestore() throws Exception {
     int numDatanodes = 0;
@@ -310,7 +309,6 @@ public class TestStorageRestore {
    * then try to perform a checkpoint. The NN should not serve up the image or
    * edits from the restored (empty) dir.
    */
-  @SuppressWarnings("deprecation")
   @Test
   public void testMultipleSecondaryCheckpoint() throws IOException {
     
