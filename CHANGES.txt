@@ -1,5 +1,16 @@
 Hadoop Change Log
 
+Release 1.0.1 - unreleased
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
+    (Daryn Sharp via suresh)
+
 Release 1.0.0 - 2011.11.27
 
   NEW FEATURES
