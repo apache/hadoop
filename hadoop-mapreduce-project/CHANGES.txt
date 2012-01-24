@@ -493,6 +493,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3646. Remove redundant URL info from "mapred job" output.
     (Jonathan Eagles via mahadev)
 
+    MAPREDUCE-3681. Fixed computation of queue's usedCapacity. (acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
