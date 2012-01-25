@@ -127,6 +127,17 @@
         <unpack>false</unpack>
       </binaries>
     </moduleSet>
+    <moduleSet>
+      <includes>
+        <include>org.apache.hadoop:hadoop-mapreduce-client-jobclient</include>
+      </includes>
+      <binaries>
+        <attachmentClassifier>tests</attachmentClassifier>
+        <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
+        <includeDependencies>false</includeDependencies>
+        <unpack>false</unpack>
+      </binaries>
+    </moduleSet>
   </moduleSets>
   <dependencySets>
     <dependencySet>
