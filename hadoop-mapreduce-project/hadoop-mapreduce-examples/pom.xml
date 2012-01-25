@@ -98,9 +98,9 @@
   <build>
    <plugins>
     <plugin>
-   	 <groupId>org.apache.maven.plugins</groupId>
+    <groupId>org.apache.maven.plugins</groupId>
      <artifactId>maven-jar-plugin</artifactId>
-  	  <configuration>
+      <configuration>
        <archive>
          <manifest>
            <mainClass>org.apache.hadoop.examples.ExampleDriver</mainClass>

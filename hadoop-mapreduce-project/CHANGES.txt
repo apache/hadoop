@@ -507,6 +507,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3712. The mapreduce tar does not contain the hadoop-mapreduce-client-
     jobclient-tests.jar. (mahadev)
 
+    MAPREDUCE-3717. JobClient test jar has missing files to run all the test programs.
+    (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
