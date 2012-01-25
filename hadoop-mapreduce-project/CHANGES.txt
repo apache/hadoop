@@ -513,6 +513,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3630. Fixes a NullPointer exception while running TeraGen - if a
     map is asked to generate 0 records. (Mahadev Konar via sseth)
 
+    MAPREDUCE-3683. Fixed maxCapacity of queues to be product of parent
+    maxCapacities. (acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

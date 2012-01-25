@@ -235,12 +235,13 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         Element qElem = (Element) queues.item(j);
         String qName = WebServicesTestUtils.getXmlString(qElem, "queueName");
         String q = CapacitySchedulerConfiguration.ROOT + "." + qName;
-        verifySubQueueXML(qElem, q, 100);
+        verifySubQueueXML(qElem, q, 100, 100);
       }
     }
   }
 
-  public void verifySubQueueXML(Element qElem, String q, float parentAbsCapacity)
+  public void verifySubQueueXML(Element qElem, String q, 
+      float parentAbsCapacity, float parentAbsMaxCapacity)
       throws Exception {
     NodeList queues = qElem.getElementsByTagName("subQueues");
     QueueInfo qi = (queues != null) ? new QueueInfo() : new LeafQueueInfo();
@@ -258,14 +259,15 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         WebServicesTestUtils.getXmlString(qElem, "usedResources");
     qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
     qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
-    verifySubQueueGeneric(q, qi, parentAbsCapacity);
+    verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
 
     if (queues != null) {
       for (int j = 0; j < queues.getLength(); j++) {
         Element subqElem = (Element) queues.item(j);
         String qName = WebServicesTestUtils.getXmlString(subqElem, "queueName");
         String q2 = q + "." + qName;
-        verifySubQueueXML(subqElem, q2, qi.absoluteCapacity);
+        verifySubQueueXML(subqElem, q2, 
+            qi.absoluteCapacity, qi.absoluteMaxCapacity);
       }
     } else {
       LeafQueueInfo lqi = (LeafQueueInfo) qi;
@@ -309,7 +311,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     for (int i = 0; i < arr.length(); i++) {
       JSONObject obj = arr.getJSONObject(i);
       String q = CapacitySchedulerConfiguration.ROOT + "." + obj.getString("queueName");
-      verifySubQueue(obj, q, 100);
+      verifySubQueue(obj, q, 100, 100);
     }
   }
 
@@ -323,7 +325,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     assertTrue("queueName doesn't match", "root".matches(queueName));
   }
 
-  private void verifySubQueue(JSONObject info, String q, float parentAbsCapacity)
+  private void verifySubQueue(JSONObject info, String q, 
+      float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
     int numExpectedElements = 11;
     boolean isParentQueue = true;
@@ -345,7 +348,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     qi.queueName = info.getString("queueName");
     qi.state = info.getString("state");
 
-    verifySubQueueGeneric(q, qi, parentAbsCapacity);
+    verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
 
     if (isParentQueue) {
       JSONArray arr = info.getJSONArray("subQueues");
@@ -353,7 +356,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       for (int i = 0; i < arr.length(); i++) {
         JSONObject obj = arr.getJSONObject(i);
         String q2 = q + "." + obj.getString("queueName");
-        verifySubQueue(obj, q2, qi.absoluteCapacity);
+        verifySubQueue(obj, q2, qi.absoluteCapacity, qi.absoluteMaxCapacity);
       }
     } else {
       LeafQueueInfo lqi = (LeafQueueInfo) qi;
@@ -371,7 +374,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
   }
 
   private void verifySubQueueGeneric(String q, QueueInfo info,
-      float parentAbsCapacity) throws Exception {
+      float parentAbsCapacity, float parentAbsMaxCapacity) throws Exception {
     String[] qArr = q.split("\\.");
     assertTrue("q name invalid: " + q, qArr.length > 1);
     String qshortName = qArr[qArr.length - 1];
@@ -380,7 +383,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     assertEquals("capacity doesn't match", csConf.getCapacity(q),
         info.capacity, 1e-3f);
     float expectCapacity = csConf.getMaximumCapacity(q);
-    float expectAbsMaxCapacity = parentAbsCapacity * (info.maxCapacity/100);
+    float expectAbsMaxCapacity = parentAbsMaxCapacity * (info.maxCapacity/100);
     if (CapacitySchedulerConfiguration.UNDEFINED == expectCapacity) {
       expectCapacity = 100;
       expectAbsMaxCapacity = 100;
