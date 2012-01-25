@@ -9,21 +9,21 @@ HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
 HADOOP-7774. HA: Administrative CLI to control HA daemons. (todd)
 
 HADOOP-7896. HA: if both NNs are in Standby mode, client needs to try failing
-             back and forth several times with sleeps. (atm)
+back and forth several times with sleeps. (atm)
 
 HADOOP-7922. Improve some logging for client IPC failovers and
-             StandbyExceptions (todd)
+StandbyExceptions (todd)
 
 HADOOP-7921. StandbyException should extend IOException (todd)
 
 HADOOP-7928. HA: Client failover policy is incorrectly trying to fail over all
-             IOExceptions (atm)
+IOExceptions (atm)
 
 HADOOP-7925. Add interface and update CLI to query current state to
-             HAServiceProtocol (eli via todd)
+HAServiceProtocol (eli via todd)
 
 HADOOP-7932. Make client connection retries on socket time outs configurable.
-             (Uma Maheswara Rao G via todd)
+(Uma Maheswara Rao G via todd)
 
 HADOOP-7924.  FailoverController for client-based configuration (eli)
 
@@ -31,3 +31,6 @@ HADOOP-7961. Move HA fencing to common. (eli)
 
 HADOOP-7970. HAServiceProtocol methods must throw IOException.
 (Hari Mankude via suresh).
+
+HADOOP-7992. Add ZKClient library to facilitate leader election.
+(Bikas Saha via suresh).
