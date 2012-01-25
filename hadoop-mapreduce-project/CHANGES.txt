@@ -154,6 +154,9 @@ Release 0.23.1 - Unreleased
     for every event slowing down AM. (Siddarth Seth via vinodkv)
 
   BUG FIXES
+    MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
+                     (Jason Lowe via bobby)
+
     MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
                     (Ravi Prakash and Ravi Gummadi via amarrk)
 
