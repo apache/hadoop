@@ -148,6 +148,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
 
+    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
+
 Release 1.0.1 - unreleased
 
   NEW FEATURES

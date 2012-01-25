@@ -71,6 +71,7 @@ public class UserGroupInformation {
    * Percentage of the ticket window to use before we renew ticket.
    */
   private static final float TICKET_RENEW_WINDOW = 0.80f;
+  static final String HADOOP_USER_NAME = "HADOOP_USER_NAME";
   
   /**
    * A login module that looks at the Kerberos, Unix, or Windows principal and
@@ -111,7 +112,16 @@ public class UserGroupInformation {
           LOG.debug("using kerberos user:"+user);
         }
       }
-      // if we don't have a kerberos user, use the OS user
+      //If we don't have a kerberos user and security is disabled, check
+      //if user is specified in the environment or properties
+      if (!isSecurityEnabled() && (user == null)) {
+        String envUser = System.getenv(HADOOP_USER_NAME);
+        if (envUser == null) {
+          envUser = System.getProperty(HADOOP_USER_NAME);
+        }
+        user = envUser == null ? null : new User(envUser);
+      }
+      // use the OS user
       if (user == null) {
         user = getCanonicalUser(OS_PRINCIPAL_CLASS);
         if (LOG.isDebugEnabled()) {
