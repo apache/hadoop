@@ -64,6 +64,8 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7975. Add LZ4 as an entry in the default codec list, missed by HADOOP-7657 (harsh)
 
+    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
