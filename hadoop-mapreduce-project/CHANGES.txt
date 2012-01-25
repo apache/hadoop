@@ -510,6 +510,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3717. JobClient test jar has missing files to run all the test programs.
     (mahadev)
 
+    MAPREDUCE-3630. Fixes a NullPointer exception while running TeraGen - if a
+    map is asked to generate 0 records. (Mahadev Konar via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
