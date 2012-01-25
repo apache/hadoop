@@ -85,6 +85,8 @@ Trunk (unreleased changes)
 
     HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol (Sho Shimauchi via harsh)
 
+    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
