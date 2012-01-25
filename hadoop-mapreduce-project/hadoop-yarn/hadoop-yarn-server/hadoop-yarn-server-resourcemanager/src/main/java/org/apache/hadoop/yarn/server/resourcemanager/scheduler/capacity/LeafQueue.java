@@ -720,12 +720,11 @@ public class LeafQueue implements CSQueue {
       if(LOG.isDebugEnabled()) {
         LOG.debug("pre-assignContainers for application "
         + application.getApplicationId());
+        application.showRequests();
       }
-      application.showRequests();
 
       synchronized (application) {
-        computeAndSetUserResourceLimit(application, clusterResource);
-        
+        // Schedule in priority order
         for (Priority priority : application.getPriorities()) {
           // Required resource
           Resource required = 
@@ -736,15 +735,21 @@ public class LeafQueue implements CSQueue {
             continue;
           }
 
-          // Are we going over limits by allocating to this application?
-          // Maximum Capacity of the queue
+          // Compute & set headroom
+          // Note: We set the headroom with the highest priority request 
+          //       as the target. 
+          //       This works since we never assign lower priority requests
+          //       before all higher priority ones are serviced.
+          Resource userLimit = 
+              computeAndSetUserResourceLimit(application, clusterResource, 
+                  required);
+
+          // Check queue max-capacity limit
           if (!assignToQueue(clusterResource, required)) {
             return NULL_ASSIGNMENT;
           }
 
-          // User limits
-          Resource userLimit = 
-            computeUserLimit(application, clusterResource, required); 
+          // Check user limit
           if (!assignToUser(application.getUser(), userLimit)) {
             break; 
           }
@@ -758,7 +763,7 @@ public class LeafQueue implements CSQueue {
                 null);
           
           Resource assigned = assignment.getResource();
-            
+          
           // Did we schedule or reserve a container?
           if (Resources.greaterThan(assigned, Resources.none())) {
 
@@ -832,13 +837,15 @@ public class LeafQueue implements CSQueue {
     return true;
   }
 
-  private void computeAndSetUserResourceLimit(SchedulerApp application, 
-      Resource clusterResource) {
-    Resource userLimit = 
-        computeUserLimit(application, clusterResource, Resources.none());
-    application.setAvailableResourceLimit(userLimit);
-    metrics.setAvailableResourcesToUser(application.getUser(), 
-        application.getHeadroom());
+  private Resource computeAndSetUserResourceLimit(SchedulerApp application, 
+      Resource clusterResource, Resource required) {
+    String user = application.getUser();
+    Resource limit = computeUserLimit(application, clusterResource, required);
+    Resource headroom = 
+        Resources.subtract(limit, getUser(user).getConsumedResources());
+    application.setHeadroom(headroom);
+    metrics.setAvailableResourcesToUser(user, headroom);
+    return limit;
   }
   
   private int roundUp(int memory) {
@@ -909,7 +916,7 @@ public class LeafQueue implements CSQueue {
     User user = getUser(userName);
     
     // Note: We aren't considering the current request since there is a fixed
-    // overhead of the AM, but it's a >= check, so... 
+    // overhead of the AM, but it's a > check, not a >= check, so... 
     if ((user.getConsumedResources().getMemory()) > limit.getMemory()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("User " + userName + " in queue " + getQueueName() + 
@@ -1227,8 +1234,8 @@ public class LeafQueue implements CSQueue {
         // happen under scheduler's lock... 
         // So, this is, in effect, a transaction across application & node
         if (rmContainer.getState() == RMContainerState.RESERVED) {
-          application.unreserve(node, rmContainer.getReservedPriority());
-          node.unreserveResource(application);
+          unreserve(application, rmContainer.getReservedPriority(), 
+              node, rmContainer);
         } else {
           application.containerCompleted(rmContainer, containerStatus, event);
           node.releaseContainer(container);
@@ -1301,7 +1308,8 @@ public class LeafQueue implements CSQueue {
     
     // Update application properties
     for (SchedulerApp application : activeApplications) {
-      computeAndSetUserResourceLimit(application, clusterResource);
+      computeAndSetUserResourceLimit(
+          application, clusterResource, Resources.none());
     }
   }
   
