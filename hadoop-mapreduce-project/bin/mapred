@@ -30,9 +30,6 @@ fi
 function print_usage(){
   echo "Usage: mapred [--config confdir] COMMAND"
   echo "       where COMMAND is one of:"
-  echo "  mradmin              run a Map-Reduce admin client"
-  echo "  jobtracker           run the MapReduce job Tracker node" 
-  echo "  tasktracker          run a MapReduce task Tracker node" 
   echo "  pipes                run a Pipes job"
   echo "  job                  manipulate MapReduce jobs"
   echo "  queue                get information regarding JobQueues"
@@ -51,16 +48,7 @@ fi
 COMMAND=$1
 shift
 
-if [ "$COMMAND" = "mradmin" ] ; then
-  CLASS=org.apache.hadoop.mapred.tools.MRAdmin
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "jobtracker" ] ; then
-  CLASS=org.apache.hadoop.mapred.JobTracker
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOBTRACKER_OPTS"
-elif [ "$COMMAND" = "tasktracker" ] ; then
-  CLASS=org.apache.hadoop.mapred.TaskTracker
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_TASKTRACKER_OPTS"
-elif [ "$COMMAND" = "job" ] ; then
+if [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
 elif [ "$COMMAND" = "queue" ] ; then
   CLASS=org.apache.hadoop.mapred.JobQueueClient
@@ -75,6 +63,13 @@ elif [ "$COMMAND" = "classpath" ] ; then
 elif [ "$COMMAND" = "groups" ] ; then
   CLASS=org.apache.hadoop.mapred.tools.GetGroups
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "mradmin" ] \
+    || [ "$COMMAND" = "jobtracker" ] \
+    || [ "$COMMAND" = "tasktracker" ] ; then
+  echo "Sorry, the $COMMAND command is no longer supported."
+  echo "You may find similar functionality with the \"yarn\" shell command."
+  print_usage
+  exit
 else
   echo $COMMAND - invalid command
   print_usage
