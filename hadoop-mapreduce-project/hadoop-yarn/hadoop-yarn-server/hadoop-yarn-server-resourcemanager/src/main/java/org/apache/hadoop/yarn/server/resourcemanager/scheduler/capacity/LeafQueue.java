@@ -144,10 +144,10 @@ public class LeafQueue implements CSQueue {
       (float)cs.getConfiguration().getCapacity(getQueuePath()) / 100;
     float absoluteCapacity = parent.getAbsoluteCapacity() * capacity;
 
-    float maximumCapacity = (float)cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
+    float maximumCapacity = 
+        (float)cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
-      (Math.round(maximumCapacity * 100) == CapacitySchedulerConfiguration.UNDEFINED) ? 
-          Float.MAX_VALUE : (parent.getAbsoluteCapacity() * maximumCapacity);
+        CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
 
     int userLimit = cs.getConfiguration().getUserLimit(getQueuePath());
     float userLimitFactor = 
@@ -161,10 +161,10 @@ public class LeafQueue implements CSQueue {
     this.maxAMResourcePercent = 
         cs.getConfiguration().getMaximumApplicationMasterResourcePercent();
     int maxActiveApplications = 
-        computeMaxActiveApplications(cs.getClusterResources(), 
+        CSQueueUtils.computeMaxActiveApplications(cs.getClusterResources(), 
             maxAMResourcePercent, absoluteCapacity);
     int maxActiveApplicationsPerUser = 
-        computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
+        CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
             userLimitFactor);
 
     this.queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
@@ -193,20 +193,6 @@ public class LeafQueue implements CSQueue {
     this.activeApplications = new TreeSet<SchedulerApp>(applicationComparator);
   }
 
-  private int computeMaxActiveApplications(Resource clusterResource,
-      float maxAMResourcePercent, float absoluteCapacity) {
-    return 
-        Math.max(
-            (int)((clusterResource.getMemory() / (float)DEFAULT_AM_RESOURCE) * 
-                   maxAMResourcePercent * absoluteCapacity), 
-            1);
-  }
-  
-  private int computeMaxActiveApplicationsPerUser(int maxActiveApplications, 
-      int userLimit, float userLimitFactor) {
-    return (int)(maxActiveApplications * (userLimit / 100.0f) * userLimitFactor);
-  }
-  
   private synchronized void setupQueueConfigs(
       float capacity, float absoluteCapacity, 
       float maximumCapacity, float absoluteMaxCapacity,
@@ -254,8 +240,8 @@ public class LeafQueue implements CSQueue {
         "maxCapacity = " + maximumCapacity +
         " [= configuredMaxCapacity ]" + "\n" +
         "absoluteMaxCapacity = " + absoluteMaxCapacity +
-        " [= Float.MAX_VALUE if maximumCapacity undefined, " +
-        "(parentAbsoluteCapacity * maximumCapacity) / 100 otherwise ]" + "\n" +
+        " [= 1.0 maximumCapacity undefined, " +
+        "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]" + "\n" +
         "userLimit = " + userLimit +
         " [= configuredUserLimit ]" + "\n" +
         "userLimitFactor = " + userLimitFactor +
@@ -400,9 +386,7 @@ public class LeafQueue implements CSQueue {
     
     this.maximumCapacity = maximumCapacity;
     this.absoluteMaxCapacity = 
-      (Math.round(maximumCapacity * 100) == CapacitySchedulerConfiguration.UNDEFINED) ? 
-          Float.MAX_VALUE : 
-          (parent.getAbsoluteCapacity() * maximumCapacity);
+        CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
   }
   
   /**
@@ -835,13 +819,14 @@ public class LeafQueue implements CSQueue {
     float potentialNewCapacity = 
       (float)(usedResources.getMemory() + required.getMemory()) / 
         clusterResource.getMemory();
-    LOG.info(getQueueName() + 
-        " usedResources: " + usedResources.getMemory() + 
-        " currentCapacity " + ((float)usedResources.getMemory())/clusterResource.getMemory() + 
-        " required " + required.getMemory() +
-        " potentialNewCapacity: " + potentialNewCapacity + " ( " +
-        " max-capacity: " + absoluteMaxCapacity + ")");
     if (potentialNewCapacity > absoluteMaxCapacity) {
+      LOG.info(getQueueName() + 
+          " usedResources: " + usedResources.getMemory() +
+          " clusterResources: " + clusterResource.getMemory() +
+          " currentCapacity " + ((float)usedResources.getMemory())/clusterResource.getMemory() + 
+          " required " + required.getMemory() +
+          " potentialNewCapacity: " + potentialNewCapacity + " ( " +
+          " max-capacity: " + absoluteMaxCapacity + ")");
       return false;
     }
     return true;
@@ -1308,10 +1293,10 @@ public class LeafQueue implements CSQueue {
   public synchronized void updateClusterResource(Resource clusterResource) {
     // Update queue properties
     maxActiveApplications = 
-        computeMaxActiveApplications(clusterResource, maxAMResourcePercent, 
+        CSQueueUtils.computeMaxActiveApplications(clusterResource, maxAMResourcePercent, 
             absoluteCapacity);
     maxActiveApplicationsPerUser = 
-        computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
+        CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
             userLimitFactor);
     
     // Update application properties
