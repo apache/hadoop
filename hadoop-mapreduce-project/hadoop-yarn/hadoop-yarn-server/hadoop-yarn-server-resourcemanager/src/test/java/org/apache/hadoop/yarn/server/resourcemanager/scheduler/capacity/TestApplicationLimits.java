@@ -21,16 +21,24 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.junit.After;
@@ -283,38 +291,76 @@ public class TestApplicationLimits {
     final String user_0 = "user_0";
     final String user_1 = "user_1";
     
-    int APPLICATION_ID = 0;
+    RecordFactory recordFactory = 
+        RecordFactoryProvider.getRecordFactory(null);
+    RMContext rmContext = TestUtils.getMockRMContext();
 
-    // Submit first application from user_0, check headroom
-    SchedulerApp app_0_0 = getMockApplication(APPLICATION_ID++, user_0);
+    Priority priority_1 = TestUtils.createMockPriority(1);
+
+    // Submit first application with some resource-requests from user_0, 
+    // and check headroom
+    final ApplicationAttemptId appAttemptId_0_0 = 
+        TestUtils.getMockApplicationAttemptId(0, 0); 
+    SchedulerApp app_0_0 = 
+        spy(new SchedulerApp(appAttemptId_0_0, user_0, queue, rmContext, null));
     queue.submitApplication(app_0_0, user_0, A);
-    queue.assignContainers(clusterResource, node_0); // Schedule to compute
+
+    List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
+    app_0_0_requests.add(
+        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+            priority_1, recordFactory));
+    app_0_0.updateResourceRequests(app_0_0_requests);
+
+    // Schedule to compute 
+    queue.assignContainers(clusterResource, node_0);
     Resource expectedHeadroom = Resources.createResource(10*16*GB);
-    verify(app_0_0).setAvailableResourceLimit(eq(expectedHeadroom));
+    verify(app_0_0).setHeadroom(eq(expectedHeadroom));
 
     // Submit second application from user_0, check headroom
-    SchedulerApp app_0_1 = getMockApplication(APPLICATION_ID++, user_0);
+    final ApplicationAttemptId appAttemptId_0_1 = 
+        TestUtils.getMockApplicationAttemptId(1, 0); 
+    SchedulerApp app_0_1 = 
+        spy(new SchedulerApp(appAttemptId_0_1, user_0, queue, rmContext, null));
     queue.submitApplication(app_0_1, user_0, A);
+    
+    List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
+    app_0_1_requests.add(
+        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+            priority_1, recordFactory));
+    app_0_1.updateResourceRequests(app_0_1_requests);
+
+    // Schedule to compute 
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
-    verify(app_0_0, times(2)).setAvailableResourceLimit(eq(expectedHeadroom));
-    verify(app_0_1).setAvailableResourceLimit(eq(expectedHeadroom));// no change
+    verify(app_0_0, times(2)).setHeadroom(eq(expectedHeadroom));
+    verify(app_0_1).setHeadroom(eq(expectedHeadroom));// no change
     
     // Submit first application from user_1, check  for new headroom
-    SchedulerApp app_1_0 = getMockApplication(APPLICATION_ID++, user_1);
+    final ApplicationAttemptId appAttemptId_1_0 = 
+        TestUtils.getMockApplicationAttemptId(2, 0); 
+    SchedulerApp app_1_0 = 
+        spy(new SchedulerApp(appAttemptId_1_0, user_1, queue, rmContext, null));
     queue.submitApplication(app_1_0, user_1, A);
+
+    List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
+    app_1_0_requests.add(
+        TestUtils.createResourceRequest(RMNodeImpl.ANY, 1*GB, 2, 
+            priority_1, recordFactory));
+    app_1_0.updateResourceRequests(app_1_0_requests);
+    
+    // Schedule to compute 
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
     expectedHeadroom = Resources.createResource(10*16*GB / 2); // changes
-    verify(app_0_0).setAvailableResourceLimit(eq(expectedHeadroom));
-    verify(app_0_1).setAvailableResourceLimit(eq(expectedHeadroom));
-    verify(app_1_0).setAvailableResourceLimit(eq(expectedHeadroom));
-    
+    verify(app_0_0).setHeadroom(eq(expectedHeadroom));
+    verify(app_0_1).setHeadroom(eq(expectedHeadroom));
+    verify(app_1_0).setHeadroom(eq(expectedHeadroom));
+
     // Now reduce cluster size and check for the smaller headroom
     clusterResource = Resources.createResource(90*16*GB);
     queue.assignContainers(clusterResource, node_0); // Schedule to compute
     expectedHeadroom = Resources.createResource(9*16*GB / 2); // changes
-    verify(app_0_0).setAvailableResourceLimit(eq(expectedHeadroom));
-    verify(app_0_1).setAvailableResourceLimit(eq(expectedHeadroom));
-    verify(app_1_0).setAvailableResourceLimit(eq(expectedHeadroom));
+    verify(app_0_0).setHeadroom(eq(expectedHeadroom));
+    verify(app_0_1).setHeadroom(eq(expectedHeadroom));
+    verify(app_1_0).setHeadroom(eq(expectedHeadroom));
   }
   
 

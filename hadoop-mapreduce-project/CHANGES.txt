@@ -519,6 +519,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3683. Fixed maxCapacity of queues to be product of parent
     maxCapacities. (acmurthy)
 
+    MAPREDUCE-3713. Fixed the way head-room is allocated to applications by
+    CapacityScheduler so that it deducts current-usage per user and not
+    per-application. (Arun C Murthy via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

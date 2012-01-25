@@ -358,7 +358,7 @@ public class FifoScheduler implements ResourceScheduler {
         }
       }
       
-      application.setAvailableResourceLimit(clusterResource);
+      application.setHeadroom(clusterResource);
       
       LOG.debug("post-assignContainers");
       application.showRequests();

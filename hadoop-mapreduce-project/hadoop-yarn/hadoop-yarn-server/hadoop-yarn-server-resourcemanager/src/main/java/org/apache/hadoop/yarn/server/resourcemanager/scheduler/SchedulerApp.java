@@ -295,10 +295,6 @@ public class SchedulerApp {
     }
   }
 
-  public synchronized void setAvailableResourceLimit(Resource globalLimit) {
-    this.resourceLimit = globalLimit; 
-  }
-
   public synchronized RMContainer getRMContainer(ContainerId id) {
     return liveContainers.get(id);
   }
@@ -446,20 +442,21 @@ public class SchedulerApp {
     return reservedContainers;
   }
   
+  public synchronized void setHeadroom(Resource globalLimit) {
+    this.resourceLimit = globalLimit; 
+  }
+
   /**
    * Get available headroom in terms of resources for the application's user.
    * @return available resource headroom
    */
   public synchronized Resource getHeadroom() {
-    Resource limit = Resources.subtract(resourceLimit, currentConsumption);
-    Resources.subtractFrom(limit, currentReservation);
-
     // Corner case to deal with applications being slightly over-limit
-    if (limit.getMemory() < 0) {
-      limit.setMemory(0);
+    if (resourceLimit.getMemory() < 0) {
+      resourceLimit.setMemory(0);
     }
     
-    return limit;
+    return resourceLimit;
   }
 
   public Queue getQueue() {
