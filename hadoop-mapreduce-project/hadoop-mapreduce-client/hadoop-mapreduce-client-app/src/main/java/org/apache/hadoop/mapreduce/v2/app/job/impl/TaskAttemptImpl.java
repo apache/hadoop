@@ -522,13 +522,13 @@ public abstract class TaskAttemptImpl implements
    * a parent CLC and use it for all the containers, so this should go away
    * once the mr-generated-classpath stuff is gone.
    */
-  private static String getInitialClasspath() throws IOException {
+  private static String getInitialClasspath(Configuration conf) throws IOException {
     synchronized (classpathLock) {
       if (initialClasspathFlag.get()) {
         return initialClasspath;
       }
       Map<String, String> env = new HashMap<String, String>();
-      MRApps.setClasspath(env);
+      MRApps.setClasspath(env, conf);
       initialClasspath = env.get(Environment.CLASSPATH.name());
       initialClasspathFlag.set(true);
       return initialClasspath;
@@ -631,7 +631,7 @@ public abstract class TaskAttemptImpl implements
       Apps.addToEnvironment(
           environment,  
           Environment.CLASSPATH.name(), 
-          getInitialClasspath());
+          getInitialClasspath(conf));
     } catch (IOException e) {
       throw new YarnException(e);
     }

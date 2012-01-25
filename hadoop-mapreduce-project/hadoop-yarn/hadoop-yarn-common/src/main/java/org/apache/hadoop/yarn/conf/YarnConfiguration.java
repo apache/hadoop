@@ -508,6 +508,10 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
 
+  /** Standard Hadoop classes */
+  public static final String YARN_APPLICATION_CLASSPATH = YARN_PREFIX
+      + "application.classpath";
+
   public YarnConfiguration() {
     super();
   }

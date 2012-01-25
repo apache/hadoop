@@ -189,6 +189,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3692. yarn-resourcemanager out and log files can get big. (eli)
 
+    MAPREDUCE-3710. Improved FileInputFormat to return better locality for the
+    last split. (Siddarth Seth via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -539,6 +542,21 @@ Release 0.23.1 - Unreleased
     (Jonathan Eagles via mahadev)
 
     MAPREDUCE-3681. Fixed computation of queue's usedCapacity. (acmurthy) 
+
+    MAPREDUCE-3505. yarn APPLICATION_CLASSPATH needs to be overridable. 
+    (ahmed via tucu)
+
+    MAPREDUCE-3714. Fixed EventFetcher and Fetcher threads to shut-down properly
+    so that reducers don't hang in corner cases. (vinodkv)
+
+    MAPREDUCE-3712. The mapreduce tar does not contain the hadoop-mapreduce-client-
+    jobclient-tests.jar. (mahadev)
+
+    MAPREDUCE-3717. JobClient test jar has missing files to run all the test programs.
+    (mahadev)
+
+    MAPREDUCE-3630. Fixes a NullPointer exception while running TeraGen - if a
+    map is asked to generate 0 records. (Mahadev Konar via sseth)
 
 Release 0.23.0 - 2011-11-01 
 
