@@ -203,7 +203,6 @@ public class TestCheckpoint extends TestCase {
   /*
    * Simulate namenode crashing after rolling edit log.
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryNamenodeError1()
     throws IOException {
     LOG.info("Starting testSecondaryNamenodeError1");
@@ -265,7 +264,6 @@ public class TestCheckpoint extends TestCase {
   /*
    * Simulate a namenode crash after uploading new image
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryNamenodeError2() throws IOException {
     LOG.info("Starting testSecondaryNamenodeError2");
     Configuration conf = new HdfsConfiguration();
@@ -324,7 +322,6 @@ public class TestCheckpoint extends TestCase {
   /*
    * Simulate a secondary namenode crash after rolling the edit log.
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryNamenodeError3() throws IOException {
     LOG.info("Starting testSecondaryNamenodeError3");
     Configuration conf = new HdfsConfiguration();
@@ -394,7 +391,6 @@ public class TestCheckpoint extends TestCase {
    * back to the name-node.
    * Used to truncate primary fsimage file.
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryFailsToReturnImage() throws IOException {
     LOG.info("Starting testSecondaryFailsToReturnImage");
     Configuration conf = new HdfsConfiguration();
@@ -471,7 +467,6 @@ public class TestCheckpoint extends TestCase {
    * @param errorType the ErrorSimulator type to trigger
    * @param exceptionSubstring an expected substring of the triggered exception
    */
-  @SuppressWarnings("deprecation")
   private void doSendFailTest(int errorType, String exceptionSubstring)
       throws IOException {
     Configuration conf = new HdfsConfiguration();
@@ -586,7 +581,6 @@ public class TestCheckpoint extends TestCase {
   /**
    * Test that the SecondaryNameNode properly locks its storage directories.
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryNameNodeLocking() throws Exception {
     // Start a primary NN so that the secondary will start successfully
     Configuration conf = new HdfsConfiguration();
@@ -679,7 +673,6 @@ public class TestCheckpoint extends TestCase {
    * 2. if the NN does not contain an image, importing a checkpoint
    *    succeeds and re-saves the image
    */
-  @SuppressWarnings("deprecation")
   public void testImportCheckpoint() throws Exception {
     Configuration conf = new HdfsConfiguration();
     Path testPath = new Path("/testfile");
@@ -760,16 +753,12 @@ public class TestCheckpoint extends TestCase {
       throw new IOException("Cannot create directory " + dir);
   }
   
-  // This deprecation suppress warning does not work due to known Java bug:
-  // http://bugs.sun.com/view_bug.do?bug_id=6460147
-  @SuppressWarnings("deprecation")
   SecondaryNameNode startSecondaryNameNode(Configuration conf
                                           ) throws IOException {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
     return new SecondaryNameNode(conf);
   }
   
-  @SuppressWarnings("deprecation")
   SecondaryNameNode startSecondaryNameNode(Configuration conf, int index)
       throws IOException {
     Configuration snnConf = new Configuration(conf);
@@ -782,7 +771,6 @@ public class TestCheckpoint extends TestCase {
   /**
    * Tests checkpoint in HDFS.
    */
-  @SuppressWarnings("deprecation")
   public void testCheckpoint() throws IOException {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
@@ -1009,7 +997,6 @@ public class TestCheckpoint extends TestCase {
    * - it then fails again for the same reason
    * - it then tries to checkpoint a third time
    */
-  @SuppressWarnings("deprecation")
   public void testCheckpointAfterTwoFailedUploads() throws IOException {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
@@ -1064,7 +1051,6 @@ public class TestCheckpoint extends TestCase {
    * 
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   public void testMultipleSecondaryNamenodes() throws IOException {
     Configuration conf = new HdfsConfiguration();
     String nameserviceId1 = "ns1";
@@ -1114,7 +1100,6 @@ public class TestCheckpoint extends TestCase {
    * Test that the secondary doesn't have to re-download image
    * if it hasn't changed.
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryImageDownload() throws IOException {
     LOG.info("Starting testSecondaryImageDownload");
     Configuration conf = new HdfsConfiguration();
@@ -1197,7 +1182,6 @@ public class TestCheckpoint extends TestCase {
    * It verifies that this works even though the earlier-txid checkpoint gets
    * uploaded after the later-txid checkpoint.
    */
-  @SuppressWarnings("deprecation")
   public void testMultipleSecondaryNNsAgainstSameNN() throws Exception {
     Configuration conf = new HdfsConfiguration();
 
@@ -1283,7 +1267,6 @@ public class TestCheckpoint extends TestCase {
    * It verifies that one of the two gets an error that it's uploading a
    * duplicate checkpoint, and the other one succeeds.
    */
-  @SuppressWarnings("deprecation")
   public void testMultipleSecondaryNNsAgainstSameNN2() throws Exception {
     Configuration conf = new HdfsConfiguration();
 
@@ -1382,7 +1365,6 @@ public class TestCheckpoint extends TestCase {
    * is running. The secondary should shut itself down if if talks to a NN
    * with the wrong namespace.
    */
-  @SuppressWarnings("deprecation")
   public void testReformatNNBetweenCheckpoints() throws IOException {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
@@ -1637,7 +1619,6 @@ public class TestCheckpoint extends TestCase {
   /**
    * Test that the 2NN triggers a checkpoint after the configurable interval
    */
-  @SuppressWarnings("deprecation")
   public void testCheckpointTriggerOnTxnCount() throws Exception {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
@@ -1691,7 +1672,6 @@ public class TestCheckpoint extends TestCase {
    * logs that connect the 2NN's old checkpoint to the current txid
    * get archived. Then, the 2NN tries to checkpoint again.
    */
-  @SuppressWarnings("deprecation")
   public void testSecondaryHasVeryOutOfDateImage() throws IOException {
     MiniDFSCluster cluster = null;
     SecondaryNameNode secondary = null;
@@ -1729,7 +1709,6 @@ public class TestCheckpoint extends TestCase {
     }
   }
   
-  @SuppressWarnings("deprecation")
   public void testCommandLineParsing() throws ParseException {
     SecondaryNameNode.CommandLineOpts opts =
       new SecondaryNameNode.CommandLineOpts();
@@ -1764,7 +1743,6 @@ public class TestCheckpoint extends TestCase {
     } catch (ParseException e) {}
   }
 
-  @SuppressWarnings("deprecation")
   private void cleanup(SecondaryNameNode snn) {
     if (snn != null) {
       try {
@@ -1780,7 +1758,6 @@ public class TestCheckpoint extends TestCase {
    * Assert that if any two files have the same name across the 2NNs
    * and NN, they should have the same content too.
    */
-  @SuppressWarnings("deprecation")
   private void assertParallelFilesInvariant(MiniDFSCluster cluster,
       ImmutableList<SecondaryNameNode> secondaries) throws Exception {
     List<File> allCurrentDirs = Lists.newArrayList();
@@ -1792,7 +1769,6 @@ public class TestCheckpoint extends TestCase {
         ImmutableSet.of("VERSION"));    
   }
   
-  @SuppressWarnings("deprecation")
   private List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
     List<File> ret = Lists.newArrayList();
     for (URI u : secondary.getCheckpointDirs()) {
@@ -1802,7 +1778,6 @@ public class TestCheckpoint extends TestCase {
     return ret;
   }
 
-  @SuppressWarnings("deprecation")
   private CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
     CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());;
     secondary1.setFSImage(spy);
@@ -1812,7 +1787,6 @@ public class TestCheckpoint extends TestCase {
   /**
    * A utility class to perform a checkpoint in a different thread.
    */
-  @SuppressWarnings("deprecation")
   private static class DoCheckpointThread extends Thread {
     private final SecondaryNameNode snn;
     private volatile Throwable thrown = null;

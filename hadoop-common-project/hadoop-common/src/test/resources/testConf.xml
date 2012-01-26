@@ -610,11 +610,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*in the specified format. Format accepts filesize in blocks \(%b\), filename \(%n\),( )*</expected-output>
+          <expected-output>^( |\t)*in the specified format. Format accepts filesize in blocks \(%b\), group name of owner\(%g\),( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*block size \(%o\), replication \(%r\), modification date \(%y, %Y\)( )*</expected-output>
+          <expected-output>^( |\t)*filename \(%n\), block size \(%o\), replication \(%r\), user name of owner\(%u\), modification date \(%y, %Y\)( )*</expected-output>
         </comparator>
       </comparators>
     </test>

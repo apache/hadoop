@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Daemon;
 
+import com.google.common.base.Preconditions;
+
 public class BlockManagerTestUtil {
   public static void setNodeReplicationLimit(final BlockManager blockManager,
       final int limit) {
@@ -122,4 +124,17 @@ public class BlockManagerTestUtil {
     return blockManager.computeDatanodeWork();
   }
   
+  
+  /**
+   * Change whether the block placement policy will prefer the writer's
+   * local Datanode or not.
+   * @param prefer
+   */
+  public static void setWritingPrefersLocalNode(
+      BlockManager bm, boolean prefer) {
+    BlockPlacementPolicy bpp = bm.getBlockPlacementPolicy();
+    Preconditions.checkState(bpp instanceof BlockPlacementPolicyDefault,
+        "Must use default policy, got %s", bpp.getClass());
+    ((BlockPlacementPolicyDefault)bpp).setPreferLocalNode(prefer);
+  }
 }

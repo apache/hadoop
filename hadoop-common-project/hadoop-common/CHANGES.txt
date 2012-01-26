@@ -125,6 +125,21 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7975. Add LZ4 as an entry in the default codec list, missed by HADOOP-7657 (harsh)
 
+    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
+
+    HADOOP-4515. Configuration#getBoolean must not be case sensitive. (Sho Shimauchi via harsh)
+
+    HADOOP-6490. Use StringUtils over String#replace in Path#normalizePath.
+    (Uma Maheswara Rao G via harsh)
+
+    HADOOP-7574. Improve FSShell -stat, add user/group elements.
+    (XieXianshan via harsh)
+
+    HADOOP-7736. Remove duplicate Path#normalizePath call. (harsh)
+
+    HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
+    core-default.xml file. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -206,6 +221,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7986. Adding config for MapReduce History Server protocol in
    hadoop-policy.xml for service level authorization. (Mahadev Konar via vinodkv)
+
+   HADOOP-7981. Improve documentation for org.apache.hadoop.io.compress.
+   Decompressor.getRemaining (Jonathan Eagles via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

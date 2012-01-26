@@ -201,6 +201,10 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2817. Combine the two TestSafeMode test suites. (todd)
 
+    HDFS-2818. Fix a missing space issue in HDFS webapps' title tags. (Devaraj K via harsh)
+
+    HDFS-2397. Undeprecate SecondaryNameNode (eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -214,6 +218,12 @@ Release 0.23.1 - UNRELEASED
     HDFS-2246. Enable reading a block directly from local file system
     for a client on the same node as the block file.  (Andrew Purtell,
     Suresh Srinivas and Jitendra Nath Pandey via szetszwo)
+
+    HDFS-2825. Add test hook to turn off the writer preferring its local
+    DN. (todd)
+
+    HDFS-2826. Add test case for HDFS-1476 (safemode can initialize
+    replication queues before exiting) (todd)
 
   BUG FIXES
 
@@ -275,6 +285,15 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2816. Fix missing license header in httpfs findbugsExcludeFile.xml.
     (hitesh via tucu)
+
+    HDFS-2822. processMisReplicatedBlock incorrectly identifies
+    under-construction blocks as under-replicated. (todd)
+
+    HDFS-442. dfsthroughput in test jar throws NPE (harsh)
+
+    HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk (revans2 via tucu)
+
+    HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class (revans2 via tucu)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -118,16 +118,14 @@ public class ParentQueue implements CSQueue {
     }
 
     float capacity = (float) rawCapacity / 100;
-
     float parentAbsoluteCapacity = 
-      (parent == null) ? 1.0f : parent.getAbsoluteCapacity();
+      (rootQueue) ? 1.0f : parent.getAbsoluteCapacity();
     float absoluteCapacity = parentAbsoluteCapacity * capacity; 
 
-    float maximumCapacity = 
+    float  maximumCapacity =
       (float) cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
-      (Math.round(maximumCapacity * 100) == CapacitySchedulerConfiguration.UNDEFINED) ? 
-          Float.MAX_VALUE :  (parentAbsoluteCapacity * maximumCapacity);
+          CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
     
     QueueState state = cs.getConfiguration().getState(getQueuePath());
 
@@ -333,10 +331,15 @@ public class ParentQueue implements CSQueue {
   }
 
   public String toString() {
-    return queueName + ":" + capacity + ":" + absoluteCapacity + ":" + 
-      getUsedCapacity() + ":" + getUtilization() + ":" + 
-      getNumApplications() + ":" + getNumContainers() + ":" + 
-      childQueues.size() + " child-queues";
+    return queueName + ": " +
+        "numChildQueue= " + childQueues.size() + ", " + 
+        "capacity=" + capacity + ", " +  
+        "absoluteCapacity=" + absoluteCapacity + ", " +
+        "usedResources=" + usedResources.getMemory() + "MB, " + 
+        "usedCapacity=" + getUsedCapacity() + ", " + 
+        "utilization=" + getUtilization() + ", " +
+        "numApps=" + getNumApplications() + ", " + 
+        "numContainers=" + getNumContainers();
   }
   
   @Override
@@ -492,12 +495,8 @@ public class ParentQueue implements CSQueue {
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
     
     this.maximumCapacity = maximumCapacity;
-    float parentAbsoluteCapacity = 
-        (rootQueue) ? 100.0f : parent.getAbsoluteCapacity();
     this.absoluteMaxCapacity = 
-      (maximumCapacity == CapacitySchedulerConfiguration.UNDEFINED) ? 
-          Float.MAX_VALUE : 
-          (parentAbsoluteCapacity * maximumCapacity);
+        CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
   }
 
   @Override
@@ -688,11 +687,13 @@ public class ParentQueue implements CSQueue {
   }
   
   private synchronized void updateResource(Resource clusterResource) {
-    float queueLimit = clusterResource.getMemory() * absoluteCapacity; 
+    float queueLimit = clusterResource.getMemory() * absoluteCapacity;
+    float parentAbsoluteCapacity = 
+        (rootQueue) ? 1.0f : parent.getAbsoluteCapacity();
     setUtilization(usedResources.getMemory() / queueLimit);
-    setUsedCapacity(
-        usedResources.getMemory() / (clusterResource.getMemory() * capacity));
-    
+    setUsedCapacity(usedResources.getMemory() 
+        / (clusterResource.getMemory() * parentAbsoluteCapacity));
+  
     Resource resourceLimit = 
       Resources.createResource((int)queueLimit);
     metrics.setAvailableResourcesToQueue(

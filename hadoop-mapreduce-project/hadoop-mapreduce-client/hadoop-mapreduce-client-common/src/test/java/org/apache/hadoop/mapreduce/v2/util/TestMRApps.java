@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -121,4 +126,17 @@ public class TestMRApps {
         "/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile);
   }
 
+  @Test public void testSetClasspath() throws IOException {
+    Job job = Job.getInstance();
+    Map<String, String> environment = new HashMap<String, String>();
+    MRApps.setClasspath(environment, job.getConfiguration());
+    assertEquals("job.jar:$PWD/*:$HADOOP_CONF_DIR:" +
+        "$HADOOP_COMMON_HOME/share/hadoop/common/*:" +
+        "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*:" +
+        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*:" +
+        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*:" +
+        "$YARN_HOME/share/hadoop/mapreduce/*:" +
+        "$YARN_HOME/share/hadoop/mapreduce/lib/*",
+        environment.get("CLASSPATH"));
+  }
 }

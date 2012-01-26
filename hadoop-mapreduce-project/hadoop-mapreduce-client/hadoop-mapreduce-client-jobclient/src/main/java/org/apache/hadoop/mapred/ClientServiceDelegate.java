@@ -175,7 +175,6 @@ public class ClientServiceDelegate {
                 + ":" + addr.getPort()));
             newUgi.addToken(clientToken);
           }
-          LOG.info("The url to track the job: " + application.getTrackingUrl());
           LOG.debug("Connecting to " + serviceAddr);
           final String tempStr = serviceAddr;
           realProxy = newUgi.doAs(new PrivilegedExceptionAction<MRClientProtocol>() {

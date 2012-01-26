@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -32,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 
+@SuppressWarnings("deprecation")
 public class TestFileInputFormat extends TestCase {
 
   Configuration conf = new Configuration();
@@ -184,6 +189,102 @@ public class TestFileInputFormat extends TestCase {
     job.setBoolean("mapred.input.dir.recursive", true);
     InputSplit[] splits = inFormat.getSplits(job, 1);
     assertEquals(splits.length, 2);
+  }
+
+  @SuppressWarnings("rawtypes")
+  public void testLastInputSplitAtSplitBoundary() throws Exception {
+    FileInputFormat fif = new FileInputFormatForTest(1024l * 1024 * 1024,
+        128l * 1024 * 1024);
+    JobConf job = new JobConf();
+    InputSplit[] splits = fif.getSplits(job, 8);
+    assertEquals(8, splits.length);
+    for (int i = 0; i < splits.length; i++) {
+      InputSplit split = splits[i];
+      assertEquals(("host" + i), split.getLocations()[0]);
+    }
+  }
+
+  @SuppressWarnings("rawtypes")
+  public void testLastInputSplitExceedingSplitBoundary() throws Exception {
+    FileInputFormat fif = new FileInputFormatForTest(1027l * 1024 * 1024,
+        128l * 1024 * 1024);
+    JobConf job = new JobConf();
+    InputSplit[] splits = fif.getSplits(job, 8);
+    assertEquals(8, splits.length);
+    for (int i = 0; i < splits.length; i++) {
+      InputSplit split = splits[i];
+      assertEquals(("host" + i), split.getLocations()[0]);
+    }
+  }
+
+  @SuppressWarnings("rawtypes")
+  public void testLastInputSplitSingleSplit() throws Exception {
+    FileInputFormat fif = new FileInputFormatForTest(100l * 1024 * 1024,
+        128l * 1024 * 1024);
+    JobConf job = new JobConf();
+    InputSplit[] splits = fif.getSplits(job, 1);
+    assertEquals(1, splits.length);
+    for (int i = 0; i < splits.length; i++) {
+      InputSplit split = splits[i];
+      assertEquals(("host" + i), split.getLocations()[0]);
+    }
+  }
+
+  private class FileInputFormatForTest<K, V> extends FileInputFormat<K, V> {
+
+    long splitSize;
+    long length;
+
+    FileInputFormatForTest(long length, long splitSize) {
+      this.length = length;
+      this.splitSize = splitSize;
+    }
+
+    @Override
+    public RecordReader<K, V> getRecordReader(InputSplit split, JobConf job,
+        Reporter reporter) throws IOException {
+      return null;
+    }
+
+    @Override
+    protected FileStatus[] listStatus(JobConf job) throws IOException {
+      FileStatus mockFileStatus = mock(FileStatus.class);
+      when(mockFileStatus.getBlockSize()).thenReturn(splitSize);
+      when(mockFileStatus.isDirectory()).thenReturn(false);
+      Path mockPath = mock(Path.class);
+      FileSystem mockFs = mock(FileSystem.class);
+
+      BlockLocation[] blockLocations = mockBlockLocations(length, splitSize);
+      when(mockFs.getFileBlockLocations(mockFileStatus, 0, length)).thenReturn(
+          blockLocations);
+      when(mockPath.getFileSystem(any(Configuration.class))).thenReturn(mockFs);
+
+      when(mockFileStatus.getPath()).thenReturn(mockPath);
+      when(mockFileStatus.getLen()).thenReturn(length);
+
+      FileStatus[] fs = new FileStatus[1];
+      fs[0] = mockFileStatus;
+      return fs;
+    }
+
+    @Override
+    protected long computeSplitSize(long blockSize, long minSize, long maxSize) {
+      return splitSize;
+    }
+
+    private BlockLocation[] mockBlockLocations(long size, long splitSize) {
+      int numLocations = (int) (size / splitSize);
+      if (size % splitSize != 0)
+        numLocations++;
+      BlockLocation[] blockLocations = new BlockLocation[numLocations];
+      for (int i = 0; i < numLocations; i++) {
+        String[] names = new String[] { "b" + i };
+        String[] hosts = new String[] { "host" + i };
+        blockLocations[i] = new BlockLocation(names, hosts, i * splitSize,
+            Math.min(splitSize, size - (splitSize * i)));
+      }
+      return blockLocations;
+    }
   }
 
   static void writeFile(Configuration conf, Path name,

@@ -255,7 +255,7 @@ public class TestLeafQueue {
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     //unset maxCapacity
-    a.setMaxCapacity(-0.01f);
+    a.setMaxCapacity(1.0f);
 
     // Users
     final String user_0 = "user_0";
@@ -377,7 +377,7 @@ public class TestLeafQueue {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     //unset maxCapacity
-    a.setMaxCapacity(-0.01f);
+    a.setMaxCapacity(1.0f);
     
     // Users
     final String user_0 = "user_0";
@@ -491,7 +491,7 @@ public class TestLeafQueue {
     
     // Revert max-capacity and user-limit-factor
     // Now, allocations should goto app_3 since it's under user-limit 
-    a.setMaxCapacity(-0.01f);
+    a.setMaxCapacity(1.0f);
     a.setUserLimitFactor(1);
     a.assignContainers(clusterResource, node_0);
     assertEquals(7*GB, a.getUsedResources().getMemory()); 
@@ -548,7 +548,7 @@ public class TestLeafQueue {
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     //unset maxCapacity
-    a.setMaxCapacity(-0.01f);
+    a.setMaxCapacity(1.0f);
 
     // Users
     final String user_0 = "user_0";
@@ -571,7 +571,7 @@ public class TestLeafQueue {
     String host_0 = "host_0";
     SchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 4*GB);
     
-    final int numNodes = 1;
+    final int numNodes = 2;
     Resource clusterResource = Resources.createResource(numNodes * (4*GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     
@@ -646,7 +646,7 @@ public class TestLeafQueue {
     // Manipulate queue 'a'
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
     //unset maxCapacity
-    a.setMaxCapacity(-0.01f);
+    a.setMaxCapacity(1.0f);
     a.setUserLimitFactor(10);
 
     // Users
@@ -673,7 +673,7 @@ public class TestLeafQueue {
     String host_1 = "host_1";
     SchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 4*GB);
     
-    final int numNodes = 2;
+    final int numNodes = 3;
     Resource clusterResource = Resources.createResource(numNodes * (4*GB));
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
     when(csContext.getMaximumResourceCapability()).thenReturn(

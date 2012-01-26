@@ -47,4 +47,6 @@ MapReduce NextGen aka YARN aka MRv2
 
   * {{{./CapacityScheduler.html}Capacity Scheduler}}
 
+  * {{{./WebApplicationProxy.html}Web Application Proxy}}
+
 

@@ -286,8 +286,9 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
           }
 
           if (bytesRemaining != 0) {
+            int blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);
             splits.add(makeSplit(path, length-bytesRemaining, bytesRemaining,
-                       blkLocations[blkLocations.length-1].getHosts()));
+                       blkLocations[blkIndex].getHosts()));
           }
         } else { // not splitable
           splits.add(makeSplit(path, 0, length, blkLocations[0].getHosts()));

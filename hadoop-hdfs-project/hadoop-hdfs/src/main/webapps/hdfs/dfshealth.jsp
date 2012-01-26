@@ -37,7 +37,7 @@
 <html>
 
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
-<title>Hadoop <%=namenodeRole%> <%=namenodeLabel%></title>
+<title>Hadoop <%=namenodeRole%>&nbsp;<%=namenodeLabel%></title>
     
 <body>
 <h1><%=namenodeRole%> '<%=namenodeLabel%>'</h1>

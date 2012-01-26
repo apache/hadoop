@@ -27,6 +27,7 @@ import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
+@SuppressWarnings("deprecation")
 class EventFetcher<K,V> extends Thread {
   private static final long SLEEP_TIME = 1000;
   private static final int MAX_EVENTS_TO_FETCH = 10000;
@@ -41,6 +42,8 @@ class EventFetcher<K,V> extends Thread {
   private ExceptionReporter exceptionReporter = null;
   
   private int maxMapRuntime = 0;
+
+  private volatile boolean stopped = false;
   
   public EventFetcher(TaskAttemptID reduce,
                       TaskUmbilicalProtocol umbilical,
@@ -60,7 +63,7 @@ class EventFetcher<K,V> extends Thread {
     LOG.info(reduce + " Thread started: " + getName());
     
     try {
-      while (true && !Thread.currentThread().isInterrupted()) {
+      while (!stopped && !Thread.currentThread().isInterrupted()) {
         try {
           int numNewMaps = getMapCompletionEvents();
           failures = 0;
@@ -71,6 +74,9 @@ class EventFetcher<K,V> extends Thread {
           if (!Thread.currentThread().isInterrupted()) {
             Thread.sleep(SLEEP_TIME);
           }
+        } catch (InterruptedException e) {
+          LOG.info("EventFetcher is interrupted.. Returning");
+          return;
         } catch (IOException ie) {
           LOG.info("Exception in getting events", ie);
           // check to see whether to abort
@@ -88,6 +94,16 @@ class EventFetcher<K,V> extends Thread {
     } catch (Throwable t) {
       exceptionReporter.reportException(t);
       return;
+    }
+  }
+
+  public void shutDown() {
+    this.stopped = true;
+    interrupt();
+    try {
+      join(5000);
+    } catch(InterruptedException ie) {
+      LOG.warn("Got interrupted while joining " + getName(), ie);
     }
   }
   

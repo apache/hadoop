@@ -753,11 +753,6 @@
 			
 			<section>
 				<title> secondarynamenode </title>
-				<note>
-					The Secondary NameNode has been deprecated. Instead, consider using the
-					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Checkpoint+Node">Checkpoint Node</a> or 
-					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Backup+Node">Backup Node</a>. 
-				</note>
 				<p>	
 					Runs the HDFS secondary 
 					namenode. See <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Secondary+NameNode">Secondary NameNode</a> 

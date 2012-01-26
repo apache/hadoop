@@ -406,7 +406,7 @@ public class YARNRunner implements ClientProtocol {
     // Setup the CLASSPATH in environment
     // i.e. add { job jar, CWD, Hadoop jars} to classpath.
     Map<String, String> environment = new HashMap<String, String>();
-    MRApps.setClasspath(environment);
+    MRApps.setClasspath(environment, conf);
 
     // Parse distributed cache
     MRApps.setupDistributedCache(jobConf, localResources);

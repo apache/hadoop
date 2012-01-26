@@ -238,7 +238,9 @@ public class TeraGen extends Configured implements Tool {
 
     @Override
     public void cleanup(Context context) {
-      checksumCounter.increment(total.getLow8());
+      if (checksumCounter != null) {
+        checksumCounter.increment(total.getLow8());
+      }
     }
   }
 
@@ -307,5 +309,4 @@ public class TeraGen extends Configured implements Tool {
     int res = ToolRunner.run(new Configuration(), new TeraGen(), args);
     System.exit(res);
   }
-
 }

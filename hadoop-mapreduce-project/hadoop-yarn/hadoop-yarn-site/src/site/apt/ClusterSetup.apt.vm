@@ -95,7 +95,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
 *--------------------------------------+--------------------------------------+
 | DataNode                             | HADOOP_DATANODE_OPTS                 |
 *--------------------------------------+--------------------------------------+
-| Backup NameNode                      | HADOOP_SECONDARYNAMENODE_OPTS        |
+| Secondary NameNode                   | HADOOP_SECONDARYNAMENODE_OPTS        |
 *--------------------------------------+--------------------------------------+
 | ResourceManager                      | YARN_RESOURCEMANAGER_OPTS            |
 *--------------------------------------+--------------------------------------+
@@ -537,15 +537,15 @@ Hadoop MapReduce Next Generation - Cluster Setup
       
   It's recommended to have them share a Unix group, for e.g. <<<hadoop>>>.
       
-*--------------------------------------+--------------------------------------+
-|| User:Group                          || Daemons                             |
-*--------------------------------------+--------------------------------------+
-| hdfs:hadoop                          | NameNode, Backup NameNode, DataNode  |
-*--------------------------------------+--------------------------------------+
-| yarn:hadoop                          | ResourceManager, NodeManager         |
-*--------------------------------------+--------------------------------------+
-| mapred:hadoop                        | MapReduce JobHistory Server          |  
-*--------------------------------------+--------------------------------------+
+*--------------------------------------+----------------------------------------------------------------------+
+|| User:Group                          || Daemons                                                             |
+*--------------------------------------+----------------------------------------------------------------------+
+| hdfs:hadoop                          | NameNode, Secondary NameNode, Checkpoint Node, Backup Node, DataNode |
+*--------------------------------------+----------------------------------------------------------------------+
+| yarn:hadoop                          | ResourceManager, NodeManager                                         |
+*--------------------------------------+----------------------------------------------------------------------+
+| mapred:hadoop                        | MapReduce JobHistory Server                                          |
+*--------------------------------------+----------------------------------------------------------------------+
       
   * <<<Permissions for both HDFS and local fileSystem paths>>>
      
