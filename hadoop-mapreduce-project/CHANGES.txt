@@ -523,6 +523,9 @@ Release 0.23.1 - Unreleased
     CapacityScheduler so that it deducts current-usage per user and not
     per-application. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3721. Fixed a race in shuffle which caused reduces to hang.
+    (sseth via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
