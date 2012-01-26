@@ -3623,11 +3623,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       assert assertsOn = true; // set to true if asserts are on
       if (!assertsOn) return;
       
-      
-      int activeBlocks = blockManager.getActiveBlockCount();
       if (blockTotal == -1 && blockSafe == -1) {
         return; // manual safe mode
       }
+      int activeBlocks = blockManager.getActiveBlockCount();
       if ((blockTotal != activeBlocks) &&
           !(blockSafe >= 0 && blockSafe <= blockTotal)) {
         throw new AssertionError(

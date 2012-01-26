@@ -131,3 +131,5 @@ HDFS-2804. Should not mark blocks under-replicated when exiting safemode (todd)
 HDFS-2807. Service level authorizartion for HAServiceProtocol. (jitendra)
 
 HDFS-2809. Add test to verify that delegation tokens are honored after failover. (jitendra and atm)
+
+HDFS-2838. NPE in FSNamesystem when in safe mode. (Gregory Chanan via eli)
