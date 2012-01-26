@@ -184,6 +184,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-442. dfsthroughput in test jar throws NPE (harsh)
 
+    HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk (revans2 via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
