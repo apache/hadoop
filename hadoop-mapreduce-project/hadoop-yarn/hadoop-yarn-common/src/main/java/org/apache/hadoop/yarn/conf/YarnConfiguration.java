@@ -90,7 +90,7 @@ public class YarnConfiguration extends Configuration {
   /** The number of threads used to handle applications manager requests.*/
   public static final String RM_CLIENT_THREAD_COUNT =
     RM_PREFIX + "client.thread-count";
-  public static final int DEFAULT_RM_CLIENT_THREAD_COUNT = 10;
+  public static final int DEFAULT_RM_CLIENT_THREAD_COUNT = 50;
 
   /** The Kerberos principal for the resource manager.*/
   public static final String RM_PRINCIPAL =
@@ -106,7 +106,7 @@ public class YarnConfiguration extends Configuration {
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
     RM_PREFIX + "scheduler.client.thread-count";
-  public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 10;
+  public static final int DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT = 50;
   
   /** The address of the RM web application.*/
   public static final String RM_WEBAPP_ADDRESS = 
@@ -184,7 +184,7 @@ public class YarnConfiguration extends Configuration {
   /** Number of threads to handle resource tracker calls.*/
   public static final String RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT =
     RM_PREFIX + "resource-tracker.client.thread-count";
-  public static final int DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT = 10;
+  public static final int DEFAULT_RM_RESOURCE_TRACKER_CLIENT_THREAD_COUNT = 50;
   
   /** The class to use as the resource scheduler.*/
   public static final String RM_SCHEDULER = 
@@ -257,7 +257,7 @@ public class YarnConfiguration extends Configuration {
   /** Number of threads container manager uses.*/
   public static final String NM_CONTAINER_MGR_THREAD_COUNT =
     NM_PREFIX + "container-manager.thread-count";
-  public static final int DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT = 5;
+  public static final int DEFAULT_NM_CONTAINER_MGR_THREAD_COUNT = 20;
   
   /** Number of threads used in cleanup.*/
   public static final String NM_DELETE_THREAD_COUNT = 

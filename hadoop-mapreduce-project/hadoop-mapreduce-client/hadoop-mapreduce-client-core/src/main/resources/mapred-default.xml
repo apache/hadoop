@@ -1224,4 +1224,18 @@
     mapreduce.job.end-notification.max.retry.interval</description>
 </property>
 
+<property>
+  <name>yarn.app.mapreduce.am.job.task.listener.thread-count</name>
+  <value>30</value>
+  <description>The number of threads used to handle RPC calls in the 
+    MR AppMaster from remote tasks</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms</name>
+  <value>1000</value>
+  <description>The interval in ms at which the MR AppMaster should send
+    heartbeats to the ResourceManager</description>
+</property>
+
 </configuration>
