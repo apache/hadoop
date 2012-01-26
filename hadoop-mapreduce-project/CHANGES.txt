@@ -135,6 +135,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3737. The Web Application Proxy's is not documented very well.
     (Robert Evans via mahadev)
 
+    MAPREDUCE-3699. Increased RPC handlers for all YARN servers to reasonable
+    values for working at scale. (Hitesh Shah via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar

@@ -412,7 +412,7 @@ public interface MRJobConfig {
   /** The number of threads used to handle task RPC calls.*/
   public static final String MR_AM_TASK_LISTENER_THREAD_COUNT =
     MR_AM_PREFIX + "job.task.listener.thread-count";
-  public static final int DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT = 10;
+  public static final int DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT = 30;
 
   /** How often the AM should send heartbeats to the RM.*/
   public static final String MR_AM_TO_RM_HEARTBEAT_INTERVAL_MS =
