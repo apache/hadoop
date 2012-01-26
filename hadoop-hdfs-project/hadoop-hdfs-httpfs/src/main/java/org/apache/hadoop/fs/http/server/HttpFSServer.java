@@ -219,7 +219,7 @@ public class HttpFSServer {
    * operation is @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.GetOpValues#LISTSTATUS}
    * @param doAs user being impersonated, defualt value is none. It can be used
    * only if the current user is a HttpFSServer proxyuser.
-   * @param override, default is true. Used only for
+   * @param override default is true. Used only for
    * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
    * @param blockSize block size to set, used only by
    * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
@@ -419,7 +419,7 @@ public class HttpFSServer {
    * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETOWNER} operations.
    * @param group group to set, used only for
    * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#SETOWNER} operations.
-   * @param override, default is true. Used only for
+   * @param override default is true. Used only for
    * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.
    * @param blockSize block size to set, used only by
    * @link org.apache.hadoop.fs.http.client.HttpFSFileSystem.PutOpValues#CREATE} operations.

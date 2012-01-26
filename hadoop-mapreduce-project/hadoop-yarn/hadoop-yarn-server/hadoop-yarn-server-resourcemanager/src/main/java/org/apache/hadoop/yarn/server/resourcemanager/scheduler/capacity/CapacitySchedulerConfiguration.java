@@ -149,7 +149,7 @@ public class CapacitySchedulerConfiguration extends Configuration {
       throw new IllegalArgumentException("Illegal " +
       		"capacity of " + capacity + " for queue " + queue);
     }
-    LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue) + 
+    LOG.debug("CSConf - getCapacity: queuePrefix=" + getQueuePrefix(queue) + 
         ", capacity=" + capacity);
     return capacity;
   }
@@ -162,11 +162,15 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   public int getMaximumCapacity(String queue) {
     int maxCapacity = 
-      getInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, UNDEFINED);
+      getInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, MAXIMUM_CAPACITY_VALUE);
     return maxCapacity;
   }
   
   public void setMaximumCapacity(String queue, int maxCapacity) {
+    if (maxCapacity > MAXIMUM_CAPACITY_VALUE) {
+      throw new IllegalArgumentException("Illegal " +
+          "maximum-capacity of " + maxCapacity + " for queue " + queue);
+    }
     setInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
     LOG.debug("CSConf - setMaxCapacity: queuePrefix=" + getQueuePrefix(queue) + 
         ", maxCapacity=" + maxCapacity);

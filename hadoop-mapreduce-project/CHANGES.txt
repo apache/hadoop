@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
   BUG FIXES
+    MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
+                     (Jason Lowe via bobby)
+
     MAPREDUCE-3462. Fix Gridmix JUnit testcase failures. 
                     (Ravi Prakash and Ravi Gummadi via amarrk)
 
@@ -191,6 +194,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3710. Improved FileInputFormat to return better locality for the
     last split. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-2765. DistCp Rewrite. (Mithun Radhakrishnan via mahadev)
 
   OPTIMIZATIONS
 
@@ -557,6 +562,19 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3630. Fixes a NullPointer exception while running TeraGen - if a
     map is asked to generate 0 records. (Mahadev Konar via sseth)
+
+    MAPREDUCE-3683. Fixed maxCapacity of queues to be product of parent
+    maxCapacities. (acmurthy)
+
+    MAPREDUCE-3713. Fixed the way head-room is allocated to applications by
+    CapacityScheduler so that it deducts current-usage per user and not
+    per-application. (Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3721. Fixed a race in shuffle which caused reduces to hang.
+    (sseth via acmurthy) 
+
+    MAPREDUCE-3733. Add Apache License Header to hadoop-distcp/pom.xml.
+    (mahadev)
 
 Release 0.23.0 - 2011-11-01 
 
