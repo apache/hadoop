@@ -39,6 +39,7 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -259,7 +260,13 @@ public class TestRPC {
         SecretManager<? extends TokenIdentifier> secretManager) throws IOException {
       return null;
     }
-    
+
+    @Override
+    public ProtocolProxy<ProtocolMetaInfoPB> getProtocolMetaInfoProxy(
+        ConnectionId connId, Configuration conf, SocketFactory factory)
+        throws IOException {
+      throw new UnsupportedOperationException("This proxy is not supported");
+    }
   }
 
   /**

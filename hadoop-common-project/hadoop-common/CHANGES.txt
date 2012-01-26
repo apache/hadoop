@@ -74,6 +74,8 @@ Trunk (unreleased changes)
 
     HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
 
+    HADOOP-7965. Support for protocol version and signature in PB. (jitendra)
+
   BUGS
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 

@@ -41,6 +41,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
+import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolInfoService;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -48,6 +49,8 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.protobuf.BlockingService;
 
 /** A simple RPC mechanism.
  *
@@ -177,8 +180,8 @@ public class RPC {
   }
 
   // return the RpcEngine configured to handle a protocol
-  private static synchronized RpcEngine getProtocolEngine(Class<?> protocol,
-                                                          Configuration conf) {
+  static synchronized RpcEngine getProtocolEngine(Class<?> protocol,
+      Configuration conf) {
     RpcEngine engine = PROTOCOL_ENGINES.get(protocol);
     if (engine == null) {
       Class<?> impl = conf.getClass(ENGINE_PROP+"."+protocol.getName(),
@@ -522,7 +525,16 @@ public class RPC {
 
      return getProtocolProxy(protocol, clientVersion, addr, conf).getProxy();
    }
-
+  
+  /**
+   * Returns the server address for a given proxy.
+   */
+  public static InetSocketAddress getServerAddress(Object proxy) {
+    RpcInvocationHandler inv = (RpcInvocationHandler) Proxy
+        .getInvocationHandler(proxy);
+    return inv.getConnectionId().getAddress();
+  }
+   
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server
@@ -817,6 +829,19 @@ public class RPC {
                      SecretManager<? extends TokenIdentifier> secretManager) throws IOException {
       super(bindAddress, port, paramClass, handlerCount, numReaders, queueSizePerHandler,
             conf, serverName, secretManager);
+      initProtocolMetaInfo(conf);
+    }
+    
+    private void initProtocolMetaInfo(Configuration conf)
+        throws IOException {
+      RPC.setProtocolEngine(conf, ProtocolMetaInfoPB.class,
+          ProtobufRpcEngine.class);
+      ProtocolMetaInfoServerSideTranslatorPB xlator = 
+          new ProtocolMetaInfoServerSideTranslatorPB(this);
+      BlockingService protocolInfoBlockingService = ProtocolInfoService
+          .newReflectiveBlockingService(xlator);
+      addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, ProtocolMetaInfoPB.class,
+          protocolInfoBlockingService);
     }
     
     /**

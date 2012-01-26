@@ -26,6 +26,7 @@ import javax.net.SocketFactory;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -54,4 +55,16 @@ public interface RpcEngine {
                        SecretManager<? extends TokenIdentifier> secretManager
                        ) throws IOException;
 
+  /**
+   * Returns a proxy for ProtocolMetaInfoPB, which uses the given connection
+   * id.
+   * @param connId, ConnectionId to be used for the proxy.
+   * @param conf, Configuration.
+   * @param factory, Socket factory.
+   * @return Proxy object.
+   * @throws IOException
+   */
+  ProtocolProxy<ProtocolMetaInfoPB> getProtocolMetaInfoProxy(
+      ConnectionId connId, Configuration conf, SocketFactory factory)
+      throws IOException;
 }
