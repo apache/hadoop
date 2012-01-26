@@ -186,6 +186,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk (revans2 via tucu)
 
+    HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class (revans2 via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
