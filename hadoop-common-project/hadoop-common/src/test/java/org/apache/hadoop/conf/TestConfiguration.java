@@ -451,6 +451,9 @@ public class TestConfiguration extends TestCase {
     appendProperty("test.bool3", "  true ");
     appendProperty("test.bool4", " false ");
     appendProperty("test.bool5", "foo");
+    appendProperty("test.bool6", "TRUE");
+    appendProperty("test.bool7", "FALSE");
+    appendProperty("test.bool8", "");
     endConfig();
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
@@ -459,6 +462,9 @@ public class TestConfiguration extends TestCase {
     assertEquals(true, conf.getBoolean("test.bool3", false));
     assertEquals(false, conf.getBoolean("test.bool4", true));
     assertEquals(true, conf.getBoolean("test.bool5", true));
+    assertEquals(true, conf.getBoolean("test.bool6", false));
+    assertEquals(false, conf.getBoolean("test.bool7", true));
+    assertEquals(false, conf.getBoolean("test.bool8", false));
   }
   
   public void testFloatValues() throws IOException {

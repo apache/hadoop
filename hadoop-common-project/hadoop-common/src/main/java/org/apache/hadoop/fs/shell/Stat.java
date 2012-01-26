@@ -32,9 +32,11 @@ import org.apache.hadoop.fs.FileStatus;
  * Print statistics about path in specified format.
  * Format sequences:
  *   %b: Size of file in blocks
+ *   %g: Group name of owner
  *   %n: Filename
  *   %o: Block size
  *   %r: replication
+ *   %u: User name of owner
  *   %y: UTC date as &quot;yyyy-MM-dd HH:mm:ss&quot;
  *   %Y: Milliseconds since January 1, 1970 UTC
  */
@@ -50,8 +52,8 @@ class Stat extends FsCommand {
   public static final String USAGE = "[format] <path> ...";
   public static final String DESCRIPTION =
     "Print statistics about the file/directory at <path>\n" +
-    "in the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
-    "block size (%o), replication (%r), modification date (%y, %Y)\n";
+    "in the specified format. Format accepts filesize in blocks (%b), group name of owner(%g),\n" +
+    "filename (%n), block size (%o), replication (%r), user name of owner(%u), modification date (%y, %Y)\n";
 
   protected static final SimpleDateFormat timeFmt;
   static {
@@ -92,6 +94,9 @@ class Stat extends FsCommand {
                 ? "directory" 
                 : (stat.isFile() ? "regular file" : "symlink"));
             break;
+          case 'g':
+            buf.append(stat.getGroup());
+            break;
           case 'n':
             buf.append(item.path.getName());
             break;
@@ -100,6 +105,9 @@ class Stat extends FsCommand {
             break;
           case 'r':
             buf.append(stat.getReplication());
+            break;
+          case 'u':
+            buf.append(stat.getOwner());
             break;
           case 'y':
             buf.append(timeFmt.format(new Date(stat.getModificationTime())));

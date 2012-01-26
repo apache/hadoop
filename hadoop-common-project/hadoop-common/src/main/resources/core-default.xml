@@ -134,20 +134,6 @@
   </description>
 </property>
 
-<!--- logging properties -->
-
-<property>
-  <name>hadoop.logfile.size</name>
-  <value>10000000</value>
-  <description>The max size of each log file</description>
-</property>
-
-<property>
-  <name>hadoop.logfile.count</name>
-  <value>10</value>
-  <description>The max number of log files</description>
-</property>
-
 <!-- i/o properties -->
 <property>
   <name>io.file.buffer.size</name>

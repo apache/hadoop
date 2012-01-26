@@ -826,6 +826,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public boolean getBoolean(String name, boolean defaultValue) {
     String valueString = getTrimmed(name);
+    if (null == valueString || "".equals(valueString)) {
+      return defaultValue;
+    }
+
+    valueString = valueString.toLowerCase();
+
     if ("true".equals(valueString))
       return true;
     else if ("false".equals(valueString))

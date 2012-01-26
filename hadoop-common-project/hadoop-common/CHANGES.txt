@@ -66,6 +66,19 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
 
+    HADOOP-4515. Configuration#getBoolean must not be case sensitive. (Sho Shimauchi via harsh)
+
+    HADOOP-6490. Use StringUtils over String#replace in Path#normalizePath.
+    (Uma Maheswara Rao G via harsh)
+
+    HADOOP-7574. Improve FSShell -stat, add user/group elements.
+    (XieXianshan via harsh)
+
+    HADOOP-7736. Remove duplicate Path#normalizePath call. (harsh)
+
+    HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
+    core-default.xml file. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
