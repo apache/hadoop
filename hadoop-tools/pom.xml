@@ -29,6 +29,7 @@
 
   <modules>
     <module>hadoop-streaming</module>
+    <module>hadoop-distcp</module>
     <module>hadoop-archives</module>
     <module>hadoop-rumen</module>
     <module>hadoop-tools-dist</module>
