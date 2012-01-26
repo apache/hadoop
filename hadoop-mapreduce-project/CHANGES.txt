@@ -229,6 +229,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3718. Change default AM heartbeat interval to 1 second. (Hitesh
     Shah via sseth)
 
+    MAPREDUCE-3360. Added information about lost/rebooted/decommissioned nodes
+    on the webapps. (Bhallamudi Venkata Siva Kamesh and Jason Lowe via vinodkv)
+
   BUG FIXES
 
     MAPREDUCE-3221. Reenabled the previously ignored test in TestSubmitJob

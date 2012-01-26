@@ -24,6 +24,8 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.DATATABLES_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
+import java.util.Collection;
+
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -36,6 +38,7 @@ import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -79,7 +82,19 @@ class NodesPage extends RmView {
       if(type != null && !type.isEmpty()) {
         stateFilter = RMNodeState.valueOf(type.toUpperCase());
       }
-      for (RMNode ni : this.rmContext.getRMNodes().values()) {
+      Collection<RMNode> rmNodes = this.rmContext.getRMNodes().values();
+      boolean isInactive = false;
+      if (stateFilter != null) {
+        switch (stateFilter) {
+        case DECOMMISSIONED:
+        case LOST:
+        case REBOOTED:
+          rmNodes = this.rmContext.getInactiveRMNodes().values();
+          isInactive = true;
+          break;
+        }
+      }
+      for (RMNode ni : rmNodes) {
         if(stateFilter != null) {
           RMNodeState state = ni.getState();
           if(!stateFilter.equals(state)) {
@@ -89,12 +104,17 @@ class NodesPage extends RmView {
         NodeInfo info = new NodeInfo(ni, sched);
         int usedMemory = (int)info.getUsedMemory();
         int availableMemory = (int)info.getAvailableMemory();
-        tbody.tr().
+        TR<TBODY<TABLE<Hamlet>>> row = tbody.tr().
             td(info.getRack()).
             td(info.getState()).
-            td(info.getNodeId()).
-            td().a("http://" + info.getNodeHTTPAddress(), info.getNodeHTTPAddress())._().
-            td(info.getHealthStatus()).
+            td(info.getNodeId());
+        if (isInactive) {
+          row.td()._("N/A")._();
+        } else {
+          String httpAddress = info.getNodeHTTPAddress();
+          row.td().a("http://" + httpAddress, httpAddress)._();
+        }
+        row.td(info.getHealthStatus()).
             td(Times.format(info.getLastHealthUpdate())).
             td(info.getHealthReport()).
             td(String.valueOf(info.getNumContainers())).

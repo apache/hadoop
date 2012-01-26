@@ -119,7 +119,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.DECOMMISSION, new RemoveNodeTransition())
      .addTransition(RMNodeState.RUNNING, RMNodeState.LOST,
          RMNodeEventType.EXPIRE, new RemoveNodeTransition())
-     .addTransition(RMNodeState.RUNNING, RMNodeState.LOST,
+     .addTransition(RMNodeState.RUNNING, RMNodeState.REBOOTED,
          RMNodeEventType.REBOOTING, new RemoveNodeTransition())
      .addTransition(RMNodeState.RUNNING, RMNodeState.RUNNING,
          RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
@@ -307,6 +307,21 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   
   public static class AddNodeTransition implements
       SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+	  
+    private void updateMetrics(RMNodeState nodeState) {
+      ClusterMetrics metrics = ClusterMetrics.getMetrics();
+      switch (nodeState) {
+      case LOST:
+        metrics.decrNumLostNMs();
+        break;
+      case REBOOTED:
+        metrics.decrNumRebootedNMs();
+        break;
+      case DECOMMISSIONED:
+        metrics.decrDecommisionedNMs();
+        break;
+      }
+    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -315,6 +330,13 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeAddedSchedulerEvent(rmNode));
+      
+      String host = rmNode.nodeId.getHost();
+      if (rmNode.context.getInactiveRMNodes().containsKey(host)) {
+        RMNode node = rmNode.context.getInactiveRMNodes().get(host);
+        rmNode.context.getInactiveRMNodes().remove(host);
+        updateMetrics(node.getState());
+      }
 
       ClusterMetrics.getMetrics().addNode();
     }
@@ -353,7 +375,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Remove the node from the system.
       rmNode.context.getRMNodes().remove(rmNode.nodeId);
       LOG.info("Removed Node " + rmNode.nodeId);
-      
+      rmNode.context.getInactiveRMNodes().put(rmNode.nodeId.getHost(), rmNode);
       //Update the metrics 
       ClusterMetrics.getMetrics().removeNode(event.getType());
     }

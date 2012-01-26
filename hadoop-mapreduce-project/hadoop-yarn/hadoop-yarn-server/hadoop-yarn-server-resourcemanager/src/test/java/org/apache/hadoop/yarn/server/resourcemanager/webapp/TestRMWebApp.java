@@ -120,10 +120,21 @@ public class TestRMWebApp {
     for (RMNode node : nodes) {
       nodesMap.put(node.getNodeID(), node);
     }
+    
+    final List<RMNode> lostNodes = MockNodes.lostNodes(racks, numNodes,
+        newResource(mbsPerNode));
+    final ConcurrentMap<String, RMNode> lostNodesMap = Maps.newConcurrentMap();
+    for (RMNode node : lostNodes) {
+      lostNodesMap.put(node.getHostName(), node);
+    }
    return new RMContextImpl(new MemStore(), null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return applicationsMaps;
+      }
+      @Override
+      public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
+        return lostNodesMap;
       }
       @Override
       public ConcurrentMap<NodeId, RMNode> getRMNodes() {
