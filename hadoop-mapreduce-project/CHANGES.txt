@@ -155,6 +155,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3512. Batching JobHistory flushing to DFS so that we don't flush
     for every event slowing down AM. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3718. Change default AM heartbeat interval to 1 second. (Hitesh
+    Shah via sseth)
+
   BUG FIXES
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
