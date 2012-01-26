@@ -531,6 +531,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3733. Add Apache License Header to hadoop-distcp/pom.xml.
     (mahadev)
 
+    MAPREDUCE-3735. Add distcp jar to the distribution (tar).
+    (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
