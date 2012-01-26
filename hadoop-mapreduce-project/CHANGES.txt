@@ -132,6 +132,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-2765. DistCp Rewrite. (Mithun Radhakrishnan via mahadev)
 
+    MAPREDUCE-3737. The Web Application Proxy's is not documented very well.
+    (Robert Evans via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
