@@ -220,10 +220,6 @@ public class ResourceTrackerService extends AbstractService implements
     if (rmNode == null) {
       /* node does not exist */
       LOG.info("Node not found rebooting " + remoteNodeStatus.getNodeId());
-      
-      // Updating the metrics directly as reboot event cannot be 
-      // triggered on a null rmNode
-      ClusterMetrics.getMetrics().incrNumRebootedNMs();
       return reboot;
     }
 

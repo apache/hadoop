@@ -31,6 +31,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
@@ -100,8 +101,8 @@ public class TestRMNodeTransitions {
     rmDispatcher.register(SchedulerEventType.class, 
         new TestSchedulerEventDispatcher());
     
-    
-    node = new RMNodeImpl(null, rmContext, null, 0, 0, null, null);
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
 
   }
   

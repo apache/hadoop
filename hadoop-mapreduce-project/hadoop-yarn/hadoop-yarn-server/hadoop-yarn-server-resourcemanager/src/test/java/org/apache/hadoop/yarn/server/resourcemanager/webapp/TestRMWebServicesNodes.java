@@ -202,6 +202,69 @@ public class TestRMWebServicesNodes extends JerseyTest {
       rm.stop();
     }
   }
+  
+  @Test
+  public void testNodesQueryStateLost() throws JSONException, Exception {
+    WebResource r = resource();
+    MockNM nm1 = rm.registerNode("h1:1234", 5120);
+    MockNM nm2 = rm.registerNode("h2:1234", 5120);
+    rm.sendNodeStarted(nm1);
+    rm.sendNodeStarted(nm2);
+    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.RUNNING);
+    rm.sendNodeLost(nm1);
+    rm.sendNodeLost(nm2);
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("nodes").queryParam("state", RMNodeState.LOST.toString())
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject nodes = json.getJSONObject("nodes");
+    assertEquals("incorrect number of elements", 1, nodes.length());
+    JSONArray nodeArray = nodes.getJSONArray("node");
+    assertEquals("incorrect number of elements", 2, nodeArray.length());
+    for (int i = 0; i < nodeArray.length(); ++i) {
+      JSONObject info = nodeArray.getJSONObject(i);
+      String host = info.get("id").toString().split(":")[0];
+      RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get(host);
+      WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
+          info.getString("nodeHTTPAddress"));
+      WebServicesTestUtils.checkStringMatch("state", rmNode.getState()
+          .toString(), info.getString("state"));
+    }
+  }
+  
+  @Test
+  public void testSingleNodeQueryStateLost() throws JSONException, Exception {
+    WebResource r = resource();
+    MockNM nm1 = rm.registerNode("h1:1234", 5120);
+    MockNM nm2 = rm.registerNode("h2:1234", 5120);
+    rm.sendNodeStarted(nm1);
+    rm.sendNodeStarted(nm2);
+    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.RUNNING);
+    rm.sendNodeLost(nm1);
+    rm.sendNodeLost(nm2);
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("nodes").path("h2:1234").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    JSONObject info = json.getJSONObject("node");
+    String id = info.get("id").toString();
+
+    assertEquals("Incorrect Node Information.", "h2:1234", id);
+
+    RMNode rmNode = rm.getRMContext().getInactiveRMNodes().get("h2");
+    WebServicesTestUtils.checkStringMatch("nodeHTTPAddress", "",
+        info.getString("nodeHTTPAddress"));
+    WebServicesTestUtils.checkStringMatch("state",
+        rmNode.getState().toString(), info.getString("state"));
+  }
 
   @Test
   public void testNodesQueryHealthy() throws JSONException, Exception {
