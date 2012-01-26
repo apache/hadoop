@@ -220,7 +220,7 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3512. Batching JobHistory flushing to DFS so that we don't flush
     for every event slowing down AM. (Siddarth Seth via vinodkv)
 
-    MAPREDUCE-3712. Change default AM heartbeat interval to 1 second. (Hitesh
+    MAPREDUCE-3718. Change default AM heartbeat interval to 1 second. (Hitesh
     Shah via sseth)
 
   BUG FIXES
