@@ -164,6 +164,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7981. Improve documentation for org.apache.hadoop.io.compress.
    Decompressor.getRemaining (Jonathan Eagles via mahadev)
 
+   HADOOP-7997. SequenceFile.createWriter(...createParent...) no
+   longer works on existing file. (Gregory Chanan via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
