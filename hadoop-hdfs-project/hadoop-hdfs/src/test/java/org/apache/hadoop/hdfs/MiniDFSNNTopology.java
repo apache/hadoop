@@ -77,6 +77,22 @@ public class MiniDFSNNTopology {
     return topology;
   }
 
+  /**
+   * Set up federated cluster with the given number of nameservices, each
+   * of which has two NameNodes.
+   */
+  public static MiniDFSNNTopology simpleHAFederatedTopology(
+      int numNameservices) {
+    MiniDFSNNTopology topology = new MiniDFSNNTopology();
+    for (int i = 0; i < numNameservices; i++) {
+      topology.addNameservice(new MiniDFSNNTopology.NSConf("ns" + i)
+        .addNN(new MiniDFSNNTopology.NNConf("nn0"))
+        .addNN(new MiniDFSNNTopology.NNConf("nn1")));
+    }
+    topology.setFederation(true);
+    return topology;
+  }
+
   public MiniDFSNNTopology setFederation(boolean federation) {
     this.federation = federation;
     return this;

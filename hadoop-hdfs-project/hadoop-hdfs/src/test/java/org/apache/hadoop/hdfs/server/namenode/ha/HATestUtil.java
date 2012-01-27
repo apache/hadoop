@@ -131,18 +131,36 @@ public abstract class HATestUtil {
   /** Gets the filesystem instance by setting the failover configurations */
   public static FileSystem configureFailoverFs(MiniDFSCluster cluster, Configuration conf)
       throws IOException, URISyntaxException {
+    return configureFailoverFs(cluster, conf, 0);
+  }
+
+  /** 
+   * Gets the filesystem instance by setting the failover configurations
+   * @param cluster the single process DFS cluster
+   * @param conf cluster configuration
+   * @param nsIndex namespace index starting with zero
+   * @throws IOException if an error occurs rolling the edit log
+   */
+  public static FileSystem configureFailoverFs(MiniDFSCluster cluster, Configuration conf,
+      int nsIndex) throws IOException, URISyntaxException {
     conf = new Configuration(conf);
     String logicalName = getLogicalHostname(cluster);
-    setFailoverConfigurations(cluster, conf, logicalName);
+    setFailoverConfigurations(cluster, conf, logicalName, nsIndex);
     FileSystem fs = FileSystem.get(new URI("hdfs://" + logicalName), conf);
     return fs;
   }
-
-  /** Sets the required configurations for performing failover */
+  
+  /** Sets the required configurations for performing failover of default namespace. */
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf, String logicalName) {
-    InetSocketAddress nnAddr1 = cluster.getNameNode(0).getNameNodeAddress();
-    InetSocketAddress nnAddr2 = cluster.getNameNode(1).getNameNodeAddress();
+    setFailoverConfigurations(cluster, conf, logicalName, 0);
+  }
+  
+  /** Sets the required configurations for performing failover.  */
+  public static void setFailoverConfigurations(MiniDFSCluster cluster,
+      Configuration conf, String logicalName, int nsIndex) {
+    InetSocketAddress nnAddr1 = cluster.getNameNode(2 * nsIndex).getNameNodeAddress();
+    InetSocketAddress nnAddr2 = cluster.getNameNode(2 * nsIndex + 1).getNameNodeAddress();
     String nameNodeId1 = "nn1";
     String nameNodeId2 = "nn2";
     String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();

@@ -586,11 +586,19 @@ public class MiniDFSCluster {
       conf.set(FS_DEFAULT_NAME_KEY, "127.0.0.1:" + onlyNN.getIpcPort());
     }
     
+    // If we have more than one nameservice, need to enumerate them in the
+    // config.
+    if (federation) {      
+      List<String> allNsIds = Lists.newArrayList();
+      for (MiniDFSNNTopology.NSConf nameservice : nnTopology.getNameservices()) {
+        allNsIds.add(nameservice.getId());
+      }
+      conf.set(DFS_FEDERATION_NAMESERVICES, Joiner.on(",").join(allNsIds));
+    }
+    
     int nnCounter = 0;
-    List<String> nsIds = Lists.newArrayList();
     for (MiniDFSNNTopology.NSConf nameservice : nnTopology.getNameservices()) {
       String nsId = nameservice.getId();
-      nsIds.add(nameservice.getId());
       
       Preconditions.checkArgument(
           !federation || nsId != null,
@@ -643,6 +651,7 @@ public class MiniDFSCluster {
         }
         prevNNDirs = FSNamesystem.getNamespaceDirs(conf);
       }
+
       // Start all Namenodes
       for (NNConf nn : nameservice.getNNs()) {
         initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs, nnCounter);
@@ -651,12 +660,7 @@ public class MiniDFSCluster {
       }
       
     }
-    if (federation) {
-      // If we have more than one nameservice, need to enumerate them in the
-      // config.
-      conf.set(DFS_FEDERATION_NAMESERVICES, Joiner.on(",").join(nsIds));
-    }
-    
+
   }
   
   public URI getSharedEditsDir(int minNN, int maxNN) throws IOException {

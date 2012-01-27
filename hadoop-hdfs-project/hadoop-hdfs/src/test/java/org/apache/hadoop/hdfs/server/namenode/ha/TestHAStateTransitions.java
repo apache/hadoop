@@ -107,6 +107,46 @@ public class TestHAStateTransitions {
   }
   
   /**
+   * Test manual failover failback for one namespace
+   * @param cluster single process test cluster
+   * @param conf cluster configuration
+   * @param nsIndex namespace index starting from zero
+   * @throws Exception
+   */
+  private void testManualFailoverFailback(MiniDFSCluster cluster, 
+		  Configuration conf, int nsIndex) throws Exception {
+      int nn0 = 2 * nsIndex, nn1 = 2 * nsIndex + 1;
+
+      cluster.transitionToActive(nn0);
+      
+      LOG.info("Starting with NN 0 active in namespace " + nsIndex);
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+      fs.mkdirs(TEST_DIR);
+
+      LOG.info("Failing over to NN 1 in namespace " + nsIndex);
+      cluster.transitionToStandby(nn0);
+      cluster.transitionToActive(nn1);
+      assertTrue(fs.exists(TEST_DIR));
+      DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+
+      LOG.info("Failing over to NN 0 in namespace " + nsIndex);
+      cluster.transitionToStandby(nn1);
+      cluster.transitionToActive(nn0);
+      assertTrue(fs.exists(TEST_DIR));
+      assertEquals(TEST_FILE_DATA, 
+          DFSTestUtil.readFile(fs, TEST_FILE_PATH));
+
+      LOG.info("Removing test file");
+      fs.delete(TEST_DIR, true);
+      assertFalse(fs.exists(TEST_DIR));
+
+      LOG.info("Failing over to NN 1 in namespace " + nsIndex);
+      cluster.transitionToStandby(nn0);
+      cluster.transitionToActive(nn1);
+      assertFalse(fs.exists(TEST_DIR));
+  }
+  
+  /**
    * Tests manual failover back and forth between two NameNodes.
    */
   @Test
@@ -118,34 +158,8 @@ public class TestHAStateTransitions {
       .build();
     try {
       cluster.waitActive();
-      cluster.transitionToActive(0);
-      
-      LOG.info("Starting with NN 0 active");
-      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
-      fs.mkdirs(TEST_DIR);
-
-      LOG.info("Failing over to NN 1");
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
-      assertTrue(fs.exists(TEST_DIR));
-      DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
-
-      LOG.info("Failing over to NN 0");
-      cluster.transitionToStandby(1);
-      cluster.transitionToActive(0);
-      assertTrue(fs.exists(TEST_DIR));
-      assertEquals(TEST_FILE_DATA, 
-          DFSTestUtil.readFile(fs, TEST_FILE_PATH));
-
-      LOG.info("Removing test file");
-      fs.delete(TEST_DIR, true);
-      assertFalse(fs.exists(TEST_DIR));
-
-      LOG.info("Failing over to NN 1");
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
-      assertFalse(fs.exists(TEST_DIR));
-
+      // test the only namespace
+      testManualFailoverFailback(cluster, conf, 0);
     } finally {
       cluster.shutdown();
     }
@@ -290,6 +304,30 @@ public class TestHAStateTransitions {
       nn2.getRpcServer().cancelDelegationToken(token);
       token = nn2.getRpcServer().getDelegationToken(new Text(renewer));
       Assert.assertTrue(token != null);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Tests manual failover back and forth between two NameNodes
+   * for federation cluster with two namespaces.
+   */
+  @Test
+  public void testManualFailoverFailbackFederationHA() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleHAFederatedTopology(2))
+      .numDataNodes(1)
+      .build();
+    try {
+      cluster.waitActive();
+   
+      // test for namespace 0
+      testManualFailoverFailback(cluster, conf, 0);
+      
+      // test for namespace 1
+      testManualFailoverFailback(cluster, conf, 1); 
     } finally {
       cluster.shutdown();
     }
