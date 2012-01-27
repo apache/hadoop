@@ -517,6 +517,23 @@ public class TestSequenceFile extends TestCase {
     assertTrue("InputStream for " + path + " should have been closed.", openedFile[0].isClosed());
   }
 
+   /**
+   * Test that makes sure createWriter succeeds on a file that was 
+   * already created
+   * @throws IOException
+   */
+  public void testCreateWriterOnExistingFile() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path name = new Path(new Path(System.getProperty("test.build.data","."),
+        "createWriterOnExistingFile") , "file");
+
+    fs.create(name);
+    SequenceFile.createWriter(fs, conf, name, RandomDatum.class,
+        RandomDatum.class, 512, (short) 1, 4096, false,
+        CompressionType.NONE, null, new Metadata());
+  }
+
   public void testRecursiveSeqFileCreate() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
