@@ -138,6 +138,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3699. Increased RPC handlers for all YARN servers to reasonable
     values for working at scale. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3693. Added mapreduce.admin.user.env to mapred-default.xml.
+    (Roman Shapshonik via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
