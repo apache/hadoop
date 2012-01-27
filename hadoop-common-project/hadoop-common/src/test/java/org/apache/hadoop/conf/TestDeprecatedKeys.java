@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.conf;
 
+import java.io.ByteArrayOutputStream;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
@@ -31,5 +33,23 @@ public class TestDeprecatedKeys extends TestCase {
     conf.set("topology.script.file.name", "xyz");
     String scriptFile = conf.get(CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
     assertTrue(scriptFile.equals("xyz")) ;
+  }
+  
+  //Tests reading / writing a conf file with deprecation after setting
+  public void testReadWriteWithDeprecatedKeys() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean("old.config.yet.to.be.deprecated", true);
+    Configuration.addDeprecation("old.config.yet.to.be.deprecated", 
+	new String[]{"new.conf.to.replace.deprecated.conf"});
+    ByteArrayOutputStream out=new ByteArrayOutputStream();
+    String fileContents;
+    try {
+      conf.writeXml(out);
+      fileContents = out.toString();
+    } finally {
+      out.close();
+    }
+    assertTrue(fileContents.contains("old.config.yet.to.be.deprecated"));
+    assertTrue(fileContents.contains("new.conf.to.replace.deprecated.conf"));
   }
 }
