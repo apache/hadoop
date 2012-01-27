@@ -546,6 +546,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3735. Add distcp jar to the distribution (tar).
     (mahadev)
 
+    MAPREDUCE-3720. Changed bin/mapred job -list to not print job-specific
+    information not available at RM. (vinodkv via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
