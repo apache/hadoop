@@ -167,6 +167,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7997. SequenceFile.createWriter(...createParent...) no
    longer works on existing file. (Gregory Chanan via eli)
 
+   HADOOP-7993. Hadoop ignores old-style config options for enabling compressed 
+   output. (Anupam Seth via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
