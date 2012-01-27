@@ -79,6 +79,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
     (Brandon Li via jitendra)
 
+    MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
+    HADOOP-7965. (Devaraj K via vinodkv) 
+
 Release 0.23.1 - Unreleased
 
   INCOMPATIBLE CHANGES
