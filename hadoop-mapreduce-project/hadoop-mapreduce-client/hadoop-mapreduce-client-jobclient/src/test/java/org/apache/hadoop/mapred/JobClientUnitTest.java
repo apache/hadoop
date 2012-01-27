@@ -22,19 +22,24 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import org.apache.hadoop.mapred.JobConf;
+import java.io.PrintWriter;
+
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobPriority;
 import org.apache.hadoop.mapreduce.JobStatus;
-import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TaskReport;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.junit.Assert;
 import org.junit.Test;
 
+@SuppressWarnings("deprecation")
 public class JobClientUnitTest {
   
   public class TestJobClient extends JobClient {
@@ -48,7 +53,6 @@ public class JobClientUnitTest {
     }
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testMapTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
@@ -64,7 +68,6 @@ public class JobClientUnitTest {
     verify(mockCluster).getJob(id);
   }
   
-  @SuppressWarnings("deprecation")
   @Test
   public void testReduceTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
@@ -80,7 +83,6 @@ public class JobClientUnitTest {
     verify(mockCluster).getJob(id);
   }
   
-  @SuppressWarnings("deprecation")
   @Test
   public void testSetupTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
@@ -96,7 +98,6 @@ public class JobClientUnitTest {
     verify(mockCluster).getJob(id);
   }
   
-  @SuppressWarnings("deprecation")
   @Test
   public void testCleanupTaskReportsWithNullJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
@@ -115,12 +116,15 @@ public class JobClientUnitTest {
   @Test
   public void testShowJob() throws Exception {
     TestJobClient client = new TestJobClient(new JobConf());
-    JobID jobID = new JobID("test", 0);
+
+    long startTime = System.currentTimeMillis();
+
+    JobID jobID = new JobID(String.valueOf(startTime), 12345);
 
     JobStatus mockJobStatus = mock(JobStatus.class);
     when(mockJobStatus.getJobID()).thenReturn(jobID);
     when(mockJobStatus.getState()).thenReturn(JobStatus.State.RUNNING);
-    when(mockJobStatus.getStartTime()).thenReturn(0L);
+    when(mockJobStatus.getStartTime()).thenReturn(startTime);
     when(mockJobStatus.getUsername()).thenReturn("mockuser");
     when(mockJobStatus.getQueue()).thenReturn("mockqueue");
     when(mockJobStatus.getPriority()).thenReturn(JobPriority.NORMAL);
@@ -132,18 +136,21 @@ public class JobClientUnitTest {
     when(mockJobStatus.getSchedulingInfo()).thenReturn("NA");
 
     Job mockJob = mock(Job.class);
-    when(mockJob.getTaskReports(isA(TaskType.class))).thenReturn(new TaskReport[0]);
+    when(mockJob.getTaskReports(isA(TaskType.class))).thenReturn(
+      new TaskReport[5]);
 
     Cluster mockCluster = mock(Cluster.class);
     when(mockCluster.getJob(jobID)).thenReturn(mockJob);
 
     client.setCluster(mockCluster);
     
-    
-    client.displayJobList(new JobStatus[] {mockJobStatus});
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    client.displayJobList(new JobStatus[] {mockJobStatus}, new PrintWriter(out));
+    String commandLineOutput = out.toString();
+    System.out.println(commandLineOutput);
+    Assert.assertTrue(commandLineOutput.contains("Total jobs:1"));
+
     verify(mockJobStatus, atLeastOnce()).getJobID();
-    verify(mockJob, atLeastOnce()).getTaskReports(isA(TaskType.class));
-    verify(mockCluster, atLeastOnce()).getJob(jobID);
     verify(mockJobStatus).getState();
     verify(mockJobStatus).getStartTime();
     verify(mockJobStatus).getUsername();
@@ -155,5 +162,9 @@ public class JobClientUnitTest {
     verify(mockJobStatus).getReservedMem();
     verify(mockJobStatus).getNeededMem();
     verify(mockJobStatus).getSchedulingInfo();
+
+    // This call should not go to each AM.
+    verify(mockCluster, never()).getJob(jobID);
+    verify(mockJob, never()).getTaskReports(isA(TaskType.class));
   }
 }
