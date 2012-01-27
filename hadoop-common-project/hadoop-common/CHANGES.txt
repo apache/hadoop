@@ -173,6 +173,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7993. Hadoop ignores old-style config options for enabling compressed 
    output. (Anupam Seth via mahadev)
 
+   HADOOP-8000. fetchdt command not available in bin/hadoop.
+   (Arpit Gupta via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
