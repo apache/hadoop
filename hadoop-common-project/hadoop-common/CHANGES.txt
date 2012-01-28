@@ -74,7 +74,11 @@ Trunk (unreleased changes)
 
     HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
 
+    HADOOP-7965. Support for protocol version and signature in PB. (jitendra)
+
   BUGS
+    HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
+                 (Daryn Sharp via bobby)
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
                  (Uma Maheswara Rao G via amarrk)
@@ -209,6 +213,8 @@ Release 0.23.1 - Unreleased
     HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
     core-default.xml file. (harsh)
 
+    HADOOP-7939. Improve Hadoop subcomponent integration in Hadoop 0.23. (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -289,6 +295,15 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7981. Improve documentation for org.apache.hadoop.io.compress.
    Decompressor.getRemaining (Jonathan Eagles via mahadev)
+
+   HADOOP-7997. SequenceFile.createWriter(...createParent...) no
+   longer works on existing file. (Gregory Chanan via eli)
+
+   HADOOP-7993. Hadoop ignores old-style config options for enabling compressed 
+   output. (Anupam Seth via mahadev)
+
+   HADOOP-8000. fetchdt command not available in bin/hadoop.
+   (Arpit Gupta via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

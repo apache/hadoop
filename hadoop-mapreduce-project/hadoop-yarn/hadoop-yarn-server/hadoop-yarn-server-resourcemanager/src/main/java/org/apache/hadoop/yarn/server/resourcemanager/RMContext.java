@@ -43,6 +43,8 @@ public interface RMContext {
   ApplicationsStore getApplicationsStore();
 
   ConcurrentMap<ApplicationId, RMApp> getRMApps();
+  
+  ConcurrentMap<String, RMNode> getInactiveRMNodes();
 
   ConcurrentMap<NodeId, RMNode> getRMNodes();
 

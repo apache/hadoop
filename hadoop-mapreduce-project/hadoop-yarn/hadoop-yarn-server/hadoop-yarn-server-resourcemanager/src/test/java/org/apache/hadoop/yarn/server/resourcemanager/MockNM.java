@@ -81,13 +81,20 @@ public class MockNM {
   }
 
   public HeartbeatResponse nodeHeartbeat(boolean b) throws Exception {
-    return nodeHeartbeat(new HashMap<ApplicationId, List<ContainerStatus>>(), b);
+    return nodeHeartbeat(new HashMap<ApplicationId, List<ContainerStatus>>(),
+        b, ++responseId);
   }
 
   public HeartbeatResponse nodeHeartbeat(Map<ApplicationId, 
       List<ContainerStatus>> conts, boolean isHealthy) throws Exception {
+    return nodeHeartbeat(conts, isHealthy, ++responseId);
+  }
+
+  public HeartbeatResponse nodeHeartbeat(Map<ApplicationId, 
+      List<ContainerStatus>> conts, boolean isHealthy, int resId) throws Exception {
     NodeHeartbeatRequest req = Records.newRecord(NodeHeartbeatRequest.class);
     NodeStatus status = Records.newRecord(NodeStatus.class);
+    status.setResponseId(resId);
     status.setNodeId(nodeId);
     for (Map.Entry<ApplicationId, List<ContainerStatus>> entry : conts.entrySet()) {
       status.setContainersStatuses(entry.getValue());
@@ -97,7 +104,6 @@ public class MockNM {
     healthStatus.setIsNodeHealthy(isHealthy);
     healthStatus.setLastHealthReportTime(1);
     status.setNodeHealthStatus(healthStatus);
-    status.setResponseId(++responseId);
     req.setNodeStatus(status);
     return resourceTracker.nodeHeartbeat(req).getHeartbeatResponse();
   }

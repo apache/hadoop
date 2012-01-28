@@ -467,7 +467,7 @@ public class SequenceFile {
                Metadata metadata) throws IOException {
     return createWriter(FileContext.getFileContext(fs.getUri(), conf),
         conf, name, keyClass, valClass, compressionType, codec,
-        metadata, EnumSet.of(CreateFlag.CREATE),
+        metadata, EnumSet.of(CreateFlag.CREATE,CreateFlag.OVERWRITE),
         CreateOpts.bufferSize(bufferSize),
         createParent ? CreateOpts.createParent()
                      : CreateOpts.donotCreateParent(),

@@ -43,6 +43,9 @@ public class RMContextImpl implements RMContext {
 
   private final ConcurrentMap<NodeId, RMNode> nodes
     = new ConcurrentHashMap<NodeId, RMNode>();
+  
+  private final ConcurrentMap<String, RMNode> inactiveNodes
+    = new ConcurrentHashMap<String, RMNode>();
 
   private AMLivelinessMonitor amLivelinessMonitor;
   private ContainerAllocationExpirer containerAllocationExpirer;
@@ -82,6 +85,11 @@ public class RMContextImpl implements RMContext {
   @Override
   public ConcurrentMap<NodeId, RMNode> getRMNodes() {
     return this.nodes;
+  }
+  
+  @Override
+  public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
+    return this.inactiveNodes;
   }
 
   @Override

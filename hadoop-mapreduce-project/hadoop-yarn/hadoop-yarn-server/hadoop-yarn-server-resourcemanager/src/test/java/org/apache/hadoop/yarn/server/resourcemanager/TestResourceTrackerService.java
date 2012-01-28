@@ -157,14 +157,14 @@ public class TestResourceTrackerService {
     rm.start();
 
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
-    MockNM nm2 = new MockNM("host2:1234", 2048, rm.getResourceTrackerService());
+    MockNM nm2 = rm.registerNode("host2:1234", 2048);
 
     int initialMetricCount = ClusterMetrics.getMetrics().getNumRebootedNMs();
     HeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
 
     nodeHeartbeat = nm2.nodeHeartbeat(
-      new HashMap<ApplicationId, List<ContainerStatus>>(), true);
+      new HashMap<ApplicationId, List<ContainerStatus>>(), true, -100);
     Assert.assertTrue(NodeAction.REBOOT.equals(nodeHeartbeat.getNodeAction()));
     checkRebootedNMCount(rm, ++initialMetricCount);
   }

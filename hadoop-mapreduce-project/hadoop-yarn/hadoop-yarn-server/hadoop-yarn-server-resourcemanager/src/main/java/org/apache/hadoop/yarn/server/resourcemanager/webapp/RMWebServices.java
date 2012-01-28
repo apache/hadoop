@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
@@ -68,6 +69,7 @@ import com.google.inject.Singleton;
 @Singleton
 @Path("/ws/v1/cluster")
 public class RMWebServices {
+  private static final String EMPTY = "";
   private static final Log LOG = LogFactory.getLog(RMWebServices.class);
   private final ResourceManager rm;
   private static RecordFactory recordFactory = RecordFactoryProvider
@@ -144,12 +146,23 @@ public class RMWebServices {
     if (sched == null) {
       throw new NotFoundException("Null ResourceScheduler instance");
     }
-
+    Collection<RMNode> rmNodes = this.rm.getRMContext().getRMNodes().values();
+    boolean isInactive = false;
+    if (filterState != null && !filterState.isEmpty()) {
+      RMNodeState nodeState = RMNodeState.valueOf(filterState.toUpperCase());
+      switch (nodeState) {
+      case DECOMMISSIONED:
+      case LOST:
+      case REBOOTED:
+        rmNodes = this.rm.getRMContext().getInactiveRMNodes().values();
+        isInactive = true;
+        break;
+      }
+    }
     NodesInfo allNodes = new NodesInfo();
-    for (RMNode ni : this.rm.getRMContext().getRMNodes().values()) {
+    for (RMNode ni : rmNodes) {
       NodeInfo nodeInfo = new NodeInfo(ni, sched);
       if (filterState != null) {
-        RMNodeState.valueOf(filterState);
         if (!(nodeInfo.getState().equalsIgnoreCase(filterState))) {
           continue;
         }
@@ -164,6 +177,9 @@ public class RMWebServices {
         if (nodeInfo.isHealthy() != Boolean.parseBoolean(healthState)) {
           continue;
         }
+      }
+      if (isInactive) {
+        nodeInfo.setNodeHTTPAddress(EMPTY);
       }
       allNodes.add(nodeInfo);
     }
@@ -183,10 +199,19 @@ public class RMWebServices {
     }
     NodeId nid = ConverterUtils.toNodeId(nodeId);
     RMNode ni = this.rm.getRMContext().getRMNodes().get(nid);
+    boolean isInactive = false;
     if (ni == null) {
-      throw new NotFoundException("nodeId, " + nodeId + ", is not found");
+      ni = this.rm.getRMContext().getInactiveRMNodes().get(nid.getHost());
+      if (ni == null) {
+        throw new NotFoundException("nodeId, " + nodeId + ", is not found");
+      }
+      isInactive = true;
     }
-    return new NodeInfo(ni, sched);
+    NodeInfo nodeInfo = new NodeInfo(ni, sched);
+    if (isInactive) {
+      nodeInfo.setNodeHTTPAddress(EMPTY);
+    }
+    return nodeInfo;
   }
 
   @GET

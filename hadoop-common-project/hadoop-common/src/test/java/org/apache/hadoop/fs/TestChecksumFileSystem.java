@@ -22,12 +22,22 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import org.apache.hadoop.conf.Configuration;
-import junit.framework.TestCase;
+import org.junit.*;
+import static org.junit.Assert.*;
 
-public class TestChecksumFileSystem extends TestCase {
+public class TestChecksumFileSystem {
   static final String TEST_ROOT_DIR
     = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
 
+  static LocalFileSystem localFs;
+
+  @Before
+  public void resetLocalFs() throws Exception {
+    localFs = FileSystem.getLocal(new Configuration());
+    localFs.setVerifyChecksum(true);
+  }
+
+  @Test
   public void testgetChecksumLength() throws Exception {
     assertEquals(8, ChecksumFileSystem.getChecksumLength(0L, 512));
     assertEquals(12, ChecksumFileSystem.getChecksumLength(1L, 512));
@@ -40,9 +50,8 @@ public class TestChecksumFileSystem extends TestCase {
                  ChecksumFileSystem.getChecksumLength(10000000000000L, 10));    
   } 
   
+  @Test
   public void testVerifyChecksum() throws Exception {    
-    Configuration conf = new Configuration();
-    LocalFileSystem localFs = FileSystem.getLocal(conf);
     Path testPath = new Path(TEST_ROOT_DIR, "testPath");
     Path testPath11 = new Path(TEST_ROOT_DIR, "testPath11");
     FSDataOutputStream fout = localFs.create(testPath);
@@ -68,7 +77,7 @@ public class TestChecksumFileSystem extends TestCase {
     
     //copying the wrong checksum file
     FileUtil.copy(localFs, localFs.getChecksumFile(testPath11), localFs, 
-        localFs.getChecksumFile(testPath),false,true,conf);
+        localFs.getChecksumFile(testPath),false,true,localFs.getConf());
     assertTrue("checksum exists", localFs.exists(localFs.getChecksumFile(testPath)));
     
     boolean errorRead = false;
@@ -80,20 +89,13 @@ public class TestChecksumFileSystem extends TestCase {
     assertTrue("error reading", errorRead);
     
     //now setting verify false, the read should succeed
-    try {
-      localFs.setVerifyChecksum(false);
-      String str = readFile(localFs, testPath, 1024).toString();
-      assertTrue("read", "testing".equals(str));
-    } finally {
-      // reset for other tests
-      localFs.setVerifyChecksum(true);
-    }
-    
+    localFs.setVerifyChecksum(false);
+    String str = readFile(localFs, testPath, 1024).toString();
+    assertTrue("read", "testing".equals(str));
   }
 
+  @Test
   public void testMultiChunkFile() throws Exception {
-    Configuration conf = new Configuration();
-    LocalFileSystem localFs = FileSystem.getLocal(conf);
     Path testPath = new Path(TEST_ROOT_DIR, "testMultiChunk");
     FSDataOutputStream fout = localFs.create(testPath);
     for (int i = 0; i < 1000; i++) {
@@ -116,9 +118,8 @@ public class TestChecksumFileSystem extends TestCase {
    * Test to ensure that if the checksum file is truncated, a
    * ChecksumException is thrown
    */
+  @Test
   public void testTruncatedChecksum() throws Exception { 
-    Configuration conf = new Configuration();
-    LocalFileSystem localFs = FileSystem.getLocal(conf);
     Path testPath = new Path(TEST_ROOT_DIR, "testtruncatedcrc");
     FSDataOutputStream fout = localFs.create(testPath);
     fout.write("testing truncation".getBytes());
@@ -146,14 +147,60 @@ public class TestChecksumFileSystem extends TestCase {
     }
 
     // telling it not to verify checksums, should avoid issue.
+    localFs.setVerifyChecksum(false);
+    String str = readFile(localFs, testPath, 1024).toString();
+    assertTrue("read", "testing truncation".equals(str));
+  }
+  
+  @Test
+  public void testStreamType() throws Exception {
+    Path testPath = new Path(TEST_ROOT_DIR, "testStreamType");
+    localFs.create(testPath).close();    
+    FSDataInputStream in = null;
+    
+    localFs.setVerifyChecksum(true);
+    in = localFs.open(testPath);
+    assertTrue("stream is input checker",
+        in.getWrappedStream() instanceof FSInputChecker);
+    
+    localFs.setVerifyChecksum(false);
+    in = localFs.open(testPath);
+    assertFalse("stream is not input checker",
+        in.getWrappedStream() instanceof FSInputChecker);
+  }
+  
+  @Test
+  public void testCorruptedChecksum() throws Exception {
+    Path testPath = new Path(TEST_ROOT_DIR, "testCorruptChecksum");
+    Path checksumPath = localFs.getChecksumFile(testPath);
+
+    // write a file to generate checksum
+    FSDataOutputStream out = localFs.create(testPath, true);
+    out.write("testing 1 2 3".getBytes());
+    out.close();
+    assertTrue(localFs.exists(checksumPath));
+    FileStatus stat = localFs.getFileStatus(checksumPath);
+    
+    // alter file directly so checksum is invalid
+    out = localFs.getRawFileSystem().create(testPath, true);
+    out.write("testing stale checksum".getBytes());
+    out.close();
+    assertTrue(localFs.exists(checksumPath));
+    // checksum didn't change on disk
+    assertEquals(stat, localFs.getFileStatus(checksumPath));
+
+    Exception e = null;
     try {
-      localFs.setVerifyChecksum(false);
-      String str = readFile(localFs, testPath, 1024).toString();
-      assertTrue("read", "testing truncation".equals(str));
-    } finally {
-      // reset for other tests
       localFs.setVerifyChecksum(true);
+      readFile(localFs, testPath, 1024);
+    } catch (ChecksumException ce) {
+      e = ce;
+    } finally {
+      assertNotNull("got checksum error", e);
     }
 
+    localFs.setVerifyChecksum(false);
+    String str = readFile(localFs, testPath, 1024);
+    assertEquals("testing stale checksum", str);
   }
 }

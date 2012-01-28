@@ -19,8 +19,6 @@ bin=`which "$0"`
 bin=`dirname "${bin}"`
 bin=`cd "$bin"; pwd`
 
-export HADOOP_PREFIX="${HADOOP_PREFIX:-$bin/..}"
-
 DEFAULT_LIBEXEC_DIR="$bin"/../libexec
 HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 if [ -e "${HADOOP_LIBEXEC_DIR}/hadoop-config.sh" ]; then

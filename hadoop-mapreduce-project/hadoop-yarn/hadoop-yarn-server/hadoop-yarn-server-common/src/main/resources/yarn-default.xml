@@ -67,7 +67,7 @@
   <property>
     <description>The number of threads used to handle applications manager requests.</description>
     <name>yarn.resourcemanager.client.thread-count</name>
-    <value>10</value>
+    <value>50</value>
   </property>
 
   <property>
@@ -90,7 +90,7 @@
   <property>
     <description>Number of threads to handle scheduler interface.</description>
     <name>yarn.resourcemanager.scheduler.client.thread-count</name>
-    <value>10</value>
+    <value>50</value>
   </property>
 
   <property>
@@ -179,7 +179,7 @@
   <property>
     <description>Number of threads to handle resource tracker calls.</description>
     <name>yarn.resourcemanager.resource-tracker.client.thread-count</name>
-    <value>10</value>
+    <value>50</value>
   </property>
 
   <property>
@@ -244,7 +244,7 @@
   <property>
     <description>Number of threads container manager uses.</description>
     <name>yarn.nodemanager.container-manager.thread-count</name>
-    <value>5</value>
+    <value>20</value>
   </property>
 
   <property>

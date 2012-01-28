@@ -455,10 +455,14 @@ public class Job extends JobContextImpl implements JobContext {
   public String toString() {
     ensureState(JobState.RUNNING);
     String reasonforFailure = " ";
+    int numMaps = 0;
+    int numReduces = 0;
     try {
       updateStatus();
       if (status.getState().equals(JobStatus.State.FAILED))
         reasonforFailure = getTaskFailureEventString();
+      numMaps = getTaskReports(TaskType.MAP).length;
+      numReduces = getTaskReports(TaskType.REDUCE).length;
     } catch (IOException e) {
     } catch (InterruptedException ie) {
     }
@@ -468,6 +472,8 @@ public class Job extends JobContextImpl implements JobContext {
     sb.append("Job Tracking URL : ").append(status.getTrackingUrl());
     sb.append("\n");
     sb.append("Uber job : ").append(status.isUber()).append("\n");
+    sb.append("Number of maps: ").append(numMaps);
+    sb.append("Number of reduces: ").append(numReduces);
     sb.append("map() completion: ");
     sb.append(status.getMapProgress()).append("\n");
     sb.append("reduce() completion: ");

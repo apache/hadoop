@@ -183,7 +183,7 @@ public class ProtocolSignature implements Writable {
    * @return its signature and finger print
    */
   private static ProtocolSigFingerprint getSigFingerprint(
-      Class <? extends VersionedProtocol> protocol, long serverVersion) {
+      Class <?> protocol, long serverVersion) {
     String protocolName = RPC.getProtocolName(protocol);
     synchronized (PROTOCOL_FINGERPRINT_CACHE) {
       ProtocolSigFingerprint sig = PROTOCOL_FINGERPRINT_CACHE.get(protocolName);
@@ -219,6 +219,12 @@ public class ProtocolSignature implements Writable {
     } 
     
     return sig.signature;
+  }
+  
+  public static ProtocolSignature getProtocolSignature(String protocolName,
+      long version) throws ClassNotFoundException {
+    Class<?> protocol = Class.forName(protocolName);
+    return getSigFingerprint(protocol, version).signature;
   }
   
   /**

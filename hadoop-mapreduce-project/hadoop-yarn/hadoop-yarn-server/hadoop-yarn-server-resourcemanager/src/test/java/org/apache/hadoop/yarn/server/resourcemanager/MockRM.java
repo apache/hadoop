@@ -130,6 +130,12 @@ public class MockRM extends ResourceManager {
         nm.getNodeId());
     node.handle(new RMNodeEvent(nm.getNodeId(), RMNodeEventType.STARTED));
   }
+  
+  public void sendNodeLost(MockNM nm) throws Exception {
+    RMNodeImpl node = (RMNodeImpl) getRMContext().getRMNodes().get(
+        nm.getNodeId());
+    node.handle(new RMNodeEvent(nm.getNodeId(), RMNodeEventType.EXPIRE));
+  }
 
   public void NMwaitForState(NodeId nodeid, RMNodeState finalState)
       throws Exception {

@@ -56,6 +56,17 @@ public class MockNodes {
     }
     return list;
   }
+  
+  public static List<RMNode> lostNodes(int racks, int nodesPerRack,
+      Resource perNode) {
+    List<RMNode> list = Lists.newArrayList();
+    for (int i = 0; i < racks; ++i) {
+      for (int j = 0; j < nodesPerRack; ++j) {
+        list.add(lostNodeInfo(i, perNode, RMNodeState.LOST));
+      }
+    }
+    return list;
+  }
 
   public static NodeId newNodeID(String host, int port) {
     NodeId nid = recordFactory.newRecordInstance(NodeId.class);
@@ -82,92 +93,120 @@ public class MockNodes {
     return rs;
   }
 
-  public static RMNode newNodeInfo(int rack, final Resource perNode) {
+  private static class MockRMNodeImpl implements RMNode {
+    private NodeId nodeId;
+    private String hostName;
+    private String nodeAddr;
+    private String httpAddress;
+    private int cmdPort;
+    private Resource perNode;
+    private String rackName;
+    private NodeHealthStatus nodeHealthStatus;
+    private RMNodeState state;
+
+    public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
+        Resource perNode, String rackName, NodeHealthStatus nodeHealthStatus,
+        int cmdPort, String hostName, RMNodeState state) {
+      this.nodeId = nodeId;
+      this.nodeAddr = nodeAddr;
+      this.httpAddress = httpAddress;
+      this.perNode = perNode;
+      this.rackName = rackName;
+      this.nodeHealthStatus = nodeHealthStatus;
+      this.cmdPort = cmdPort;
+      this.hostName = hostName;
+      this.state = state;
+    }
+
+    @Override
+    public NodeId getNodeID() {
+      return this.nodeId;
+    }
+
+    @Override
+    public String getHostName() {
+      return this.hostName;
+    }
+
+    @Override
+    public int getCommandPort() {
+      return this.cmdPort;
+    }
+
+    @Override
+    public int getHttpPort() {
+      return 0;
+    }
+
+    @Override
+    public String getNodeAddress() {
+      return this.nodeAddr;
+    }
+
+    @Override
+    public String getHttpAddress() {
+      return this.httpAddress;
+    }
+
+    @Override
+    public NodeHealthStatus getNodeHealthStatus() {
+      return this.nodeHealthStatus;
+    }
+
+    @Override
+    public Resource getTotalCapability() {
+      return this.perNode;
+    }
+
+    @Override
+    public String getRackName() {
+      return this.rackName;
+    }
+
+    @Override
+    public Node getNode() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public RMNodeState getState() {
+      return this.state;
+    }
+
+    @Override
+    public List<ContainerId> getContainersToCleanUp() {
+      return null;
+    }
+
+    @Override
+    public List<ApplicationId> getAppsToCleanup() {
+      return null;
+    }
+
+    @Override
+    public HeartbeatResponse getLastHeartBeatResponse() {
+      return null;
+    }
+  };
+
+  private static RMNode buildRMNode(int rack, final Resource perNode, RMNodeState state, String httpAddr) {
     final String rackName = "rack"+ rack;
     final int nid = NODE_ID++;
     final String hostName = "host"+ nid;
     final int port = 123;
     final NodeId nodeID = newNodeID(hostName, port);
-    final String httpAddress = "localhost:0";
+    final String httpAddress = httpAddr;
     final NodeHealthStatus nodeHealthStatus =
         recordFactory.newRecordInstance(NodeHealthStatus.class);
-    final Resource used = newUsedResource(perNode);
-    final Resource avail = newAvailResource(perNode, used);
-    return new RMNode() {
-      @Override
-      public NodeId getNodeID() {
-        return nodeID;
-      }
+    return new MockRMNodeImpl(nodeID, hostName, httpAddress, perNode, rackName,
+        nodeHealthStatus, nid, hostName, state); 
+  }
 
-      @Override
-      public String getNodeAddress() {
-        return hostName;
-      }
+  public static RMNode lostNodeInfo(int rack, final Resource perNode, RMNodeState state) {
+    return buildRMNode(rack, perNode, state, "N/A");
+  }
 
-      @Override
-      public String getHttpAddress() {
-        return httpAddress;
-      }
-
-      @Override
-      public Resource getTotalCapability() {
-        return perNode;
-      }
-
-      @Override
-      public String getRackName() {
-        return rackName;
-      }
-
-      @Override
-      public Node getNode() {
-        throw new UnsupportedOperationException("Not supported yet.");
-      }
-
-      @Override
-      public NodeHealthStatus getNodeHealthStatus() {
-        return nodeHealthStatus;
-      }
-
-      @Override
-      public int getCommandPort() {
-        return nid;
-      }
-
-      @Override
-      public int getHttpPort() {
-        // TODO Auto-generated method stub
-        return 0;
-      }
-
-      @Override
-      public String getHostName() {
-        return hostName;
-      }
-
-      @Override
-      public RMNodeState getState() {
-        // TODO Auto-generated method stub
-        return null;
-      }
-
-      @Override
-      public List<ApplicationId> getAppsToCleanup() {
-        // TODO Auto-generated method stub
-        return null;
-      }
-
-      @Override
-      public List<ContainerId> getContainersToCleanUp() {
-        // TODO Auto-generated method stub
-        return null;
-      }
-
-      @Override
-      public HeartbeatResponse getLastHeartBeatResponse() {
-        // TODO Auto-generated method stub
-        return null;
-      }
-    };
+  public static RMNode newNodeInfo(int rack, final Resource perNode) {
+    return buildRMNode(rack, perNode, null, "localhost:0");
   }
 }
