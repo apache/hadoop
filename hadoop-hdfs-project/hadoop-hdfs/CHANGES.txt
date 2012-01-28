@@ -188,6 +188,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class (revans2 via tucu)
 
+    HDFS-2840. TestHostnameFilter should work with localhost or localhost.localdomain (tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
