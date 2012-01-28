@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -419,6 +420,11 @@ class BPOfferService {
     } else {
       return null;
     }
+  }
+
+  @VisibleForTesting
+  synchronized List<BPServiceActor> getBPServiceActors() {
+    return Lists.newArrayList(bpServices);
   }
   
   /**

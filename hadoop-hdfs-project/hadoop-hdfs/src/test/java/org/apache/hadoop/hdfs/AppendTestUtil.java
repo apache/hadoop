@@ -101,7 +101,7 @@ public class AppendTestUtil {
     return DFSTestUtil.getFileSystemAs(ugi, conf);
   }
 
-  static void write(OutputStream out, int offset, int length) throws IOException {
+  public static void write(OutputStream out, int offset, int length) throws IOException {
     final byte[] bytes = new byte[length];
     for(int i = 0; i < length; i++) {
       bytes[i] = (byte)(offset + i);

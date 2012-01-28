@@ -123,6 +123,11 @@ class BPServiceActor implements Runnable {
     bpNamenode = dnProtocol;
   }
 
+  @VisibleForTesting
+  DatanodeProtocolClientSideTranslatorPB getNameNodeProxy() {
+    return bpNamenode;
+  }
+
   /**
    * Perform the first part of the handshake with the NameNode.
    * This calls <code>versionRequest</code> to determine the NN's

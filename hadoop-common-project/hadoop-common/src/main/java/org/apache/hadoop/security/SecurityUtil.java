@@ -236,7 +236,7 @@ public class SecurityUtil {
     if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
-    return components[0] + "/" + fqdn + "@" + components[2];
+    return components[0] + "/" + fqdn.toLowerCase() + "@" + components[2];
   }
   
   static String getLocalHostName() throws UnknownHostException {
