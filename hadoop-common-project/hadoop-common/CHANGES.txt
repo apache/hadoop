@@ -76,6 +76,9 @@ Trunk (unreleased changes)
 
     HADOOP-7965. Support for protocol version and signature in PB. (jitendra)
 
+    HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
+    kerberos. (jitendra)
+
   BUGS
     HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
                  (Daryn Sharp via bobby)
