@@ -409,7 +409,9 @@ public class SecurityUtil {
     Text service = buildTokenService(addr);
     if (token != null) {
       token.setService(service);
-      LOG.info("Acquired token "+token);  // Token#toString() prints service
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Acquired token "+token);  // Token#toString() prints service
+      }
     } else {
       LOG.warn("Failed to get token for service "+service);
     }

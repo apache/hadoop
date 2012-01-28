@@ -84,6 +84,9 @@ Release 0.23.1 - Unreleased
     HADOOP-7988. Upper case in hostname part of the principals doesn't work with
     kerberos. (jitendra)
 
+    HADOOP-8002. SecurityUtil acquired token message should be a debug rather than info.
+    (Arpit Gupta via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
