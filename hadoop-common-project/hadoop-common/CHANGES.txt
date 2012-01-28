@@ -81,6 +81,9 @@ Release 0.23.1 - Unreleased
 
     HADOOP-7939. Improve Hadoop subcomponent integration in Hadoop 0.23. (rvs via tucu)
 
+    HADOOP-7988. Upper case in hostname part of the principals doesn't work with
+    kerberos. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES

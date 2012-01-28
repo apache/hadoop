@@ -90,6 +90,16 @@ public class TestSecurityUtil {
   }
 
   @Test
+  public void testPrincipalsWithLowerCaseHosts() throws IOException {
+    String service = "xyz/";
+    String realm = "@REALM";
+    String principalInConf = service + SecurityUtil.HOSTNAME_PATTERN + realm;
+    String hostname = "FooHost";
+    String principal = service + hostname.toLowerCase() + realm;
+    verify(principalInConf, hostname, principal);
+  }
+
+  @Test
   public void testLocalHostNameForNullOrWild() throws Exception {
     String local = SecurityUtil.getLocalHostName();
     assertEquals("hdfs/" + local + "@REALM",
