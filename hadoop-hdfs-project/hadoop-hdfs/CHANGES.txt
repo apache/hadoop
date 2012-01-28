@@ -172,6 +172,9 @@ Trunk (unreleased changes)
     HDFS-2768. BackupNode stop can not close proxy connections because
     it is not a proxy instance. (Uma Maheswara Rao G via eli)
 
+    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
+    (atm)
+
 Release 0.23.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
