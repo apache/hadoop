@@ -14,6 +14,9 @@ Release 0.22.1 - Unreleased
 
     MAPREDUCE-3593. Fix user impersonation. (Mayank Bansal via shv)
 
+    MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. 
+    (Robert Evans via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
