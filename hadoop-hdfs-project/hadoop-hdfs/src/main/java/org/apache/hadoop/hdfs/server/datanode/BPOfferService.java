@@ -782,4 +782,13 @@ class BPOfferService implements Runnable {
     return;
   }
 
+  @VisibleForTesting
+  DatanodeProtocolClientSideTranslatorPB getBpNamenode() {
+    return bpNamenode;
+  }
+
+  @VisibleForTesting
+  void setBpNamenode(DatanodeProtocolClientSideTranslatorPB bpNamenode) {
+    this.bpNamenode = bpNamenode;
+  }
 }

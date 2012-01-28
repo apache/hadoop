@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.IOException;
+
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.mockito.Mockito;
+
+import com.google.common.base.Preconditions;
+
 /**
  * WARNING!! This is TEST ONLY class: it never has to be used
  * for ANY development purposes.
@@ -41,5 +49,30 @@ public class DataNodeAdapter {
   public static void setHeartbeatsDisabledForTests(DataNode dn,
       boolean heartbeatsDisabledForTests) {
     dn.setHeartbeatsDisabledForTests(heartbeatsDisabledForTests);
+  }
+  
+  /**
+   * Insert a Mockito spy object between the given DataNode and
+   * the given NameNode. This can be used to delay or wait for
+   * RPC calls on the datanode->NN path.
+   */
+  public static DatanodeProtocolClientSideTranslatorPB spyOnBposToNN(
+      DataNode dn, NameNode nn) {
+    String bpid = nn.getNamesystem().getBlockPoolId();
+    
+    BPOfferService bpos = null;
+    for (BPOfferService thisBpos : dn.getAllBpOs()) {
+      if (thisBpos.getBlockPoolId().equals(bpid)) {
+        bpos = thisBpos;
+        break;
+      }
+    }
+    Preconditions.checkArgument(bpos != null,
+        "No such bpid: %s", bpid);
+
+    DatanodeProtocolClientSideTranslatorPB origNN = bpos.getBpNamenode();
+    DatanodeProtocolClientSideTranslatorPB spy = Mockito.spy(origNN);
+    bpos.setBpNamenode(spy);
+    return spy;
   }
 }
