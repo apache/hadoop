@@ -37,6 +37,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.Lock;
+import org.apache.hadoop.yarn.Lock.NoLock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -58,6 +60,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
@@ -120,6 +123,8 @@ public class LeafQueue implements CSQueue {
 
   private CapacitySchedulerContext scheduler;
   
+  private final ActiveUsersManager activeUsersManager;
+  
   final static int DEFAULT_AM_RESOURCE = 2 * 1024;
   
   public LeafQueue(CapacitySchedulerContext cs, 
@@ -132,7 +137,7 @@ public class LeafQueue implements CSQueue {
     this.metrics = old != null ? old.getMetrics() :
         QueueMetrics.forQueue(getQueuePath(), parent,
         cs.getConfiguration().getEnableUserMetrics());
-    
+    this.activeUsersManager = new ActiveUsersManager(metrics);
     this.minimumAllocation = cs.getMinimumResourceCapability();
     this.maximumAllocation = cs.getMaximumResourceCapability();
     this.minimumAllocationFactor = 
@@ -346,6 +351,11 @@ public class LeafQueue implements CSQueue {
 
   public synchronized int getMaximumActiveApplicationsPerUser() {
     return maxActiveApplicationsPerUser;
+  }
+
+  @Override
+  public ActiveUsersManager getActiveUsersManager() {
+    return activeUsersManager;
   }
 
   @Override
@@ -674,6 +684,12 @@ public class LeafQueue implements CSQueue {
     // Check if we can activate more applications
     activateApplications();
     
+    // Inform the activeUsersManager
+    synchronized (application) {
+      activeUsersManager.deactivateApplication(
+          application.getUser(), application.getApplicationId());
+    }
+    
     LOG.info("Application removed -" +
         " appId: " + application.getApplicationId() + 
         " user: " + application.getUser() + 
@@ -837,6 +853,7 @@ public class LeafQueue implements CSQueue {
     return true;
   }
 
+  @Lock({LeafQueue.class, SchedulerApp.class})
   private Resource computeAndSetUserResourceLimit(SchedulerApp application, 
       Resource clusterResource, Resource required) {
     String user = application.getUser();
@@ -853,6 +870,7 @@ public class LeafQueue implements CSQueue {
         minimumAllocation.getMemory();
   }
   
+  @Lock(NoLock.class)
   private Resource computeUserLimit(SchedulerApp application, 
       Resource clusterResource, Resource required) {
     // What is our current capacity? 
@@ -877,11 +895,8 @@ public class LeafQueue implements CSQueue {
     // queue's configured capacity * user-limit-factor.
     // Also, the queue's configured capacity should be higher than 
     // queue-hard-limit * ulMin
-
-    String userName = application.getUser();
     
-    final int activeUsers = users.size();  
-    User user = getUser(userName);
+    final int activeUsers = activeUsersManager.getNumActiveUsers();  
 
     int limit = 
       roundUp(
@@ -893,12 +908,13 @@ public class LeafQueue implements CSQueue {
           );
 
     if (LOG.isDebugEnabled()) {
+      String userName = application.getUser();
       LOG.debug("User limit computation for " + userName + 
           " in queue " + getQueueName() +
           " userLimit=" + userLimit +
           " userLimitFactor=" + userLimitFactor +
           " required: " + required + 
-          " consumed: " + user.getConsumedResources() + 
+          " consumed: " + getUser(userName).getConsumedResources() + 
           " limit: " + limit +
           " queueCapacity: " + queueCapacity + 
           " qconsumed: " + consumed +
@@ -1308,8 +1324,10 @@ public class LeafQueue implements CSQueue {
     
     // Update application properties
     for (SchedulerApp application : activeApplications) {
-      computeAndSetUserResourceLimit(
-          application, clusterResource, Resources.none());
+      synchronized (application) {
+        computeAndSetUserResourceLimit(
+            application, clusterResource, Resources.none());
+      }
     }
   }
   

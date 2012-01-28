@@ -60,6 +60,8 @@ public class QueueMetrics {
   @Metric("# of pending containers") MutableGaugeInt pendingContainers;
   @Metric("# of reserved memory in GiB") MutableGaugeInt reservedGB;
   @Metric("# of reserved containers") MutableGaugeInt reservedContainers;
+  @Metric("# of active users") MutableGaugeInt activeUsers;
+  @Metric("# of active users") MutableGaugeInt activeApplications;
 
   static final Logger LOG = LoggerFactory.getLogger(QueueMetrics.class);
   static final int GB = 1024; // resource.memory is in MB
@@ -287,6 +289,36 @@ public class QueueMetrics {
     }
   }
 
+  public void incrActiveUsers() {
+    activeUsers.incr();
+  }
+  
+  public void decrActiveUsers() {
+    activeUsers.decr();
+  }
+  
+  public void activateApp(String user) {
+    activeApplications.incr();
+    QueueMetrics userMetrics = getUserMetrics(user);
+    if (userMetrics != null) {
+      userMetrics.activateApp(user);
+    }
+    if (parent != null) {
+      parent.activateApp(user);
+    }
+  }
+  
+  public void deactivateApp(String user) {
+    activeApplications.decr();
+    QueueMetrics userMetrics = getUserMetrics(user);
+    if (userMetrics != null) {
+      userMetrics.deactivateApp(user);
+    }
+    if (parent != null) {
+      parent.deactivateApp(user);
+    }
+  }
+  
   public int getAppsSubmitted() {
     return appsSubmitted.value();
   }
@@ -337,5 +369,13 @@ public class QueueMetrics {
 
   public int getReservedContainers() {
     return reservedContainers.value();
+  }
+  
+  public int getActiveUsers() {
+    return activeUsers.value();
+  }
+  
+  public int getActiveApps() {
+    return activeApplications.value();
   }
 }

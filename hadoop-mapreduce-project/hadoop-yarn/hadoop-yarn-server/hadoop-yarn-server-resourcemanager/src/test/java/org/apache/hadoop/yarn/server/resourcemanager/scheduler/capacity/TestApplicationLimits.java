@@ -302,7 +302,8 @@ public class TestApplicationLimits {
     final ApplicationAttemptId appAttemptId_0_0 = 
         TestUtils.getMockApplicationAttemptId(0, 0); 
     SchedulerApp app_0_0 = 
-        spy(new SchedulerApp(appAttemptId_0_0, user_0, queue, rmContext, null));
+        spy(new SchedulerApp(appAttemptId_0_0, user_0, queue, 
+            queue.getActiveUsersManager(), rmContext, null));
     queue.submitApplication(app_0_0, user_0, A);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
@@ -320,7 +321,8 @@ public class TestApplicationLimits {
     final ApplicationAttemptId appAttemptId_0_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
     SchedulerApp app_0_1 = 
-        spy(new SchedulerApp(appAttemptId_0_1, user_0, queue, rmContext, null));
+        spy(new SchedulerApp(appAttemptId_0_1, user_0, queue, 
+            queue.getActiveUsersManager(), rmContext, null));
     queue.submitApplication(app_0_1, user_0, A);
     
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
@@ -338,7 +340,8 @@ public class TestApplicationLimits {
     final ApplicationAttemptId appAttemptId_1_0 = 
         TestUtils.getMockApplicationAttemptId(2, 0); 
     SchedulerApp app_1_0 = 
-        spy(new SchedulerApp(appAttemptId_1_0, user_1, queue, rmContext, null));
+        spy(new SchedulerApp(appAttemptId_1_0, user_1, queue, 
+            queue.getActiveUsersManager(), rmContext, null));
     queue.submitApplication(app_1_0, user_1, A);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
