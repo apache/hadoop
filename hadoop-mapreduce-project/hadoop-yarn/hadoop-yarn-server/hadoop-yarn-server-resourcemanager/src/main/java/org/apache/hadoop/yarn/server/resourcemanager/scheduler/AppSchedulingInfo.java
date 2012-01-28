@@ -36,12 +36,11 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 
 /**
  * This class keeps track of all the consumption of an application. This also
@@ -59,27 +58,27 @@ public class AppSchedulingInfo {
   final String user;
   private final AtomicInteger containerIdCounter = new AtomicInteger(0);
 
-  private final RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
-
   final Set<Priority> priorities = new TreeSet<Priority>(
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
   final Map<Priority, Map<String, ResourceRequest>> requests = 
     new HashMap<Priority, Map<String, ResourceRequest>>();
 
-  private final ApplicationStore store;
-
+  //private final ApplicationStore store;
+  private final ActiveUsersManager activeUsersManager;
+  
   /* Allocated by scheduler */
   boolean pending = true; // for app metrics
 
   public AppSchedulingInfo(ApplicationAttemptId appAttemptId,
-      String user, Queue queue, ApplicationStore store) {
+      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      ApplicationStore store) {
     this.applicationAttemptId = appAttemptId;
     this.applicationId = appAttemptId.getApplicationId();
     this.queue = queue;
     this.queueName = queue.getQueueName();
     this.user = user;
-    this.store = store;
+    //this.store = store;
+    this.activeUsersManager = activeUsersManager;
   }
 
   public ApplicationId getApplicationId() {
@@ -123,7 +122,8 @@ public class AppSchedulingInfo {
    * @param requests
    *          resources to be acquired
    */
-  synchronized public void updateResourceRequests(List<ResourceRequest> requests) {
+  synchronized public void updateResourceRequests(
+      List<ResourceRequest> requests) {
     QueueMetrics metrics = queue.getMetrics();
     // Update resource requests
     for (ResourceRequest request : requests) {
@@ -138,6 +138,16 @@ public class AppSchedulingInfo {
               + request);
         }
         updatePendingResources = true;
+        
+        // Premature optimization?
+        // Assumes that we won't see more than one priority request updated
+        // in one call, reasonable assumption... however, it's totally safe
+        // to activate same application more than once.
+        // Thus we don't need another loop ala the one in decrementOutstanding()  
+        // which is needed during deactivate.
+        if (request.getNumContainers() > 0) {
+          activeUsersManager.activateApplication(user, applicationId);
+        }
       }
 
       Map<String, ResourceRequest> asks = this.requests.get(priority);
@@ -246,10 +256,7 @@ public class AppSchedulingInfo {
       this.requests.get(priority).remove(node.getRackName());
     }
 
-    // Do not remove ANY
-    ResourceRequest offSwitchRequest = requests.get(priority).get(
-        RMNode.ANY);
-    offSwitchRequest.setNumContainers(offSwitchRequest.getNumContainers() - 1);
+    decrementOutstanding(requests.get(priority).get(RMNode.ANY));
   }
 
   /**
@@ -271,10 +278,7 @@ public class AppSchedulingInfo {
       this.requests.get(priority).remove(node.getRackName());
     }
 
-    // Do not remove ANY
-    ResourceRequest offSwitchRequest = requests.get(priority).get(
-        RMNode.ANY);
-    offSwitchRequest.setNumContainers(offSwitchRequest.getNumContainers() - 1);
+    decrementOutstanding(requests.get(priority).get(RMNode.ANY));
   }
 
   /**
@@ -291,11 +295,32 @@ public class AppSchedulingInfo {
     allocate(container);
 
     // Update future requirements
-
-    // Do not remove ANY
-    offSwitchRequest.setNumContainers(offSwitchRequest.getNumContainers() - 1);
+    decrementOutstanding(offSwitchRequest);
   }
 
+  synchronized private void decrementOutstanding(
+      ResourceRequest offSwitchRequest) {
+    int numOffSwitchContainers = offSwitchRequest.getNumContainers() - 1;
+
+    // Do not remove ANY
+    offSwitchRequest.setNumContainers(numOffSwitchContainers);
+    
+    // Do we have any outstanding requests?
+    // If there is nothing, we need to deactivate this application
+    if (numOffSwitchContainers == 0) {
+      boolean deactivate = true;
+      for (Priority priority : getPriorities()) {
+        ResourceRequest request = getResourceRequest(priority, RMNodeImpl.ANY);
+        if (request.getNumContainers() > 0) {
+          deactivate = false;
+          break;
+        }
+      }
+      if (deactivate) {
+        activeUsersManager.deactivateApplication(user, applicationId);
+      }
+    }
+  }
   synchronized private void allocate(Container container) {
     // Update consumption and track allocations
     //TODO: fixme sharad

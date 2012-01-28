@@ -141,6 +141,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3693. Added mapreduce.admin.user.env to mapred-default.xml.
     (Roman Shapshonik via acmurthy) 
 
+    MAPREDUCE-3732. Modified CapacityScheduler to use only users with pending
+    requests for computing user-limits. (Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar

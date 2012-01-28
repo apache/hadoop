@@ -355,7 +355,8 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
     // TODO: Fix store
     SchedulerApp SchedulerApp = 
-        new SchedulerApp(applicationAttemptId, user, queue, rmContext, null);
+        new SchedulerApp(applicationAttemptId, user, queue, 
+            queue.getActiveUsersManager(), rmContext, null);
 
     // Submit to the queue
     try {

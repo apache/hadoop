@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
@@ -196,6 +197,12 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param clusterResource the current cluster resource
    */
   public void updateClusterResource(Resource clusterResource);
+  
+  /**
+   * Get the {@link ActiveUsersManager} for the queue.
+   * @return the <code>ActiveUsersManager</code> for the queue
+   */
+  public ActiveUsersManager getActiveUsersManager();
   
   /**
    * Recover the state of the queue
