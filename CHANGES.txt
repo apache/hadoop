@@ -89,6 +89,9 @@ Release 1.1.0 - unreleased
     HADOOP-7982. UserGroupInformation fails to login if thread's context
     classloader can't load HadoopLoginModule. (todd)
 
+    HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
+    kerberos. (jitendra)
+
   IMPROVEMENTS
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
