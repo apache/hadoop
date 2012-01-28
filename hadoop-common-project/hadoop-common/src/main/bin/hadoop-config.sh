@@ -25,9 +25,21 @@ common_bin=$(cd -P -- "$(dirname -- "$this")" && pwd -P)
 script="$(basename -- "$this")"
 this="$common_bin/$script"
 
+[ -f "$common_bin/hadoop-layout.sh" ] && . "$common_bin/hadoop-layout.sh"
+
+HADOOP_COMMON_DIR=${HADOOP_COMMON_DIR:-"share/hadoop/common"}
+HADOOP_COMMON_LIB_JARS_DIR=${HADOOP_COMMON_LIB_JARS_DIR:-"share/hadoop/common/lib"}
+HADOOP_COMMON_LIB_NATIVE_DIR=${HADOOP_COMMON_LIB_NATIVE_DIR:-"lib/native"}
+HDFS_DIR=${HDFS_DIR:-"share/hadoop/hdfs"}
+HDFS_LIB_JARS_DIR=${HDFS_LIB_JARS_DIR:-"share/hadoop/hdfs/lib"}
+YARN_DIR=${YARN_DIR:-"share/hadoop/mapreduce"}
+YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
+MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
+MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
+
 # the root of the Hadoop installation
 # See HADOOP-6255 for directory structure layout
-HADOOP_DEFAULT_PREFIX=`dirname "$this"`/..
+HADOOP_DEFAULT_PREFIX=$(cd -P -- "$common_bin"/.. && pwd -P)
 HADOOP_PREFIX=${HADOOP_PREFIX:-$HADOOP_DEFAULT_PREFIX}
 export HADOOP_PREFIX
 
@@ -144,16 +156,22 @@ CLASSPATH="${HADOOP_CONF_DIR}"
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
+if [ "$HADOOP_COMMON_HOME" = "" ]; then
+  if [ -d "${HADOOP_PREFIX}/$HADOOP_COMMON_DIR" ]; then
+    HADOOP_COMMON_HOME=$HADOOP_PREFIX
+  fi
+fi
+
 # for releases, add core hadoop jar & webapps to CLASSPATH
-if [ -d "$HADOOP_PREFIX/share/hadoop/common/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop/common/webapps
+if [ -d "$HADOOP_COMMON_HOME/$HADOOP_COMMON_DIR/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/$HADOOP_COMMON_DIR
 fi
 
-if [ -d "$HADOOP_PREFIX/share/hadoop/common/lib" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop/common/lib'/*'
+if [ -d "$HADOOP_COMMON_HOME/$HADOOP_COMMON_LIB_JARS_DIR" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/$HADOOP_COMMON_LIB_JARS_DIR'/*'
 fi
 
-CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop/common'/*'
+CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/$HADOOP_COMMON_DIR'/*'
 
 # add user-specified CLASSPATH last
 if [ "$HADOOP_CLASSPATH" != "" ]; then
@@ -185,13 +203,13 @@ fi
 
 # setup 'java.library.path' for native-hadoop code if necessary
 
-if [ -d "${HADOOP_PREFIX}/build/native" -o -d "${HADOOP_PREFIX}/lib/native" ]; then
+if [ -d "${HADOOP_PREFIX}/build/native" -o -d "${HADOOP_PREFIX}/$HADOOP_COMMON_LIB_NATIVE_DIR" ]; then
     
-  if [ -d "${HADOOP_PREFIX}/lib/native" ]; then
+  if [ -d "${HADOOP_PREFIX}/$HADOOP_COMMON_LIB_NATIVE_DIR" ]; then
     if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_PREFIX}/lib/native
+      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_PREFIX}/$HADOOP_COMMON_LIB_NATIVE_DIR
     else
-      JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/lib/native
+      JAVA_LIBRARY_PATH=${HADOOP_PREFIX}/$HADOOP_COMMON_LIB_NATIVE_DIR
     fi
   fi
 fi
@@ -216,37 +234,56 @@ HADOOP_OPTS="$HADOOP_OPTS -Djava.net.preferIPv4Stack=true"
 
 # put hdfs in classpath if present
 if [ "$HADOOP_HDFS_HOME" = "" ]; then
-  if [ -d "${HADOOP_PREFIX}/share/hadoop/hdfs" ]; then
+  if [ -d "${HADOOP_PREFIX}/$HDFS_DIR" ]; then
     HADOOP_HDFS_HOME=$HADOOP_PREFIX
   fi
 fi
 
-if [ -d "$HADOOP_HDFS_HOME/share/hadoop/hdfs/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs
+if [ -d "$HADOOP_HDFS_HOME/$HDFS_DIR/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/$HDFS_DIR
 fi
 
-if [ -d "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib'/*'
+if [ -d "$HADOOP_HDFS_HOME/$HDFS_LIB_JARS_DIR" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/$HDFS_LIB_JARS_DIR'/*'
 fi
 
-CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/share/hadoop/hdfs'/*'
+CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/$HDFS_DIR'/*'
 
 # put yarn in classpath if present
 if [ "$YARN_HOME" = "" ]; then
-  if [ -d "${HADOOP_PREFIX}/share/hadoop/mapreduce" ]; then
+  if [ -d "${HADOOP_PREFIX}/$YARN_DIR" ]; then
     YARN_HOME=$HADOOP_PREFIX
   fi
 fi
 
-if [ -d "$YARN_HOME/share/hadoop/mapreduce/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce
+if [ -d "$YARN_HOME/$YARN_DIR/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_DIR
 fi
 
-if [ -d "$YARN_HOME/share/hadoop/mapreduce/lib" ]; then
-  CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce/lib'/*'
+if [ -d "$YARN_HOME/$YARN_LIB_JARS_DIR" ]; then
+  CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_LIB_JARS_DIR'/*'
 fi
 
-CLASSPATH=${CLASSPATH}:$YARN_HOME/share/hadoop/mapreduce'/*'
+CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_DIR'/*'
+
+# put mapred in classpath if present AND different from YARN
+if [ "$HADOOP_MAPRED_HOME" = "" ]; then
+  if [ -d "${HADOOP_PREFIX}/$MAPRED_DIR" ]; then
+    HADOOP_MAPRED_HOME=$HADOOP_PREFIX
+  fi
+fi
+
+if [ "$HADOOP_MAPRED_HOME/$MAPRED_DIR" != "$YARN_HOME/$YARN_DIR" ] ; then
+  if [ -d "$HADOOP_MAPRED_HOME/$MAPRED_DIR/webapps" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR
+  fi
+
+  if [ -d "$HADOOP_MAPRED_HOME/$MAPRED_LIB_JARS_DIR" ]; then
+    CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_LIB_JARS_DIR'/*'
+  fi
+
+  CLASSPATH=${CLASSPATH}:$HADOOP_MAPRED_HOME/$MAPRED_DIR'/*'
+fi
 
 # cygwin path translation
 if $cygwin; then

@@ -79,6 +79,8 @@ Release 0.23.1 - Unreleased
     HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
     core-default.xml file. (harsh)
 
+    HADOOP-7939. Improve Hadoop subcomponent integration in Hadoop 0.23. (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
