@@ -190,6 +190,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2840. TestHostnameFilter should work with localhost or localhost.localdomain (tucu)
 
+    HDFS-2791. If block report races with closing of file, replica is
+    incorrectly marked corrupt. (todd)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
