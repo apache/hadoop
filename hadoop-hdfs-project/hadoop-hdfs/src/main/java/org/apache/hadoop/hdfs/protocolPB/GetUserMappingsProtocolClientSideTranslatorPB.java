@@ -29,8 +29,11 @@ import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcClientUtil;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
@@ -39,7 +42,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 public class GetUserMappingsProtocolClientSideTranslatorPB implements
-    GetUserMappingsProtocol, Closeable {
+    ProtocolMetaInterface, GetUserMappingsProtocol, Closeable {
 
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
@@ -85,5 +88,12 @@ public class GetUserMappingsProtocolClientSideTranslatorPB implements
       throw ProtobufHelper.getRemoteException(se);
     }
     return resp.getGroupsList().toArray(new String[resp.getGroupsCount()]);
+  }
+
+  @Override
+  public boolean isMethodSupported(String methodName) throws IOException {
+    return RpcClientUtil.isMethodSupported(rpcProxy,
+        GetUserMappingsProtocolPB.class, RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(GetUserMappingsProtocolPB.class), methodName);
   }
 }

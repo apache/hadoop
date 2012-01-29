@@ -104,6 +104,9 @@ Trunk (unreleased changes)
 
     HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
 
+    HDFS-2801. Provide a method in client side translators to check for a 
+    methods supported in underlying protocol. (jitendra)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)

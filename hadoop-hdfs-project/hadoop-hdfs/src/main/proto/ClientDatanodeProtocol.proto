@@ -104,7 +104,7 @@ service ClientDatanodeProtocolService {
    * Refresh the list of federated namenodes from updated configuration.
    * Adds new namenodes and stops the deleted namenodes.
    */
-  rpc refreshNamenode(RefreshNamenodesRequestProto)
+  rpc refreshNamenodes(RefreshNamenodesRequestProto)
       returns(RefreshNamenodesResponseProto);
 
   /**
