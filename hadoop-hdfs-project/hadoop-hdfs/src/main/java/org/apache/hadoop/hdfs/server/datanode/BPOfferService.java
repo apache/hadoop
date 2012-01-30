@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -202,10 +203,13 @@ class BPOfferService {
   void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint) {
     checkBlock(block);
     checkDelHint(delHint);
-    ReceivedDeletedBlockInfo bInfo = 
-               new ReceivedDeletedBlockInfo(block.getLocalBlock(), delHint);
+    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
+        block.getLocalBlock(),
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
+        delHint);
+
     for (BPServiceActor actor : bpServices) {
-      actor.notifyNamenodeReceivedBlock(bInfo);
+      actor.notifyNamenodeBlockImmediately(bInfo);
     }
   }
 
@@ -224,13 +228,24 @@ class BPOfferService {
 
   void notifyNamenodeDeletedBlock(ExtendedBlock block) {
     checkBlock(block);
-    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(block
-          .getLocalBlock(), ReceivedDeletedBlockInfo.TODELETE_HINT);
+    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
+       block.getLocalBlock(), BlockStatus.DELETED_BLOCK, null);
     
     for (BPServiceActor actor : bpServices) {
       actor.notifyNamenodeDeletedBlock(bInfo);
     }
   }
+  
+  void notifyNamenodeReceivingBlock(ExtendedBlock block) {
+    checkBlock(block);
+    ReceivedDeletedBlockInfo bInfo = new ReceivedDeletedBlockInfo(
+       block.getLocalBlock(), BlockStatus.RECEIVING_BLOCK, null);
+    
+    for (BPServiceActor actor : bpServices) {
+      actor.notifyNamenodeBlockImmediately(bInfo);
+    }
+  }
+
 
   //This must be called only by blockPoolManager
   void start() {

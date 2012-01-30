@@ -107,7 +107,9 @@ public class TestDeadDatanode {
     DatanodeProtocol dnp = cluster.getNameNodeRpc();
     
     ReceivedDeletedBlockInfo[] blocks = { new ReceivedDeletedBlockInfo(
-        new Block(0), "") };
+        new Block(0), 
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
+        null) };
     
     // Ensure blockReceived call from dead datanode is rejected with IOException
     try {

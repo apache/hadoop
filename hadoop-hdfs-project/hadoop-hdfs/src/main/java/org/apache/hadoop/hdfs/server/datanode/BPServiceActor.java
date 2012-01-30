@@ -267,7 +267,7 @@ class BPServiceActor implements Runnable {
    * till namenode is informed before responding with success to the
    * client? For now we don't.
    */
-  void notifyNamenodeReceivedBlock(ReceivedDeletedBlockInfo bInfo) {
+  void notifyNamenodeBlockImmediately(ReceivedDeletedBlockInfo bInfo) {
     synchronized (receivedAndDeletedBlockList) {
       receivedAndDeletedBlockList.add(bInfo);
       pendingReceivedRequests++;
@@ -340,6 +340,12 @@ class BPServiceActor implements Runnable {
     DatanodeCommand cmd = null;
     long startTime = now();
     if (startTime - lastBlockReport > dnConf.blockReportInterval) {
+
+      // Flush any block information that precedes the block report. Otherwise
+      // we have a chance that we will miss the delHint information
+      // or we will report an RBW replica after the BlockReport already reports
+      // a FINALIZED one.
+      reportReceivedDeletedBlocks();
 
       // Create block report
       long brCreateStartTime = now();

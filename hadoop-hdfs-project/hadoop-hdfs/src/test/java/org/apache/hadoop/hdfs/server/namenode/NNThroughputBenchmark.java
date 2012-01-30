@@ -884,7 +884,8 @@ public class NNThroughputBenchmark {
           nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
               .getNamesystem().getBlockPoolId(),
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
-                  blocks[i], DataNode.EMPTY_DEL_HINT) });
+                  blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
+                  null) });
         }
       }
       return blocks.length;
@@ -999,7 +1000,8 @@ public class NNThroughputBenchmark {
           nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
               .getBlock().getBlockPoolId(),
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(loc
-                  .getBlock().getLocalBlock(), "") });
+                  .getBlock().getLocalBlock(),
+                  ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) });
         }
       }
       return prevBlock;

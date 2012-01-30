@@ -4933,7 +4933,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                     + m.getNodeReg().getName() + " "
                     + m.getReceivedAndDeletedBlocks().length + " blocks.");
           }
-          this.getBlockManager().blockReceivedAndDeleted(m.getNodeReg(),
+          this.getBlockManager().processIncrementalBlockReport(m.getNodeReg(),
               m.getPoolId(), m.getReceivedAndDeletedBlocks());
           break;
         case BLOCK_REPORT:

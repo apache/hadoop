@@ -213,12 +213,16 @@ message BlockReportResponseProto {
 /**
  * Data structure to send received or deleted block information
  * from datanode to namenode.
- *
- * deleteHint set to "-" indicates block deletion.
- * other deleteHint indicates block addition.
  */
 message ReceivedDeletedBlockInfoProto {
+  enum BlockStatus {
+    RECEIVING = 1; // block being created
+    RECEIVED = 2; // block creation complete
+    DELETED = 3;
+  }
+
   required BlockProto block = 1;
+  required BlockStatus status = 3;
   optional string deleteHint = 2;
 }
 
@@ -329,7 +333,9 @@ service DatanodeProtocolService {
   rpc blockReport(BlockReportRequestProto) returns(BlockReportResponseProto);
 
   /**
-   * Report from datanode about recently received or deleted block
+   * Incremental block report from the DN. This contains info about recently
+   * received and deleted blocks, as well as when blocks start being
+   * received.
    */
   rpc blockReceivedAndDeleted(BlockReceivedAndDeletedRequestProto) 
       returns(BlockReceivedAndDeletedResponseProto);

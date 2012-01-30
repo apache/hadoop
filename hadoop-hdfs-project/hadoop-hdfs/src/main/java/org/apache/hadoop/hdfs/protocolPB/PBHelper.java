@@ -116,6 +116,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -813,6 +814,23 @@ public class PBHelper {
     ReceivedDeletedBlockInfoProto.Builder builder = 
         ReceivedDeletedBlockInfoProto.newBuilder();
     
+    ReceivedDeletedBlockInfoProto.BlockStatus status;
+    switch (receivedDeletedBlockInfo.getStatus()) {
+    case RECEIVING_BLOCK:
+      status = ReceivedDeletedBlockInfoProto.BlockStatus.RECEIVING;
+      break;
+    case RECEIVED_BLOCK:
+      status = ReceivedDeletedBlockInfoProto.BlockStatus.RECEIVED;
+      break;
+    case DELETED_BLOCK:
+      status = ReceivedDeletedBlockInfoProto.BlockStatus.DELETED;
+      break;
+    default:
+      throw new IllegalArgumentException("Bad status: " +
+          receivedDeletedBlockInfo.getStatus());
+    }
+    builder.setStatus(status);
+    
     if (receivedDeletedBlockInfo.getDelHints() != null) {
       builder.setDeleteHint(receivedDeletedBlockInfo.getDelHints());
     }
@@ -844,7 +862,21 @@ public class PBHelper {
 
   public static ReceivedDeletedBlockInfo convert(
       ReceivedDeletedBlockInfoProto proto) {
-    return new ReceivedDeletedBlockInfo(PBHelper.convert(proto.getBlock()),
+    ReceivedDeletedBlockInfo.BlockStatus status = null;
+    switch (proto.getStatus()) {
+    case RECEIVING:
+      status = BlockStatus.RECEIVING_BLOCK;
+      break;
+    case RECEIVED:
+      status = BlockStatus.RECEIVED_BLOCK;
+      break;
+    case DELETED:
+      status = BlockStatus.DELETED_BLOCK;
+      break;
+    }
+    return new ReceivedDeletedBlockInfo(
+        PBHelper.convert(proto.getBlock()),
+        status,
         proto.hasDeleteHint() ? proto.getDeleteHint() : null);
   }
   

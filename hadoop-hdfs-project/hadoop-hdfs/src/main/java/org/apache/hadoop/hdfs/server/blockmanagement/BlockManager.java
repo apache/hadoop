@@ -2256,13 +2256,19 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     // Modify the blocks->datanode map and node's map.
     //
     pendingReplications.remove(block);
-
+    processAndHandleReportedBlock(node, block, ReplicaState.FINALIZED,
+        delHintNode);
+  }
+  
+  private void processAndHandleReportedBlock(DatanodeDescriptor node, Block block,
+      ReplicaState reportedState, DatanodeDescriptor delHintNode)
+      throws IOException {
     // blockReceived reports a finalized block
     Collection<BlockInfo> toAdd = new LinkedList<BlockInfo>();
     Collection<Block> toInvalidate = new LinkedList<Block>();
     Collection<BlockInfo> toCorrupt = new LinkedList<BlockInfo>();
     Collection<StatefulBlockInfo> toUC = new LinkedList<StatefulBlockInfo>();
-    processReportedBlock(node, block, ReplicaState.FINALIZED,
+    processReportedBlock(node, block, reportedState,
                               toAdd, toInvalidate, toCorrupt, toUC);
     // the block is only in one of the to-do lists
     // if it is in none then data-node already has it
@@ -2286,47 +2292,66 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
   }
 
-  /** The given node is reporting that it received/deleted certain blocks. */
-  public void blockReceivedAndDeleted(final DatanodeID nodeID, 
+  /**
+   * The given node is reporting incremental information about some blocks.
+   * This includes blocks that are starting to be received, completed being
+   * received, or deleted.
+   */
+  public void processIncrementalBlockReport(final DatanodeID nodeID, 
      final String poolId, 
-     final ReceivedDeletedBlockInfo receivedAndDeletedBlocks[]
+     final ReceivedDeletedBlockInfo blockInfos[]
   ) throws IOException {
     namesystem.writeLock();
     int received = 0;
     int deleted = 0;
+    int receiving = 0;
     try {
       final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
       if (node == null || !node.isAlive) {
         NameNode.stateChangeLog
-            .warn("BLOCK* blockReceivedDeleted"
+            .warn("BLOCK* processIncrementalBlockReport"
                 + " is received from dead or unregistered node "
                 + nodeID.getName());
         throw new IOException(
-            "Got blockReceivedDeleted message from unregistered or dead node");
+            "Got incremental block report from unregistered or dead node");
       }
 
-      for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
-        if (receivedAndDeletedBlocks[i].isDeletedBlock()) {
-          removeStoredBlock(
-              receivedAndDeletedBlocks[i].getBlock(), node);
+      for (ReceivedDeletedBlockInfo rdbi : blockInfos) {
+        switch (rdbi.getStatus()) {
+        case DELETED_BLOCK:
+          removeStoredBlock(rdbi.getBlock(), node);
           deleted++;
-        } else {
-          addBlock(node, receivedAndDeletedBlocks[i].getBlock(),
-              receivedAndDeletedBlocks[i].getDelHints());
+          break;
+        case RECEIVED_BLOCK:
+          addBlock(node, rdbi.getBlock(), rdbi.getDelHints());
           received++;
+          break;
+        case RECEIVING_BLOCK:
+          receiving++;
+          processAndHandleReportedBlock(node, rdbi.getBlock(),
+              ReplicaState.RBW, null);
+          break;
+        default:
+          String msg = 
+            "Unknown block status code reported by " + nodeID.getName() +
+            ": " + rdbi;
+          NameNode.stateChangeLog.warn(msg);
+          assert false : msg; // if assertions are enabled, throw.
+          break;
         }
         if (NameNode.stateChangeLog.isDebugEnabled()) {
-          NameNode.stateChangeLog.debug("BLOCK* block"
-              + (receivedAndDeletedBlocks[i].isDeletedBlock() ? "Deleted"
-                  : "Received") + ": " + receivedAndDeletedBlocks[i].getBlock()
+          NameNode.stateChangeLog.debug("BLOCK* block "
+              + (rdbi.getStatus()) + ": " + rdbi.getBlock()
               + " is received from " + nodeID.getName());
         }
       }
     } finally {
       namesystem.writeUnlock();
       NameNode.stateChangeLog
-          .debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
-              + nodeID.getName() + " received: " + received + ", "
+          .debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
+              + nodeID.getName()
+              +  " receiving: " + receiving + ", "
+              + " received: " + received + ", "
               + " deleted: " + deleted);
     }
   }

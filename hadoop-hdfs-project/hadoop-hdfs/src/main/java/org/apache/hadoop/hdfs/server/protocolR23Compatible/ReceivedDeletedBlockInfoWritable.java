@@ -24,8 +24,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocolR23Compatible.BlockWritable;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * A data structure to store Block and delHints together, used to send
@@ -33,33 +35,43 @@ import org.apache.hadoop.io.Writable;
  */
 public class ReceivedDeletedBlockInfoWritable implements Writable {
   BlockWritable block;
+  int statusCode;
   String delHints;
 
-  public final static String TODELETE_HINT = "-";
 
   public ReceivedDeletedBlockInfoWritable() {
   }
 
-  public ReceivedDeletedBlockInfoWritable(BlockWritable blk, String delHints) {
+  public ReceivedDeletedBlockInfoWritable(
+      BlockWritable blk, int statusCode, String delHints) {
     this.block = blk;
+    this.statusCode = statusCode;
     this.delHints = delHints;
   }
+
 
   @Override
   public void write(DataOutput out) throws IOException {
     this.block.write(out);
-    Text.writeString(out, this.delHints);
+    WritableUtils.writeVInt(out, this.statusCode);
+    if (this.statusCode == BlockStatus.DELETED_BLOCK.getCode()) {
+      Text.writeString(out, this.delHints);
+    }
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     this.block = new BlockWritable();
     this.block.readFields(in);
-    this.delHints = Text.readString(in);
+    this.statusCode = WritableUtils.readVInt(in);
+    if (this.statusCode == BlockStatus.DELETED_BLOCK.getCode()) {
+      this.delHints = Text.readString(in);
+    }
   }
 
   public String toString() {
-    return block.toString() + ", delHint: " + delHints;
+    return block.toString() + ", statusCode: " + statusCode +
+      ", delHint: " + delHints;
   }
 
   public static ReceivedDeletedBlockInfo[] convert(
@@ -83,13 +95,16 @@ public class ReceivedDeletedBlockInfoWritable implements Writable {
   }
 
   public ReceivedDeletedBlockInfo convert() {
-    return new ReceivedDeletedBlockInfo(block.convert(), delHints);
+    return new ReceivedDeletedBlockInfo(block.convert(),
+        BlockStatus.fromCode(statusCode), delHints);
   }
 
   public static ReceivedDeletedBlockInfoWritable convert(
       ReceivedDeletedBlockInfo b) {
     if (b == null) return null;
-    return new ReceivedDeletedBlockInfoWritable(BlockWritable.convert(b
-        .getBlock()), b.getDelHints());
+    return new ReceivedDeletedBlockInfoWritable(
+        BlockWritable.convert(b.getBlock()),
+        b.getStatus().getCode(),
+        b.getDelHints());
   }
 }
