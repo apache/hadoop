@@ -18,6 +18,9 @@ Release 0.23-PB - Unreleased
     Move the support for multiple protocols to lower layer so that Writable,
     PB and Avro can all use it (Sanjay)
 
+    MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
+    HADOOP-7965. (Devaraj K via vinodkv) 
+
 Release 0.23.1 - Unreleased
 
   NEW FEATURES                                                                    
