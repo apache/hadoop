@@ -18,6 +18,7 @@
 package org.apache.hadoop.ha;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,6 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+
+import com.google.common.base.Preconditions;
 
 /**
  * The FailOverController is responsible for electing an active service
@@ -48,13 +51,13 @@ public class FailoverController {
    * @throws FailoverFailedException if we should avoid failover
    */
   private static void preFailoverChecks(HAServiceProtocol toSvc,
-                                        String toSvcName)
+                                        InetSocketAddress toSvcAddr)
       throws FailoverFailedException {
     HAServiceState toSvcState;
     try {
       toSvcState = toSvc.getServiceState();
     } catch (IOException e) {
-      String msg = "Unable to get service state for " + toSvcName;
+      String msg = "Unable to get service state for " + toSvcAddr;
       LOG.error(msg, e);
       throw new FailoverFailedException(msg, e);
     }
@@ -69,7 +72,7 @@ public class FailoverController {
           "Can't failover to an unhealthy service", hce);
     } catch (IOException e) {
       throw new FailoverFailedException(
-          "Got an io exception", e);
+          "Got an IO exception", e);
     }
     // TODO(HA): ask toSvc if it's capable. Eg not in SM.
   }
@@ -79,26 +82,42 @@ public class FailoverController {
    * then try to failback.
    *
    * @param fromSvc currently active service
-   * @param fromSvcName name of currently active service
+   * @param fromSvcAddr addr of the currently active service
    * @param toSvc service to make active
-   * @param toSvcName name of service to make active
+   * @param toSvcAddr addr of the service to make active
+   * @param fencer for fencing fromSvc
+   * @param forceFence to fence fromSvc even if not strictly necessary
    * @throws FailoverFailedException if the failover fails
    */
-  public static void failover(HAServiceProtocol fromSvc, String fromSvcName,
-                              HAServiceProtocol toSvc, String toSvcName)
+  public static void failover(HAServiceProtocol fromSvc,
+                              InetSocketAddress fromSvcAddr,
+                              HAServiceProtocol toSvc,
+                              InetSocketAddress toSvcAddr,
+                              NodeFencer fencer, boolean forceFence)
       throws FailoverFailedException {
-    preFailoverChecks(toSvc, toSvcName);
+    Preconditions.checkArgument(fencer != null, "failover requires a fencer");
+    preFailoverChecks(toSvc, toSvcAddr);
 
     // Try to make fromSvc standby
+    boolean tryFence = true;
     try {
       HAServiceProtocolHelper.transitionToStandby(fromSvc);
+      // We should try to fence if we failed or it was forced
+      tryFence = forceFence ? true : false;
     } catch (ServiceFailedException sfe) {
-      LOG.warn("Unable to make " + fromSvcName + " standby (" +
+      LOG.warn("Unable to make " + fromSvcAddr + " standby (" +
           sfe.getMessage() + ")");
-    } catch (Exception e) {
-      LOG.warn("Unable to make " + fromSvcName +
-          " standby (unable to connect)", e);
-      // TODO(HA): fence fromSvc and unfence on failback
+    } catch (IOException ioe) {
+      LOG.warn("Unable to make " + fromSvcAddr +
+          " standby (unable to connect)", ioe);
+    }
+
+    // Fence fromSvc if it's required or forced by the user
+    if (tryFence) {
+      if (!fencer.fence(fromSvcAddr)) {
+        throw new FailoverFailedException("Unable to fence " +
+            fromSvcAddr + ". Fencing failed.");
+      }
     }
 
     // Try to make toSvc active
@@ -107,29 +126,31 @@ public class FailoverController {
     try {
       HAServiceProtocolHelper.transitionToActive(toSvc);
     } catch (ServiceFailedException sfe) {
-      LOG.error("Unable to make " + toSvcName + " active (" +
-          sfe.getMessage() + "). Failing back");
+      LOG.error("Unable to make " + toSvcAddr + " active (" +
+          sfe.getMessage() + "). Failing back.");
       failed = true;
       cause = sfe;
-    } catch (Exception e) {
-      LOG.error("Unable to make " + toSvcName +
-          " active (unable to connect). Failing back", e);
+    } catch (IOException ioe) {
+      LOG.error("Unable to make " + toSvcAddr +
+          " active (unable to connect). Failing back.", ioe);
       failed = true;
-      cause = e;
+      cause = ioe;
     }
 
-    // Try to failback if we failed to make toSvc active
+    // We failed to make toSvc active
     if (failed) {
-      String msg = "Unable to failover to " + toSvcName;
-      try {
-        HAServiceProtocolHelper.transitionToActive(fromSvc);
-      } catch (ServiceFailedException sfe) {
-        msg = "Failback to " + fromSvcName + " failed (" +
-              sfe.getMessage() + ")";
-        LOG.fatal(msg);
-      } catch (Exception e) {
-        msg = "Failback to " + fromSvcName + " failed (unable to connect)";
-        LOG.fatal(msg);
+      String msg = "Unable to failover to " + toSvcAddr;
+      // Only try to failback if we didn't fence fromSvc
+      if (!tryFence) {
+        try {
+          // Unconditionally fence toSvc in case it is still trying to
+          // become active, eg we timed out waiting for its response.
+          failover(toSvc, toSvcAddr, fromSvc, fromSvcAddr, fencer, true);
+        } catch (FailoverFailedException ffe) {
+          msg += ". Failback to " + fromSvcAddr +
+            " failed (" + ffe.getMessage() + ")";
+          LOG.fatal(msg);
+        }
       }
       throw new FailoverFailedException(msg, cause);
     }

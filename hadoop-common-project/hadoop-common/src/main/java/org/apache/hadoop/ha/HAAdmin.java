@@ -22,6 +22,13 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.ParseException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RPC;
@@ -37,8 +44,11 @@ import com.google.common.collect.ImmutableMap;
  * mode, or to trigger a health-check.
  */
 @InterfaceAudience.Private
+
 public abstract class HAAdmin extends Configured implements Tool {
   
+  private static final String FORCEFENCE = "forcefence";
+
   private static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
@@ -46,8 +56,9 @@ public abstract class HAAdmin extends Configured implements Tool {
     .put("-transitionToStandby",
         new UsageInfo("<host:port>", "Transitions the daemon into Standby state"))
     .put("-failover",
-        new UsageInfo("<host:port> <host:port>",
-            "Failover from the first daemon to the second"))
+        new UsageInfo("[--"+FORCEFENCE+"] <host:port> <host:port>",
+            "Failover from the first daemon to the second.\n" +
+            "Unconditionally fence services if the "+FORCEFENCE+" option is used."))
     .put("-getServiceState",
         new UsageInfo("<host:port>", "Returns the state of the daemon"))
     .put("-checkHealth",
@@ -111,20 +122,61 @@ public abstract class HAAdmin extends Configured implements Tool {
 
   private int failover(final String[] argv)
       throws IOException, ServiceFailedException {
-    if (argv.length != 3) {
-      errOut.println("failover: incorrect number of arguments");
+    Configuration conf = getConf();
+    boolean forceFence = false;
+
+    Options failoverOpts = new Options();
+    // "-failover" isn't really an option but we need to add
+    // it to appease CommandLineParser
+    failoverOpts.addOption("failover", false, "failover");
+    failoverOpts.addOption(FORCEFENCE, false, "force fencing");
+
+    CommandLineParser parser = new GnuParser();
+    CommandLine cmd;
+
+    try {
+      cmd = parser.parse(failoverOpts, argv);
+      forceFence = cmd.hasOption(FORCEFENCE);
+    } catch (ParseException pe) {
+      errOut.println("failover: incorrect arguments");
+      printUsage(errOut, "-failover");
+      return -1;
+    }
+    
+    int numOpts = cmd.getOptions() == null ? 0 : cmd.getOptions().length;
+    final String[] args = cmd.getArgs();
+
+    if (numOpts > 2 || args.length != 2) {
+      errOut.println("failover: incorrect arguments");
       printUsage(errOut, "-failover");
       return -1;
     }
 
-    HAServiceProtocol proto1 = getProtocol(argv[1]);
-    HAServiceProtocol proto2 = getProtocol(argv[2]);
+    NodeFencer fencer;
     try {
-      FailoverController.failover(proto1, argv[1], proto2, argv[2]);
-      out.println("Failover from "+argv[1]+" to "+argv[2]+" successful");
+      fencer = NodeFencer.create(conf);
+    } catch (BadFencingConfigurationException bfce) {
+      errOut.println("failover: incorrect fencing configuration: " + 
+          bfce.getLocalizedMessage());
+      return -1;
+    }
+    if (fencer == null) {
+      errOut.println("failover: no fencer configured");
+      return -1;
+    }
+
+    InetSocketAddress addr1 = NetUtils.createSocketAddr(args[0]);
+    InetSocketAddress addr2 = NetUtils.createSocketAddr(args[1]);
+    HAServiceProtocol proto1 = getProtocol(args[0]);
+    HAServiceProtocol proto2 = getProtocol(args[1]);
+
+    try {
+      FailoverController.failover(proto1, addr1, proto2, addr2,
+          fencer, forceFence); 
+      out.println("Failover from "+args[0]+" to "+args[1]+" successful");
     } catch (FailoverFailedException ffe) {
       errOut.println("Failover failed: " + ffe.getLocalizedMessage());
-      return 1;
+      return -1;
     }
     return 0;
   }
@@ -142,7 +194,7 @@ public abstract class HAAdmin extends Configured implements Tool {
       HAServiceProtocolHelper.monitorHealth(proto);
     } catch (HealthCheckFailedException e) {
       errOut.println("Health check failed: " + e.getLocalizedMessage());
-      return 1;
+      return -1;
     }
     return 0;
   }
@@ -223,7 +275,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     }
     
     errOut.println(cmd + " [" + usageInfo.args + "]: " + usageInfo.help);
-    return 1;
+    return 0;
   }
   
   private static class UsageInfo {

@@ -105,7 +105,29 @@ public class TestHAStateTransitions {
       cluster.shutdown();
     }
   }
-  
+
+  /**
+   * Test that transitioning a service to the state that it is already
+   * in is a nop, specifically, an exception is not thrown.
+   */
+  @Test
+  public void testTransitionToCurrentStateIsANop() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleHATopology())
+      .numDataNodes(1)
+      .build();
+    try {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+      cluster.transitionToActive(0);
+      cluster.transitionToStandby(0);
+      cluster.transitionToStandby(0);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * Test manual failover failback for one namespace
    * @param cluster single process test cluster

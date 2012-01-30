@@ -82,6 +82,15 @@ public class NodeFencer {
     this.methods = parseMethods(conf);
   }
   
+  public static NodeFencer create(Configuration conf)
+      throws BadFencingConfigurationException {
+    String confStr = conf.get(CONF_METHODS_KEY);
+    if (confStr == null) {
+      return null;
+    }
+    return new NodeFencer(conf);
+  }
+
   public boolean fence(InetSocketAddress serviceAddr) {
     LOG.info("====== Beginning NameNode Fencing Process... ======");
     int i = 0;
@@ -108,7 +117,7 @@ public class NodeFencer {
   }
 
   private static List<FenceMethodWithArg> parseMethods(Configuration conf)
-  throws BadFencingConfigurationException {
+      throws BadFencingConfigurationException {
     String confStr = conf.get(CONF_METHODS_KEY);
     String[] lines = confStr.split("\\s*\n\\s*");
     
@@ -130,7 +139,6 @@ public class NodeFencer {
     if ((m = CLASS_WITH_ARGUMENT.matcher(line)).matches()) {
       String className = m.group(1);
       String arg = m.group(2);
-      
       return createFenceMethod(conf, className, arg);
     } else if ((m = CLASS_WITHOUT_ARGUMENT.matcher(line)).matches()) {
       String className = m.group(1);

@@ -119,12 +119,11 @@ public class TestNodeFencer {
     assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
   }
 
-  private NodeFencer setupFencer(String confStr)
+  public static NodeFencer setupFencer(String confStr)
       throws BadFencingConfigurationException {
     System.err.println("Testing configuration:\n" + confStr);
     Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY,
-        confStr);
+    conf.set(NodeFencer.CONF_METHODS_KEY, confStr);
     return new NodeFencer(conf);
   }
   
