@@ -236,7 +236,7 @@ public class SecurityUtil {
     if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
       fqdn = getLocalHostName();
     }
-    return components[0] + "/" + fqdn + "@" + components[2];
+    return components[0] + "/" + fqdn.toLowerCase() + "@" + components[2];
   }
   
   static String getLocalHostName() throws UnknownHostException {
@@ -409,7 +409,9 @@ public class SecurityUtil {
     Text service = buildTokenService(addr);
     if (token != null) {
       token.setService(service);
-      LOG.info("Acquired token "+token);  // Token#toString() prints service
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Acquired token "+token);  // Token#toString() prints service
+      }
     } else {
       LOG.warn("Failed to get token for service "+service);
     }

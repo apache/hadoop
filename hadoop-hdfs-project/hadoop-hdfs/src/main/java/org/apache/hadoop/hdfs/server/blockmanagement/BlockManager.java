@@ -1571,7 +1571,24 @@ public class BlockManager {
       }
     case RBW:
     case RWR:
-      return storedBlock.isComplete();
+      if (!storedBlock.isComplete()) {
+        return false;
+      } else if (storedBlock.getGenerationStamp() != iblk.getGenerationStamp()) {
+        return true;
+      } else { // COMPLETE block, same genstamp
+        if (reportedState == ReplicaState.RBW) {
+          // If it's a RBW report for a COMPLETE block, it may just be that
+          // the block report got a little bit delayed after the pipeline
+          // closed. So, ignore this report, assuming we will get a
+          // FINALIZED replica later. See HDFS-2791
+          LOG.info("Received an RBW replica for block " + storedBlock +
+              " on " + dn.getName() + ": ignoring it, since the block is " +
+              "complete with the same generation stamp.");
+          return false;
+        } else {
+          return true;
+        }
+      }
     case RUR:       // should not be reported
     case TEMPORARY: // should not be reported
     default:

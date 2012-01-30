@@ -91,15 +91,15 @@ if [ -d "$HADOOP_MAPRED_HOME/build/tools" ]; then
 fi
 
 # for releases, add core mapred jar & webapps to CLASSPATH
-if [ -d "$HADOOP_PREFIX/share/hadoop/mapreduce/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/share/hadoop/mapreduce
+if [ -d "$HADOOP_PREFIX/${MAPRED_DIR}/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/${MAPRED_DIR}
 fi
-for f in $HADOOP_MAPRED_HOME/share/hadoop-mapreduce/*.jar; do
+for f in $HADOOP_MAPRED_HOME/${MAPRED_DIR}/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
 # add libs to CLASSPATH
-for f in $HADOOP_MAPRED_HOME/lib/*.jar; do
+for f in $HADOOP_MAPRED_HOME/${MAPRED_LIB_JARS_DIR}/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 

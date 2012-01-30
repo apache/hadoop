@@ -142,10 +142,21 @@ Release 0.23.1 - Unreleased
     HADOOP-7919. Remove the unused hadoop.logfile.* properties from the 
     core-default.xml file. (harsh)
 
+    HADOOP-7939. Improve Hadoop subcomponent integration in Hadoop 0.23. (rvs via tucu)
+
+    HADOOP-7988. Upper case in hostname part of the principals doesn't work with
+    kerberos. (jitendra)
+
+    HADOOP-8002. SecurityUtil acquired token message should be a debug rather than info.
+    (Arpit Gupta via mahadev)
+
   OPTIMIZATIONS
 
   BUG FIXES
-   
+ 
+   HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
+   (Daryn Sharp via bobby)
+  
    HADOOP-7811. TestUserGroupInformation#testGetServerSideGroups test fails in chroot.
    (Jonathan Eagles via mahadev)
 
@@ -226,6 +237,15 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7981. Improve documentation for org.apache.hadoop.io.compress.
    Decompressor.getRemaining (Jonathan Eagles via mahadev)
+
+   HADOOP-7997. SequenceFile.createWriter(...createParent...) no
+   longer works on existing file. (Gregory Chanan via eli)
+
+   HADOOP-7993. Hadoop ignores old-style config options for enabling compressed 
+   output. (Anupam Seth via mahadev)
+
+   HADOOP-8000. fetchdt command not available in bin/hadoop.
+   (Arpit Gupta via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -149,10 +149,15 @@ class ExecutionSummarizer implements StatListener<JobStats> {
   throws IOException {
     numJobsInInputTrace = factory.numJobsInTrace;
     endTime = System.currentTimeMillis();
-    Path inputTracePath = new Path(inputPath);
-    FileSystem fs = inputTracePath.getFileSystem(conf);
-    inputTraceLocation = fs.makeQualified(inputTracePath).toString();
-    inputTraceSignature = getTraceSignature(inputTraceLocation);
+     if ("-".equals(inputPath)) {
+      inputTraceLocation = Summarizer.NA;
+      inputTraceSignature = Summarizer.NA;
+    } else {
+      Path inputTracePath = new Path(inputPath);
+      FileSystem fs = inputTracePath.getFileSystem(conf);
+      inputTraceLocation = fs.makeQualified(inputTracePath).toString();
+      inputTraceSignature = getTraceSignature(inputPath);
+    }
     jobSubmissionPolicy = Gridmix.getJobSubmissionPolicy(conf).name();
     resolver = userResolver.getClass().getName();
     if (dataSize > 0) {

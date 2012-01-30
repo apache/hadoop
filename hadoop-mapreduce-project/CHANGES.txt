@@ -36,6 +36,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
 
   IMPROVEMENTS
+    MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
+
     MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the 
                     job-history related information.
 
@@ -153,6 +155,15 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3737. The Web Application Proxy's is not documented very well.
     (Robert Evans via mahadev)
 
+    MAPREDUCE-3699. Increased RPC handlers for all YARN servers to reasonable
+    values for working at scale. (Hitesh Shah via vinodkv)
+
+    MAPREDUCE-3693. Added mapreduce.admin.user.env to mapred-default.xml.
+    (Roman Shapshonik via acmurthy) 
+
+    MAPREDUCE-3732. Modified CapacityScheduler to use only users with pending
+    requests for computing user-limits. (Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -179,7 +190,13 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3718. Change default AM heartbeat interval to 1 second. (Hitesh
     Shah via sseth)
 
+    MAPREDUCE-3360. Added information about lost/rebooted/decommissioned nodes
+    on the webapps. (Bhallamudi Venkata Siva Kamesh and Jason Lowe via vinodkv)
+
   BUG FIXES
+    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
+                    ResourceUsageMatcher. (amarrk)
+
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 
@@ -557,6 +574,12 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3735. Add distcp jar to the distribution (tar).
     (mahadev)
+
+    MAPREDUCE-3720. Changed bin/mapred job -list to not print job-specific
+    information not available at RM. (vinodkv via acmurthy) 
+
+    MAPREDUCE-3742. "yarn logs" command fails with ClassNotFoundException.
+    (Jason Lowe via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

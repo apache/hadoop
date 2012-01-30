@@ -94,6 +94,10 @@ public class NodeInfo {
   public String getNodeHTTPAddress() {
     return this.nodeHTTPAddress;
   }
+  
+  public void setNodeHTTPAddress(String nodeHTTPAddress) {
+    this.nodeHTTPAddress = nodeHTTPAddress;
+  }
 
   public String getHealthStatus() {
     return this.healthStatus;

@@ -68,7 +68,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         th().$class("ui-state-default")._("Memory Used")._().
         th().$class("ui-state-default")._("Memory Total")._().
         th().$class("ui-state-default")._("Memory Reserved")._().
-        th().$class("ui-state-default")._("Total Nodes")._().
+        th().$class("ui-state-default")._("Active Nodes")._().
         th().$class("ui-state-default")._("Decommissioned Nodes")._().
         th().$class("ui-state-default")._("Lost Nodes")._().
         th().$class("ui-state-default")._("Unhealthy Nodes")._().
@@ -82,7 +82,7 @@ public class MetricsOverviewTable extends HtmlBlock {
         td(StringUtils.byteDesc(clusterMetrics.getAllocatedMB() * BYTES_IN_MB)).
         td(StringUtils.byteDesc(clusterMetrics.getTotalMB() * BYTES_IN_MB)).
         td(StringUtils.byteDesc(clusterMetrics.getReservedMB() * BYTES_IN_MB)).
-        td().a(url("nodes"),String.valueOf(clusterMetrics.getTotalNodes()))._().
+        td().a(url("nodes"),String.valueOf(clusterMetrics.getActiveNodes()))._().
         td().a(url("nodes/decommissioned"),String.valueOf(clusterMetrics.getDecommissionedNodes()))._().
         td().a(url("nodes/lost"),String.valueOf(clusterMetrics.getLostNodes()))._().
         td().a(url("nodes/unhealthy"),String.valueOf(clusterMetrics.getUnhealthyNodes()))._().

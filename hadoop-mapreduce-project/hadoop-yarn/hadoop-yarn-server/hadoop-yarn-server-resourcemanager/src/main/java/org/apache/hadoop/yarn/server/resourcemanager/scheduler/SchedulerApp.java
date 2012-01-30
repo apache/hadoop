@@ -102,11 +102,12 @@ public class SchedulerApp {
 
   private final RMContext rmContext;
   public SchedulerApp(ApplicationAttemptId applicationAttemptId, 
-      String user, Queue queue, 
+      String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext, ApplicationStore store) {
     this.rmContext = rmContext;
     this.appSchedulingInfo = 
-        new AppSchedulingInfo(applicationAttemptId, user, queue, store);
+        new AppSchedulingInfo(applicationAttemptId, user, queue,  
+            activeUsersManager, store);
     this.queue = queue;
   }
 

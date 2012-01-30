@@ -304,8 +304,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    */
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    return new FSDataInputStream(
-        new ChecksumFSInputChecker(this, f, bufferSize));
+    return verifyChecksum
+      ? new FSDataInputStream(new ChecksumFSInputChecker(this, f, bufferSize))
+      : getRawFileSystem().open(f, bufferSize);
   }
 
   /** {@inheritDoc} */

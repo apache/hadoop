@@ -55,8 +55,8 @@ if [ "${1}" = "stop" ]; then
 fi
 
 if [ "${HTTPFS_SILENT}" != "true" ]; then
-  ${BASEDIR}/share/hadoop/httpfs/tomcat/bin/catalina.sh "$@"
+  ${CATALINA_BASE:-"${BASEDIR}/share/hadoop/httpfs/tomcat"}/bin/catalina.sh "$@"
 else
-  ${BASEDIR}/share/hadoop/httpfs/tomcat/bin/catalina.sh "$@" > /dev/null
+  ${CATALINA_BASE:-"${BASEDIR}/share/hadoop/httpfs/tomcat"}/bin/catalina.sh "$@" > /dev/null
 fi
 

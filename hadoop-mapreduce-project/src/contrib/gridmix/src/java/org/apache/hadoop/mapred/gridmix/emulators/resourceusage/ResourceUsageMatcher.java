@@ -52,15 +52,23 @@ public class ResourceUsageMatcher {
   @SuppressWarnings("unchecked")
   public void configure(Configuration conf, ResourceCalculatorPlugin monitor, 
                         ResourceUsageMetrics metrics, Progressive progress) {
-    Class[] plugins = 
-      conf.getClasses(RESOURCE_USAGE_EMULATION_PLUGINS, 
-                      ResourceUsageEmulatorPlugin.class);
+    Class[] plugins = conf.getClasses(RESOURCE_USAGE_EMULATION_PLUGINS);
     if (plugins == null) {
       System.out.println("No resource usage emulator plugins configured.");
     } else {
-      for (Class<? extends ResourceUsageEmulatorPlugin> plugin : plugins) {
-        if (plugin != null) {
-          emulationPlugins.add(ReflectionUtils.newInstance(plugin, conf));
+      for (Class clazz : plugins) {
+        if (clazz != null) {
+          if (ResourceUsageEmulatorPlugin.class.isAssignableFrom(clazz)) {
+            ResourceUsageEmulatorPlugin plugin = 
+              (ResourceUsageEmulatorPlugin) ReflectionUtils.newInstance(clazz, 
+                                                                        conf);
+            emulationPlugins.add(plugin);
+          } else {
+            throw new RuntimeException("Misconfigured resource usage plugins. " 
+                + "Class " + clazz.getClass().getName() + " is not a resource "
+                + "usage plugin as it does not extend "
+                + ResourceUsageEmulatorPlugin.class.getName());
+          }
         }
       }
     }
