@@ -21,18 +21,17 @@ package org.apache.hadoop.ipc;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Method;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 
 import java.net.InetSocketAddress;
 import java.io.*;
-import java.io.Closeable;
 
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -202,7 +201,7 @@ public class WritableRpcEngine implements RpcEngine {
 
   private static ClientCache CLIENTS=new ClientCache();
   
-  private static class Invoker implements InvocationHandler, Closeable {
+  private static class Invoker implements RpcInvocationHandler {
     private Client.ConnectionId remoteId;
     private Client client;
     private boolean isClosed = false;
@@ -238,6 +237,11 @@ public class WritableRpcEngine implements RpcEngine {
         isClosed = true;
         CLIENTS.stopClient(client);
       }
+    }
+
+    @Override
+    public ConnectionId getConnectionId() {
+      return remoteId;
     }
   }
   
@@ -523,5 +527,12 @@ public class WritableRpcEngine implements RpcEngine {
         }
       }
     }
+  }
+
+  @Override
+  public ProtocolProxy<ProtocolMetaInfoPB> getProtocolMetaInfoProxy(
+      ConnectionId connId, Configuration conf, SocketFactory factory)
+      throws IOException {
+    throw new UnsupportedOperationException("This proxy is not supported");
   }
 }

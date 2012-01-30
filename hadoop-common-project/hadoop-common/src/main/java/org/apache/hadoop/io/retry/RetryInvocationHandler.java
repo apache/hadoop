@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.io.retry;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.Collections;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.RpcInvocationHandler;
 
-class RetryInvocationHandler implements InvocationHandler, Closeable {
+class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private FailoverProxyProvider proxyProvider;
   
@@ -108,6 +109,13 @@ class RetryInvocationHandler implements InvocationHandler, Closeable {
   @Override
   public void close() throws IOException {
     proxyProvider.close();
+  }
+
+  @Override //RpcInvocationHandler
+  public ConnectionId getConnectionId() {
+    RpcInvocationHandler inv = (RpcInvocationHandler) Proxy
+        .getInvocationHandler(currentProxy);
+    return inv.getConnectionId();
   }
 
 }

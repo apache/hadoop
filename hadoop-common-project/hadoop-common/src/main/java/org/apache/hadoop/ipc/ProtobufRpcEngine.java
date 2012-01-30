@@ -18,11 +18,9 @@
 
 package org.apache.hadoop.ipc;
 
-import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
@@ -37,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcExceptionProto;
@@ -51,7 +50,6 @@ import org.apache.hadoop.util.StringUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.Descriptors.MethodDescriptor;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.ServiceException;
 
@@ -80,8 +78,19 @@ public class ProtobufRpcEngine implements RpcEngine {
         .getClassLoader(), new Class[] { protocol }, new Invoker(protocol,
         addr, ticket, conf, factory, rpcTimeout)), false);
   }
+  
+  @Override
+  public ProtocolProxy<ProtocolMetaInfoPB> getProtocolMetaInfoProxy(
+      ConnectionId connId, Configuration conf, SocketFactory factory)
+      throws IOException {
+    Class<ProtocolMetaInfoPB> protocol = ProtocolMetaInfoPB.class;
+    return new ProtocolProxy<ProtocolMetaInfoPB>(protocol,
+        (ProtocolMetaInfoPB) Proxy.newProxyInstance(protocol.getClassLoader(),
+            new Class[] { protocol }, new Invoker(protocol, connId, conf,
+                factory)), false);
+  }
 
-  private static class Invoker implements InvocationHandler, Closeable {
+  private static class Invoker implements RpcInvocationHandler {
     private final Map<String, Message> returnTypes = 
         new ConcurrentHashMap<String, Message>();
     private boolean isClosed = false;
@@ -93,12 +102,20 @@ public class ProtobufRpcEngine implements RpcEngine {
     public Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout) throws IOException {
-      this.remoteId = Client.ConnectionId.getConnectionId(addr, protocol,
-          ticket, rpcTimeout, conf);
-      this.client = CLIENTS.getClient(conf, factory,
-          RpcResponseWritable.class);
-      this.clientProtocolVersion = RPC.getProtocolVersion(protocol);
+      this(protocol, Client.ConnectionId.getConnectionId(addr, protocol,
+          ticket, rpcTimeout, conf), conf, factory);
+    }
+    
+    /**
+     * This constructor takes a connectionId, instead of creating a new one.
+     */
+    public Invoker(Class<?> protocol, Client.ConnectionId connId,
+        Configuration conf, SocketFactory factory) {
+      this.remoteId = connId;
+      this.client = CLIENTS.getClient(conf, factory, RpcResponseWritable.class);
       this.protocolName = RPC.getProtocolName(protocol);
+      this.clientProtocolVersion = RPC
+          .getProtocolVersion(protocol);
     }
 
     private HadoopRpcRequestProto constructRpcRequest(Method method,
@@ -221,6 +238,11 @@ public class ProtobufRpcEngine implements RpcEngine {
       Message prototype = (Message) newInstMethod.invoke(null, (Object[]) null);
       returnTypes.put(method.getName(), prototype);
       return prototype;
+    }
+
+    @Override //RpcInvocationHandler
+    public ConnectionId getConnectionId() {
+      return remoteId;
     }
   }
 
