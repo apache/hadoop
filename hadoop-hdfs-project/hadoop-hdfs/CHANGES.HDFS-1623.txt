@@ -135,3 +135,5 @@ HDFS-2809. Add test to verify that delegation tokens are honored after failover.
 HDFS-2838. NPE in FSNamesystem when in safe mode. (Gregory Chanan via eli)
 
 HDFS-2805. Add a test for a federated cluster with HA NNs. (Brandon Li via jitendra)
+
+HDFS-2841. HAAdmin does not work if security is enabled. (atm)

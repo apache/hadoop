@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableMap;
  * mode, or to trigger a health-check.
  */
 @InterfaceAudience.Private
-public class HAAdmin extends Configured implements Tool {
+public abstract class HAAdmin extends Configured implements Tool {
   
   private static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
@@ -171,7 +171,6 @@ public class HAAdmin extends Configured implements Tool {
           addr, getConf());
   }
 
-      
   @Override
   public int run(String[] argv) throws Exception {
     if (argv.length < 1) {
@@ -226,12 +225,6 @@ public class HAAdmin extends Configured implements Tool {
     errOut.println(cmd + " [" + usageInfo.args + "]: " + usageInfo.help);
     return 1;
   }
-
-  public static void main(String[] argv) throws Exception {
-    int res = ToolRunner.run(new HAAdmin(), argv);
-    System.exit(res);
-  }
-  
   
   private static class UsageInfo {
     private final String args;

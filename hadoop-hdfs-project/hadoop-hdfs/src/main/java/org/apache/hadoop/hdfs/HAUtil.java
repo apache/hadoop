@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
@@ -34,11 +36,16 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 public class HAUtil {
+  
+  private static final Log LOG = 
+    LogFactory.getLog(HAUtil.class);
+  
   private HAUtil() { /* Hidden constructor */ }
 
   /**
@@ -171,11 +178,14 @@ public class HAUtil {
           xface);
       return (FailoverProxyProvider<T>) provider;
     } catch (Exception e) {
+      String message = "Couldn't create proxy provider " + failoverProxyProviderClass;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(message, e);
+      }
       if (e.getCause() instanceof IOException) {
         throw (IOException) e.getCause();
       } else {
-        throw new IOException(
-            "Couldn't create proxy provider " + failoverProxyProviderClass, e);
+        throw new IOException(message, e);
       }
     }
   }
