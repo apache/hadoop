@@ -255,7 +255,8 @@ public class TestFileJournalManager {
       jm.getNumberOfTransactions(startGapTxId, true);
       fail("Should have thrown an exception by now");
     } catch (IOException ioe) {
-      assertTrue(true);
+      GenericTestUtils.assertExceptionContains(
+          "Gap in transactions, max txnid is 110, 0 txns from 31", ioe);
     }
 
     // rolled 10 times so there should be 11 files.

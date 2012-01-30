@@ -605,19 +605,21 @@ public class FSEditLogLoader {
       FSImage.LOG.debug("Caught exception after reading " + numValid +
           " ops from " + in + " while determining its valid length.", t);
     }
-    return new EditLogValidation(lastPos, firstTxId, lastTxId);
+    return new EditLogValidation(lastPos, firstTxId, lastTxId, false);
   }
   
   static class EditLogValidation {
-    private long validLength;
-    private long startTxId;
-    private long endTxId;
+    private final long validLength;
+    private final long startTxId;
+    private final long endTxId;
+    private final boolean corruptionDetected;
      
-    EditLogValidation(long validLength, 
-                      long startTxId, long endTxId) {
+    EditLogValidation(long validLength, long startTxId, long endTxId,
+        boolean corruptionDetected) {
       this.validLength = validLength;
       this.startTxId = startTxId;
       this.endTxId = endTxId;
+      this.corruptionDetected = corruptionDetected;
     }
     
     long getValidLength() { return validLength; }
@@ -633,6 +635,8 @@ public class FSEditLogLoader {
       }
       return (endTxId - startTxId) + 1;
     }
+    
+    boolean hasCorruptHeader() { return corruptionDetected; }
   }
 
   /**

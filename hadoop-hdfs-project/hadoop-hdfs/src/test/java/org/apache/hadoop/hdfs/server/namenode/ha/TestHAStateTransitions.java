@@ -17,14 +17,22 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,7 +41,10 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
@@ -41,8 +52,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
+import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -59,6 +71,10 @@ public class TestHAStateTransitions {
   private static final String TEST_FILE_STR = TEST_FILE_PATH.toUri().getPath();
   private static final String TEST_FILE_DATA =
     "Hello state transitioning world";
+  
+  static {
+    ((Log4JLogger)EditLogTailer.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   /**
    * Test which takes a single node and flip flops between
@@ -352,6 +368,57 @@ public class TestHAStateTransitions {
       testManualFailoverFailback(cluster, conf, 1); 
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testFailoverWithEmptyInProgressEditLog() throws Exception {
+    testFailoverAfterCrashDuringLogRoll(false);
+  }
+  
+  @Test
+  public void testFailoverWithEmptyInProgressEditLogWithHeader()
+      throws Exception {
+    testFailoverAfterCrashDuringLogRoll(true);
+  }
+  
+  private static void testFailoverAfterCrashDuringLogRoll(boolean writeHeader)
+      throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, Integer.MAX_VALUE);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .nnTopology(MiniDFSNNTopology.simpleHATopology())
+      .numDataNodes(0)
+      .build();
+    FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+    try {
+      cluster.transitionToActive(0);
+      NameNode nn0 = cluster.getNameNode(0);
+      nn0.getRpcServer().rollEditLog();
+      cluster.shutdownNameNode(0);
+      createEmptyInProgressEditLog(cluster, nn0, writeHeader);
+      cluster.transitionToActive(1);
+    } finally {
+      IOUtils.cleanup(LOG, fs);
+      cluster.shutdown();
+    }
+  }
+  
+  private static void createEmptyInProgressEditLog(MiniDFSCluster cluster,
+      NameNode nn, boolean writeHeader) throws IOException {
+    long txid = nn.getNamesystem().getEditLog().getLastWrittenTxId();
+    URI sharedEditsUri = cluster.getSharedEditsDir(0, 1);
+    File sharedEditsDir = new File(sharedEditsUri.getPath());
+    StorageDirectory storageDir = new StorageDirectory(sharedEditsDir);
+    File inProgressFile = NameNodeAdapter.getInProgressEditsFile(storageDir,
+        txid + 1);
+    assertTrue("Failed to create in-progress edits file",
+        inProgressFile.createNewFile());
+    
+    if (writeHeader) {
+      DataOutputStream out = new DataOutputStream(new FileOutputStream(
+          inProgressFile));
+      EditLogFileOutputStream.writeHeader(out);
     }
   }
 }

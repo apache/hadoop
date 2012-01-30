@@ -224,7 +224,7 @@ public class EditLogTailer {
         editsLoaded = elie.getNumEditsLoaded();
         throw elie;
       } finally {
-        if (editsLoaded > 0) {
+        if (editsLoaded > 0 || LOG.isDebugEnabled()) {
           LOG.info(String.format("Loaded %d edits starting from txid %d ",
               editsLoaded, lastTxnId));
         }

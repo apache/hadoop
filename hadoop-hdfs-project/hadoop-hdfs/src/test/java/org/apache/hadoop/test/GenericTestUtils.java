@@ -80,8 +80,8 @@ public abstract class GenericTestUtils {
   public static void assertExceptionContains(String string, Throwable t) {
     String msg = t.getMessage();
     Assert.assertTrue(
-        "Unexpected exception:" + StringUtils.stringifyException(t),
-        msg.contains(string));    
+        "Expected to find '" + string + "' but got unexpected exception:"
+        + StringUtils.stringifyException(t), msg.contains(string));
   }  
 
   public static void waitFor(Supplier<Boolean> check,

@@ -629,22 +629,26 @@ public class TestEditLog extends TestCase {
     }
   }
   
+  // should succeed - only one corrupt log dir
   public void testCrashRecoveryEmptyLogOneDir() throws Exception {
-    doTestCrashRecoveryEmptyLog(false, true);
+    doTestCrashRecoveryEmptyLog(false, true, true);
   }
   
+  // should fail - seen_txid updated to 3, but no log dir contains txid 3
   public void testCrashRecoveryEmptyLogBothDirs() throws Exception {
-    doTestCrashRecoveryEmptyLog(true, true);
+    doTestCrashRecoveryEmptyLog(true, true, false);
   }
 
+  // should succeed - only one corrupt log dir
   public void testCrashRecoveryEmptyLogOneDirNoUpdateSeenTxId() 
       throws Exception {
-    doTestCrashRecoveryEmptyLog(false, false);
+    doTestCrashRecoveryEmptyLog(false, false, true);
   }
   
+  // should succeed - both log dirs corrupt, but seen_txid never updated
   public void testCrashRecoveryEmptyLogBothDirsNoUpdateSeenTxId()
       throws Exception {
-    doTestCrashRecoveryEmptyLog(true, false);
+    doTestCrashRecoveryEmptyLog(true, false, true);
   }
 
   /**
@@ -660,12 +664,13 @@ public class TestEditLog extends TestCase {
    * NN should fail to start up, because it's aware that txid 3
    * was reached, but unable to find a non-corrupt log starting there.
    * @param updateTransactionIdFile if true update the seen_txid file.
-   * If false, the it will not be updated. This will simulate a case 
-   * where the NN crashed between creating the new segment and updating
-   * seen_txid. 
+   * If false, it will not be updated. This will simulate a case where
+   * the NN crashed between creating the new segment and updating the
+   * seen_txid file.
+   * @param shouldSucceed true if the test is expected to succeed.
    */
   private void doTestCrashRecoveryEmptyLog(boolean inBothDirs, 
-                                           boolean updateTransactionIdFile) 
+      boolean updateTransactionIdFile, boolean shouldSucceed)
       throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
@@ -684,29 +689,40 @@ public class TestEditLog extends TestCase {
       // Make a truncated edits_3_inprogress
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));
-      NNStorage storage = new NNStorage(conf, 
-                                        Collections.<URI>emptyList(),
-                                        Lists.newArrayList(uri));
-      if (updateTransactionIdFile) {
-        storage.writeTransactionIdFileToStorage(3);
-      }
-      storage.close();
 
       new EditLogFileOutputStream(log, 1024).create();
       if (!inBothDirs) {
         break;
       }
+      
+      NNStorage storage = new NNStorage(conf, 
+          Collections.<URI>emptyList(),
+          Lists.newArrayList(uri));
+      
+      if (updateTransactionIdFile) {
+        storage.writeTransactionIdFileToStorage(3);
+      }
+      storage.close();
     }
     
     try {
       cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(NUM_DATA_NODES).format(false).build();
-      fail("Did not fail to start with all-corrupt logs");
+      if (!shouldSucceed) {
+        fail("Should not have succeeded in startin cluster");
+      }
     } catch (IOException ioe) {
-      GenericTestUtils.assertExceptionContains(
-          "No non-corrupt logs for txid 3", ioe);
+      if (shouldSucceed) {
+        LOG.info("Should have succeeded in starting cluster, but failed", ioe);
+        throw ioe;
+      } else {
+        GenericTestUtils.assertExceptionContains(
+            "No non-corrupt logs for txid 3",
+            ioe);
+      }
+    } finally {
+      cluster.shutdown();
     }
-    cluster.shutdown();
   }
 
   
@@ -1082,9 +1098,7 @@ public class TestEditLog extends TestCase {
     editlog.initJournalsForWrite();
     long startTxId = 1;
     try {
-      Iterable<EditLogInputStream> editStreams 
-        = editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
-      
+      editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
       fail("Should have thrown exception");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(

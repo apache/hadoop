@@ -139,3 +139,5 @@ HDFS-2805. Add a test for a federated cluster with HA NNs. (Brandon Li via jiten
 HDFS-2841. HAAdmin does not work if security is enabled. (atm)
 
 HDFS-2691. Fixes for pipeline recovery in an HA cluster: report RBW replicas immediately upon pipeline creation. (todd)
+
+HDFS-2824. Fix failover when prior NN died just after creating an edit log segment. (atm via todd)

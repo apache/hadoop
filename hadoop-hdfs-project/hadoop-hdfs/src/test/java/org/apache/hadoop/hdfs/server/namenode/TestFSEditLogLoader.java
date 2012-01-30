@@ -243,7 +243,9 @@ public class TestFSEditLogLoader {
       Files.copy(logFileBak, logFile);
       corruptByteInFile(logFile, offset);
       EditLogValidation val = EditLogFileInputStream.validateEditLog(logFile);
-      assertTrue(val.getNumTransactions() >= prevNumValid);
+      assertTrue(String.format("%d should have been >= %d",
+          val.getNumTransactions(), prevNumValid),
+          val.getNumTransactions() >= prevNumValid);
       prevNumValid = val.getNumTransactions();
     }
   }
