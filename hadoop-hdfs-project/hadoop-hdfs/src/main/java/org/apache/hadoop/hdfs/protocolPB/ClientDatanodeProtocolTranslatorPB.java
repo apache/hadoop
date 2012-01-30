@@ -43,8 +43,11 @@ import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcClientUtil;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -60,7 +63,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class ClientDatanodeProtocolTranslatorPB implements
-    ClientDatanodeProtocol, Closeable {
+    ProtocolMetaInterface, ClientDatanodeProtocol, Closeable {
   public static final Log LOG = LogFactory
       .getLog(ClientDatanodeProtocolTranslatorPB.class);
   
@@ -168,7 +171,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   @Override
   public void refreshNamenodes() throws IOException {
     try {
-      rpcProxy.refreshNamenode(NULL_CONTROLLER, REFRESH_NAMENODES);
+      rpcProxy.refreshNamenodes(NULL_CONTROLLER, REFRESH_NAMENODES);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -200,5 +203,12 @@ public class ClientDatanodeProtocolTranslatorPB implements
     }
     return new BlockLocalPathInfo(PBHelper.convert(resp.getBlock()),
         resp.getLocalPath(), resp.getLocalMetaPath());
+  }
+
+  @Override
+  public boolean isMethodSupported(String methodName) throws IOException {
+    return RpcClientUtil.isMethodSupported(rpcProxy,
+        ClientDatanodeProtocolPB.class, RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(ClientDatanodeProtocolPB.class), methodName);
   }
 }

@@ -29,8 +29,11 @@ import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcClientUtil;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -39,7 +42,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
-    RefreshUserMappingsProtocol, Closeable {
+    ProtocolMetaInterface, RefreshUserMappingsProtocol, Closeable {
 
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
@@ -94,5 +97,14 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
+  }
+
+  @Override
+  public boolean isMethodSupported(String methodName) throws IOException {
+    return RpcClientUtil
+        .isMethodSupported(rpcProxy, RefreshUserMappingsProtocolPB.class,
+            RpcKind.RPC_PROTOCOL_BUFFER,
+            RPC.getProtocolVersion(RefreshUserMappingsProtocolPB.class),
+            methodName);
   }
 }
