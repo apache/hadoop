@@ -563,6 +563,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3742. "yarn logs" command fails with ClassNotFoundException.
     (Jason Lowe via mahadev)
 
+    MAPREDUCE-3703. ResourceManager should provide node lists in JMX output.
+    (Eric Payne via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
