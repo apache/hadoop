@@ -19,9 +19,10 @@ package org.apache.hadoop.ha;
 
 import static org.junit.Assert.*;
 
+import java.net.InetSocketAddress;
+
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.ha.SshFenceByTcpPort.Args;
 import org.apache.log4j.Level;
 import org.junit.Assume;
@@ -33,8 +34,10 @@ public class TestSshFenceByTcpPort {
     ((Log4JLogger)SshFenceByTcpPort.LOG).getLogger().setLevel(Level.ALL);
   }
   
-  private String TEST_FENCING_ARG = System.getProperty(
-      "test.TestSshFenceByTcpPort.arg", "localhost");
+  private String TEST_FENCING_HOST = System.getProperty(
+      "test.TestSshFenceByTcpPort.host", "localhost");
+  private String TEST_FENCING_PORT = System.getProperty(
+      "test.TestSshFenceByTcpPort.port", "8020");
   private final String TEST_KEYFILE = System.getProperty(
       "test.TestSshFenceByTcpPort.key");
 
@@ -43,10 +46,12 @@ public class TestSshFenceByTcpPort {
     Assume.assumeTrue(isConfigured());
     Configuration conf = new Configuration();
     conf.set(SshFenceByTcpPort.CONF_IDENTITIES_KEY, TEST_KEYFILE);
-    FileSystem.setDefaultUri(conf, "localhost:8020");
     SshFenceByTcpPort fence = new SshFenceByTcpPort();
     fence.setConf(conf);
-    assertTrue(fence.tryFence(TEST_FENCING_ARG));
+    assertTrue(fence.tryFence(
+        new InetSocketAddress(TEST_FENCING_HOST,
+                              Integer.valueOf(TEST_FENCING_PORT)),
+        null));
   }
 
   /**
@@ -61,61 +66,65 @@ public class TestSshFenceByTcpPort {
     SshFenceByTcpPort fence = new SshFenceByTcpPort();
     fence.setConf(conf);
     // Connect to Google's DNS server - not running ssh!
-    assertFalse(fence.tryFence("8.8.8.8, 1234"));
+    assertFalse(fence.tryFence(new InetSocketAddress("8.8.8.8", 1234), ""));
   }
   
   @Test
   public void testArgsParsing() throws BadFencingConfigurationException {
-    Args args = new SshFenceByTcpPort.Args("foo@bar.com:1234, 5678");
-    assertEquals("foo", args.user);
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.sshPort);
-    assertEquals(5678, args.targetPort);
+    InetSocketAddress addr = new InetSocketAddress("bar.com", 1234);
 
-    args = new SshFenceByTcpPort.Args("foo@bar.com, 1234");
+    Args args = new SshFenceByTcpPort.Args(addr, null);
+    assertEquals("bar.com", args.host);
+    assertEquals(1234, args.targetPort);
+    assertEquals(System.getProperty("user.name"), args.user);
+    assertEquals(22, args.sshPort);
+    
+    args = new SshFenceByTcpPort.Args(addr, "");
+    assertEquals("bar.com", args.host);
+    assertEquals(1234, args.targetPort);    
+    assertEquals(System.getProperty("user.name"), args.user);
+    assertEquals(22, args.sshPort);
+
+    args = new SshFenceByTcpPort.Args(addr, "12345");
+    assertEquals("bar.com", args.host);
+    assertEquals(1234, args.targetPort);
+    assertEquals("12345", args.user);
+    assertEquals(22, args.sshPort);
+
+    args = new SshFenceByTcpPort.Args(addr, ":12345");
+    assertEquals("bar.com", args.host);
+    assertEquals(1234, args.targetPort);
+    assertEquals(System.getProperty("user.name"), args.user);
+    assertEquals(12345, args.sshPort);
+
+    args = new SshFenceByTcpPort.Args(addr, "foo:8020");
+    assertEquals("bar.com", args.host);
+    assertEquals(1234, args.targetPort);
     assertEquals("foo", args.user);
-    assertEquals("bar.com", args.host);
-    assertEquals(22, args.sshPort);
-    assertEquals(1234, args.targetPort);
-    
-    args = new SshFenceByTcpPort.Args("bar.com, 1234");
-    assertEquals(System.getProperty("user.name"), args.user);
-    assertEquals("bar.com", args.host);
-    assertEquals(22, args.sshPort);
-    assertEquals(1234, args.targetPort);
-    
-    args = new SshFenceByTcpPort.Args("bar.com:1234, 12345");
-    assertEquals(System.getProperty("user.name"), args.user);
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.sshPort);
-    assertEquals(12345, args.targetPort);
-    
-    args = new SshFenceByTcpPort.Args("bar, 8020");
-    assertEquals(8020, args.targetPort);    
+    assertEquals(8020, args.sshPort);
   }
   
   @Test
   public void testBadArgsParsing() throws BadFencingConfigurationException {
-    assertBadArgs(null);
-    assertBadArgs("");
-    assertBadArgs("bar.com:");
-    assertBadArgs("bar.com:x");
-    assertBadArgs("foo.com, x");
-    assertBadArgs("foo.com,");
-    assertBadArgs("foo.com, ");
+    assertBadArgs(":");          // No port specified
+    assertBadArgs("bar.com:");   // "
+    assertBadArgs(":xx");        // Port does not parse
+    assertBadArgs("bar.com:xx"); // "
   }
   
   private void assertBadArgs(String argStr) {
+    InetSocketAddress addr = new InetSocketAddress("bar.com", 1234);
     try {
-      new Args(argStr);
+      new Args(addr, argStr);
       fail("Did not fail on bad args: " + argStr);
     } catch (BadFencingConfigurationException e) {
-      // expected
+      // Expected
     }
   }
 
   private boolean isConfigured() {
-    return (TEST_FENCING_ARG != null && !TEST_FENCING_ARG.isEmpty()) &&
-      (TEST_KEYFILE != null && !TEST_KEYFILE.isEmpty());
+    return (TEST_FENCING_HOST != null && !TEST_FENCING_HOST.isEmpty()) &&
+           (TEST_FENCING_PORT != null && !TEST_FENCING_PORT.isEmpty()) &&
+           (TEST_KEYFILE != null && !TEST_KEYFILE.isEmpty());
   }
 }

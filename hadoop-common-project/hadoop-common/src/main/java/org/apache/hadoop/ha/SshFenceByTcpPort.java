@@ -18,8 +18,7 @@
 package org.apache.hadoop.ha;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,14 +47,9 @@ import com.jcraft.jsch.Session;
  * <p>
  * This fencing mechanism is configured as following in the fencing method
  * list:
- * <code>sshfence([username@]nnhost[:ssh-port], target-port)</code>
- * where the first argument specifies the username, host, and port to ssh
- * into, and the second argument specifies the port on which the target
- * NN process is listening on.
- * <p>
- * For example, <code>sshfence(other-nn, 8020)<code> will SSH into
- * <code>other-nn<code> as the current user on the standard SSH port,
- * then kill whatever process is listening on port 8020.
+ * <code>sshfence([[username][:ssh-port]])</code>
+ * where the optional argument specifies the username and port to use
+ * with ssh.
  * <p>
  * In order to achieve passwordless SSH, the operator must also configure
  * <code>dfs.namenode.ha.fencing.ssh.private-key-files<code> to point to an
@@ -75,25 +69,23 @@ public class SshFenceByTcpPort extends Configured
     "dfs.namenode.ha.fencing.ssh.private-key-files";
 
   /**
-   * Verify that the arguments are parseable and that the host
-   * can be resolved.
+   * Verify that the argument, if given, in the conf is parseable.
    */
   @Override
   public void checkArgs(String argStr) throws BadFencingConfigurationException {
-    Args args = new Args(argStr);
-    try {
-      InetAddress.getByName(args.host);
-    } catch (UnknownHostException e) {
-      throw new BadFencingConfigurationException(
-          "Unknown host: " + args.host);
+    if (argStr != null) {
+      // Use a dummy service when checking the arguments defined
+      // in the configuration are parseable.
+      Args args = new Args(new InetSocketAddress("localhost", 8020), argStr);
     }
   }
 
   @Override
-  public boolean tryFence(String argsStr)
+  public boolean tryFence(InetSocketAddress serviceAddr, String argsStr)
       throws BadFencingConfigurationException {
-    Args args = new Args(argsStr);
-    
+
+    Args args = new Args(serviceAddr, argsStr);
+
     Session session;
     try {
       session = createSession(args);
@@ -155,11 +147,11 @@ public class SshFenceByTcpPort extends Configured
             "Verifying whether it is running using nc...");
         rc = execCommand(session, "nc -z localhost 8020");
         if (rc == 0) {
-          // the NN is still listening - we are unable to fence
-          LOG.warn("Unable to fence NN - it is running but we cannot kill it");
+          // the service is still listening - we are unable to fence
+          LOG.warn("Unable to fence - it is running but we cannot kill it");
           return false;
         } else {
-          LOG.info("Verified that the NN is down.");
+          LOG.info("Verified that the service is down.");
           return true;          
         }
       } else {
@@ -189,7 +181,6 @@ public class SshFenceByTcpPort extends Configured
       exec.setCommand(cmd);
       exec.setInputStream(null);
       exec.connect();
-      
 
       // Pump stdout of the command to our WARN logs
       StreamPumper outPumper = new StreamPumper(LOG, cmd + " via ssh",
@@ -233,50 +224,37 @@ public class SshFenceByTcpPort extends Configured
    */
   @VisibleForTesting
   static class Args {
-    private static final Pattern USER_HOST_PORT_RE = Pattern.compile(
-      "(?:(.+?)@)?([^:]+?)(?:\\:(\\d+))?");
+    private static final Pattern USER_PORT_RE = Pattern.compile(
+      "([^:]+?)?(?:\\:(\\d+))?");
 
     private static final int DEFAULT_SSH_PORT = 22;
 
-    final String user;
-    final String host;
-    final int sshPort;
-    final int targetPort;
+    String host;
+    int targetPort;
+    String user;
+    int sshPort;
     
-    public Args(String args) throws BadFencingConfigurationException {
-      if (args == null) {
-        throw new BadFencingConfigurationException(
-            "Must specify args for ssh fencing configuration");
-      }
-      String[] argList = args.split(",\\s*");
-      if (argList.length != 2) {
-        throw new BadFencingConfigurationException(
-            "Incorrect number of arguments: " + args);
-      }
-      
-      // Parse SSH destination.
-      String sshDestArg = argList[0];
-      Matcher m = USER_HOST_PORT_RE.matcher(sshDestArg);
-      if (!m.matches()) {
-        throw new BadFencingConfigurationException(
-            "Unable to parse SSH destination: "+ sshDestArg);
-      }
-      if (m.group(1) != null) {
-        user = m.group(1);
-      } else {
-        user = System.getProperty("user.name");
-      }
-      
-      host = m.group(2);
+    public Args(InetSocketAddress serviceAddr, String arg) 
+        throws BadFencingConfigurationException {
+      host = serviceAddr.getHostName();
+      targetPort = serviceAddr.getPort();
+      user = System.getProperty("user.name");
+      sshPort = DEFAULT_SSH_PORT;
 
-      if (m.group(3) != null) {
-        sshPort = parseConfiggedPort(m.group(3));
-      } else {
-        sshPort = DEFAULT_SSH_PORT;
+      // Parse optional user and ssh port
+      if (arg != null && !"".equals(arg)) {
+        Matcher m = USER_PORT_RE.matcher(arg);
+        if (!m.matches()) {
+          throw new BadFencingConfigurationException(
+              "Unable to parse user and SSH port: "+ arg);
+        }
+        if (m.group(1) != null) {
+          user = m.group(1);
+        }
+        if (m.group(2) != null) {
+          sshPort = parseConfiggedPort(m.group(2));
+        }
       }
-      
-      // Parse target port.
-      targetPort = parseConfiggedPort(argList[1]);
     }
 
     private Integer parseConfiggedPort(String portStr)

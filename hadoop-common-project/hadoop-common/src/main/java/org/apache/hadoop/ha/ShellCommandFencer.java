@@ -19,11 +19,16 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -70,9 +75,18 @@ public class ShellCommandFencer
   }
 
   @Override
-  public boolean tryFence(String cmd) {
+  public boolean tryFence(InetSocketAddress serviceAddr, String cmd) {
+    List<String> cmdList = Arrays.asList(cmd.split("\\s+"));
+
+    // Create arg list with service as the first argument
+    List<String> argList = new ArrayList<String>();
+    argList.add(cmdList.get(0));
+    argList.add(serviceAddr.getHostName() + ":" + serviceAddr.getPort());
+    argList.addAll(cmdList.subList(1, cmdList.size()));
+    String cmdWithSvc = StringUtils.join(" ", argList);
+
     ProcessBuilder builder = new ProcessBuilder(
-        "bash", "-e", "-c", cmd);
+        "bash", "-e", "-c", cmdWithSvc);
     setConfAsEnvVars(builder.environment());
 
     Process p;

@@ -19,6 +19,8 @@ package org.apache.hadoop.ha;
 
 import static org.junit.Assert.*;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
@@ -55,14 +57,15 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testBasicSuccessFailure() {
-    assertTrue(fencer.tryFence("exit 0"));
-    assertFalse(fencer.tryFence("exit 1"));
+    InetSocketAddress addr = new InetSocketAddress("host", 1234);
+    assertTrue(fencer.tryFence(addr, "echo"));
+    assertFalse(fencer.tryFence(addr, "exit 1"));
     // bad path should also fail
-    assertFalse(fencer.tryFence("xxxxxxxxxxxx"));
+    assertFalse(fencer.tryFence(addr, "xxxxxxxxxxxx"));
   }
   
   @Test
-  public void testCheckArgs() {
+  public void testCheckNoArgs() {
     try {
       Configuration conf = new Configuration();
       conf.set(NodeFencer.CONF_METHODS_KEY, "shell");
@@ -74,16 +77,31 @@ public class TestShellCommandFencer {
         confe.getMessage().contains("No argument passed"));    
     }
   }
-  
+
+  @Test
+  public void testCheckParensNoArgs() {
+    try {
+      Configuration conf = new Configuration();
+      conf.set(NodeFencer.CONF_METHODS_KEY, "shell()");
+      new NodeFencer(conf);
+      fail("Didn't throw when passing no args to shell");
+    } catch (BadFencingConfigurationException confe) {
+      assertTrue(
+        "Unexpected exception:" + StringUtils.stringifyException(confe),
+        confe.getMessage().contains("Unable to parse line: 'shell()'"));
+    }
+  }
+
   /**
    * Test that lines on stdout get passed as INFO
    * level messages
    */
   @Test
   public void testStdoutLogging() {
-    assertTrue(fencer.tryFence("echo hello"));
+    InetSocketAddress addr = new InetSocketAddress("host", 1234);
+    assertTrue(fencer.tryFence(addr, "echo hello"));
     Mockito.verify(ShellCommandFencer.LOG).info(
-        Mockito.endsWith("echo hello: hello"));
+        Mockito.endsWith("echo hello: host:1234 hello"));
   }
    
   /**
@@ -92,9 +110,10 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testStderrLogging() {
-    assertTrue(fencer.tryFence("echo hello >&2"));
+    InetSocketAddress addr = new InetSocketAddress("host", 1234);
+    assertTrue(fencer.tryFence(addr, "echo hello >&2"));
     Mockito.verify(ShellCommandFencer.LOG).warn(
-        Mockito.endsWith("echo hello >&2: hello"));
+        Mockito.endsWith("echo hello >&2: host:1234 hello"));
   }
 
   /**
@@ -103,9 +122,10 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testConfAsEnvironment() {
-    fencer.tryFence("echo $in_fencing_tests");
+    InetSocketAddress addr = new InetSocketAddress("host", 1234);
+    fencer.tryFence(addr, "echo $in_fencing_tests");
     Mockito.verify(ShellCommandFencer.LOG).info(
-        Mockito.endsWith("echo $in...ing_tests: yessir"));
+        Mockito.endsWith("echo $in...ing_tests: host:1234 yessir"));
   }
 
   /**
@@ -116,7 +136,8 @@ public class TestShellCommandFencer {
    */
   @Test(timeout=10000)
   public void testSubprocessInputIsClosed() {
-    assertFalse(fencer.tryFence("read"));
+    InetSocketAddress addr = new InetSocketAddress("host", 1234);
+    assertFalse(fencer.tryFence(addr, "read"));
   }
   
   @Test

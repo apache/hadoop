@@ -19,6 +19,7 @@ package org.apache.hadoop.ha;
 
 import static org.junit.Assert.*;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -42,8 +43,9 @@ public class TestNodeFencer {
   public void testSingleFencer() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer(
         AlwaysSucceedFencer.class.getName() + "(foo)");
-    assertTrue(fencer.fence());
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
+    assertEquals("host:1234", AlwaysSucceedFencer.fencedSvc);
     assertEquals("foo", AlwaysSucceedFencer.callArgs.get(0));
   }
   
@@ -52,7 +54,7 @@ public class TestNodeFencer {
     NodeFencer fencer = setupFencer(
         AlwaysSucceedFencer.class.getName() + "(foo)\n" +
         AlwaysSucceedFencer.class.getName() + "(bar)\n");
-    assertTrue(fencer.fence());
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     // Only one call, since the first fencer succeeds
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
     assertEquals("foo", AlwaysSucceedFencer.callArgs.get(0));
@@ -66,10 +68,12 @@ public class TestNodeFencer {
         " # the next one will always fail\n" +
         " " + AlwaysFailFencer.class.getName() + "(foo) # <- fails\n" +
         AlwaysSucceedFencer.class.getName() + "(bar) \n");
-    assertTrue(fencer.fence());
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     // One call to each, since top fencer fails
     assertEquals(1, AlwaysFailFencer.fenceCalled);
+    assertEquals("host:1234", AlwaysFailFencer.fencedSvc);
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
+    assertEquals("host:1234", AlwaysSucceedFencer.fencedSvc);
     assertEquals("foo", AlwaysFailFencer.callArgs.get(0));
     assertEquals("bar", AlwaysSucceedFencer.callArgs.get(0));
   }
@@ -78,18 +82,43 @@ public class TestNodeFencer {
   public void testArglessFencer() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer(
         AlwaysSucceedFencer.class.getName());
-    assertTrue(fencer.fence());
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     // One call to each, since top fencer fails
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
+    assertEquals("host:1234", AlwaysSucceedFencer.fencedSvc);
     assertEquals(null, AlwaysSucceedFencer.callArgs.get(0));
   }
-  
+
   @Test
-  public void testShortName() throws BadFencingConfigurationException {
+  public void testShortNameShell() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer("shell(true)");
-    assertTrue(fencer.fence());
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
   }
- 
+
+  @Test
+  public void testShortNameSsh() throws BadFencingConfigurationException {
+    NodeFencer fencer = setupFencer("sshfence");
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
+  }
+
+  @Test
+  public void testShortNameSshWithUser() throws BadFencingConfigurationException {
+    NodeFencer fencer = setupFencer("sshfence(user)");
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
+  }
+
+  @Test
+  public void testShortNameSshWithPort() throws BadFencingConfigurationException {
+    NodeFencer fencer = setupFencer("sshfence(:123)");
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
+  }
+
+  @Test
+  public void testShortNameSshWithUserPort() throws BadFencingConfigurationException {
+    NodeFencer fencer = setupFencer("sshfence(user:123)");
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
+  }
+
   private NodeFencer setupFencer(String confStr)
       throws BadFencingConfigurationException {
     System.err.println("Testing configuration:\n" + confStr);
@@ -105,10 +134,12 @@ public class TestNodeFencer {
   public static class AlwaysSucceedFencer extends Configured
       implements FenceMethod {
     static int fenceCalled = 0;
+    static String fencedSvc;
     static List<String> callArgs = Lists.newArrayList();
 
     @Override
-    public boolean tryFence(String args) {
+    public boolean tryFence(InetSocketAddress serviceAddr, String args) {
+      fencedSvc = serviceAddr.getHostName() + ":" + serviceAddr.getPort();
       callArgs.add(args);
       fenceCalled++;
       return true;
@@ -125,10 +156,12 @@ public class TestNodeFencer {
   public static class AlwaysFailFencer extends Configured
       implements FenceMethod {
     static int fenceCalled = 0;
+    static String fencedSvc;
     static List<String> callArgs = Lists.newArrayList();
 
     @Override
-    public boolean tryFence(String args) {
+    public boolean tryFence(InetSocketAddress serviceAddr, String args) {
+      fencedSvc = serviceAddr.getHostName() + ":" + serviceAddr.getPort();
       callArgs.add(args);
       fenceCalled++;
       return false;

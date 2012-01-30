@@ -34,3 +34,5 @@ HADOOP-7970. HAServiceProtocol methods must throw IOException.
 
 HADOOP-7992. Add ZKClient library to facilitate leader election.
 (Bikas Saha via suresh).
+
+HADOOP-7983. HA: failover should be able to pass args to fencers. (eli)

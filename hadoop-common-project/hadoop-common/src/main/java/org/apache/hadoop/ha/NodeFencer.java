@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -67,7 +68,7 @@ public class NodeFencer {
   private static final Log LOG = LogFactory.getLog(NodeFencer.class);
 
   /**
-   * Standard fencing methods included with HDFS.
+   * Standard fencing methods included with Hadoop.
    */
   private static final Map<String, Class<? extends FenceMethod>> STANDARD_METHODS =
     ImmutableMap.<String, Class<? extends FenceMethod>>of(
@@ -81,14 +82,14 @@ public class NodeFencer {
     this.methods = parseMethods(conf);
   }
   
-  public boolean fence() {
+  public boolean fence(InetSocketAddress serviceAddr) {
     LOG.info("====== Beginning NameNode Fencing Process... ======");
     int i = 0;
     for (FenceMethodWithArg method : methods) {
       LOG.info("Trying method " + (++i) + "/" + methods.size() +": " + method);
       
       try {
-        if (method.method.tryFence(method.arg)) {
+        if (method.method.tryFence(serviceAddr, method.arg)) {
           LOG.info("====== Fencing successful by method " + method + " ======");
           return true;
         }

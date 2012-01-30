@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ha;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -52,6 +54,7 @@ public interface FenceMethod {
   
   /**
    * Attempt to fence the target node.
+   * @param serviceAddr the address (host:ipcport) of the service to fence
    * @param args the configured arguments, which were checked at startup by
    *             {@link #checkArgs(String)}
    * @return true if fencing was successful, false if unsuccessful or
@@ -59,5 +62,6 @@ public interface FenceMethod {
    * @throws BadFencingConfigurationException if the configuration was
    *         determined to be invalid only at runtime
    */
-  public boolean tryFence(String args) throws BadFencingConfigurationException; 
+  public boolean tryFence(InetSocketAddress serviceAddr, String args)
+    throws BadFencingConfigurationException;
 }
