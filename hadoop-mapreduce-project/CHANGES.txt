@@ -176,6 +176,9 @@ Release 0.23.1 - Unreleased
     on the webapps. (Bhallamudi Venkata Siva Kamesh and Jason Lowe via vinodkv)
 
   BUG FIXES
+    MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
+                    ResourceUsageMatcher. (amarrk)
+
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 
