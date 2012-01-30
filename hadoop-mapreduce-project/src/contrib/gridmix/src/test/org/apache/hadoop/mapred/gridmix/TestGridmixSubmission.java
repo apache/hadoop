@@ -101,10 +101,17 @@ public class TestGridmixSubmission {
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
 
-    public void verify(ArrayList<JobStory> submitted) throws Exception {
+    public void verify(ArrayList<JobStory> submitted, Configuration clientConf) 
+    throws Exception {
       final ArrayList<Job> succeeded = new ArrayList<Job>();
       assertEquals("Bad job count", expected, retiredJobs.drainTo(succeeded));
       final HashMap<String,JobStory> sub = new HashMap<String,JobStory>();
+      
+      // define the input and output path for the run
+      final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
+      final Path out = 
+        new Path(in, clientConf.get(Gridmix.GRIDMIX_OUT_DIR, "gridmix"));
+      
       for (JobStory spec : submitted) {
         sub.put(spec.getJobID().toString(), spec);
       }
@@ -115,8 +122,7 @@ public class TestGridmixSubmission {
         Configuration conf = job.getConfiguration();
         if (GenerateData.JOB_NAME.equals(jobName)) {
           verifyQueue(conf, jobName);
-          final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
-          final Path out = new Path("/gridmix").makeQualified(GridmixTestUtils.dfs);
+          
           final ContentSummary generated = GridmixTestUtils.dfs.getContentSummary(in);
           assertTrue("Mismatched data gen", // +/- 100k for logs
               (GENDATA << 20) < generated.getLength() + GENSLOP ||
@@ -164,7 +170,7 @@ public class TestGridmixSubmission {
 
         final FileStatus stat = 
           GridmixTestUtils.dfs.getFileStatus(
-            new Path(GridmixTestUtils.DEST, "" + Integer.valueOf(jobSeqNum)));
+            new Path(out, "" + Integer.valueOf(jobSeqNum)));
         assertEquals("Wrong owner for " + jobName, spec.getUser(),
                      stat.getOwner());
 
@@ -337,8 +343,9 @@ public class TestGridmixSubmission {
     private JobFactory factory;
     private TestMonitor monitor;
 
-    public void checkMonitor() throws Exception {
-      monitor.verify(((DebugJobFactory.Debuggable)factory).getSubmitted());
+    public void checkMonitor(Configuration conf) throws Exception {
+      monitor.verify(((DebugJobFactory.Debuggable)factory).getSubmitted(), 
+                     conf);
     }
 
     @Override
@@ -534,9 +541,11 @@ public class TestGridmixSubmission {
       GridmixTestUtils.dfs.setPermission(root, new FsPermission((short)0777));
       int res = ToolRunner.run(conf, client, argv);
       assertEquals("Client exited with nonzero status", 0, res);
-      client.checkMonitor();
+      client.checkMonitor(conf);
     } catch (Exception e) {
       e.printStackTrace();
+      // fail the test if there is an exception
+      throw new RuntimeException(e);
     } finally {
       in.getFileSystem(conf).delete(in, true);
       out.getFileSystem(conf).delete(out, true);

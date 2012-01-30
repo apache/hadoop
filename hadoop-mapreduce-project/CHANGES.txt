@@ -18,6 +18,8 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
 
   IMPROVEMENTS
+    MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
+
     MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the 
                     job-history related information.
 
