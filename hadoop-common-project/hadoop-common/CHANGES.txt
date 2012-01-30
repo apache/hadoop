@@ -184,6 +184,9 @@ Release 0.23.1 - Unreleased
    HADOOP-8000. fetchdt command not available in bin/hadoop.
    (Arpit Gupta via mahadev)
 
+   HADOOP-7999. "hadoop archive" fails with ClassNotFoundException.
+   (Jason Lowe via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
