@@ -197,6 +197,9 @@ Release 0.23.1 - UNRELEASED
     directory results in leases updated incorrectly.  (Uma Maheswara Rao G
     via szetszwo)
 
+    HDFS-2835. Fix findbugs and javadoc issue with GetConf.java.
+    (suresh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
