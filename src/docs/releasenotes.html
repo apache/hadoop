@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.0.0 Release Notes</title>
+<title>Hadoop 1.0.1 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,46 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.0.0 Release Notes</h1>
+<h1>Hadoop 1.0.1 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+<h2>Changes since Hadoop 1.0.0</h2>
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+  <li>none.
+</ul>
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7960">HADOOP-7960</a>.
+     Major bug reported by gkesavan and fixed by mattf <br>
+     <b>Port HADOOP-5203 to branch-1, build version comparison is too restrictive</b><br>
+     <blockquote>hadoop services should not be using the build timestamp to verify version difference in the cluster installation. Instead it should use the source checksum as in HADOOP-5203.<br>  </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7964">HADOOP-7964</a>.
+     Blocker bug reported by kihwal and fixed by daryn (security, util)<br>
+     <b>Deadlock in class init.</b><br>
+     <blockquote>After HADOOP-7808, client-side commands hang occasionally. There are cyclic dependencies in NetUtils and SecurityUtil class initialization. Upon initial look at the stack trace, two threads deadlock when they hit the either of class init the same time.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7987">HADOOP-7987</a>.
+     Major improvement reported by devaraj and fixed by jnp (security)<br>
+     <b>Support setting the run-as user in unsecure mode</b><br>
+     <blockquote>Some applications need to be able to perform actions (such as launch MR jobs) from map or reduce tasks. In earlier unsecure versions of hadoop (20.x), it was possible to do this by setting user.name in the configuration. But in 20.205 and 1.0, when running in unsecure mode, this does not work. (In secure mode, you can do this using the kerberos credentials).</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7988">HADOOP-7988</a>.
+     Major bug reported by jnp and fixed by jnp <br>
+     <b>Upper case in hostname part of the principals doesn&apos;t work with kerberos.</b><br>
+     <blockquote>Kerberos doesn&apos;t like upper case in the hostname part of the principals.<br>This issue has been seen in 23 as well as 1.0.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3607">MAPREDUCE-3607</a>.
+     Major improvement reported by tomwhite and fixed by tomwhite (client)<br>
+     <b>Port missing new API mapreduce lib classes to 1.x</b><br>
+     <blockquote>There are a number of classes under mapreduce.lib that are not present in the 1.x series. Including these would help users and downstream projects using the new MapReduce API migrate to later versions of Hadoop in the future.<br><br>A few examples of where this would help:<br>* Sqoop uses mapreduce.lib.db.DBWritable and mapreduce.lib.input.CombineFileInputFormat (SQOOP-384).<br>* Mahout uses mapreduce.lib.output.MultipleOutputs (MAHOUT-822).<br>* HBase has a backport of mapreduce.lib.partition.InputSampler ...</blockquote></li>
+
+</ul>
+
 <h2>Changes since Hadoop 0.20.205.0</h2>
 
 <h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
