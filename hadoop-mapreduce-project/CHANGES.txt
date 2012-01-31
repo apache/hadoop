@@ -178,6 +178,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3360. Added information about lost/rebooted/decommissioned nodes
     on the webapps. (Bhallamudi Venkata Siva Kamesh and Jason Lowe via vinodkv)
 
+    MAPREDUCE-3756. Made single shuffle limit configurable. (Hitesh Shah via
+    acmurthy) 
+
   BUG FIXES
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
                     ResourceUsageMatcher. (amarrk)

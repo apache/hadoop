@@ -518,6 +518,13 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.shuffle.memory.limit.percent</name>
+  <value>0.25</value>
+  <description>Expert: Maximum percentage of the in-memory limit that a
+  single shuffle can consume</description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to

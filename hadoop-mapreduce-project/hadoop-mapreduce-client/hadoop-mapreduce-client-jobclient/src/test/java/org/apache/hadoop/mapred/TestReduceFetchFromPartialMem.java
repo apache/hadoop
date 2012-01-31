@@ -89,7 +89,7 @@ public class TestReduceFetchFromPartialMem extends TestCase {
     job.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, "-Xmx128m");
     job.setLong(JobContext.REDUCE_MEMORY_TOTAL_BYTES, 128 << 20);
     job.set(JobContext.SHUFFLE_INPUT_BUFFER_PERCENT, "0.14");
-    job.set(JobContext.SHUFFLE_MERGE_EPRCENT, "1.0");
+    job.set(JobContext.SHUFFLE_MERGE_PERCENT, "1.0");
     Counters c = runJob(job);
     final long out = c.findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getCounter();
     final long spill = c.findCounter(TaskCounter.SPILLED_RECORDS).getCounter();
