@@ -90,6 +90,9 @@ Release 0.23.1 - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES
+
+   HADOOP-8006  TestFSInputChecker is failing in trunk.
+   (Daryn Sharp via bobby)
  
    HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
    (Daryn Sharp via bobby)
