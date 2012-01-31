@@ -21,9 +21,11 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -71,8 +73,6 @@ public class TestCounters {
     // Check for recovery from string
     assertEquals("Recovered counter does not match on content", 
                  counter, recoveredCounter);
-    assertEquals("recovered counter has wrong hash code",
-                 counter.hashCode(), recoveredCounter.hashCode());
   }
   
   @Test
@@ -157,6 +157,28 @@ public class TestCounters {
     assertEquals("Legacy name", 1, counters.findCounter(
         "FileSystemCounter",
         "FILE_BYTES_READ").getValue());
+  }
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testCounterIteratorConcurrency() {
+    Counters counters = new Counters();
+    counters.incrCounter("group1", "counter1", 1);
+    Iterator<Group> iterator = counters.iterator();
+    counters.incrCounter("group2", "counter2", 1);
+    iterator.next();
+  }
+  
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testGroupIteratorConcurrency() {
+    Counters counters = new Counters();
+    counters.incrCounter("group1", "counter1", 1);
+    Group group = counters.getGroup("group1");
+    Iterator<Counter> iterator = group.iterator();
+    counters.incrCounter("group1", "counter2", 1);
+    iterator.next();
   }
   
   public static void main(String[] args) throws IOException {
