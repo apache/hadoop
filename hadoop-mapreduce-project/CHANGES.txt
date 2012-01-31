@@ -566,6 +566,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3703. ResourceManager should provide node lists in JMX output.
     (Eric Payne via mahadev)
 
+    MAPREDUCE-3716. Fixing YARN+MR to allow MR jobs to be able to use
+    java.io.File.createTempFile to create temporary files as part of their
+    tasks. (Jonathan Eagles via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -315,6 +315,13 @@ char* get_app_log_directory(const char *log_root, const char* app_id) {
 }
 
 /**
+ * Get the tmp directory under the working directory
+ */
+char *get_tmp_directory(const char *work_dir) {
+  return concatenate("%s/%s", "tmp dir", 2, work_dir, TMP_DIR);
+}
+
+/**
  * Ensure that the given path and all of the parent directories are created
  * with the desired permissions.
  */
@@ -357,7 +364,7 @@ int mkdirs(const char* path, mode_t perm) {
  * It creates the container work and log directories.
  */
 static int create_container_directories(const char* user, const char *app_id, 
-    const char *container_id, char* const* local_dir, char* const* log_dir) {
+    const char *container_id, char* const* local_dir, char* const* log_dir, const char *work_dir) {
   // create dirs as 0750
   const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
   if (app_id == NULL || container_id == NULL || user == NULL) {
@@ -409,6 +416,23 @@ static int create_container_directories(const char* user, const char *app_id,
     }
     free(combined_name);
   }
+
+  if (result != 0) {
+    return result;
+  }
+
+  result = -1;
+  // also make the tmp directory
+  char *tmp_dir = get_tmp_directory(work_dir);
+
+  if (tmp_dir == NULL) {
+    return -1;
+  }
+  if (mkdirs(tmp_dir, perms) == 0) {
+    result = 0;
+  }
+  free(tmp_dir);
+
   return result;
 }
 
@@ -823,7 +847,7 @@ int launch_container_as_user(const char *user, const char *app_id,
   }
 
   if (create_container_directories(user, app_id, container_id, local_dirs,
-                                   log_dirs) != 0) {
+                                   log_dirs, work_dir) != 0) {
     fprintf(LOGFILE, "Could not create container dirs");
     goto cleanup;
   }

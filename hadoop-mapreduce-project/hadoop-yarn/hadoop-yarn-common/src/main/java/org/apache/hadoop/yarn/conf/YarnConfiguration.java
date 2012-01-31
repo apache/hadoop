@@ -512,6 +512,9 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_APPLICATION_CLASSPATH = YARN_PREFIX
       + "application.classpath";
 
+  /** Container temp directory */
+  public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";
+
   public YarnConfiguration() {
     super();
   }

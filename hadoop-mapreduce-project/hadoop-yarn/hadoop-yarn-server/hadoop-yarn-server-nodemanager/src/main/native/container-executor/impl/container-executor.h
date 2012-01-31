@@ -64,6 +64,7 @@ enum errorcodes {
 #define CREDENTIALS_FILENAME "container_tokens"
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
+#define TMP_DIR "tmp"
 
 extern struct passwd *user_detail;
 
