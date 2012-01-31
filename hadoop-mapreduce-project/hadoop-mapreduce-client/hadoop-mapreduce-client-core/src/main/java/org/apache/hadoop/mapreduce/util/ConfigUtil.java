@@ -355,7 +355,7 @@ public class ConfigUtil {
     Configuration.addDeprecation("mapred.job.shuffle.input.buffer.percent", 
       new String[] {MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT});
     Configuration.addDeprecation("mapred.job.shuffle.merge.percent", 
-      new String[] {MRJobConfig.SHUFFLE_MERGE_EPRCENT});
+      new String[] {MRJobConfig.SHUFFLE_MERGE_PERCENT});
     Configuration.addDeprecation("mapred.max.reduce.failures.percent", 
       new String[] {MRJobConfig.REDUCE_FAILURES_MAXPERCENT});
     Configuration.addDeprecation("mapred.reduce.child.env", 

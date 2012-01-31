@@ -228,7 +228,10 @@ public interface MRJobConfig {
 
   public static final String SHUFFLE_INPUT_BUFFER_PERCENT = "mapreduce.reduce.shuffle.input.buffer.percent";
 
-  public static final String SHUFFLE_MERGE_EPRCENT = "mapreduce.reduce.shuffle.merge.percent";
+  public static final String SHUFFLE_MEMORY_LIMIT_PERCENT
+    = "mapreduce.reduce.shuffle.memory.limit.percent";
+
+  public static final String SHUFFLE_MERGE_PERCENT = "mapreduce.reduce.shuffle.merge.percent";
 
   public static final String REDUCE_FAILURES_MAXPERCENT = "mapreduce.reduce.failures.maxpercent";
 
