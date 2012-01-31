@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,6 +58,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TestRumenJobTraces {
+  private static final Log LOG = LogFactory.getLog(TestRumenJobTraces.class);
+
   @Test
   public void testSmallTrace() throws Exception {
     performSingleTest("sample-job-tracker-logs.gz",
@@ -202,6 +206,140 @@ public class TestRumenJobTraces {
 
     TestRumenJobTraces.<LoggedJob> jsonFileMatchesGold(conf, tracePath,
         goldPath, LoggedJob.class, "trace");
+  }
+
+  /**
+   * Verify if the obtainXXX methods of {@link ParsedJob}, {@link ParsedTask}
+   * and {@link ParsedTaskAttempt} give valid info
+   */
+  private void validateParsedJob(ParsedJob parsedJob, int numMaps,
+      int numReduces, String queueName) {
+    validateParsedJobAPI(parsedJob, numMaps, numReduces, queueName);
+
+    List<ParsedTask> maps = parsedJob.obtainMapTasks();
+    for (ParsedTask task : maps) {
+      validateParsedTask(task);
+    }
+    List<ParsedTask> reduces = parsedJob.obtainReduceTasks();
+    for (ParsedTask task : reduces) {
+      validateParsedTask(task);
+    }
+    List<ParsedTask> others = parsedJob.obtainOtherTasks();
+    for (ParsedTask task : others) {
+      validateParsedTask(task);
+    }
+  }
+
+  /** Verify if the obtainXXX methods of {@link ParsedJob} give valid info */
+  private void validateParsedJobAPI(ParsedJob parsedJob, int numMaps,
+      int numReduces, String queueName) {
+    LOG.info("Validating ParsedJob.obtainXXX api... for "
+             + parsedJob.getJobID());
+    assertNotNull("Job acls in ParsedJob is null",
+                  parsedJob.obtainJobAcls());
+    assertNotNull("Job conf path in ParsedJob is null",
+                  parsedJob.obtainJobConfpath());
+    assertEquals("Job queue in ParsedJob is wrong",
+                 queueName, parsedJob.getQueue());
+
+    assertNotNull("Map Counters in ParsedJob is null",
+                  parsedJob.obtainMapCounters());
+    assertNotNull("Reduce Counters in ParsedJob is null",
+                  parsedJob.obtainReduceCounters());
+    assertNotNull("Total Counters in ParsedJob is null",
+                  parsedJob.obtainTotalCounters());
+
+    assertNotNull("Map Tasks List in ParsedJob is null",
+                  parsedJob.obtainMapTasks());
+    assertNotNull("Reduce Tasks List in ParsedJob is null",
+                  parsedJob.obtainReduceTasks());
+    assertNotNull("Other Tasks List in ParsedJob is null",
+                  parsedJob.obtainOtherTasks());
+
+    // 1 map and 1 reduce task should be there
+    assertEquals("Number of map tasks in ParsedJob is wrong",
+                 numMaps, parsedJob.obtainMapTasks().size());
+    assertEquals("Number of reduce tasks in ParsedJob is wrong",
+                 numReduces, parsedJob.obtainReduceTasks().size(), 1);
+
+    assertTrue("Total Counters in ParsedJob is empty",
+               parsedJob.obtainTotalCounters().size() > 0);
+    // Current 0.20 history files contain job-level-map-counters and
+    // job-level-reduce-counters. Older 0.20 history files may not have them.
+    assertTrue("Map Counters in ParsedJob is empty",
+               parsedJob.obtainMapCounters().size() > 0);
+    assertTrue("Reduce Counters in ParsedJob is empty",
+        parsedJob.obtainReduceCounters().size() > 0);
+  }
+
+  /**
+   * Verify if the obtainXXX methods of {@link ParsedTask} and
+   * {@link ParsedTaskAttempt} give valid info
+   */
+  private void validateParsedTask(ParsedTask parsedTask) {
+    validateParsedTaskAPI(parsedTask);
+
+    List<ParsedTaskAttempt> attempts = parsedTask.obtainTaskAttempts();
+    for (ParsedTaskAttempt attempt : attempts) {
+      validateParsedTaskAttemptAPI(attempt);
+    }
+  }
+
+  /** Verify if the obtainXXX methods of {@link ParsedTask} give valid info */
+  private void validateParsedTaskAPI(ParsedTask parsedTask) {
+    LOG.info("Validating ParsedTask.obtainXXX api... for "
+             + parsedTask.getTaskID());
+    assertNotNull("Task counters in ParsedTask is null",
+                  parsedTask.obtainCounters());
+
+    if (parsedTask.getTaskStatus()
+        == Pre21JobHistoryConstants.Values.SUCCESS) {
+      // task counters should not be empty
+      assertTrue("Task counters in ParsedTask is empty",
+                 parsedTask.obtainCounters().size() > 0);
+      assertNull("Diagnostic-info is non-null for a succeeded task",
+                 parsedTask.obtainDiagnosticInfo());
+      assertNull("Failed-due-to-attemptId is non-null for a succeeded task",
+                 parsedTask.obtainFailedDueToAttemptId());
+    } else {
+      assertNotNull("Diagnostic-info is non-null for a succeeded task",
+                    parsedTask.obtainDiagnosticInfo());
+      assertNotNull("Failed-due-to-attemptId is non-null for a succeeded task",
+                    parsedTask.obtainFailedDueToAttemptId());
+    }
+
+    List<ParsedTaskAttempt> attempts = parsedTask.obtainTaskAttempts();
+    assertNotNull("TaskAttempts list in ParsedTask is null", attempts);
+    assertTrue("TaskAttempts list in ParsedTask is empty",
+               attempts.size() > 0);    
+  }
+
+  /**
+   * Verify if the obtainXXX methods of {@link ParsedTaskAttempt} give
+   * valid info
+   */
+  private void validateParsedTaskAttemptAPI(
+      ParsedTaskAttempt parsedTaskAttempt) {
+    LOG.info("Validating ParsedTaskAttempt.obtainXXX api... for "
+             + parsedTaskAttempt.getAttemptID());
+    assertNotNull("Counters in ParsedTaskAttempt is null",
+                  parsedTaskAttempt.obtainCounters());
+
+    if (parsedTaskAttempt.getResult()
+        == Pre21JobHistoryConstants.Values.SUCCESS) { 
+      assertTrue("Counters in ParsedTaskAttempt is empty",
+               parsedTaskAttempt.obtainCounters().size() > 0);
+      assertNull("Diagnostic-info is non-null for a succeeded taskAttempt",
+                 parsedTaskAttempt.obtainDiagnosticInfo());
+    } else {
+      assertNotNull("Diagnostic-info is non-null for a succeeded taskAttempt",
+                 parsedTaskAttempt.obtainDiagnosticInfo());
+    }
+    assertNotNull("TrackerName in ParsedTaskAttempt is null",
+                  parsedTaskAttempt.obtainTrackerName());
+
+    assertNotNull("http-port info in ParsedTaskAttempt is null",
+        parsedTaskAttempt.obtainHttpPort());
   }
 
   @Test
@@ -533,10 +671,12 @@ public class TestRumenJobTraces {
     final Path tempDir = new Path(rootTempDir, "TestCurrentJHParser");
     lfs.delete(tempDir, true);
     
+    String queueName = "testQueue";
     // Run a MR job
     // create a MR cluster
     conf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
     conf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
+    conf.set("mapred.queue.names", queueName);
     MiniMRCluster mrCluster = new MiniMRCluster(1, "file:///", 1, null, null, 
                                                 new JobConf(conf));
     
@@ -549,8 +689,10 @@ public class TestRumenJobTraces {
     RunningJob rJob = null;
     
     try {
+      JobConf jobConf = mrCluster.createJobConf();
+      jobConf.setQueueName(queueName);
       // construct a job with 1 map and 1 reduce task.
-      rJob = UtilsForTests.runJob(mrCluster.createJobConf(), inDir, outDir, 1, 
+      rJob = UtilsForTests.runJob(jobConf, inDir, outDir, 1, 
                                   1);
       rJob.waitForCompletion();
       assertTrue("Job failed", rJob.isSuccessful());
@@ -583,12 +725,24 @@ public class TestRumenJobTraces {
       // Test if the JobHistoryParserFactory can detect the parser correctly
       parser = JobHistoryParserFactory.getParser(ris);
 
+      // Get ParsedJob
+      String jobId = TraceBuilder.extractJobID(filePair.first());
+      JobBuilder builder = new JobBuilder(jobId);
+
       HistoryEvent e;
       while ((e = parser.nextEvent()) != null) {
         String eventString = e.getEventType().toString();
         System.out.println(eventString);
         seenEvents.add(eventString);
+        if (builder != null) {
+          builder.process(e);
+        }
       }
+
+      ParsedJob parsedJob = builder.build();
+      // validate the obtainXXX api of ParsedJob, ParsedTask and
+      // ParsedTaskAttempt.
+      validateParsedJob(parsedJob, 1, 1, queueName);
     } finally {
       // stop the MR cluster
       mrCluster.shutdown();

@@ -91,6 +91,9 @@ Release 1.1.0 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
+                    from Rumen tool. (ravigummadi)
+
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for

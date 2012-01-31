@@ -37,17 +37,32 @@ public class JobSubmittedEvent implements HistoryEvent {
   private long submitTime;
   private String jobConfPath;
   private Map<JobACL, AccessControlList> jobAcls;
+  private String queue;
 
   /**
    * @deprecated Use
-   *             {@link #JobSubmittedEvent(JobID, String, String, long, String, Map)}
+   *             {@link #JobSubmittedEvent(JobID, String, String, long, String,
+   *             Map, String)}
    *             instead.
    */
   @Deprecated
   public JobSubmittedEvent(JobID id, String jobName, String userName,
       long submitTime, String jobConfPath) {
     this(id, jobName, userName, submitTime, jobConfPath,
-        new HashMap<JobACL, AccessControlList>());
+        new HashMap<JobACL, AccessControlList>(), null);
+  }
+
+  /**
+   * @deprecated Use
+   *             {@link #JobSubmittedEvent(JobID, String, String, long, String,
+   *             Map, String)}
+   *             instead.
+   */
+  @Deprecated
+  public JobSubmittedEvent(JobID id, String jobName, String userName,
+      long submitTime, String jobConfPath,
+      Map<JobACL, AccessControlList> jobACLs) {
+    this(id, jobName, userName, submitTime, jobConfPath, jobACLs, null);
   }
 
   /**
@@ -58,16 +73,18 @@ public class JobSubmittedEvent implements HistoryEvent {
    * @param submitTime Time of submission
    * @param jobConfPath Path of the Job Configuration file
    * @param jobACLs The configured acls for the job.
+   * @param queue job queue name
    */
   public JobSubmittedEvent(JobID id, String jobName, String userName,
       long submitTime, String jobConfPath,
-      Map<JobACL, AccessControlList> jobACLs) {
+      Map<JobACL, AccessControlList> jobACLs, String queue) {
     this.jobId = id;
     this.jobName = jobName;
     this.userName = userName;
     this.submitTime = submitTime;
     this.jobConfPath = jobConfPath;
     this.jobAcls = jobACLs;
+    this.queue = queue;
   }
 
   /** Get the Job Id */
@@ -84,7 +101,11 @@ public class JobSubmittedEvent implements HistoryEvent {
   public Map<JobACL, AccessControlList> getJobAcls() {
     return jobAcls;
   }
-  
+
+  public String getJobQueueName() {
+    return queue;
+  }
+
   /** Get the event type */
   public EventType getEventType() { return EventType.JOB_SUBMITTED; }
 

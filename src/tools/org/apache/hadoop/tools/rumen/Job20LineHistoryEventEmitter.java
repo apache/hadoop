@@ -65,6 +65,7 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
       String jobConf = line.get("JOBCONF");
       String user = line.get("USER");
       String jobName = line.get("JOBNAME");
+      String queueName = line.get("JOB_QUEUE");
 
       if (submitTime != null) {
         Job20LineHistoryEventEmitter that =
@@ -75,7 +76,7 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
         Map<JobACL, AccessControlList> jobACLs =
           new HashMap<JobACL, AccessControlList>();
         return new JobSubmittedEvent(jobID, jobName, user == null ? "nulluser"
-            : user, that.originalSubmitTime, jobConf, jobACLs);
+            : user, that.originalSubmitTime, jobConf, jobACLs, queueName);
       }
 
       return null;
@@ -213,6 +214,8 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
       String failedMaps = line.get("FAILED_MAPS");
       String failedReduces = line.get("FAILED_REDUCES");
 
+      String mapCounters = line.get("MAP_COUNTERS");
+      String reduceCounters = line.get("REDUCE_COUNTERS");
       String counters = line.get("COUNTERS");
 
       if (status != null && status.equalsIgnoreCase("success")
@@ -220,7 +223,8 @@ public class Job20LineHistoryEventEmitter extends HistoryEventEmitter {
           && finishedReduces != null) {
         return new JobFinishedEvent(jobID, Long.parseLong(finishTime), Integer
             .parseInt(finishedMaps), Integer.parseInt(finishedReduces), Integer
-            .parseInt(failedMaps), Integer.parseInt(failedReduces), null, null,
+            .parseInt(failedMaps), Integer.parseInt(failedReduces),
+            maybeParseCounters(mapCounters), maybeParseCounters(reduceCounters),
             maybeParseCounters(counters));
       }
 

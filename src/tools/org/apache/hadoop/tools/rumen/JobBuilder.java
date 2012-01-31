@@ -42,16 +42,16 @@ public class JobBuilder {
 
   private boolean finalized = false;
 
-  private LoggedJob result = new LoggedJob();
+  private ParsedJob result = new ParsedJob();
 
-  private Map<String, LoggedTask> mapTasks = new HashMap<String, LoggedTask>();
-  private Map<String, LoggedTask> reduceTasks =
-      new HashMap<String, LoggedTask>();
-  private Map<String, LoggedTask> otherTasks =
-      new HashMap<String, LoggedTask>();
+  private Map<String, ParsedTask> mapTasks = new HashMap<String, ParsedTask>();
+  private Map<String, ParsedTask> reduceTasks =
+      new HashMap<String, ParsedTask>();
+  private Map<String, ParsedTask> otherTasks =
+      new HashMap<String, ParsedTask>();
 
-  private Map<String, LoggedTaskAttempt> attempts =
-      new HashMap<String, LoggedTaskAttempt>();
+  private Map<String, ParsedTaskAttempt> attempts =
+      new HashMap<String, ParsedTaskAttempt>();
 
   private Map<ParsedHost, ParsedHost> allHosts =
       new HashMap<ParsedHost, ParsedHost>();
@@ -103,7 +103,7 @@ public class JobBuilder {
   public void process(HistoryEvent event) {
     if (finalized) {
       throw new IllegalStateException(
-          "JobBuilder.process(HistoryEvent event) called after LoggedJob built");
+          "JobBuilder.process(HistoryEvent event) called after ParsedJob built");
     }
 
     // these are in lexicographical order by class name.
@@ -205,12 +205,16 @@ public class JobBuilder {
   public void process(Properties conf) {
     if (finalized) {
       throw new IllegalStateException(
-          "JobBuilder.process(Properties conf) called after LoggedJob built");
+          "JobBuilder.process(Properties conf) called after ParsedJob built");
     }
 
     //TODO remove this once the deprecate APIs in LoggedJob are removed
-    result.setQueue(extract(conf, JobConfPropertyNames.QUEUE_NAMES
-        .getCandidates(), "default"));
+    String queue = extract(conf, JobConfPropertyNames.QUEUE_NAMES
+                           .getCandidates(), null);
+    // set the queue name if existing
+    if (queue != null) {
+      result.setQueue(queue);
+    }
     result.setJobName(extract(conf, JobConfPropertyNames.JOB_NAMES
         .getCandidates(), null));
 
@@ -228,9 +232,9 @@ public class JobBuilder {
    * Request the builder to build the final object. Once called, the
    * {@link JobBuilder} would accept no more events or job-conf properties.
    * 
-   * @return Parsed {@link LoggedJob} object.
+   * @return Parsed {@link ParsedJob} object.
    */
-  public LoggedJob build() {
+  public ParsedJob build() {
     // The main job here is to build CDFs and manage the conf
     finalized = true;
 
@@ -394,7 +398,7 @@ public class JobBuilder {
   }
 
   private void processTaskUpdatedEvent(TaskUpdatedEvent event) {
-    LoggedTask task = getTask(event.getTaskId().toString());
+    ParsedTask task = getTask(event.getTaskId().toString());
     if (task == null) {
       return;
     }
@@ -402,7 +406,7 @@ public class JobBuilder {
   }
 
   private void processTaskStartedEvent(TaskStartedEvent event) {
-    LoggedTask task =
+    ParsedTask task =
         getOrMakeTask(event.getTaskType(), event.getTaskId().toString(), true);
     task.setStartTime(event.getStartTime());
     task.setPreferredLocations(preferredLocationForSplits(event
@@ -410,7 +414,7 @@ public class JobBuilder {
   }
 
   private void processTaskFinishedEvent(TaskFinishedEvent event) {
-    LoggedTask task =
+    ParsedTask task =
         getOrMakeTask(event.getTaskType(), event.getTaskId().toString(), false);
     if (task == null) {
       return;
@@ -421,18 +425,21 @@ public class JobBuilder {
   }
 
   private void processTaskFailedEvent(TaskFailedEvent event) {
-    LoggedTask task =
+    ParsedTask task =
         getOrMakeTask(event.getTaskType(), event.getTaskId().toString(), false);
     if (task == null) {
       return;
     }
     task.setFinishTime(event.getFinishTime());
     task.setTaskStatus(getPre21Value(event.getTaskStatus()));
+    task.putDiagnosticInfo(event.getError());
+    task.putFailedDueToAttemptId(event.getFailedAttemptID().toString());
+    // No counters in TaskFailedEvent
   }
 
   private void processTaskAttemptUnsuccessfulCompletionEvent(
       TaskAttemptUnsuccessfulCompletionEvent event) {
-    LoggedTaskAttempt attempt =
+    ParsedTaskAttempt attempt =
         getOrMakeTaskAttempt(event.getTaskType(), event.getTaskId().toString(),
             event.getTaskAttemptId().toString());
 
@@ -448,20 +455,24 @@ public class JobBuilder {
     }
 
     attempt.setFinishTime(event.getFinishTime());
+    attempt.putDiagnosticInfo(event.getError());
+    // No counters in TaskAttemptUnsuccessfulCompletionEvent
   }
 
   private void processTaskAttemptStartedEvent(TaskAttemptStartedEvent event) {
-    LoggedTaskAttempt attempt =
+    ParsedTaskAttempt attempt =
         getOrMakeTaskAttempt(event.getTaskType(), event.getTaskId().toString(),
             event.getTaskAttemptId().toString());
     if (attempt == null) {
       return;
     }
     attempt.setStartTime(event.getStartTime());
+    attempt.putTrackerName(event.getTrackerName());
+    attempt.putHttpPort(event.getHttpPort());
   }
 
   private void processTaskAttemptFinishedEvent(TaskAttemptFinishedEvent event) {
-    LoggedTaskAttempt attempt =
+    ParsedTaskAttempt attempt =
         getOrMakeTaskAttempt(event.getTaskType(), event.getTaskId().toString(),
             event.getAttemptId().toString());
     if (attempt == null) {
@@ -477,7 +488,7 @@ public class JobBuilder {
 
   private void processReduceAttemptFinishedEvent(
       ReduceAttemptFinishedEvent event) {
-    LoggedTaskAttempt attempt =
+    ParsedTaskAttempt attempt =
         getOrMakeTaskAttempt(event.getTaskType(), event.getTaskId().toString(),
             event.getAttemptId().toString());
     if (attempt == null) {
@@ -496,7 +507,7 @@ public class JobBuilder {
   }
 
   private void processMapAttemptFinishedEvent(MapAttemptFinishedEvent event) {
-    LoggedTaskAttempt attempt =
+    ParsedTaskAttempt attempt =
         getOrMakeTaskAttempt(event.getTaskType(), event.getTaskId().toString(),
             event.getAttemptId().toString());
     if (attempt == null) {
@@ -517,6 +528,7 @@ public class JobBuilder {
     result.setOutcome(Pre21JobHistoryConstants.Values
         .valueOf(event.getStatus()));
     result.setFinishTime(event.getFinishTime());
+    // No counters in JobUnsuccessfulCompletionEvent
   }
 
   private void processJobSubmittedEvent(JobSubmittedEvent event) {
@@ -524,6 +536,13 @@ public class JobBuilder {
     result.setJobName(event.getJobName());
     result.setUser(event.getUserName());
     result.setSubmitTime(event.getSubmitTime());
+    result.putJobConfPath(event.getJobConfPath());
+
+    String queue = event.getJobQueueName();
+    if (queue != null) {
+      result.setQueue(queue);
+    }
+    result.putJobAcls(event.getJobAcls());
   }
 
   private void processJobStatusChangedEvent(JobStatusChangedEvent event) {
@@ -550,10 +569,20 @@ public class JobBuilder {
     result.setFinishTime(event.getFinishTime());
     result.setJobID(jobID);
     result.setOutcome(Values.SUCCESS);
+
+    Map<String, Long> countersMap = JobHistoryUtils.extractCounters(
+        new JhCounters(event.getTotalCounters(), "COUNTERS"));
+    result.putTotalCounters(countersMap);
+    countersMap = JobHistoryUtils.extractCounters(new JhCounters(
+        event.getMapCounters(), "MAP_COUNTERS"));
+    result.putMapCounters(countersMap);
+    countersMap = JobHistoryUtils.extractCounters(new JhCounters(
+        event.getReduceCounters(), "REDUCE_COUNTERS"));
+    result.putReduceCounters(countersMap);
   }
 
-  private LoggedTask getTask(String taskIDname) {
-    LoggedTask result = mapTasks.get(taskIDname);
+  private ParsedTask getTask(String taskIDname) {
+    ParsedTask result = mapTasks.get(taskIDname);
 
     if (result != null) {
       return result;
@@ -577,9 +606,9 @@ public class JobBuilder {
    *          if true, we can create a task.
    * @return
    */
-  private LoggedTask getOrMakeTask(TaskType type, String taskIDname,
+  private ParsedTask getOrMakeTask(TaskType type, String taskIDname,
       boolean allowCreate) {
-    Map<String, LoggedTask> taskMap = otherTasks;
+    Map<String, ParsedTask> taskMap = otherTasks;
     List<LoggedTask> tasks = this.result.getOtherTasks();
 
     switch (type) {
@@ -597,10 +626,10 @@ public class JobBuilder {
       // no code
     }
 
-    LoggedTask result = taskMap.get(taskIDname);
+    ParsedTask result = taskMap.get(taskIDname);
 
     if (result == null && allowCreate) {
-      result = new LoggedTask();
+      result = new ParsedTask();
       result.setTaskType(getPre21Value(type.toString()));
       result.setTaskID(taskIDname);
       taskMap.put(taskIDname, result);
@@ -610,13 +639,13 @@ public class JobBuilder {
     return result;
   }
 
-  private LoggedTaskAttempt getOrMakeTaskAttempt(TaskType type,
+  private ParsedTaskAttempt getOrMakeTaskAttempt(TaskType type,
       String taskIDName, String taskAttemptName) {
-    LoggedTask task = getOrMakeTask(type, taskIDName, false);
-    LoggedTaskAttempt result = attempts.get(taskAttemptName);
+    ParsedTask task = getOrMakeTask(type, taskIDName, false);
+    ParsedTaskAttempt result = attempts.get(taskAttemptName);
 
     if (result == null && task != null) {
-      result = new LoggedTaskAttempt();
+      result = new ParsedTaskAttempt();
       result.setAttemptID(taskAttemptName);
       attempts.put(taskAttemptName, result);
       task.getAttempts().add(result);
