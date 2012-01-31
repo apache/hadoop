@@ -193,6 +193,10 @@ Release 0.23.1 - UNRELEASED
     HDFS-2791. If block report races with closing of file, replica is
     incorrectly marked corrupt. (todd)
 
+    HDFS-2827.  When the parent of a directory is the root, renaming the
+    directory results in leases updated incorrectly.  (Uma Maheswara Rao G
+    via szetszwo)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
