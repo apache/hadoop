@@ -398,19 +398,19 @@ public class TestRMWebServices extends JerseyTest {
     ResourceScheduler rs = rm.getResourceScheduler();
     QueueMetrics metrics = rs.getRootQueueMetrics();
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
-    final long MB_IN_GB = 1024;
 
-    long totalMBExpect = (metrics.getReservedGB() * MB_IN_GB)
-        + (metrics.getAvailableGB() * MB_IN_GB)
-        + (metrics.getAllocatedGB() * MB_IN_GB);
+    long totalMBExpect = 
+        metrics.getReservedMB()+ metrics.getAvailableMB() 
+        + metrics.getAllocatedMB();
 
-    assertEquals("appsSubmitted doesn't match", metrics.getAppsSubmitted(), sub);
+    assertEquals("appsSubmitted doesn't match", 
+        metrics.getAppsSubmitted(), sub);
     assertEquals("reservedMB doesn't match",
-        metrics.getReservedGB() * MB_IN_GB, reservedMB);
-    assertEquals("availableMB doesn't match", metrics.getAvailableGB()
-        * MB_IN_GB, availableMB);
-    assertEquals("allocatedMB doesn't match", metrics.getAllocatedGB()
-        * MB_IN_GB, allocMB);
+        metrics.getReservedMB(), reservedMB);
+    assertEquals("availableMB doesn't match", 
+        metrics.getAvailableMB(), availableMB);
+    assertEquals("allocatedMB doesn't match", 
+        metrics.getAllocatedMB(), allocMB);
     assertEquals("containersAllocated doesn't match", 0, containersAlloc);
     assertEquals("totalMB doesn't match", totalMBExpect, totalMB);
     assertEquals(

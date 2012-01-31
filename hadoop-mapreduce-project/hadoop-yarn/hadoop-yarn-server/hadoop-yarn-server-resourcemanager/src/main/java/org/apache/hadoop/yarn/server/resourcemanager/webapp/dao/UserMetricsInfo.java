@@ -31,8 +31,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 @XmlAccessorType(XmlAccessType.FIELD)
 public class UserMetricsInfo {
 
-  private static final long MB_IN_GB = 1024;
-
   protected int appsSubmitted;
   protected int runningContainers;
   protected int pendingContainers;
@@ -60,9 +58,9 @@ public class UserMetricsInfo {
       this.runningContainers = userMetrics.getAllocatedContainers();
       this.pendingContainers = userMetrics.getPendingContainers();
       this.reservedContainers = userMetrics.getReservedContainers();
-      this.reservedMB = userMetrics.getReservedGB() * MB_IN_GB;
-      this.pendingMB = userMetrics.getPendingGB() * MB_IN_GB;
-      this.allocatedMB = userMetrics.getAllocatedGB() * MB_IN_GB;
+      this.reservedMB = userMetrics.getReservedMB();
+      this.pendingMB = userMetrics.getPendingMB();
+      this.allocatedMB = userMetrics.getAllocatedMB();
     }
   }
 

@@ -576,6 +576,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3748. Changed a log in CapacityScheduler.nodeUpdate to debug.
     (ramya via acmurthy) 
 
+    MAPREDUCE-3764. Fixed resource usage metrics for queues and users.
+    (acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
