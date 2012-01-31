@@ -8,9 +8,6 @@ Release 1.1.0 - unreleased
                     branch-0.20-security (Ravi Gummadi via amarrk)
   BUG FIXES
 
-    HADOOP-7960. Port HADOOP-5203 to branch-1, build version comparison is too 
-    restrictive. (mattf)
-
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
 
     HADOOP-7634. Docs specify wrong owner for task-controller.cfg (eli)
@@ -151,9 +148,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
 
-    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
 
-Release 1.0.1 - unreleased
+Release 1.0.1 - 2012.01.30
 
   NEW FEATURES
 
@@ -161,12 +157,21 @@ Release 1.0.1 - unreleased
 
     MAPREDUCE-3607. Port missing new API mapreduce lib classes to 1.x. (tomwhite)
 
+    HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
+
+    HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
+    kerberos. (jitendra)
+
   BUG FIXES
+
+    HADOOP-7960. Port HADOOP-5203 to branch-1, build version comparison is too 
+    restrictive. (mattf)
 
     HADOOP-7964. Deadlock in NetUtils and SecurityUtil class initialization.
     (Daryn Sharp via suresh)
 
-Release 1.0.0 - unreleased
+
+Release 1.0.0 - 2011.12.15
 
   NEW FEATURES
 
