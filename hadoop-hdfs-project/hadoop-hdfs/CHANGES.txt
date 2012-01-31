@@ -48,7 +48,7 @@ Trunk (unreleased changes)
   IMPROVEMENTS
 
     HADOOP-7524 Change RPC to allow multiple protocols including multuple 
-    versions of the same protocol (sanjay Radia)
+    versions of the same protocol (Sanjay Radia)
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
                HdfsConstants. (Harsh J Chouraria via atm)
@@ -100,9 +100,9 @@ Trunk (unreleased changes)
 
     HDFS-2651 ClientNameNodeProtocol Translators for Protocol Buffers (sanjay)
 
-    HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh).
+    HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh)
 
-    HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
+    HDFS-2669. Enable protobuf rpc for ClientNamenodeProtocol. (Sanjay Radia)
 
     HDFS-2801. Provide a method in client side translators to check for a 
     methods supported in underlying protocol. (jitendra)
@@ -283,6 +283,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2818. Fix a missing space issue in HDFS webapps' title tags. (Devaraj K via harsh)
 
     HDFS-2397. Undeprecate SecondaryNameNode (eli)
+
+    HDFS-2857. Cleanup BlockInfo class. (suresh)
 
   OPTIMIZATIONS
 
