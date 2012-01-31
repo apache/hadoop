@@ -664,7 +664,12 @@ public class MiniDFSCluster {
   }
   
   public URI getSharedEditsDir(int minNN, int maxNN) throws IOException {
-    return fileAsURI(new File(base_dir, "shared-edits-" +
+    return formatSharedEditsDir(base_dir, minNN, maxNN);
+  }
+  
+  public static URI formatSharedEditsDir(File baseDir, int minNN, int maxNN)
+      throws IOException {
+    return fileAsURI(new File(baseDir, "shared-edits-" +
         minNN + "-through-" + maxNN));
   }
 

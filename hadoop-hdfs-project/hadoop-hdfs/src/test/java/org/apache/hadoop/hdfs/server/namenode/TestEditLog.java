@@ -807,7 +807,7 @@ public class TestEditLog extends TestCase {
       fail("Did no throw exception on only having a bad dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
-          "no journals successfully started", ioe);
+          "too few journals successfully started", ioe);
     } finally {
       logDir.setWritable(true);
       log.close();

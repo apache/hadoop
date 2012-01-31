@@ -865,7 +865,7 @@ public class FSEditLog  {
       editLogStream = journalSet.startLogSegment(segmentTxId);
     } catch (IOException ex) {
       throw new IOException("Unable to start log segment " +
-          segmentTxId + ": no journals successfully started.");
+          segmentTxId + ": too few journals successfully started.", ex);
     }
     
     curSegmentTxId = segmentTxId;
