@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
@@ -179,13 +180,14 @@ public abstract class AbstractCounters<C extends Counter,
    * @return Set of counter names.
    */
   public synchronized Iterable<String> getGroupNames() {
-    return Iterables.concat(fgroups.keySet(), groups.keySet());
+    return Iterables.concat(ImmutableSet.copyOf(fgroups.keySet()),
+                            ImmutableSet.copyOf(groups.keySet()));
   }
 
   @Override
-  public Iterator<G> iterator() {
-    return Iterators.concat(fgroups.values().iterator(),
-                            groups.values().iterator());
+  public synchronized Iterator<G> iterator() {
+    return Iterators.concat(ImmutableSet.copyOf(fgroups.values()).iterator(),
+                            ImmutableSet.copyOf(groups.values()).iterator());
   }
 
   /**

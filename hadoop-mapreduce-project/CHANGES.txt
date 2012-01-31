@@ -580,7 +580,10 @@ Release 0.23.1 - Unreleased
     (ramya via acmurthy) 
 
     MAPREDUCE-3764. Fixed resource usage metrics for queues and users.
-    (acmurthy) 
+    (acmurthy)
+
+    MAPREDUCE-3749. ConcurrentModificationException in counter groups.
+    (tomwhite)
 
 Release 0.23.0 - 2011-11-01 
 
