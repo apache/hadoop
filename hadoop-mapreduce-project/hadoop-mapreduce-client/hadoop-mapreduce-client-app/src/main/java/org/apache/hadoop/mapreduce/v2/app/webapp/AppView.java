@@ -33,7 +33,6 @@ public class AppView extends TwoColumnLayout {
   }
 
   protected void commonPreHead(Page.HTML<_> html) {
-    html.meta_http("refresh", "10");
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:1}");
     set(THEMESWITCHER_ID, "themeswitcher");

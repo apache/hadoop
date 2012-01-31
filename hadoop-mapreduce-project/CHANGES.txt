@@ -146,6 +146,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3732. Modified CapacityScheduler to use only users with pending
     requests for computing user-limits. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3679. AM logs and others should not automatically refresh after every 1 
+    second. (Vinod KV  via mahadev)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar

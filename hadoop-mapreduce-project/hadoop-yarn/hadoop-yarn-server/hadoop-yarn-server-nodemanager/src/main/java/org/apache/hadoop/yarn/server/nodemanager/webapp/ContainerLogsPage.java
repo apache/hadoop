@@ -62,7 +62,6 @@ public class ContainerLogsPage extends NMView {
     String redirectUrl = $(REDIRECT_URL);
     if (redirectUrl == null || redirectUrl.isEmpty()) {
       set(TITLE, join("Logs for ", $(CONTAINER_ID)));
-      html.meta_http("refresh", "10");
     } else {
       if (redirectUrl.equals("false")) {
         set(TITLE, join("Failed redirect for ", $(CONTAINER_ID)));
