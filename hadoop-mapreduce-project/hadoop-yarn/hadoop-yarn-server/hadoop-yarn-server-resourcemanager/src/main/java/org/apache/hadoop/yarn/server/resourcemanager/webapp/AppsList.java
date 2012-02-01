@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.ToJSON;
@@ -51,10 +52,14 @@ class AppsList implements ToJSON {
     apps = rmContext.getRMApps();
   }
 
-  void toDataTableArrays(PrintWriter out) {
+  void toDataTableArrays(String requiredAppState, PrintWriter out) {
     out.append('[');
     boolean first = true;
     for (RMApp app : apps.values()) {
+      if (requiredAppState != null && !requiredAppState.isEmpty()
+          && app.getState() != RMAppState.valueOf(requiredAppState)) {
+        continue;
+      }
       AppInfo appInfo = new AppInfo(app, false);
       if (first) {
         first = false;
@@ -84,7 +89,7 @@ class AppsList implements ToJSON {
   @Override
   public void toJSON(PrintWriter out) {
     out.print("{\"aaData\":");
-    toDataTableArrays(out);
+    toDataTableArrays(null, out);
     out.print("}\n");
   }
 }

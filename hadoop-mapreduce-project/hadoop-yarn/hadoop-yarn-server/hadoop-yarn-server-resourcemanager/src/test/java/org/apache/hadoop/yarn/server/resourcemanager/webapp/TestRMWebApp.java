@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 
@@ -74,7 +76,7 @@ public class TestRMWebApp {
 
   @Test public void testView() {
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
-        mockRMContext(3, 1, 2, 8*GiB),
+        mockRMContext(15, 1, 2, 8*GiB),
         new Module() {
       @Override
       public void configure(Binder binder) {
@@ -85,7 +87,9 @@ public class TestRMWebApp {
         }
       }
     });
-    injector.getInstance(RmView.class).render();
+    RmView rmViewInstance = injector.getInstance(RmView.class);
+    rmViewInstance.set(YarnWebParams.APP_STATE, RMAppState.RUNNING.toString());
+    rmViewInstance.render();
     WebAppTests.flushOutput(injector);
   }
 

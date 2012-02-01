@@ -25,4 +25,7 @@ public interface YarnWebParams {
   String CONTAINER_LOG_TYPE= "log.type";
   String ENTITY_STRING = "entity.string";
   String APP_OWNER = "app.owner";
+  String APP_STATE = "app.state";
+  String QUEUE_NAME = "queue.name";
+  String NODE_STATE = "node.state";
 }
