@@ -352,7 +352,7 @@ public class TestDirectoryScanner extends TestCase {
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(), fds.findBlockFile(bpid, blockId).getName());
+    assertEquals(file.getName(), fds.getFile(bpid, blockId).getName());
 
     // Generation stamp is same as that of created file
     assertEquals(genStamp, replicainfo.getGenerationStamp());

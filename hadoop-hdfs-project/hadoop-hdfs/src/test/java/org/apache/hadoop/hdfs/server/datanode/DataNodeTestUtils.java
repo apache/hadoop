@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -37,5 +38,8 @@ public class DataNodeTestUtils {
   getDNRegistrationForBP(DataNode dn, String bpid) throws IOException {
     return dn.getDNRegistrationForBP(bpid);
   }
-  
+
+  public static File getBlockFile(FSDataset fsdataset, String bpid, long bid) {
+    return fsdataset.getFile(bpid, bid);
+  }
 }

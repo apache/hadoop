@@ -81,8 +81,8 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
                               CHECKSUM_NULL, 16*1024 );
     byte[] nullCrcHeader = checksum.getHeader();
     nullCrcFileData =  new byte[2 + nullCrcHeader.length];
-    nullCrcFileData[0] = (byte) ((FSDataset.METADATA_VERSION >>> 8) & 0xff);
-    nullCrcFileData[1] = (byte) (FSDataset.METADATA_VERSION & 0xff);
+    nullCrcFileData[0] = (byte) ((BlockMetadataHeader.VERSION >>> 8) & 0xff);
+    nullCrcFileData[1] = (byte) (BlockMetadataHeader.VERSION & 0xff);
     for (int i = 0; i < nullCrcHeader.length; i++) {
       nullCrcFileData[i+2] = nullCrcHeader[i];
     }
@@ -390,9 +390,7 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
       Iterable<Block> injectBlocks) throws IOException {
     ExtendedBlock blk = new ExtendedBlock();
     if (injectBlocks != null) {
-      int numInjectedBlocks = 0;
       for (Block b: injectBlocks) { // if any blocks in list is bad, reject list
-        numInjectedBlocks++;
         if (b == null) {
           throw new NullPointerException("Null blocks in block list");
         }
@@ -555,31 +553,27 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
     }
   }
 
+  private BInfo getBInfo(final ExtendedBlock b) {
+    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
+    return map == null? null: map.get(b.getLocalBlock());
+  }
+
+  @Override // {@link FSDatasetInterface}
+  public boolean contains(ExtendedBlock block) {
+    return getBInfo(block) != null;
+  }
+
   @Override // FSDatasetInterface
   public synchronized boolean isValidBlock(ExtendedBlock b) {
-    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
-    if (map == null) {
-      return false;
-    }
-    BInfo binfo = map.get(b.getLocalBlock());
-    if (binfo == null) {
-      return false;
-    }
-    return binfo.isFinalized();
+    final BInfo binfo = getBInfo(b);
+    return binfo != null && binfo.isFinalized();
   }
 
   /* check if a block is created but not finalized */
   @Override
   public synchronized boolean isValidRbw(ExtendedBlock b) {
-    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
-    if (map == null) {
-      return false;
-    }
-    BInfo binfo = map.get(b.getLocalBlock());
-    if (binfo == null) {
-      return false;
-    }
-    return !binfo.isFinalized();  
+    final BInfo binfo = getBInfo(b);
+    return binfo != null && !binfo.isFinalized();  
   }
 
   @Override
