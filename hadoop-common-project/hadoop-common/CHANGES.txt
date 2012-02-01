@@ -90,6 +90,8 @@ Release 0.23.1 - Unreleased
    HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for downstream 
    projects. (tucu)
 
+    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
