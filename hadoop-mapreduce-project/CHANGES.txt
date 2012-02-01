@@ -152,6 +152,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3754. Modified RM UI to filter applications based on state of the
     applications. (vinodkv)
 
+    MAPREDUCE-3774. Moved yarn-default.xml to hadoop-yarn-common from
+    hadoop-server-common. (Mahadev Konar via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
