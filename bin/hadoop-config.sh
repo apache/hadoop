@@ -70,7 +70,7 @@ if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
-if [ "$HADOOP_HOME_WARN_SUPPRESS" == "" ] && [ "$HADOOP_HOME" != "" ]; then
+if [ "$HADOOP_HOME_WARN_SUPPRESS" = "" ] && [ "$HADOOP_HOME" != "" ]; then
   echo "Warning: \$HADOOP_HOME is deprecated." 1>&2
   echo 1>&2
 fi
