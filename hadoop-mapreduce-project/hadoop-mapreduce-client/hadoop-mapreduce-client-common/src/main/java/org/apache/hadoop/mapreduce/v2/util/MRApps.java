@@ -227,15 +227,23 @@ public class MRApps extends Apps {
   
   public static void setClasspath(Map<String, String> environment,
       Configuration conf) throws IOException {
+    boolean userClassesTakesPrecedence = 
+      conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
+
+    if (!userClassesTakesPrecedence) {
+      MRApps.setMRFrameworkClasspath(environment, conf);
+    }
     Apps.addToEnvironment(
-        environment, 
-        Environment.CLASSPATH.name(), 
+        environment,
+        Environment.CLASSPATH.name(),
         MRJobConfig.JOB_JAR);
     Apps.addToEnvironment(
-        environment, 
+        environment,
         Environment.CLASSPATH.name(),
         Environment.PWD.$() + Path.SEPARATOR + "*");
-    MRApps.setMRFrameworkClasspath(environment, conf);
+    if (userClassesTakesPrecedence) {
+      MRApps.setMRFrameworkClasspath(environment, conf);
+    }
   }
   
   private static final String STAGING_CONSTANT = ".staging";

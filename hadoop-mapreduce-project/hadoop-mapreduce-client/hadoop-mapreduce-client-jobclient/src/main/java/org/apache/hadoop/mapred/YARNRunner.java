@@ -408,7 +408,7 @@ public class YARNRunner implements ClientProtocol {
         + mergedCommand);
 
     // Setup the CLASSPATH in environment
-    // i.e. add { job jar, CWD, Hadoop jars} to classpath.
+    // i.e. add { Hadoop jars, job jar, CWD } to classpath.
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
 
