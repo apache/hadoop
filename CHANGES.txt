@@ -165,6 +165,8 @@ Release 1.0.1 - 2012.01.30
     HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
     kerberos. (jitendra)
 
+    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
+
   BUG FIXES
 
     HADOOP-7960. Port HADOOP-5203 to branch-1, build version comparison is too 

@@ -286,7 +286,7 @@
     </dependency>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
-      rev="1.0.1"
+      rev="${jackson.version}"
       conf="common->default"/>
    <dependency org="org.mockito" 
        name="mockito-all" 
