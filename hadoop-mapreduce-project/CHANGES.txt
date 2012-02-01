@@ -588,6 +588,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3749. ConcurrentModificationException in counter groups.
     (tomwhite)
 
+    MAPREDUCE-3762. Fixed default CapacityScheduler configs. (mahadev via
+    acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

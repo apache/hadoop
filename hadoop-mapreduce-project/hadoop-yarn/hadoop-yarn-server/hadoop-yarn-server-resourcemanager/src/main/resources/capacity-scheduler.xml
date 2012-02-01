@@ -53,9 +53,9 @@
 
   <property>
     <name>yarn.scheduler.capacity.root.default.maximum-capacity</name>
-    <value>-1</value>
+    <value>100</value>
     <description>
-      The maximum capacity of the default queue. A value of -1 disables this.
+      The maximum capacity of the default queue. 
     </description>
   </property>
 
