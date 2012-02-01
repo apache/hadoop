@@ -878,16 +878,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
       String poolId, long[] blocks) throws IOException {
     verifyRequest(nodeReg);
     BlockListAsLongs blist = new BlockListAsLongs(blocks);
-    if (nn.isStandbyState()) {
-      long maxGs = blist.getMaxGsInBlockList();
-      if (namesystem.isGenStampInFuture(maxGs)) {
-        LOG.info("Required GS="+maxGs+", Queuing blockReport message");
-        namesystem.getPendingDataNodeMessages().queueMessage(
-            new PendingDataNodeMessages.BlockReportMessage(nodeReg, poolId,
-                blist, maxGs));
-        return null;
-      }
-    }
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
            + "from " + nodeReg.getName() + " " + blist.getNumberOfBlocks()
@@ -904,25 +894,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
       ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks) throws IOException {
     verifyRequest(nodeReg);
-    if (nn.isStandbyState()) {
-      if (receivedAndDeletedBlocks.length > 0) {
-        long maxGs = receivedAndDeletedBlocks[0].getBlock()
-            .getGenerationStamp();
-        for (ReceivedDeletedBlockInfo binfo : receivedAndDeletedBlocks) {
-          if (binfo.getBlock().getGenerationStamp() > maxGs) {
-            maxGs = binfo.getBlock().getGenerationStamp();
-          }
-        }
-        if (namesystem.isGenStampInFuture(maxGs)) {
-          LOG.info("Required GS=" + maxGs
-              + ", Queuing blockReceivedAndDeleted message");
-          namesystem.getPendingDataNodeMessages().queueMessage(
-              new PendingDataNodeMessages.BlockReceivedDeleteMessage(nodeReg,
-                  poolId, receivedAndDeletedBlocks, maxGs));
-          return;
-        }
-      }
-    }
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
           +"from "+nodeReg.getName()+" "+receivedAndDeletedBlocks.length

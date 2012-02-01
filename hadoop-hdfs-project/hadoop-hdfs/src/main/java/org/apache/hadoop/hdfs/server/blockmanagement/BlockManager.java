@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -28,6 +29,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.commons.logging.Log;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -58,7 +61,6 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
-import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -69,7 +71,6 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
 /**
@@ -83,11 +84,20 @@ public class BlockManager {
   /** Default load factor of map */
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
 
+  private static final String QUEUE_REASON_CORRUPT_STATE =
+    "it has the wrong state or generation stamp";
+
+  private static final String QUEUE_REASON_FUTURE_GENSTAMP =
+    "generation stamp is in the future";
+
   private final Namesystem namesystem;
 
   private final DatanodeManager datanodeManager;
   private final HeartbeatManager heartbeatManager;
   private final BlockTokenSecretManager blockTokenSecretManager;
+  
+  private final PendingDataNodeMessages pendingDNMessages =
+    new PendingDataNodeMessages();
 
   private volatile long pendingReplicationBlocksCount = 0L;
   private volatile long corruptReplicaBlocksCount = 0L;
@@ -123,6 +133,10 @@ public class BlockManager {
   /** Used by metrics */
   public long getPostponedMisreplicatedBlocksCount() {
     return postponedMisreplicatedBlocksCount;
+  }
+  /** Used by metrics */
+  public int getPendingDataNodeMessageCount() {
+    return pendingDNMessages.count();
   }
 
   /**replicationRecheckInterval is how often namenode checks for new replication work*/
@@ -479,12 +493,24 @@ public class BlockManager {
     if(curBlock.isComplete())
       return curBlock;
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)curBlock;
-    if (!force && ucBlock.numNodes() < minReplication)
+    int numNodes = ucBlock.numNodes();
+    if (!force && numNodes < minReplication)
       throw new IOException("Cannot complete block: " +
           "block does not satisfy minimal replication requirement.");
     BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
     // replace penultimate block in file
     fileINode.setBlock(blkIndex, completeBlock);
+    
+    // Since safe-mode only counts complete blocks, and we now have
+    // one more complete block, we need to adjust the total up, and
+    // also count it as safe, if we have at least the minimum replica
+    // count. (We may not have the minimum replica count yet if this is
+    // a "forced" completion when a file is getting closed by an
+    // OP_CLOSE edit on the standby).
+    namesystem.adjustSafeModeBlockTotals(0, 1);
+    namesystem.incrementSafeBlockCount(
+        Math.min(numNodes, minReplication));
+    
     // replace block in the blocksMap
     return blocksMap.replaceBlock(completeBlock);
   }
@@ -547,6 +573,14 @@ public class BlockManager {
       String datanodeId = dd.getStorageID();
       invalidateBlocks.remove(datanodeId, oldBlock);
     }
+    
+    // Adjust safe-mode totals, since under-construction blocks don't
+    // count in safe-mode.
+    namesystem.adjustSafeModeBlockTotals(
+        // decrement safe if we had enough
+        targets.length >= minReplication ? -1 : 0,
+        // always decrement total blocks
+        -1);
 
     final long fileLength = fileINode.computeContentSummary().getLength();
     final long pos = fileLength - ucBlock.getNumBytes();
@@ -1483,9 +1517,19 @@ public class BlockManager {
     assert (node.numBlocks() == 0);
     BlockReportIterator itBR = report.getBlockReportIterator();
 
+    boolean isStandby = namesystem.isInStandbyState();
+    
     while(itBR.hasNext()) {
       Block iblk = itBR.next();
       ReplicaState reportedState = itBR.getCurrentReplicaState();
+      
+      if (isStandby &&
+          namesystem.isGenStampInFuture(iblk.getGenerationStamp())) {
+        queueReportedBlock(node, iblk, reportedState,
+            QUEUE_REASON_FUTURE_GENSTAMP);
+        continue;
+      }
+      
       BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
       // If block does not belong to any file, we are done.
       if (storedBlock == null) continue;
@@ -1493,7 +1537,14 @@ public class BlockManager {
       // If block is corrupt, mark it and continue to next block.
       BlockUCState ucState = storedBlock.getBlockUCState();
       if (isReplicaCorrupt(iblk, reportedState, storedBlock, ucState, node)) {
-        markBlockAsCorrupt(storedBlock, node);
+        if (namesystem.isInStandbyState()) {
+          // In the Standby, we may receive a block report for a file that we
+          // just have an out-of-date gen-stamp or state for, for example.
+          queueReportedBlock(node, iblk, reportedState,
+              QUEUE_REASON_CORRUPT_STATE);
+        } else {
+          markBlockAsCorrupt(storedBlock, node);
+        }
         continue;
       }
       
@@ -1576,7 +1627,8 @@ public class BlockManager {
    * @param toCorrupt replicas with unexpected length or generation stamp;
    *        add to corrupt replicas
    * @param toUC replicas of blocks currently under construction
-   * @return
+   * @return the up-to-date stored block, if it should be kept.
+   *         Otherwise, null.
    */
   private BlockInfo processReportedBlock(final DatanodeDescriptor dn, 
       final Block block, final ReplicaState reportedState, 
@@ -1591,6 +1643,13 @@ public class BlockManager {
           + " replicaState = " + reportedState);
     }
   
+    if (namesystem.isInStandbyState() &&
+        namesystem.isGenStampInFuture(block.getGenerationStamp())) {
+      queueReportedBlock(dn, block, reportedState,
+          QUEUE_REASON_FUTURE_GENSTAMP);
+      return null;
+    }
+    
     // find block by blockId
     BlockInfo storedBlock = blocksMap.getStoredBlock(block);
     if(storedBlock == null) {
@@ -1615,7 +1674,16 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
 
     if (isReplicaCorrupt(block, reportedState, storedBlock, ucState, dn)) {
-      toCorrupt.add(storedBlock);
+      if (namesystem.isInStandbyState()) {
+        // If the block is an out-of-date generation stamp or state,
+        // but we're the standby, we shouldn't treat it as corrupt,
+        // but instead just queue it for later processing.
+        queueReportedBlock(dn, storedBlock, reportedState,
+            QUEUE_REASON_CORRUPT_STATE);
+
+      } else {
+        toCorrupt.add(storedBlock);
+      }
       return storedBlock;
     }
 
@@ -1631,6 +1699,68 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       toAdd.add(storedBlock);
     }
     return storedBlock;
+  }
+
+  /**
+   * Queue the given reported block for later processing in the
+   * standby node. {@see PendingDataNodeMessages}.
+   * @param reason a textual reason to report in the debug logs
+   */
+  private void queueReportedBlock(DatanodeDescriptor dn, Block block,
+      ReplicaState reportedState, String reason) {
+    assert namesystem.isInStandbyState();
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Queueing reported block " + block +
+          " in state " + reportedState + 
+          " from datanode " + dn + " for later processing " +
+          "because " + reason + ".");
+    }
+    pendingDNMessages.enqueueReportedBlock(dn, block, reportedState);
+  }
+
+  /**
+   * Try to process any messages that were previously queued for the given
+   * block. This is called from FSEditLogLoader whenever a block's state
+   * in the namespace has changed or a new block has been created.
+   */
+  public void processQueuedMessagesForBlock(Block b) throws IOException {
+    Queue<ReportedBlockInfo> queue = pendingDNMessages.takeBlockQueue(b);
+    if (queue == null) {
+      // Nothing to re-process
+      return;
+    }
+    processQueuedMessages(queue);
+  }
+  
+  private void processQueuedMessages(Iterable<ReportedBlockInfo> rbis)
+      throws IOException {
+    for (ReportedBlockInfo rbi : rbis) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Processing previouly queued message " + rbi);
+      }
+      processAndHandleReportedBlock(
+          rbi.getNode(), rbi.getBlock(), rbi.getReportedState(), null);
+    }
+  }
+  
+  /**
+   * Process any remaining queued datanode messages after entering
+   * active state. At this point they will not be re-queued since
+   * we are the definitive master node and thus should be up-to-date
+   * with the namespace information.
+   */
+  public void processAllPendingDNMessages() throws IOException {
+    assert !namesystem.isInStandbyState() :
+      "processAllPendingDNMessages() should be called after exiting " +
+      "standby state!";
+    int count = pendingDNMessages.count();
+    if (count > 0) {
+      LOG.info("Processing " + count + " messages from DataNodes " +
+          "that were previously queued during standby state.");
+    }
+    processQueuedMessages(pendingDNMessages.takeAll());
+    assert pendingDNMessages.count() == 0;
   }
 
   /*
@@ -1742,13 +1872,15 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     // Now check for completion of blocks and safe block count
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
-        && numCurrentReplica >= minReplication)
+        && numCurrentReplica >= minReplication) {
       storedBlock = completeBlock(storedBlock.getINode(), storedBlock, false);
-
-    // check whether safe replication is reached for the block
-    // only complete blocks are counted towards that
-    if(storedBlock.isComplete())
+    } else if (storedBlock.isComplete()) {
+      // check whether safe replication is reached for the block
+      // only complete blocks are counted towards that.
+      // In the case that the block just became complete above, completeBlock()
+      // handles the safe block count maintenance.
       namesystem.incrementSafeBlockCount(numCurrentReplica);
+    }
   }
 
   /**
@@ -1807,15 +1939,17 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       + pendingReplications.getNumReplicas(storedBlock);
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
-        numLiveReplicas >= minReplication)
+        numLiveReplicas >= minReplication) {
       storedBlock = completeBlock(fileINode, storedBlock, false);
-
-    // check whether safe replication is reached for the block
-    // only complete blocks are counted towards that
-    // Is no-op if not in safe mode.
-    if(storedBlock.isComplete())
+    } else if (storedBlock.isComplete()) {
+      // check whether safe replication is reached for the block
+      // only complete blocks are counted towards that
+      // Is no-op if not in safe mode.
+      // In the case that the block just became complete above, completeBlock()
+      // handles the safe block count maintenance.
       namesystem.incrementSafeBlockCount(numCurrentReplica);
-
+    }
+    
     // if file is under construction, then done for now
     if (fileINode.isUnderConstruction()) {
       return storedBlock;
@@ -2514,7 +2648,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   }
 
   public int getActiveBlockCount() {
-    return blocksMap.size() - (int)invalidateBlocks.numBlocks();
+    return blocksMap.size();
   }
 
   public DatanodeDescriptor[] getNodes(BlockInfo block) {

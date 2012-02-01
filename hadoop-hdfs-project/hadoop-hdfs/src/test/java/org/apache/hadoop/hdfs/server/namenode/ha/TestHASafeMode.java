@@ -25,10 +25,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -38,15 +41,19 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 
 /**
  * Tests that exercise safemode in an HA cluster.
@@ -59,6 +66,12 @@ public class TestHASafeMode {
   private FileSystem fs;
   private MiniDFSCluster cluster;
   private Runtime mockRuntime = mock(Runtime.class);
+  
+  static {
+    ((Log4JLogger)LogFactory.getLog(FSImage.class)).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
+  }
   
   @Before
   public void setupCluster() throws Exception {
@@ -112,7 +125,11 @@ public class TestHASafeMode {
   @Test
   public void testEnterSafeModeInANNShouldNotThrowNPE() throws Exception {
     banner("Restarting active");
+    DFSTestUtil
+      .createFile(fs, new Path("/test"), 3 * BLOCK_SIZE, (short) 3, 1L);
     restartActive();
+    nn0.getRpcServer().transitionToActive();
+
     FSNamesystem namesystem = nn0.getNamesystem();
     String status = namesystem.getSafemode();
     assertTrue("Bad safemode status: '" + status + "'", status
@@ -187,24 +204,14 @@ public class TestHASafeMode {
     banner("Restarting standby");
     restartStandby();
 
-    // We expect it to be stuck in safemode (not the extension) because
-    // the block reports are delayed (since they include blocks
-    // from /test2 which are too-high genstamps.
-    String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 0 needs additional 3 blocks to reach"));
+    // We expect it not to be stuck in safemode, since those blocks
+    // that are already visible to the SBN should be processed
+    // in the initial block reports.
+    assertSafeMode(nn1, 3, 3);
 
     banner("Waiting for standby to catch up to active namespace");
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
-
-    status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 8 has reached the threshold 0.9990 of " +
-            "total blocks 8. Safe mode will be turned off automatically"));
+    assertSafeMode(nn1, 8, 8);
   }
   
   /**
@@ -224,12 +231,7 @@ public class TestHASafeMode {
     banner("Restarting standby");
     restartStandby();
     
-    String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 3 has reached the threshold 0.9990 of " +
-            "total blocks 3. Safe mode will be turned off automatically"));
+    assertSafeMode(nn1, 3, 3);
     
     // Create a few blocks which will send blockReceived calls to the
     // SBN.
@@ -240,12 +242,7 @@ public class TestHASafeMode {
     banner("Waiting for standby to catch up to active namespace");
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 
-    status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 8 has reached the threshold 0.9990 of " +
-            "total blocks 8. Safe mode will be turned off automatically"));
+    assertSafeMode(nn1, 8, 8);
   }
 
   /**
@@ -285,20 +282,11 @@ public class TestHASafeMode {
 
     banner("Restarting standby");
     restartStandby();
-    String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 0 needs additional 5 blocks to reach"));
+    assertSafeMode(nn1, 0, 5);
     
     banner("Waiting for standby to catch up to active namespace");
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
-    status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 0 has reached the threshold 0.9990 of " +
-            "total blocks 0. Safe mode will be turned off automatically"));
+    assertSafeMode(nn1, 0, 0);
   }
   
   /**
@@ -320,12 +308,7 @@ public class TestHASafeMode {
     restartStandby();
     
     // It will initially have all of the blocks necessary.
-    String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 10 has reached the threshold 0.9990 of " +
-            "total blocks 10. Safe mode will be turned off automatically"));
+    assertSafeMode(nn1, 10, 10);
 
     // Delete those blocks while the SBN is in safe mode - this
     // should reduce it back below the threshold
@@ -339,23 +322,123 @@ public class TestHASafeMode {
     HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
 
-    status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 0 needs additional 10 blocks"));
+    assertSafeMode(nn1, 0, 10);
 
     banner("Waiting for standby to catch up to active namespace");
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 
-    status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 0 has reached the threshold 0.9990 of " +
-            "total blocks 0. Safe mode will be turned off automatically"));
+    assertSafeMode(nn1, 0, 0);
   }
   
+  /**
+   * Tests that the standby node properly tracks the number of total
+   * and safe blocks while it is in safe mode. Since safe-mode only
+   * counts completed blocks, append needs to decrement the total
+   * number of blocks and then re-increment when the file is closed
+   * again.
+   */
+  @Test
+  public void testAppendWhileInSafeMode() throws Exception {
+    banner("Starting with NN0 active and NN1 standby, creating some blocks");
+    // Make 4.5 blocks so that append() will re-open an existing block
+    // instead of just adding a new one
+    DFSTestUtil.createFile(fs, new Path("/test"),
+        4*BLOCK_SIZE + BLOCK_SIZE/2, (short) 3, 1L);
+
+    // Roll edit log so that, when the SBN restarts, it will load
+    // the namespace during startup.
+    nn0.getRpcServer().rollEditLog();
+ 
+    banner("Restarting standby");
+    restartStandby();
+    
+    // It will initially have all of the blocks necessary.
+    assertSafeMode(nn1, 5, 5);
+
+    // Append to a block while SBN is in safe mode. This should
+    // not affect safemode initially, since the DN message
+    // will get queued.
+    FSDataOutputStream stm = fs.append(new Path("/test"));
+    try {
+      assertSafeMode(nn1, 5, 5);
+      
+      // if we roll edits now, the SBN should see that it's under construction
+      // and change its total count and safe count down by one, since UC
+      // blocks are not counted by safe mode.
+      HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+      assertSafeMode(nn1, 4, 4);
+    } finally {
+      IOUtils.closeStream(stm);
+    }
+    
+    // Delete those blocks while the SBN is in safe mode - this
+    // should reduce it back below the threshold
+    banner("Removing the blocks without rolling the edit log");
+    fs.delete(new Path("/test"), true);
+    BlockManagerTestUtil.computeAllPendingWork(
+        nn0.getNamesystem().getBlockManager());
+    
+    banner("Triggering deletions on DNs and Deletion Reports");
+    cluster.triggerHeartbeats();
+    HATestUtil.waitForDNDeletions(cluster);
+    cluster.triggerDeletionReports();
+
+    assertSafeMode(nn1, 0, 4);
+
+    banner("Waiting for standby to catch up to active namespace");
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+
+    assertSafeMode(nn1, 0, 0);
+  }
+  
+  /**
+   * Regression test for a bug experienced while developing
+   * HDFS-2742. The scenario here is:
+   * - image contains some blocks
+   * - edits log contains at least one block addition, followed
+   *   by deletion of more blocks than were added.
+   * - When node starts up, some incorrect accounting of block
+   *   totals caused an assertion failure.
+   */
+  @Test
+  public void testBlocksDeletedInEditLog() throws Exception {
+    banner("Starting with NN0 active and NN1 standby, creating some blocks");
+    // Make 4 blocks persisted in the image.
+    DFSTestUtil.createFile(fs, new Path("/test"),
+        4*BLOCK_SIZE, (short) 3, 1L);
+    NameNodeAdapter.enterSafeMode(nn0, false);
+    NameNodeAdapter.saveNamespace(nn0);
+    NameNodeAdapter.leaveSafeMode(nn0, false);
+    
+    // OP_ADD for 2 blocks
+    DFSTestUtil.createFile(fs, new Path("/test2"),
+        2*BLOCK_SIZE, (short) 3, 1L);
+    
+    // OP_DELETE for 4 blocks
+    fs.delete(new Path("/test"), true);
+
+    restartActive();
+  }
+  
+  private void assertSafeMode(NameNode nn, int safe, int total) {
+    String status = nn1.getNamesystem().getSafemode();
+    if (safe == total) {
+      assertTrue("Bad safemode status: '" + status + "'",
+          status.startsWith(
+            "Safe mode is ON." +
+            "The reported blocks " + safe + " has reached the threshold " +
+            "0.9990 of total blocks " + total + ". Safe mode will be " +
+            "turned off automatically"));
+    } else {
+      int additional = total - safe;
+      assertTrue("Bad safemode status: '" + status + "'",
+          status.startsWith(
+              "Safe mode is ON." +
+              "The reported blocks " + safe + " needs additional " +
+              additional + " blocks"));
+    }
+  }
+
   /**
    * Set up a namesystem with several edits, both deletions and
    * additions, and failover to a new NN while that NN is in
@@ -378,26 +461,107 @@ public class TestHASafeMode {
     banner("Restarting standby");
     restartStandby();
 
-    // We expect it to be stuck in safemode (not the extension) because
-    // the block reports are delayed (since they include blocks
-    // from /test2 which are too-high genstamps.
-    String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 0 needs additional 3 blocks to reach"));
-
+    // We expect it to be on its way out of safemode, since all of the blocks
+    // from the edit log have been reported.
+    assertSafeMode(nn1, 3, 3);
+    
     // Initiate a failover into it while it's in safemode
     banner("Initiating a failover into NN1 in safemode");
     NameNodeAdapter.abortEditLogs(nn0);
     cluster.transitionToActive(1);
 
-    status = nn1.getNamesystem().getSafemode();
+    assertSafeMode(nn1, 5, 5);
+  }
+  
+  /**
+   * Similar to {@link #testBlocksRemovedWhileInSafeMode()} except that
+   * the OP_DELETE edits arrive at the SBN before the block deletion reports.
+   * The tracking of safe blocks needs to properly account for the removal
+   * of the blocks as well as the safe count. This is a regression test for
+   * HDFS-2742.
+   */
+  @Test
+  public void testBlocksRemovedWhileInSafeModeEditsArriveFirst() throws Exception {
+    banner("Starting with NN0 active and NN1 standby, creating some blocks");
+    DFSTestUtil.createFile(fs, new Path("/test"), 10*BLOCK_SIZE, (short) 3, 1L);
+
+    // Roll edit log so that, when the SBN restarts, it will load
+    // the namespace during startup.
+    nn0.getRpcServer().rollEditLog();
+ 
+    banner("Restarting standby");
+    restartStandby();
+    
+    // It will initially have all of the blocks necessary.
+    String status = nn1.getNamesystem().getSafemode();
     assertTrue("Bad safemode status: '" + status + "'",
         status.startsWith(
             "Safe mode is ON." +
-            "The reported blocks 5 has reached the threshold 0.9990 of " +
-            "total blocks 5. Safe mode will be turned off automatically"));
+            "The reported blocks 10 has reached the threshold 0.9990 of " +
+            "total blocks 10. Safe mode will be turned off automatically"));
+
+    // Delete those blocks while the SBN is in safe mode.
+    // Immediately roll the edit log before the actual deletions are sent
+    // to the DNs.
+    banner("Removing the blocks without rolling the edit log");
+    fs.delete(new Path("/test"), true);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+
+    // Should see removal of the blocks as well as their contribution to safe block count.
+    assertSafeMode(nn1, 0, 0);
+
+    
+    banner("Triggering sending deletions to DNs and Deletion Reports");
+    BlockManagerTestUtil.computeAllPendingWork(
+        nn0.getNamesystem().getBlockManager());    
+    cluster.triggerHeartbeats();
+    HATestUtil.waitForDNDeletions(cluster);
+    cluster.triggerDeletionReports();
+
+    // No change in assertion status here, but some of the consistency checks
+    // in safemode will fire here if we accidentally decrement safe block count
+    // below 0.    
+    assertSafeMode(nn1, 0, 0);
+  }
+  
+
+  /**
+   * Test that the number of safe blocks is accounted correctly even when
+   * blocks move between under-construction state and completed state.
+   * If a FINALIZED report arrives at the SBN before the block is marked
+   * COMPLETE, then when we get the OP_CLOSE we need to count it as "safe"
+   * at that point. This is a regression test for HDFS-2742.
+   */
+  @Test
+  public void testSafeBlockTracking() throws Exception {
+    banner("Starting with NN0 active and NN1 standby, creating some " +
+    		"UC blocks plus some other blocks to force safemode");
+    DFSTestUtil.createFile(fs, new Path("/other-blocks"), 10*BLOCK_SIZE, (short) 3, 1L);
+
+    List<FSDataOutputStream> stms = Lists.newArrayList();
+    try {
+      for (int i = 0; i < 5; i++) {
+        FSDataOutputStream stm = fs.create(new Path("/test-uc-" + i));
+        stms.add(stm);
+        stm.write(1);
+        stm.hflush();
+      }
+      // Roll edit log so that, when the SBN restarts, it will load
+      // the namespace during startup and enter safemode.
+      nn0.getRpcServer().rollEditLog();
+    } finally {
+      for (FSDataOutputStream stm : stms) {
+        IOUtils.closeStream(stm);
+      }
+    }
+    
+    banner("Restarting SBN");
+    restartStandby();
+    assertSafeMode(nn1, 10, 10);
+
+    banner("Allowing SBN to catch up");
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+    assertSafeMode(nn1, 15, 15);
   }
   
   /**
@@ -425,12 +589,7 @@ public class TestHASafeMode {
     nn0.getRpcServer().rollEditLog();
     
     restartStandby();
-    String status = nn1.getNamesystem().getSafemode();
-    assertTrue("Bad safemode status: '" + status + "'",
-        status.startsWith(
-            "Safe mode is ON." +
-            "The reported blocks 6 has reached the threshold 0.9990 of " +
-            "total blocks 6. Safe mode will be turned off automatically"));    
+    assertSafeMode(nn1, 6, 6);
   }
   
   /**

@@ -154,10 +154,6 @@ import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
-import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.BlockReceivedDeleteMessage;
-import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.BlockReportMessage;
-import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.CommitBlockSynchronizationMessage;
-import org.apache.hadoop.hdfs.server.namenode.PendingDataNodeMessages.DataNodeMessage;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -321,8 +317,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // lock to protect FSNamesystem.
   private ReentrantReadWriteLock fsLock;
 
-  private PendingDataNodeMessages pendingDatanodeMessages = new PendingDataNodeMessages();
-  
   /**
    * Used when this NN is in standby state to read from the shared edit log.
    */
@@ -342,11 +336,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private boolean haEnabled;
 
   private final Configuration conf;
-  
-  PendingDataNodeMessages getPendingDataNodeMessages() {
-    return pendingDatanodeMessages;
-  }
-  
+    
   /**
    * Instantiates an FSNamesystem loaded from the image and edits
    * directories specified in the passed Configuration.
@@ -481,6 +471,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       nnResourceChecker = new NameNodeResourceChecker(conf);
       checkAvailableResources();
+      assert safeMode != null &&
+        !safeMode.initializedReplQueues;
       setBlockTotal();
       blockManager.activate(conf);
       this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
@@ -531,6 +523,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("Reprocessing replication and invalidation queues...");
         blockManager.getDatanodeManager().markAllDatanodesStale();
         blockManager.clearQueues();
+        blockManager.processAllPendingDNMessages();
         blockManager.processMisReplicatedBlocks();
         
         if (LOG.isDebugEnabled()) {
@@ -849,8 +842,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public boolean isRunning() {
     return fsRunning;
   }
-
-  private boolean isInStandbyState() {
+  
+  @Override
+  public boolean isInStandbyState() {
     if (haContext == null || haContext.getState() == null) {
       // We're still starting up. In this case, if HA is
       // on for the cluster, we always start in standby. Otherwise
@@ -1543,7 +1537,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
 
       if (append && myFile != null) {
-        return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode);
+        return prepareFileForWrite(
+            src, myFile, holder, clientMachine, clientNode, true);
       } else {
        // Now we can add the name to the filesystem. This file has no
        // blocks associated with it.
@@ -1581,12 +1576,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param leaseHolder identifier of the lease holder on this file
    * @param clientMachine identifier of the client machine
    * @param clientNode if the client is collocated with a DN, that DN's descriptor
+   * @param writeToEditLog whether to persist this change to the edit log
    * @return the last block locations if the block is partial or null otherwise
    * @throws UnresolvedLinkException
    * @throws IOException
    */
   public LocatedBlock prepareFileForWrite(String src, INode file,
-      String leaseHolder, String clientMachine, DatanodeDescriptor clientNode)
+      String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
+      boolean writeToEditLog)
       throws UnresolvedLinkException, IOException {
     INodeFile node = (INodeFile) file;
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
@@ -1601,6 +1598,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                     clientNode);
     dir.replaceNode(src, node, cons);
     leaseManager.addLease(cons.getClientName(), src);
+    
+    if (writeToEditLog) {
+      getEditLog().logOpenFile(src, cons);
+    }
 
     return blockManager.convertLastBlockToUnderConstruction(cons);
   }
@@ -2346,9 +2347,45 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (blocks == null) {
       return;
     }
-    for(Block b : blocks) {
+    
+    // In the case that we are a Standby tailing edits from the
+    // active while in safe-mode, we need to track the total number
+    // of blocks and safe blocks in the system.
+    boolean trackBlockCounts = isSafeModeTrackingBlocks();
+    int numRemovedComplete = 0, numRemovedSafe = 0;
+
+    for (Block b : blocks) {
+      if (trackBlockCounts) {
+        BlockInfo bi = blockManager.getStoredBlock(b);
+        if (bi.isComplete()) {
+          numRemovedComplete++;
+          if (bi.numNodes() >= blockManager.minReplication) {
+            numRemovedSafe++;
+          }
+        }
+      }
       blockManager.removeBlock(b);
     }
+    if (trackBlockCounts) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adjusting safe-mode totals for deletion of " + src + ":" +
+            "decreasing safeBlocks by " + numRemovedSafe +
+            ", totalBlocks by " + numRemovedComplete);
+      }
+      adjustSafeModeBlockTotals(-numRemovedSafe, -numRemovedComplete);
+    }
+  }
+
+  /**
+   * @see SafeModeInfo#shouldIncrementallyTrackBlocks
+   */
+  private boolean isSafeModeTrackingBlocks() {
+    if (!haEnabled) {
+      // Never track blocks incrementally in non-HA code.
+      return false;
+    }
+    SafeModeInfo sm = this.safeMode;
+    return sm != null && sm.shouldIncrementallyTrackBlocks();
   }
 
   /**
@@ -2712,15 +2749,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkOperation(OperationCategory.WRITE);
       if (haContext.getState().equals(NameNode.STANDBY_STATE)) {
         // TODO(HA) we'll never get here, since we check for WRITE operation above!
-        if (isGenStampInFuture(newgenerationstamp)) {
-          LOG.info("Required GS=" + newgenerationstamp
-              + ", Queuing commitBlockSynchronization message");
-          getPendingDataNodeMessages().queueMessage(
-              new PendingDataNodeMessages.CommitBlockSynchronizationMessage(
-                  lastblock, newgenerationstamp, newlength, closeFile, deleteblock,
-                  newtargets, newgenerationstamp));
-          return;
-        }
+        // Need to implement tests, etc, for this - block recovery spanning
+        // failover.
       }
 
       if (isInSafeMode()) {
@@ -3264,6 +3294,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean initializedReplQueues = false;
     /** Was safemode entered automatically because available resources were low. */
     private boolean resourcesLow = false;
+    /** Should safemode adjust its block totals as blocks come in */
+    private boolean shouldIncrementallyTrackBlocks = false;
     
     /**
      * Creates SafeModeInfo when the name node enters
@@ -3289,6 +3321,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                       (float) threshold);
       this.blockTotal = 0; 
       this.blockSafe = 0;
+    }
+
+    /**
+     * In the HA case, the StandbyNode can be in safemode while the namespace
+     * is modified by the edit log tailer. In this case, the number of total
+     * blocks changes as edits are processed (eg blocks are added and deleted).
+     * However, we don't want to do the incremental tracking during the
+     * startup-time loading process -- only once the initial total has been
+     * set after the image has been loaded.
+     */
+    private boolean shouldIncrementallyTrackBlocks() {
+      return shouldIncrementallyTrackBlocks;
     }
 
     /**
@@ -3476,6 +3520,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
         (int) (blockTotal * replQueueThreshold);
+      if (haEnabled) {
+        // After we initialize the block count, any further namespace
+        // modifications done while in safe mode need to keep track
+        // of the number of total blocks in the system.
+        this.shouldIncrementallyTrackBlocks = true;
+      }
+      
       checkMode();
     }
       
@@ -3485,9 +3536,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      */
     private synchronized void incrementSafeBlockCount(short replication) {
-      if (replication == safeReplication)
+      if (replication == safeReplication) {
         this.blockSafe++;
-      checkMode();
+        checkMode();
+      }
     }
       
     /**
@@ -3496,9 +3548,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @param replication current replication 
      */
     private synchronized void decrementSafeBlockCount(short replication) {
-      if (replication == safeReplication-1)
+      if (replication == safeReplication-1) {
         this.blockSafe--;
-      checkMode();
+        assert blockSafe >= 0 || isManual();
+        checkMode();
+      }
     }
 
     /**
@@ -3636,6 +3690,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         + "BlockManager data: active="  + activeBlocks);
       }
     }
+
+    private void adjustBlockTotals(int deltaSafe, int deltaTotal) {
+      if (!shouldIncrementallyTrackBlocks) {
+        return;
+      }
+      assert haEnabled;
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adjusting block totals from " +
+            blockSafe + "/" + blockTotal + " to " +
+            (blockSafe + deltaSafe) + "/" + (blockTotal + deltaTotal));
+      }
+      assert blockSafe + deltaSafe >= 0 : "Can't reduce blockSafe " +
+        blockSafe + " by " + deltaSafe + ": would be negative";
+      assert blockTotal + deltaTotal >= 0 : "Can't reduce blockTotal " +
+        blockTotal + " by " + deltaTotal + ": would be negative";
+      
+      blockSafe += deltaSafe;
+      setBlockTotal(blockTotal + deltaTotal);
+    }
   }
     
   /**
@@ -3741,7 +3815,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null) // mostly true
       return;
-    safeMode.decrementSafeBlockCount((short)blockManager.countNodes(b).liveReplicas());
+    BlockInfo storedBlock = blockManager.getStoredBlock(b);
+    if (storedBlock.isComplete()) {
+      safeMode.decrementSafeBlockCount((short)blockManager.countNodes(b).liveReplicas());
+    }
+  }
+  
+  /**
+   * Adjust the total number of blocks safe and expected during safe mode.
+   * If safe mode is not currently on, this is a no-op.
+   * @param deltaSafe the change in number of safe blocks
+   * @param deltaTotal the change i nnumber of total blocks expected
+   */
+  public void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal) {
+    // safeMode is volatile, and may be set to null at any time
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null)
+      return;
+    safeMode.adjustBlockTotals(deltaSafe, deltaTotal);
   }
 
   /**
@@ -4063,6 +4154,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric
   public long getPostponedMisreplicatedBlocks() {
     return blockManager.getPostponedMisreplicatedBlocksCount();
+  }
+  
+  @Metric
+  public int getPendingDataNodeMessageCount() {
+    return blockManager.getPendingDataNodeMessageCount();
   }
   
   @Metric
@@ -4912,54 +5008,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public boolean isGenStampInFuture(long genStamp) {
     return (genStamp > getGenerationStamp());
   }
-  
-  public void notifyGenStampUpdate(long gs) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Generation stamp " + gs + " has been reached. " +
-          "Processing pending messages from DataNodes...");
-    }
-    DataNodeMessage msg = pendingDatanodeMessages.take(gs);
-    while (msg != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Processing previously pending message: " + msg);
-      }
-      try {
-        switch (msg.getType()) {
-        case BLOCK_RECEIVED_DELETE:
-          BlockReceivedDeleteMessage m = (BlockReceivedDeleteMessage) msg;
-          if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog
-                .debug("*BLOCK* NameNode.blockReceivedAndDeleted: " + "from "
-                    + m.getNodeReg().getName() + " "
-                    + m.getReceivedAndDeletedBlocks().length + " blocks.");
-          }
-          this.getBlockManager().processIncrementalBlockReport(m.getNodeReg(),
-              m.getPoolId(), m.getReceivedAndDeletedBlocks());
-          break;
-        case BLOCK_REPORT:
-          BlockReportMessage mbr = (BlockReportMessage) msg;
-          if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
-                + "from " + mbr.getNodeReg().getName() + " "
-                + mbr.getBlockList().getNumberOfBlocks() + " blocks");
-          }
-          this.getBlockManager().processReport(mbr.getNodeReg(),
-              mbr.getPoolId(), mbr.getBlockList());
-          break;
-        case COMMIT_BLOCK_SYNCHRONIZATION:
-          CommitBlockSynchronizationMessage mcbm = (CommitBlockSynchronizationMessage) msg;
-          this.commitBlockSynchronization(mcbm.getBlock(),
-              mcbm.getNewgenerationstamp(), mcbm.getNewlength(),
-              mcbm.isCloseFile(), mcbm.isDeleteblock(), mcbm.getNewtargets());
-          break;
-        }
-      } catch (IOException ex) {
-        LOG.warn("Could not process the message " + msg.getType(), ex);
-      }
-      msg = pendingDatanodeMessages.take(gs);
-    }
-  }
-  
   @VisibleForTesting
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;

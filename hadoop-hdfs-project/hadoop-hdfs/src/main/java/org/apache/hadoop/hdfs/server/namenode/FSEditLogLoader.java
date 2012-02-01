@@ -66,7 +66,6 @@ import com.google.common.base.Joiner;
 @InterfaceStability.Evolving
 public class FSEditLogLoader {
   private final FSNamesystem fsNamesys;
-  private long maxGenStamp = 0;
 
   public FSEditLogLoader(FSNamesystem fsNamesys) {
     this.fsNamesys = fsNamesys;
@@ -91,15 +90,6 @@ public class FSEditLogLoader {
           + " of size " + edits.length() + " edits # " + numEdits 
           + " loaded in " + (now()-startTime)/1000 + " seconds.");
     } finally {
-      fsNamesys.setBlockTotal();
-      
-      // Delay the notification of genstamp updates until after
-      // setBlockTotal() above. Otherwise, we will mark blocks
-      // as "safe" before they've been incorporated in the expected
-      // totalBlocks and threshold for SafeMode -- triggering an
-      // assertion failure and/or exiting safemode too early!
-      fsNamesys.notifyGenStampUpdate(maxGenStamp);
-      
       edits.close();
       fsNamesys.writeUnlock();
     }
@@ -183,6 +173,12 @@ public class FSEditLogLoader {
     switch (op.opCode) {
     case OP_ADD: {
       AddCloseOp addCloseOp = (AddCloseOp)op;
+      if (FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug(op.opCode + ": " + addCloseOp.path +
+            " numblocks : " + addCloseOp.blocks.length +
+            " clientHolder " + addCloseOp.clientName +
+            " clientMachine " + addCloseOp.clientMachine);
+      }
 
       // See if the file already exists (persistBlocks call)
       INodeFile oldFile = getINodeFile(fsDir, addCloseOp.path);
@@ -197,13 +193,6 @@ public class FSEditLogLoader {
         }
         long blockSize = addCloseOp.blockSize;
         
-        if (FSNamesystem.LOG.isDebugEnabled()) {
-          FSNamesystem.LOG.debug(op.opCode + ": " + addCloseOp.path +
-              " numblocks : " + addCloseOp.blocks.length +
-              " clientHolder " + addCloseOp.clientName +
-              " clientMachine " + addCloseOp.clientMachine);
-        }
-
         // Older versions of HDFS does not store the block size in inode.
         // If the file has more than one block, use the size of the
         // first block as the blocksize. Otherwise use the default
@@ -227,12 +216,18 @@ public class FSEditLogLoader {
             addCloseOp.atime, blockSize);
 
         fsNamesys.prepareFileForWrite(addCloseOp.path, node,
-            addCloseOp.clientName, addCloseOp.clientMachine, null);
+            addCloseOp.clientName, addCloseOp.clientMachine, null,
+            false);
       } else { // This is OP_ADD on an existing file
         if (!oldFile.isUnderConstruction()) {
           // This is a call to append() on an already-closed file.
+          if (FSNamesystem.LOG.isDebugEnabled()) {
+            FSNamesystem.LOG.debug("Reopening an already-closed file " +
+                "for append");
+          }
           fsNamesys.prepareFileForWrite(addCloseOp.path, oldFile,
-              addCloseOp.clientName, addCloseOp.clientMachine, null);
+              addCloseOp.clientName, addCloseOp.clientMachine, null,
+              false);
           oldFile = getINodeFile(fsDir, addCloseOp.path);
         }
         
@@ -243,6 +238,13 @@ public class FSEditLogLoader {
     case OP_CLOSE: {
       AddCloseOp addCloseOp = (AddCloseOp)op;
       
+      if (FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug(op.opCode + ": " + addCloseOp.path +
+            " numblocks : " + addCloseOp.blocks.length +
+            " clientHolder " + addCloseOp.clientName +
+            " clientMachine " + addCloseOp.clientMachine);
+      }
+
       INodeFile oldFile = getINodeFile(fsDir, addCloseOp.path);
       if (oldFile == null) {
         throw new IOException("Operation trying to close non-existent file " +
@@ -478,13 +480,22 @@ public class FSEditLogLoader {
       }
       
       oldBlock.setNumBytes(newBlock.getNumBytes());
+      boolean changeMade =
+        oldBlock.getGenerationStamp() != newBlock.getGenerationStamp();
       oldBlock.setGenerationStamp(newBlock.getGenerationStamp());
       
       if (oldBlock instanceof BlockInfoUnderConstruction &&
           (!isLastBlock || addCloseOp.opCode == FSEditLogOpCodes.OP_CLOSE)) {
+        changeMade = true;
         fsNamesys.getBlockManager().forceCompleteBlock(
             (INodeFileUnderConstruction)file,
             (BlockInfoUnderConstruction)oldBlock);
+      }
+      if (changeMade) {
+        // The state or gen-stamp of the block has changed. So, we may be
+        // able to process some messages from datanodes that we previously
+        // were unable to process.
+        fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
       }
     }
     
@@ -517,12 +528,8 @@ public class FSEditLogLoader {
         }
         fsNamesys.getBlockManager().addINode(newBI, file);
         file.addBlock(newBI);
+        fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
       }
-    }
-    
-    // Record the max genstamp seen
-    for (Block b : addCloseOp.blocks) {
-      maxGenStamp = Math.max(maxGenStamp, b.getGenerationStamp());
     }
   }
 

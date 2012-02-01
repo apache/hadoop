@@ -21,18 +21,18 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -40,23 +40,29 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -359,6 +365,164 @@ public class TestDNFencing {
     banner("Making sure the file is still readable");
     FileSystem fs2 = cluster.getFileSystem(1);
     DFSTestUtil.readFile(fs2, TEST_FILE_PATH);
+  }
+  
+  /**
+   * Regression test for HDFS-2742. The issue in this bug was:
+   * - DN does a block report while file is open. This BR contains
+   *   the block in RBW state.
+   * - Standby queues the RBW state in PendingDatanodeMessages
+   * - Standby processes edit logs during failover. Before fixing
+   *   this bug, it was mistakenly applying the RBW reported state
+   *   after the block had been completed, causing the block to get
+   *   marked corrupt. Instead, we should now be applying the RBW
+   *   message on OP_ADD, and then the FINALIZED message on OP_CLOSE.
+   */
+  @Test
+  public void testBlockReportsWhileFileBeingWritten() throws Exception {
+    FSDataOutputStream out = fs.create(TEST_FILE_PATH);
+    try {
+      AppendTestUtil.write(out, 0, 10);
+      out.hflush();
+      
+      // Block report will include the RBW replica, but will be
+      // queued on the StandbyNode.
+      cluster.triggerBlockReports();
+      
+    } finally {
+      IOUtils.closeStream(out);
+    }
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    
+    // Verify that no replicas are marked corrupt, and that the
+    // file is readable from the failed-over standby.
+    BlockManagerTestUtil.updateState(nn1.getNamesystem().getBlockManager());
+    BlockManagerTestUtil.updateState(nn2.getNamesystem().getBlockManager());
+    assertEquals(0, nn1.getNamesystem().getCorruptReplicaBlocks());
+    assertEquals(0, nn2.getNamesystem().getCorruptReplicaBlocks());
+    
+    DFSTestUtil.readFile(fs, TEST_FILE_PATH);
+  }
+  
+  /**
+   * Test that, when a block is re-opened for append, the related
+   * datanode messages are correctly queued by the SBN because
+   * they have future states and genstamps.
+   */
+  @Test
+  public void testQueueingWithAppend() throws Exception {
+    int numQueued = 0;
+    int numDN = cluster.getDataNodes().size();
+    
+    FSDataOutputStream out = fs.create(TEST_FILE_PATH);
+    try {
+      AppendTestUtil.write(out, 0, 10);
+      out.hflush();
+
+      // Opening the file will report RBW replicas, but will be
+      // queued on the StandbyNode.
+      numQueued += numDN; // RBW messages
+    } finally {
+      IOUtils.closeStream(out);
+      numQueued += numDN; // blockReceived messages
+    }
+    
+    cluster.triggerBlockReports();
+    numQueued += numDN;
+    
+    try {
+      out = fs.append(TEST_FILE_PATH);
+      AppendTestUtil.write(out, 10, 10);
+      // RBW replicas once it's opened for append
+      numQueued += numDN;
+
+    } finally {
+      IOUtils.closeStream(out);
+      numQueued += numDN; // blockReceived
+    }
+    
+    cluster.triggerBlockReports();
+    numQueued += numDN;
+
+    assertEquals(numQueued, cluster.getNameNode(1).getNamesystem().
+        getPendingDataNodeMessageCount());
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    
+    // Verify that no replicas are marked corrupt, and that the
+    // file is readable from the failed-over standby.
+    BlockManagerTestUtil.updateState(nn1.getNamesystem().getBlockManager());
+    BlockManagerTestUtil.updateState(nn2.getNamesystem().getBlockManager());
+    assertEquals(0, nn1.getNamesystem().getCorruptReplicaBlocks());
+    assertEquals(0, nn2.getNamesystem().getCorruptReplicaBlocks());
+    
+    AppendTestUtil.check(fs, TEST_FILE_PATH, 20);
+  }
+  
+  /**
+   * Another regression test for HDFS-2742. This tests the following sequence:
+   * - DN does a block report while file is open. This BR contains
+   *   the block in RBW state.
+   * - The block report is delayed in reaching the standby.
+   * - The file is closed.
+   * - The standby processes the OP_ADD and OP_CLOSE operations before
+   *   the RBW block report arrives.
+   * - The standby should not mark the block as corrupt.
+   */
+  @Test
+  public void testRBWReportArrivesAfterEdits() throws Exception {
+    final CountDownLatch brFinished = new CountDownLatch(1);
+    DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG) {
+      @Override
+      protected Object passThrough(InvocationOnMock invocation)
+          throws Throwable {
+        try {
+          return super.passThrough(invocation);
+        } finally {
+          // inform the test that our block report went through.
+          brFinished.countDown();
+        }
+      }
+    };
+
+    FSDataOutputStream out = fs.create(TEST_FILE_PATH);
+    try {
+      AppendTestUtil.write(out, 0, 10);
+      out.hflush();
+
+      DataNode dn = cluster.getDataNodes().get(0);
+      DatanodeProtocolClientSideTranslatorPB spy =
+        DataNodeAdapter.spyOnBposToNN(dn, nn2);
+      
+      Mockito.doAnswer(delayer)
+        .when(spy).blockReport(
+          Mockito.<DatanodeRegistration>anyObject(),
+          Mockito.anyString(),
+          Mockito.<long[]>anyObject());
+      dn.scheduleAllBlockReport(0);
+      delayer.waitForCall();
+      
+    } finally {
+      IOUtils.closeStream(out);
+    }
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    
+    delayer.proceed();
+    brFinished.await();
+    
+    // Verify that no replicas are marked corrupt, and that the
+    // file is readable from the failed-over standby.
+    BlockManagerTestUtil.updateState(nn1.getNamesystem().getBlockManager());
+    BlockManagerTestUtil.updateState(nn2.getNamesystem().getBlockManager());
+    assertEquals(0, nn1.getNamesystem().getCorruptReplicaBlocks());
+    assertEquals(0, nn2.getNamesystem().getCorruptReplicaBlocks());
+    
+    DFSTestUtil.readFile(fs, TEST_FILE_PATH);
   }
 
   /**
