@@ -591,6 +591,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3762. Fixed default CapacityScheduler configs. (mahadev via
     acmurthy) 
 
+    MAPREDUCE-3499. New MiniMR does not setup proxyuser configuration 
+    correctly, thus tests using doAs do not work. (johnvijoe via tucu)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

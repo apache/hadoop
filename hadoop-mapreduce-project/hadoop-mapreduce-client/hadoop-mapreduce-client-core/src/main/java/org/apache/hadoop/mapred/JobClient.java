@@ -147,7 +147,7 @@ public class JobClient extends CLI {
    */
   private boolean getDelegationTokenCalled = false;
   /* notes the renewer that will renew the delegation token */
-  private Text dtRenewer = null;
+  private String dtRenewer = null;
   /* do we need a HS delegation token for this client */
   static final String HS_DELEGATION_TOKEN_REQUIRED 
       = "mapreduce.history.server.delegationtoken.required";
@@ -600,7 +600,7 @@ public class JobClient extends CLI {
       if (getDelegationTokenCalled) {
         conf.setBoolean(HS_DELEGATION_TOKEN_REQUIRED, getDelegationTokenCalled);
         getDelegationTokenCalled = false;
-        conf.set(HS_DELEGATION_TOKEN_RENEWER, dtRenewer.toString());
+        conf.set(HS_DELEGATION_TOKEN_RENEWER, dtRenewer);
         dtRenewer = null;
       }
       Job job = clientUgi.doAs(new PrivilegedExceptionAction<Job> () {
@@ -1202,7 +1202,7 @@ public class JobClient extends CLI {
   public Token<DelegationTokenIdentifier> 
     getDelegationToken(final Text renewer) throws IOException, InterruptedException {
     getDelegationTokenCalled = true;
-    dtRenewer = renewer;
+    dtRenewer = renewer.toString();
     return clientUgi.doAs(new 
         PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
       public Token<DelegationTokenIdentifier> run() throws IOException, 

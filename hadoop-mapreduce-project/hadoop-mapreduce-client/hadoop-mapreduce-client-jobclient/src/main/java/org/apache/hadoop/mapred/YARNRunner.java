@@ -263,16 +263,20 @@ public class YARNRunner implements ClientProtocol {
   @Override
   public JobStatus submitJob(JobID jobId, String jobSubmitDir, Credentials ts)
   throws IOException, InterruptedException {
-    // JobClient will set this flag if getDelegationToken is called, if so, get
-    // the delegation tokens for the HistoryServer also.
-    if (conf.getBoolean(JobClient.HS_DELEGATION_TOKEN_REQUIRED, 
-        DEFAULT_HS_DELEGATION_TOKEN_REQUIRED)) {
-      Token hsDT = getDelegationTokenFromHS(clientCache.
-          getInitializedHSProxy(), new Text( 
-              conf.get(JobClient.HS_DELEGATION_TOKEN_RENEWER)));
-      ts.addToken(hsDT.getService(), hsDT);
-    }
     
+    /* check if we have a hsproxy, if not, no need */
+    MRClientProtocol hsProxy = clientCache.getInitializedHSProxy();
+    if (hsProxy != null) {
+      // JobClient will set this flag if getDelegationToken is called, if so, get
+      // the delegation tokens for the HistoryServer also.
+      if (conf.getBoolean(JobClient.HS_DELEGATION_TOKEN_REQUIRED, 
+          DEFAULT_HS_DELEGATION_TOKEN_REQUIRED)) {
+        Token hsDT = getDelegationTokenFromHS(hsProxy, new Text( 
+                conf.get(JobClient.HS_DELEGATION_TOKEN_RENEWER)));
+        ts.addToken(hsDT.getService(), hsDT);
+      }
+    }
+
     // Upload only in security mode: TODO
     Path applicationTokensFile =
         new Path(jobSubmitDir, MRJobConfig.APPLICATION_TOKENS_FILE);

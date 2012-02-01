@@ -53,7 +53,7 @@ public class MiniMRClientClusterFactory {
     Path appMasterJar = new Path(MiniMRYarnCluster.APPJAR);
 
     fs.copyFromLocalFile(appMasterJar, appJar);
-    fs.setPermission(appJar, new FsPermission("700"));
+    fs.setPermission(appJar, new FsPermission("744"));
 
     Job job = Job.getInstance(conf);
 
