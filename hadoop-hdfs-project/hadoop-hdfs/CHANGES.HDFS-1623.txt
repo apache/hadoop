@@ -147,3 +147,5 @@ HDFS-2853. HA: NN fails to start if the shared edits dir is marked required (atm
 HDFS-2845. SBN should not allow browsing of the file system via web UI. (Bikas Saha via atm)
 
 HDFS-2742. HA: observed dataloss in replication stress test. (todd via eli)
+
+HDFS-2870. Fix log level for block debug info in processMisReplicatedBlocks (todd)

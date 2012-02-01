@@ -2033,7 +2033,9 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     neededReplications.clear();
     for (BlockInfo block : blocksMap.getBlocks()) {
       MisReplicationResult res = processMisReplicatedBlock(block);
-      LOG.info("block " + block + ": " + res);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("block " + block + ": " + res);
+      }
       switch (res) {
       case UNDER_REPLICATED:
         nrUnderReplicated++;
