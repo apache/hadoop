@@ -600,6 +600,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3696. MR job via oozie does not work on hadoop 23.
     (John George via mahadev)
 
+    MAPREDUCE-3427. Fix streaming unit tests broken after mavenization.
+    (Hitesh Shah via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
