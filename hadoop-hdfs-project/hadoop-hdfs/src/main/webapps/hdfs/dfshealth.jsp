@@ -30,8 +30,10 @@
   final NamenodeJspHelper.HealthJsp healthjsp  = new NamenodeJspHelper.HealthJsp();
   NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
   FSNamesystem fsn = nn.getNamesystem();
+  HAServiceState nnHAState = nn.getServiceState();
+  boolean isActive = (nnHAState == HAServiceState.ACTIVE);
   String namenodeRole = nn.getRole().toString();
-  String namenodeState = nn.getServiceState().toString();
+  String namenodeState = nnHAState.toString();
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameNodeAddress().getPort();
 %>
 
@@ -45,7 +47,9 @@
 <h1><%=namenodeRole%> '<%=namenodeLabel%>' (<%=namenodeState%>)</h1>
 <%= NamenodeJspHelper.getVersionTable(fsn) %>
 <br />
-<b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
+<% if (isActive) { %> 
+  <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b><br>
+<% } %> 
 <b><a href="/logs/"><%=namenodeRole%> Logs</a></b>
 
 <hr>

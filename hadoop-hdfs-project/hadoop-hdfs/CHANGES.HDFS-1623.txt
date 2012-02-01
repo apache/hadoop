@@ -143,3 +143,5 @@ HDFS-2691. Fixes for pipeline recovery in an HA cluster: report RBW replicas imm
 HDFS-2824. Fix failover when prior NN died just after creating an edit log segment. (atm via todd)
 
 HDFS-2853. HA: NN fails to start if the shared edits dir is marked required (atm via eli)
+
+HDFS-2845. SBN should not allow browsing of the file system via web UI. (Bikas Saha via atm)

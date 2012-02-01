@@ -23,6 +23,7 @@
 	import="org.apache.hadoop.fs.FileStatus"
 	import="org.apache.hadoop.fs.FileUtil"
 	import="org.apache.hadoop.fs.Path"
+	import="org.apache.hadoop.ha.HAServiceProtocol.HAServiceState"
 	import="java.util.Collection"
 	import="java.util.Arrays" %>
 <%!//for java.io.Serializable
@@ -30,6 +31,8 @@
 <%
   NameNode nn = NameNodeHttpServer.getNameNodeFromContext(application);
   FSNamesystem fsn = nn.getNamesystem();
+  HAServiceState nnHAState = nn.getServiceState();
+  boolean isActive = (nnHAState == HAServiceState.ACTIVE);
   String namenodeRole = nn.getRole().toString();
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":"
       + nn.getNameNodeAddress().getPort();
@@ -46,8 +49,10 @@
 <h1><%=namenodeRole%> '<%=namenodeLabel%>'</h1>
 <%=NamenodeJspHelper.getVersionTable(fsn)%>
 <br>
-<b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
-<br>
+<% if (isActive) { %> 
+  <b><a href="/nn_browsedfscontent.jsp">Browse the filesystem</a></b>
+  <br>
+<% } %> 
 <b><a href="/logs/"><%=namenodeRole%> Logs</a></b>
 <br>
 <b><a href=/dfshealth.jsp> Go back to DFS home</a></b>
