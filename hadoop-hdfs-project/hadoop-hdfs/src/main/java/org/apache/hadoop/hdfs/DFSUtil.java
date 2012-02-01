@@ -61,6 +61,8 @@ import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -69,6 +71,8 @@ import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {
+  private static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
+  
   private DFSUtil() { /* Hidden constructor */ }
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
     @Override
@@ -935,9 +939,10 @@ public class DFSUtil {
         try {
           s = NetUtils.createSocketAddr(addr);
         } catch (Exception e) {
+          LOG.warn("Exception in creating socket address", e);
           continue;
         }
-        if (matcher.match(s)) {
+        if (!s.isUnresolved() && matcher.match(s)) {
           nameserviceId = nsId;
           namenodeId = nnId;
           found++;
