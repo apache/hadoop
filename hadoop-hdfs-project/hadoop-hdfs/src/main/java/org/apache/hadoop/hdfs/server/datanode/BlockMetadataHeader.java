@@ -42,7 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class BlockMetadataHeader {
 
-  static final short METADATA_VERSION = FSDataset.METADATA_VERSION;
+  public static final short VERSION = 1;
   
   /**
    * Header includes everything except the checksum(s) themselves.
@@ -138,7 +138,7 @@ public class BlockMetadataHeader {
    */
   static void writeHeader(DataOutputStream out, DataChecksum checksum)
                          throws IOException {
-    writeHeader(out, new BlockMetadataHeader(METADATA_VERSION, checksum));
+    writeHeader(out, new BlockMetadataHeader(VERSION, checksum));
   }
 
   /**

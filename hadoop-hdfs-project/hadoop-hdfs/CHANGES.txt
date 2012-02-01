@@ -118,6 +118,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2826. Add test case for HDFS-1476 (safemode can initialize
     replication queues before exiting) (todd)
 
+    HDFS-2864. Remove some redundant methods and the constant METADATA_VERSION
+    from FSDataset.  (szetszwo)
+
   BUG FIXES
 
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 

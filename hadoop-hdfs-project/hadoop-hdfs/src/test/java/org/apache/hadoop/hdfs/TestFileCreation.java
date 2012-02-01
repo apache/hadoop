@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -831,7 +832,8 @@ public class TestFileCreation extends junit.framework.TestCase {
         FSDataset dataset = (FSDataset)datanode.data;
         ExtendedBlock blk = locatedblock.getBlock();
         Block b = dataset.getStoredBlock(blk.getBlockPoolId(), blk.getBlockId());
-        File blockfile = dataset.findBlockFile(blk.getBlockPoolId(), b.getBlockId());
+        final File blockfile = DataNodeTestUtils.getBlockFile(dataset,
+            blk.getBlockPoolId(), b.getBlockId());
         System.out.println("blockfile=" + blockfile);
         if (blockfile != null) {
           BufferedReader in = new BufferedReader(new FileReader(blockfile));

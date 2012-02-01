@@ -471,7 +471,7 @@ public class FSDataset implements FSDatasetInterface {
         // read and handle the common header here. For now just a version
         BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
         short version = header.getVersion();
-        if (version != FSDataset.METADATA_VERSION) {
+        if (version != BlockMetadataHeader.VERSION) {
           DataNode.LOG.warn("Wrong version (" + version + ") for metadata file "
               + metaFile + " ignoring ...");
         }
@@ -946,8 +946,7 @@ public class FSDataset implements FSDatasetInterface {
   //////////////////////////////////////////////////////
 
   //Find better place?
-  public static final String METADATA_EXTENSION = ".meta";
-  public static final short METADATA_VERSION = 1;
+  static final String METADATA_EXTENSION = ".meta";
   static final String UNLINK_BLOCK_SUFFIX = ".unlinked";
 
   private static boolean isUnlinkTmpFile(File f) {
@@ -1032,15 +1031,10 @@ public class FSDataset implements FSDatasetInterface {
     }
   }
 
-  /** Return the block file for the given ID */ 
-  public File findBlockFile(String bpid, long blockId) {
-    return getFile(bpid, blockId);
-  }
-
   @Override // FSDatasetInterface
   public synchronized Block getStoredBlock(String bpid, long blkid)
       throws IOException {
-    File blockfile = findBlockFile(bpid, blkid);
+    File blockfile = getFile(bpid, blkid);
     if (blockfile == null) {
       return null;
     }
@@ -1260,8 +1254,7 @@ public class FSDataset implements FSDatasetInterface {
   /**
    * Get File name for a given block.
    */
-  public File getBlockFile(String bpid, Block b)
-      throws IOException {
+  File getBlockFile(String bpid, Block b) throws IOException {
     File f = validateBlockFile(bpid, b);
     if(f == null) {
       if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
@@ -1292,7 +1285,10 @@ public class FSDataset implements FSDatasetInterface {
    */
   private File getBlockFileNoExistsCheck(ExtendedBlock b)
       throws IOException {
-    File f = getFile(b.getBlockPoolId(), b.getLocalBlock());
+    final File f;
+    synchronized(this) {
+      f = getFile(b.getBlockPoolId(), b.getLocalBlock().getBlockId());
+    }
     if (f == null) {
       throw new IOException("Block " + b + " is not valid");
     }
@@ -2022,7 +2018,10 @@ public class FSDataset implements FSDatasetInterface {
    */
   File validateBlockFile(String bpid, Block b) throws IOException {
     //Should we check for metadata file too?
-    File f = getFile(bpid, b);
+    final File f;
+    synchronized(this) {
+      f = getFile(bpid, b.getBlockId());
+    }
     
     if(f != null ) {
       if(f.exists())
@@ -2072,7 +2071,7 @@ public class FSDataset implements FSDatasetInterface {
       File f = null;
       FSVolume v;
       synchronized (this) {
-        f = getFile(bpid, invalidBlks[i]);
+        f = getFile(bpid, invalidBlks[i].getBlockId());
         ReplicaInfo dinfo = volumeMap.get(bpid, invalidBlks[i]);
         if (dinfo == null || 
             dinfo.getGenerationStamp() != invalidBlks[i].getGenerationStamp()) {
@@ -2127,11 +2126,10 @@ public class FSDataset implements FSDatasetInterface {
     }
   }
 
-  /**
-   * Turn the block identifier into a filename; ignore generation stamp!!!
-   */
-  public synchronized File getFile(String bpid, Block b) {
-    return getFile(bpid, b.getBlockId());
+  @Override // {@link FSDatasetInterface}
+  public synchronized boolean contains(final ExtendedBlock block) {
+    final long blockId = block.getLocalBlock().getBlockId();
+    return getFile(block.getBlockPoolId(), blockId) != null;
   }
 
   /**
@@ -2140,7 +2138,7 @@ public class FSDataset implements FSDatasetInterface {
    * @param blockId a block's id
    * @return on disk data file path; null if the replica does not exist
    */
-  private File getFile(String bpid, long blockId) {
+  File getFile(final String bpid, final long blockId) {
     ReplicaInfo info = volumeMap.get(bpid, blockId);
     if (info != null) {
       return info.getBlockFile();

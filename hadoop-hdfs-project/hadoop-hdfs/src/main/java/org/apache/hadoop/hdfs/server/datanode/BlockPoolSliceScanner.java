@@ -425,9 +425,8 @@ class BlockPoolSliceScanner {
         updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
-        if ( dataset.getFile(block.getBlockPoolId(), block.getLocalBlock()) == null ) {
-          LOG.info("Verification failed for " + block + ". Its ok since " +
-          "it not in datanode dataset anymore.");
+        if (!dataset.contains(block)) {
+          LOG.info(block + " is no longer in the dataset.");
           deleteBlock(block.getLocalBlock());
           return;
         }
