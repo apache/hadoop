@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
+import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 // Do NOT rename/refactor this to RMView as it will wreak havoc
@@ -36,10 +38,14 @@ public class RmView extends TwoColumnLayout {
     set(DATATABLES_ID, "apps");
     set(initID(DATATABLES, "apps"), appsTableInit());
     setTableStyles(html, "apps", ".queue {width:6em}", ".ui {width:8em}");
+
+    // Set the correct title.
+    String reqState = $(APP_STATE);
+    reqState = (reqState == null || reqState.isEmpty() ? "All" : reqState);
+    setTitle(sjoin(reqState, "Applications"));
   }
 
   protected void commonPreHead(Page.HTML<_> html) {
-    //html.meta_http("refresh", "20");
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
     set(THEMESWITCHER_ID, "themeswitcher");

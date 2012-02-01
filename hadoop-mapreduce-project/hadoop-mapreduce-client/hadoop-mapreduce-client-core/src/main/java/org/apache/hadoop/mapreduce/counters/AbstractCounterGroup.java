@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 
@@ -56,7 +57,7 @@ public abstract class AbstractCounterGroup<T extends Counter>
   }
 
   @Override
-  public synchronized String getName() {
+  public String getName() {
     return name;
   }
 
@@ -95,7 +96,7 @@ public abstract class AbstractCounterGroup<T extends Counter>
   }
 
   @Override
-  public T findCounter(String counterName, String displayName) {
+  public synchronized T findCounter(String counterName, String displayName) {
     String saveName = limits.filterCounterName(counterName);
     T counter = findCounterImpl(saveName, false);
     if (counter == null) {
@@ -109,7 +110,7 @@ public abstract class AbstractCounterGroup<T extends Counter>
     return findCounterImpl(limits.filterCounterName(counterName), create);
   }
 
-  private T findCounterImpl(String counterName, boolean create) {
+  private synchronized T findCounterImpl(String counterName, boolean create) {
     T counter = counters.get(counterName);
     if (counter == null && create) {
       String localized =
@@ -142,7 +143,7 @@ public abstract class AbstractCounterGroup<T extends Counter>
 
   @Override
   public synchronized Iterator<T> iterator() {
-    return counters.values().iterator();
+    return ImmutableSet.copyOf(counters.values()).iterator();
   }
 
   /**

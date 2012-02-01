@@ -1,6 +1,5 @@
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
-
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -17,29 +16,8 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-
-/**
- * Utility class for accessing package-private DataNode information during tests.
- *
- */
-public class DataNodeTestUtils {
-  public static DatanodeRegistration 
-  getDNRegistrationByMachineName(DataNode dn, String mName) {
-    return dn.getDNRegistrationByMachineName(mName);
-  }
-  
-  public static DatanodeRegistration 
-  getDNRegistrationForBP(DataNode dn, String bpid) throws IOException {
-    return dn.getDNRegistrationForBP(bpid);
-  }
-
-  public static File getBlockFile(FSDataset fsdataset, String bpid, long bid) {
-    return fsdataset.getFile(bpid, bid);
-  }
+public interface RMNMInfoBeans {
+  public String getLiveNodeManagers();
 }

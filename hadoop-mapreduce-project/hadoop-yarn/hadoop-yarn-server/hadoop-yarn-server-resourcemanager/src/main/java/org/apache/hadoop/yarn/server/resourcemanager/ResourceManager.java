@@ -207,6 +207,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     addService(applicationMasterLauncher);
 
+    new RMNMInfo(this.rmContext, this.scheduler);
+
     super.init(conf);
   }
 

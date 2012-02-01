@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -47,6 +49,9 @@ import org.apache.hadoop.util.ToolRunner;
  * {@link GetConf.Command}.
  * 
  * See {@link GetConf.Command#NAMENODE} for example.
+ * 
+ * Add for the new option added, a map entry with the corresponding
+ * {@link GetConf.CommandHandler}.
  * </ul>
  */
 public class GetConf extends Configured implements Tool {
@@ -54,31 +59,40 @@ public class GetConf extends Configured implements Tool {
       + "getting configuration information from the config file.\n";
 
   enum Command {
-    NAMENODE("-namenodes", new NameNodesCommandHandler(),
-        "gets list of namenodes in the cluster."),
-    SECONDARY("-secondaryNameNodes", new SecondaryNameNodesCommandHandler(),
+    NAMENODE("-namenodes", "gets list of namenodes in the cluster."),
+    SECONDARY("-secondaryNameNodes", 
         "gets list of secondary namenodes in the cluster."),
-    BACKUP("-backupNodes", new BackupNodesCommandHandler(),
-        "gets list of backup nodes in the cluster."),
+    BACKUP("-backupNodes", "gets list of backup nodes in the cluster."),
     INCLUDE_FILE("-includeFile",
-        new CommandHandler("DFSConfigKeys.DFS_HOSTS"),
         "gets the include file path that defines the datanodes " +
         "that can join the cluster."),
     EXCLUDE_FILE("-excludeFile",
-        new CommandHandler("DFSConfigKeys.DFS_HOSTS_EXCLUDE"),
         "gets the exclude file path that defines the datanodes " +
         "that need to decommissioned."),
-    NNRPCADDRESSES("-nnRpcAddresses", 
-    		new NNRpcAddressesCommandHandler(),
-        "gets the namenode rpc addresses");
+    NNRPCADDRESSES("-nnRpcAddresses", "gets the namenode rpc addresses");
 
+    private static Map<String, CommandHandler> map;
+    static  {
+      map = new HashMap<String, CommandHandler>();
+      map.put(NAMENODE.getName().toLowerCase(), 
+          new NameNodesCommandHandler());
+      map.put(SECONDARY.getName().toLowerCase(),
+          new SecondaryNameNodesCommandHandler());
+      map.put(BACKUP.getName().toLowerCase(), 
+          new BackupNodesCommandHandler());
+      map.put(INCLUDE_FILE.getName().toLowerCase(), 
+          new CommandHandler("DFSConfigKeys.DFS_HOSTS"));
+      map.put(EXCLUDE_FILE.getName().toLowerCase(),
+          new CommandHandler("DFSConfigKeys.DFS_HOSTS_EXCLUDE"));
+      map.put(NNRPCADDRESSES.getName().toLowerCase(),
+          new NNRpcAddressesCommandHandler());
+    }
+    
     private final String cmd;
-    private final CommandHandler handler;
     private final String description;
 
-    Command(String cmd, CommandHandler handler, String description) {
+    Command(String cmd, String description) {
       this.cmd = cmd;
-      this.handler = handler;
       this.description = description;
     }
 
@@ -91,12 +105,7 @@ public class GetConf extends Configured implements Tool {
     }
     
     public static CommandHandler getHandler(String name) {
-      for (Command cmd : values()) {
-        if (cmd.getName().equalsIgnoreCase(name)) {
-          return cmd.handler;
-        }
-      }
-      return null;
+      return map.get(name.toLowerCase());
     }
   }
   

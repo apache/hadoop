@@ -40,6 +40,10 @@ public class ContainerPage extends NMView implements YarnWebParams {
   @Override
   protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
+
+    // Per-container information. Helps to refresh automatically.
+    html.meta_http("refresh", "10");
+
     setTitle("Container " + $(CONTAINER_ID));
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
   }

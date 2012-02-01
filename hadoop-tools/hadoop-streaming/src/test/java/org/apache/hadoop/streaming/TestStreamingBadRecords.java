@@ -154,6 +154,10 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     }
   }
 
+  /*
+   * Disable test as skipping bad records not supported in 0.23
+   */
+  /*
   public void testSkip() throws Exception {
     JobConf clusterConf = createJobConf();
     createInput();
@@ -195,7 +199,12 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     //validate that there is no skip directory as it has been set to "none"
     assertTrue(SkipBadRecords.getSkipOutputPath(job.jobConf_)==null);
   }
+  */
   
+  /*
+   * Disable test as skipping bad records not supported in 0.23
+   */
+  /*
   public void testNarrowDown() throws Exception {
     createInput();
     JobConf clusterConf = createJobConf();
@@ -230,6 +239,11 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     
     validateOutput(job.running_, true);
     assertTrue(SkipBadRecords.getSkipOutputPath(job.jobConf_)!=null);
+  }
+  */
+
+  public void testNoOp() {
+    // Added to avoid warnings when running this disabled test
   }
   
   static class App{

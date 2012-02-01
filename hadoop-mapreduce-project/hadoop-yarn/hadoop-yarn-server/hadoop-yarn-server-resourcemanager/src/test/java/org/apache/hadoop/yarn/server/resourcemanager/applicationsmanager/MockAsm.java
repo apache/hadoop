@@ -22,14 +22,14 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationMaster;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -41,7 +41,6 @@ import com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 public abstract class MockAsm extends MockApps {
-  static final int DT = 1000000; // ms
 
   public static class AppMasterBase implements ApplicationMaster {
     @Override
@@ -232,9 +231,10 @@ public abstract class MockAsm extends MockApps {
     final String user = newUserName();
     final String name = newAppName();
     final String queue = newQueue();
-    final long start = System.currentTimeMillis() - (int)(Math.random()*DT);
-    final long finish = Math.random() < 0.5 ? 0 :
-        System.currentTimeMillis() + (int)(Math.random()*DT);
+    final long start = 123456 + i * 1000;
+    final long finish = 234567 + i * 1000;
+    RMAppState[] allStates = RMAppState.values();
+    final RMAppState state = allStates[i % allStates.length];
     return new ApplicationBase() {
       @Override
       public ApplicationId getApplicationId() {
@@ -270,7 +270,7 @@ public abstract class MockAsm extends MockApps {
       }
       @Override
       public RMAppState getState() {
-        return RMAppState.RUNNING;
+        return state;
       }
       @Override
       public StringBuilder getDiagnostics() {

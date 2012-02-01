@@ -228,6 +228,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2826. Add test case for HDFS-1476 (safemode can initialize
     replication queues before exiting) (todd)
 
+    HDFS-2864. Remove some redundant methods and the constant METADATA_VERSION
+    from FSDataset.  (szetszwo)
+
   BUG FIXES
 
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 
@@ -302,6 +305,13 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2791. If block report races with closing of file, replica is
     incorrectly marked corrupt. (todd)
+
+    HDFS-2827.  When the parent of a directory is the root, renaming the
+    directory results in leases updated incorrectly.  (Uma Maheswara Rao G
+    via szetszwo)
+
+    HDFS-2835. Fix findbugs and javadoc issue with GetConf.java.
+    (suresh)
 
 Release 0.23.0 - 2011-11-01 
 

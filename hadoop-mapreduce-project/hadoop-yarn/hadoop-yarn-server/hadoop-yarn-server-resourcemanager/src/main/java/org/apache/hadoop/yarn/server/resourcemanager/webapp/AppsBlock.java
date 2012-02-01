@@ -19,10 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -56,7 +59,12 @@ class AppsBlock extends HtmlBlock {
             th(".note", "Note")._()._().
         tbody();
     int i = 0;
+    String reqState = $(APP_STATE);
+    reqState = (reqState == null ? "" : reqState);
     for (RMApp app : list.apps.values()) {
+      if (!reqState.isEmpty() && app.getState() != RMAppState.valueOf(reqState)) {
+        continue;
+      }
       AppInfo appInfo = new AppInfo(app, true);
       String percent = String.format("%.1f", appInfo.getProgress());
       tbody.
@@ -86,7 +94,7 @@ class AppsBlock extends HtmlBlock {
     if (list.rendering == Render.JS_ARRAY) {
       echo("<script type='text/javascript'>\n",
            "var appsData=");
-      list.toDataTableArrays(writer());
+      list.toDataTableArrays(reqState, writer());
       echo("\n</script>\n");
     }
   }

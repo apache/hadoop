@@ -164,6 +164,15 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3732. Modified CapacityScheduler to use only users with pending
     requests for computing user-limits. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3679. AM logs and others should not automatically refresh after every 1 
+    second. (Vinod KV  via mahadev)
+
+    MAPREDUCE-3754. Modified RM UI to filter applications based on state of the
+    applications. (vinodkv)
+
+    MAPREDUCE-3774. Moved yarn-default.xml to hadoop-yarn-common from
+    hadoop-server-common. (Mahadev Konar via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -192,6 +201,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3360. Added information about lost/rebooted/decommissioned nodes
     on the webapps. (Bhallamudi Venkata Siva Kamesh and Jason Lowe via vinodkv)
+
+    MAPREDUCE-3756. Made single shuffle limit configurable. (Hitesh Shah via
+    acmurthy) 
 
   BUG FIXES
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
@@ -580,6 +592,34 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3742. "yarn logs" command fails with ClassNotFoundException.
     (Jason Lowe via mahadev)
+
+    MAPREDUCE-3703. ResourceManager should provide node lists in JMX output.
+    (Eric Payne via mahadev)
+
+    MAPREDUCE-3716. Fixing YARN+MR to allow MR jobs to be able to use
+    java.io.File.createTempFile to create temporary files as part of their
+    tasks. (Jonathan Eagles via vinodkv)
+
+    MAPREDUCE-3748. Changed a log in CapacityScheduler.nodeUpdate to debug.
+    (ramya via acmurthy) 
+
+    MAPREDUCE-3764. Fixed resource usage metrics for queues and users.
+    (acmurthy)
+
+    MAPREDUCE-3749. ConcurrentModificationException in counter groups.
+    (tomwhite)
+
+    MAPREDUCE-3762. Fixed default CapacityScheduler configs. (mahadev via
+    acmurthy) 
+
+    MAPREDUCE-3499. New MiniMR does not setup proxyuser configuration 
+    correctly, thus tests using doAs do not work. (johnvijoe via tucu)
+
+    MAPREDUCE-3696. MR job via oozie does not work on hadoop 23.
+    (John George via mahadev)
+
+    MAPREDUCE-3427. Fix streaming unit tests broken after mavenization.
+    (Hitesh Shah via acmurthy) 
 
 Release 0.23.0 - 2011-11-01 
 
