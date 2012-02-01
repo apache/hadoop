@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.APP_ID;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.QUEUE_NAME;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -64,7 +64,7 @@ public class RmController extends Controller {
   }
 
   public void app() {
-    String aid = $(APP_ID);
+    String aid = $(APPLICATION_ID);
     if (aid.isEmpty()) {
       setStatus(HttpServletResponse.SC_BAD_REQUEST);
       setTitle("Bad request: requires application ID");
