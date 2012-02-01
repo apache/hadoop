@@ -603,6 +603,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3427. Fix streaming unit tests broken after mavenization.
     (Hitesh Shah via acmurthy) 
 
+    MAPREDUCE-3640. Allow AMRecovery to work with partial JobHistory files.
+    (Arun C Murthy via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
