@@ -79,7 +79,8 @@ Trunk (unreleased changes)
     HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
     kerberos. (jitendra)
 
-  BUGS
+  BUG FIXES
+
     HADOOP-8006  TestFSInputChecker is failing in trunk.
                  (Daryn Sharp via bobby)
 
@@ -226,6 +227,8 @@ Release 0.23.1 - Unreleased
 
    HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for downstream 
    projects. (tucu)
+
+    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
 
   OPTIMIZATIONS
 
