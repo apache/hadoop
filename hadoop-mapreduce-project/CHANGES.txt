@@ -597,6 +597,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3499. New MiniMR does not setup proxyuser configuration 
     correctly, thus tests using doAs do not work. (johnvijoe via tucu)
 
+    MAPREDUCE-3696. MR job via oozie does not work on hadoop 23.
+    (John George via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
