@@ -87,6 +87,9 @@ Release 0.23.1 - Unreleased
     HADOOP-8002. SecurityUtil acquired token message should be a debug rather than info.
     (Arpit Gupta via mahadev)
 
+   HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for downstream 
+   projects. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
