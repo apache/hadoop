@@ -95,8 +95,11 @@ fi
 if [ "$HADOOP_LOG_DIR" = "" ]; then
   export HADOOP_LOG_DIR="$HADOOP_PREFIX/logs"
 fi
-mkdir -p "$HADOOP_LOG_DIR"
-chown $HADOOP_IDENT_STRING $HADOOP_LOG_DIR
+
+if [ ! -w "$HADOOP_LOG_DIR" ] ; then
+  mkdir -p "$HADOOP_LOG_DIR"
+  chown $HADOOP_IDENT_STRING $HADOOP_LOG_DIR
+fi
 
 if [ "$HADOOP_PID_DIR" = "" ]; then
   HADOOP_PID_DIR=/tmp
@@ -118,7 +121,7 @@ case $startStop in
 
   (start)
 
-    mkdir -p "$HADOOP_PID_DIR"
+    [ -w "$HADOOP_PID_DIR" ] ||  mkdir -p "$HADOOP_PID_DIR"
 
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
