@@ -929,6 +929,13 @@ public class NameNode {
     return state.getServiceState();
   }
 
+  synchronized boolean readyToBecomeActive() throws ServiceFailedException {
+    if (!haEnabled) {
+      throw new ServiceFailedException("HA for namenode is not enabled");
+    }
+    return !isInSafeMode();
+  }
+
   
   /**
    * Class used as expose {@link NameNode} as context to {@link HAState}

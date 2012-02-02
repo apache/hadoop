@@ -112,4 +112,15 @@ public interface HAServiceProtocol extends VersionedProtocol {
    *           if other errors happen
    */
   public HAServiceState getServiceState() throws IOException;
+
+  /**
+   * Return true if the service is capable and ready to transition
+   * from the standby state to the active state.
+   * 
+   * @return true if the service is ready to become active, false otherwise.
+   * @throws IOException
+   *           if other errors happen
+   */
+  public boolean readyToBecomeActive() throws ServiceFailedException,
+                                              IOException;
 }

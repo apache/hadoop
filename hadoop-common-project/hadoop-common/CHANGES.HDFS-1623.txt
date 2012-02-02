@@ -39,3 +39,6 @@ HADOOP-7983. HA: failover should be able to pass args to fencers. (eli)
 
 HADOOP-7938. HA: the FailoverController should optionally fence the
 active during failover. (eli)
+
+HADOOP-7991. HA: the FailoverController should check the standby is
+ready before failing over. (eli)

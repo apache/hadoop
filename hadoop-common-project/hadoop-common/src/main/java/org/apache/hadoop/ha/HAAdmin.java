@@ -47,7 +47,8 @@ import com.google.common.collect.ImmutableMap;
 
 public abstract class HAAdmin extends Configured implements Tool {
   
-  private static final String FORCEFENCE = "forcefence";
+  private static final String FORCEFENCE  = "forcefence";
+  private static final String FORCEACTIVE = "forceactive";
 
   private static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
@@ -56,9 +57,11 @@ public abstract class HAAdmin extends Configured implements Tool {
     .put("-transitionToStandby",
         new UsageInfo("<host:port>", "Transitions the daemon into Standby state"))
     .put("-failover",
-        new UsageInfo("[--"+FORCEFENCE+"] <host:port> <host:port>",
+        new UsageInfo("[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] <host:port> <host:port>",
             "Failover from the first daemon to the second.\n" +
-            "Unconditionally fence services if the "+FORCEFENCE+" option is used."))
+            "Unconditionally fence services if the "+FORCEFENCE+" option is used.\n" +
+            "Try to failover to the target service even if it is not ready if the " + 
+            FORCEACTIVE + " option is used."))
     .put("-getServiceState",
         new UsageInfo("<host:port>", "Returns the state of the daemon"))
     .put("-checkHealth",
@@ -124,12 +127,14 @@ public abstract class HAAdmin extends Configured implements Tool {
       throws IOException, ServiceFailedException {
     Configuration conf = getConf();
     boolean forceFence = false;
+    boolean forceActive = false;
 
     Options failoverOpts = new Options();
     // "-failover" isn't really an option but we need to add
     // it to appease CommandLineParser
     failoverOpts.addOption("failover", false, "failover");
     failoverOpts.addOption(FORCEFENCE, false, "force fencing");
+    failoverOpts.addOption(FORCEACTIVE, false, "force failover");
 
     CommandLineParser parser = new GnuParser();
     CommandLine cmd;
@@ -137,6 +142,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     try {
       cmd = parser.parse(failoverOpts, argv);
       forceFence = cmd.hasOption(FORCEFENCE);
+      forceActive = cmd.hasOption(FORCEACTIVE);
     } catch (ParseException pe) {
       errOut.println("failover: incorrect arguments");
       printUsage(errOut, "-failover");
@@ -172,7 +178,7 @@ public abstract class HAAdmin extends Configured implements Tool {
 
     try {
       FailoverController.failover(proto1, addr1, proto2, addr2,
-          fencer, forceFence); 
+          fencer, forceFence, forceActive); 
       out.println("Failover from "+args[0]+" to "+args[1]+" successful");
     } catch (FailoverFailedException ffe) {
       errOut.println("Failover failed: " + ffe.getLocalizedMessage());

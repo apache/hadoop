@@ -1007,6 +1007,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return nn.getServiceState();
   }
 
+  @Override // HAServiceProtocol
+  public synchronized boolean readyToBecomeActive() throws ServiceFailedException {
+    return nn.readyToBecomeActive();
+  }
+
   /**
    * Verify version.
    * 

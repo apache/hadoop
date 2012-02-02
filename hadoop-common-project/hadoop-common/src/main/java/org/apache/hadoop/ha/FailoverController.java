@@ -46,12 +46,19 @@ public class FailoverController {
    * failover to, eg to prevent failing over to a service (eg due
    * to it being inaccessible, already active, not healthy, etc).
    *
+   * An option to ignore toSvc if it claims it is not ready to
+   * become active is provided in case performing a failover will
+   * allow it to become active, eg because it triggers a log roll
+   * so the standby can learn about new blocks and leave safemode.
+   *
    * @param toSvc service to make active
    * @param toSvcName name of service to make active
+   * @param forceActive ignore toSvc if it reports that it is not ready
    * @throws FailoverFailedException if we should avoid failover
    */
   private static void preFailoverChecks(HAServiceProtocol toSvc,
-                                        InetSocketAddress toSvcAddr)
+                                        InetSocketAddress toSvcAddr,
+                                        boolean forceActive)
       throws FailoverFailedException {
     HAServiceState toSvcState;
     try {
@@ -74,7 +81,17 @@ public class FailoverController {
       throw new FailoverFailedException(
           "Got an IO exception", e);
     }
-    // TODO(HA): ask toSvc if it's capable. Eg not in SM.
+    try {
+      if (!toSvc.readyToBecomeActive()) {
+        if (!forceActive) {
+          throw new FailoverFailedException(
+              toSvcAddr + " is not ready to become active");
+        }
+      }
+    } catch (IOException e) {
+      throw new FailoverFailedException(
+          "Got an IO exception", e);
+    }
   }
 
   /**
@@ -87,16 +104,19 @@ public class FailoverController {
    * @param toSvcAddr addr of the service to make active
    * @param fencer for fencing fromSvc
    * @param forceFence to fence fromSvc even if not strictly necessary
+   * @param forceActive try to make toSvc active even if it is not ready
    * @throws FailoverFailedException if the failover fails
    */
   public static void failover(HAServiceProtocol fromSvc,
                               InetSocketAddress fromSvcAddr,
                               HAServiceProtocol toSvc,
                               InetSocketAddress toSvcAddr,
-                              NodeFencer fencer, boolean forceFence)
+                              NodeFencer fencer,
+                              boolean forceFence,
+                              boolean forceActive)
       throws FailoverFailedException {
     Preconditions.checkArgument(fencer != null, "failover requires a fencer");
-    preFailoverChecks(toSvc, toSvcAddr);
+    preFailoverChecks(toSvc, toSvcAddr, forceActive);
 
     // Try to make fromSvc standby
     boolean tryFence = true;
@@ -145,7 +165,9 @@ public class FailoverController {
         try {
           // Unconditionally fence toSvc in case it is still trying to
           // become active, eg we timed out waiting for its response.
-          failover(toSvc, toSvcAddr, fromSvc, fromSvcAddr, fencer, true);
+          // Unconditionally force fromSvc to become active since it
+          // was previously active when we initiated failover.
+          failover(toSvc, toSvcAddr, fromSvc, fromSvcAddr, fencer, true, true);
         } catch (FailoverFailedException ffe) {
           msg += ". Failback to " + fromSvcAddr +
             " failed (" + ffe.getMessage() + ")";

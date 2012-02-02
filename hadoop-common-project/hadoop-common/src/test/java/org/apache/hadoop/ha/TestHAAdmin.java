@@ -31,6 +31,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -44,8 +45,9 @@ public class TestHAAdmin {
   private HAServiceProtocol mockProtocol;
   
   @Before
-  public void setup() {
+  public void setup() throws IOException {
     mockProtocol = Mockito.mock(HAServiceProtocol.class);
+    when(mockProtocol.readyToBecomeActive()).thenReturn(true);
     tool = new HAAdmin() {
       @Override
       protected HAServiceProtocol getProtocol(String target) throws IOException {
@@ -128,6 +130,15 @@ public class TestHAAdmin {
     conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "foo:1234", "bar:5678", "--forcefence"));
+  }
+
+  @Test
+  public void testFailoverWithForceActive() throws Exception {
+    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
+    Configuration conf = new Configuration();
+    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
+    tool.setConf(conf);
+    assertEquals(0, runTool("-failover", "foo:1234", "bar:5678", "--forceactive"));
   }
 
   @Test

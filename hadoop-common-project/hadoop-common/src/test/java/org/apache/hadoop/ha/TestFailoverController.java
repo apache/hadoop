@@ -79,6 +79,11 @@ public class TestFailoverController {
     public HAServiceState getServiceState() throws IOException {
       return state;
     }
+
+    @Override
+    public boolean readyToBecomeActive() throws ServiceFailedException, IOException {
+      return true;
+    }
   }
   
   @Test
@@ -88,13 +93,13 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     AlwaysSucceedFencer.fenceCalled = 0;
-    FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+    FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
     assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
     assertEquals(HAServiceState.STANDBY, svc1.getServiceState());
     assertEquals(HAServiceState.ACTIVE, svc2.getServiceState());
 
     AlwaysSucceedFencer.fenceCalled = 0;
-    FailoverController.failover(svc2, svc2Addr, svc1, svc1Addr, fencer, false);
+    FailoverController.failover(svc2, svc2Addr, svc1, svc1Addr, fencer, false, false);
     assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
     assertEquals(HAServiceState.ACTIVE, svc1.getServiceState());
     assertEquals(HAServiceState.STANDBY, svc2.getServiceState());
@@ -106,7 +111,7 @@ public class TestFailoverController {
     DummyService svc2 = new DummyService(HAServiceState.STANDBY);
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
-    FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+    FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
     assertEquals(HAServiceState.STANDBY, svc1.getServiceState());
     assertEquals(HAServiceState.ACTIVE, svc2.getServiceState());
   }
@@ -118,13 +123,40 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Can't failover to an already active service");
     } catch (FailoverFailedException ffe) {
       // Expected
     }
 
     assertEquals(HAServiceState.ACTIVE, svc1.getServiceState());
+    assertEquals(HAServiceState.ACTIVE, svc2.getServiceState());
+  }
+
+  @Test
+  public void testFailoverToUnreadyService() throws Exception {
+    DummyService svc1 = new DummyService(HAServiceState.ACTIVE);
+    DummyService svc2 = new DummyService(HAServiceState.STANDBY) {
+      @Override
+      public boolean readyToBecomeActive() throws ServiceFailedException, IOException {
+        return false;
+      }
+    };
+    NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
+
+    try {
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
+      fail("Can't failover to a service that's not ready");
+    } catch (FailoverFailedException ffe) {
+      // Expected
+    }
+
+    assertEquals(HAServiceState.ACTIVE, svc1.getServiceState());
+    assertEquals(HAServiceState.STANDBY, svc2.getServiceState());
+
+    // Forcing it means we ignore readyToBecomeActive
+    FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, true);
+    assertEquals(HAServiceState.STANDBY, svc1.getServiceState());
     assertEquals(HAServiceState.ACTIVE, svc2.getServiceState());
   }
 
@@ -140,7 +172,7 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Failover to unhealthy service");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -162,7 +194,7 @@ public class TestFailoverController {
 
     AlwaysSucceedFencer.fenceCalled = 0;
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
     } catch (FailoverFailedException ffe) {
       fail("Faulty active prevented failover");
     }
@@ -187,7 +219,7 @@ public class TestFailoverController {
 
     AlwaysFailFencer.fenceCalled = 0;
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Failed over even though fencing failed");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -207,7 +239,7 @@ public class TestFailoverController {
 
     AlwaysFailFencer.fenceCalled = 0;
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, true);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, true, false);
       fail("Failed over even though fencing requested and failed");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -238,7 +270,7 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
     } catch (FailoverFailedException ffe) {
       fail("Non-existant active prevented failover");
     }
@@ -254,7 +286,7 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Failed over to a non-existant standby");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -275,7 +307,7 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Failover to already active service");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -300,7 +332,7 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, true);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, true, false);
       fail("Failed over to service that won't transition to active");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -325,7 +357,7 @@ public class TestFailoverController {
     AlwaysSucceedFencer.fenceCalled = 0;
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Failed over to service that won't transition to active");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -352,7 +384,7 @@ public class TestFailoverController {
     AlwaysFailFencer.fenceCalled = 0;
 
     try {
-      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false);
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
       fail("Failed over to service that won't transition to active");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -383,7 +415,7 @@ public class TestFailoverController {
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc1Addr, svc2, svc2Addr, fencer, false);
+      FailoverController.failover(svc1, svc1Addr, svc2, svc2Addr, fencer, false, false);
       fail("Failover to already active service");
     } catch (FailoverFailedException ffe) {
       // Expected
