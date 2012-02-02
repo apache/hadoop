@@ -89,6 +89,9 @@ Release 1.1.0 - unreleased
     HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
     kerberos. (jitendra)
 
+    HDFS-2877. If locking of a storage dir fails, it will remove the other
+    NN's lock file on exit. (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
