@@ -257,6 +257,87 @@ public class TestApplicationLimits {
   }
 
   @Test
+  public void testActiveLimitsWithKilledApps() throws Exception {
+    final String user_0 = "user_0";
+
+    int APPLICATION_ID = 0;
+
+    // set max active to 2
+    doReturn(2).when(queue).getMaximumActiveApplications();
+
+    // Submit first application
+    SchedulerApp app_0 = getMockApplication(APPLICATION_ID++, user_0);
+    queue.submitApplication(app_0, user_0, A);
+    assertEquals(1, queue.getNumActiveApplications());
+    assertEquals(0, queue.getNumPendingApplications());
+    assertEquals(1, queue.getNumActiveApplications(user_0));
+    assertEquals(0, queue.getNumPendingApplications(user_0));
+    assertTrue(queue.activeApplications.contains(app_0));
+
+    // Submit second application
+    SchedulerApp app_1 = getMockApplication(APPLICATION_ID++, user_0);
+    queue.submitApplication(app_1, user_0, A);
+    assertEquals(2, queue.getNumActiveApplications());
+    assertEquals(0, queue.getNumPendingApplications());
+    assertEquals(2, queue.getNumActiveApplications(user_0));
+    assertEquals(0, queue.getNumPendingApplications(user_0));
+    assertTrue(queue.activeApplications.contains(app_1));
+
+    // Submit third application, should remain pending
+    SchedulerApp app_2 = getMockApplication(APPLICATION_ID++, user_0);
+    queue.submitApplication(app_2, user_0, A);
+    assertEquals(2, queue.getNumActiveApplications());
+    assertEquals(1, queue.getNumPendingApplications());
+    assertEquals(2, queue.getNumActiveApplications(user_0));
+    assertEquals(1, queue.getNumPendingApplications(user_0));
+    assertTrue(queue.pendingApplications.contains(app_2));
+
+    // Submit fourth application, should remain pending
+    SchedulerApp app_3 = getMockApplication(APPLICATION_ID++, user_0);
+    queue.submitApplication(app_3, user_0, A);
+    assertEquals(2, queue.getNumActiveApplications());
+    assertEquals(2, queue.getNumPendingApplications());
+    assertEquals(2, queue.getNumActiveApplications(user_0));
+    assertEquals(2, queue.getNumPendingApplications(user_0));
+    assertTrue(queue.pendingApplications.contains(app_3));
+
+    // Kill 3rd pending application
+    queue.finishApplication(app_2, A);
+    assertEquals(2, queue.getNumActiveApplications());
+    assertEquals(1, queue.getNumPendingApplications());
+    assertEquals(2, queue.getNumActiveApplications(user_0));
+    assertEquals(1, queue.getNumPendingApplications(user_0));
+    assertFalse(queue.pendingApplications.contains(app_2));
+    assertFalse(queue.activeApplications.contains(app_2));
+
+    // Finish 1st application, app_3 should become active
+    queue.finishApplication(app_0, A);
+    assertEquals(2, queue.getNumActiveApplications());
+    assertEquals(0, queue.getNumPendingApplications());
+    assertEquals(2, queue.getNumActiveApplications(user_0));
+    assertEquals(0, queue.getNumPendingApplications(user_0));
+    assertTrue(queue.activeApplications.contains(app_3));
+    assertFalse(queue.pendingApplications.contains(app_3));
+    assertFalse(queue.activeApplications.contains(app_0));
+
+    // Finish 2nd application
+    queue.finishApplication(app_1, A);
+    assertEquals(1, queue.getNumActiveApplications());
+    assertEquals(0, queue.getNumPendingApplications());
+    assertEquals(1, queue.getNumActiveApplications(user_0));
+    assertEquals(0, queue.getNumPendingApplications(user_0));
+    assertFalse(queue.activeApplications.contains(app_1));
+
+    // Finish 4th application
+    queue.finishApplication(app_3, A);
+    assertEquals(0, queue.getNumActiveApplications());
+    assertEquals(0, queue.getNumPendingApplications());
+    assertEquals(0, queue.getNumActiveApplications(user_0));
+    assertEquals(0, queue.getNumPendingApplications(user_0));
+    assertFalse(queue.activeApplications.contains(app_3));
+  }
+
+  @Test
   public void testHeadroom() throws Exception {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();

@@ -635,7 +635,7 @@ public class LeafQueue implements CSQueue {
         user.activateApplication();
         activeApplications.add(application);
         i.remove();
-        LOG.info("Application " + application.getApplicationId().getId() + 
+        LOG.info("Application " + application.getApplicationId() +
             " from user: " + application.getUser() + 
             " activated in queue: " + getQueueName());
       }
@@ -673,10 +673,13 @@ public class LeafQueue implements CSQueue {
   }
 
   public synchronized void removeApplication(SchedulerApp application, User user) {
-    activeApplications.remove(application);
+    boolean wasActive = activeApplications.remove(application);
+    if (!wasActive) {
+      pendingApplications.remove(application);
+    }
     applicationsMap.remove(application.getApplicationAttemptId());
 
-    user.finishApplication();
+    user.finishApplication(wasActive);
     if (user.getTotalApplications() == 0) {
       users.remove(application.getUser());
     }
@@ -1415,8 +1418,13 @@ public class LeafQueue implements CSQueue {
       ++activeApplications;
     }
 
-    public synchronized void finishApplication() {
-      --activeApplications;
+    public synchronized void finishApplication(boolean wasActive) {
+      if (wasActive) {
+        --activeApplications;
+      }
+      else {
+        --pendingApplications;
+      }
     }
 
     public synchronized void assignContainer(Resource resource) {
