@@ -98,6 +98,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2397. Undeprecate SecondaryNameNode (eli)
 
+    HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
+    information. (Hitesh Shah via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

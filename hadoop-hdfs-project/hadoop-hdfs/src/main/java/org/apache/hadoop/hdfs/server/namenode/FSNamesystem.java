@@ -4222,7 +4222,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   @Override // NameNodeMXBean
   public String getVersion() {
-    return VersionInfo.getVersion();
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
   }
 
   @Override // NameNodeMXBean
