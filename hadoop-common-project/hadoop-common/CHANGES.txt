@@ -15,6 +15,9 @@ Release 0.23.1 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-8015. ChRootFileSystem should extend FilterFileSystem 
+    (Daryn Sharp via bobby)
+
     HADOOP-7801. HADOOP_PREFIX cannot be overriden. (Bruno Mahé via tomwhite)
 
     HADOOP-7802. Hadoop scripts unconditionally source
