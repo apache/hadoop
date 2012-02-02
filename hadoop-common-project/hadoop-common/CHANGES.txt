@@ -197,6 +197,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7999. "hadoop archive" fails with ClassNotFoundException.
    (Jason Lowe via mahadev)
 
+   HADOOP-8012. hadoop-daemon.sh and yarn-daemon.sh are trying to mkdir
+   and chown log/pid dirs which can fail. (Roman Shaposhnik via eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
