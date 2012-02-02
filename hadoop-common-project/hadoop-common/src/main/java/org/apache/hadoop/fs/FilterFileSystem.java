@@ -63,6 +63,14 @@ public class FilterFileSystem extends FileSystem {
     this.statistics = fs.statistics;
   }
 
+  /**
+   * Get the raw file system 
+   * @return FileSystem being filtered
+   */
+  public FileSystem getRawFileSystem() {
+    return fs;
+  }
+
   /** Called after a new FileSystem instance is constructed.
    * @param name a uri whose authority section names the host, port, etc.
    *   for this FileSystem

@@ -14,6 +14,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-8015. ChRootFileSystem should extend FilterFileSystem 
+    (Daryn Sharp via bobby)
+
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple
