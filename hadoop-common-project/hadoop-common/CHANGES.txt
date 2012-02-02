@@ -81,6 +81,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-8001  ChecksumFileSystem's rename doesn't correctly handle checksum
+                 files. (Daryn Sharp via bobby)
+
     HADOOP-8006  TestFSInputChecker is failing in trunk.
                  (Daryn Sharp via bobby)
 
