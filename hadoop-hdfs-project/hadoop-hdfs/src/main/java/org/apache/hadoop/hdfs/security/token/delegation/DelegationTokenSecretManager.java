@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
@@ -296,8 +297,7 @@ public class DelegationTokenSecretManager
     }
 
     final InetSocketAddress addr = namenode.getNameNodeAddress();
-    final String s = addr.getAddress().getHostAddress() + ":" + addr.getPort();
-    token.setService(new Text(s));
+    SecurityUtil.setTokenService(token, addr);
     final Credentials c = new Credentials();
     c.addToken(new Text(ugi.getShortUserName()), token);
     return c;

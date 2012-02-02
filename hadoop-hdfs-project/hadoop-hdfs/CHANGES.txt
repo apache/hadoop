@@ -101,6 +101,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
 
+    HDFS-2784. Update hftp and hdfs for host-based token support.
+    (Kihwal Lee via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

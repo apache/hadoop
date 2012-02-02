@@ -108,43 +108,8 @@ public class DistributedFileSystem extends FileSystem {
 
     InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
     this.dfs = new DFSClient(namenode, conf, statistics);
-    this.uri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" + uri.getAuthority());
+    this.uri = URI.create(uri.getScheme()+"://"+uri.getAuthority());
     this.workingDir = getHomeDirectory();
-  }
-
-  /** Permit paths which explicitly specify the default port. */
-  @Override
-  protected void checkPath(Path path) {
-    URI thisUri = this.getUri();
-    URI thatUri = path.toUri();
-    String thatAuthority = thatUri.getAuthority();
-    if (thatUri.getScheme() != null
-        && thatUri.getScheme().equalsIgnoreCase(thisUri.getScheme())
-        && thatUri.getPort() == NameNode.DEFAULT_PORT
-        && (thisUri.getPort() == -1 || 
-            thisUri.getPort() == NameNode.DEFAULT_PORT)
-        && thatAuthority.substring(0,thatAuthority.indexOf(":"))
-        .equalsIgnoreCase(thisUri.getAuthority()))
-      return;
-    super.checkPath(path);
-  }
-
-  /** Normalize paths that explicitly specify the default port. */
-  @Override
-  public Path makeQualified(Path path) {
-    URI thisUri = this.getUri();
-    URI thatUri = path.toUri();
-    String thatAuthority = thatUri.getAuthority();
-    if (thatUri.getScheme() != null
-        && thatUri.getScheme().equalsIgnoreCase(thisUri.getScheme())
-        && thatUri.getPort() == NameNode.DEFAULT_PORT
-        && thisUri.getPort() == -1
-        && thatAuthority.substring(0,thatAuthority.indexOf(":"))
-        .equalsIgnoreCase(thisUri.getAuthority())) {
-      path = new Path(thisUri.getScheme(), thisUri.getAuthority(),
-                      thatUri.getPath());
-    }
-    return super.makeQualified(path);
   }
 
   @Override
