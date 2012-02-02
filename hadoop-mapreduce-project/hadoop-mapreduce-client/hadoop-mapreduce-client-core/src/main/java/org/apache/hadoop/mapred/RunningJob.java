@@ -34,9 +34,7 @@ import org.apache.hadoop.conf.Configuration;
  * progress etc.</p> 
  * 
  * @see JobClient
- * @deprecated Use {@link org.apache.hadoop.mapreduce.Job} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface RunningJob {

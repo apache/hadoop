@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
-import java.util.List;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /*
  * This object gathers the [currently four] PeriodStatset's that we
  * are gathering for a particular task attempt for packaging and
  * handling as a single object.
  */
+@Private
+@Unstable
 public class ProgressSplitsBlock {
   final PeriodicStatsAccumulator progressWallclockTime;
   final PeriodicStatsAccumulator progressCPUTime;

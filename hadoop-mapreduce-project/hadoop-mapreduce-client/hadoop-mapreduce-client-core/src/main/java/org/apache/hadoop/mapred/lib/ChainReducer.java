@@ -88,10 +88,7 @@ import java.util.Iterator;
  * RunningJob job = jc.submitJob(conf);
  * ...
  * </pre>
- * @deprecated 
- * Use {@link org.apache.hadoop.mapreduce.lib.chain.ChainReducer} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ChainReducer implements Reducer {

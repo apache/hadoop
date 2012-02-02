@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability;
  * @see TaskID
  * @see TaskAttemptID
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class ID extends org.apache.hadoop.mapreduce.ID {

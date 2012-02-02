@@ -33,10 +33,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * An {@link InputSplit} that tags another InputSplit with extra data for use
  * by {@link DelegatingInputFormat}s and {@link DelegatingMapper}s.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.TaggedInputSplit} instead
  */
-@Deprecated
 class TaggedInputSplit implements Configurable, InputSplit {
 
   private Class<? extends InputSplit> inputSplitClass;

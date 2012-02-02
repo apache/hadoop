@@ -28,10 +28,7 @@ import org.apache.hadoop.io.Writable;
  * implementation uses an {@link java.util.ArrayList} to store elements
  * added to it, replaying them as requested.
  * Prefer {@link StreamBackedIterator}.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.ArrayListBackedIterator} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ArrayListBackedIterator<X extends Writable> extends 

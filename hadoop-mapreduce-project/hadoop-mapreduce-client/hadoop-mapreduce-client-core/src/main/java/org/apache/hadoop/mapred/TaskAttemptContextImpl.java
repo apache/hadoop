@@ -22,11 +22,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.util.Progressable;
 
-/**
- * @deprecated Use {@link org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl}
- *   instead.
- */
-@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TaskAttemptContextImpl

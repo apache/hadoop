@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Used when target file already exists for any operation and 
  * is not configured to be overwritten.  
  */
-@Deprecated // may be removed after 0.23
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FileAlreadyExistsException

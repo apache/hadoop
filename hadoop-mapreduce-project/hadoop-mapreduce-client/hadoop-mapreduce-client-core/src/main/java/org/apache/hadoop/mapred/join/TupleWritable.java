@@ -33,11 +33,7 @@ import org.apache.hadoop.io.Writable;
  * incompatible with, but contrary to the general case.
  *
  * @see org.apache.hadoop.io.Writable
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.TupleWritable} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TupleWritable 

@@ -65,10 +65,7 @@ import org.apache.hadoop.mapreduce.lib.fieldsel.*;
  * 
  * The reducer extracts output key/value pairs in a similar manner, except that
  * the key is never ignored.
- * @deprecated Use {@link FieldSelectionMapper} and 
- * {@link FieldSelectionReducer} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FieldSelectionMapReduce<K, V>

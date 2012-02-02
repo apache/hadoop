@@ -30,9 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * control on map processing e.g. multi-threaded, asynchronous mappers etc.</p>
  * 
  * @see Mapper
- * @deprecated Use {@link org.apache.hadoop.mapreduce.Mapper} instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface MapRunnable<K1, V1, K2, V2>

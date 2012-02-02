@@ -28,10 +28,7 @@ import org.apache.hadoop.mapred.RecordReader;
 
 /**
  * Additional operations required of a RecordReader to participate in a join.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.ComposableRecordReader} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface ComposableRecordReader<K extends WritableComparable,

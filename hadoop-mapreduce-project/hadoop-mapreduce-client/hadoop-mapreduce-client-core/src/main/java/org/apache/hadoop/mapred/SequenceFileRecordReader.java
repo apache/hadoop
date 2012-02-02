@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
-/** An {@link RecordReader} for {@link SequenceFile}s. */
+/** 
+ * An {@link RecordReader} for {@link SequenceFile}s. 
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SequenceFileRecordReader<K, V> implements RecordReader<K, V> {

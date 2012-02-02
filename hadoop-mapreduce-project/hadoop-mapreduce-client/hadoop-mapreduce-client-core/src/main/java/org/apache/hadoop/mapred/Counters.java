@@ -18,27 +18,24 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.hadoop.mapreduce.util.CountersStrings.parseEscapedCompactString;
+import static org.apache.hadoop.mapreduce.util.CountersStrings.toEscapedCompactString;
+
 import java.text.ParseException;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.counters.AbstractCounterGroup;
 import org.apache.hadoop.mapreduce.counters.AbstractCounters;
 import org.apache.hadoop.mapreduce.counters.CounterGroupBase;
 import org.apache.hadoop.mapreduce.counters.CounterGroupFactory;
-import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
 import org.apache.hadoop.mapreduce.counters.FileSystemCounterGroup;
+import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
 import org.apache.hadoop.mapreduce.counters.GenericCounter;
 import org.apache.hadoop.mapreduce.counters.Limits;
-import static org.apache.hadoop.mapreduce.util.CountersStrings.*;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 
 /**
  * A set of named counters.
@@ -49,9 +46,7 @@ import static org.apache.hadoop.mapreduce.util.CountersStrings.*;
  *
  * <p><code>Counters</code> are bunched into {@link Group}s, each comprising of
  * counters from a particular <code>Enum</code> class.
- * @deprecated Use {@link org.apache.hadoop.mapreduce.Counters} instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Counters

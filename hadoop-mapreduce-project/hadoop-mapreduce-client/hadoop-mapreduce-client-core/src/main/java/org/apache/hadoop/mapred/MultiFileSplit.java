@@ -18,20 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 
 /**
@@ -42,9 +38,7 @@ import org.apache.hadoop.mapred.lib.CombineFileSplit;
  * reading one record per file.
  * @see FileSplit
  * @see MultiFileInputFormat 
- * @deprecated Use {@link org.apache.hadoop.mapred.lib.CombineFileSplit} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MultiFileSplit extends CombineFileSplit {

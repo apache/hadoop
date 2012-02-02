@@ -34,11 +34,7 @@ import org.apache.hadoop.mapred.Partitioner;
   *  field's last character. If '.c' is omitted from pos1, it defaults to 1
   *  (the beginning of the field); if omitted from pos2, it defaults to 0 
   *  (the end of the field).
-  *  @deprecated Use 
-  *  {@link org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedPartitioner} 
-  *  instead
   */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class KeyFieldBasedPartitioner<K2, V2> extends 

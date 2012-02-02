@@ -24,10 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * This is used to track task completion events on 
  * job tracker. 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.TaskCompletionEvent} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TaskCompletionEvent 

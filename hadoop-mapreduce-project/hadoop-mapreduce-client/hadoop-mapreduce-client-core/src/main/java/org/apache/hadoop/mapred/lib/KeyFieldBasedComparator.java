@@ -38,11 +38,7 @@ import org.apache.hadoop.mapreduce.JobContext;
  *  field). opts are ordering options (any of 'nr' as described above). 
  * We assume that the fields in the key are separated by
  * {@link JobContext#MAP_OUTPUT_KEY_FIELD_SEPERATOR} 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.partition.KeyFieldBasedComparator} 
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class KeyFieldBasedComparator<K, V> extends 
