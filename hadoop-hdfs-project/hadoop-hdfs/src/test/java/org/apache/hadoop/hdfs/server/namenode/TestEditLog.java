@@ -111,10 +111,12 @@ public class TestEditLog extends TestCase {
     int numTransactions;
     short replication = 3;
     long blockSize = 64;
+    int startIndex;
 
-    Transactions(FSNamesystem ns, int num) {
+    Transactions(FSNamesystem ns, int numTx, int startIdx) {
       namesystem = ns;
-      numTransactions = num;
+      numTransactions = numTx;
+      startIndex = startIdx;
     }
 
     // add a bunch of transactions.
@@ -126,8 +128,8 @@ public class TestEditLog extends TestCase {
       for (int i = 0; i < numTransactions; i++) {
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
                             p, replication, blockSize, 0, "", "", null);
-        editLog.logOpenFile("/filename" + i, inode);
-        editLog.logCloseFile("/filename" + i, inode);
+        editLog.logOpenFile("/filename" + startIndex + i, inode);
+        editLog.logCloseFile("/filename" + startIndex + i, inode);
         editLog.logSync();
       }
     }
@@ -275,7 +277,8 @@ public class TestEditLog extends TestCase {
       // Create threads and make them run transactions concurrently.
       Thread threadId[] = new Thread[NUM_THREADS];
       for (int i = 0; i < NUM_THREADS; i++) {
-        Transactions trans = new Transactions(namesystem, NUM_TRANSACTIONS);
+        Transactions trans =
+          new Transactions(namesystem, NUM_TRANSACTIONS, i*NUM_TRANSACTIONS);
         threadId[i] = new Thread(trans, "TransactionThread-" + i);
         threadId[i].start();
       }
@@ -288,11 +291,16 @@ public class TestEditLog extends TestCase {
           i--;      // retry 
         }
       } 
-      
+
+      // Reopen some files as for append
+      Transactions trans = 
+        new Transactions(namesystem, NUM_TRANSACTIONS, NUM_TRANSACTIONS / 2);
+      trans.run();
+
       // Roll another time to finalize edits_inprogress_3
       fsimage.rollEditLog();
       
-      long expectedTxns = (NUM_THREADS * 2 * NUM_TRANSACTIONS) + 2; // +2 for start/end txns
+      long expectedTxns = ((NUM_THREADS+1) * 2 * NUM_TRANSACTIONS) + 2; // +2 for start/end txns
    
       // Verify that we can read in all the transactions that we have written.
       // If there were any corruptions, it is likely that the reading in

@@ -1544,6 +1544,8 @@ Release 0.22.1 - Unreleased
 
   OPTIMIZATIONS
 
+    HDFS-2718. Optimize OP_ADD in edits loading. (shv)
+
   BUG FIXES
 
 Release 0.22.0 - 2011-11-29
