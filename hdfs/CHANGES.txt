@@ -19,6 +19,9 @@ Release 0.22.1 - Unreleased
     HDFS-2698. BackupNode is downloading image from NameNode for every 
     checkpoint. (shv)
 
+    HDFS-2877. If locking of a storage dir fails, it will remove the other
+    NN's lock file on exit. (todd)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
