@@ -606,6 +606,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3640. Allow AMRecovery to work with partial JobHistory files.
     (Arun C Murthy via sseth)
 
+    MAPREDUCE-3752. Modified application limits to include queue max-capacities
+    besides the usual user limits. (Arun C Murthy via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
