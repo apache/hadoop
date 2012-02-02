@@ -322,15 +322,23 @@ public class BlockManager {
    */
   BlockInfo completeBlock(INodeFile fileINode, int blkIndex)
   throws IOException {
+    return completeBlock(fileINode, blkIndex, false);
+  }
+
+  BlockInfo completeBlock(INodeFile fileINode, int blkIndex, boolean force)
+  throws IOException {
     if(blkIndex < 0)
       return null;
     BlockInfo curBlock = fileINode.getBlocks()[blkIndex];
     if(curBlock.isComplete())
       return curBlock;
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)curBlock;
-    if(ucBlock.numNodes() < minReplication)
+    if(!force && ucBlock.numNodes() < minReplication)
       throw new IOException("Cannot complete block: " +
           "block does not satisfy minimal replication requirement.");
+    if(!force && ucBlock.getBlockUCState() != BlockUCState.COMMITTED)
+      throw new IOException(
+          "Cannot complete block: block has not been COMMITTED by the client");
     BlockInfo completeBlock = ucBlock.convertToCompleteBlock();
     // replace penultimate block in file
     fileINode.setBlock(blkIndex, completeBlock);
@@ -1739,16 +1747,14 @@ public class BlockManager {
     return blocksMap.getINode(b);
   }
 
-  void removeFromCorruptReplicasMap(Block block) {
-    corruptReplicas.removeFromCorruptReplicasMap(block);
-  }
-
   int numCorruptReplicas(Block block) {
     return corruptReplicas.numCorruptReplicas(block);
   }
 
   void removeBlockFromMap(Block block) {
     blocksMap.removeBlock(block);
+    // If block is removed from blocksMap remove it from corruptReplicasMap
+    corruptReplicas.removeFromCorruptReplicasMap(block);
   }
 
   int getCapacity() {

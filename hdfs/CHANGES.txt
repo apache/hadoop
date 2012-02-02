@@ -10,6 +10,8 @@ Release 0.22.1 - Unreleased
 
   OPTIMIZATIONS
 
+    HDFS-2718. Optimize OP_ADD in edits loading. (shv)
+
   BUG FIXES
 
     HDFS-1910. NameNode should not save fsimage twice. (shv)

@@ -160,9 +160,7 @@ public class FSEditLogLoader {
             blockSize = readLong(in);
           }
           // get blocks
-          boolean isFileUnderConstruction = (opcode == Ops.OP_ADD);
-          BlockInfo blocks[] = 
-            readBlocks(in, logVersion, isFileUnderConstruction, replication);
+          BlockInfo blocks[] = readBlocks(in, logVersion, replication);
 
           // Older versions of HDFS does not store the block size in inode.
           // If the file has more than one block, use the size of the
@@ -182,7 +180,7 @@ public class FSEditLogLoader {
             permissions = PermissionStatus.read(in);
           }
 
-          // clientname, clientMachine and block locations of last block.
+          // clientName, clientMachine and block locations of last block.
           if (opcode == Ops.OP_ADD && logVersion <= -12) {
             clientName = FSImageSerialization.readString(in);
             clientMachine = FSImageSerialization.readString(in);
@@ -203,31 +201,54 @@ public class FSEditLogLoader {
                                    " clientMachine " + clientMachine);
           }
 
-          fsDir.unprotectedDelete(path, mtime);
+          // There are four cases here:
+          // 1. OP_ADD to create a new file
+          // 2. OP_ADD to update file blocks
+          // 3. OP_ADD to open file for append
+          // 4. OP_CLOSE to close the file
 
-          // add to the file tree
-          INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
-                                                    path, permissions,
-                                                    blocks, replication, 
-                                                    mtime, atime, blockSize);
-          if (isFileUnderConstruction) {
+          // See if the file already exists
+          INodeFile oldFile = fsDir.getFileINode(path);
+          if (oldFile == null) { // OP_ADD for a new file
+            assert opcode == Ops.OP_ADD : 
+              "Expected opcode OP_ADD, but got " + opcode;
+            fsDir.unprotectedAddFile(
+                path, permissions, blocks, replication,
+                mtime, atime, blockSize, clientName, clientMachine);
+          } else {
+            fsDir.updateFile(oldFile,
+                path, permissions, blocks, replication,
+                mtime, atime, blockSize);
+            if(opcode == Ops.OP_CLOSE) {  // OP_CLOSE
+              assert oldFile.isUnderConstruction() : 
+                "File is not under construction: " + path;
+              fsNamesys.blockManager.completeBlock(
+                  oldFile, blocks.length-1, true);
+              INodeFile newFile =
+                ((INodeFileUnderConstruction)oldFile).convertToInodeFile();
+              fsDir.replaceNode(path, oldFile, newFile);
+            } else if(! oldFile.isUnderConstruction()) {  // OP_ADD for append
+              INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                  oldFile.getLocalNameBytes(),
+                  oldFile.getReplication(), 
+                  oldFile.getModificationTime(),
+                  oldFile.getPreferredBlockSize(),
+                  oldFile.getBlocks(),
+                  oldFile.getPermissionStatus(),
+                  clientName, 
+                  clientMachine, 
+                  null);
+              fsDir.replaceNode(path, oldFile, cons);
+            }
+          }
+          // Update file lease
+          if(opcode == Ops.OP_ADD) {
             numOpAdd++;
-            //
-            // Replace current node with a INodeUnderConstruction.
-            // Recreate in-memory lease record.
-            //
-            INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                      node.getLocalNameBytes(),
-                                      node.getReplication(), 
-                                      node.getModificationTime(),
-                                      node.getPreferredBlockSize(),
-                                      node.getBlocks(),
-                                      node.getPermissionStatus(),
-                                      clientName, 
-                                      clientMachine, 
-                                      null);
-            fsDir.replaceNode(path, node, cons);
-            fsNamesys.leaseManager.addLease(cons.getClientName(), path);
+            fsNamesys.leaseManager.addLease(clientName, path);
+          } else {  // Ops.OP_CLOSE
+            numOpClose++;
+            fsNamesys.leaseManager.removeLease(
+                ((INodeFileUnderConstruction)oldFile).getClientName(), path);
           }
           break;
         } 
@@ -553,7 +574,6 @@ public class FSEditLogLoader {
   static private BlockInfo[] readBlocks(
       DataInputStream in,
       int logVersion,
-      boolean isFileUnderConstruction,
       short replication) throws IOException {
     int numBlocks = in.readInt();
     BlockInfo[] blocks = new BlockInfo[numBlocks];
@@ -567,7 +587,7 @@ public class FSEditLogLoader {
         blk.set(oldblk.blkid, oldblk.len,
                 GenerationStamp.GRANDFATHER_GENERATION_STAMP);
       }
-      if(isFileUnderConstruction && i == numBlocks-1)
+      if(i == numBlocks-1)
         blocks[i] = new BlockInfoUnderConstruction(blk, replication);
       else
         blocks[i] = new BlockInfo(blk, replication);
