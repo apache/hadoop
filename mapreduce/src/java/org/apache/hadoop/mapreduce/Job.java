@@ -153,6 +153,7 @@ public class Job extends JobContextImpl implements JobContext {
     this(cluster, conf);
     setJobID(status.getJobID());
     this.status = status;
+    this.setUser(status.getUsername());
     state = JobState.RUNNING;
   }
 

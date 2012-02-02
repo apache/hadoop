@@ -17,6 +17,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-2539. Fixed NPE in getMapTaskReports in JobClient. 
     (Robert Evans via shv)
 
+    MAPREDUCE-3725. hadoop job -list returns user name as NULL.
+    (Mayank Bansal via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
