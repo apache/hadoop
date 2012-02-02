@@ -345,7 +345,7 @@ public class CLI extends Configured implements Tool {
         LogParams logParams = cluster.getLogParams(jobID, taskAttemptID);
         LogDumper logDumper = new LogDumper();
         logDumper.setConf(getConf());
-        logDumper.dumpAContainersLogs(logParams.getApplicationId(),
+        exitCode = logDumper.dumpAContainersLogs(logParams.getApplicationId(),
             logParams.getContainerId(), logParams.getNodeId(),
             logParams.getOwner());
         } catch (IOException e) {
