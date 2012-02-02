@@ -29,9 +29,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
  * not intended to be a comprehensive piece of data.
  * For that, look at JobProfile.
  *************************************************
- *@deprecated Use {@link org.apache.hadoop.mapreduce.JobStatus} instead
  **/
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class JobStatus extends org.apache.hadoop.mapreduce.JobStatus {

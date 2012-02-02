@@ -26,11 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 
-/**
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.CombineFileSplit}
- */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class CombineFileSplit extends 

@@ -24,11 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * This class implements a value aggregator that maintain the biggest of 
  * a sequence of strings.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.StringValueMax} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class StringValueMax 

@@ -27,20 +27,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
 
 /**
  * InputFormat reading keys, values from SequenceFiles in binary (raw)
  * format.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.SequenceFileAsBinaryInputFormat}
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SequenceFileAsBinaryInputFormat

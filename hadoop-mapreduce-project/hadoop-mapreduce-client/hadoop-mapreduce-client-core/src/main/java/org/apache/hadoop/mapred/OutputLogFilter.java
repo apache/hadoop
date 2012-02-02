@@ -29,9 +29,6 @@ import org.apache.hadoop.fs.PathFilter;
  * This can be used to list paths of output directory as follows:
  *   Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
  *                                   new OutputLogFilter()));
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputLogFilter} 
- *   instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

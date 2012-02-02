@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+
 /**
  *
  * This abstract class that represents a bucketed series of
@@ -33,6 +36,8 @@ package org.apache.hadoop.mapred;
  *  bucket and how we interpret the readings by overriding
  *  {@code extendInternal(...)} and {@code initializeInterval()}
  */
+@Private
+@Unstable
 public abstract class PeriodicStatsAccumulator {
   // The range of progress from 0.0D through 1.0D is divided into
   //  count "progress segments".  This object accumulates an

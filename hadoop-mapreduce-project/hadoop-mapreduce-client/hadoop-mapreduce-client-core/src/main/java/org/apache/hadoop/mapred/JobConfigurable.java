@@ -22,7 +22,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /** That what may be configured. */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface JobConfigurable {

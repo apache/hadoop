@@ -21,10 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Progressable;
 
-/**
- * @deprecated Use {@link org.apache.hadoop.mapreduce.JobContext} instead.
- */
-@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class JobContextImpl 

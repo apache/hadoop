@@ -16,8 +16,4 @@
  * limitations under the License.
  * 
  */ 
-/** 
- * <b>Deprecated.</b> Use {@link org.apache.hadoop.mapreduce.Job} instead.
- */
-@Deprecated
 package org.apache.hadoop.filecache;

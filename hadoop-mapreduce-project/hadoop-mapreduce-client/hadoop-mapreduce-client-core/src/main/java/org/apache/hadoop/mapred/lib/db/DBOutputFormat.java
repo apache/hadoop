@@ -31,15 +31,10 @@ import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.util.Progressable;
 
-/**
- * @deprecated Use org.apache.hadoop.mapreduce.lib.db.DBOutputFormat instead
- */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class DBOutputFormat<K  extends DBWritable, V> 

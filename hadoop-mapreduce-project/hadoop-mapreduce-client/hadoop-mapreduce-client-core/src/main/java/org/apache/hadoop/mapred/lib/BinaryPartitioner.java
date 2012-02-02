@@ -29,11 +29,7 @@ import org.apache.hadoop.mapred.Partitioner;
  * the bytes array returned by {@link BinaryComparable#getBytes()}. 
  * 
  * @see org.apache.hadoop.mapreduce.lib.partition.BinaryPartitioner
- * @deprecated Use
- *   {@link org.apache.hadoop.mapreduce.lib.partition.BinaryPartitioner}
- *   instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class BinaryPartitioner<V>  

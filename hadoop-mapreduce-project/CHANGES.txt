@@ -155,6 +155,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3774. Moved yarn-default.xml to hadoop-yarn-common from
     hadoop-server-common. (Mahadev Konar via vinodkv)
 
+    MAPREDUCE-3771. Un-deprecated the old mapred apis, port of MAPREDUCE-1735.
+    (acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar

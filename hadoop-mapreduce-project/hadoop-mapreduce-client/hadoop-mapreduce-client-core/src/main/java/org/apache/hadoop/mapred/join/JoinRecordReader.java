@@ -31,10 +31,7 @@ import org.apache.hadoop.mapred.JobConf;
 
 /**
  * Base class for Composite joins returning Tuples of arbitrary Writables.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.JoinRecordReader} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class JoinRecordReader<K extends WritableComparable>

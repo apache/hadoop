@@ -35,9 +35,7 @@ import java.util.List;
 /**
  * The Chain class provides all the common functionality for the
  * {@link ChainMapper} and the {@link ChainReducer} classes.
- * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.chain.Chain} instead
  */
-@Deprecated
 class Chain extends org.apache.hadoop.mapreduce.lib.chain.Chain {
 
   private static final String MAPPER_BY_VALUE = "chain.mapper.byValue";

@@ -31,10 +31,7 @@ import org.apache.hadoop.util.Progressable;
 
 /**
  * FilterOutputFormat is a convenience class that wraps OutputFormat. 
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapreduce.lib.output.FilterOutputFormat} instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FilterOutputFormat<K, V> implements OutputFormat<K, V> {

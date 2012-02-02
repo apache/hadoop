@@ -41,10 +41,7 @@ import org.apache.commons.logging.Log;
 
 /**
  * Treats keys as offset in file and value as line. 
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapreduce.lib.input.LineRecordReader} instead.
  */
-@Deprecated
 @InterfaceAudience.LimitedPrivate({"MapReduce", "Pig"})
 @InterfaceStability.Unstable
 public class LineRecordReader implements RecordReader<LongWritable, Text> {
