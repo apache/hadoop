@@ -567,10 +567,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (leaseManager != null) {
         leaseManager.stopMonitor();
       }
-      dir.fsImage.editLog.close();
-      // Update the fsimage with the last txid that we wrote
-      // so that the tailer starts from the right spot.
-      dir.fsImage.updateLastAppliedTxIdFromWritten();
+      if (dir != null && dir.fsImage != null) {
+        if (dir.fsImage.editLog != null) {
+          dir.fsImage.editLog.close();
+        }
+        // Update the fsimage with the last txid that we wrote
+        // so that the tailer starts from the right spot.
+        dir.fsImage.updateLastAppliedTxIdFromWritten();
+      }
     } finally {
       writeUnlock();
     }
@@ -612,7 +616,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (editLogTailer != null) {
       editLogTailer.stop();
     }
-    dir.fsImage.editLog.close();
+    if (dir != null && dir.fsImage != null && dir.fsImage.editLog != null) {
+      dir.fsImage.editLog.close();
+    }
   }
   
   

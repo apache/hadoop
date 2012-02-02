@@ -125,7 +125,7 @@ public class TestEditLogTailer {
     
     // Have to specify IPC ports so the NNs can talk to each other.
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf(null)
+      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
         .addNN(new MiniDFSNNTopology.NNConf("nn1").setIpcPort(10001))
         .addNN(new MiniDFSNNTopology.NNConf("nn2").setIpcPort(10002)));
 

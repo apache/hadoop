@@ -57,7 +57,7 @@ public class MiniDFSNNTopology {
    */
   public static MiniDFSNNTopology simpleHATopology() {
     return new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf(null)
+      .addNameservice(new MiniDFSNNTopology.NSConf("minidfs-ns")
         .addNN(new MiniDFSNNTopology.NNConf("nn1"))
         .addNN(new MiniDFSNNTopology.NNConf("nn2")));
   }

@@ -60,7 +60,7 @@ public class TestStandbyCheckpoints {
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf(null)
+      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
         .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
         .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
     

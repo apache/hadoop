@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -43,6 +44,15 @@ import org.apache.hadoop.fs.BlockLocation;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 public class TestDFSUtil {
+  
+  /**
+   * Reset to default UGI settings since some tests change them.
+   */
+  @Before
+  public void resetUGI() {
+    UserGroupInformation.setConfiguration(new Configuration());
+  }
+  
   /**
    * Test conversion of LocatedBlock to BlockLocation
    */
@@ -398,4 +408,11 @@ public class TestDFSUtil {
     assertEquals(NS2_NN2_HOST, map.get("ns2").get("ns2-nn2").toString());
   }
 
+  @Test
+  public void testSubstituteForWildcardAddress() throws IOException {
+    assertEquals("foo:12345",
+        DFSUtil.substituteForWildcardAddress("0.0.0.0:12345", "foo"));
+    assertEquals("127.0.0.1:12345",
+        DFSUtil.substituteForWildcardAddress("127.0.0.1:12345", "foo"));
+  }
 }

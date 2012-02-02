@@ -586,13 +586,13 @@ public class MiniDFSCluster {
       conf.set(FS_DEFAULT_NAME_KEY, "127.0.0.1:" + onlyNN.getIpcPort());
     }
     
-    // If we have more than one nameservice, need to enumerate them in the
-    // config.
-    if (federation) {      
-      List<String> allNsIds = Lists.newArrayList();
-      for (MiniDFSNNTopology.NSConf nameservice : nnTopology.getNameservices()) {
+    List<String> allNsIds = Lists.newArrayList();
+    for (MiniDFSNNTopology.NSConf nameservice : nnTopology.getNameservices()) {
+      if (nameservice.getId() != null) {
         allNsIds.add(nameservice.getId());
       }
+    }
+    if (!allNsIds.isEmpty()) {
       conf.set(DFS_FEDERATION_NAMESERVICES, Joiner.on(",").join(allNsIds));
     }
     

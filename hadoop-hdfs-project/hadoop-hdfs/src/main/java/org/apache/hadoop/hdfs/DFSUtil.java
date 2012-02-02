@@ -676,6 +676,33 @@ public class DFSUtil {
     return getSuffixedConf(conf, httpAddressKey, httpAddressDefault, suffixes);
   }
   
+
+  /**
+   * Substitute a default host in the case that an address has been configured
+   * with a wildcard. This is used, for example, when determining the HTTP
+   * address of the NN -- if it's configured to bind to 0.0.0.0, we want to
+   * substitute the hostname from the filesystem URI rather than trying to
+   * connect to 0.0.0.0.
+   * @param configuredAddress the address found in the configuration
+   * @param defaultHost the host to substitute with, if configuredAddress
+   * is a local/wildcard address.
+   * @return the substituted address
+   * @throws IOException if it is a wildcard address and security is enabled
+   */
+  public static String substituteForWildcardAddress(String configuredAddress,
+      String defaultHost) throws IOException {
+    InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
+    if (sockAddr.getAddress().isAnyLocalAddress()) {
+      if(UserGroupInformation.isSecurityEnabled()) {
+        throw new IOException("Cannot use a wildcard address with security. " +
+                              "Must explicitly set bind address for Kerberos");
+      }
+      return defaultHost + ":" + sockAddr.getPort();
+    } else {
+      return configuredAddress;
+    }
+  }
+  
   private static String getSuffixedConf(Configuration conf,
       String key, String defaultVal, String[] suffixes) {
     String ret = conf.get(DFSUtil.addKeySuffixes(key, suffixes));

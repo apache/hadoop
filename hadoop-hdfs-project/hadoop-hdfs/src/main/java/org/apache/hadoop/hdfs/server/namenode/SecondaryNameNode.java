@@ -450,19 +450,10 @@ public class SecondaryNameNode implements Runnable {
     }
 
     String configuredAddress = DFSUtil.getInfoServer(null, conf, true);
-    InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
-    if (sockAddr.getAddress().isAnyLocalAddress()) {
-      if(UserGroupInformation.isSecurityEnabled()) {
-        throw new IOException("Cannot use a wildcard address with security. " +
-                              "Must explicitly set bind address for Kerberos");
-      }
-      return fsName.getHost() + ":" + sockAddr.getPort();
-    } else {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("configuredAddress = " + configuredAddress);
-      }
-      return configuredAddress;
-    }
+    String address = DFSUtil.substituteForWildcardAddress(configuredAddress,
+        fsName.getHost());
+    LOG.debug("Will connect to NameNode at HTTP address: " + address);
+    return address;
   }
   
   /**

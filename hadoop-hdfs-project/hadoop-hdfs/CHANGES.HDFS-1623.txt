@@ -151,3 +151,5 @@ HDFS-2742. HA: observed dataloss in replication stress test. (todd via eli)
 HDFS-2870. Fix log level for block debug info in processMisReplicatedBlocks (todd)
 
 HDFS-2859. LOCAL_ADDRESS_MATCHER.match has NPE when called from DFSUtil.getSuffixIDs when the host is incorrect (Bikas Saha via todd)
+
+HDFS-2861. checkpointing should verify that the dfs.http.address has been configured to a non-loopback for peer NN (todd)

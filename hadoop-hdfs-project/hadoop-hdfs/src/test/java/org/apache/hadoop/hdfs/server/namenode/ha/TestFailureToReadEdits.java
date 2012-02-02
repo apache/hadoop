@@ -82,7 +82,7 @@ public class TestFailureToReadEdits {
     HAUtil.setAllowStandbyReads(conf, true);
     
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
-      .addNameservice(new MiniDFSNNTopology.NSConf(null)
+      .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
         .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
         .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
     cluster = new MiniDFSCluster.Builder(conf)

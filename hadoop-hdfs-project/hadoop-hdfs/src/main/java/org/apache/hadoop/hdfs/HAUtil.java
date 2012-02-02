@@ -129,16 +129,28 @@ public class HAUtil {
       Configuration myConf) {
     
     String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
+    Preconditions.checkArgument(nsId != null,
+        "Could not determine namespace id. Please ensure that this " +
+        "machine is one of the machines listed as a NN RPC address, " +
+        "or configure " + DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID);
+    
     Collection<String> nnIds = DFSUtil.getNameNodeIds(myConf, nsId);
     String myNNId = myConf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);
     Preconditions.checkArgument(nnIds != null,
-        "Could not determine namenode ids in namespace '%s'",
+        "Could not determine namenode ids in namespace '%s'. " +
+        "Please configure " +
+        DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY,
+            nsId),
         nsId);
     Preconditions.checkArgument(nnIds.size() == 2,
-        "Expected exactly 2 NameNodes in this namespace. Instead, got: '%s'",
-        Joiner.on("','").join(nnIds));
+        "Expected exactly 2 NameNodes in namespace '%s'. " +
+        "Instead, got only %s (NN ids were '%s'",
+        nsId, nnIds.size(), Joiner.on("','").join(nnIds));
     Preconditions.checkState(myNNId != null && !myNNId.isEmpty(),
-        "Could not determine own NN ID");
+        "Could not determine own NN ID in namespace '%s'. Please " +
+        "ensure that this node is one of the machines listed as an " +
+        "NN RPC address, or configure " + DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY,
+        nsId);
 
     ArrayList<String> nnSet = Lists.newArrayList(nnIds);
     nnSet.remove(myNNId);

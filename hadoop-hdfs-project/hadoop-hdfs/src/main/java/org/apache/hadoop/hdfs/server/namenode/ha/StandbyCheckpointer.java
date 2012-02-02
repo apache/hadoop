@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointConf;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.net.NetUtils;
@@ -75,12 +76,11 @@ public class StandbyCheckpointer {
    */
   private void setNameNodeAddresses(Configuration conf) {
     // Look up our own address.
-    String myAddrString = DFSUtil.getInfoServer(null, conf, true);
+    String myAddrString = getHttpAddress(conf);
 
     // Look up the active node's address
     Configuration confForActive = HAUtil.getConfForOtherNode(conf);
-    activeNNAddress = DFSUtil.getInfoServer(null, confForActive, true);
-    
+    activeNNAddress = getHttpAddress(confForActive);
     
     // Sanity-check.
     Preconditions.checkArgument(checkAddress(activeNNAddress),
@@ -90,13 +90,28 @@ public class StandbyCheckpointer {
     myNNAddress = NetUtils.createSocketAddr(myAddrString);
   }
   
+  private String getHttpAddress(Configuration conf) {
+    String configuredAddr = DFSUtil.getInfoServer(null, conf, true);
+    
+    // Use the hostname from the RPC address as a default, in case
+    // the HTTP address is configured to 0.0.0.0.
+    String hostnameFromRpc = NameNode.getServiceAddress(
+        conf, true).getHostName();
+    try {
+      return DFSUtil.substituteForWildcardAddress(
+          configuredAddr, hostnameFromRpc);
+    } catch (IOException e) {
+      throw new IllegalArgumentException(e);
+    }
+  }
+  
   /**
    * Ensure that the given address is valid and has a port
    * specified.
    */
   private boolean checkAddress(String addrStr) {
     InetSocketAddress addr = NetUtils.createSocketAddr(addrStr);
-    return addr.getPort() != 0;
+    return addr.getPort() != 0 && !addr.getAddress().isAnyLocalAddress();
   }
 
   public void start() {
@@ -286,5 +301,10 @@ public class StandbyCheckpointer {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  String getActiveNNAddress() {
+    return activeNNAddress;
   }
 }
