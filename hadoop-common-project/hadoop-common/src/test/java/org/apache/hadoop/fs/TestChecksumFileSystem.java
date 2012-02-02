@@ -203,4 +203,58 @@ public class TestChecksumFileSystem {
     String str = readFile(localFs, testPath, 1024);
     assertEquals("testing stale checksum", str);
   }
+  
+  @Test
+  public void testRenameFileToFile() throws Exception {
+    Path srcPath = new Path(TEST_ROOT_DIR, "testRenameSrc");
+    Path dstPath = new Path(TEST_ROOT_DIR, "testRenameDst");
+    verifyRename(srcPath, dstPath, false);
+  }
+
+  @Test
+  public void testRenameFileIntoDir() throws Exception {
+    Path srcPath = new Path(TEST_ROOT_DIR, "testRenameSrc");
+    Path dstPath = new Path(TEST_ROOT_DIR, "testRenameDir");
+    localFs.mkdirs(dstPath);
+    verifyRename(srcPath, dstPath, true);
+  }
+
+  @Test
+  public void testRenameFileIntoDirFile() throws Exception {
+    Path srcPath = new Path(TEST_ROOT_DIR, "testRenameSrc");
+    Path dstPath = new Path(TEST_ROOT_DIR, "testRenameDir/testRenameDst");
+    assertTrue(localFs.mkdirs(dstPath));
+    verifyRename(srcPath, dstPath, false);
+  }
+
+
+  void verifyRename(Path srcPath, Path dstPath, boolean dstIsDir)
+      throws Exception { 
+    localFs.delete(srcPath,true);
+    localFs.delete(dstPath,true);
+    
+    Path realDstPath = dstPath;
+    if (dstIsDir) {
+      localFs.mkdirs(dstPath);
+      realDstPath = new Path(dstPath, srcPath.getName());
+    }
+    
+    // ensure file + checksum are moved
+    writeFile(localFs, srcPath, 1);
+    assertTrue(localFs.exists(localFs.getChecksumFile(srcPath)));
+    assertTrue(localFs.rename(srcPath, dstPath));
+    assertTrue(localFs.exists(localFs.getChecksumFile(realDstPath)));
+
+    // create a file with no checksum, rename, ensure dst checksum is removed    
+    writeFile(localFs.getRawFileSystem(), srcPath, 1);
+    assertFalse(localFs.exists(localFs.getChecksumFile(srcPath)));
+    assertTrue(localFs.rename(srcPath, dstPath));
+    assertFalse(localFs.exists(localFs.getChecksumFile(realDstPath)));
+    
+    // create file with checksum, rename over prior dst with no checksum
+    writeFile(localFs, srcPath, 1);
+    assertTrue(localFs.exists(localFs.getChecksumFile(srcPath)));
+    assertTrue(localFs.rename(srcPath, dstPath));
+    assertTrue(localFs.exists(localFs.getChecksumFile(realDstPath)));
+  }
 }
