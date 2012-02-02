@@ -631,7 +631,7 @@ public class DFSClient implements java.io.Closeable {
                DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = 
         DFSUtil.createNamenode
-           (NameNode.getAddress(token.getService().toString()),
+           (SecurityUtil.getTokenServiceAddr(delToken),
             conf, UserGroupInformation.getCurrentUser());
       try {
         return nn.renewDelegationToken(delToken);
@@ -649,7 +649,7 @@ public class DFSClient implements java.io.Closeable {
       LOG.info("Cancelling " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = DFSUtil.createNamenode(
-          NameNode.getAddress(token.getService().toString()), conf,
+          SecurityUtil.getTokenServiceAddr(delToken), conf,
           UserGroupInformation.getCurrentUser());
       try {
         nn.cancelDelegationToken(delToken);

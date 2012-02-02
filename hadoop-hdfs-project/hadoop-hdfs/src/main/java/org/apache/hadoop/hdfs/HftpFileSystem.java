@@ -59,6 +59,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ServletUtil;
 import org.xml.sax.Attributes;
@@ -89,17 +90,20 @@ public class HftpFileSystem extends FileSystem
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
 
-  private String nnHttpUrl;
-  private Text hdfsServiceName;
+  protected UserGroupInformation ugi;
   private URI hftpURI;
+
   protected InetSocketAddress nnAddr;
-  protected UserGroupInformation ugi; 
+  protected InetSocketAddress nnSecureAddr;
 
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+
   private Token<?> delegationToken;
   private Token<?> renewToken;
-  
+  private static final HftpDelegationTokenSelector hftpTokenSelector =
+      new HftpDelegationTokenSelector();
+
   public static final SimpleDateFormat getDateFormat() {
     final SimpleDateFormat df = new SimpleDateFormat(HFTP_DATE_FORMAT);
     df.setTimeZone(TimeZone.getTimeZone(HFTP_TIMEZONE));
@@ -115,11 +119,8 @@ public class HftpFileSystem extends FileSystem
 
   @Override
   protected int getDefaultPort() {
-    return getDefaultSecurePort();
-
-    //TODO: un-comment the following once HDFS-7510 is committed. 
-//    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
-//        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
+    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
   }
 
   protected int getDefaultSecurePort() {
@@ -127,16 +128,22 @@ public class HftpFileSystem extends FileSystem
         DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 
-  @Override
-  public String getCanonicalServiceName() {
-    return SecurityUtil.buildDTServiceName(hftpURI, getDefaultPort());
-  }
-  
-  private String buildUri(String schema, String host, int port) {
-    StringBuilder sb = new StringBuilder(schema);
-    return sb.append(host).append(":").append(port).toString();
+  protected InetSocketAddress getNamenodeAddr(URI uri) {
+    // use authority so user supplied uri can override port
+    return NetUtils.createSocketAddr(uri.getAuthority(), getDefaultPort());
   }
 
+  protected InetSocketAddress getNamenodeSecureAddr(URI uri) {
+    // must only use the host and the configured https port
+    return NetUtils.createSocketAddrForHost(uri.getHost(), getDefaultSecurePort());
+  }
+
+  @Override
+  public String getCanonicalServiceName() {
+    // unlike other filesystems, hftp's service is the secure port, not the
+    // actual port in the uri
+    return SecurityUtil.buildTokenService(nnSecureAddr).toString();
+  }
 
   @Override
   public void initialize(final URI name, final Configuration conf)
@@ -144,95 +151,51 @@ public class HftpFileSystem extends FileSystem
     super.initialize(name, conf);
     setConf(conf);
     this.ugi = UserGroupInformation.getCurrentUser(); 
-    nnAddr = NetUtils.createSocketAddr(name.toString());
-    
-    // in case we open connection to hftp of a different cluster
-    // we need to know this cluster https port
-    // if it is not set we assume it is the same cluster or same port
-    int urlPort = conf.getInt("dfs.hftp.https.port", -1);
-    if(urlPort == -1)
-      urlPort = conf.getInt(DFSConfigKeys.DFS_HTTPS_PORT_KEY, 
-          DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
-
-    String normalizedNN = NetUtils.normalizeHostName(name.getHost());
-    nnHttpUrl = buildUri("https://", normalizedNN ,urlPort);
-    LOG.debug("using url to get DT:" + nnHttpUrl);
+    this.nnAddr = getNamenodeAddr(name);
+    this.nnSecureAddr = getNamenodeSecureAddr(name);
     try {
-      hftpURI = new URI(buildUri("hftp://", normalizedNN, urlPort));
-    } catch (URISyntaxException ue) {
-      throw new IOException("bad uri for hdfs", ue);
-    }
-
-    // if one uses RPC port different from the Default one,  
-    // one should specify what is the setvice name for this delegation token
-    // otherwise it is hostname:RPC_PORT
-    String key = DelegationTokenSelector.SERVICE_NAME_KEY
-        + SecurityUtil.buildDTServiceName(name,
-            DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Trying to find DT for " + name + " using key=" + key + 
-          "; conf=" + conf.get(key, ""));
-    }
-    String nnServiceName = conf.get(key);
-    int nnPort = NameNode.DEFAULT_PORT;
-    if (nnServiceName != null) { // get the real port
-      nnPort = NetUtils.createSocketAddr(nnServiceName, 
-          NameNode.DEFAULT_PORT).getPort();
-    }
-    try {
-      URI hdfsURI = new URI("hdfs://" + normalizedNN + ":" + nnPort);
-      hdfsServiceName = new Text(SecurityUtil.buildDTServiceName(hdfsURI, 
-                                                                 nnPort));
-    } catch (URISyntaxException ue) {
-      throw new IOException("bad uri for hdfs", ue);
+      this.hftpURI = new URI(name.getScheme(), name.getAuthority(),
+                             null, null, null);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
     }
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      //try finding a token for this namenode (esp applicable for tasks
-      //using hftp). If there exists one, just set the delegationField
-      String hftpServiceName = getCanonicalServiceName();
-      for (Token<? extends TokenIdentifier> t : ugi.getTokens()) {
-        Text kind = t.getKind();
-        if (DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind)) {
-          if (t.getService().equals(hdfsServiceName)) {
-            setDelegationToken(t);
-            break;
-          }
-        } else if (TOKEN_KIND.equals(kind)) {
-          if (hftpServiceName
-              .equals(normalizeService(t.getService().toString()))) {
-            setDelegationToken(t);
-            break;
-          }
-        }
-      }
-      
-      //since we don't already have a token, go get one over https
-      if (delegationToken == null) {
-        setDelegationToken(getDelegationToken(null));
+      initDelegationToken();
+    }
+  }
+
+  protected void initDelegationToken() throws IOException {
+    // look for hftp token, then try hdfs
+    Token<?> token = selectHftpDelegationToken();
+    if (token == null) {
+      token = selectHdfsDelegationToken();
+    }  
+
+    // if we don't already have a token, go get one over https
+    boolean createdToken = false;
+    if (token == null) {
+      token = getDelegationToken(null);
+      createdToken = (token != null);
+    }
+
+    // we already had a token or getDelegationToken() didn't fail.
+    if (token != null) {
+      setDelegationToken(token);
+      if (createdToken) {
         dtRenewer.addRenewAction(this);
+        LOG.debug("Created new DT for " + token.getService());
+      } else {
+        LOG.debug("Found existing DT for " + token.getService());
       }
     }
   }
 
-  private String normalizeService(String service) {
-    int colonIndex = service.indexOf(':');
-    if (colonIndex == -1) {
-      throw new IllegalArgumentException("Invalid service for hftp token: " + 
-                                         service);
-    }
-    String hostname = 
-        NetUtils.normalizeHostName(service.substring(0, colonIndex));
-    String port = service.substring(colonIndex + 1);
-    return hostname + ":" + port;
+  protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
+    Text serviceName = SecurityUtil.buildTokenService(nnSecureAddr);
+    return hftpTokenSelector.selectToken(serviceName, ugi.getTokens());
   }
 
-  //TODO: un-comment the following once HDFS-7510 is committed. 
-//  protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
-//    Text serviceName = SecurityUtil.buildTokenService(nnSecureAddr);
-//    return hftpTokenSelector.selectToken(serviceName, ugi.getTokens());      
-//  }
-  
   protected Token<DelegationTokenIdentifier> selectHdfsDelegationToken() {
     return  DelegationTokenSelector.selectHdfsDelegationToken(
         nnAddr, ugi, getConf());
@@ -245,13 +208,17 @@ public class HftpFileSystem extends FileSystem
   }
 
   @Override
-  public <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+  public synchronized <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
     renewToken = token;
     // emulate the 203 usage of the tokens
     // by setting the kind and service as if they were hdfs tokens
     delegationToken = new Token<T>(token);
+    // NOTE: the remote nn must be configured to use hdfs
     delegationToken.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
-    delegationToken.setService(hdfsServiceName);
+    // no need to change service because we aren't exactly sure what it
+    // should be.  we can guess, but it might be wrong if the local conf
+    // value is incorrect.  the service is a client side field, so the remote
+    // end does not care about the value
   }
 
   @Override
@@ -262,6 +229,7 @@ public class HftpFileSystem extends FileSystem
       ugi.reloginFromKeytab();
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
         public Token<?> run() throws IOException {
+          final String nnHttpUrl = DFSUtil.createUri("https", nnSecureAddr).toString();
           Credentials c;
           try {
             c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
@@ -291,12 +259,7 @@ public class HftpFileSystem extends FileSystem
 
   @Override
   public URI getUri() {
-    try {
-      return new URI("hftp", null, nnAddr.getHostName(), nnAddr.getPort(),
-                     null, null, null);
-    } catch (URISyntaxException e) {
-      return null;
-    } 
+    return hftpURI;
   }
 
   /**
@@ -722,11 +685,12 @@ public class HftpFileSystem extends FileSystem
     public long renew(Token<?> token, 
                       Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
-      UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+      UserGroupInformation.getLoginUser().reloginFromKeytab();
       // use https to renew the token
+      InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       return 
         DelegationTokenFetcher.renewDelegationToken
-        ("https://" + token.getService().toString(), 
+        (DFSUtil.createUri("https", serviceAddr).toString(), 
          (Token<DelegationTokenIdentifier>) token);
     }
 
@@ -737,10 +701,18 @@ public class HftpFileSystem extends FileSystem
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
       // use https to cancel the token
+      InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       DelegationTokenFetcher.cancelDelegationToken
-        ("https://" + token.getService().toString(), 
+        (DFSUtil.createUri("https", serviceAddr).toString(), 
          (Token<DelegationTokenIdentifier>) token);
+    }    
+  }
+  
+  private static class HftpDelegationTokenSelector
+  extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
+
+    public HftpDelegationTokenSelector() {
+      super(TOKEN_KIND);
     }
-    
   }
 }

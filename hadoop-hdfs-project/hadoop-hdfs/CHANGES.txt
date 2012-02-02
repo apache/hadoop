@@ -110,6 +110,9 @@ Trunk (unreleased changes)
     HDFS-2814 NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
 
+    HDFS-2784. Update hftp and hdfs for host-based token support. 
+    (Kihwal Lee via jitendra)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
