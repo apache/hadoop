@@ -111,4 +111,12 @@ public class Resources {
   public static boolean greaterThanOrEqual(Resource lhs, Resource rhs) {
     return lhs.getMemory() >= rhs.getMemory();
   }
+  
+  public static Resource min(Resource lhs, Resource rhs) {
+    return (lhs.getMemory() < rhs.getMemory()) ? lhs : rhs;
+  }
+
+  public static Resource max(Resource lhs, Resource rhs) {
+    return (lhs.getMemory() > rhs.getMemory()) ? lhs : rhs;
+  }
 }

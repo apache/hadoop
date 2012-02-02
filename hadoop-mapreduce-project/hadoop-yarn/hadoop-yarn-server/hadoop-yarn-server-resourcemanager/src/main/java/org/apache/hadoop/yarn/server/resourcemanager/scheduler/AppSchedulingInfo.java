@@ -162,6 +162,13 @@ public class AppSchedulingInfo {
 
       asks.put(hostName, request);
       if (updatePendingResources) {
+        
+        // Similarly, deactivate application?
+        if (request.getNumContainers() <= 0) {
+          LOG.info("checking for deactivate... ");
+          checkForDeactivation();
+        }
+        
         int lastRequestContainers = lastRequest != null ? lastRequest
             .getNumContainers() : 0;
         Resource lastRequestCapability = lastRequest != null ? lastRequest
@@ -308,19 +315,24 @@ public class AppSchedulingInfo {
     // Do we have any outstanding requests?
     // If there is nothing, we need to deactivate this application
     if (numOffSwitchContainers == 0) {
-      boolean deactivate = true;
-      for (Priority priority : getPriorities()) {
-        ResourceRequest request = getResourceRequest(priority, RMNodeImpl.ANY);
-        if (request.getNumContainers() > 0) {
-          deactivate = false;
-          break;
-        }
-      }
-      if (deactivate) {
-        activeUsersManager.deactivateApplication(user, applicationId);
-      }
+      checkForDeactivation();
     }
   }
+  
+  synchronized private void checkForDeactivation() {
+    boolean deactivate = true;
+    for (Priority priority : getPriorities()) {
+      ResourceRequest request = getResourceRequest(priority, RMNodeImpl.ANY);
+      if (request.getNumContainers() > 0) {
+        deactivate = false;
+        break;
+      }
+    }
+    if (deactivate) {
+      activeUsersManager.deactivateApplication(user, applicationId);
+    }
+  }
+  
   synchronized private void allocate(Container container) {
     // Update consumption and track allocations
     //TODO: fixme sharad

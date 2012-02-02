@@ -86,7 +86,7 @@ public class TestParentQueue {
   private SchedulerApp getMockApplication(int appId, String user) {
     SchedulerApp application = mock(SchedulerApp.class);
     doReturn(user).when(application).getUser();
-    doReturn(null).when(application).getHeadroom();
+    doReturn(Resources.createResource(0)).when(application).getHeadroom();
     return application;
   }
 
