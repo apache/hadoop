@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapreduce.security;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -33,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Master;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -158,4 +161,13 @@ public class TestTokenCache {
 
     return mockFs;
   }
+
+  @Test
+  public void testCleanUpTokenReferral() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY, "foo");
+    TokenCache.cleanUpTokenReferral(conf);
+    assertNull(conf.get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY));
+  }
+  
 }
