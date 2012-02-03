@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,13 +34,37 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
+import com.google.common.base.Joiner;
+
 public class TestFailureOfSharedDir {
   
   private static final Log LOG = LogFactory.getLog(TestFailureOfSharedDir.class);
+
+  /**
+   * Test that the shared edits dir is automatically added to the list of edits
+   * dirs that are marked required.
+   */
+  @Test
+  public void testSharedDirIsAutomaticallyMarkedRequired()
+      throws URISyntaxException {
+    URI foo = new URI("file:/foo");
+    URI bar = new URI("file:/bar");
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, Joiner.on(",").join(foo, bar));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY, foo.toString());
+    assertFalse(FSNamesystem.getRequiredNamespaceEditsDirs(conf).contains(
+        bar));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY, bar.toString());
+    Collection<URI> requiredEditsDirs = FSNamesystem
+        .getRequiredNamespaceEditsDirs(conf); 
+    assertTrue(Joiner.on(",").join(requiredEditsDirs) + " does not contain " + bar,
+        requiredEditsDirs.contains(bar));
+  }
 
   /**
    * Test that marking the shared edits dir as being "required" causes the NN to
@@ -48,11 +73,9 @@ public class TestFailureOfSharedDir {
   @Test
   public void testFailureOfSharedDir() throws Exception {
     Configuration conf = new Configuration();
+    // The shared edits dir will automatically be marked required.
     URI sharedEditsUri = MiniDFSCluster.formatSharedEditsDir(
         new File(MiniDFSCluster.getBaseDirectory()), 0, 1);
-    // Mark the shared edits dir required.
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
-        sharedEditsUri.toString());
     
     MiniDFSCluster cluster = null;
     try {

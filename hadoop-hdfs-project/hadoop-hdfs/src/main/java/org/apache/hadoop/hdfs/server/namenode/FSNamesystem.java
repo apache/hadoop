@@ -632,9 +632,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public static Collection<URI> getNamespaceDirs(Configuration conf) {
     return getStorageDirs(conf, DFS_NAMENODE_NAME_DIR_KEY);
   }
-  
+
+  /**
+   * Get all edits dirs which are required. If any shared edits dirs are
+   * configured, these are also included in the set of required dirs.
+   * 
+   * @param conf the HDFS configuration.
+   * @return all required dirs.
+   */
   public static Collection<URI> getRequiredNamespaceEditsDirs(Configuration conf) {
-    return getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY);
+    Set<URI> ret = new HashSet<URI>();
+    ret.addAll(getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY));
+    ret.addAll(getSharedEditsDirs(conf));
+    return ret;
   }
 
   private static Collection<URI> getStorageDirs(Configuration conf,

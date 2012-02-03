@@ -155,3 +155,6 @@ HDFS-2859. LOCAL_ADDRESS_MATCHER.match has NPE when called from DFSUtil.getSuffi
 HDFS-2861. checkpointing should verify that the dfs.http.address has been configured to a non-loopback for peer NN (todd)
 
 HDFS-2860. TestDFSRollback#testRollback is failing. (atm)
+
+HDFS-2769. HA: When HA is enabled with a shared edits dir, that dir should be
+marked required. (atm via eli)
