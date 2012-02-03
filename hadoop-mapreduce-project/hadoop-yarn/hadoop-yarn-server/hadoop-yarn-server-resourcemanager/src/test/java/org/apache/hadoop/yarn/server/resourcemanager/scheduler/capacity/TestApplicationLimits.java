@@ -153,29 +153,31 @@ public class TestApplicationLimits {
     		queue.getMaximumActiveApplicationsPerUser());
     int expectedMaxActiveApps = 
         Math.max(1, 
-            (int)((clusterResource.getMemory() / LeafQueue.DEFAULT_AM_RESOURCE) * 
+            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
                    csConf.getMaximumApplicationMasterResourcePercent() *
-                   queue.getAbsoluteCapacity()));
+                   queue.getAbsoluteMaximumCapacity()));
     assertEquals(expectedMaxActiveApps, 
                  queue.getMaximumActiveApplications());
-    assertEquals((int)(expectedMaxActiveApps * (queue.getUserLimit() / 100.0f) * 
-                       queue.getUserLimitFactor()), 
-                 queue.getMaximumActiveApplicationsPerUser());
+    assertEquals(
+        (int)Math.ceil(
+            expectedMaxActiveApps * (queue.getUserLimit() / 100.0f) * 
+            queue.getUserLimitFactor()), 
+        queue.getMaximumActiveApplicationsPerUser());
     
     // Add some nodes to the cluster & test new limits
     clusterResource = Resources.createResource(120 * 16 * GB);
     root.updateClusterResource(clusterResource);
     expectedMaxActiveApps = 
         Math.max(1, 
-            (int)((clusterResource.getMemory() / LeafQueue.DEFAULT_AM_RESOURCE) * 
+            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
                    csConf.getMaximumApplicationMasterResourcePercent() *
-                   queue.getAbsoluteCapacity()));
+                   queue.getAbsoluteMaximumCapacity()));
     assertEquals(expectedMaxActiveApps, 
                  queue.getMaximumActiveApplications());
-    assertEquals((int)(expectedMaxActiveApps * (queue.getUserLimit() / 100.0f) * 
-                       queue.getUserLimitFactor()), 
-                 queue.getMaximumActiveApplicationsPerUser());
-    
+    assertEquals(
+        (int)Math.ceil(expectedMaxActiveApps * 
+            (queue.getUserLimit() / 100.0f) * queue.getUserLimitFactor()), 
+        queue.getMaximumActiveApplicationsPerUser());
   }
   
   @Test

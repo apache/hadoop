@@ -125,8 +125,6 @@ public class LeafQueue implements CSQueue {
   
   private final ActiveUsersManager activeUsersManager;
   
-  final static int DEFAULT_AM_RESOURCE = 2 * 1024;
-  
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, 
       Comparator<SchedulerApp> applicationComparator, CSQueue old) {
@@ -166,8 +164,9 @@ public class LeafQueue implements CSQueue {
     this.maxAMResourcePercent = 
         cs.getConfiguration().getMaximumApplicationMasterResourcePercent();
     int maxActiveApplications = 
-        CSQueueUtils.computeMaxActiveApplications(cs.getClusterResources(), 
-            maxAMResourcePercent, absoluteCapacity);
+        CSQueueUtils.computeMaxActiveApplications(
+            cs.getClusterResources(), this.minimumAllocation,
+            maxAMResourcePercent, absoluteMaxCapacity);
     int maxActiveApplicationsPerUser = 
         CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
             userLimitFactor);
@@ -246,30 +245,39 @@ public class LeafQueue implements CSQueue {
         " [= configuredMaxCapacity ]" + "\n" +
         "absoluteMaxCapacity = " + absoluteMaxCapacity +
         " [= 1.0 maximumCapacity undefined, " +
-        "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]" + "\n" +
+        "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]" + 
+        "\n" +
         "userLimit = " + userLimit +
         " [= configuredUserLimit ]" + "\n" +
         "userLimitFactor = " + userLimitFactor +
         " [= configuredUserLimitFactor ]" + "\n" +
         "maxApplications = " + maxApplications +
-        " [= (int)(configuredMaximumSystemApplications * absoluteCapacity) ]" + "\n" +
+        " [= (int)(configuredMaximumSystemApplications * absoluteCapacity) ]" + 
+        "\n" +
         "maxApplicationsPerUser = " + maxApplicationsPerUser +
-        " [= (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
+        " [= (int)(maxApplications * (userLimit / 100.0f) * " +
+        "userLimitFactor) ]" + "\n" +
         "maxActiveApplications = " + maxActiveApplications +
         " [= max(" + 
-        "(int)((clusterResourceMemory / (float)DEFAULT_AM_RESOURCE) *" + 
-        "maxAMResourcePercent * absoluteCapacity)," + 
+        "(int)ceil((clusterResourceMemory / minimumAllocation) *" + 
+        "maxAMResourcePercent * absoluteMaxCapacity)," + 
         "1) ]" + "\n" +
         "maxActiveApplicationsPerUser = " + maxActiveApplicationsPerUser +
-        " [= (int)(maxActiveApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
+        " [= max(" +
+        "(int)(maxActiveApplications * (userLimit / 100.0f) * " +
+        "userLimitFactor)," +
+        "1) ]" + "\n" +
         "utilization = " + utilization +
-        " [= usedResourcesMemory /  (clusterResourceMemory * absoluteCapacity)]" + "\n" +
+        " [= usedResourcesMemory / " +
+        "(clusterResourceMemory * absoluteCapacity)]" + "\n" +
         "usedCapacity = " + usedCapacity +
-        " [= usedResourcesMemory / (clusterResourceMemory * parent.absoluteCapacity)]" + "\n" +
+        " [= usedResourcesMemory / " +
+        "(clusterResourceMemory * parent.absoluteCapacity)]" + "\n" +
         "maxAMResourcePercent = " + maxAMResourcePercent +
         " [= configuredMaximumAMResourcePercent ]" + "\n" +
         "minimumAllocationFactor = " + minimumAllocationFactor +
-        " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / maximumAllocationMemory ]" + "\n" +
+        " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / " +
+        "maximumAllocationMemory ]" + "\n" +
         "numContainers = " + numContainers +
         " [= currentNumContainers ]" + "\n" +
         "state = " + state +
@@ -1359,11 +1367,12 @@ public class LeafQueue implements CSQueue {
   public synchronized void updateClusterResource(Resource clusterResource) {
     // Update queue properties
     maxActiveApplications = 
-        CSQueueUtils.computeMaxActiveApplications(clusterResource, maxAMResourcePercent, 
-            absoluteCapacity);
+        CSQueueUtils.computeMaxActiveApplications(
+            clusterResource, minimumAllocation, 
+            maxAMResourcePercent, absoluteMaxCapacity);
     maxActiveApplicationsPerUser = 
-        CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
-            userLimitFactor);
+        CSQueueUtils.computeMaxActiveApplicationsPerUser(
+            maxActiveApplications, userLimit, userLimitFactor);
     
     // Update application properties
     for (SchedulerApp application : activeApplications) {
