@@ -190,6 +190,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -680,6 +681,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {
     Collection<URI> editsDirs = getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY);
     editsDirs.addAll(getSharedEditsDirs(conf));
+    Set<URI> uniqueEditsDirs = new HashSet<URI>();
+    uniqueEditsDirs.addAll(editsDirs);
+    if (uniqueEditsDirs.size() != editsDirs.size()) {
+      // clearing and re-initializing editsDirs to preserve Collection semantics
+      // assigning finalEditsDirs to editsDirs would leak Set semantics in the 
+      // return value and cause unexpected results downstream. eg future addAll
+      // calls. Perf is not an issue since these are small lists.
+      editsDirs.clear();
+      editsDirs.addAll(uniqueEditsDirs);
+      LOG.warn("Overlapping entries in " + DFS_NAMENODE_EDITS_DIR_KEY 
+          + " and/or " + DFS_NAMENODE_SHARED_EDITS_DIR_KEY
+          + ". Using the following entries: " + Joiner.on(',').join(editsDirs));
+    }
     if (editsDirs.isEmpty()) {
       // If this is the case, no edit dirs have been explicitly configured.
       // Image dirs are to be used for edits too.

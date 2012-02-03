@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
+
+import java.net.URI;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -77,5 +80,22 @@ public class TestHAConfiguration {
     StandbyCheckpointer checkpointer = new StandbyCheckpointer(conf, fsn);
     assertEquals(HOST_B + ":" + DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
         checkpointer.getActiveNNAddress());
+  }
+  
+  /**
+   * Tests that the namenode edits dirs and shared edits dirs are gotten with
+   * duplicates removed
+   */
+  @Test
+  public void testHAUniqueEditDirs() {
+    Configuration config = new Configuration();
+
+    config.set(DFS_NAMENODE_EDITS_DIR_KEY, "file://edits/dir, "
+        + "file://edits/shared/dir"); // overlapping
+    config.set(DFS_NAMENODE_SHARED_EDITS_DIR_KEY, "file://edits/shared/dir");
+
+    // getNamespaceEditsDirs removes duplicates across edits and shared.edits
+    Collection<URI> editsDirs = FSNamesystem.getNamespaceEditsDirs(config);
+    assertEquals(2, editsDirs.size());
   }
 }
