@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -51,6 +52,7 @@ import org.apache.hadoop.util.Progressable;
 public class FilterFileSystem extends FileSystem {
   
   protected FileSystem fs;
+  private String swapScheme;
   
   /*
    * so that extending classes can define it
@@ -77,7 +79,11 @@ public class FilterFileSystem extends FileSystem {
    * @param conf the configuration
    */
   public void initialize(URI name, Configuration conf) throws IOException {
-    fs.initialize(name, conf);
+    super.initialize(name, conf);
+    String scheme = name.getScheme();
+    if (!scheme.equals(fs.getUri().getScheme())) {
+      swapScheme = scheme;
+    }
   }
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
@@ -96,7 +102,19 @@ public class FilterFileSystem extends FileSystem {
   
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
-    return fs.makeQualified(path);
+    Path fqPath = fs.makeQualified(path);
+    // swap in our scheme if the filtered fs is using a different scheme
+    if (swapScheme != null) {
+      try {
+        // NOTE: should deal with authority, but too much other stuff is broken 
+        fqPath = new Path(
+            new URI(swapScheme, fqPath.toUri().getSchemeSpecificPart(), null)
+        );
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(e);
+      }
+    }
+    return fqPath;
   }
   
   ///////////////////////////////////////////////////////////////

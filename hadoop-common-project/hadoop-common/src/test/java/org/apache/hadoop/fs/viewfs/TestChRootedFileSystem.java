@@ -51,7 +51,7 @@ public class TestChRootedFileSystem {
 
 
     // ChRoot to the root of the testDirectory
-    fSys = new ChRootedFileSystem(fSysTarget, chrootedTo);
+    fSys = new ChRootedFileSystem(chrootedTo.toUri(), conf);
   }
 
   @After
