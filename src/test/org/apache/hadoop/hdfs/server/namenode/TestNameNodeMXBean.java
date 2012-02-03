@@ -25,6 +25,7 @@ import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.util.VersionInfo;
 
 import org.junit.Test;
 import junit.framework.Assert;
@@ -53,6 +54,8 @@ public class TestNameNodeMXBean {
       // get attribute "Version"
       String version = (String) mbs.getAttribute(mxbeanName, "Version");
       Assert.assertEquals(fsn.getVersion(), version);
+      Assert.assertTrue(version.equals(VersionInfo.getVersion()
+              + ", r" + VersionInfo.getRevision()));
       // get attribute "Used"
       Long used = (Long) mbs.getAttribute(mxbeanName, "Used");
       Assert.assertEquals(fsn.getUsed(), used.longValue());

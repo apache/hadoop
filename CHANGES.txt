@@ -13,6 +13,9 @@ Release 1.0.1 - 2012.01.30
     HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
     kerberos. (jitendra)
 
+    HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
+    information. (Hitesh Shah via jitendra)
+
   BUG FIXES
 
     HADOOP-7960. Port HADOOP-5203 to branch-1, build version comparison is too 
