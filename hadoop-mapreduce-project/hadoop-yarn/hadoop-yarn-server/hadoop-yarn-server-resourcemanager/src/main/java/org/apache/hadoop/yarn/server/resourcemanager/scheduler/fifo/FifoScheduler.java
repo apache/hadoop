@@ -298,7 +298,9 @@ public class FifoScheduler implements ResourceScheduler {
         new SchedulerApp(appAttemptId, user, DEFAULT_QUEUE, activeUsersManager,
             this.rmContext, null);
     applications.put(appAttemptId, schedulerApp);
-    metrics.submitApp(user);
+    if (appAttemptId.getAttemptId() == 1) {
+      metrics.submitApp(user);
+    }
     LOG.info("Application Submission: " + appAttemptId.getApplicationId() + 
         " from " + user + ", currently active: " + applications.size());
     rmContext.getDispatcher().getEventHandler().handle(

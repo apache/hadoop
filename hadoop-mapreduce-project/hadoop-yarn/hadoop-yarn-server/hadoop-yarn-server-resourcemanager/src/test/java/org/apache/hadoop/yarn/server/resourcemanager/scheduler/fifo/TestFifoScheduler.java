@@ -26,17 +26,28 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 public class TestFifoScheduler {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
@@ -63,7 +74,30 @@ public class TestFifoScheduler {
             .getRMContext());
   }
   
+  @Test
+  public void testAppAttemptMetrics() throws Exception {
+    AsyncDispatcher dispatcher = new InlineDispatcher();
+    RMContext rmContext = new RMContextImpl(null, dispatcher, null, null, null);
 
+    FifoScheduler schedular = new FifoScheduler();
+    schedular.reinitialize(new Configuration(), null, rmContext);
+
+    ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+        appId, 1);
+
+    SchedulerEvent event = new AppAddedSchedulerEvent(appAttemptId, "queue",
+        "user");
+    schedular.handle(event);
+
+    appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 2);
+
+    event = new AppAddedSchedulerEvent(appAttemptId, "queue", "user");
+    schedular.handle(event);
+
+    QueueMetrics metrics = schedular.getRootQueueMetrics();
+    Assert.assertEquals(1, metrics.getAppsSubmitted());
+  }
 
 //  @Test
   public void testFifoScheduler() throws Exception {

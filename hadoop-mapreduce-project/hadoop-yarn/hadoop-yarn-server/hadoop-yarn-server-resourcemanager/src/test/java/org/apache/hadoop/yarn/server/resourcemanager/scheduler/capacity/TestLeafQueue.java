@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.junit.After;
@@ -92,6 +93,7 @@ public class TestLeafQueue {
     
     csConf = 
         new CapacitySchedulerConfiguration();
+    csConf.setBoolean("yarn.scheduler.capacity.user-metrics.enable", true);
     setupQueueConfiguration(csConf);
     
     
@@ -258,6 +260,35 @@ public class TestLeafQueue {
     assertEquals(7*GB, a.getMetrics().getAvailableMB());
   }
 
+  @Test
+  public void testAppAttemptMetrics() throws Exception {
+
+    // Manipulate queue 'a'
+    LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
+
+    // Users
+    final String user_0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 = TestUtils
+        .getMockApplicationAttemptId(0, 1);
+    SchedulerApp app_0 = new SchedulerApp(appAttemptId_0, user_0, a, null,
+        rmContext, null);
+    a.submitApplication(app_0, user_0, B);
+
+    // Attempt the same application again
+    final ApplicationAttemptId appAttemptId_1 = TestUtils
+        .getMockApplicationAttemptId(0, 2);
+    SchedulerApp app_1 = new SchedulerApp(appAttemptId_1, user_0, a, null,
+        rmContext, null);
+    a.submitApplication(app_1, user_0, B); // same user
+
+    assertEquals(1, a.getMetrics().getAppsSubmitted());
+    assertEquals(1, a.getMetrics().getAppsPending());
+
+    QueueMetrics userMetrics = a.getMetrics().getUserMetrics(user_0);
+    assertEquals(1, userMetrics.getAppsSubmitted());
+  }
 
   @Test
   public void testSingleQueueWithOneUser() throws Exception {

@@ -606,7 +606,10 @@ public class LeafQueue implements CSQueue {
       addApplication(application, user);
     }
 
-    metrics.submitApp(userName);
+    int attemptId = application.getApplicationAttemptId().getAttemptId();
+    if (attemptId == 1) {
+      metrics.submitApp(userName);
+    }
 
     // Inform the parent queue
     try {
