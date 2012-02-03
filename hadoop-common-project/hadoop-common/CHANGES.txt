@@ -98,6 +98,9 @@ Release 0.23.1 - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES
+   HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
+   (Jon Eagles via bobby)
+
    HADOOP-8001  ChecksumFileSystem's rename doesn't correctly handle checksum
    files. (Daryn Sharp via bobby)
 
