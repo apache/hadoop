@@ -162,7 +162,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * be recovered (especially on Windows) on datanode restart.
    */
   private void unlinkFile(File file, Block b) throws IOException {
-    File tmpFile = FSDataset.createTmpFile(b, FSDataset.getUnlinkTmpFile(file));
+    File tmpFile = DatanodeUtil.createTmpFile(b, FSDataset.getUnlinkTmpFile(file));
     try {
       FileInputStream in = new FileInputStream(file);
       try {
