@@ -158,6 +158,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3771. Un-deprecated the old mapred apis, port of MAPREDUCE-1735.
     (acmurthy)
 
+    MAPREDUCE-3784. Fixed CapacityScheduler so that maxActiveApplications and
+    maxActiveApplicationsPerUser per queue are not too low for small
+    clusters. (Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
