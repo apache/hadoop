@@ -5681,7 +5681,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   
   @Override // NameNodeMXBean
   public String getVersion() {
-    return VersionInfo.getVersion();
+    return VersionInfo.getVersion() + ", r" + VersionInfo.getRevision();
   }
 
   @Override // NameNodeMXBean
