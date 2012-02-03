@@ -83,17 +83,20 @@ Trunk (unreleased changes)
     kerberos. (jitendra)
 
   BUG FIXES
+    HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
+    (Daryn Sharp via bobby)
+
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
     (Jon Eagles via bobby)
 
     HADOOP-8001  ChecksumFileSystem's rename doesn't correctly handle checksum
-                 files. (Daryn Sharp via bobby)
+    files. (Daryn Sharp via bobby)
 
     HADOOP-8006  TestFSInputChecker is failing in trunk.
-                 (Daryn Sharp via bobby)
+    (Daryn Sharp via bobby)
 
     HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
-                 (Daryn Sharp via bobby)
+    (Daryn Sharp via bobby)
 
     HADOOP-7851. Configuration.getClasses() never returns the default value. 
                  (Uma Maheswara Rao G via amarrk)

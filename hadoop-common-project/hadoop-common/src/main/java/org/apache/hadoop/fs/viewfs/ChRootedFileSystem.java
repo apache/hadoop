@@ -19,8 +19,6 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -82,37 +80,16 @@ class ChRootedFileSystem extends FilterFileSystem {
   
   /**
    * Constructor
-   * @param fs base file system
-   * @param theRoot chRoot for this file system
-   * @throws URISyntaxException
+   * @param uri base file system
+   * @param conf configuration
+   * @throws IOException 
    */
-  public ChRootedFileSystem(final FileSystem fs, final Path theRoot)
-    throws URISyntaxException {
-    super(fs);
-    makeQualified(theRoot); //check that root is a valid path for fs
-                            // Would like to call myFs.checkPath(theRoot); 
-                            // but not public
-    chRootPathPart = new Path(theRoot.toUri().getPath());
+  public ChRootedFileSystem(final URI uri, Configuration conf)
+      throws IOException {
+    super(FileSystem.get(uri, conf));
+    chRootPathPart = new Path(uri.getPath());
     chRootPathPartString = chRootPathPart.toUri().getPath();
-    try {
-      initialize(fs.getUri(), fs.getConf());
-    } catch (IOException e) { // This exception should not be thrown
-      throw new RuntimeException("This should not occur");
-    }
-    
-    /*
-     * We are making URI include the chrootedPath: e.g. file:///chrootedPath.
-     * This is questionable since Path#makeQualified(uri, path) ignores
-     * the pathPart of a uri. Since this class is internal we can ignore
-     * this issue but if we were to make it external then this needs
-     * to be resolved.
-     */
-    // Handle the two cases:
-    //              scheme:/// and scheme://authority/
-    myUri = new URI(fs.getUri().toString() + 
-        (fs.getUri().getAuthority() == null ? "" :  Path.SEPARATOR) +
-          chRootPathPart.toString().substring(1));
-
+    myUri = uri;
     workingDir = getHomeDirectory();
     // We don't use the wd of the myFs
   }
