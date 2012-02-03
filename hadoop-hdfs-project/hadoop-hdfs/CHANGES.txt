@@ -127,6 +127,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2864. Remove some redundant methods and the constant METADATA_VERSION
     from FSDataset.  (szetszwo)
 
+    HDFS-2879. Change FSDataset to package private.  (szetszwo)
+
   BUG FIXES
 
     HDFS-2541. For a sufficiently large value of blocks, the DN Scanner 

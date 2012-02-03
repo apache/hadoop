@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -35,16 +36,15 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.ToolRunner;
-
-import org.junit.Before;
 import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import junit.framework.Assert;
 
 /**
  * Class is used to test client reporting corrupted block replica to name node.
@@ -305,9 +305,9 @@ public class TestClientReportBadBlock {
    */
   private static void corruptBlock(final ExtendedBlock block, final DataNode dn)
       throws FileNotFoundException, IOException {
-    final FSDataset data = (FSDataset) dn.getFSDataset();
-    final RandomAccessFile raFile = new RandomAccessFile(
-        data.getBlockFile(block), "rw");
+    final File f = DataNodeTestUtils.getBlockFile(
+        dn, block.getBlockPoolId(), block.getLocalBlock());
+    final RandomAccessFile raFile = new RandomAccessFile(f, "rw");
     final byte[] bytes = new byte[(int) BLOCK_SIZE];
     for (int i = 0; i < BLOCK_SIZE; i++) {
       bytes[i] = (byte) (i);

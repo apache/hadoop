@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
@@ -35,7 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -199,8 +200,9 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     DatanodeInfo[] datanodeinfos = lb.getLocations();
     assertEquals(repl, datanodeinfos.length);
     final DataNode dn = cluster.getDataNode(datanodeinfos[0].getIpcPort());
-    final FSDataset data = (FSDataset)dn.getFSDataset();
-    final RandomAccessFile raf = new RandomAccessFile(data.getBlockFile(blk), "rw");
+    final File f = DataNodeTestUtils.getBlockFile(
+        dn, blk.getBlockPoolId(), blk.getLocalBlock());
+    final RandomAccessFile raf = new RandomAccessFile(f, "rw");
     AppendTestUtil.LOG.info("dn=" + dn + ", blk=" + blk + " (length=" + blk.getNumBytes() + ")");
     assertEquals(len1, raf.length());
     raf.setLength(0);
