@@ -141,6 +141,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   private final UserGroupInformation ugi;
   private InetSocketAddress nnAddr;
+  private URI uri;
   private Token<?> delegationToken;
   private final AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private Path workingDir;
@@ -158,7 +159,11 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
-
+    try {
+      this.uri = new URI(uri.getScheme(), uri.getAuthority(), null, null, null);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
     this.nnAddr = NetUtils.createSocketAddr(uri.toString());
     this.workingDir = getHomeDirectory();
 
@@ -203,12 +208,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   public URI getUri() {
-    try {
-      return new URI(SCHEME, null, nnAddr.getHostName(), nnAddr.getPort(),
-          null, null, null);
-    } catch (URISyntaxException e) {
-      return null;
-    }
+    return this.uri;
   }
 
   /** @return the home directory. */
@@ -810,8 +810,7 @@ public class WebHdfsFileSystem extends FileSystem
         final Token<?> token, final Configuration conf
         ) throws IOException, InterruptedException, URISyntaxException {
       
-      final InetSocketAddress nnAddr =  NetUtils.createSocketAddr(
-          token.getService().toString());
+      final InetSocketAddress nnAddr = SecurityUtil.getTokenServiceAddr(token);
       final URI uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, nnAddr);
       return (WebHdfsFileSystem)FileSystem.get(uri, conf);
     }
@@ -821,7 +820,7 @@ public class WebHdfsFileSystem extends FileSystem
         ) throws IOException, InterruptedException {
       final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
       // update the kerberos credentials, if they are coming from a keytab
-      ugi.checkTGTAndReloginFromKeytab();
+      ugi.reloginFromKeytab();
 
       try {
         WebHdfsFileSystem webhdfs = getWebHdfs(token, conf);

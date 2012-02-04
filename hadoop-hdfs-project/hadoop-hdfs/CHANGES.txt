@@ -104,6 +104,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2784. Update hftp and hdfs for host-based token support.
     (Kihwal Lee via jitendra)
 
+    HDFS-2785. Update webhdfs and httpfs for host-based token support.
+    (Robert Joseph Evans via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
