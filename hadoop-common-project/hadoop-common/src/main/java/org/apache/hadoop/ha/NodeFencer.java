@@ -54,7 +54,7 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class NodeFencer {
-  static final String CONF_METHODS_KEY =
+  public static final String CONF_METHODS_KEY =
     "dfs.namenode.ha.fencing.methods";
   
   private static final String CLASS_RE = "([a-zA-Z0-9\\.\\$]+)";

@@ -166,3 +166,5 @@ HDFS-2874. Edit log should log to shared dirs before local dirs. (todd)
 HDFS-2890. DFSUtil#getSuffixIDs should skip unset configurations. (atm)
 
 HDFS-2792. Make fsck work. (atm)
+
+HDFS-2808. HA: haadmin should use namenode ids. (eli)

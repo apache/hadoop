@@ -40,7 +40,7 @@ import com.google.common.collect.ImmutableMap;
 
 /**
  * A command-line tool for making calls in the HAServiceProtocol.
- * For example,. this can be used to force a daemon to standby or active
+ * For example,. this can be used to force a service to standby or active
  * mode, or to trigger a health-check.
  */
 @InterfaceAudience.Private
@@ -53,20 +53,20 @@ public abstract class HAAdmin extends Configured implements Tool {
   private static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
-        new UsageInfo("<host:port>", "Transitions the daemon into Active state"))
+        new UsageInfo("<serviceId>", "Transitions the service into Active state"))
     .put("-transitionToStandby",
-        new UsageInfo("<host:port>", "Transitions the daemon into Standby state"))
+        new UsageInfo("<serviceId>", "Transitions the service into Standby state"))
     .put("-failover",
-        new UsageInfo("[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] <host:port> <host:port>",
-            "Failover from the first daemon to the second.\n" +
+        new UsageInfo("[--"+FORCEFENCE+"] [--"+FORCEACTIVE+"] <serviceId> <serviceId>",
+            "Failover from the first service to the second.\n" +
             "Unconditionally fence services if the "+FORCEFENCE+" option is used.\n" +
             "Try to failover to the target service even if it is not ready if the " + 
             FORCEACTIVE + " option is used."))
     .put("-getServiceState",
-        new UsageInfo("<host:port>", "Returns the state of the daemon"))
+        new UsageInfo("<serviceId>", "Returns the state of the service"))
     .put("-checkHealth",
-        new UsageInfo("<host:port>",
-            "Requests that the daemon perform a health check.\n" + 
+        new UsageInfo("<serviceId>",
+            "Requests that the service perform a health check.\n" + 
             "The HAAdmin tool will exit with a non-zero exit code\n" +
             "if the check fails."))
     .put("-help",
@@ -74,11 +74,15 @@ public abstract class HAAdmin extends Configured implements Tool {
     .build();
 
   /** Output stream for errors, for use in tests */
-  PrintStream errOut = System.err;
+  protected PrintStream errOut = System.err;
   PrintStream out = System.out;
 
-  private static void printUsage(PrintStream errOut) {
-    errOut.println("Usage: java HAAdmin");
+  protected String getUsageString() {
+    return "Usage: HAAdmin";
+  }
+
+  protected void printUsage(PrintStream errOut) {
+    errOut.println(getUsageString());
     for (Map.Entry<String, UsageInfo> e : USAGE.entrySet()) {
       String cmd = e.getKey();
       UsageInfo usage = e.getValue();
@@ -94,7 +98,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     if (usage == null) {
       throw new RuntimeException("No usage for cmd " + cmd);
     }
-    errOut.println("Usage: java HAAdmin [" + cmd + " " + usage.args + "]");
+    errOut.println("Usage: HAAdmin [" + cmd + " " + usage.args + "]");
   }
 
   private int transitionToActive(final String[] argv)
@@ -171,8 +175,10 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
 
-    InetSocketAddress addr1 = NetUtils.createSocketAddr(args[0]);
-    InetSocketAddress addr2 = NetUtils.createSocketAddr(args[1]);
+    InetSocketAddress addr1 = 
+      NetUtils.createSocketAddr(getServiceAddr(args[0]));
+    InetSocketAddress addr2 = 
+      NetUtils.createSocketAddr(getServiceAddr(args[1]));
     HAServiceProtocol proto1 = getProtocol(args[0]);
     HAServiceProtocol proto2 = getProtocol(args[1]);
 
@@ -219,11 +225,20 @@ public abstract class HAAdmin extends Configured implements Tool {
   }
 
   /**
-   * Return a proxy to the specified target host:port.
+   * Return the serviceId as is, we are assuming it was
+   * given as a service address of form <host:ipcport>.
    */
-  protected HAServiceProtocol getProtocol(String target)
+  protected String getServiceAddr(String serviceId) {
+    return serviceId;
+  }
+
+  /**
+   * Return a proxy to the specified target service.
+   */
+  protected HAServiceProtocol getProtocol(String serviceId)
       throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(target);
+    String serviceAddr = getServiceAddr(serviceId);
+    InetSocketAddress addr = NetUtils.createSocketAddr(serviceAddr);
     return (HAServiceProtocol)RPC.getProxy(
           HAServiceProtocol.class, HAServiceProtocol.versionID,
           addr, getConf());
@@ -231,6 +246,15 @@ public abstract class HAAdmin extends Configured implements Tool {
 
   @Override
   public int run(String[] argv) throws Exception {
+    try {
+      return runCmd(argv);
+    } catch (IllegalArgumentException iae) {
+      errOut.println("Illegal argument: " + iae.getMessage());
+      return -1;
+    }
+  }
+  
+  protected int runCmd(String[] argv) throws Exception {
     if (argv.length < 1) {
       printUsage(errOut);
       return -1;
@@ -244,7 +268,7 @@ public abstract class HAAdmin extends Configured implements Tool {
       printUsage(errOut);
       return -1;
     }
-    
+
     if ("-transitionToActive".equals(cmd)) {
       return transitionToActive(argv);
     } else if ("-transitionToStandby".equals(cmd)) {

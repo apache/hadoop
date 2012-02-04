@@ -57,7 +57,7 @@ public class TestCheckPointForSecurityTokens {
   }
   
   /**
-   * Tests save namepsace.
+   * Tests save namespace.
    */
   @Test
   public void testSaveNamespace() throws IOException {

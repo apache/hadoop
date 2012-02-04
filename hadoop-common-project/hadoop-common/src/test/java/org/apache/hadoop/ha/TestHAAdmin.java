@@ -26,7 +26,6 @@ import java.io.PrintStream;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -88,107 +87,12 @@ public class TestHAAdmin {
     assertEquals(-1, runTool("-failover", "foo:1234"));
     assertOutputContains("failover: incorrect arguments");
   }
-  
+
   @Test
   public void testHelp() throws Exception {
     assertEquals(-1, runTool("-help"));
     assertEquals(0, runTool("-help", "transitionToActive"));
-    assertOutputContains("Transitions the daemon into Active");
-  }
-  
-  @Test
-  public void testTransitionToActive() throws Exception {
-    assertEquals(0, runTool("-transitionToActive", "foo:1234"));
-    Mockito.verify(mockProtocol).transitionToActive();
-  }
-
-  @Test
-  public void testTransitionToStandby() throws Exception {
-    assertEquals(0, runTool("-transitionToStandby", "foo:1234"));
-    Mockito.verify(mockProtocol).transitionToStandby();
-  }
-
-  @Test
-  public void testFailoverWithNoFencerConfigured() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    assertEquals(-1, runTool("-failover", "foo:1234", "bar:5678"));
-  }
-
-  @Test
-  public void testFailoverWithFencerConfigured() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
-    tool.setConf(conf);
-    assertEquals(0, runTool("-failover", "foo:1234", "bar:5678"));
-  }
-
-  @Test
-  public void testFailoverWithFencerConfiguredAndForce() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
-    tool.setConf(conf);
-    assertEquals(0, runTool("-failover", "foo:1234", "bar:5678", "--forcefence"));
-  }
-
-  @Test
-  public void testFailoverWithForceActive() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
-    tool.setConf(conf);
-    assertEquals(0, runTool("-failover", "foo:1234", "bar:5678", "--forceactive"));
-  }
-
-  @Test
-  public void testFailoverWithInvalidFenceArg() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
-    tool.setConf(conf);
-    assertEquals(-1, runTool("-failover", "foo:1234", "bar:5678", "notforcefence"));
-  }
-
-  @Test
-  public void testFailoverWithFenceButNoFencer() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    assertEquals(-1, runTool("-failover", "foo:1234", "bar:5678", "--forcefence"));
-  }
-
-  @Test
-  public void testFailoverWithFenceAndBadFencer() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, "foobar!");
-    tool.setConf(conf);
-    assertEquals(-1, runTool("-failover", "foo:1234", "bar:5678", "--forcefence"));
-  }
-
-  @Test
-  public void testForceFenceOptionListedBeforeArgs() throws Exception {
-    Mockito.doReturn(HAServiceState.STANDBY).when(mockProtocol).getServiceState();
-    Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
-    tool.setConf(conf);
-    assertEquals(0, runTool("-failover", "--forcefence", "foo:1234", "bar:5678"));
-  }
-
-  @Test
-  public void testGetServiceState() throws Exception {
-    assertEquals(0, runTool("-getServiceState", "foo:1234"));
-    Mockito.verify(mockProtocol).getServiceState();
-  }
-
-  @Test
-  public void testCheckHealth() throws Exception {
-    assertEquals(0, runTool("-checkHealth", "foo:1234"));
-    Mockito.verify(mockProtocol).monitorHealth();
-    
-    Mockito.doThrow(new HealthCheckFailedException("fake health check failure"))
-      .when(mockProtocol).monitorHealth();
-    assertEquals(-1, runTool("-checkHealth", "foo:1234"));
-    assertOutputContains("Health check failed: fake health check failure");
+    assertOutputContains("Transitions the service into Active");
   }
 
   private Object runTool(String ... args) throws Exception {
@@ -199,5 +103,4 @@ public class TestHAAdmin {
     LOG.info("Output:\n" + errOutput);
     return ret;
   }
-  
 }

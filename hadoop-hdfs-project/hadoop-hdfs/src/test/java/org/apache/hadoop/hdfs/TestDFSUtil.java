@@ -406,6 +406,53 @@ public class TestDFSUtil {
     assertEquals(NS1_NN2_HOST, map.get("ns1").get("ns1-nn2").toString());
     assertEquals(NS2_NN1_HOST, map.get("ns2").get("ns2-nn1").toString());
     assertEquals(NS2_NN2_HOST, map.get("ns2").get("ns2-nn2").toString());
+    
+    assertEquals(NS1_NN1_HOST, 
+        DFSUtil.getNamenodeServiceAddr(conf, "ns1", "ns1-nn1"));
+    assertEquals(NS1_NN2_HOST, 
+        DFSUtil.getNamenodeServiceAddr(conf, "ns1", "ns1-nn2"));
+    assertEquals(NS2_NN1_HOST, 
+        DFSUtil.getNamenodeServiceAddr(conf, "ns2", "ns2-nn1"));
+
+    // No nameservice was given and we can't determine which to use
+    // as two nameservices could share a namenode ID.
+    assertEquals(null, DFSUtil.getNamenodeServiceAddr(conf, null, "ns1-nn1"));
+  }
+
+  @Test
+  public void getNameNodeServiceAddr() throws IOException {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    
+    // One nameservice with two NNs
+    final String NS1_NN1_HOST = "ns1-nn1.example.com:8020";
+    final String NS1_NN1_HOST_SVC = "ns1-nn2.example.com:8021";
+    final String NS1_NN2_HOST = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_HOST_SVC = "ns1-nn2.example.com:8021";
+   
+    conf.set(DFS_FEDERATION_NAMESERVICES, "ns1");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, "ns1"),"nn1,nn2"); 
+
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_HOST);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_HOST);
+
+    // The rpc address is used if no service address is defined
+    assertEquals(NS1_NN1_HOST, DFSUtil.getNamenodeServiceAddr(conf, null, "nn1"));
+    assertEquals(NS1_NN2_HOST, DFSUtil.getNamenodeServiceAddr(conf, null, "nn2"));
+
+    // A nameservice is specified explicitly
+    assertEquals(NS1_NN1_HOST, DFSUtil.getNamenodeServiceAddr(conf, "ns1", "nn1"));
+    assertEquals(null, DFSUtil.getNamenodeServiceAddr(conf, "invalid", "nn1"));
+    
+    // The service addrs are used when they are defined
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_HOST_SVC);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_HOST_SVC);
+
+    assertEquals(NS1_NN1_HOST_SVC, DFSUtil.getNamenodeServiceAddr(conf, null, "nn1"));
+    assertEquals(NS1_NN2_HOST_SVC, DFSUtil.getNamenodeServiceAddr(conf, null, "nn2"));
   }
 
   @Test

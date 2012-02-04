@@ -861,7 +861,7 @@ public class TestCheckpoint extends TestCase {
   }
 
   /**
-   * Tests save namepsace.
+   * Tests save namespace.
    */
   public void testSaveNamespace() throws IOException {
     MiniDFSCluster cluster = null;

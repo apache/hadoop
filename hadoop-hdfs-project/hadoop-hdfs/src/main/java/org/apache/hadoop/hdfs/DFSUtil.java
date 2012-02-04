@@ -1042,4 +1042,39 @@ public class DFSUtil {
     RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine.class);
     server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
   }
+
+  /**
+   * Map a logical namenode ID to its service address. Use the given
+   * nameservice if specified, or the configured one if none is given.
+   *
+   * @param conf Configuration
+   * @param nsId which nameservice nnId is a part of, optional
+   * @param nnId the namenode ID to get the service addr for
+   * @return the service addr, null if it could not be determined
+   */
+  public static String getNamenodeServiceAddr(final Configuration conf,
+      String nsId, String nnId) {
+
+    if (nsId == null) {
+      Collection<String> nsIds = getNameServiceIds(conf);
+      if (nsIds.size() != 1) {
+        // No nameservice ID was given and more than one is configured
+        return null;
+      } else {
+        nsId = nsIds.toArray(new String[1])[0];
+      }
+    }
+
+    String serviceAddrKey = concatSuffixes(
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nsId, nnId);
+
+    String addrKey = concatSuffixes(
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nsId, nnId);
+
+    String serviceRpcAddr = conf.get(serviceAddrKey);
+    if (serviceRpcAddr == null) {
+      serviceRpcAddr = conf.get(addrKey);
+    }
+    return serviceRpcAddr;
+  }
 }

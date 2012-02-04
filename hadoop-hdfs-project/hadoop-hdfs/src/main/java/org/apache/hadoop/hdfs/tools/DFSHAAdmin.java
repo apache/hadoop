@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import java.io.PrintStream;
+import java.util.Arrays;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -30,10 +34,15 @@ import org.apache.hadoop.util.ToolRunner;
  * Class to extend HAAdmin to do a little bit of HDFS-specific configuration.
  */
 public class DFSHAAdmin extends HAAdmin {
-  
-  private static final Log LOG = 
-    LogFactory.getLog(DFSHAAdmin.class);
-  
+
+  private static final Log LOG = LogFactory.getLog(DFSHAAdmin.class);
+
+  private String nameserviceId;
+
+  protected void setErrOut(PrintStream errOut) {
+    this.errOut = errOut;
+  }
+
   @Override
   public void setConf(Configuration conf) {
     if (conf != null) {
@@ -50,6 +59,54 @@ public class DFSHAAdmin extends HAAdmin {
           nameNodePrincipal);
     }
     super.setConf(conf);
+  }
+
+  /**
+   * Try to map the given namenode ID to its service address.
+   */
+  @Override
+  protected String getServiceAddr(String nnId) {
+    HdfsConfiguration conf = (HdfsConfiguration)getConf();
+    String serviceAddr = 
+      DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, nnId);
+    if (serviceAddr == null) {
+      throw new IllegalArgumentException(
+          "Unable to determine service address for namenode '" + nnId + "'");
+    }
+    return serviceAddr;
+  }
+
+  @Override
+  protected String getUsageString() {
+    return "Usage: DFSHAAdmin [-ns <nameserviceId>]";
+  }
+
+  @Override
+  protected int runCmd(String[] argv) throws Exception {
+    if (argv.length < 1) {
+      printUsage(errOut);
+      return -1;
+    }
+
+    int i = 0;
+    String cmd = argv[i++];
+
+    if ("-ns".equals(cmd)) {
+      if (i == argv.length) {
+        errOut.println("Missing nameservice ID");
+        printUsage(errOut);
+        return -1;
+      }
+      nameserviceId = argv[i++];
+      if (i >= argv.length) {
+        errOut.println("Missing command");
+        printUsage(errOut);
+        return -1;
+      }
+      argv = Arrays.copyOfRange(argv, i, argv.length);
+    }
+    
+    return super.runCmd(argv);
   }
 
   public static void main(String[] argv) throws Exception {
