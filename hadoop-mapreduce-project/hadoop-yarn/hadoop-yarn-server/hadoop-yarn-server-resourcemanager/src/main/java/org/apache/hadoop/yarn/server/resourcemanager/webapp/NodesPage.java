@@ -100,6 +100,12 @@ class NodesPage extends RmView {
           if(!stateFilter.equals(state)) {
             continue;
           }
+        } else {
+          // No filter. User is asking for all nodes. Make sure you skip the
+          // unhealthy nodes.
+          if (ni.getState() == RMNodeState.UNHEALTHY) {
+            continue;
+          }
         }
         NodeInfo info = new NodeInfo(ni, sched);
         int usedMemory = (int)info.getUsedMemory();

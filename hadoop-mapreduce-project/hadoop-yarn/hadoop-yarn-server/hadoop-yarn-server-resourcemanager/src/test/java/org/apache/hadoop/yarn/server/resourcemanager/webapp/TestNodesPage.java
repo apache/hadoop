@@ -22,6 +22,7 @@ import java.io.PrintWriter;
 
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Before;
@@ -39,7 +40,12 @@ import com.google.inject.Module;
 public class TestNodesPage {
   
   final int numberOfRacks = 2;
-  final int numberOfNodesPerRack = 2;
+  final int numberOfNodesPerRack = 6;
+  // The following is because of the way TestRMWebApp.mockRMContext creates
+  // nodes.
+  final int numberOfLostNodesPerRack = numberOfNodesPerRack
+      / RMNodeState.values().length;
+
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.
   final int numberOfThInMetricsTable = 10;
@@ -49,20 +55,22 @@ public class TestNodesPage {
   
   @Before
   public void setUp() throws Exception {
-    injector = WebAppTests.createMockInjector(RMContext.class, TestRMWebApp
-        .mockRMContext(3, numberOfRacks, numberOfNodesPerRack,
-            8 * TestRMWebApp.GiB), new Module() {
-      @Override
-      public void configure(Binder binder) {
-        try {
-          binder.bind(ResourceManager.class).toInstance(
-              TestRMWebApp.mockRm(3, numberOfRacks, numberOfNodesPerRack,
-                  8 * TestRMWebApp.GiB));
-        } catch (IOException e) {
-          throw new IllegalStateException(e);
-        }
-      }
-    });
+    final RMContext mockRMContext =
+        TestRMWebApp.mockRMContext(3, numberOfRacks, numberOfNodesPerRack,
+          8 * TestRMWebApp.GiB);
+    injector =
+        WebAppTests.createMockInjector(RMContext.class, mockRMContext,
+          new Module() {
+            @Override
+            public void configure(Binder binder) {
+              try {
+                binder.bind(ResourceManager.class).toInstance(
+                  TestRMWebApp.mockRm(mockRMContext));
+              } catch (IOException e) {
+                throw new IllegalStateException(e);
+              }
+            }
+          });
   }
 
   @Test
@@ -94,7 +102,7 @@ public class TestNodesPage {
         .print("<th");
     Mockito.verify(
         writer,
-        Mockito.times(numberOfRacks * numberOfNodesPerRack
+        Mockito.times(numberOfRacks * numberOfLostNodesPerRack
             * numberOfActualTableHeaders + numberOfThInMetricsTable)).print(
         "<td");
   }

@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -94,20 +95,38 @@ public class TestRMWebApp {
   }
 
   @Test public void testNodesPage() {
+    // 10 nodes. Two of each type.
+    final RMContext rmContext = mockRMContext(3, 2, 12, 8*GiB);
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
-        mockRMContext(3, 1, 2, 8*GiB),
+        rmContext,
         new Module() {
       @Override
       public void configure(Binder binder) {
         try {
-          binder.bind(ResourceManager.class).toInstance(mockRm(3, 1, 2, 8*GiB));
+          binder.bind(ResourceManager.class).toInstance(mockRm(rmContext));
         } catch (IOException e) {
           throw new IllegalStateException(e);
         }
       }
     });
-    injector.getInstance(NodesPage.class).render();
+
+    // All nodes
+    NodesPage instance = injector.getInstance(NodesPage.class);
+    instance.render();
     WebAppTests.flushOutput(injector);
+
+    // Unhealthy nodes
+    instance.moreParams().put(YarnWebParams.NODE_STATE,
+      RMNodeState.UNHEALTHY.toString());
+    instance.render();
+    WebAppTests.flushOutput(injector);
+
+    // Lost nodes
+    instance.moreParams().put(YarnWebParams.NODE_STATE,
+      RMNodeState.LOST.toString());
+    instance.render();
+    WebAppTests.flushOutput(injector);
+
   }
 
   public static RMContext mockRMContext(int numApps, int racks, int numNodes,
@@ -125,11 +144,12 @@ public class TestRMWebApp {
       nodesMap.put(node.getNodeID(), node);
     }
     
-    final List<RMNode> lostNodes = MockNodes.lostNodes(racks, numNodes,
-        newResource(mbsPerNode));
-    final ConcurrentMap<String, RMNode> lostNodesMap = Maps.newConcurrentMap();
-    for (RMNode node : lostNodes) {
-      lostNodesMap.put(node.getHostName(), node);
+    final List<RMNode> deactivatedNodes =
+        MockNodes.deactivatedNodes(racks, numNodes, newResource(mbsPerNode));
+    final ConcurrentMap<String, RMNode> deactivatedNodesMap =
+        Maps.newConcurrentMap();
+    for (RMNode node : deactivatedNodes) {
+      deactivatedNodesMap.put(node.getHostName(), node);
     }
    return new RMContextImpl(new MemStore(), null, null, null, null) {
       @Override
@@ -138,7 +158,7 @@ public class TestRMWebApp {
       }
       @Override
       public ConcurrentMap<String, RMNode> getInactiveRMNodes() {
-        return lostNodesMap;
+        return deactivatedNodesMap;
       }
       @Override
       public ConcurrentMap<NodeId, RMNode> getRMNodes() {
@@ -149,9 +169,13 @@ public class TestRMWebApp {
 
   public static ResourceManager mockRm(int apps, int racks, int nodes,
                                        int mbsPerNode) throws IOException {
-    ResourceManager rm = mock(ResourceManager.class);
     RMContext rmContext = mockRMContext(apps, racks, nodes,
-        mbsPerNode);
+      mbsPerNode);
+    return mockRm(rmContext);
+  }
+
+  public static ResourceManager mockRm(RMContext rmContext) throws IOException {
+    ResourceManager rm = mock(ResourceManager.class);
     ResourceScheduler rs = mockCapacityScheduler();
     when(rm.getResourceScheduler()).thenReturn(rs);
     when(rm.getRMContext()).thenReturn(rmContext);
