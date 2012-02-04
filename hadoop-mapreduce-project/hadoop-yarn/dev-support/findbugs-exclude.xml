@@ -161,6 +161,12 @@
     </Or>
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <!-- Inconsistent sync warning - minimumAllocation is only initialized once and never changed -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler" />
+    <Field name="minimumAllocation" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
 
   <!-- Don't care if putIfAbsent value is ignored -->
   <Match>

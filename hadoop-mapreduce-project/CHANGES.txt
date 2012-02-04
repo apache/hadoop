@@ -657,6 +657,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3775. Change MiniYarnCluster to escape special chars in testname.
     (Hitesh Shah via mahadev)
 
+    MAPREDUCE-3765. FifoScheduler does not respect yarn.scheduler.fifo.minimum-
+    allocation-mb setting (Hitesh Shah via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
