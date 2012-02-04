@@ -644,6 +644,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3791. can't build site in hadoop-yarn-server-common.
     (mahadev)
 
+    MAPREDUCE-3723. TestAMWebServicesJobs & TestHSWebServicesJobs 
+    incorrectly asserting tests (Bhallamudi Venkata Siva Kamesh
+    via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
