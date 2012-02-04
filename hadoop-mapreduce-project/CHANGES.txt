@@ -648,6 +648,9 @@ Release 0.23.1 - Unreleased
     incorrectly asserting tests (Bhallamudi Venkata Siva Kamesh
     via mahadev)
 
+    MAPREDUCE-3795. "job -status" command line output is malformed.
+    (vinodkv via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
