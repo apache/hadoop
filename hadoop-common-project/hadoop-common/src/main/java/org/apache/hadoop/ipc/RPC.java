@@ -40,6 +40,7 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolInfoService;
 import org.apache.hadoop.net.NetUtils;
@@ -530,9 +531,24 @@ public class RPC {
    * Returns the server address for a given proxy.
    */
   public static InetSocketAddress getServerAddress(Object proxy) {
+    return getConnectionIdForProxy(proxy).getAddress();
+  }
+
+  /**
+   * Return the connection ID of the given object. If the provided object is in
+   * fact a protocol translator, we'll get the connection ID of the underlying
+   * proxy object.
+   * 
+   * @param proxy the proxy object to get the connection ID of.
+   * @return the connection ID for the provided proxy object.
+   */
+  public static ConnectionId getConnectionIdForProxy(Object proxy) {
+    if (proxy instanceof ProtocolTranslator) {
+      proxy = ((ProtocolTranslator)proxy).getUnderlyingProxyObject();
+    }
     RpcInvocationHandler inv = (RpcInvocationHandler) Proxy
         .getInvocationHandler(proxy);
-    return inv.getConnectionId().getAddress();
+    return inv.getConnectionId();
   }
    
   /**

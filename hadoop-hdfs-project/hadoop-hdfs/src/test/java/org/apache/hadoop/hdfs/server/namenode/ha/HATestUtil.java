@@ -175,6 +175,7 @@ public abstract class HATestUtil {
         nameNodeId1 + "," + nameNodeId2);
     conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
         ConfiguredFailoverProxyProvider.class.getName());
+    conf.set("fs.defaultFS", "hdfs://" + logicalName);
   }
   
 

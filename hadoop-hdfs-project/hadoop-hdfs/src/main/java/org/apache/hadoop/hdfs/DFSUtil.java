@@ -71,7 +71,7 @@ import com.google.protobuf.BlockingService;
 
 @InterfaceAudience.Private
 public class DFSUtil {
-  private static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
+  public static final Log LOG = LogFactory.getLog(DFSUtil.class.getName());
   
   private DFSUtil() { /* Hidden constructor */ }
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {

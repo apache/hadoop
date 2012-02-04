@@ -32,11 +32,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -204,8 +206,9 @@ public class DFSck extends Configured implements Tool {
    * Derive the namenode http address from the current file system,
    * either default or as set by "-fs" in the generic options.
    * @return Returns http address or null if failure.
+   * @throws IOException if we can't determine the active NN address
    */
-  private String getCurrentNamenodeAddress() {
+  private String getCurrentNamenodeAddress() throws IOException {
     //String nnAddress = null;
     Configuration conf = getConf();
 
@@ -222,16 +225,21 @@ public class DFSck extends Configured implements Tool {
       System.err.println("FileSystem is " + fs.getUri());
       return null;
     }
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
-
-    // Derive the nameservice ID from the filesystem URI.
-    // The URI may have been provided by a human, and the server name may be
-    // aliased, so compare InetSocketAddresses instead of URI strings, and
-    // test against both possible variants of RPC address.
-    InetSocketAddress namenode = 
-      NameNode.getAddress(dfs.getUri().getAuthority());
     
-    return DFSUtil.getInfoServer(namenode, conf, true);
+    // force client address resolution.
+    fs.exists(new Path("/"));
+    
+    // Derive the nameservice ID from the filesystem connection. The URI may
+    // have been provided by a human, the server name may be aliased, or there
+    // may be multiple possible actual addresses (e.g. in an HA setup) so
+    // compare InetSocketAddresses instead of URI strings, and test against both
+    // possible configurations of RPC address (DFS_NAMENODE_RPC_ADDRESS_KEY and
+    // DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY).
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DFSClient dfsClient = dfs.getClient();
+    InetSocketAddress addr = RPC.getServerAddress(dfsClient.getNamenode());
+    
+    return DFSUtil.getInfoServer(addr, conf, true);
   }
 
   private int doWork(final String[] args) throws IOException {
