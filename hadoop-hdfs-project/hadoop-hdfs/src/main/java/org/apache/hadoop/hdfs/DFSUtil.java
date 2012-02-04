@@ -655,7 +655,6 @@ public class DFSUtil {
    */
   public static String getInfoServer(
       InetSocketAddress namenodeAddr, Configuration conf, boolean httpsAddress) {
-    String httpAddress = null;
     boolean securityOn = UserGroupInformation.isSecurityEnabled();
     String httpAddressKey = (securityOn && httpsAddress) ? 
         DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
@@ -957,16 +956,23 @@ public class DFSUtil {
       
       Collection<String> nnIds = getNameNodeIds(conf, nsId);
       for (String nnId : emptyAsSingletonNull(nnIds)) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(String.format("addressKey: %s nsId: %s nnId: %s",
+              addressKey, nsId, nnId));
+        }
         if (knownNNId != null && !knownNNId.equals(nnId)) {
           continue;
         }
         String key = addKeySuffixes(addressKey, nsId, nnId);
         String addr = conf.get(key);
+        if (addr == null) {
+          continue;
+        }
         InetSocketAddress s = null;
         try {
           s = NetUtils.createSocketAddr(addr);
         } catch (Exception e) {
-          LOG.warn("Exception in creating socket address", e);
+          LOG.warn("Exception in creating socket address " + addr, e);
           continue;
         }
         if (!s.isUnresolved() && matcher.match(s)) {
