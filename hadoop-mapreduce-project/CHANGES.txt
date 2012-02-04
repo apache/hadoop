@@ -651,6 +651,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3795. "job -status" command line output is malformed.
     (vinodkv via mahadev)
 
+    MAPREDUCE-3759. ClassCastException thrown in -list-active-trackers when 
+    there are a few unhealthy nodes (vinodkv via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
