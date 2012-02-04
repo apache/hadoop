@@ -166,6 +166,12 @@ public class RMWebServices {
         if (!(nodeInfo.getState().equalsIgnoreCase(filterState))) {
           continue;
         }
+      } else {
+        // No filter. User is asking for all nodes. Make sure you skip the
+        // unhealthy nodes.
+        if (ni.getState() == RMNodeState.UNHEALTHY) {
+          continue;
+        }
       }
       if ((healthState != null) && (!healthState.isEmpty())) {
         LOG.info("heatlh state is : " + healthState);

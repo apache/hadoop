@@ -632,6 +632,9 @@ Release 0.23.1 - Unreleased
     output is recovered and thus reduce the unnecessarily bloated recovery
     time. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3760. Changed active nodes list to not contain unhealthy nodes
+    on the webUI and metrics. (vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
