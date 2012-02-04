@@ -24,38 +24,22 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.NodeReport;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 public class TestFifoScheduler {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
   
-  private ResourceManager resourceManager = null;
-  
-  @Before
-  public void setUp() throws Exception {
-    Store store = StoreFactory.getStore(new Configuration());
-    resourceManager = new ResourceManager(store);
-    resourceManager.init(new Configuration());
-  }
-
-  @After
-  public void tearDown() throws Exception {
-  }
+  private final int GB = 1024;
   
   @Test
   public void test() throws Exception {
@@ -63,7 +47,6 @@ public class TestFifoScheduler {
     rootLogger.setLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
-    int GB = 1024;
     MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
     MockNM nm2 = rm.registerNode("h2:5678", 4 * GB);
 
@@ -146,8 +129,48 @@ public class TestFifoScheduler {
     rm.stop();
   }
 
+  private void testMinimumAllocation(YarnConfiguration conf)
+      throws Exception {
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    // Register node1
+    MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
+
+    // Submit an application
+    RMApp app1 = rm.submitApp(256);
+
+    // kick the scheduling
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+    SchedulerNodeReport report_nm1 = rm.getResourceScheduler().getNodeReport(
+        nm1.getNodeId());
+
+    int checkAlloc =
+        conf.getInt("yarn.scheduler.fifo.minimum-allocation-mb", GB);
+    Assert.assertEquals(checkAlloc, report_nm1.getUsedResource().getMemory());
+
+    rm.stop();
+  }
+
+  @Test
+  public void testDefaultMinimumAllocation() throws Exception {
+    testMinimumAllocation(new YarnConfiguration());
+  }
+
+  @Test
+  public void testNonDefaultMinimumAllocation() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt("yarn.scheduler.fifo.minimum-allocation-mb", 512);
+    testMinimumAllocation(conf);
+  }
+
   public static void main(String[] args) throws Exception {
     TestFifoScheduler t = new TestFifoScheduler();
     t.test();
+    t.testDefaultMinimumAllocation();
+    t.testNonDefaultMinimumAllocation();
   }
 }
