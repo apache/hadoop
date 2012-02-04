@@ -641,6 +641,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3803. Fix broken build of raid contrib due to HDFS-2864.
     (Ravi Prakash via suresh)
 
+    MAPREDUCE-3791. can't build site in hadoop-yarn-server-common.
+    (mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
