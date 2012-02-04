@@ -81,11 +81,11 @@ public class MiniYARNCluster extends CompositeService {
    */
   public MiniYARNCluster(String testName, int noOfNodeManagers,
                          int numLocalDirs, int numLogDirs) {
-
-    super(testName);
+    super(testName.replace("$", ""));
     this.numLocalDirs = numLocalDirs;
     this.numLogDirs = numLogDirs;
-    this.testWorkDir = new File("target", testName);
+    this.testWorkDir = new File("target",
+        testName.replace("$", ""));
     try {
       FileContext.getLocalFSFileContext().delete(
           new Path(testWorkDir.getAbsolutePath()), true);
