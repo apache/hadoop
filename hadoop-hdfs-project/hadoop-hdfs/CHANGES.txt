@@ -211,6 +211,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2835. Fix findbugs and javadoc issue with GetConf.java.
     (suresh)
 
+    HDFS-2889. getNumCurrentReplicas is package private but should be public on
+    0.23 (see HDFS-2408). (Gregory Chanan via atm)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
