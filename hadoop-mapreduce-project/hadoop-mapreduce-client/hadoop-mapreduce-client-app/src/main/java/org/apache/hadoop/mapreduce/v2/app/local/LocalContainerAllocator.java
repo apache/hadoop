@@ -103,6 +103,7 @@ public class LocalContainerAllocator extends RMCommunicator
       // This can happen when the connection to the RM has gone down. Keep
       // re-trying until the retryInterval has expired.
       if (System.currentTimeMillis() - retrystartTime >= retryInterval) {
+        LOG.error("Could not contact RM after " + retryInterval + " milliseconds.");
         eventHandler.handle(new JobEvent(this.getJob().getID(),
                                          JobEventType.INTERNAL_ERROR));
         throw new YarnException("Could not contact RM after " +

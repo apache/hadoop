@@ -34,7 +34,7 @@ public class TestTaskCommit extends HadoopTestCase {
 
   static class CommitterWithCommitFail extends FileOutputCommitter {
     public void commitTask(TaskAttemptContext context) throws IOException {
-      Path taskOutputPath = getTempTaskOutputPath(context);
+      Path taskOutputPath = getTaskAttemptPath(context);
       TaskAttemptID attemptId = context.getTaskAttemptID();
       JobConf job = context.getJobConf();
       if (taskOutputPath != null) {

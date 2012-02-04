@@ -628,6 +628,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong 
     jobtoken file (tucu)
 
+    MAPREDUCE-3711. Fixed MR AM recovery so that only single selected task
+    output is recovered and thus reduce the unnecessarily bloated recovery
+    time. (Robert Joseph Evans via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
