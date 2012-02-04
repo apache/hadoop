@@ -152,7 +152,7 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
 
   @Override
   public boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation) {
-    return false;
+    return true;
   }
   
   @Override

@@ -328,9 +328,6 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   @Override
   public
       boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation) {
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return true;
-    }
     Map<JobACL, AccessControlList> jobACLs = jobInfo.getJobACLs();
     AccessControlList jobACL = jobACLs.get(jobOperation);
     return aclsMgr.checkAccess(callerUGI, jobOperation, 

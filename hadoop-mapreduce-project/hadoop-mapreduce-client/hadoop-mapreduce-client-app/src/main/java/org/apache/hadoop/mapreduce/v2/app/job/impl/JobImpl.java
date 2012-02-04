@@ -431,9 +431,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public boolean checkAccess(UserGroupInformation callerUGI, 
       JobACL jobOperation) {
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return true;
-    }
     AccessControlList jobACL = jobACLs.get(jobOperation);
     return aclsManager.checkAccess(callerUGI, jobOperation, username, jobACL);
   }

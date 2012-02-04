@@ -635,6 +635,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3760. Changed active nodes list to not contain unhealthy nodes
     on the webUI and metrics. (vinodkv)
 
+    MAPREDUCE-3417. Fixed job-access-controls to work with MR AM and
+    JobHistoryServer web-apps. (Jonathan Eagles via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
