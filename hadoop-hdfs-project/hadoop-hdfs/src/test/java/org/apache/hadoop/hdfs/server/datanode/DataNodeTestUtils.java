@@ -22,6 +22,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 
 /**
@@ -39,7 +41,18 @@ public class DataNodeTestUtils {
     return dn.getDNRegistrationForBP(bpid);
   }
 
-  public static File getBlockFile(FSDataset fsdataset, String bpid, long bid) {
-    return fsdataset.getFile(bpid, bid);
+  public static File getFile(DataNode dn, String bpid, long bid) {
+    return ((FSDataset)dn.getFSDataset()).getFile(bpid, bid);
+  }
+
+  public static File getBlockFile(DataNode dn, String bpid, Block b
+      ) throws IOException {
+    return ((FSDataset)dn.getFSDataset()).getBlockFile(bpid, b);
+  }
+
+  public static boolean unlinkBlock(DataNode dn, ExtendedBlock block, int numLinks
+      ) throws IOException {
+    ReplicaInfo info = ((FSDataset)dn.getFSDataset()).getReplicaInfo(block);
+    return info.unlinkBlock(numLinks);
   }
 }

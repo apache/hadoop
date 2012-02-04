@@ -88,10 +88,7 @@ import java.io.IOException;
  * RunningJob job = jc.submitJob(conf);
  * ...
  * </pre>
- * @deprecated 
- * Use {@link org.apache.hadoop.mapreduce.lib.chain.ChainMapper} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ChainMapper implements Mapper {

@@ -72,12 +72,20 @@ public class TestAbandonBlock {
 
     // Now abandon the last block
     DFSClient dfsclient = DFSClientAdapter.getDFSClient((DistributedFileSystem)fs);
-    LocatedBlocks blocks = dfsclient.getNamenode().getBlockLocations(src, 0, 1);
+    LocatedBlocks blocks =
+      dfsclient.getNamenode().getBlockLocations(src, 0, Integer.MAX_VALUE);
+    int orginalNumBlocks = blocks.locatedBlockCount();
     LocatedBlock b = blocks.getLastLocatedBlock();
     dfsclient.getNamenode().abandonBlock(b.getBlock(), src, dfsclient.clientName);
 
     // And close the file
     fout.close();
+
+    // Close cluster and check the block has been abandoned after restart
+    cluster.restartNameNode();
+    blocks = dfsclient.getNamenode().getBlockLocations(src, 0, Integer.MAX_VALUE);
+    assert orginalNumBlocks == blocks.locatedBlockCount() + 1 :
+      "Blocks " + b + " has not been abandoned.";
   }
 
   @Test

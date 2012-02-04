@@ -24,11 +24,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * This class implements a value aggregator that sums up a sequence of double
  * values.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.DoubleValueSum} instead 
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class DoubleValueSum 

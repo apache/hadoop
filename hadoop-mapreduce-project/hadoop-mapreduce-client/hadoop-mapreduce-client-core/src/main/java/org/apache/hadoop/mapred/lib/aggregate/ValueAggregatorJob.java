@@ -78,11 +78,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
  * framework. The function takes the following parameters: input directory spec
  * input format (text or sequence file) output directory a file specifying the
  * user plugin class
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorJob} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ValueAggregatorJob {

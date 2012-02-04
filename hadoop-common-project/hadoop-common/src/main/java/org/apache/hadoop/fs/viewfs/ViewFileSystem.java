@@ -168,8 +168,7 @@ public class ViewFileSystem extends FileSystem {
         protected
         FileSystem getTargetFileSystem(final URI uri)
           throws URISyntaxException, IOException {
-            return new ChRootedFileSystem(FileSystem.get(uri, config), 
-                new Path(uri.getPath()));
+            return new ChRootedFileSystem(uri, config);
         }
 
         @Override
@@ -464,8 +463,11 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public void setVerifyChecksum(final boolean verifyChecksum) { 
-    // This is a file system level operations, however ViewFileSystem 
-    // points to many file systems. Noop for ViewFileSystem.
+    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
+        fsState.getMountPoints();
+    for (InodeTree.MountPoint<FileSystem> mount : mountPoints) {
+      mount.target.targetFileSystem.setVerifyChecksum(verifyChecksum);
+    }
   }
   
   public MountPoint[] getMountPoints() {

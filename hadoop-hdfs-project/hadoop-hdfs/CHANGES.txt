@@ -208,6 +208,12 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2397. Undeprecate SecondaryNameNode (eli)
 
+    HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
+    information. (Hitesh Shah via jitendra)
+
+    HDFS-2784. Update hftp and hdfs for host-based token support.
+    (Kihwal Lee via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -230,6 +236,8 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2864. Remove some redundant methods and the constant METADATA_VERSION
     from FSDataset.  (szetszwo)
+
+    HDFS-2879. Change FSDataset to package private.  (szetszwo)
 
   BUG FIXES
 
@@ -312,6 +320,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2835. Fix findbugs and javadoc issue with GetConf.java.
     (suresh)
+
+    HDFS-2889. getNumCurrentReplicas is package private but should be public on
+    0.23 (see HDFS-2408). (Gregory Chanan via atm)
 
 Release 0.23.0 - 2011-11-01 
 
@@ -1654,7 +1665,12 @@ Release 0.22.1 - Unreleased
 
   OPTIMIZATIONS
 
+    HDFS-2718. Optimize OP_ADD in edits loading. (shv)
+
   BUG FIXES
+
+   HDFS-2877. If locking of a storage dir fails, it will remove the other
+   NN's lock file on exit. (todd)
 
 Release 0.22.0 - 2011-11-29
 

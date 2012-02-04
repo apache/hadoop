@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1164,9 +1163,9 @@ public class TestDFSShell extends TestCase {
     String poolId = cluster.getNamesystem().getBlockPoolId();
     Iterable<Block>[] blocks = cluster.getAllBlockReports(poolId);
     for(int i = 0; i < blocks.length; i++) {
-      FSDataset ds = (FSDataset)datanodes.get(i).getFSDataset();
+      DataNode dn = datanodes.get(i);
       for(Block b : blocks[i]) {
-        files.add(DataNodeTestUtils.getBlockFile(ds, poolId, b.getBlockId()));
+        files.add(DataNodeTestUtils.getFile(dn, poolId, b.getBlockId()));
       }        
     }
     return files;

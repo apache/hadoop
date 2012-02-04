@@ -79,7 +79,17 @@ public class TokenCache {
     }
     obtainTokensForNamenodesInternal(credentials, ps, conf);
   }
-    
+
+  /**
+   * Remove jobtoken referrals which don't make sense in the context
+   * of the task execution.
+   *
+   * @param conf
+   */
+  public static void cleanUpTokenReferral(Configuration conf) {
+    conf.unset(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
+  }
+
   static void obtainTokensForNamenodesInternal(Credentials credentials,
       Path[] ps, Configuration conf) throws IOException {
     for(Path p: ps) {

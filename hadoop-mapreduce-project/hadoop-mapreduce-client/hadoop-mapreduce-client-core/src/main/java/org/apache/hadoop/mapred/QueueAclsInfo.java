@@ -20,9 +20,7 @@ package org.apache.hadoop.mapred;
 /**
  *  Class to encapsulate Queue ACLs for a particular
  *  user.
- * @deprecated Use {@link org.apache.hadoop.mapreduce.QueueAclsInfo} instead
  */
-@Deprecated
 class QueueAclsInfo extends org.apache.hadoop.mapreduce.QueueAclsInfo {
 
   /**

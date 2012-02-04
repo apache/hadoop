@@ -34,12 +34,7 @@ import org.apache.hadoop.io.compress.SplittableCompressionCodec;
  * Either linefeed or carriage-return are used to signal end of line. Each line
  * is divided into key and value parts by a separator byte. If no such a byte
  * exists, the key will be the entire line and value will be empty.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.KeyValueTextInputFormat} 
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class KeyValueTextInputFormat extends FileInputFormat<Text, Text>

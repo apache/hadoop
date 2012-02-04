@@ -173,6 +173,13 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3774. Moved yarn-default.xml to hadoop-yarn-common from
     hadoop-server-common. (Mahadev Konar via vinodkv)
 
+    MAPREDUCE-3771. Un-deprecated the old mapred apis, port of MAPREDUCE-1735.
+    (acmurthy)
+
+    MAPREDUCE-3784. Fixed CapacityScheduler so that maxActiveApplications and
+    maxActiveApplicationsPerUser per queue are not too low for small
+    clusters. (Arun C Murthy via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3567. Extraneous JobConf objects in AM heap. (Vinod Kumar
@@ -620,6 +627,37 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3427. Fix streaming unit tests broken after mavenization.
     (Hitesh Shah via acmurthy) 
+
+    MAPREDUCE-3640. Allow AMRecovery to work with partial JobHistory files.
+    (Arun C Murthy via sseth)
+
+    MAPREDUCE-3752. Modified application limits to include queue max-capacities
+    besides the usual user limits. (Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3744. Fix the yarn logs command line. Improve error messages for
+    mapred job -logs. (Jason Lowe via sseth)
+
+    MAPREDUCE-3780. Fixed a bug where applications killed before getting
+    activated were not getting cleaned up properly. (Hitesh Shah via acmurthy)
+
+    MAPREDUCE-3708. Metrics: Incorrect Apps Submitted Count (Bhallamudi via 
+    mahadev)
+
+    MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong 
+    jobtoken file (tucu)
+
+    MAPREDUCE-3711. Fixed MR AM recovery so that only single selected task
+    output is recovered and thus reduce the unnecessarily bloated recovery
+    time. (Robert Joseph Evans via vinodkv)
+
+    MAPREDUCE-3760. Changed active nodes list to not contain unhealthy nodes
+    on the webUI and metrics. (vinodkv)
+
+    MAPREDUCE-3417. Fixed job-access-controls to work with MR AM and
+    JobHistoryServer web-apps. (Jonathan Eagles via vinodkv)
+
+    MAPREDUCE-3803. Fix broken build of raid contrib due to HDFS-2864.
+    (Ravi Prakash via suresh)
 
 Release 0.23.0 - 2011-11-01 
 

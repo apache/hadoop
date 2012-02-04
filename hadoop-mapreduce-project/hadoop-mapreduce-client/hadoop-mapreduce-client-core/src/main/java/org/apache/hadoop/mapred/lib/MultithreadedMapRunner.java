@@ -50,9 +50,7 @@ import java.util.concurrent.*;
  * <code>mapred.map.multithreadedrunner.threads</code> property, its default
  * value is 10 threads.
  * <p>
- * @deprecated Use {@link MultithreadedMapper} instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MultithreadedMapRunner<K1, V1, K2, V2>

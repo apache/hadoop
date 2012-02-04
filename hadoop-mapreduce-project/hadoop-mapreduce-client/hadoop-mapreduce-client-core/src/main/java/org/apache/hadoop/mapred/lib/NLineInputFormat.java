@@ -52,10 +52,7 @@ import org.apache.hadoop.mapred.Reporter;
  * a value to one map task, and key is the offset.
  * i.e. (k,v) is (LongWritable, Text).
  * The location hints will span the whole mapred cluster.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.NLineInputFormat} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class NLineInputFormat extends FileInputFormat<LongWritable, Text> 

@@ -187,31 +187,53 @@ public class FSEditLogLoader {
                   " clientMachine " + addCloseOp.clientMachine);
             }
 
-            fsDir.unprotectedDelete(addCloseOp.path, addCloseOp.mtime);
+            // There are four cases here:
+            // 1. OP_ADD to create a new file
+            // 2. OP_ADD to update file blocks
+            // 3. OP_ADD to open file for append
+            // 4. OP_CLOSE to close the file
 
-            // add to the file tree
-            INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
-                addCloseOp.path, permissions,
-                blocks, replication,
-                addCloseOp.mtime, addCloseOp.atime, blockSize);
-            if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
-              //
-              // Replace current node with a INodeUnderConstruction.
-              // Recreate in-memory lease record.
-              //
-              INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                        node.getLocalNameBytes(),
-                                        node.getReplication(),
-                                        node.getModificationTime(),
-                                        node.getPreferredBlockSize(),
-                                        node.getBlocks(),
-                                        node.getPermissionStatus(),
-                                        addCloseOp.clientName,
-                                        addCloseOp.clientMachine,
-                                        null);
-              fsDir.replaceNode(addCloseOp.path, node, cons);
-              fsNamesys.leaseManager.addLease(cons.getClientName(),
-                                              addCloseOp.path);
+            // See if the file already exists
+            INodeFile oldFile = fsDir.getFileINode(addCloseOp.path);
+            if (oldFile == null) { // OP_ADD for a new file
+              assert addCloseOp.opCode == FSEditLogOpCodes.OP_ADD : 
+                "Expected opcode OP_ADD, but got " + addCloseOp.opCode;
+              fsDir.unprotectedAddFile(
+                  addCloseOp.path, permissions, blocks, replication,
+                  addCloseOp.mtime, addCloseOp.atime, blockSize,
+                  addCloseOp.clientName, addCloseOp.clientMachine);
+            } else {
+              fsDir.updateFile(oldFile,
+                  addCloseOp.path, permissions, blocks, replication,
+                  addCloseOp.mtime, addCloseOp.atime, blockSize);
+              if(addCloseOp.opCode == FSEditLogOpCodes.OP_CLOSE) {  // OP_CLOSE
+                assert oldFile.isUnderConstruction() : 
+                  "File is not under construction: " + addCloseOp.path;
+                fsNamesys.getBlockManager().completeBlock(
+                    oldFile, blocks.length-1, true);
+                INodeFile newFile =
+                  ((INodeFileUnderConstruction)oldFile).convertToInodeFile();
+                fsDir.replaceNode(addCloseOp.path, oldFile, newFile);
+              } else if(! oldFile.isUnderConstruction()) {  // OP_ADD for append
+                INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                    oldFile.getLocalNameBytes(),
+                    oldFile.getReplication(), 
+                    oldFile.getModificationTime(),
+                    oldFile.getPreferredBlockSize(),
+                    oldFile.getBlocks(),
+                    oldFile.getPermissionStatus(),
+                    addCloseOp.clientName,
+                    addCloseOp.clientMachine,
+                    null);
+                fsDir.replaceNode(addCloseOp.path, oldFile, cons);
+              }
+            }
+            // Update file lease
+            if(addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
+              fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
+            } else {  // Ops.OP_CLOSE
+              fsNamesys.leaseManager.removeLease(
+                  ((INodeFileUnderConstruction)oldFile).getClientName(), addCloseOp.path);
             }
             break;
           }

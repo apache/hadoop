@@ -119,9 +119,7 @@ import org.apache.hadoop.mapreduce.Job;
  * @see org.apache.hadoop.mapred.JobConf
  * @see org.apache.hadoop.mapred.JobClient
  * @see org.apache.hadoop.mapreduce.Job
- * @deprecated Use methods on {@link Job}.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class DistributedCache extends

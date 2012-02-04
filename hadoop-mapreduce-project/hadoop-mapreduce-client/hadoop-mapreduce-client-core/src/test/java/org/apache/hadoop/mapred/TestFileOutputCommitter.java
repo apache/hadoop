@@ -105,10 +105,9 @@ public class TestFileOutputCommitter extends TestCase {
 
     // do commit
     committer.commitTask(tContext);
-    Path jobTempDir1 = new Path(outDir, 
-        FileOutputCommitter.getJobAttemptBaseDirName(
-            conf.getInt(MRConstants.APPLICATION_ATTEMPT_ID, 0)));
-    assertTrue((new File(jobTempDir1.toString()).exists()));
+    Path jobTempDir1 = committer.getCommittedTaskPath(tContext);
+    File jtd1 = new File(jobTempDir1.toUri().getPath());
+    assertTrue(jtd1.exists());
     validateContent(jobTempDir1);        
     
     //now while running the second app attempt, 
@@ -119,14 +118,12 @@ public class TestFileOutputCommitter extends TestCase {
     JobContext jContext2 = new JobContextImpl(conf2, taskID.getJobID());
     TaskAttemptContext tContext2 = new TaskAttemptContextImpl(conf2, taskID);
     FileOutputCommitter committer2 = new FileOutputCommitter();
-    committer.setupJob(jContext2);
-    Path jobTempDir2 = new Path(outDir, 
-        FileOutputCommitter.getJobAttemptBaseDirName(
-            conf2.getInt(MRConstants.APPLICATION_ATTEMPT_ID, 0)));
-    assertTrue((new File(jobTempDir2.toString()).exists()));
+    committer2.setupJob(jContext2);
+    Path jobTempDir2 = committer2.getCommittedTaskPath(tContext2);
     
-    tContext2.getConfiguration().setInt(MRConstants.APPLICATION_ATTEMPT_ID, 2);
     committer2.recoverTask(tContext2);
+    File jtd2 = new File(jobTempDir2.toUri().getPath());
+    assertTrue(jtd2.exists());
     validateContent(jobTempDir2);
     
     committer2.commitJob(jContext2);
@@ -135,7 +132,8 @@ public class TestFileOutputCommitter extends TestCase {
   }
 
   private void validateContent(Path dir) throws IOException {
-    File expectedFile = new File(new Path(dir, partFile).toString());
+    File fdir = new File(dir.toUri().getPath());
+    File expectedFile = new File(fdir, partFile);
     StringBuffer expectedOutput = new StringBuffer();
     expectedOutput.append(key1).append('\t').append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
@@ -244,21 +242,17 @@ public class TestFileOutputCommitter extends TestCase {
 
     // do abort
     committer.abortTask(tContext);
-    FileSystem outputFileSystem = outDir.getFileSystem(conf);
-    Path workPath = new Path(outDir,
-        committer.getTaskAttemptBaseDirName(tContext))
-        .makeQualified(outputFileSystem);
-    File expectedFile = new File(new Path(workPath, partFile)
-        .toString());
+    File out = new File(outDir.toUri().getPath());
+    Path workPath = committer.getWorkPath(tContext, outDir);
+    File wp = new File(workPath.toUri().getPath());
+    File expectedFile = new File(wp, partFile);
     assertFalse("task temp dir still exists", expectedFile.exists());
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
-    expectedFile = new File(new Path(outDir, FileOutputCommitter.TEMP_DIR_NAME)
-        .toString());
+    expectedFile = new File(out, FileOutputCommitter.TEMP_DIR_NAME);
     assertFalse("job temp dir still exists", expectedFile.exists());
-    assertEquals("Output directory not empty", 0, new File(outDir.toString())
-        .listFiles().length);
-    FileUtil.fullyDelete(new File(outDir.toString()));
+    assertEquals("Output directory not empty", 0, out.listFiles().length);
+    FileUtil.fullyDelete(out);
   }
 
   public static class FakeFileSystem extends RawLocalFileSystem {

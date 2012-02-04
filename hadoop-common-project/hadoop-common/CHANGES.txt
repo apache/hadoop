@@ -78,6 +78,9 @@ Release 0.23.1 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-8015. ChRootFileSystem should extend FilterFileSystem 
+    (Daryn Sharp via bobby)
+
     HADOOP-7801. HADOOP_PREFIX cannot be overriden. (Bruno Mahé via tomwhite)
 
     HADOOP-7802. Hadoop scripts unconditionally source
@@ -158,6 +161,14 @@ Release 0.23.1 - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES
+   HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
+   (Daryn Sharp via bobby)
+
+   HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
+   (Jon Eagles via bobby)
+
+   HADOOP-8001  ChecksumFileSystem's rename doesn't correctly handle checksum
+   files. (Daryn Sharp via bobby)
 
    HADOOP-8006  TestFSInputChecker is failing in trunk.
    (Daryn Sharp via bobby)
@@ -257,6 +268,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7999. "hadoop archive" fails with ClassNotFoundException.
    (Jason Lowe via mahadev)
+
+   HADOOP-8012. hadoop-daemon.sh and yarn-daemon.sh are trying to mkdir
+   and chown log/pid dirs which can fail. (Roman Shaposhnik via eli)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -24,8 +24,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -52,9 +55,13 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 @InterfaceStability.Unstable
 public class JobHistoryParser {
 
+  private static final Log LOG = LogFactory.getLog(JobHistoryParser.class);
+  
   private final FSDataInputStream in;
-  JobInfo info = null;
+  private JobInfo info = null;
 
+  private IOException parseException = null;
+  
   /**
    * Create a job history parser for the given history file using the 
    * given file system
@@ -91,30 +98,58 @@ public class JobHistoryParser {
    * The first invocation will populate the object, subsequent calls
    * will return the already parsed object. 
    * The input stream is closed on return 
+   * 
+   * This api ignores partial records and stops parsing on encountering one.
+   * {@link #getParseException()} can be used to fetch the exception, if any.
+   * 
    * @return The populated jobInfo object
    * @throws IOException
+   * @see #getParseException()
    */
   public synchronized JobInfo parse() throws IOException {
+    return parse(new EventReader(in)); 
+  }
+
+  /**
+   * Only used for unit tests.
+   */
+  @Private
+  public synchronized JobInfo parse(EventReader reader) throws IOException {
 
     if (info != null) {
       return info;
     }
 
-    EventReader reader = new EventReader(in);
-
-    HistoryEvent event;
     info = new JobInfo();
+
+    int eventCtr = 0;
+    HistoryEvent event;
     try {
       while ((event = reader.getNextEvent()) != null) {
         handleEvent(event);
-      }
+        ++eventCtr;
+      } 
+    } catch (IOException ioe) {
+      LOG.info("Caught exception parsing history file after " + eventCtr + 
+          " events", ioe);
+      parseException = ioe;
     } finally {
       in.close();
     }
     return info;
   }
   
-  private void handleEvent(HistoryEvent event) throws IOException { 
+  /**
+   * Get the parse exception, if any.
+   * 
+   * @return the parse exception, if any
+   * @see #parse()
+   */
+  public synchronized IOException getParseException() {
+    return parseException;
+  }
+  
+  private void handleEvent(HistoryEvent event)  { 
     EventType type = event.getEventType();
 
     switch (type) {

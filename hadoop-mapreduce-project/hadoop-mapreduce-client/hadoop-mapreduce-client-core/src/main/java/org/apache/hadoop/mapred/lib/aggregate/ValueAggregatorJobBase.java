@@ -33,11 +33,7 @@ import org.apache.hadoop.mapred.Reducer;
 /**
  * This abstract class implements some common functionalities of the
  * the generic mapper, reducer and combiner classes of Aggregate.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorJobBase}
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class ValueAggregatorJobBase<K1 extends WritableComparable,

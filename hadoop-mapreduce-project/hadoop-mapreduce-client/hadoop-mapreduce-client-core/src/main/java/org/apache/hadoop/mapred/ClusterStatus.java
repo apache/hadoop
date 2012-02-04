@@ -62,9 +62,7 @@ import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
  * {@link JobClient#getClusterStatus()}.</p>
  * 
  * @see JobClient
- * @deprecated  Use {@link ClusterMetrics} or {@link TaskTrackerInfo} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ClusterStatus implements Writable {

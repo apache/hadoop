@@ -38,7 +38,7 @@ public class ClusterMetrics {
   
   private static AtomicBoolean isInitialized = new AtomicBoolean(false);
   
-  @Metric("# of active NMs") MutableGaugeInt numNMs;
+  @Metric("# of active NMs") MutableGaugeInt numActiveNMs;
   @Metric("# of decommissioned NMs") MutableGaugeInt numDecommissionedNMs;
   @Metric("# of lost NMs") MutableGaugeInt numLostNMs;
   @Metric("# of unhealthy NMs") MutableGaugeInt numUnhealthyNMs;
@@ -74,7 +74,7 @@ public class ClusterMetrics {
   
   //Active Nodemanagers
   public int getNumActiveNMs() {
-    return numNMs.value();
+    return numActiveNMs.value();
   }
   
   //Decommisioned NMs
@@ -128,17 +128,12 @@ public class ClusterMetrics {
   public void decrNumRebootedNMs() {
     numRebootedNMs.decr();
   }
-  
-  public void removeNode(RMNodeEventType nodeEventType) {
-    numNMs.decr();
-    switch(nodeEventType){
-    case DECOMMISSION: incrDecommisionedNMs(); break;
-    case EXPIRE: incrNumLostNMs();break;
-    case REBOOTING: incrNumRebootedNMs();break;
-    }
+
+  public void incrNumActiveNodes() {
+    numActiveNMs.incr();
   }
-  
-  public void addNode() {
-    numNMs.incr();
+
+  public void decrNumActiveNodes() {
+    numActiveNMs.decr();
   }
 }

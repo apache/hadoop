@@ -95,7 +95,13 @@ public class AppController extends Controller implements AMParams {
    * Render the /job page
    */
   public void job() {
-    requireJob();
+    try {
+      requireJob();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     render(jobPage());
   }
 
@@ -110,7 +116,13 @@ public class AppController extends Controller implements AMParams {
    * Render the /jobcounters page
    */
   public void jobCounters() {
-    requireJob();
+    try {
+      requireJob();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     if (app.getJob() != null) {
       setTitle(join("Counters for ", $(JOB_ID)));
     }
@@ -121,7 +133,13 @@ public class AppController extends Controller implements AMParams {
    * Display a page showing a task's counters
    */
   public void taskCounters() {
-    requireTask();
+    try {
+      requireTask();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     if (app.getTask() != null) {
       setTitle(StringHelper.join("Counters for ", $(TASK_ID)));
     }
@@ -140,7 +158,13 @@ public class AppController extends Controller implements AMParams {
    * @throws IOException on any error.
    */
   public void singleJobCounter() throws IOException{
-    requireJob();
+    try {
+      requireJob();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     set(COUNTER_GROUP, URLDecoder.decode($(COUNTER_GROUP), "UTF-8"));
     set(COUNTER_NAME, URLDecoder.decode($(COUNTER_NAME), "UTF-8"));
     if (app.getJob() != null) {
@@ -155,7 +179,13 @@ public class AppController extends Controller implements AMParams {
    * @throws IOException on any error.
    */
   public void singleTaskCounter() throws IOException{
-    requireTask();
+    try {
+      requireTask();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     set(COUNTER_GROUP, URLDecoder.decode($(COUNTER_GROUP), "UTF-8"));
     set(COUNTER_NAME, URLDecoder.decode($(COUNTER_NAME), "UTF-8"));
     if (app.getTask() != null) {
@@ -176,7 +206,13 @@ public class AppController extends Controller implements AMParams {
    * Render the /tasks page
    */
   public void tasks() {
-    requireJob();
+    try {
+      requireJob();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     if (app.getJob() != null) {
       try {
         String tt = $(TASK_TYPE);
@@ -201,7 +237,13 @@ public class AppController extends Controller implements AMParams {
    * Render the /task page
    */
   public void task() {
-    requireTask();
+    try {
+      requireTask();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     if (app.getTask() != null) {
       setTitle(join("Attempts for ", $(TASK_ID)));
     }
@@ -219,7 +261,13 @@ public class AppController extends Controller implements AMParams {
    * Render the attempts page
    */
   public void attempts() {
-    requireJob();
+    try {
+      requireJob();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     if (app.getJob() != null) {
       try {
         String taskType = $(TASK_TYPE);
@@ -252,6 +300,13 @@ public class AppController extends Controller implements AMParams {
    */
   public void conf() {
     requireJob();
+    try {
+      requireJob();
+    }
+    catch (Exception e) {
+      renderText(e.getMessage());
+      return;
+    }
     render(confPage());
   }
 
@@ -280,41 +335,43 @@ public class AppController extends Controller implements AMParams {
   void accessDenied(String s) {
     setStatus(HttpServletResponse.SC_FORBIDDEN);
     setTitle(join("Access denied: ", s));
-    throw new RuntimeException("Access denied: " + s);
   }
 
   /**
    * check for job access.
    * @param job the job that is being accessed
+   * @return True if the requesting user has permission to view the job
    */
-  void checkAccess(Job job) {
+  boolean checkAccess(Job job) {
     UserGroupInformation callerUgi = UserGroupInformation.createRemoteUser(
         request().getRemoteUser());
-    if (!job.checkAccess(callerUgi, JobACL.VIEW_JOB)) {
-      accessDenied("User " + request().getRemoteUser() + " does not have " +
-          " permissions.");
-    }
+    return job.checkAccess(callerUgi, JobACL.VIEW_JOB);
   }
 
   /**
    * Ensure that a JOB_ID was passed into the page.
    */
   public void requireJob() {
-    try {
-      if ($(JOB_ID).isEmpty()) {
-        throw new RuntimeException("missing job ID");
-      }
-      JobId jobID = MRApps.toJobID($(JOB_ID));
-      app.setJob(app.context.getJob(jobID));
-      if (app.getJob() == null) {
-        notFound($(JOB_ID));
-      }
-      /* check for acl access */
-      Job job = app.context.getJob(jobID);
-      checkAccess(job);
-    } catch (Exception e) {
-      badRequest(e.getMessage() == null ? 
-          e.getClass().getName() : e.getMessage());
+    if ($(JOB_ID).isEmpty()) {
+      badRequest("missing job ID");
+      throw new RuntimeException("Bad Request: Missing job ID");
+    }
+
+    JobId jobID = MRApps.toJobID($(JOB_ID));
+    app.setJob(app.context.getJob(jobID));
+    if (app.getJob() == null) {
+      notFound($(JOB_ID));
+      throw new RuntimeException("Not Found: " + $(JOB_ID));
+    }
+
+    /* check for acl access */
+    Job job = app.context.getJob(jobID);
+    if (!checkAccess(job)) {
+      accessDenied("User " + request().getRemoteUser() + " does not have " +
+          " permission to view job " + $(JOB_ID));
+      throw new RuntimeException("Access denied: User " +
+          request().getRemoteUser() + " does not have permission to view job " +
+          $(JOB_ID));
     }
   }
 
@@ -322,24 +379,30 @@ public class AppController extends Controller implements AMParams {
    * Ensure that a TASK_ID was passed into the page.
    */
   public void requireTask() {
-    try {
-      if ($(TASK_ID).isEmpty()) {
-        throw new RuntimeException("missing task ID");
+    if ($(TASK_ID).isEmpty()) {
+      badRequest("missing task ID");
+      throw new RuntimeException("missing task ID");
+    }
+
+    TaskId taskID = MRApps.toTaskID($(TASK_ID));
+    Job job = app.context.getJob(taskID.getJobId());
+    app.setJob(job);
+    if (app.getJob() == null) {
+      notFound(MRApps.toString(taskID.getJobId()));
+      throw new RuntimeException("Not Found: " + $(JOB_ID));
+    } else {
+      app.setTask(app.getJob().getTask(taskID));
+      if (app.getTask() == null) {
+        notFound($(TASK_ID));
+        throw new RuntimeException("Not Found: " + $(TASK_ID));
       }
-      TaskId taskID = MRApps.toTaskID($(TASK_ID));
-      Job job = app.context.getJob(taskID.getJobId());
-      app.setJob(job);
-      if (app.getJob() == null) {
-        notFound(MRApps.toString(taskID.getJobId()));
-      } else {
-        app.setTask(app.getJob().getTask(taskID));
-        if (app.getTask() == null) {
-          notFound($(TASK_ID));
-        }
-      }
-      checkAccess(job);
-    } catch (Exception e) {
-      badRequest(e.getMessage());
+    }
+    if (!checkAccess(job)) {
+      accessDenied("User " + request().getRemoteUser() + " does not have " +
+          " permission to view job " + $(JOB_ID));
+      throw new RuntimeException("Access denied: User " +
+          request().getRemoteUser() + " does not have permission to view job " +
+          $(JOB_ID));
     }
   }
 }

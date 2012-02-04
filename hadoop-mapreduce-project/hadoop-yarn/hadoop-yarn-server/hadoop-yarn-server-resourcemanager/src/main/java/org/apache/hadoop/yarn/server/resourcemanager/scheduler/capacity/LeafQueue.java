@@ -125,8 +125,6 @@ public class LeafQueue implements CSQueue {
   
   private final ActiveUsersManager activeUsersManager;
   
-  final static int DEFAULT_AM_RESOURCE = 2 * 1024;
-  
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, 
       Comparator<SchedulerApp> applicationComparator, CSQueue old) {
@@ -166,8 +164,9 @@ public class LeafQueue implements CSQueue {
     this.maxAMResourcePercent = 
         cs.getConfiguration().getMaximumApplicationMasterResourcePercent();
     int maxActiveApplications = 
-        CSQueueUtils.computeMaxActiveApplications(cs.getClusterResources(), 
-            maxAMResourcePercent, absoluteCapacity);
+        CSQueueUtils.computeMaxActiveApplications(
+            cs.getClusterResources(), this.minimumAllocation,
+            maxAMResourcePercent, absoluteMaxCapacity);
     int maxActiveApplicationsPerUser = 
         CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
             userLimitFactor);
@@ -246,30 +245,39 @@ public class LeafQueue implements CSQueue {
         " [= configuredMaxCapacity ]" + "\n" +
         "absoluteMaxCapacity = " + absoluteMaxCapacity +
         " [= 1.0 maximumCapacity undefined, " +
-        "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]" + "\n" +
+        "(parentAbsoluteMaxCapacity * maximumCapacity) / 100 otherwise ]" + 
+        "\n" +
         "userLimit = " + userLimit +
         " [= configuredUserLimit ]" + "\n" +
         "userLimitFactor = " + userLimitFactor +
         " [= configuredUserLimitFactor ]" + "\n" +
         "maxApplications = " + maxApplications +
-        " [= (int)(configuredMaximumSystemApplications * absoluteCapacity) ]" + "\n" +
+        " [= (int)(configuredMaximumSystemApplications * absoluteCapacity) ]" + 
+        "\n" +
         "maxApplicationsPerUser = " + maxApplicationsPerUser +
-        " [= (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
+        " [= (int)(maxApplications * (userLimit / 100.0f) * " +
+        "userLimitFactor) ]" + "\n" +
         "maxActiveApplications = " + maxActiveApplications +
         " [= max(" + 
-        "(int)((clusterResourceMemory / (float)DEFAULT_AM_RESOURCE) *" + 
-        "maxAMResourcePercent * absoluteCapacity)," + 
+        "(int)ceil((clusterResourceMemory / minimumAllocation) *" + 
+        "maxAMResourcePercent * absoluteMaxCapacity)," + 
         "1) ]" + "\n" +
         "maxActiveApplicationsPerUser = " + maxActiveApplicationsPerUser +
-        " [= (int)(maxActiveApplications * (userLimit / 100.0f) * userLimitFactor) ]" + "\n" +
+        " [= max(" +
+        "(int)(maxActiveApplications * (userLimit / 100.0f) * " +
+        "userLimitFactor)," +
+        "1) ]" + "\n" +
         "utilization = " + utilization +
-        " [= usedResourcesMemory /  (clusterResourceMemory * absoluteCapacity)]" + "\n" +
+        " [= usedResourcesMemory / " +
+        "(clusterResourceMemory * absoluteCapacity)]" + "\n" +
         "usedCapacity = " + usedCapacity +
-        " [= usedResourcesMemory / (clusterResourceMemory * parent.absoluteCapacity)]" + "\n" +
+        " [= usedResourcesMemory / " +
+        "(clusterResourceMemory * parent.absoluteCapacity)]" + "\n" +
         "maxAMResourcePercent = " + maxAMResourcePercent +
         " [= configuredMaximumAMResourcePercent ]" + "\n" +
         "minimumAllocationFactor = " + minimumAllocationFactor +
-        " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / maximumAllocationMemory ]" + "\n" +
+        " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / " +
+        "maximumAllocationMemory ]" + "\n" +
         "numContainers = " + numContainers +
         " [= currentNumContainers ]" + "\n" +
         "state = " + state +
@@ -606,7 +614,10 @@ public class LeafQueue implements CSQueue {
       addApplication(application, user);
     }
 
-    metrics.submitApp(userName);
+    int attemptId = application.getApplicationAttemptId().getAttemptId();
+    if (attemptId == 1) {
+      metrics.submitApp(userName);
+    }
 
     // Inform the parent queue
     try {
@@ -635,7 +646,7 @@ public class LeafQueue implements CSQueue {
         user.activateApplication();
         activeApplications.add(application);
         i.remove();
-        LOG.info("Application " + application.getApplicationId().getId() + 
+        LOG.info("Application " + application.getApplicationId() +
             " from user: " + application.getUser() + 
             " activated in queue: " + getQueueName());
       }
@@ -673,10 +684,13 @@ public class LeafQueue implements CSQueue {
   }
 
   public synchronized void removeApplication(SchedulerApp application, User user) {
-    activeApplications.remove(application);
+    boolean wasActive = activeApplications.remove(application);
+    if (!wasActive) {
+      pendingApplications.remove(application);
+    }
     applicationsMap.remove(application.getApplicationAttemptId());
 
-    user.finishApplication();
+    user.finishApplication(wasActive);
     if (user.getTotalApplications() == 0) {
       users.remove(application.getUser());
     }
@@ -751,15 +765,15 @@ public class LeafQueue implements CSQueue {
             continue;
           }
 
-          // Compute & set headroom
-          // Note: We set the headroom with the highest priority request 
-          //       as the target. 
+          // Compute user-limit & set headroom
+          // Note: We compute both user-limit & headroom with the highest 
+          //       priority request as the target. 
           //       This works since we never assign lower priority requests
           //       before all higher priority ones are serviced.
           Resource userLimit = 
-              computeAndSetUserResourceLimit(application, clusterResource, 
-                  required);
-
+              computeUserLimitAndSetHeadroom(application, clusterResource, 
+                  required);          
+          
           // Check queue max-capacity limit
           if (!assignToQueue(clusterResource, required)) {
             return NULL_ASSIGNMENT;
@@ -777,13 +791,13 @@ public class LeafQueue implements CSQueue {
           CSAssignment assignment =  
             assignContainersOnNode(clusterResource, node, application, priority, 
                 null);
-          
-          Resource assigned = assignment.getResource();
-          
+
           // Did we schedule or reserve a container?
+          Resource assigned = assignment.getResource();
           if (Resources.greaterThan(assigned, Resources.none())) {
 
-            // Book-keeping
+            // Book-keeping 
+            // Note: Update headroom to account for current allocation too...
             allocateResource(clusterResource, application, assigned);
             
             // Reset scheduling opportunities
@@ -854,20 +868,50 @@ public class LeafQueue implements CSQueue {
   }
 
   @Lock({LeafQueue.class, SchedulerApp.class})
-  private Resource computeAndSetUserResourceLimit(SchedulerApp application, 
-      Resource clusterResource, Resource required) {
+  private Resource computeUserLimitAndSetHeadroom(
+      SchedulerApp application, Resource clusterResource, Resource required) {
+    
     String user = application.getUser();
-    Resource limit = computeUserLimit(application, clusterResource, required);
+    
+    /** 
+     * Headroom is min((userLimit, queue-max-cap) - consumed)
+     */
+
+    Resource userLimit =                          // User limit
+        computeUserLimit(application, clusterResource, required);
+    
+
+    Resource queueMaxCap =                        // Queue Max-Capacity
+        Resources.createResource(
+            roundDown((int)(absoluteMaxCapacity * clusterResource.getMemory()))
+            );
+    
+    Resource userConsumed = getUser(user).getConsumedResources(); 
     Resource headroom = 
-        Resources.subtract(limit, getUser(user).getConsumedResources());
+        Resources.subtract(Resources.min(userLimit, queueMaxCap), userConsumed);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Headroom calculation for user " + user + ": " + 
+          " userLimit=" + userLimit + 
+          " queueMaxCap=" + queueMaxCap + 
+          " consumed=" + userConsumed + 
+          " headroom=" + headroom);
+    }
+    
     application.setHeadroom(headroom);
     metrics.setAvailableResourcesToUser(user, headroom);
-    return limit;
+    
+    return userLimit;
   }
   
   private int roundUp(int memory) {
-    return divideAndCeil(memory, minimumAllocation.getMemory()) * 
-        minimumAllocation.getMemory();
+    int minMemory = minimumAllocation.getMemory();
+    return divideAndCeil(memory, minMemory) * minMemory; 
+  }
+  
+  private int roundDown(int memory) {
+    int minMemory = minimumAllocation.getMemory();
+    return (memory / minMemory) * minMemory;
   }
   
   @Lock(NoLock.class)
@@ -1288,10 +1332,17 @@ public class LeafQueue implements CSQueue {
     String userName = application.getUser();
     User user = getUser(userName);
     user.assignContainer(resource);
+    Resources.subtractFrom(application.getHeadroom(), resource); // headroom
     metrics.setAvailableResourcesToUser(userName, application.getHeadroom());
-    LOG.info(getQueueName() + 
-        " used=" + usedResources + " numContainers=" + numContainers + 
-        " user=" + userName + " user-resources=" + user.getConsumedResources());
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.info(getQueueName() + 
+          " user=" + userName + 
+          " used=" + usedResources + " numContainers=" + numContainers +
+          " headroom = " + application.getHeadroom() +
+          " user-resources=" + user.getConsumedResources()
+          );
+    }
   }
 
   synchronized void releaseResource(Resource clusterResource, 
@@ -1316,17 +1367,18 @@ public class LeafQueue implements CSQueue {
   public synchronized void updateClusterResource(Resource clusterResource) {
     // Update queue properties
     maxActiveApplications = 
-        CSQueueUtils.computeMaxActiveApplications(clusterResource, maxAMResourcePercent, 
-            absoluteCapacity);
+        CSQueueUtils.computeMaxActiveApplications(
+            clusterResource, minimumAllocation, 
+            maxAMResourcePercent, absoluteMaxCapacity);
     maxActiveApplicationsPerUser = 
-        CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveApplications, userLimit, 
-            userLimitFactor);
+        CSQueueUtils.computeMaxActiveApplicationsPerUser(
+            maxActiveApplications, userLimit, userLimitFactor);
     
     // Update application properties
     for (SchedulerApp application : activeApplications) {
       synchronized (application) {
-        computeAndSetUserResourceLimit(
-            application, clusterResource, Resources.none());
+        computeUserLimitAndSetHeadroom(application, clusterResource, 
+            Resources.none());
       }
     }
   }
@@ -1378,8 +1430,13 @@ public class LeafQueue implements CSQueue {
       ++activeApplications;
     }
 
-    public synchronized void finishApplication() {
-      --activeApplications;
+    public synchronized void finishApplication(boolean wasActive) {
+      if (wasActive) {
+        --activeApplications;
+      }
+      else {
+        --pendingApplications;
+      }
     }
 
     public synchronized void assignContainer(Resource resource) {

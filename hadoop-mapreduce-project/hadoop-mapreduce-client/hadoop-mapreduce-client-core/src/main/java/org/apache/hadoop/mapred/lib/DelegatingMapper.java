@@ -34,10 +34,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * mappers.
  * 
  * @see MultipleInputs#addInputPath(JobConf, Path, Class, Class)
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.DelegatingMapper} instead
  */
-@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DelegatingMapper<K1, V1, K2, V2> implements Mapper<K1, V1, K2, V2> {

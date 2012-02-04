@@ -222,7 +222,7 @@ class BlockReceiver implements Closeable {
       cleanupBlock();
       
       // check if there is a disk error
-      IOException cause = FSDataset.getCauseIfDiskError(ioe);
+      IOException cause = DatanodeUtil.getCauseIfDiskError(ioe);
       DataNode.LOG.warn("IOException in BlockReceiver constructor. Cause is ",
           cause);
       

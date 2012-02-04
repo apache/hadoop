@@ -882,6 +882,8 @@ public class MiniDFSCluster {
       if(dn == null)
         throw new IOException("Cannot start DataNode in "
             + dnConf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
+      //NOTE: the following is true if and only if:
+      //      hadoop.security.token.service.use_ip=true
       //since the HDFS does things based on IP:port, we need to add the mapping
       //for IP:port to rackId
       String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();

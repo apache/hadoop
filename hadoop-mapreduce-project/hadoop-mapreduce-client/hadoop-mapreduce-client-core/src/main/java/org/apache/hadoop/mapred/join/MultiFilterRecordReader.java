@@ -34,10 +34,7 @@ import org.apache.hadoop.mapred.RecordReader;
 /**
  * Base class for Composite join returning values derived from multiple
  * sources, but generally not tuples.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.MultiFilterRecordReader} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class MultiFilterRecordReader<K extends WritableComparable,

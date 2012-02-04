@@ -249,14 +249,21 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     }
     
     if (historyFileAbsolute != null) {
+      JobHistoryParser parser = null;
       try {
-        JobHistoryParser parser =
+        parser =
             new JobHistoryParser(historyFileAbsolute.getFileSystem(conf),
                 historyFileAbsolute);
         jobInfo = parser.parse();
       } catch (IOException e) {
         throw new YarnException("Could not load history file "
             + historyFileAbsolute, e);
+      }
+      IOException parseException = parser.getParseException(); 
+      if (parseException != null) {
+        throw new YarnException(
+            "Could not parse history file " + historyFileAbsolute, 
+            parseException);
       }
     } else {
       throw new IOException("History file not found");
@@ -321,9 +328,6 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   @Override
   public
       boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation) {
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      return true;
-    }
     Map<JobACL, AccessControlList> jobACLs = jobInfo.getJobACLs();
     AccessControlList jobACL = jobACLs.get(jobOperation);
     return aclsMgr.checkAccess(callerUGI, jobOperation, 

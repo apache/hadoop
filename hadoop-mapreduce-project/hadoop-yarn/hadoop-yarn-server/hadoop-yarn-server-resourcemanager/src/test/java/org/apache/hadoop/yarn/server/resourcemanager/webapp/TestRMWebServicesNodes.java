@@ -55,6 +55,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import clover.org.jfree.util.Log;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -121,6 +123,46 @@ public class TestRMWebServicesNodes extends JerseyTest {
   @Test
   public void testNodesDefault() throws JSONException, Exception {
     testNodesHelper("nodes/", "");
+  }
+
+  @Test
+  public void testNodesDefaultWithUnHealthyNode() throws JSONException,
+      Exception {
+
+    WebResource r = resource();
+    MockNM nm1 = rm.registerNode("h1:1234", 5120);
+    MockNM nm2 = rm.registerNode("h2:1235", 5121);
+    rm.sendNodeStarted(nm1);
+    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
+
+    // One unhealthy node which should not appear in the list after
+    // MAPREDUCE-3760.
+    MockNM nm3 = rm.registerNode("h3:1236", 5122);
+    rm.NMwaitForState(nm3.getNodeId(), RMNodeState.NEW);
+    rm.sendNodeStarted(nm3);
+    rm.NMwaitForState(nm3.getNodeId(), RMNodeState.RUNNING);
+    RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
+        .get(nm3.getNodeId());
+    NodeHealthStatus nodeHealth = node.getNodeHealthStatus();
+    nodeHealth.setHealthReport("test health report");
+    nodeHealth.setIsNodeHealthy(false);
+    node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
+        new ArrayList<ContainerStatus>(), null, null));
+    rm.NMwaitForState(nm3.getNodeId(), RMNodeState.UNHEALTHY);
+
+    ClientResponse response =
+        r.path("ws").path("v1").path("cluster").path("nodes")
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject nodes = json.getJSONObject("nodes");
+    assertEquals("incorrect number of elements", 1, nodes.length());
+    JSONArray nodeArray = nodes.getJSONArray("node");
+    // Just 2 nodes, leaving behind the unhealthy node.
+    assertEquals("incorrect number of elements", 2, nodeArray.length());
   }
 
   @Test

@@ -56,9 +56,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * @see FileOutputCommitter 
  * @see JobContext
  * @see TaskAttemptContext 
- * @deprecated Use {@link org.apache.hadoop.mapreduce.OutputCommitter} instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class OutputCommitter 

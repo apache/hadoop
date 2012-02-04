@@ -28,10 +28,7 @@ import org.apache.hadoop.mapred.Partitioner;
 /**
  * Partitioner effecting a total order by reading split points from
  * an externally generated source.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner}
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TotalOrderPartitioner<K extends WritableComparable<?>,V>

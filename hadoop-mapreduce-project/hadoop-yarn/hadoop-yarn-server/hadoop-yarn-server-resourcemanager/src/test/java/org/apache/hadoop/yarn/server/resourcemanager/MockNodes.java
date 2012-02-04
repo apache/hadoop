@@ -51,18 +51,23 @@ public class MockNodes {
     List<RMNode> list = Lists.newArrayList();
     for (int i = 0; i < racks; ++i) {
       for (int j = 0; j < nodesPerRack; ++j) {
+        if (j == (nodesPerRack - 1)) {
+          // One unhealthy node per rack.
+          list.add(nodeInfo(i, perNode, RMNodeState.UNHEALTHY));
+        }
         list.add(newNodeInfo(i, perNode));
       }
     }
     return list;
   }
   
-  public static List<RMNode> lostNodes(int racks, int nodesPerRack,
+  public static List<RMNode> deactivatedNodes(int racks, int nodesPerRack,
       Resource perNode) {
     List<RMNode> list = Lists.newArrayList();
     for (int i = 0; i < racks; ++i) {
       for (int j = 0; j < nodesPerRack; ++j) {
-        list.add(lostNodeInfo(i, perNode, RMNodeState.LOST));
+        RMNodeState[] allStates = RMNodeState.values();
+        list.add(nodeInfo(i, perNode, allStates[j % allStates.length]));
       }
     }
     return list;
@@ -198,15 +203,20 @@ public class MockNodes {
     final String httpAddress = httpAddr;
     final NodeHealthStatus nodeHealthStatus =
         recordFactory.newRecordInstance(NodeHealthStatus.class);
+    if (state != RMNodeState.UNHEALTHY) {
+      nodeHealthStatus.setIsNodeHealthy(true);
+      nodeHealthStatus.setHealthReport("HealthyMe");
+    }
     return new MockRMNodeImpl(nodeID, hostName, httpAddress, perNode, rackName,
         nodeHealthStatus, nid, hostName, state); 
   }
 
-  public static RMNode lostNodeInfo(int rack, final Resource perNode, RMNodeState state) {
+  public static RMNode nodeInfo(int rack, final Resource perNode,
+      RMNodeState state) {
     return buildRMNode(rack, perNode, state, "N/A");
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode) {
-    return buildRMNode(rack, perNode, null, "localhost:0");
+    return buildRMNode(rack, perNode, RMNodeState.RUNNING, "localhost:0");
   }
 }

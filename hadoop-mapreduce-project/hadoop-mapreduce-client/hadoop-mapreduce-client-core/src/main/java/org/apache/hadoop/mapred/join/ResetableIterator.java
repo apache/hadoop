@@ -25,11 +25,7 @@ import org.apache.hadoop.io.Writable;
  * This defines an interface to a stateful Iterator that can replay elements
  * added to it directly.
  * Note that this does not extend {@link java.util.Iterator}.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.ResetableIterator} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface ResetableIterator<T extends Writable> 

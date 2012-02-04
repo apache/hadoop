@@ -559,6 +559,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   }
 
   private void internalError(TaskEventType type) {
+    LOG.error("Invalid event " + type + " on Task " + this.taskId);
     eventHandler.handle(new JobDiagnosticsUpdateEvent(
         this.taskId.getJobId(), "Invalid event " + type + 
         " on Task " + this.taskId));
