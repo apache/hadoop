@@ -86,6 +86,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -190,10 +191,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -350,7 +349,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public static FSNamesystem loadFromDisk(Configuration conf)
     throws IOException {
     Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
-    Collection<URI> namespaceEditsDirs = 
+    List<URI> namespaceEditsDirs = 
       FSNamesystem.getNamespaceEditsDirs(conf);
 
     if (namespaceDirs.size() == 1) {
@@ -678,28 +677,44 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return Util.stringCollectionAsURIs(dirNames);
   }
 
-  public static Collection<URI> getNamespaceEditsDirs(Configuration conf) {
-    Collection<URI> editsDirs = getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY);
-    editsDirs.addAll(getSharedEditsDirs(conf));
-    Set<URI> uniqueEditsDirs = new HashSet<URI>();
-    uniqueEditsDirs.addAll(editsDirs);
-    if (uniqueEditsDirs.size() != editsDirs.size()) {
-      // clearing and re-initializing editsDirs to preserve Collection semantics
-      // assigning finalEditsDirs to editsDirs would leak Set semantics in the 
-      // return value and cause unexpected results downstream. eg future addAll
-      // calls. Perf is not an issue since these are small lists.
-      editsDirs.clear();
-      editsDirs.addAll(uniqueEditsDirs);
-      LOG.warn("Overlapping entries in " + DFS_NAMENODE_EDITS_DIR_KEY 
-          + " and/or " + DFS_NAMENODE_SHARED_EDITS_DIR_KEY
-          + ". Using the following entries: " + Joiner.on(',').join(editsDirs));
+  /**
+   * Return an ordered list of edits directories to write to.
+   * The list is ordered such that all shared edits directories
+   * are ordered before non-shared directories, and any duplicates
+   * are removed. The order they are specified in the configuration
+   * is retained.
+   */
+  public static List<URI> getNamespaceEditsDirs(Configuration conf) {
+    // Use a LinkedHashSet so that order is maintained while we de-dup
+    // the entries.
+    LinkedHashSet<URI> editsDirs = new LinkedHashSet<URI>();
+    
+    // First add the shared edits dirs. It's critical that the shared dirs
+    // are added first, since JournalSet syncs them in the order they are listed,
+    // and we need to make sure all edits are in place in the shared storage
+    // before they are replicated locally. See HDFS-2874.
+    for (URI dir : getSharedEditsDirs(conf)) {
+      if (!editsDirs.add(dir)) {
+        LOG.warn("Edits URI " + dir + " listed multiple times in " + 
+            DFS_NAMENODE_SHARED_EDITS_DIR_KEY + ". Ignoring duplicates.");
+      }
     }
+    
+    // Now add the non-shared dirs.
+    for (URI dir : getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY)) {
+      if (!editsDirs.add(dir)) {
+        LOG.warn("Edits URI " + dir + " listed multiple times in " + 
+            DFS_NAMENODE_SHARED_EDITS_DIR_KEY + " and " +
+            DFS_NAMENODE_EDITS_DIR_KEY + ". Ignoring duplicates.");
+      }
+    }
+
     if (editsDirs.isEmpty()) {
       // If this is the case, no edit dirs have been explicitly configured.
       // Image dirs are to be used for edits too.
-      return getNamespaceDirs(conf);
+      return Lists.newArrayList(getNamespaceDirs(conf));
     } else {
-      return editsDirs;
+      return Lists.newArrayList(editsDirs);
     }
   }
   
@@ -708,7 +723,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param conf
    * @return Collection of edit directories.
    */
-  public static Collection<URI> getSharedEditsDirs(Configuration conf) {
+  public static List<URI> getSharedEditsDirs(Configuration conf) {
     // don't use getStorageDirs here, because we want an empty default
     // rather than the dir in /tmp
     Collection<String> dirNames = conf.getTrimmedStringCollection(

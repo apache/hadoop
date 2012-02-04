@@ -126,12 +126,12 @@ public class FSEditLog  {
   private NNStorage storage;
   private Configuration conf;
   
-  private Collection<URI> editsDirs;
+  private List<URI> editsDirs;
   
   /**
    * The edit directories that are shared between primary and secondary.
    */
-  private Collection<URI> sharedEditsDirs;
+  private List<URI> sharedEditsDirs;
 
   private static class TransactionId {
     public long txid;
@@ -170,11 +170,11 @@ public class FSEditLog  {
    * @param storage Storage object used by namenode
    * @param editsDirs List of journals to use
    */
-  FSEditLog(Configuration conf, NNStorage storage, Collection<URI> editsDirs) {
+  FSEditLog(Configuration conf, NNStorage storage, List<URI> editsDirs) {
     init(conf, storage, editsDirs);
   }
   
-  private void init(Configuration conf, NNStorage storage, Collection<URI> editsDirs) {
+  private void init(Configuration conf, NNStorage storage, List<URI> editsDirs) {
     isSyncRunning = false;
     this.conf = conf;
     this.storage = storage;
@@ -209,7 +209,7 @@ public class FSEditLog  {
     state = State.OPEN_FOR_READING;
   }
   
-  private void initJournals(Collection<URI> dirs) {
+  private void initJournals(List<URI> dirs) {
     int minimumRedundantJournals = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY,
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT);

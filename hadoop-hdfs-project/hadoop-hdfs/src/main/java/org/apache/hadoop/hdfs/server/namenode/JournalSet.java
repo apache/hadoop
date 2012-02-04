@@ -309,13 +309,25 @@ public class JournalSet implements JournalManager {
    */
   private void mapJournalsAndReportErrors(
       JournalClosure closure, String status) throws IOException{
+
     List<JournalAndStream> badJAS = Lists.newLinkedList();
     for (JournalAndStream jas : journals) {
       try {
         closure.apply(jas);
       } catch (Throwable t) {
-        LOG.error("Error: " + status + " failed for (journal " + jas + ")", t);
-        badJAS.add(jas);
+        if (jas.isRequired()) {
+          String msg = "Error: " + status + " failed for required journal ("
+            + jas + ")";
+          LOG.fatal(msg, t);
+          // If we fail on *any* of the required journals, then we must not
+          // continue on any of the other journals. Abort them to ensure that
+          // retry behavior doesn't allow them to keep going in any way.
+          abortAllJournals();
+          throw new IOException(msg);
+        } else {
+          LOG.error("Error: " + status + " failed for (journal " + jas + ")", t);
+          badJAS.add(jas);          
+        }
       }
     }
     disableAndReportErrorOnJournals(badJAS);
@@ -327,6 +339,17 @@ public class JournalSet implements JournalManager {
     }
   }
   
+  /**
+   * Abort all of the underlying streams.
+   */
+  private void abortAllJournals() {
+    for (JournalAndStream jas : journals) {
+      if (jas.isActive()) {
+        jas.abort();
+      }
+    }
+  }
+
   /**
    * An implementation of EditLogOutputStream that applies a requested method on
    * all the journals that are currently active.

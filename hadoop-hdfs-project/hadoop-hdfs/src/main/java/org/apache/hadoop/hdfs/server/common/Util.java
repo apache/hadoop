@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -97,9 +98,9 @@ public final class Util {
    * @param names collection of strings to convert to URIs
    * @return collection of URIs
    */
-  public static Collection<URI> stringCollectionAsURIs(
+  public static List<URI> stringCollectionAsURIs(
                                   Collection<String> names) {
-    Collection<URI> uris = new ArrayList<URI>(names.size());
+    List<URI> uris = new ArrayList<URI>(names.size());
     for(String name : names) {
       try {
         uris.add(stringAsURI(name));

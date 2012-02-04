@@ -114,7 +114,7 @@ public class SecondaryNameNode implements Runnable {
   private String infoBindAddress;
 
   private Collection<URI> checkpointDirs;
-  private Collection<URI> checkpointEditsDirs;
+  private List<URI> checkpointEditsDirs;
 
   private CheckpointConf checkpointConf;
   private FSNamesystem namesystem;
@@ -729,7 +729,7 @@ public class SecondaryNameNode implements Runnable {
      */
     CheckpointStorage(Configuration conf, 
                       Collection<URI> imageDirs,
-                      Collection<URI> editsDirs) throws IOException {
+                      List<URI> editsDirs) throws IOException {
       super(conf, imageDirs, editsDirs);
       
       // the 2NN never writes edits -- it only downloads them. So

@@ -160,3 +160,5 @@ HDFS-2769. HA: When HA is enabled with a shared edits dir, that dir should be
 marked required. (atm via eli)
 
 HDFS-2863. Failures observed if dfs.edits.dir and shared.edits.dir have same directories. (Bikas Saha via atm)
+
+HDFS-2874. Edit log should log to shared dirs before local dirs. (todd)

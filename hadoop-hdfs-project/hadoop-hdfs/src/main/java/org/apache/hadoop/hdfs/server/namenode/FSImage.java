@@ -115,7 +115,7 @@ public class FSImage implements Closeable {
    */
   protected FSImage(Configuration conf,
                     Collection<URI> imageDirs,
-                    Collection<URI> editsDirs)
+                    List<URI> editsDirs)
       throws IOException {
     this.conf = conf;
 
@@ -485,7 +485,7 @@ public class FSImage implements Closeable {
   void doImportCheckpoint(FSNamesystem target) throws IOException {
     Collection<URI> checkpointDirs =
       FSImage.getCheckpointDirs(conf, null);
-    Collection<URI> checkpointEditsDirs =
+    List<URI> checkpointEditsDirs =
       FSImage.getCheckpointEditsDirs(conf, null);
 
     if (checkpointDirs == null || checkpointDirs.isEmpty()) {
@@ -1094,7 +1094,7 @@ public class FSImage implements Closeable {
     return Util.stringCollectionAsURIs(dirNames);
   }
 
-  static Collection<URI> getCheckpointEditsDirs(Configuration conf,
+  static List<URI> getCheckpointEditsDirs(Configuration conf,
       String defaultName) {
     Collection<String> dirNames = 
       conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);

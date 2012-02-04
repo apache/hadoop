@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
@@ -66,6 +68,35 @@ public class TestFailureOfSharedDir {
         requiredEditsDirs.contains(bar));
   }
 
+  
+  /**
+   * Make sure that the shared edits dirs are listed before non-shared dirs
+   * when the configuration is parsed. This ensures that the shared journals
+   * are synced before the local ones.
+   */
+  @Test
+  public void testSharedDirsComeFirstInEditsList() throws Exception {
+    Configuration conf = new Configuration();
+    URI sharedA = new URI("file:///shared-A");
+    URI sharedB = new URI("file:///shared-B");
+    URI localA = new URI("file:///local-A");
+    URI localB = new URI("file:///local-B");
+    URI localC = new URI("file:///local-C");
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
+        Joiner.on(",").join(sharedA,sharedB));
+    // List them in reverse order, to make sure they show up in
+    // the order listed, regardless of lexical sort order.
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        Joiner.on(",").join(localC, localB, localA));
+    List<URI> dirs = FSNamesystem.getNamespaceEditsDirs(conf);
+    assertEquals(
+        "Shared dirs should come first, then local dirs, in the order " +
+        "they were listed in the configuration.",
+        Joiner.on(",").join(sharedA, sharedB, localC, localB, localA),
+        Joiner.on(",").join(dirs));
+  }
+  
   /**
    * Test that marking the shared edits dir as being "required" causes the NN to
    * fail if that dir can't be accessed.
@@ -73,18 +104,14 @@ public class TestFailureOfSharedDir {
   @Test
   public void testFailureOfSharedDir() throws Exception {
     Configuration conf = new Configuration();
-    // The shared edits dir will automatically be marked required.
-    URI sharedEditsUri = MiniDFSCluster.formatSharedEditsDir(
-        new File(MiniDFSCluster.getBaseDirectory()), 0, 1);
     
+    // The shared edits dir will automatically be marked required.
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0)
         .build();
-      
-      assertEquals(sharedEditsUri, cluster.getSharedEditsDir(0, 1));
       
       cluster.waitActive();
       cluster.transitionToActive(0);
@@ -94,6 +121,7 @@ public class TestFailureOfSharedDir {
       assertTrue(fs.mkdirs(new Path("/test1")));
       
       // Blow away the shared edits dir.
+      URI sharedEditsUri = cluster.getSharedEditsDir(0, 1);      
       FileUtil.fullyDelete(new File(sharedEditsUri));
       
       NameNode nn0 = cluster.getNameNode(0);
@@ -106,6 +134,19 @@ public class TestFailureOfSharedDir {
             "Unable to start log segment 4: too few journals successfully started",
             ioe);
         LOG.info("Got expected exception", ioe);
+      }
+      
+      // Check that none of the edits dirs rolled, since the shared edits
+      // dir didn't roll. Regression test for HDFS-2874.
+      for (URI editsUri : cluster.getNameEditsDirs(0)) {
+        if (editsUri.equals(sharedEditsUri)) {
+          continue;
+        }
+        File editsDir = new File(editsUri.getPath());
+        File curDir = new File(editsDir, "current");
+        GenericTestUtils.assertGlobEquals(curDir,
+            "edits_.*",
+            NNStorage.getInProgressEditsFileName(1));
       }
     } finally {
       if (cluster != null) {
