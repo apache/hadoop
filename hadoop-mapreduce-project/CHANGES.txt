@@ -638,6 +638,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3417. Fixed job-access-controls to work with MR AM and
     JobHistoryServer web-apps. (Jonathan Eagles via vinodkv)
 
+    MAPREDUCE-3803. Fix broken build of raid contrib due to HDFS-2864.
+    (Ravi Prakash via suresh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

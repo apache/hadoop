@@ -108,7 +108,7 @@ public class RaidBlockSender implements java.io.Closeable {
        BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
        short version = header.getVersion();
 
-        if (version != FSDataset.METADATA_VERSION) {
+        if (version != BlockMetadataHeader.VERSION) {
           LOG.warn("Wrong version (" + version + ") for metadata file for "
               + block + " ignoring ...");
         }
