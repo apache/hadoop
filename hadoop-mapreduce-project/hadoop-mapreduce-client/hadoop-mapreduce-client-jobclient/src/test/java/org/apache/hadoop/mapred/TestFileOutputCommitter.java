@@ -74,7 +74,7 @@ public class TestFileOutputCommitter extends TestCase {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(job, taskID);
     FileOutputCommitter committer = new FileOutputCommitter();
     FileOutputFormat.setWorkOutputPath(job, 
-      committer.getTempTaskOutputPath(tContext));
+      committer.getTaskAttemptPath(tContext));
 
     committer.setupJob(jContext);
     committer.setupTask(tContext);
@@ -115,7 +115,7 @@ public class TestFileOutputCommitter extends TestCase {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(job, taskID);
     FileOutputCommitter committer = new FileOutputCommitter();
     FileOutputFormat.setWorkOutputPath(job, committer
-        .getTempTaskOutputPath(tContext));
+        .getTaskAttemptPath(tContext));
 
     // do setup
     committer.setupJob(jContext);
@@ -134,13 +134,13 @@ public class TestFileOutputCommitter extends TestCase {
     // do abort
     committer.abortTask(tContext);
     File expectedFile = new File(new Path(committer
-        .getTempTaskOutputPath(tContext), file).toString());
+        .getTaskAttemptPath(tContext), file).toString());
     assertFalse("task temp dir still exists", expectedFile.exists());
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
     expectedFile = new File(new Path(outDir, FileOutputCommitter.TEMP_DIR_NAME)
         .toString());
-    assertFalse("job temp dir still exists", expectedFile.exists());
+    assertFalse("job temp dir "+expectedFile+" still exists", expectedFile.exists());
     assertEquals("Output directory not empty", 0, new File(outDir.toString())
         .listFiles().length);
     FileUtil.fullyDelete(new File(outDir.toString()));
@@ -170,16 +170,15 @@ public class TestFileOutputCommitter extends TestCase {
     TaskAttemptContext tContext = new TaskAttemptContextImpl(job, taskID);
     FileOutputCommitter committer = new FileOutputCommitter();
     FileOutputFormat.setWorkOutputPath(job, committer
-        .getTempTaskOutputPath(tContext));
+        .getTaskAttemptPath(tContext));
 
     // do setup
     committer.setupJob(jContext);
     committer.setupTask(tContext);
     
     String file = "test.txt";
-    String taskBaseDirName = committer.getTaskAttemptBaseDirName(tContext);
-    File jobTmpDir = new File(outDir.toString(), committer.getJobAttemptBaseDirName(jContext));
-    File taskTmpDir = new File(outDir.toString(), taskBaseDirName);
+    File jobTmpDir = new File(committer.getJobAttemptPath(jContext).toUri().getPath());
+    File taskTmpDir = new File(committer.getTaskAttemptPath(tContext).toUri().getPath());
     File expectedFile = new File(taskTmpDir, file);
 
     // A reporter that does nothing

@@ -70,6 +70,22 @@ public class TestFileOutputCommitter extends TestCase {
     }
   }
 
+  private static void cleanup() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = outDir.getFileSystem(conf);
+    fs.delete(outDir, true);
+  }
+  
+  @Override
+  public void setUp() throws IOException {
+    cleanup();
+  }
+  
+  @Override
+  public void tearDown() throws IOException {
+    cleanup();
+  }
+  
   @SuppressWarnings("unchecked")
   public void testCommitter() throws Exception {
     Job job = Job.getInstance();
@@ -133,7 +149,7 @@ public class TestFileOutputCommitter extends TestCase {
     assertFalse("task temp dir still exists", expectedFile.exists());
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
-    expectedFile = new File(new Path(outDir, FileOutputCommitter.TEMP_DIR_NAME)
+    expectedFile = new File(new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME)
         .toString());
     assertFalse("job temp dir still exists", expectedFile.exists());
     assertEquals("Output directory not empty", 0, new File(outDir.toString())
@@ -188,9 +204,9 @@ public class TestFileOutputCommitter extends TestCase {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    String taskBaseDirName = committer.getTaskAttemptBaseDirName(tContext);
-    File jobTmpDir = new File(outDir.toString(), committer.getJobAttemptBaseDirName(jContext));
-    File taskTmpDir = new File(outDir.toString(), taskBaseDirName);
+    //Path taskBaseDirName = committer.getTaskAttemptBaseDirName(tContext);
+    File jobTmpDir = new File(committer.getJobAttemptPath(jContext).toUri().getPath());
+    File taskTmpDir = new File(committer.getTaskAttemptPath(tContext).toUri().getPath());
     File expectedFile = new File(taskTmpDir, partFile);
     assertTrue(expectedFile + " does not exists", expectedFile.exists());
 
