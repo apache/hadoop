@@ -46,6 +46,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgra
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -169,11 +172,16 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       int xmitsInProgress, int xceiverCount, int failedVolumes)
       throws IOException {
-    HeartbeatRequestProto req = HeartbeatRequestProto.newBuilder()
-        .setRegistration(PBHelper.convert(registration)).setCapacity(capacity)
+    StorageReportProto report = StorageReportProto.newBuilder()
+        .setBlockPoolUsed(blockPoolUsed).setCapacity(capacity)
         .setDfsUsed(dfsUsed).setRemaining(remaining)
-        .setBlockPoolUsed(blockPoolUsed).setXmitsInProgress(xmitsInProgress)
-        .setXceiverCount(xceiverCount).setFailedVolumes(failedVolumes).build();
+        .setStorageID(registration.getStorageID()).build();
+    
+    HeartbeatRequestProto req = HeartbeatRequestProto.newBuilder()
+        .setRegistration(PBHelper.convert(registration)).addReports(report)
+        .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
+        .setFailedVolumes(failedVolumes)
+        .build();
     HeartbeatResponseProto resp;
     try {
       resp = rpcProxy.sendHeartbeat(NULL_CONTROLLER, req);
@@ -192,15 +200,17 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   @Override
   public DatanodeCommand blockReport(DatanodeRegistration registration,
       String poolId, long[] blocks) throws IOException {
-    BlockReportRequestProto.Builder builder = BlockReportRequestProto
-        .newBuilder().setRegistration(PBHelper.convert(registration))
-        .setBlockPoolId(poolId);
+    StorageBlockReportProto.Builder reportBuilder = StorageBlockReportProto
+        .newBuilder().setStorageID(registration.getStorageID());
+    
     if (blocks != null) {
       for (int i = 0; i < blocks.length; i++) {
-        builder.addBlocks(blocks[i]);
+        reportBuilder.addBlocks(blocks[i]);
       }
     }
-    BlockReportRequestProto req = builder.build();
+    BlockReportRequestProto req = BlockReportRequestProto
+        .newBuilder().setRegistration(PBHelper.convert(registration))
+        .setBlockPoolId(poolId).addReports(reportBuilder.build()).build();
     BlockReportResponseProto resp;
     try {
       resp = rpcProxy.blockReport(NULL_CONTROLLER, req);
@@ -211,19 +221,21 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public void blockReceivedAndDeleted(DatanodeRegistration registration,
+  public void blockReceivedAndDeleted(DatanodeRegistration reg,
       String poolId, ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks)
       throws IOException {
-    BlockReceivedAndDeletedRequestProto.Builder builder = 
-        BlockReceivedAndDeletedRequestProto.newBuilder()
-        .setRegistration(PBHelper.convert(registration))
-        .setBlockPoolId(poolId);
+    StorageReceivedDeletedBlocksProto.Builder builder = 
+        StorageReceivedDeletedBlocksProto.newBuilder()
+        .setStorageID(reg.getStorageID());
     if (receivedAndDeletedBlocks != null) {
       for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
         builder.addBlocks(PBHelper.convert(receivedAndDeletedBlocks[i]));
       }
     }
-    BlockReceivedAndDeletedRequestProto req = builder.build();
+    BlockReceivedAndDeletedRequestProto req = 
+        BlockReceivedAndDeletedRequestProto.newBuilder()
+        .setRegistration(PBHelper.convert(reg))
+        .setBlockPoolId(poolId).addBlocks(builder.build()).build();
     try {
       rpcProxy.blockReceivedAndDeleted(NULL_CONTROLLER, req);
     } catch (ServiceException se) {
