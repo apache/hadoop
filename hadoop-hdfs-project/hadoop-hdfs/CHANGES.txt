@@ -119,6 +119,9 @@ Trunk (unreleased changes)
     HDFS-2785. Update webhdfs and httpfs for host-based token support.
     (Robert Joseph Evans via jitendra)
 
+    HDS-2895. Remove Writable wire protocol types and translators to
+    complete transition to protocol buffers. (suresh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
