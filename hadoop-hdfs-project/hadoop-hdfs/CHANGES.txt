@@ -219,6 +219,9 @@ Release 0.23.1 - UNRELEASED
     HDFS-2889. getNumCurrentReplicas is package private but should be public on
     0.23 (see HDFS-2408). (Gregory Chanan via atm)
 
+    HDFS-2893. The start/stop scripts don't start/stop the 2NN when
+    using the default configuration. (eli)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

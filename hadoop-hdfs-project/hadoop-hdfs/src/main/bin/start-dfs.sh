@@ -59,7 +59,7 @@ echo "Starting namenodes on [$NAMENODES]"
   --script "$bin/hdfs" start namenode $nameStartOpt
 
 #---------------------------------------------------------
-# datanodes (using defalut slaves file)
+# datanodes (using default slaves file)
 
 if [ -n "$HADOOP_SECURE_DN_USER" ]; then
   echo \
@@ -74,22 +74,13 @@ fi
 #---------------------------------------------------------
 # secondary namenodes (if any)
 
-# if there are no secondary namenodes configured it returns
-# 0.0.0.0 or empty string
 SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>&-)
-SECONDARY_NAMENODES=${SECONDARY_NAMENODES:='0.0.0.0'}
 
-if [ "$SECONDARY_NAMENODES" = '0.0.0.0' ] ; then
-  echo \
-    "Secondary namenodes are not configured. " \
-    "Cannot start secondary namenodes."
-else
-  echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
+echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
 
-  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
+"$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
     --config "$HADOOP_CONF_DIR" \
     --hostnames "$SECONDARY_NAMENODES" \
     --script "$bin/hdfs" start secondarynamenode
-fi
 
 # eof
