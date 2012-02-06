@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
@@ -33,7 +34,7 @@ public class TestFSNamesystem {
    * Tests that the namenode edits dirs are gotten with duplicates removed
    */
   @Test
-  public void testUniqueEditDirs() {
+  public void testUniqueEditDirs() throws IOException {
     Configuration config = new Configuration();
 
     config.set(DFS_NAMENODE_EDITS_DIR_KEY, "file://edits/dir, "

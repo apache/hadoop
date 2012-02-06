@@ -68,6 +68,29 @@ public class TestFailureOfSharedDir {
         requiredEditsDirs.contains(bar));
   }
 
+  /**
+   * Multiple shared edits directories is an invalid configuration.
+   */
+  @Test
+  public void testMultipleSharedDirsFails() throws Exception {
+    Configuration conf = new Configuration();
+    URI sharedA = new URI("file:///shared-A");
+    URI sharedB = new URI("file:///shared-B");
+    URI localA = new URI("file:///local-A");
+
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
+        Joiner.on(",").join(sharedA,sharedB));
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        localA.toString());
+
+    try {
+      FSNamesystem.getNamespaceEditsDirs(conf);
+      fail("Allowed multiple shared edits directories");
+    } catch (IOException ioe) {
+      assertEquals("Multiple shared edits directories are not yet supported",
+          ioe.getMessage());
+    }
+  }
   
   /**
    * Make sure that the shared edits dirs are listed before non-shared dirs
@@ -78,13 +101,12 @@ public class TestFailureOfSharedDir {
   public void testSharedDirsComeFirstInEditsList() throws Exception {
     Configuration conf = new Configuration();
     URI sharedA = new URI("file:///shared-A");
-    URI sharedB = new URI("file:///shared-B");
     URI localA = new URI("file:///local-A");
     URI localB = new URI("file:///local-B");
     URI localC = new URI("file:///local-C");
     
     conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-        Joiner.on(",").join(sharedA,sharedB));
+        sharedA.toString());
     // List them in reverse order, to make sure they show up in
     // the order listed, regardless of lexical sort order.
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
@@ -93,7 +115,7 @@ public class TestFailureOfSharedDir {
     assertEquals(
         "Shared dirs should come first, then local dirs, in the order " +
         "they were listed in the configuration.",
-        Joiner.on(",").join(sharedA, sharedB, localC, localB, localA),
+        Joiner.on(",").join(sharedA, localC, localB, localA),
         Joiner.on(",").join(dirs));
   }
   

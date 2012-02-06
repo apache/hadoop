@@ -170,3 +170,5 @@ HDFS-2792. Make fsck work. (atm)
 HDFS-2808. HA: haadmin should use namenode ids. (eli)
 
 HDFS-2819. Document new HA-related configs in hdfs-default.xml. (eli)
+
+HDFS-2752. HA: exit if multiple shared dirs are configured. (eli)

@@ -683,17 +683,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * are ordered before non-shared directories, and any duplicates
    * are removed. The order they are specified in the configuration
    * is retained.
+   * @return Collection of shared edits directories.
+   * @throws IOException if multiple shared edits directories are configured
    */
-  public static List<URI> getNamespaceEditsDirs(Configuration conf) {
+  public static List<URI> getNamespaceEditsDirs(Configuration conf)
+      throws IOException {
     // Use a LinkedHashSet so that order is maintained while we de-dup
     // the entries.
     LinkedHashSet<URI> editsDirs = new LinkedHashSet<URI>();
     
+    List<URI> sharedDirs = getSharedEditsDirs(conf);
+
+    // Fail until multiple shared edits directories are supported (HDFS-2782)
+    if (sharedDirs.size() > 1) {
+      throw new IOException(
+          "Multiple shared edits directories are not yet supported");
+    }
+
     // First add the shared edits dirs. It's critical that the shared dirs
     // are added first, since JournalSet syncs them in the order they are listed,
     // and we need to make sure all edits are in place in the shared storage
     // before they are replicated locally. See HDFS-2874.
-    for (URI dir : getSharedEditsDirs(conf)) {
+    for (URI dir : sharedDirs) {
       if (!editsDirs.add(dir)) {
         LOG.warn("Edits URI " + dir + " listed multiple times in " + 
             DFS_NAMENODE_SHARED_EDITS_DIR_KEY + ". Ignoring duplicates.");

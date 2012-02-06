@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 
@@ -87,7 +88,7 @@ public class TestHAConfiguration {
    * duplicates removed
    */
   @Test
-  public void testHAUniqueEditDirs() {
+  public void testHAUniqueEditDirs() throws IOException {
     Configuration config = new Configuration();
 
     config.set(DFS_NAMENODE_EDITS_DIR_KEY, "file://edits/dir, "

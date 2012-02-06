@@ -1594,7 +1594,7 @@ public class MiniDFSCluster {
   /**
    * Get the directories where the namenode stores its edits.
    */
-  public Collection<URI> getNameEditsDirs(int nnIndex) {
+  public Collection<URI> getNameEditsDirs(int nnIndex) throws IOException {
     return FSNamesystem.getNamespaceEditsDirs(nameNodes[nnIndex].conf);
   }
   
