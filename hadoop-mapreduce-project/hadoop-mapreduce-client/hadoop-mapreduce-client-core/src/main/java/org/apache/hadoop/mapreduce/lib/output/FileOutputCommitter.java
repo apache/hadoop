@@ -495,36 +495,40 @@ public class FileOutputCommitter extends OutputCommitter {
   @Override
   public void recoverTask(TaskAttemptContext context)
       throws IOException {
-    context.progress();
-    TaskAttemptID attemptId = context.getTaskAttemptID();
-    int previousAttempt = getAppAttemptId(context) - 1;
-    if (previousAttempt < 0) {
-      throw new IOException ("Cannot recover task output for first attempt...");
-    }
-    
-    Path committedTaskPath = getCommittedTaskPath(context);
-    Path previousCommittedTaskPath = getCommittedTaskPath(
-        previousAttempt, context);
-    FileSystem fs = committedTaskPath.getFileSystem(context.getConfiguration());
-    
-    LOG.debug("Trying to recover task from " + previousCommittedTaskPath 
-        + " into " + committedTaskPath);
-    if (fs.exists(previousCommittedTaskPath)) {
-      if(fs.exists(committedTaskPath)) {
-        if(!fs.delete(committedTaskPath, true)) {
-          throw new IOException("Could not delete "+committedTaskPath);
+    if(hasOutputPath()) {
+      context.progress();
+      TaskAttemptID attemptId = context.getTaskAttemptID();
+      int previousAttempt = getAppAttemptId(context) - 1;
+      if (previousAttempt < 0) {
+        throw new IOException ("Cannot recover task output for first attempt...");
+      }
+
+      Path committedTaskPath = getCommittedTaskPath(context);
+      Path previousCommittedTaskPath = getCommittedTaskPath(
+          previousAttempt, context);
+      FileSystem fs = committedTaskPath.getFileSystem(context.getConfiguration());
+
+      LOG.debug("Trying to recover task from " + previousCommittedTaskPath 
+          + " into " + committedTaskPath);
+      if (fs.exists(previousCommittedTaskPath)) {
+        if(fs.exists(committedTaskPath)) {
+          if(!fs.delete(committedTaskPath, true)) {
+            throw new IOException("Could not delete "+committedTaskPath);
+          }
         }
+        //Rename can fail if the parent directory does not yet exist.
+        Path committedParent = committedTaskPath.getParent();
+        fs.mkdirs(committedParent);
+        if(!fs.rename(previousCommittedTaskPath, committedTaskPath)) {
+          throw new IOException("Could not rename " + previousCommittedTaskPath +
+              " to " + committedTaskPath);
+        }
+        LOG.info("Saved output of " + attemptId + " to " + committedTaskPath);
+      } else {
+        LOG.warn(attemptId+" had no output to recover.");
       }
-      //Rename can fail if the parent directory does not yet exist.
-      Path committedParent = committedTaskPath.getParent();
-      fs.mkdirs(committedParent);
-      if(!fs.rename(previousCommittedTaskPath, committedTaskPath)) {
-        throw new IOException("Could not rename " + previousCommittedTaskPath +
-            " to " + committedTaskPath);
-      }
-      LOG.info("Saved output of " + attemptId + " to " + committedTaskPath);
     } else {
-      LOG.warn(attemptId+" had no output to recover.");
+      LOG.warn("Output Path is null in recoverTask()");
     }
   }
 }

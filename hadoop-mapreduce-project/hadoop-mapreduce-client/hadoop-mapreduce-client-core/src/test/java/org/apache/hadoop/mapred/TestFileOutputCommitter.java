@@ -104,7 +104,9 @@ public class TestFileOutputCommitter extends TestCase {
     writeOutput(theRecordWriter, tContext);
 
     // do commit
-    committer.commitTask(tContext);
+    if(committer.needsTaskCommit(tContext)) {
+      committer.commitTask(tContext);
+    }
     Path jobTempDir1 = committer.getCommittedTaskPath(tContext);
     File jtd1 = new File(jobTempDir1.toUri().getPath());
     assertTrue(jtd1.exists());
@@ -188,7 +190,9 @@ public class TestFileOutputCommitter extends TestCase {
     writeOutput(theRecordWriter, tContext);
 
     // do commit
-    committer.commitTask(tContext);
+    if(committer.needsTaskCommit(tContext)) {
+      committer.commitTask(tContext);
+    }
     committer.commitJob(jContext);
 
     // validate output
@@ -214,11 +218,35 @@ public class TestFileOutputCommitter extends TestCase {
     writeMapFileOutput(theRecordWriter, tContext);
 
     // do commit
-    committer.commitTask(tContext);
+    if(committer.needsTaskCommit(tContext)) {
+      committer.commitTask(tContext);
+    }
     committer.commitJob(jContext);
 
     // validate output
     validateMapFileOutputContent(FileSystem.get(conf), outDir);
+    FileUtil.fullyDelete(new File(outDir.toString()));
+  }
+  
+  public void testMapOnlyNoOutput() throws Exception {
+    JobConf conf = new JobConf();
+    //This is not set on purpose. FileOutputFormat.setOutputPath(conf, outDir);
+    conf.set(JobContext.TASK_ATTEMPT_ID, attempt);
+    JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter();    
+    
+    // setup
+    committer.setupJob(jContext);
+    committer.setupTask(tContext);
+    
+    if(committer.needsTaskCommit(tContext)) {
+      // do commit
+      committer.commitTask(tContext);
+    }
+    committer.commitJob(jContext);
+
+    // validate output
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
   
