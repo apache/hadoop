@@ -23,6 +23,11 @@
 <h3>Other Jiras (describe bug fixes and minor changes)</h3>
 <ul>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7470">HADOOP-7470</a>.
+     Minor improvement reported by stevel@apache.org and fixed by enis (util)<br>
+     <b>move up to Jackson 1.8.8</b><br>
+     <blockquote>I see that hadoop-core still depends on Jackson 1.0.1 -but that project is now up to 1.8.2 in releases. Upgrading will make it easier for other Jackson-using apps that are more up to date to keep their classpath consistent.<br><br>The patch would be updating the ivy file to pull in the later version; no test</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7960">HADOOP-7960</a>.
      Major bug reported by gkesavan and fixed by mattf <br>
      <b>Port HADOOP-5203 to branch-1, build version comparison is too restrictive</b><br>
@@ -43,12 +48,29 @@
      <b>Upper case in hostname part of the principals doesn&apos;t work with kerberos.</b><br>
      <blockquote>Kerberos doesn&apos;t like upper case in the hostname part of the principals.<br>This issue has been seen in 23 as well as 1.0.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8010">HADOOP-8010</a>.
+     Minor bug reported by rvs and fixed by rvs (scripts)<br>
+     <b>hadoop-config.sh spews error message when HADOOP_HOME_WARN_SUPPRESS is set to true and HADOOP_HOME is present</b><br>
+     <blockquote>Running hadoop daemon commands when HADOOP_HOME_WARN_SUPPRESS is set to true and HADOOP_HOME is present produces:<br>{noformat}<br>  [: 76: true: unexpected operator<br>{noformat}</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2379">HDFS-2379</a>.
+     Critical bug reported by tlipcon and fixed by tlipcon (data-node)<br>
+     <b>0.20: Allow block reports to proceed without holding FSDataset lock</b><br>
+     <blockquote>As disks are getting larger and more plentiful, we&apos;re seeing DNs with multiple millions of blocks on a single machine. When page cache space is tight, block reports can take multiple minutes to generate. Currently, during the scanning of the data directories to generate a report, the FSVolumeSet lock is held. This causes writes and reads to block, timeout, etc, causing big problems especially for clients like HBase.<br><br>This JIRA is to explore some of the ideas originally discussed in HADOOP-458...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2814">HDFS-2814</a>.
+     Minor improvement reported by hitesh and fixed by hitesh <br>
+     <b>NamenodeMXBean does not account for svn revision in the version information</b><br>
+     <blockquote>Unlike the jobtracker where both the UI and jmx information report the version as &quot;x.y.z, r&lt;svn revision&quot;, in case of the namenode, the UI displays x.y.z and svn revision info but the jmx output only contains the x.y.z version.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3607">MAPREDUCE-3607</a>.
      Major improvement reported by tomwhite and fixed by tomwhite (client)<br>
      <b>Port missing new API mapreduce lib classes to 1.x</b><br>
      <blockquote>There are a number of classes under mapreduce.lib that are not present in the 1.x series. Including these would help users and downstream projects using the new MapReduce API migrate to later versions of Hadoop in the future.<br><br>A few examples of where this would help:<br>* Sqoop uses mapreduce.lib.db.DBWritable and mapreduce.lib.input.CombineFileInputFormat (SQOOP-384).<br>* Mahout uses mapreduce.lib.output.MultipleOutputs (MAHOUT-822).<br>* HBase has a backport of mapreduce.lib.partition.InputSampler ...</blockquote></li>
 
+
 </ul>
+
 
 <h2>Changes since Hadoop 0.20.205.0</h2>
 
