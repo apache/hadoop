@@ -214,6 +214,10 @@ public class TestDFSUtil {
     checkNameServiceId(conf, NN1_ADDRESS, "nn1");
     checkNameServiceId(conf, NN2_ADDRESS, "nn2");
     checkNameServiceId(conf, NN3_ADDRESS, null);
+
+    // HA is not enabled in a purely federated config
+    assertFalse(HAUtil.isHAEnabled(conf, "nn1"));
+    assertFalse(HAUtil.isHAEnabled(conf, "nn2"));
   }
 
   public void checkNameServiceId(Configuration conf, String addr,
@@ -399,8 +403,10 @@ public class TestDFSUtil {
     
     Map<String, Map<String, InetSocketAddress>> map =
       DFSUtil.getHaNnRpcAddresses(conf);
-    System.err.println("TestHANameNodesWithFederation:\n" +
-        DFSUtil.addressMapToString(map));
+
+    assertTrue(HAUtil.isHAEnabled(conf, "ns1"));
+    assertTrue(HAUtil.isHAEnabled(conf, "ns2"));
+    assertFalse(HAUtil.isHAEnabled(conf, "ns3"));
     
     assertEquals(NS1_NN1_HOST, map.get("ns1").get("ns1-nn1").toString());
     assertEquals(NS1_NN2_HOST, map.get("ns1").get("ns1-nn2").toString());
@@ -414,9 +420,13 @@ public class TestDFSUtil {
     assertEquals(NS2_NN1_HOST, 
         DFSUtil.getNamenodeServiceAddr(conf, "ns2", "ns2-nn1"));
 
-    // No nameservice was given and we can't determine which to use
-    // as two nameservices could share a namenode ID.
+    // No nameservice was given and we can't determine which service addr
+    // to use as two nameservices could share a namenode ID.
     assertEquals(null, DFSUtil.getNamenodeServiceAddr(conf, null, "ns1-nn1"));
+
+    // Ditto for nameservice IDs, if multiple are defined
+    assertEquals(null, DFSUtil.getNamenodeNameServiceId(conf));
+    assertEquals(null, DFSUtil.getSecondaryNameServiceId(conf));
   }
 
   @Test
@@ -453,6 +463,10 @@ public class TestDFSUtil {
 
     assertEquals(NS1_NN1_HOST_SVC, DFSUtil.getNamenodeServiceAddr(conf, null, "nn1"));
     assertEquals(NS1_NN2_HOST_SVC, DFSUtil.getNamenodeServiceAddr(conf, null, "nn2"));
+
+    // We can determine the nameservice ID, there's only one listed
+    assertEquals("ns1", DFSUtil.getNamenodeNameServiceId(conf));
+    assertEquals("ns1", DFSUtil.getSecondaryNameServiceId(conf));
   }
 
   @Test

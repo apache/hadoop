@@ -907,9 +907,10 @@ public class DFSUtil {
    * the address of the local node. 
    * 
    * If {@link DFSConfigKeys#DFS_FEDERATION_NAMESERVICE_ID} is not specifically
-   * configured, this method determines the nameservice Id by matching the local
-   * node's address with the configured addresses. When a match is found, it
-   * returns the nameservice Id from the corresponding configuration key.
+   * configured, and more than one nameservice Id is configured, this method 
+   * determines the nameservice Id by matching the local node's address with the
+   * configured addresses. When a match is found, it returns the nameservice Id
+   * from the corresponding configuration key.
    * 
    * @param conf Configuration
    * @param addressKey configuration key to get the address.
@@ -920,6 +921,10 @@ public class DFSUtil {
     String nameserviceId = conf.get(DFS_FEDERATION_NAMESERVICE_ID);
     if (nameserviceId != null) {
       return nameserviceId;
+    }
+    Collection<String> nsIds = getNameServiceIds(conf);
+    if (1 == nsIds.size()) {
+      return nsIds.toArray(new String[1])[0];
     }
     String nnId = conf.get(DFS_HA_NAMENODE_ID_KEY);
     
@@ -1057,11 +1062,11 @@ public class DFSUtil {
 
     if (nsId == null) {
       Collection<String> nsIds = getNameServiceIds(conf);
-      if (nsIds.size() != 1) {
+      if (1 == nsIds.size()) {
+        nsId = nsIds.toArray(new String[1])[0];
+      } else {
         // No nameservice ID was given and more than one is configured
         return null;
-      } else {
-        nsId = nsIds.toArray(new String[1])[0];
       }
     }
 

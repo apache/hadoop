@@ -47,7 +47,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
-import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
@@ -170,20 +169,17 @@ public class SecondaryNameNode implements Runnable {
     try {
       String nsId = DFSUtil.getSecondaryNameServiceId(conf);
       if (HAUtil.isHAEnabled(conf, nsId)) {
-        LOG.fatal("Cannot use SecondaryNameNode in an HA cluster." +
+        throw new IOException(
+            "Cannot use SecondaryNameNode in an HA cluster." +
             " The Standby Namenode will perform checkpointing.");
-        shutdown();
-        return;
       }
       NameNode.initializeGenericKeys(conf, nsId, null);
       initialize(conf, commandLineOpts);
-    } catch(IOException e) {
+    } catch (IOException e) {
       shutdown();
-      LOG.fatal("Failed to start secondary namenode. ", e);
       throw e;
-    } catch(HadoopIllegalArgumentException e) {
+    } catch (HadoopIllegalArgumentException e) {
       shutdown();
-      LOG.fatal("Failed to start secondary namenode. ", e);
       throw e;
     }
   }
@@ -335,7 +331,6 @@ public class SecondaryNameNode implements Runnable {
   // The main work loop
   //
   public void doWork() {
-
     //
     // Poll the Namenode (once every checkpointCheckPeriod seconds) to find the
     // number of transactions in the edit log that haven't yet been checkpointed.
@@ -612,7 +607,13 @@ public class SecondaryNameNode implements Runnable {
     
     StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
     Configuration tconf = new HdfsConfiguration();
-    SecondaryNameNode secondary = new SecondaryNameNode(tconf, opts);
+    SecondaryNameNode secondary = null;
+    try {
+      secondary = new SecondaryNameNode(tconf, opts);
+    } catch (IOException ioe) {
+      LOG.fatal("Failed to start secondary namenode", ioe);
+      System.exit(-1);
+    }
 
     if (opts.getCommand() != null) {
       int ret = secondary.processStartupCommand(opts);
