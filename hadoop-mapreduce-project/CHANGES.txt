@@ -195,6 +195,9 @@ Release 0.23.1 - Unreleased
     acmurthy) 
 
   BUG FIXES
+    MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
+    (Dave Thompson via bobby)
+
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
                     ResourceUsageMatcher. (amarrk)
 
