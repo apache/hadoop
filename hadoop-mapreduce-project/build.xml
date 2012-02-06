@@ -525,41 +525,9 @@
       dest.dir="${test.mapred.build.classes}"
       classpath="test.classpath"/>
 
-    <javac
-      encoding="${build.encoding}"
-      srcdir="${test.src.dir}/mapred/testjar"
-      includes="*.java"
-      destdir="${test.mapred.build.testjar}"
-      debug="${javac.debug}"
-      optimize="${javac.optimize}"
-      target="${javac.version}"
-      source="${javac.version}"
-      deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args} ${javac.args.warnings}" />
-      <classpath refid="test.classpath"/>
-    </javac>
-
     <delete file="${test.mapred.build.testjar}/testjob.jar"/> 
     <jar jarfile="${test.mapred.build.testjar}/testjob.jar"
        basedir="${test.mapred.build.testjar}">
-    </jar>
-
-    <javac 
-     encoding="${build.encoding}"
-     srcdir="${test.src.dir}/mapred/testshell"
-     includes="*.java"
-     destdir="${test.mapred.build.testshell}"
-     debug="${javac.debug}"
-     optimize="${javac.optimize}"
-     target="${javac.version}"
-     source="${javac.version}"
-     deprecation="${javac.deprecation}">
-      <compilerarg line="${javac.args} ${javac.args.warnings}"/>
-      <classpath refid="test.classpath"/>
-    </javac>
-    <delete file="${test.mapred.build.testshell}/testshell.jar"/>
-    <jar jarfile="${test.mapred.build.testshell}/testshell.jar"
-      basedir="${test.mapred.build.testshell}">
     </jar>
 
      <delete dir="${test.cache.data}"/>
@@ -618,8 +586,6 @@
     <jar jarfile="${hadoop-mapred-test-sources.jar}">
       <fileset dir="${test.src.dir}/mapred" includes="org/apache/hadoop/**/*.java" />
       <fileset dir="${test.src.dir}/unit" includes="org/apache/hadoop/**/*.java" />
-      <fileset dir="${test.src.dir}/mapred/testjar" includes="*.java" />
-      <fileset dir="${test.src.dir}/mapred/testshell" includes="*.java" />
     </jar>
   </target>
 
