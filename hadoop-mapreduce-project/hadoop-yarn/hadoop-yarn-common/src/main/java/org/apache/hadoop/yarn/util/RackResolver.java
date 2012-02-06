@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
@@ -50,7 +51,14 @@ public class RackResolver {
     try {
       Constructor<? extends DNSToSwitchMapping> dnsToSwitchMappingConstructor
                              = dnsToSwitchMappingClass.getConstructor();
-      dnsToSwitchMapping = dnsToSwitchMappingConstructor.newInstance();
+      DNSToSwitchMapping newInstance =
+          dnsToSwitchMappingConstructor.newInstance();
+      // Wrap around the configured class with the Cached implementation so as
+      // to save on repetitive lookups.
+      // Check if the impl is already caching, to avoid double caching.
+      dnsToSwitchMapping =
+          ((newInstance instanceof CachedDNSToSwitchMapping) ? newInstance
+              : new CachedDNSToSwitchMapping(newInstance));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
