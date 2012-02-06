@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
+import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -148,16 +148,10 @@ public class TestSubmitJob {
         conf, NetUtils.getSocketFactory(conf, ClientProtocol.class));
   }
 
-  static ClientNamenodeWireProtocol getDFSClient(
-      Configuration conf, UserGroupInformation ugi) 
-  throws IOException {
-    return (ClientNamenodeWireProtocol) 
-      RPC.getProxy(ClientNamenodeWireProtocol.class, 
-          ClientNamenodeWireProtocol.versionID, 
-        NameNode.getAddress(conf), ugi, 
-        conf, 
-        NetUtils.getSocketFactory(conf, 
-            ClientNamenodeWireProtocol.class));
+  static org.apache.hadoop.hdfs.protocol.ClientProtocol getDFSClient(
+      Configuration conf, UserGroupInformation ugi) throws IOException {
+    return new ClientNamenodeProtocolTranslatorPB(NameNode.getAddress(conf),
+        conf, ugi);
   }
   
   /**
@@ -226,7 +220,7 @@ public class TestSubmitJob {
       UserGroupInformation user2 = 
         TestMiniMRWithDFSWithDistinctUsers.createUGI("user2", false);
       JobConf conf_other = mr.createJobConf();
-      ClientNamenodeWireProtocol client = 
+      org.apache.hadoop.hdfs.protocol.ClientProtocol client = 
         getDFSClient(conf_other, user2);
 
       // try accessing mapred.system.dir/jobid/*
