@@ -303,7 +303,7 @@ public class TestDFSUtil {
     
     conf.set(DFS_FEDERATION_NAMESERVICES, nsId);
     conf.set(DFS_FEDERATION_NAMESERVICE_ID, nsId);
-    conf.set(DFS_HA_NAMENODES_KEY + "." + nsId, nnId);
+    conf.set(DFS_HA_NAMENODES_KEY_PREFIX + "." + nsId, nnId);
 
     // Set the nameservice specific keys with nameserviceId in the config key
     for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
@@ -380,9 +380,9 @@ public class TestDFSUtil {
     
     // Two nameservices, each with two NNs.
     conf.set(DFS_FEDERATION_NAMESERVICES, "ns1,ns2");
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, "ns1"),
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),
         "ns1-nn1,ns1-nn2");
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, "ns2"),
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns2"),
         "ns2-nn1,ns2-nn2");
     conf.set(DFSUtil.addKeySuffixes(
           DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "ns1-nn1"),
@@ -430,7 +430,7 @@ public class TestDFSUtil {
     final String NS1_NN2_HOST_SVC = "ns1-nn2.example.com:8021";
    
     conf.set(DFS_FEDERATION_NAMESERVICES, "ns1");
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY, "ns1"),"nn1,nn2"); 
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),"nn1,nn2"); 
 
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_HOST);

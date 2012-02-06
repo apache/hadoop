@@ -168,3 +168,5 @@ HDFS-2890. DFSUtil#getSuffixIDs should skip unset configurations. (atm)
 HDFS-2792. Make fsck work. (atm)
 
 HDFS-2808. HA: haadmin should use namenode ids. (eli)
+
+HDFS-2819. Document new HA-related configs in hdfs-default.xml. (eli)

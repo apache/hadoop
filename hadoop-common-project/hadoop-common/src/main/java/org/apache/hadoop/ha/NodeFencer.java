@@ -55,7 +55,7 @@ import com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public class NodeFencer {
   public static final String CONF_METHODS_KEY =
-    "dfs.namenode.ha.fencing.methods";
+    "dfs.ha.fencing.methods";
   
   private static final String CLASS_RE = "([a-zA-Z0-9\\.\\$]+)";
   private static final Pattern CLASS_WITH_ARGUMENT =
@@ -92,7 +92,7 @@ public class NodeFencer {
   }
 
   public boolean fence(InetSocketAddress serviceAddr) {
-    LOG.info("====== Beginning NameNode Fencing Process... ======");
+    LOG.info("====== Beginning Service Fencing Process... ======");
     int i = 0;
     for (FenceMethodWithArg method : methods) {
       LOG.info("Trying method " + (++i) + "/" + methods.size() +": " + method);
@@ -112,7 +112,7 @@ public class NodeFencer {
       LOG.warn("Fencing method " + method + " was unsuccessful.");
     }
     
-    LOG.error("Unable to fence NameNode by any configured method.");
+    LOG.error("Unable to fence service by any configured method.");
     return false;
   }
 

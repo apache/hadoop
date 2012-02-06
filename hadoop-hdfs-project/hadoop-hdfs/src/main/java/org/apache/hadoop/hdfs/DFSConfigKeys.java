@@ -48,6 +48,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_DEFAULT = "DEFAULT";
   public static final String  DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY = "dfs.client.socketcache.capacity";
   public static final int     DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT = 16;
+
+  // HA related configuration
   public static final String  DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX = "dfs.client.failover.proxy.provider";
   public static final String  DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY = "dfs.client.failover.max.attempts";
   public static final int     DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT = 15;
@@ -329,7 +331,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY = "dfs.block.local-path-access.user";
 
   // HA related configuration
-  public static final String DFS_HA_NAMENODES_KEY = "dfs.ha.namenodes";
+  public static final String DFS_HA_NAMENODES_KEY_PREFIX = "dfs.ha.namenodes";
   public static final String DFS_HA_NAMENODE_ID_KEY = "dfs.ha.namenode.id";
   public static final String  DFS_HA_STANDBY_CHECKPOINTS_KEY = "dfs.ha.standby.checkpoints";
   public static final boolean DFS_HA_STANDBY_CHECKPOINTS_DEFAULT = true;

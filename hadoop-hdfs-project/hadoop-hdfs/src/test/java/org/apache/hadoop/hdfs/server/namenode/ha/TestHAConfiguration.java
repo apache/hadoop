@@ -61,7 +61,7 @@ public class TestHAConfiguration {
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, NSID);    
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, NSID);
     conf.set(DFSUtil.addKeySuffixes(
-        DFSConfigKeys.DFS_HA_NAMENODES_KEY, NSID),
+        DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, NSID),
         "nn1,nn2");    
     conf.set(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY, "nn1");
     conf.set(DFSUtil.addKeySuffixes(

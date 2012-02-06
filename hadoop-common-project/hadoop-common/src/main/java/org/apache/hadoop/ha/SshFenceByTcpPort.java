@@ -52,7 +52,7 @@ import com.jcraft.jsch.Session;
  * with ssh.
  * <p>
  * In order to achieve passwordless SSH, the operator must also configure
- * <code>dfs.namenode.ha.fencing.ssh.private-key-files<code> to point to an
+ * <code>dfs.ha.fencing.ssh.private-key-files<code> to point to an
  * SSH key that has passphrase-less access to the given username and host.
  */
 public class SshFenceByTcpPort extends Configured
@@ -62,11 +62,11 @@ public class SshFenceByTcpPort extends Configured
       SshFenceByTcpPort.class);
   
   static final String CONF_CONNECT_TIMEOUT_KEY =
-    "dfs.namenode.ha.fencing.ssh.connect-timeout";
+    "dfs.ha.fencing.ssh.connect-timeout";
   private static final int CONF_CONNECT_TIMEOUT_DEFAULT =
     30*1000;
   static final String CONF_IDENTITIES_KEY =
-    "dfs.namenode.ha.fencing.ssh.private-key-files";
+    "dfs.ha.fencing.ssh.private-key-files";
 
   /**
    * Verify that the argument, if given, in the conf is parseable.

@@ -139,7 +139,7 @@ public class HAUtil {
     Preconditions.checkArgument(nnIds != null,
         "Could not determine namenode ids in namespace '%s'. " +
         "Please configure " +
-        DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY,
+        DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
             nsId),
         nsId);
     Preconditions.checkArgument(nnIds.size() == 2,

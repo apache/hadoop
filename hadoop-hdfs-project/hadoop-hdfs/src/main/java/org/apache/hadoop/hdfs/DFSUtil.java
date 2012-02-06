@@ -349,7 +349,7 @@ public class DFSUtil {
    * @return collection of namenode Ids
    */
   public static Collection<String> getNameNodeIds(Configuration conf, String nsId) {
-    String key = addSuffix(DFS_HA_NAMENODES_KEY, nsId);
+    String key = addSuffix(DFS_HA_NAMENODES_KEY_PREFIX, nsId);
     return conf.getTrimmedStringCollection(key);
   }
   
