@@ -97,7 +97,8 @@ public class ParentQueue implements CSQueue {
     RecordFactoryProvider.getRecordFactory(null);
 
   public ParentQueue(CapacitySchedulerContext cs, 
-      String queueName, Comparator<CSQueue> comparator, CSQueue parent, CSQueue old) {
+      String queueName, Comparator<CSQueue> comparator, 
+      CSQueue parent, CSQueue old) {
     minimumAllocation = cs.getMinimumResourceCapability();
     
     this.parent = parent;
@@ -137,7 +138,8 @@ public class ParentQueue implements CSQueue {
     this.queueInfo.setQueueName(queueName);
     this.queueInfo.setChildQueues(new ArrayList<QueueInfo>());
 
-    setupQueueConfigs(capacity, absoluteCapacity, 
+    setupQueueConfigs(cs.getClusterResources(),
+        capacity, absoluteCapacity, 
         maximumCapacity, absoluteMaxCapacity, state, acls);
     
     this.queueComparator = comparator;
@@ -149,9 +151,10 @@ public class ParentQueue implements CSQueue {
   }
 
   private synchronized void setupQueueConfigs(
-          float capacity, float absoluteCapacity, 
-          float maximumCapacity, float absoluteMaxCapacity,
-          QueueState state, Map<QueueACL, AccessControlList> acls
+      Resource clusterResource,
+      float capacity, float absoluteCapacity, 
+      float maximumCapacity, float absoluteMaxCapacity,
+      QueueState state, Map<QueueACL, AccessControlList> acls
   ) {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -173,6 +176,10 @@ public class ParentQueue implements CSQueue {
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
     }
+
+    // Update metrics
+    CSQueueUtils.updateQueueStatistics(
+        this, parent, clusterResource, minimumAllocation);
 
     LOG.info(queueName +
         ", capacity=" + capacity +
@@ -384,12 +391,10 @@ public class ParentQueue implements CSQueue {
     childQueues.addAll(currentChildQueues.values());
 
     // Set new configs
-    setupQueueConfigs(parentQueue.capacity, parentQueue.absoluteCapacity,
+    setupQueueConfigs(clusterResource,
+        parentQueue.capacity, parentQueue.absoluteCapacity,
         parentQueue.maximumCapacity, parentQueue.absoluteMaxCapacity,
         parentQueue.state, parentQueue.acls);
-
-    // Update
-    updateResource(clusterResource);
   }
 
   Map<String, CSQueue> getQueues(Set<CSQueue> queues) {
@@ -485,11 +490,11 @@ public class ParentQueue implements CSQueue {
         " #applications: " + getNumApplications());
   }
   
-  synchronized void setUsedCapacity(float usedCapacity) {
+  public synchronized void setUsedCapacity(float usedCapacity) {
     this.usedCapacity = usedCapacity;
   }
   
-  synchronized void setUtilization(float utilization) {
+  public synchronized void setUtilization(float utilization) {
     this.utilization = utilization;
   }
 
@@ -674,14 +679,16 @@ public class ParentQueue implements CSQueue {
   synchronized void allocateResource(Resource clusterResource, 
       Resource resource) {
     Resources.addTo(usedResources, resource);
-    updateResource(clusterResource);
+    CSQueueUtils.updateQueueStatistics(
+        this, parent, clusterResource, minimumAllocation);
     ++numContainers;
   }
   
   synchronized void releaseResource(Resource clusterResource, 
       Resource resource) {
     Resources.subtractFrom(usedResources, resource);
-    updateResource(clusterResource);
+    CSQueueUtils.updateQueueStatistics(
+        this, parent, clusterResource, minimumAllocation);
     --numContainers;
   }
 
@@ -691,22 +698,12 @@ public class ParentQueue implements CSQueue {
     for (CSQueue childQueue : childQueues) {
       childQueue.updateClusterResource(clusterResource);
     }
+    
+    // Update metrics
+    CSQueueUtils.updateQueueStatistics(
+        this, parent, clusterResource, minimumAllocation);
   }
   
-  private synchronized void updateResource(Resource clusterResource) {
-    float queueLimit = clusterResource.getMemory() * absoluteCapacity;
-    float parentAbsoluteCapacity = 
-        (rootQueue) ? 1.0f : parent.getAbsoluteCapacity();
-    setUtilization(usedResources.getMemory() / queueLimit);
-    setUsedCapacity(usedResources.getMemory() 
-        / (clusterResource.getMemory() * parentAbsoluteCapacity));
-  
-    Resource resourceLimit = 
-      Resources.createResource((int)queueLimit);
-    metrics.setAvailableResourcesToQueue(
-        Resources.subtractFrom(resourceLimit, usedResources));
-  }
-
   @Override
   public QueueMetrics getMetrics() {
     return metrics;

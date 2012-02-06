@@ -32,10 +32,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 public class ClusterMetricsInfo {
 
   protected int appsSubmitted;
+  protected int appsCompleted;
+  protected int appsPending;
+  protected int appsRunning;
+  protected int appsFailed;
+  protected int appsKilled;
+  
   protected long reservedMB;
   protected long availableMB;
   protected long allocatedMB;
+  
   protected int containersAllocated;
+  protected int containersReserved;
+  protected int containersPending;
+  
   protected long totalMB;
   protected int totalNodes;
   protected int lostNodes;
@@ -53,10 +63,20 @@ public class ClusterMetricsInfo {
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
 
     this.appsSubmitted = metrics.getAppsSubmitted();
+    this.appsCompleted = metrics.getAppsCompleted();
+    this.appsPending = metrics.getAppsPending();
+    this.appsRunning = metrics.getAppsRunning();
+    this.appsFailed = metrics.getAppsFailed();
+    this.appsKilled = metrics.getAppsKilled();
+    
     this.reservedMB = metrics.getReservedMB();
     this.availableMB = metrics.getAvailableMB();
     this.allocatedMB = metrics.getAllocatedMB();
+    
     this.containersAllocated = metrics.getAllocatedContainers();
+    this.containersPending = metrics.getPendingContainers();
+    this.containersReserved = metrics.getReservedContainers();
+    
     this.totalMB = availableMB + reservedMB + allocatedMB;
     this.activeNodes = clusterMetrics.getNumActiveNMs();
     this.lostNodes = clusterMetrics.getNumLostNMs();
@@ -69,6 +89,26 @@ public class ClusterMetricsInfo {
 
   public int getAppsSubmitted() {
     return this.appsSubmitted;
+  }
+
+  public int getAppsCompleted() {
+    return appsCompleted;
+  }
+
+  public int getAppsPending() {
+    return appsPending;
+  }
+
+  public int getAppsRunning() {
+    return appsRunning;
+  }
+
+  public int getAppsFailed() {
+    return appsFailed;
+  }
+
+  public int getAppsKilled() {
+    return appsKilled;
   }
 
   public long getReservedMB() {
@@ -87,6 +127,14 @@ public class ClusterMetricsInfo {
     return this.containersAllocated;
   }
 
+  public int getReservedContainers() {
+    return this.containersReserved;
+  }
+
+  public int getPendingContainers() {
+    return this.containersPending;
+  }
+  
   public long getTotalMB() {
     return this.totalMB;
   }

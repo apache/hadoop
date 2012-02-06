@@ -55,15 +55,19 @@ public class MetricsOverviewTable extends HtmlBlock {
     //CSS in the correct spot
     html.style(".metrics {margin-bottom:5px}"); 
     
-    ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm, this.rmContext);
-
+    ClusterMetricsInfo clusterMetrics = 
+        new ClusterMetricsInfo(this.rm, this.rmContext);
     
     DIV<Hamlet> div = html.div().$class("metrics");
     
-    div.table("#metricsoverview").
+    div.h3("Cluster Metrics").
+    table("#metricsoverview").
     thead().$class("ui-widget-header").
       tr().
         th().$class("ui-state-default")._("Apps Submitted")._().
+        th().$class("ui-state-default")._("Apps Pending")._().
+        th().$class("ui-state-default")._("Apps Running")._().
+        th().$class("ui-state-default")._("Apps Completed")._().
         th().$class("ui-state-default")._("Containers Running")._().
         th().$class("ui-state-default")._("Memory Used")._().
         th().$class("ui-state-default")._("Memory Total")._().
@@ -78,6 +82,14 @@ public class MetricsOverviewTable extends HtmlBlock {
     tbody().$class("ui-widget-content").
       tr().
         td(String.valueOf(clusterMetrics.getAppsSubmitted())).
+        td(String.valueOf(clusterMetrics.getAppsPending())).
+        td(String.valueOf(clusterMetrics.getAppsRunning())).
+        td(
+            String.valueOf(
+                clusterMetrics.getAppsCompleted() + 
+                clusterMetrics.getAppsFailed() + clusterMetrics.getAppsKilled()
+                )
+            ).
         td(String.valueOf(clusterMetrics.getContainersAllocated())).
         td(StringUtils.byteDesc(clusterMetrics.getAllocatedMB() * BYTES_IN_MB)).
         td(StringUtils.byteDesc(clusterMetrics.getTotalMB() * BYTES_IN_MB)).
@@ -89,26 +101,38 @@ public class MetricsOverviewTable extends HtmlBlock {
         td().a(url("nodes/rebooted"),String.valueOf(clusterMetrics.getRebootedNodes()))._().
       _().
     _()._();
-
+    
     String user = request().getRemoteUser();
     if (user != null) {
       UserMetricsInfo userMetrics = new UserMetricsInfo(this.rm, this.rmContext, user);
       if (userMetrics.metricsAvailable()) {
-        div.table("#usermetricsoverview").
+        div.h3("User Metrics for " + user).
+        table("#usermetricsoverview").
         thead().$class("ui-widget-header").
           tr().
-            th().$class("ui-state-default")._("Apps Submitted ("+user+")")._().
-            th().$class("ui-state-default")._("Containers Running ("+user+")")._().
-            th().$class("ui-state-default")._("Containers Pending ("+user+")")._().
-            th().$class("ui-state-default")._("Containers Reserved ("+user+")")._().
-            th().$class("ui-state-default")._("Memory Used ("+user+")")._().
-            th().$class("ui-state-default")._("Memory Pending ("+user+")")._().
-            th().$class("ui-state-default")._("Memory Reserved ("+user+")")._().
+            th().$class("ui-state-default")._("Apps Submitted")._().
+            th().$class("ui-state-default")._("Apps Pending")._().
+            th().$class("ui-state-default")._("Apps Running")._().
+            th().$class("ui-state-default")._("Apps Completed")._().
+            th().$class("ui-state-default")._("Containers Running")._().
+            th().$class("ui-state-default")._("Containers Pending")._().
+            th().$class("ui-state-default")._("Containers Reserved")._().
+            th().$class("ui-state-default")._("Memory Used")._().
+            th().$class("ui-state-default")._("Memory Pending")._().
+            th().$class("ui-state-default")._("Memory Reserved")._().
           _().
         _().
         tbody().$class("ui-widget-content").
           tr().
             td(String.valueOf(userMetrics.getAppsSubmitted())).
+            td(String.valueOf(userMetrics.getAppsPending())).
+            td(String.valueOf(userMetrics.getAppsRunning())).
+            td(
+                String.valueOf(
+                    (userMetrics.getAppsCompleted() + 
+                     userMetrics.getAppsFailed() + userMetrics.getAppsKilled())
+                    )
+              ).
             td(String.valueOf(userMetrics.getRunningContainers())).
             td(String.valueOf(userMetrics.getPendingContainers())).
             td(String.valueOf(userMetrics.getReservedContainers())).
@@ -117,6 +141,7 @@ public class MetricsOverviewTable extends HtmlBlock {
             td(StringUtils.byteDesc(userMetrics.getReservedMB() * BYTES_IN_MB)).
           _().
         _()._();
+        
       }
     }
 

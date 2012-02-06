@@ -17,7 +17,9 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 class CSQueueUtils {
   
@@ -65,4 +67,40 @@ class CSQueueUtils {
         1);
   }
   
+  @Lock(CSQueue.class)
+  public static void updateQueueStatistics(
+      final CSQueue childQueue, final CSQueue parentQueue, 
+      final Resource clusterResource, final Resource minimumAllocation) {
+    final int clusterMemory = clusterResource.getMemory();
+    final int usedMemory = childQueue.getUsedResources().getMemory();
+    
+    float queueLimit = 0.0f;
+    float utilization = 0.0f;
+    float usedCapacity = 0.0f;
+    if (clusterMemory > 0) {
+      queueLimit = clusterMemory * childQueue.getAbsoluteCapacity();
+      final float parentAbsoluteCapacity = 
+          (parentQueue == null) ? 1.0f : parentQueue.getAbsoluteCapacity();
+      utilization = (usedMemory / queueLimit);
+      usedCapacity = (usedMemory / (clusterMemory * parentAbsoluteCapacity));
+    }
+    
+    childQueue.setUtilization(utilization);
+    childQueue.setUsedCapacity(usedCapacity);
+    
+    int available = 
+        Math.max((roundUp(minimumAllocation, (int)queueLimit) - usedMemory), 0); 
+    childQueue.getMetrics().setAvailableResourcesToQueue(
+        Resources.createResource(available));
+  }
+
+  public static int roundUp(Resource minimumAllocation, int memory) {
+    int minMemory = minimumAllocation.getMemory();
+    return LeafQueue.divideAndCeil(memory, minMemory) * minMemory; 
+  }
+
+  public static int roundDown(Resource minimumAllocation, int memory) {
+    int minMemory = minimumAllocation.getMemory();
+    return (memory / minMemory) * minMemory;
+  }
 }
