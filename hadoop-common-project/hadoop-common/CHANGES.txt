@@ -97,6 +97,8 @@ Release 0.23.1 - Unreleased
 
   OPTIMIZATIONS
 
+    HADOOP-7761. Improve the performance of raw comparisons. (todd)
+
   BUG FIXES
    HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
    (Daryn Sharp via bobby)
