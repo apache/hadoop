@@ -23,7 +23,7 @@ package org.apache.hadoop.yarn.api.records;
  * allocation 
  *
  */
-public interface Priority extends Comparable<Priority> {
+public abstract class Priority implements Comparable<Priority> {
   
   /**
    * Get the assigned priority
@@ -37,4 +37,31 @@ public interface Priority extends Comparable<Priority> {
    */
   public abstract void setPriority(int priority);
   
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + getPriority();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    Priority other = (Priority) obj;
+    if (getPriority() != other.getPriority())
+      return false;
+    return true;
+  }
+
+  @Override
+  public int compareTo(Priority other) {
+    return this.getPriority() - other.getPriority();
+  }
+
 }

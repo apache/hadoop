@@ -665,6 +665,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3814. Fixed MRV1 compilation. (Arun C Murthy via vinodkv)
 
+    MAPREDUCE-3810. Performance tweaks - reduced logging in AM and defined
+    hascode/equals for ResourceRequest & Priority. (vinodkv via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

@@ -436,7 +436,7 @@ public class MRApp extends MRAppMaster {
     return new ClientService(){
       @Override
       public InetSocketAddress getBindAddress() {
-        return null;
+        return NetUtils.createSocketAddr("localhost:9876");
       }
 
       @Override

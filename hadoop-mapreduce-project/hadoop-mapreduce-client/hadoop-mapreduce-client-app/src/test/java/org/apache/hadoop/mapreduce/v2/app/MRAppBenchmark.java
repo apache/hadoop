@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -29,16 +31,30 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.Test;
 
 public class MRAppBenchmark {
 
@@ -167,17 +183,89 @@ public class MRAppBenchmark {
     }
   }
 
+  @Test
   public void benchmark1() throws Exception {
-    int maps = 100000;
-    int reduces = 100;
+    int maps = 100; // Adjust for benchmarking. Start with thousands.
+    int reduces = 0;
     System.out.println("Running benchmark with maps:"+maps +
         " reduces:"+reduces);
-    run(new MRApp(maps, reduces, true, this.getClass().getName(), true));
+    run(new MRApp(maps, reduces, true, this.getClass().getName(), true) {
+
+      @Override
+      protected ContainerAllocator createContainerAllocator(
+          ClientService clientService, AppContext context) {
+        return new RMContainerAllocator(clientService, context) {
+          @Override
+          protected AMRMProtocol createSchedulerProxy() {
+            return new AMRMProtocol() {
+
+              @Override
+              public RegisterApplicationMasterResponse
+                  registerApplicationMaster(
+                      RegisterApplicationMasterRequest request)
+                      throws YarnRemoteException {
+                RegisterApplicationMasterResponse response =
+                    Records.newRecord(RegisterApplicationMasterResponse.class);
+                response.setMinimumResourceCapability(BuilderUtils
+                  .newResource(1024));
+                response.setMaximumResourceCapability(BuilderUtils
+                  .newResource(10240));
+                return response;
+              }
+
+              @Override
+              public FinishApplicationMasterResponse finishApplicationMaster(
+                  FinishApplicationMasterRequest request)
+                  throws YarnRemoteException {
+                FinishApplicationMasterResponse response =
+                    Records.newRecord(FinishApplicationMasterResponse.class);
+                return response;
+              }
+
+              @Override
+              public AllocateResponse allocate(AllocateRequest request)
+                  throws YarnRemoteException {
+
+                AllocateResponse response =
+                    Records.newRecord(AllocateResponse.class);
+                List<ResourceRequest> askList = request.getAskList();
+                List<Container> containers = new ArrayList<Container>();
+                for (ResourceRequest req : askList) {
+                  if (req.getHostName() != "*") {
+                    continue;
+                  }
+                  int numContainers = req.getNumContainers();
+                  for (int i = 0; i < numContainers; i++) {
+                    ContainerId containerId =
+                        BuilderUtils.newContainerId(
+                          request.getApplicationAttemptId(),
+                          request.getResponseId() + i);
+                    containers.add(BuilderUtils
+                      .newContainer(containerId, BuilderUtils.newNodeId("host"
+                          + containerId.getId(), 2345),
+                        "host" + containerId.getId() + ":5678", req
+                          .getCapability(), req.getPriority(), null));
+                  }
+                }
+
+                AMResponse amResponse = Records.newRecord(AMResponse.class);
+                amResponse.setAllocatedContainers(containers);
+                amResponse.setResponseId(request.getResponseId() + 1);
+                response.setAMResponse(amResponse);
+                response.setNumClusterNodes(350);
+                return response;
+              }
+            };
+          }
+        };
+      }
+    });
   }
 
+  @Test
   public void benchmark2() throws Exception {
-    int maps = 4000;
-    int reduces = 1000;
+    int maps = 100; // Adjust for benchmarking, start with a couple of thousands
+    int reduces = 50;
     int maxConcurrentRunningTasks = 500;
     
     System.out.println("Running benchmark with throttled running tasks with " +
