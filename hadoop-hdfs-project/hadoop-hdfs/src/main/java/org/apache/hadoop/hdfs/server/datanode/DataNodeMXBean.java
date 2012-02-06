@@ -70,5 +70,10 @@ public interface DataNodeMXBean {
    * @return the cluster id
    */
   public String getClusterId();
-  
+
+  /**
+   * Returns an estimate of the number of Datanode threads
+   * actively transferring blocks.
+   */
+  public int getXceiverCount();
 }

@@ -1262,7 +1262,8 @@ public class DataNode extends Configured
   }
     
   /** Number of concurrent xceivers per node. */
-  int getXceiverCount() {
+  @Override // DataNodeMXBean
+  public int getXceiverCount() {
     return threadGroup == null ? 0 : threadGroup.activeCount();
   }
     
