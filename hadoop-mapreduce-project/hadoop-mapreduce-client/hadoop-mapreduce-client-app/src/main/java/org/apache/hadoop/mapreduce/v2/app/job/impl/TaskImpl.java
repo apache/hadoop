@@ -81,7 +81,7 @@ import org.apache.hadoop.yarn.state.StateMachineFactory;
 /**
  * Implementation of Task interface.
  */
-@SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   private static final Log LOG = LogFactory.getLog(TaskImpl.class);
@@ -505,7 +505,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   // This is always called in the Write Lock
   private void addAndScheduleAttempt() {
     TaskAttempt attempt = createAttempt();
-    LOG.info("Created attempt " + attempt.getID());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created attempt " + attempt.getID());
+    }
     switch (attempts.size()) {
       case 0:
         attempts = Collections.singletonMap(attempt.getID(), attempt);
@@ -537,7 +539,10 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   @Override
   public void handle(TaskEvent event) {
-    LOG.debug("Processing " + event.getTaskID() + " of type " + event.getType());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing " + event.getTaskID() + " of type "
+          + event.getType());
+    }
     try {
       writeLock.lock();
       TaskState oldState = getState();

@@ -127,7 +127,7 @@ import org.apache.hadoop.yarn.util.RackResolver;
 /**
  * Implementation of TaskAttempt interface.
  */
-@SuppressWarnings({ "rawtypes", "deprecation" })
+@SuppressWarnings({ "rawtypes" })
 public abstract class TaskAttemptImpl implements
     org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt,
       EventHandler<TaskAttemptEvent> {
@@ -910,8 +910,10 @@ public abstract class TaskAttemptImpl implements
   @SuppressWarnings("unchecked")
   @Override
   public void handle(TaskAttemptEvent event) {
-    LOG.info("Processing " + event.getTaskAttemptID() +
-        " of type " + event.getType());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing " + event.getTaskAttemptID() + " of type "
+          + event.getType());
+    }
     writeLock.lock();
     try {
       final TaskAttemptState oldState = getState();
@@ -1278,15 +1280,11 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       //set the finish time
       taskAttempt.setFinishTime();
-      String taskType = 
-          TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()).toString();
-      LOG.info("In TaskAttemptImpl taskType: " + taskType);
       long slotMillis = computeSlotMillis(taskAttempt);
-      JobCounterUpdateEvent jce =
-          new JobCounterUpdateEvent(taskAttempt.attemptId.getTaskId()
-              .getJobId());
+      TaskId taskId = taskAttempt.attemptId.getTaskId();
+      JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskId.getJobId());
       jce.addCounterUpdate(
-        taskAttempt.attemptId.getTaskId().getTaskType() == TaskType.MAP ? 
+        taskId.getTaskType() == TaskType.MAP ? 
           JobCounter.SLOTS_MILLIS_MAPS : JobCounter.SLOTS_MILLIS_REDUCES,
           slotMillis);
       taskAttempt.eventHandler.handle(jce);
