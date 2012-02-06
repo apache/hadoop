@@ -59,7 +59,6 @@ if [ $# = 0 ]; then
   echo "where COMMAND is one of:"
   echo "  resourcemanager      run the ResourceManager" 
   echo "  nodemanager          run a nodemanager on each slave" 
-  echo "  historyserver        run job history servers as a standalone daemon"
   echo "  rmadmin              admin tools" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
@@ -154,8 +153,6 @@ if [ "$YARN_LOGFILE" = "" ]; then
   YARN_LOGFILE='yarn.log'
 fi
 
-YARN_JOB_HISTORYSERVER_OPTS="-Dmapred.jobsummary.logger=${YARN_JHS_LOGGER:-INFO,console}"
-
 # restore ordinary behaviour
 unset IFS
 
@@ -181,9 +178,6 @@ elif [ "$COMMAND" = "nodemanager" ] ; then
   else
     YARN_OPTS="$YARN_OPTS -server $YARN_NODEMANAGER_OPTS"
   fi
-elif [ "$COMMAND" = "historyserver" ] ; then
-  CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
-  YARN_OPTS="$YARN_OPTS $YARN_JOB_HISTORYSERVER_OPTS"
 elif [ "$COMMAND" = "proxyserver" ] ; then
   CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
   YARN_OPTS="$YARN_OPTS $YARN_PROXYSERVER_OPTS"

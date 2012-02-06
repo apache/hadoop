@@ -676,6 +676,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3808. Fixed an NPE in FileOutputCommitter for jobs with maps
     but no reduces. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3354. Changed scripts so that jobhistory server is started by
+    bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
