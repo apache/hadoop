@@ -99,6 +99,12 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public float getUsedCapacity();
   
   /**
+   * Set used capacity of the queue.
+   * @param usedCapacity used capacity of the queue
+   */
+  public void setUsedCapacity(float usedCapacity);
+  
+  /**
    * Get the currently utilized resources in the cluster 
    * by the queue and children (if any).
    * @return used resources by the queue and it's children 
@@ -113,6 +119,12 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return queue utilization
    */
   public float getUtilization();
+  
+  /**
+   * Get the current <em>utilization</em> of the queue.
+   * @param utilization queue utilization
+   */
+  public void setUtilization(float utilization);
   
   /**
    * Get the current run-state of the queue

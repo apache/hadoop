@@ -32,6 +32,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 public class UserMetricsInfo {
 
   protected int appsSubmitted;
+  protected int appsCompleted;
+  protected int appsPending;
+  protected int appsRunning;
+  protected int appsFailed;
+  protected int appsKilled;
   protected int runningContainers;
   protected int pendingContainers;
   protected int reservedContainers;
@@ -54,10 +59,18 @@ public class UserMetricsInfo {
 
     if (userMetrics != null) {
       this.userMetricsAvailable = true;
+      
       this.appsSubmitted = userMetrics.getAppsSubmitted();
+      this.appsCompleted = metrics.getAppsCompleted();
+      this.appsPending = metrics.getAppsPending();
+      this.appsRunning = metrics.getAppsRunning();
+      this.appsFailed = metrics.getAppsFailed();
+      this.appsKilled = metrics.getAppsKilled();
+
       this.runningContainers = userMetrics.getAllocatedContainers();
       this.pendingContainers = userMetrics.getPendingContainers();
       this.reservedContainers = userMetrics.getReservedContainers();
+      
       this.reservedMB = userMetrics.getReservedMB();
       this.pendingMB = userMetrics.getPendingMB();
       this.allocatedMB = userMetrics.getAllocatedMB();
@@ -70,6 +83,26 @@ public class UserMetricsInfo {
 
   public int getAppsSubmitted() {
     return this.appsSubmitted;
+  }
+
+  public int getAppsCompleted() {
+    return appsCompleted;
+  }
+
+  public int getAppsPending() {
+    return appsPending;
+  }
+
+  public int getAppsRunning() {
+    return appsRunning;
+  }
+
+  public int getAppsFailed() {
+    return appsFailed;
+  }
+
+  public int getAppsKilled() {
+    return appsKilled;
   }
 
   public long getReservedMB() {

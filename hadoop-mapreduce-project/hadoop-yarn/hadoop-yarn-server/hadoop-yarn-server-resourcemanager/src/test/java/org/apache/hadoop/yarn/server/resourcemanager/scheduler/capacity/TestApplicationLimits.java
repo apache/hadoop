@@ -142,7 +142,7 @@ public class TestApplicationLimits {
         CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
             queues, queues, 
             CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator, 
+            CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
 
     LeafQueue queue = (LeafQueue)queues.get(A);
@@ -163,6 +163,10 @@ public class TestApplicationLimits {
             expectedMaxActiveApps * (queue.getUserLimit() / 100.0f) * 
             queue.getUserLimitFactor()), 
         queue.getMaximumActiveApplicationsPerUser());
+    assertEquals(
+        (int)(clusterResource.getMemory() * queue.getAbsoluteCapacity()),
+        queue.getMetrics().getAvailableMB()
+        );
     
     // Add some nodes to the cluster & test new limits
     clusterResource = Resources.createResource(120 * 16 * GB);
@@ -178,6 +182,10 @@ public class TestApplicationLimits {
         (int)Math.ceil(expectedMaxActiveApps * 
             (queue.getUserLimit() / 100.0f) * queue.getUserLimitFactor()), 
         queue.getMaximumActiveApplicationsPerUser());
+    assertEquals(
+        (int)(clusterResource.getMemory() * queue.getAbsoluteCapacity()),
+        queue.getMetrics().getAvailableMB()
+        );
   }
   
   @Test

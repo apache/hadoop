@@ -63,10 +63,11 @@ public class RmView extends TwoColumnLayout {
 
   private String appsTableInit() {
     AppsList list = getInstance(AppsList.class);
-    // id, user, name, queue, state, progress, ui, note
+    // id, user, name, queue, starttime, finishtime, state, progress, ui
     StringBuilder init = tableInit().
-        append(", aoColumns:[{sType:'title-numeric'}, null, null, null, null,").
-        append("null,{sType:'title-numeric', bSearchable:false}, null, null]");
+        append(", aoColumns:[{sType:'title-numeric'}, null, null, null, ").
+        append("null, null , null, ").
+        append("null,{sType:'title-numeric', bSearchable:false}, null]");
 
     // Sort by id upon page load
     init.append(", aaSorting: [[0, 'asc']]");

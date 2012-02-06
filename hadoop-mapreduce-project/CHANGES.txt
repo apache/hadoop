@@ -660,6 +660,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3765. FifoScheduler does not respect yarn.scheduler.fifo.minimum-
     allocation-mb setting (Hitesh Shah via mahadev)
 
+    MAPREDUCE-3747. Initialize queue metrics upfront and added start/finish
+    time to RM Web-UI. (acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
