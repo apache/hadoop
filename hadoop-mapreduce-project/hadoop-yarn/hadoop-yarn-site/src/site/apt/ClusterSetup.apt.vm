@@ -476,7 +476,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
     designated server:
   
 ----
-  $ $YARN_HOME/bin/yarn start historyserver --config $HADOOP_CONF_DIR  
+  $ $YARN_HOME/bin/mapred start historyserver --config $YARN_CONF_DIR  
 ----    	  
 
     * Hadoop Shutdown      
@@ -519,7 +519,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
     designated server:
   
 ----
-  $ $YARN_HOME/bin/yarn stop historyserver --config $HADOOP_CONF_DIR  
+  $ $YARN_HOME/bin/mapred stop historyserver --config $YARN_CONF_DIR  
 ----    	  
 
     
@@ -1020,7 +1020,7 @@ KVNO Timestamp         Principal
     designated server as <mapred>:
   
 ----
-[mapred]$ $YARN_HOME/bin/yarn start historyserver --config $HADOOP_CONF_DIR  
+[mapred]$ $YARN_HOME/bin/mapred start historyserver --config $YARN_CONF_DIR  
 ----    	  
 
     * Hadoop Shutdown      
@@ -1063,7 +1063,7 @@ KVNO Timestamp         Principal
     designated server as <mapred>:
 
 ----
-[mapred]$ $YARN_HOME/bin/yarn stop historyserver --config $HADOOP_CONF_DIR  
+[mapred]$ $YARN_HOME/bin/mapred stop historyserver --config $YARN_CONF_DIR  
 ----    	  
     
 * {Web Interfaces}      

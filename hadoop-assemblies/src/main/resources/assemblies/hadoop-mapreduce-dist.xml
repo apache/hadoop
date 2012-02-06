@@ -72,6 +72,14 @@
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
+      <directory>bin</directory>
+      <outputDirectory>sbin</outputDirectory>
+      <includes>
+        <include>mr-jobhistory-daemon.sh</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-yarn/conf</directory>
       <outputDirectory>etc/hadoop</outputDirectory>
       <includes>
