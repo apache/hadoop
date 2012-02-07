@@ -711,6 +711,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3826. Fixed a bug in RM web-ui which broke sorting. (Jonathan
     Eagles via acmurthy)
 
+    MAPREDUCE-3823. Ensure counters are calculated only once after a job
+    finishes. (Vinod Kumar Vavilapalli via sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
