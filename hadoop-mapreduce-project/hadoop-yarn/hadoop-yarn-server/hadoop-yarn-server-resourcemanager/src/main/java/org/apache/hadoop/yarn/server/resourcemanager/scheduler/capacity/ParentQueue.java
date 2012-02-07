@@ -368,6 +368,12 @@ public class ParentQueue implements CSQueue {
 
     ParentQueue parentQueue = (ParentQueue)queue;
 
+    // Set new configs
+    setupQueueConfigs(clusterResource,
+        parentQueue.capacity, parentQueue.absoluteCapacity,
+        parentQueue.maximumCapacity, parentQueue.absoluteMaxCapacity,
+        parentQueue.state, parentQueue.acls);
+
     // Re-configure existing child queues and add new ones
     // The CS has already checked to ensure all existing child queues are present!
     Map<String, CSQueue> currentChildQueues = getQueues(childQueues);
@@ -389,12 +395,6 @@ public class ParentQueue implements CSQueue {
     // Re-sort all queues
     childQueues.clear();
     childQueues.addAll(currentChildQueues.values());
-
-    // Set new configs
-    setupQueueConfigs(clusterResource,
-        parentQueue.capacity, parentQueue.absoluteCapacity,
-        parentQueue.maximumCapacity, parentQueue.absoluteMaxCapacity,
-        parentQueue.state, parentQueue.acls);
   }
 
   Map<String, CSQueue> getQueues(Set<CSQueue> queues) {
