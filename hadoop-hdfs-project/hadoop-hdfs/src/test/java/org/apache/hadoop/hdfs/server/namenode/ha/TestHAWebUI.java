@@ -32,11 +32,11 @@ public class TestHAWebUI {
 
   /**
    * Tests that the web UI of the name node provides a link to browse the file
-   * system only in active state
+   * system and summary of under-replicated blocks only in active state
    * 
    */
   @Test
-  public void testLinkToBrowseFilesystem() throws Exception {
+  public void testLinkAndClusterSummary() throws Exception {
     Configuration conf = new Configuration();
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -50,18 +50,21 @@ public class TestHAWebUI {
           + NameNode.getHttpAddress(cluster.getConfiguration(0)).getPort()
           + "/dfshealth.jsp"));
       assertTrue(pageContents.contains("Browse the filesystem"));
+      assertTrue(pageContents.contains("Number of Under-Replicated Blocks"));
 
       cluster.transitionToStandby(0);
       pageContents = DFSTestUtil.urlGet(new URL("http://localhost:"
           + NameNode.getHttpAddress(cluster.getConfiguration(0)).getPort()
           + "/dfshealth.jsp"));
       assertFalse(pageContents.contains("Browse the filesystem"));
+      assertFalse(pageContents.contains("Number of Under-Replicated Blocks"));
 
       cluster.transitionToActive(0);
       pageContents = DFSTestUtil.urlGet(new URL("http://localhost:"
           + NameNode.getHttpAddress(cluster.getConfiguration(0)).getPort()
           + "/dfshealth.jsp"));
       assertTrue(pageContents.contains("Browse the filesystem"));
+      assertTrue(pageContents.contains("Number of Under-Replicated Blocks"));
 
     } finally {
       cluster.shutdown();
