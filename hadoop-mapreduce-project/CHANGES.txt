@@ -708,6 +708,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3833. Fixed a bug in reinitiaziling of queues. (Jason Lowe via
     acmurthy) 
 
+    MAPREDUCE-3823. Fixed a bug in RM web-ui which broke sorting. (Jonathan
+    Eagles via acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
