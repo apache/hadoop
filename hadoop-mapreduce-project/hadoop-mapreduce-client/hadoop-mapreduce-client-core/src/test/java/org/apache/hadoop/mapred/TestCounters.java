@@ -132,23 +132,43 @@ public class TestCounters {
   
   @SuppressWarnings("deprecation")
   @Test
-  public void testLegacyNames() {
+  public void testReadWithLegacyNames() {
     Counters counters = new Counters();
     counters.incrCounter(TaskCounter.MAP_INPUT_RECORDS, 1);
     counters.incrCounter(JobCounter.DATA_LOCAL_MAPS, 1);
     counters.findCounter("file", FileSystemCounter.BYTES_READ).increment(1);
     
+    checkLegacyNames(counters);
+  }
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void testWriteWithLegacyNames() {
+    Counters counters = new Counters();
+    counters.incrCounter(Task.Counter.MAP_INPUT_RECORDS, 1);
+    counters.incrCounter(JobInProgress.Counter.DATA_LOCAL_MAPS, 1);
+    counters.findCounter("FileSystemCounter", "FILE_BYTES_READ").increment(1);
+    
+    checkLegacyNames(counters);
+  }
+
+  @SuppressWarnings("deprecation")
+  private void checkLegacyNames(Counters counters) {
     assertEquals("New name", 1, counters.findCounter(
         TaskCounter.class.getName(), "MAP_INPUT_RECORDS").getValue());
     assertEquals("Legacy name", 1, counters.findCounter(
         "org.apache.hadoop.mapred.Task$Counter",
         "MAP_INPUT_RECORDS").getValue());
+    assertEquals("Legacy enum", 1,
+        counters.findCounter(Task.Counter.MAP_INPUT_RECORDS).getValue());
 
     assertEquals("New name", 1, counters.findCounter(
         JobCounter.class.getName(), "DATA_LOCAL_MAPS").getValue());
     assertEquals("Legacy name", 1, counters.findCounter(
         "org.apache.hadoop.mapred.JobInProgress$Counter",
         "DATA_LOCAL_MAPS").getValue());
+    assertEquals("Legacy enum", 1,
+        counters.findCounter(JobInProgress.Counter.DATA_LOCAL_MAPS).getValue());
 
     assertEquals("New name", 1, counters.findCounter(
         FileSystemCounter.class.getName(), "FILE_BYTES_READ").getValue());

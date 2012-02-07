@@ -685,6 +685,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3809. Ensure that there is no needless sleep in Task at the end
     of the task. (sseth via acmurthy)
 
+    MAPREDUCE-3794. Support mapred.Task.Counter and mapred.JobInProgress.Counter 
+    enums for compatibility (Tom White via mahadev)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

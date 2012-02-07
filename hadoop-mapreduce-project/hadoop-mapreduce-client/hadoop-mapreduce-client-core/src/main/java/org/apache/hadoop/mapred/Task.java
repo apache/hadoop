@@ -80,6 +80,33 @@ abstract public class Task implements Writable, Configurable {
 
   public static String MERGED_OUTPUT_PREFIX = ".merged";
   public static final long DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
+  
+  /**
+   * @deprecated Provided for compatibility. Use {@link TaskCounter} instead.
+   */
+  @Deprecated
+  public static enum Counter { 
+    MAP_INPUT_RECORDS, 
+    MAP_OUTPUT_RECORDS,
+    MAP_SKIPPED_RECORDS,
+    MAP_INPUT_BYTES, 
+    MAP_OUTPUT_BYTES,
+    MAP_OUTPUT_MATERIALIZED_BYTES,
+    COMBINE_INPUT_RECORDS,
+    COMBINE_OUTPUT_RECORDS,
+    REDUCE_INPUT_GROUPS,
+    REDUCE_SHUFFLE_BYTES,
+    REDUCE_INPUT_RECORDS,
+    REDUCE_OUTPUT_RECORDS,
+    REDUCE_SKIPPED_GROUPS,
+    REDUCE_SKIPPED_RECORDS,
+    SPILLED_RECORDS,
+    SPLIT_RAW_BYTES,
+    CPU_MILLISECONDS,
+    PHYSICAL_MEMORY_BYTES,
+    VIRTUAL_MEMORY_BYTES,
+    COMMITTED_HEAP_BYTES
+  }
 
   /**
    * Counters to measure the usage of the different file systems.
@@ -826,7 +853,8 @@ abstract public class Task implements Writable, Configurable {
         return; // nothing to do.
       }
 
-      Counter gcCounter = counters.findCounter(TaskCounter.GC_TIME_MILLIS);
+      org.apache.hadoop.mapred.Counters.Counter gcCounter =
+        counters.findCounter(TaskCounter.GC_TIME_MILLIS);
       if (null != gcCounter) {
         gcCounter.increment(getElapsedGc());
       }
