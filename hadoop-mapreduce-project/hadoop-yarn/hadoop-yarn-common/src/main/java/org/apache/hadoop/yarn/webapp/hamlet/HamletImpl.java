@@ -307,7 +307,7 @@ public class HamletImpl extends HamletSpec {
     sb.setLength(0);
     sb.append(' ').append(name);
     if (value != null) {
-      sb.append("=\"").append(value).append("\"");
+      sb.append("=\"").append(escapeHtml(value)).append("\"");
     }
     out.print(sb.toString());
   }

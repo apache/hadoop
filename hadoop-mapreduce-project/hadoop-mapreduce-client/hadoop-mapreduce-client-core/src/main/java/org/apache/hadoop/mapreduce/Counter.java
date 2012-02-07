@@ -72,4 +72,10 @@ public interface Counter extends Writable {
    * @param incr the value to increase this counter by
    */
   void increment(long incr);
+ 
+  /**
+   * Return the underlying object if this is a facade.
+   * @return the undelying object.
+   */
+  Counter getUnderlyingCounter();
 }

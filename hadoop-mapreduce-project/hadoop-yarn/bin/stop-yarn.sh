@@ -31,7 +31,5 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 "$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  stop resourcemanager
 # stop nodeManager
 "$bin"/yarn-daemons.sh --config $YARN_CONF_DIR  stop nodemanager
-# stop historyServer
-"$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  stop historyserver
 # stop proxy server
 "$bin"/yarn-daemon.sh --config $YARN_CONF_DIR  stop proxyserver

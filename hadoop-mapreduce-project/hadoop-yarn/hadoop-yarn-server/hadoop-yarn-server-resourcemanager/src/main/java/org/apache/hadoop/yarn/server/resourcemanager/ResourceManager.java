@@ -110,7 +110,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ApplicationACLsManager applicationACLsManager;
   protected RMDelegationTokenSecretManager rmDTSecretManager;
   private WebApp webApp;
-  private RMContext rmContext;
+  protected RMContext rmContext;
   private final Store store;
   protected ResourceTrackerService resourceTracker;
 

@@ -64,7 +64,6 @@
             </goals>
             <configuration>
               <tasks>
-                <copy file="src/main/resources/yarn-default.xml" todir="src/site/resources"/>
                 <copy file="src/main/xsl/configuration.xsl" todir="src/site/resources"/>
               </tasks>
             </configuration>

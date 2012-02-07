@@ -214,6 +214,11 @@ Release 0.23.1 - UNRELEASED
     HDFS-2784. Update hftp and hdfs for host-based token support.
     (Kihwal Lee via jitendra)
 
+    HDFS-2785. Update webhdfs and httpfs for host-based token support.
+    (Robert Joseph Evans via jitendra)
+
+    HDFS-2868. Expose xceiver counts via the DataNode MXBean. (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
@@ -323,6 +328,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2889. getNumCurrentReplicas is package private but should be public on
     0.23 (see HDFS-2408). (Gregory Chanan via atm)
+
+    HDFS-2893. The start/stop scripts don't start/stop the 2NN when
+    using the default configuration. (eli)
 
 Release 0.23.0 - 2011-11-01 
 
@@ -1666,6 +1674,8 @@ Release 0.22.1 - Unreleased
   OPTIMIZATIONS
 
     HDFS-2718. Optimize OP_ADD in edits loading. (shv)
+
+    HDFS-2886. CreateEditLogs should generate a realistic edit log. (shv)
 
   BUG FIXES
 

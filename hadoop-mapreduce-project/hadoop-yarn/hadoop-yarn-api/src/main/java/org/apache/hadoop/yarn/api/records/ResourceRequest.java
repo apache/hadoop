@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
  */
 @Public
 @Stable
-public interface ResourceRequest extends Comparable<ResourceRequest> {
+public abstract class ResourceRequest implements Comparable<ResourceRequest> {
   /**
    * Get the <code>Priority</code> of the request.
    * @return <code>Priority</code> of the request
@@ -121,4 +121,79 @@ public interface ResourceRequest extends Comparable<ResourceRequest> {
   @Public
   @Stable
   public abstract void setNumContainers(int numContainers);
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    Resource capability = getCapability();
+    String hostName = getHostName();
+    Priority priority = getPriority();
+    result =
+        prime * result + ((capability == null) ? 0 : capability.hashCode());
+    result = prime * result + ((hostName == null) ? 0 : hostName.hashCode());
+    result = prime * result + getNumContainers();
+    result = prime * result + ((priority == null) ? 0 : priority.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    ResourceRequest other = (ResourceRequest) obj;
+    Resource capability = getCapability();
+    if (capability == null) {
+      if (other.getCapability() != null)
+        return false;
+    } else if (!capability.equals(other.getCapability()))
+      return false;
+    String hostName = getHostName();
+    if (hostName == null) {
+      if (other.getHostName() != null)
+        return false;
+    } else if (!hostName.equals(other.getHostName()))
+      return false;
+    if (getNumContainers() != other.getNumContainers())
+      return false;
+    Priority priority = getPriority();
+    if (priority == null) {
+      if (other.getPriority() != null)
+        return false;
+    } else if (!priority.equals(other.getPriority()))
+      return false;
+    return true;
+  }
+
+  @Override
+  public int compareTo(ResourceRequest other) {
+    int priorityComparison = this.getPriority().compareTo(other.getPriority());
+    if (priorityComparison == 0) {
+      int hostNameComparison =
+          this.getHostName().compareTo(other.getHostName());
+      if (hostNameComparison == 0) {
+        int capabilityComparison =
+            this.getCapability().compareTo(other.getCapability());
+        if (capabilityComparison == 0) {
+          int numContainersComparison =
+              this.getNumContainers() - other.getNumContainers();
+          if (numContainersComparison == 0) {
+            return 0;
+          } else {
+            return numContainersComparison;
+          }
+        } else {
+          return capabilityComparison;
+        }
+      } else {
+        return hostNameComparison;
+      }
+    } else {
+      return priorityComparison;
+    }
+  }
 }

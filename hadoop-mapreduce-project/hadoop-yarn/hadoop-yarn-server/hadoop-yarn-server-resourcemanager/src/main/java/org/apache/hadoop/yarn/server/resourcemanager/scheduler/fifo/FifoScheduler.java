@@ -230,7 +230,7 @@ public class FifoScheduler implements ResourceScheduler {
     }
 
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, MINIMUM_MEMORY);
+    SchedulerUtils.normalizeRequests(ask, minimumAllocation.getMemory());
 
     // Release containers
     for (ContainerId releasedContainer : release) {
@@ -592,7 +592,7 @@ public class FifoScheduler implements ResourceScheduler {
         minimumAllocation)) {
       LOG.debug("Node heartbeat " + rmNode.getNodeID() + 
           " available resource = " + node.getAvailableResource());
-      
+
       assignContainers(node);
 
       LOG.debug("Node after allocation " + rmNode.getNodeID() + " resource = "

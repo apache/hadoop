@@ -28,7 +28,7 @@
 #   YARN_NICENESS The scheduling priority for daemons. Defaults to 0.
 ##
 
-usage="Usage: yarn-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] (start|stop) <yarn-command> "
+usage="Usage: mr-jobhistory-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] (start|stop) <mapred-command> "
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -51,19 +51,19 @@ shift
 
 hadoop_rotate_log ()
 {
-    log=$1;
-    num=5;
-    if [ -n "$2" ]; then
-	num=$2
-    fi
-    if [ -f "$log" ]; then # rotate logs
-	while [ $num -gt 1 ]; do
-	    prev=`expr $num - 1`
-	    [ -f "$log.$prev" ] && mv "$log.$prev" "$log.$num"
-	    num=$prev
-	done
-	mv "$log" "$log.$num";
-    fi
+  log=$1;
+  num=5;
+  if [ -n "$2" ]; then
+    num=$2
+  fi
+  if [ -f "$log" ]; then # rotate logs
+    while [ $num -gt 1 ]; do
+      prev=`expr $num - 1`
+      [ -f "$log.$prev" ] && mv "$log.$prev" "$log.$num"
+      num=$prev
+    done
+    mv "$log" "$log.$num";
+  fi
 }
 
 if [ -f "${YARN_CONF_DIR}/yarn-env.sh" ]; then
@@ -78,11 +78,8 @@ fi
 if [ "$YARN_LOG_DIR" = "" ]; then
   export YARN_LOG_DIR="$YARN_HOME/logs"
 fi
-
-if [ ! -w "$YARN_LOG_DIR" ] ; then
-  mkdir -p "$YARN_LOG_DIR"
-  chown $YARN_IDENT_STRING $YARN_LOG_DIR 
-fi
+mkdir -p "$YARN_LOG_DIR"
+chown $YARN_IDENT_STRING $YARN_LOG_DIR
 
 if [ "$YARN_PID_DIR" = "" ]; then
   YARN_PID_DIR=/tmp
@@ -96,14 +93,14 @@ pid=$YARN_PID_DIR/yarn-$YARN_IDENT_STRING-$command.pid
 
 # Set default scheduling priority
 if [ "$YARN_NICENESS" = "" ]; then
-    export YARN_NICENESS=0
+  export YARN_NICENESS=0
 fi
 
 case $startStop in
 
   (start)
 
-    [ -w "$YARN_PID_DIR" ] || mkdir -p "$YARN_PID_DIR"
+    mkdir -p "$YARN_PID_DIR"
 
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
@@ -120,11 +117,11 @@ case $startStop in
     hadoop_rotate_log $log
     echo starting $command, logging to $log
     cd "$YARN_HOME"
-    nohup nice -n $YARN_NICENESS "$YARN_HOME"/bin/yarn --config $YARN_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    nohup nice -n $YARN_NICENESS "$YARN_HOME"/bin/mapred --config $YARN_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;
-          
+
   (stop)
 
     if [ -f $pid ]; then
@@ -145,5 +142,3 @@ case $startStop in
     ;;
 
 esac
-
-

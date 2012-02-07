@@ -65,6 +65,11 @@ public class TestDataNodeMXBean {
       String volumeInfo = (String)mbs.getAttribute(mxbeanName, "VolumeInfo");
       Assert.assertEquals(replaceDigits(datanode.getVolumeInfo()),
           replaceDigits(volumeInfo));
+      // Ensure mxbean's XceiverCount is same as the DataNode's
+      // live value.
+      int xceiverCount = (Integer)mbs.getAttribute(mxbeanName,
+          "XceiverCount");
+      Assert.assertEquals(datanode.getXceiverCount(), xceiverCount);
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }

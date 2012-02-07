@@ -153,12 +153,17 @@ Release 0.23.1 - Unreleased
     HADOOP-8002. SecurityUtil acquired token message should be a debug rather than info.
     (Arpit Gupta via mahadev)
 
-   HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for downstream 
-   projects. (tucu)
+    HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for downstream 
+    projects. (tucu)
 
     HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
 
+    HADOOP-8027. Visiting /jmx on the daemon web interfaces may print
+    unnecessary error in logs. (atm)
+
   OPTIMIZATIONS
+
+    HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
   BUG FIXES
    HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum

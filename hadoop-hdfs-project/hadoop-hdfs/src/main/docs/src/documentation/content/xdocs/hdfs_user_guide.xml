@@ -253,9 +253,7 @@
      The secondary NameNode merges the fsimage and the edits log files periodically
      and keeps edits log size within a limit. It is usually run on a
      different machine than the primary NameNode since its memory requirements
-     are on the same order as the primary NameNode. The secondary
-     NameNode is started by <code>bin/start-dfs.sh</code> on the nodes 
-     specified in <code>conf/masters</code> file.
+     are on the same order as the primary NameNode.
    </p>
    <p>
      The start of the checkpoint process on the secondary NameNode is 

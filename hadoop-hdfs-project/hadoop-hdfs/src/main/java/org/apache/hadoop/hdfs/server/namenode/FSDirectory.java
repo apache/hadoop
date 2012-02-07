@@ -308,12 +308,9 @@ public class FSDirectory implements Closeable {
    */
   void updateFile(INodeFile file,
                   String path,
-                  PermissionStatus permissions,
                   BlockInfo[] blocks, 
-                  short replication,
                   long mtime,
-                  long atime,
-                  long preferredBlockSize) throws IOException {
+                  long atime) throws IOException {
 
     // Update the salient file attributes.
     file.setAccessTime(atime);

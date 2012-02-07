@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.Router.Dest;
 import org.apache.hadoop.yarn.webapp.view.ErrorPage;
+import org.apache.hadoop.http.HtmlQuoting;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +74,8 @@ public class Dispatcher extends HttpServlet {
   public void service(HttpServletRequest req, HttpServletResponse res)
       throws ServletException, IOException {
     res.setCharacterEncoding("UTF-8");
-    String uri = req.getRequestURI();
+    String uri = HtmlQuoting.quoteHtmlChars(req.getRequestURI());
+
     if (uri == null) {
       uri = "/";
     }

@@ -98,4 +98,10 @@ public interface CounterGroupBase<T extends Counter>
    * @param rightGroup  the group to be added to this group
    */
   void incrAllCounters(CounterGroupBase<T> rightGroup);
+  
+  /**
+   * Exposes the underlying group type if a facade.
+   * @return the underlying object that this object is wrapping up.
+   */
+  CounterGroupBase<T> getUnderlyingGroup();
 }

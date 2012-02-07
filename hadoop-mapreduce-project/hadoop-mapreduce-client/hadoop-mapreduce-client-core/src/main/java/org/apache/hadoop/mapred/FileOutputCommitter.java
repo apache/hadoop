@@ -85,18 +85,21 @@ public class FileOutputCommitter extends OutputCommitter {
    */
   @Private
   Path getJobAttemptPath(JobContext context) {
-    return org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
-        .getJobAttemptPath(context, getOutputPath(context));
+    Path out = getOutputPath(context);
+    return out == null ? null : 
+      org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
+        .getJobAttemptPath(context, out);
   }
 
   @Private
   Path getTaskAttemptPath(TaskAttemptContext context) throws IOException {
-    return getTaskAttemptPath(context, getOutputPath(context));
+    Path out = getOutputPath(context);
+    return out == null ? null : getTaskAttemptPath(context, out);
   }
 
   private Path getTaskAttemptPath(TaskAttemptContext context, Path out) throws IOException {
     Path workPath = FileOutputFormat.getWorkOutputPath(context.getJobConf());
-    if(workPath == null) {
+    if(workPath == null && out != null) {
       return org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
       .getTaskAttemptPath(context, out);
     }
@@ -110,14 +113,17 @@ public class FileOutputCommitter extends OutputCommitter {
    * @return the path where the output of a committed task is stored until
    * the entire job is committed.
    */
+  @Private
   Path getCommittedTaskPath(TaskAttemptContext context) {
-    return org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
-        .getCommittedTaskPath(context, getOutputPath(context));
+    Path out = getOutputPath(context);
+    return out == null ? null : 
+      org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter
+        .getCommittedTaskPath(context, out);
   }
 
   public Path getWorkPath(TaskAttemptContext context, Path outputPath) 
   throws IOException {
-    return getTaskAttemptPath(context, outputPath);
+    return outputPath == null ? null : getTaskAttemptPath(context, outputPath);
   }
   
   @Override
@@ -156,6 +162,7 @@ public class FileOutputCommitter extends OutputCommitter {
     getWrapped(context).abortJob(context, state);
   }
   
+  @Override
   public void setupTask(TaskAttemptContext context) throws IOException {
     getWrapped(context).setupTask(context);
   }

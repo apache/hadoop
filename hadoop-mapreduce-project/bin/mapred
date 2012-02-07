@@ -36,6 +36,9 @@ function print_usage(){
   echo "  classpath            prints the class path needed for running"
   echo "                       mapreduce subcommands"
   echo "  groups               get the groups which users belong to"
+  echo "  historyserver        run job history servers as a standalone daemon"
+  echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -47,6 +50,8 @@ fi
 
 COMMAND=$1
 shift
+
+HADOOP_JOB_HISTORYSERVER_OPTS="-Dmapred.jobsummary.logger=${HADOOP_JHS_LOGGER:-INFO,console}"
 
 if [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
@@ -63,6 +68,9 @@ elif [ "$COMMAND" = "classpath" ] ; then
 elif [ "$COMMAND" = "groups" ] ; then
   CLASS=org.apache.hadoop.mapred.tools.GetGroups
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "historyserver" ] ; then
+  CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOB_HISTORYSERVER_OPTS"
 elif [ "$COMMAND" = "mradmin" ] \
     || [ "$COMMAND" = "jobtracker" ] \
     || [ "$COMMAND" = "tasktracker" ] ; then
@@ -70,6 +78,14 @@ elif [ "$COMMAND" = "mradmin" ] \
   echo "You may find similar functionality with the \"yarn\" shell command."
   print_usage
   exit
+elif [ "$COMMAND" = "distcp" ] ; then
+  CLASS=org.apache.hadoop.tools.DistCp
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "archive" ] ; then
+  CLASS=org.apache.hadoop.tools.HadoopArchives
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 else
   echo $COMMAND - invalid command
   print_usage
@@ -103,6 +119,11 @@ for f in $HADOOP_MAPRED_HOME/${MAPRED_LIB_JARS_DIR}/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+# add modules to CLASSPATH
+for f in $HADOOP_MAPRED_HOME/modules/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
 if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
 fi
@@ -112,12 +133,7 @@ if [ "$COMMAND" = "classpath" ] ; then
   exit
 fi
 
-#turn security logger on the jobtracker
-if [ $COMMAND = "jobtracker" ]; then
-  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,DRFAS}"
-else
-  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
-fi
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
 
 export CLASSPATH
 exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"

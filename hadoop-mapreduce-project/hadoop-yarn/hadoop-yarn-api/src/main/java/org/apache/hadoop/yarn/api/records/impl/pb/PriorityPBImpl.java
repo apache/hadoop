@@ -18,15 +18,11 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
-
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProtoOrBuilder;
-
-
     
-public class PriorityPBImpl extends ProtoBase<PriorityProto> implements Priority {
+public class PriorityPBImpl extends Priority {
   PriorityProto proto = PriorityProto.getDefaultInstance();
   PriorityProto.Builder builder = null;
   boolean viaProto = false;
@@ -65,12 +61,5 @@ public class PriorityPBImpl extends ProtoBase<PriorityProto> implements Priority
     maybeInitBuilder();
     builder.setPriority((priority));
   }
-
-  
-  @Override
-  public int compareTo(Priority other) {
-    return this.getPriority() - other.getPriority();
-  }
-
 
 }  

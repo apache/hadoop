@@ -93,7 +93,9 @@ public class CreateEditsLog {
         dirInode = new INodeDirectory(p, 0L);
         editLog.logMkDir(currentDir, dirInode);
       }
-      editLog.logOpenFile(filePath, inode);
+      editLog.logOpenFile(filePath, 
+          new INodeFileUnderConstruction(
+              p, replication, 0, blockSize, "", "", null));
       editLog.logCloseFile(filePath, inode);
 
       if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks

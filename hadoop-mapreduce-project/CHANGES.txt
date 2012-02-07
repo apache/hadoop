@@ -212,7 +212,13 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3756. Made single shuffle limit configurable. (Hitesh Shah via
     acmurthy) 
 
+    MAPREDUCE-3811. Made jobclient-to-AM retries configurable. (sseth via
+    acmurthy) 
+
   BUG FIXES
+    MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
+    (Dave Thompson via bobby)
+
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
                     ResourceUsageMatcher. (amarrk)
 
@@ -659,6 +665,57 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3803. Fix broken build of raid contrib due to HDFS-2864.
     (Ravi Prakash via suresh)
 
+    MAPREDUCE-3791. can't build site in hadoop-yarn-server-common.
+    (mahadev)
+
+    MAPREDUCE-3723. TestAMWebServicesJobs & TestHSWebServicesJobs 
+    incorrectly asserting tests (Bhallamudi Venkata Siva Kamesh
+    via mahadev)
+
+    MAPREDUCE-3795. "job -status" command line output is malformed.
+    (vinodkv via mahadev)
+
+    MAPREDUCE-3759. ClassCastException thrown in -list-active-trackers when 
+    there are a few unhealthy nodes (vinodkv via mahadev)
+
+    MAPREDUCE-3775. Change MiniYarnCluster to escape special chars in testname.
+    (Hitesh Shah via mahadev)
+
+    MAPREDUCE-3765. FifoScheduler does not respect yarn.scheduler.fifo.minimum-
+    allocation-mb setting (Hitesh Shah via mahadev)
+
+    MAPREDUCE-3747. Initialize queue metrics upfront and added start/finish
+    time to RM Web-UI. (acmurthy) 
+
+    MAPREDUCE-3814. Fixed MRV1 compilation. (Arun C Murthy via vinodkv)
+
+    MAPREDUCE-3810. Performance tweaks - reduced logging in AM and defined
+    hascode/equals for ResourceRequest & Priority. (vinodkv via acmurthy) 
+
+    MAPREDUCE-3813. Added a cache for resolved racks. (vinodkv via acmurthy)   
+
+    MAPREDUCE-3808. Fixed an NPE in FileOutputCommitter for jobs with maps
+    but no reduces. (Robert Joseph Evans via vinodkv)
+
+    MAPREDUCE-3354. Changed scripts so that jobhistory server is started by
+    bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy) 
+
+    MAPREDUCE-3809. Ensure that there is no needless sleep in Task at the end
+    of the task. (sseth via acmurthy)
+
+    MAPREDUCE-3794. Support mapred.Task.Counter and mapred.JobInProgress.Counter 
+    enums for compatibility (Tom White via mahadev)
+
+    MAPREDUCE-3697. Support binary compatibility for Counters after
+    MAPREDUCE-901. (mahadev via acmurthy) 
+
+  
+    MAPREDUCE-3817. Fixed bin/mapred to allow running of distcp and archive
+    jobs. (Arpit Gupta via acmurthy) 
+
+    MAPREDUCE-3709. TestDistributedShell is failing. (Hitesh Shah via 
+    mahadev)
+ 
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
