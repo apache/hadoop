@@ -51,10 +51,11 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    * DN server side to insulate from the protocol serialization.
    * 
    * If you are adding/changing DN's interface then you need to 
-   * change both this class and ALSO
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientDatanodeWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}
+   * change both this class and ALSO related protocol buffer
+   * wire protocol definition in ClientDatanodeProtocol.proto.
+   * 
+   * For more details on protocol buffer wire protocol, please see 
+   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
    * 
    * The log of historical changes can be retrieved from the svn).
    * 9: Added deleteBlockPool method

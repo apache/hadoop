@@ -85,6 +85,9 @@ Release 0.23-PB - Unreleased
     HDFS-2801. Provide a method in client side translators to check for a 
     methods supported in underlying protocol. (jitendra)
 
+    HDFS-2895. Remove Writable wire protocol types and translators to
+    complete transition to protocol buffers. (suresh)
+
   BUG FIXES
  
     HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)

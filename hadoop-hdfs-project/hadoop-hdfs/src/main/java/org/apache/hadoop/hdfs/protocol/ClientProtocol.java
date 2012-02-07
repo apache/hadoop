@@ -72,11 +72,12 @@ public interface ClientProtocol extends VersionedProtocol {
    * This class is used by both the DFSClient and the 
    * NN server side to insulate from the protocol serialization.
    * 
-   * If you are adding/changing NN's interface then you need to 
-   * change both this class and ALSO
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}
+   * If you are adding/changing this interface then you need to 
+   * change both this class and ALSO related protocol buffer
+   * wire protocol definition in ClientNamenodeProtocol.proto.
+   * 
+   * For more details on protocol buffer wire protocol, please see 
+   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
    * 
    * The log of historical changes can be retrieved from the svn).
    * 69: Eliminate overloaded method names.
