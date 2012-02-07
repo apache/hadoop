@@ -21,8 +21,14 @@ package org.apache.hadoop.mapred;
 import static org.apache.hadoop.mapreduce.util.CountersStrings.parseEscapedCompactString;
 import static org.apache.hadoop.mapreduce.util.CountersStrings.toEscapedCompactString;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.text.ParseException;
+import java.util.Collection;
+import java.util.Iterator;
 
+import org.apache.commons.collections.IteratorUtils;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,6 +42,9 @@ import org.apache.hadoop.mapreduce.counters.FrameworkCounterGroup;
 import org.apache.hadoop.mapreduce.counters.GenericCounter;
 import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
+import org.apache.hadoop.mapreduce.util.CountersStrings;
+
+import com.google.common.collect.Iterators;
 
 /**
  * A set of named counters.
@@ -51,7 +60,9 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 @InterfaceStability.Stable
 public class Counters
     extends AbstractCounters<Counters.Counter, Counters.Group> {
-
+  
+  public static int MAX_COUNTER_LIMIT = Limits.COUNTERS_MAX;
+  
   public Counters() {
     super(groupFactory);
   }
@@ -69,17 +80,82 @@ public class Counters
     return new Counters(newCounters);
   }
 
+  public synchronized Group getGroup(String groupName) {
+    return super.getGroup(groupName);
+  }
+
+  @SuppressWarnings("unchecked")
+  public synchronized Collection<String> getGroupNames() {
+    return IteratorUtils.toList(super.getGroupNames().iterator());
+  }
+
+  public synchronized String makeCompactString() {
+    return CountersStrings.toEscapedCompactString(this);
+  }
+  
   /**
    * A counter record, comprising its name and value.
    */
-  public interface Counter extends org.apache.hadoop.mapreduce.Counter {
+  public static class Counter implements org.apache.hadoop.mapreduce.Counter {
+    org.apache.hadoop.mapreduce.Counter realCounter;
+
+    Counter(org.apache.hadoop.mapreduce.Counter counter) {
+      this.realCounter = counter;
+    }
+
+    public Counter() {
+      this(new GenericCounter());
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void setDisplayName(String displayName) {
+      realCounter.setDisplayName(displayName);
+    }
+
+    @Override
+    public String getName() {
+      return realCounter.getName();
+    }
+
+    @Override
+    public String getDisplayName() {
+      return realCounter.getDisplayName();
+    }
+
+    @Override
+    public long getValue() {
+      return realCounter.getValue();
+    }
+
+    @Override
+    public void setValue(long value) {
+      realCounter.setValue(value);
+    }
+
+    @Override
+    public void increment(long incr) {
+      realCounter.increment(incr);
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      realCounter.write(out);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      realCounter.readFields(in);
+    }
 
     /**
      * Returns the compact stringified version of the counter in the format
      * [(actual-name)(display-name)(value)]
      * @return the stringified result
      */
-    String makeEscapedCompactString();
+    public String makeEscapedCompactString() {
+      return toEscapedCompactString(realCounter);
+    }
 
     /**
      * Checks for (content) equality of two (basic) counters
@@ -88,38 +164,41 @@ public class Counters
      * @deprecated
      */
     @Deprecated
-    boolean contentEquals(Counter counter);
+    public boolean contentEquals(Counter counter) {
+      return realCounter.equals(counter.getUnderlyingCounter());
+    }
 
     /**
      * @return the value of the counter
      */
-    long getCounter();
-  }
-
-  static class OldCounterImpl extends GenericCounter implements Counter {
-
-    OldCounterImpl() {
-    }
-
-    OldCounterImpl(String name, String displayName, long value) {
-      super(name, displayName, value);
-    }
-
-    @Override
-    public synchronized String makeEscapedCompactString() {
-      return toEscapedCompactString(this);
-    }
-
-    @Override @Deprecated
-    public boolean contentEquals(Counter counter) {
-      return equals(counter);
-    }
-
-    @Override
     public long getCounter() {
-      return getValue();
+      return realCounter.getValue();
+    }
+
+    @Override
+    public org.apache.hadoop.mapreduce.Counter getUnderlyingCounter() {
+      return realCounter;
+    }
+    
+    @Override
+    public synchronized boolean equals(Object genericRight) {
+      if (genericRight instanceof Counter) {
+        synchronized (genericRight) {
+          Counter right = (Counter) genericRight;
+          return getName().equals(right.getName()) &&
+                 getDisplayName().equals(right.getDisplayName()) &&
+                 getValue() == right.getValue();
+        }
+      }
+      return false;
+    }
+    
+    @Override
+    public int hashCode() {
+      return realCounter.hashCode();
     }
   }
+
 
   /**
    *  <code>Group</code> of counters, comprising of counters from a particular
@@ -128,21 +207,38 @@ public class Counters
    *  <p><code>Group</code>handles localization of the class name and the
    *  counter names.</p>
    */
-  public static interface Group extends CounterGroupBase<Counter> {
-
+  public static class Group implements CounterGroupBase<Counter> {
+    private CounterGroupBase<Counter> realGroup;
+    
+    Group(GenericGroup group) {
+      this.realGroup = group;
+    }
+    Group(FSGroupImpl group) {
+      this.realGroup = group;
+    }
+    
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    Group(FrameworkGroupImpl group) {
+      this.realGroup = group;
+    }
+    
     /**
      * @param counterName the name of the counter
      * @return the value of the specified counter, or 0 if the counter does
      * not exist.
      */
-    long getCounter(String counterName);
+    public long getCounter(String counterName)  {
+      return getCounterValue(realGroup, counterName);
+    }
 
     /**
      * @return the compact stringified version of the group in the format
      * {(actual-name)(display-name)(value)[][][]} where [] are compact strings
      * for the counters within.
      */
-    String makeEscapedCompactString();
+    public String makeEscapedCompactString() {
+      return toEscapedCompactString(realGroup);
+    }
 
     /**
      * Get the counter for the given id and create it if it doesn't exist.
@@ -152,88 +248,147 @@ public class Counters
      * @deprecated use {@link #findCounter(String)} instead
      */
     @Deprecated
-    Counter getCounter(int id, String name);
+    public Counter getCounter(int id, String name) {
+      return findCounter(name);
+    }
 
     /**
      * Get the counter for the given name and create it if it doesn't exist.
      * @param name the internal counter name
      * @return the counter
      */
-    Counter getCounterForName(String name);
+    public Counter getCounterForName(String name) {
+      return findCounter(name);
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+     realGroup.write(out); 
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      realGroup.readFields(in);
+    }
+
+    @Override
+    public Iterator<Counter> iterator() {
+      return realGroup.iterator();
+    }
+
+    @Override
+    public String getName() {
+      return realGroup.getName();
+    }
+
+    @Override
+    public String getDisplayName() {
+      return realGroup.getDisplayName();
+    }
+
+    @Override
+    public void setDisplayName(String displayName) {
+      realGroup.setDisplayName(displayName);
+    }
+
+    @Override
+    public void addCounter(Counter counter) {
+      realGroup.addCounter(counter);
+    }
+
+    @Override
+    public Counter addCounter(String name, String displayName, long value) {
+      return realGroup.addCounter(name, displayName, value);
+    }
+
+    @Override
+    public Counter findCounter(String counterName, String displayName) {
+      return realGroup.findCounter(counterName, displayName);
+    }
+
+    @Override
+    public Counter findCounter(String counterName, boolean create) {
+      return realGroup.findCounter(counterName, create);
+    }
+
+    @Override
+    public Counter findCounter(String counterName) {
+      return realGroup.findCounter(counterName);
+    }
+
+    @Override
+    public int size() {
+      return realGroup.size();
+    }
+
+    @Override
+    public void incrAllCounters(CounterGroupBase<Counter> rightGroup) {
+      realGroup.incrAllCounters(rightGroup);
+    }
+    
+    @Override
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+      return realGroup;
+    }
+
+    @Override
+    public synchronized boolean equals(Object genericRight) {
+      if (genericRight instanceof CounterGroupBase<?>) {
+        @SuppressWarnings("unchecked")
+        CounterGroupBase<Counter> right = ((CounterGroupBase<Counter>) 
+        genericRight).getUnderlyingGroup();
+        return Iterators.elementsEqual(iterator(), right.iterator());
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return realGroup.hashCode();
+    }
   }
 
   // All the group impls need this for legacy group interface
-  static long getCounterValue(Group group, String counterName) {
+  static long getCounterValue(CounterGroupBase<Counter> group, String counterName) {
     Counter counter = group.findCounter(counterName, false);
     if (counter != null) return counter.getValue();
     return 0L;
   }
 
   // Mix the generic group implementation into the Group interface
-  private static class GenericGroup extends AbstractCounterGroup<Counter>
-                                    implements Group {
+  private static class GenericGroup extends AbstractCounterGroup<Counter> {
 
     GenericGroup(String name, String displayName, Limits limits) {
       super(name, displayName, limits);
     }
 
     @Override
-    public long getCounter(String counterName) {
-      return getCounterValue(this, counterName);
-    }
-
-    @Override
-    public String makeEscapedCompactString() {
-      return toEscapedCompactString(this);
-    }
-
-    @Override
-    public Counter getCounter(int id, String name) {
-      return findCounter(name);
-    }
-
-    @Override
-    public Counter getCounterForName(String name) {
-      return findCounter(name);
-    }
-
-    @Override
     protected Counter newCounter(String counterName, String displayName,
                                  long value) {
-      return new OldCounterImpl(counterName, displayName, value);
+      return new Counter(new GenericCounter(counterName, displayName, value));
     }
 
     @Override
     protected Counter newCounter() {
-      return new OldCounterImpl();
+      return new Counter();
+    }
+    
+    @Override
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+     return this;
     }
   }
 
   // Mix the framework group implementation into the Group interface
   private static class FrameworkGroupImpl<T extends Enum<T>>
-      extends FrameworkCounterGroup<T, Counter> implements Group {
+      extends FrameworkCounterGroup<T, Counter> {
 
-    // Mix the framework counter implmementation into the Counter interface
-    class FrameworkCounterImpl extends FrameworkCounter implements Counter {
-
+    // Mix the framework counter implementation into the Counter interface
+    class FrameworkCounterImpl extends FrameworkCounter {
       FrameworkCounterImpl(T key) {
         super(key);
       }
 
-      @Override
-      public String makeEscapedCompactString() {
-        return toEscapedCompactString(this);
-      }
-
-      @Override
-      public boolean contentEquals(Counter counter) {
-        return equals(counter);
-      }
-
-      @Override
-      public long getCounter() {
-        return getValue();
-      }
     }
 
     FrameworkGroupImpl(Class<T> cls) {
@@ -241,83 +396,36 @@ public class Counters
     }
 
     @Override
-    public long getCounter(String counterName) {
-      return getCounterValue(this, counterName);
-    }
-
-    @Override
-    public String makeEscapedCompactString() {
-      return toEscapedCompactString(this);
-    }
-
-    @Override @Deprecated
-    public Counter getCounter(int id, String name) {
-      return findCounter(name);
-    }
-
-    @Override
-    public Counter getCounterForName(String name) {
-      return findCounter(name);
-    }
-
-    @Override
     protected Counter newCounter(T key) {
-      return new FrameworkCounterImpl(key);
+      return new Counter(new FrameworkCounterImpl(key));
+    }
+
+    @Override
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+      return this;
     }
   }
 
   // Mix the file system counter group implementation into the Group interface
-  private static class FSGroupImpl extends FileSystemCounterGroup<Counter>
-                                   implements Group {
+  private static class FSGroupImpl extends FileSystemCounterGroup<Counter> {
 
-    private class FSCounterImpl extends FSCounter implements Counter {
+    private class FSCounterImpl extends FSCounter {
 
       FSCounterImpl(String scheme, FileSystemCounter key) {
         super(scheme, key);
-      }
-
-      @Override
-      public String makeEscapedCompactString() {
-        return toEscapedCompactString(this);
-      }
-
-      @Override @Deprecated
-      public boolean contentEquals(Counter counter) {
-        throw new UnsupportedOperationException("Not supported yet.");
-      }
-
-      @Override
-      public long getCounter() {
-        return getValue();
       }
 
     }
 
     @Override
     protected Counter newCounter(String scheme, FileSystemCounter key) {
-      return new FSCounterImpl(scheme, key);
+      return new Counter(new FSCounterImpl(scheme, key));
     }
 
     @Override
-    public long getCounter(String counterName) {
-      return getCounterValue(this, counterName);
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+      return this;
     }
-
-    @Override
-    public String makeEscapedCompactString() {
-      return toEscapedCompactString(this);
-    }
-
-    @Override @Deprecated
-    public Counter getCounter(int id, String name) {
-      return findCounter(name);
-    }
-
-    @Override
-    public Counter getCounterForName(String name) {
-      return findCounter(name);
-    }
-
   }
 
   public synchronized Counter findCounter(String group, String name) {
@@ -342,7 +450,7 @@ public class Counters
     FrameworkGroupFactory<Group> newFrameworkGroupFactory(final Class<T> cls) {
       return new FrameworkGroupFactory<Group>() {
         @Override public Group newGroup(String name) {
-          return new FrameworkGroupImpl<T>(cls); // impl in this package
+          return new Group(new FrameworkGroupImpl<T>(cls)); // impl in this package
         }
       };
     }
@@ -350,12 +458,12 @@ public class Counters
     @Override
     protected Group newGenericGroup(String name, String displayName,
                                     Limits limits) {
-      return new GenericGroup(name, displayName, limits);
+      return new Group(new GenericGroup(name, displayName, limits));
     }
 
     @Override
     protected Group newFileSystemGroup() {
-      return new FSGroupImpl();
+      return new Group(new FSGroupImpl());
     }
   }
 

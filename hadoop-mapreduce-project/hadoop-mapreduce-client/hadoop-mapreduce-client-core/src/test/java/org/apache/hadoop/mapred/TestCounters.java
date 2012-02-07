@@ -24,6 +24,8 @@ import java.text.ParseException;
 import java.util.Iterator;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
@@ -37,6 +39,7 @@ import org.junit.Test;
 public class TestCounters {
   enum myCounters {TEST1, TEST2};
   private static final long MAX_VALUE = 10;
+  private static final Log LOG = LogFactory.getLog(TestCounters.class);
   
   // Generates enum based counters
   private Counters getEnumCounters(Enum[] keys) {

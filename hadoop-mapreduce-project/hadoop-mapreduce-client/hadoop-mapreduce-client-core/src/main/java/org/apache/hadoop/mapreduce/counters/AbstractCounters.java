@@ -172,7 +172,8 @@ public abstract class AbstractCounters<C extends Counter,
   @InterfaceAudience.Private
   public synchronized C findCounter(String scheme, FileSystemCounter key) {
     return ((FileSystemCounterGroup<C>) getGroup(
-        FileSystemCounter.class.getName())).findCounter(scheme, key);
+        FileSystemCounter.class.getName()).getUnderlyingGroup()).
+        findCounter(scheme, key);
   }
 
   /**
@@ -243,11 +244,11 @@ public abstract class AbstractCounters<C extends Counter,
     WritableUtils.writeVInt(out, groupFactory.version());
     WritableUtils.writeVInt(out, fgroups.size());  // framework groups first
     for (G group : fgroups.values()) {
-      if (group instanceof FrameworkCounterGroup<?, ?>) {
+      if (group.getUnderlyingGroup() instanceof FrameworkCounterGroup<?, ?>) {
         WritableUtils.writeVInt(out, GroupType.FRAMEWORK.ordinal());
         WritableUtils.writeVInt(out, getFrameworkGroupId(group.getName()));
         group.write(out);
-      } else if (group instanceof FileSystemCounterGroup<?>) {
+      } else if (group.getUnderlyingGroup() instanceof FileSystemCounterGroup<?>) {
         WritableUtils.writeVInt(out, GroupType.FILESYSTEM.ordinal());
         group.write(out);
       }

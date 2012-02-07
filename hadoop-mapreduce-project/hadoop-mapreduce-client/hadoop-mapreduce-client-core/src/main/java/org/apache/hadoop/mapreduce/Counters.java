@@ -52,6 +52,11 @@ public class Counters extends AbstractCounters<Counter, CounterGroup> {
     protected FrameworkCounter newCounter(T key) {
       return new FrameworkCounter(key);
     }
+
+    @Override
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+      return this;
+    }
   }
 
   // Mix generic group implementation into CounterGroup interface
@@ -72,6 +77,11 @@ public class Counters extends AbstractCounters<Counter, CounterGroup> {
     protected Counter newCounter() {
       return new GenericCounter();
     }
+
+    @Override
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+      return this;
+    }
   }
 
   // Mix file system group implementation into the CounterGroup interface
@@ -81,6 +91,11 @@ public class Counters extends AbstractCounters<Counter, CounterGroup> {
     @Override
     protected Counter newCounter(String scheme, FileSystemCounter key) {
       return new FSCounter(scheme, key);
+    }
+
+    @Override
+    public CounterGroupBase<Counter> getUnderlyingGroup() {
+      return this;
     }
   }
 
