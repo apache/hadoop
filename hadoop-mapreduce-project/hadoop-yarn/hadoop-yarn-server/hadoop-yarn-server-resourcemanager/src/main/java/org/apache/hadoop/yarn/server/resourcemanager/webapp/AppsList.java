@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller.RequestContext;
 import org.apache.hadoop.yarn.webapp.ToJSON;
 import org.apache.hadoop.yarn.webapp.view.JQueryUI.Render;
@@ -60,7 +61,9 @@ class AppsList implements ToJSON {
           && app.getState() != RMAppState.valueOf(requiredAppState)) {
         continue;
       }
-      AppInfo appInfo = new AppInfo(app, false);
+      AppInfo appInfo = new AppInfo(app, true);
+      String startTime = Times.format(appInfo.getStartTime());
+      String finishTime = Times.format(appInfo.getFinishTime());
       if (first) {
         first = false;
       } else {
@@ -72,15 +75,15 @@ class AppsList implements ToJSON {
           appInfo.getAppId()).append(_SEP).
           append(escapeHtml(appInfo.getUser())).append(_SEP).
           append(escapeJavaScript(escapeHtml(appInfo.getName()))).append(_SEP).
-          append(escapeHtml(appInfo.getQueue())).append(_SEP).
+          append(escapeHtml(appInfo.getQueue())).append(_SEP);
+      appendSortable(out, startTime).append(startTime).append(_SEP);
+      appendSortable(out, finishTime).append(finishTime).append(_SEP).
           append(appInfo.getState()).append(_SEP).
           append(appInfo.getFinalStatus()).append(_SEP);
       appendProgressBar(out, appInfo.getProgress()).append(_SEP);
       appendLink(out, appInfo.getTrackingUI(), rc.prefix(),
           !appInfo.isTrackingUrlReady() ?
             "#" : appInfo.getTrackingUrlPretty()).
-          append(_SEP).append(escapeJavaScript(escapeHtml(
-                              appInfo.getNote()))).
           append("\"]");
     }
     out.append(']');
