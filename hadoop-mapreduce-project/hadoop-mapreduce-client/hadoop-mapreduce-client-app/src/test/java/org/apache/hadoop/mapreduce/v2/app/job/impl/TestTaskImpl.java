@@ -59,7 +59,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-@SuppressWarnings({ "rawtypes", "deprecation" })
+@SuppressWarnings("rawtypes")
 public class TestTaskImpl {
 
   private static final Log LOG = LogFactory.getLog(TestTaskImpl.class);    
