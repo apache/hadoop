@@ -320,6 +320,13 @@ public interface MRJobConfig {
 
   public static final String MR_AM_PREFIX = MR_PREFIX + "am.";
 
+  /** The number of client retires to the AM - before reconnecting to the RM
+   * to fetch Application State. 
+   */
+  public static final String MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 
+    MR_PREFIX + "client-am.ipc.max-retries";
+  public static final int DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
+  
   /** The staging directory for map reduce.*/
   public static final String MR_AM_STAGING_DIR = 
     MR_AM_PREFIX+"staging-dir";

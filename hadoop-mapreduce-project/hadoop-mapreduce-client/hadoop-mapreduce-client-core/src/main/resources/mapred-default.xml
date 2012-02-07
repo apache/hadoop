@@ -1255,4 +1255,11 @@
     heartbeats to the ResourceManager</description>
 </property>
 
+<property>
+  <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
+  <value>1</value>
+  <description>The number of client retries to the AM - before reconnecting
+    to the RM to fetch Application Status.</description>
+</property>
+
 </configuration>
