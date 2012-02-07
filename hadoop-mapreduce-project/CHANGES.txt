@@ -268,6 +268,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3756. Made single shuffle limit configurable. (Hitesh Shah via
     acmurthy) 
 
+    MAPREDUCE-3811. Made jobclient-to-AM retries configurable. (sseth via
+    acmurthy) 
+
   BUG FIXES
 
     MAPREDUCE-3221. Reenabled the previously ignored test in TestSubmitJob
