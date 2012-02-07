@@ -679,6 +679,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3354. Changed scripts so that jobhistory server is started by
     bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy) 
 
+    MAPREDUCE-3809. Ensure that there is no needless sleep in Task at the end
+    of the task. (sseth via acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
