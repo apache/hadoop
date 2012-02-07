@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.Counter;
 
 /**
  * A generic counter implementation
@@ -100,5 +101,10 @@ public class GenericCounter extends AbstractCounter {
   @Override
   public synchronized void increment(long incr) {
     value += incr;
+  }
+
+  @Override
+  public Counter getUnderlyingCounter() {
+    return this;
   }
 }

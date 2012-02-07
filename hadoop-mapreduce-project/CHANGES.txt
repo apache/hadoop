@@ -688,6 +688,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3794. Support mapred.Task.Counter and mapred.JobInProgress.Counter 
     enums for compatibility (Tom White via mahadev)
 
+    MAPREDUCE-3697. Support binary compatibility for Counters after
+    MAPREDUCE-901. (mahadev via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

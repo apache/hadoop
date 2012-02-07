@@ -18,20 +18,23 @@
 
 package org.apache.hadoop.mapreduce.counters;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.*;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.util.ResourceBundles;
+
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.Iterators;
 
 /**
  * An abstract class to provide common implementation for the framework
@@ -43,7 +46,8 @@ import org.apache.hadoop.mapreduce.util.ResourceBundles;
 @InterfaceAudience.Private
 public abstract class FrameworkCounterGroup<T extends Enum<T>,
     C extends Counter> implements CounterGroupBase<C> {
-
+  private static final Log LOG = LogFactory.getLog(FrameworkCounterGroup.class);
+  
   private final Class<T> enumClass; // for Enum.valueOf
   private final Object[] counters;  // local casts are OK and save a class ref
   private String displayName = null;
@@ -94,6 +98,11 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
     @Override
     public void readFields(DataInput in) throws IOException {
       assert false : "shouldn't be called";
+    }
+
+    @Override
+    public Counter getUnderlyingCounter() {
+      return this;
     }
   }
 
