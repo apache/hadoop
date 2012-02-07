@@ -638,6 +638,19 @@
 </property>
 
 <property>
+  <name>dfs.namenode.num.extra.edits.retained</name>
+  <value>1000000</value>
+  <description>The number of extra transactions which should be retained
+  beyond what is minimally necessary for a NN restart. This can be useful for
+  audit purposes or for an HA setup where a remote Standby Node may have
+  been offline for some time and need to have a longer backlog of retained
+  edits in order to start again.
+  Typically each edit is on the order of a few hundred bytes, so the default
+  of 1 million edits should be on the order of hundreds of MBs or low GBs.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.delegation.key.update-interval</name>
   <value>86400000</value>
   <description>The update interval for master key for delegation tokens 
