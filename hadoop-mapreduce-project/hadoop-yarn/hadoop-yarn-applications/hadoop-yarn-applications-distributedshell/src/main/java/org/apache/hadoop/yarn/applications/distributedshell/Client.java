@@ -531,6 +531,8 @@ public class Client {
     // Set java executable command 
     LOG.info("Setting up app master command");
     vargs.add("${JAVA_HOME}" + "/bin/java");
+    // Set Xmx based on am memory size
+    vargs.add("-Xmx" + amMemory + "m");
     // Set class name 
     vargs.add(appMasterMainClass);
     // Set params for Application Master

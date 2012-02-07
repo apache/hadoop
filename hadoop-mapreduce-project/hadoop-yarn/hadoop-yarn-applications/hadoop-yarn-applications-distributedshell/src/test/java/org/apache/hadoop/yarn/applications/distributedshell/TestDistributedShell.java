@@ -42,6 +42,7 @@ public class TestDistributedShell {
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {
     LOG.info("Starting up YARN cluster");
+    conf.setInt("yarn.scheduler.fifo.minimum-allocation-mb", 128);
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(TestDistributedShell.class.getName(),
           1, 1, 1);
@@ -74,9 +75,9 @@ public class TestDistributedShell {
         "--shell_command",
         "ls",
         "--master_memory",
-        "1536",
+        "512",
         "--container_memory",
-        "1536"				
+        "128"
     };
 
     LOG.info("Initializing DS Client");
