@@ -691,6 +691,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3697. Support binary compatibility for Counters after
     MAPREDUCE-901. (mahadev via acmurthy) 
 
+    MAPREDUCE-3817. Fixed bin/mapred to allow running of distcp and archive
+    jobs. (Arpit Gupta via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
