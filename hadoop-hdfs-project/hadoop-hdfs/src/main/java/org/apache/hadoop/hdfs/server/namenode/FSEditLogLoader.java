@@ -203,9 +203,8 @@ public class FSEditLogLoader {
                   addCloseOp.mtime, addCloseOp.atime, blockSize,
                   addCloseOp.clientName, addCloseOp.clientMachine);
             } else {
-              fsDir.updateFile(oldFile,
-                  addCloseOp.path, permissions, blocks, replication,
-                  addCloseOp.mtime, addCloseOp.atime, blockSize);
+              fsDir.updateFile(oldFile, addCloseOp.path, blocks,
+                  addCloseOp.mtime, addCloseOp.atime);
               if(addCloseOp.opCode == FSEditLogOpCodes.OP_CLOSE) {  // OP_CLOSE
                 assert oldFile.isUnderConstruction() : 
                   "File is not under construction: " + addCloseOp.path;
