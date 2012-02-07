@@ -45,8 +45,11 @@ Trunk (unreleased changes)
     HDFS-2697. Move RefreshAuthPolicy, RefreshUserMappings, GetUserMappings 
     protocol to protocol buffers. (jitendra)
 
-    HDFS-2880. Protobuf chagnes in DatanodeProtocol to add multiple storages.
+    HDFS-2880. Protobuf changes in DatanodeProtocol to add multiple storages.
     (suresh)
+
+    HDFS-2899. Service protocol changes in DatanodeProtocol to add multiple 
+    storages. (suresh)
 
   IMPROVEMENTS
 

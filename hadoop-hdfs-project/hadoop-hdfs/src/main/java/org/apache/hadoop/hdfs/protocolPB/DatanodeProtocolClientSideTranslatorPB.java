@@ -48,15 +48,18 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterData
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -153,13 +156,17 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public DatanodeRegistration registerDatanode(DatanodeRegistration registration)
-      throws IOException {
-    RegisterDatanodeRequestProto req = RegisterDatanodeRequestProto
-        .newBuilder().setRegistration(PBHelper.convert(registration)).build();
+  public DatanodeRegistration registerDatanode(DatanodeRegistration registration,
+      DatanodeStorage[] storages) throws IOException {
+    RegisterDatanodeRequestProto.Builder builder = RegisterDatanodeRequestProto
+        .newBuilder().setRegistration(PBHelper.convert(registration));
+    for (DatanodeStorage s : storages) {
+      builder.addStorages(PBHelper.convert(s));
+    }
+    
     RegisterDatanodeResponseProto resp;
     try {
-      resp = rpcProxy.registerDatanode(NULL_CONTROLLER, req);
+      resp = rpcProxy.registerDatanode(NULL_CONTROLLER, builder.build());
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
@@ -168,22 +175,19 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
   @Override
   public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
-      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-      int xmitsInProgress, int xceiverCount, int failedVolumes)
-      throws IOException {
-    StorageReportProto report = StorageReportProto.newBuilder()
-        .setBlockPoolUsed(blockPoolUsed).setCapacity(capacity)
-        .setDfsUsed(dfsUsed).setRemaining(remaining)
-        .setStorageID(registration.getStorageID()).build();
-    
-    HeartbeatRequestProto req = HeartbeatRequestProto.newBuilder()
-        .setRegistration(PBHelper.convert(registration)).addReports(report)
+      StorageReport[] reports, int xmitsInProgress, int xceiverCount,
+      int failedVolumes) throws IOException {
+    HeartbeatRequestProto.Builder builder = HeartbeatRequestProto.newBuilder()
+        .setRegistration(PBHelper.convert(registration))
         .setXmitsInProgress(xmitsInProgress).setXceiverCount(xceiverCount)
-        .setFailedVolumes(failedVolumes)
-        .build();
+        .setFailedVolumes(failedVolumes);
+    for (StorageReport r : reports) {
+      builder.addReports(PBHelper.convert(r));
+    }
+    
     HeartbeatResponseProto resp;
     try {
-      resp = rpcProxy.sendHeartbeat(NULL_CONTROLLER, req);
+      resp = rpcProxy.sendHeartbeat(NULL_CONTROLLER, builder.build());
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
@@ -198,21 +202,23 @@ public class DatanodeProtocolClientSideTranslatorPB implements
 
   @Override
   public DatanodeCommand blockReport(DatanodeRegistration registration,
-      String poolId, long[] blocks) throws IOException {
-    StorageBlockReportProto.Builder reportBuilder = StorageBlockReportProto
-        .newBuilder().setStorageID(registration.getStorageID());
+      String poolId, StorageBlockReport[] reports) throws IOException {
+    BlockReportRequestProto.Builder builder = BlockReportRequestProto
+        .newBuilder().setRegistration(PBHelper.convert(registration))
+        .setBlockPoolId(poolId);
     
-    if (blocks != null) {
+    for (StorageBlockReport r : reports) {
+      StorageBlockReportProto.Builder reportBuilder = StorageBlockReportProto
+          .newBuilder().setStorageID(r.getStorageID());
+      long[] blocks = r.getBlocks();
       for (int i = 0; i < blocks.length; i++) {
         reportBuilder.addBlocks(blocks[i]);
       }
+      builder.addReports(reportBuilder.build());
     }
-    BlockReportRequestProto req = BlockReportRequestProto
-        .newBuilder().setRegistration(PBHelper.convert(registration))
-        .setBlockPoolId(poolId).addReports(reportBuilder.build()).build();
     BlockReportResponseProto resp;
     try {
-      resp = rpcProxy.blockReport(NULL_CONTROLLER, req);
+      resp = rpcProxy.blockReport(NULL_CONTROLLER, builder.build());
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
@@ -220,23 +226,24 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public void blockReceivedAndDeleted(DatanodeRegistration reg,
-      String poolId, ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks)
+  public void blockReceivedAndDeleted(DatanodeRegistration registration,
+      String poolId, StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks)
       throws IOException {
-    StorageReceivedDeletedBlocksProto.Builder builder = 
-        StorageReceivedDeletedBlocksProto.newBuilder()
-        .setStorageID(reg.getStorageID());
-    if (receivedAndDeletedBlocks != null) {
-      for (int i = 0; i < receivedAndDeletedBlocks.length; i++) {
-        builder.addBlocks(PBHelper.convert(receivedAndDeletedBlocks[i]));
-      }
-    }
-    BlockReceivedAndDeletedRequestProto req = 
+    BlockReceivedAndDeletedRequestProto.Builder builder = 
         BlockReceivedAndDeletedRequestProto.newBuilder()
-        .setRegistration(PBHelper.convert(reg))
-        .setBlockPoolId(poolId).addBlocks(builder.build()).build();
+        .setRegistration(PBHelper.convert(registration))
+        .setBlockPoolId(poolId);
+    for (StorageReceivedDeletedBlocks storageBlock : receivedAndDeletedBlocks) {
+      StorageReceivedDeletedBlocksProto.Builder repBuilder = 
+          StorageReceivedDeletedBlocksProto.newBuilder();
+      repBuilder.setStorageID(storageBlock.getStorageID());
+      for (ReceivedDeletedBlockInfo rdBlock : storageBlock.getBlocks()) {
+        repBuilder.addBlocks(PBHelper.convert(rdBlock));
+      }
+      builder.addBlocks(repBuilder.build());
+    }
     try {
-      rpcProxy.blockReceivedAndDeleted(NULL_CONTROLLER, req);
+      rpcProxy.blockReceivedAndDeleted(NULL_CONTROLLER, builder.build());
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
