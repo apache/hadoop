@@ -41,8 +41,8 @@ Release 0.23-PB - Unreleased
     HDFS-2697. Move RefreshAuthPolicy, RefreshUserMappings, GetUserMappings 
     protocol to protocol buffers. (jitendra)
 
-    HDFS-2801. Provide a method in client side translators to check for a 
-    methods supported in underlying protocol. (jitendra)
+    HDFS-2880. Protobuf chagnes in DatanodeProtocol to add multiple storages.
+    (suresh)
 
   IMPROVEMENTS
 
@@ -81,6 +81,9 @@ Release 0.23-PB - Unreleased
     HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh).
 
     HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
+
+    HDFS-2801. Provide a method in client side translators to check for a 
+    methods supported in underlying protocol. (jitendra)
 
   BUG FIXES
  

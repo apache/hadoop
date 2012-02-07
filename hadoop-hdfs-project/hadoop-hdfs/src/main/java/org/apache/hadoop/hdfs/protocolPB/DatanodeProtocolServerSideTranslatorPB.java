@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportR
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatRequestProto;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterData
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
@@ -98,9 +98,10 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       HeartbeatRequestProto request) throws ServiceException {
     DatanodeCommand[] cmds = null;
     try {
+      StorageReportProto report = request.getReports(0);
       cmds = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
-          request.getCapacity(), request.getDfsUsed(), request.getRemaining(),
-          request.getBlockPoolUsed(), request.getXmitsInProgress(),
+          report.getCapacity(), report.getDfsUsed(), report.getRemaining(),
+          report.getBlockPoolUsed(), request.getXmitsInProgress(),
           request.getXceiverCount(), request.getFailedVolumes());
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -121,7 +122,7 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   public BlockReportResponseProto blockReport(RpcController controller,
       BlockReportRequestProto request) throws ServiceException {
     DatanodeCommand cmd = null;
-    List<Long> blockIds = request.getBlocksList();
+    List<Long> blockIds = request.getReports(0).getBlocksList();
     long[] blocks = new long[blockIds.size()];
     for (int i = 0; i < blockIds.size(); i++) {
       blocks[i] = blockIds.get(i);
@@ -144,7 +145,8 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   public BlockReceivedAndDeletedResponseProto blockReceivedAndDeleted(
       RpcController controller, BlockReceivedAndDeletedRequestProto request)
       throws ServiceException {
-    List<ReceivedDeletedBlockInfoProto> rdbip = request.getBlocksList();
+    List<ReceivedDeletedBlockInfoProto> rdbip = request.getBlocks(0)
+        .getBlocksList();
     ReceivedDeletedBlockInfo[] info = 
         new ReceivedDeletedBlockInfo[rdbip.size()];
     for (int i = 0; i < rdbip.size(); i++) {
