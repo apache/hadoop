@@ -697,6 +697,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3709. TestDistributedShell is failing. (Hitesh Shah via 
     mahadev)
+
+    MAPREDUCE-3436. JobHistory webapp address should use the host configured
+    in the jobhistory address. (Ahmed Radwan via sseth)
  
 Release 0.23.0 - 2011-11-01 
 
