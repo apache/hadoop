@@ -705,6 +705,9 @@ Release 0.23.1 - Unreleased
     requesting containers so that scheduler can give off data local containers
     correctly. (Siddarth Seth via vinodkv)
  
+    MAPREDUCE-3833. Fixed a bug in reinitiaziling of queues. (Jason Lowe via
+    acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
