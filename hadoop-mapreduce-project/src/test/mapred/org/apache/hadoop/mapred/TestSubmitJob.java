@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -148,15 +149,9 @@ public class TestSubmitJob {
   }
 
   static org.apache.hadoop.hdfs.protocol.ClientProtocol getDFSClient(
-      Configuration conf, UserGroupInformation ugi) 
-  throws IOException {
-    return (org.apache.hadoop.hdfs.protocol.ClientProtocol) 
-      RPC.getProxy(org.apache.hadoop.hdfs.protocol.ClientProtocol.class, 
-        org.apache.hadoop.hdfs.protocol.ClientProtocol.versionID, 
-        NameNode.getAddress(conf), ugi, 
-        conf, 
-        NetUtils.getSocketFactory(conf, 
-            org.apache.hadoop.hdfs.protocol.ClientProtocol.class));
+      Configuration conf, UserGroupInformation ugi) throws IOException {
+    return new ClientNamenodeProtocolTranslatorPB(NameNode.getAddress(conf),
+        conf, ugi);
   }
   
   /**

@@ -21,6 +21,11 @@ Release 0.23-PB - Unreleased
     MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
     HADOOP-7965. (Devaraj K via vinodkv) 
 
+  BUG FIXES
+
+    MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
+    for HDFS-2895. (Suresh Srinivas via vinodkv)
+
 Release 0.23.1 - Unreleased
 
   NEW FEATURES                                                                    
