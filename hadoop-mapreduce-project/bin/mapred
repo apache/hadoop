@@ -37,6 +37,8 @@ function print_usage(){
   echo "                       mapreduce subcommands"
   echo "  groups               get the groups which users belong to"
   echo "  historyserver        run job history servers as a standalone daemon"
+  echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo ""
   echo "Most commands print help when invoked w/o parameters."
 }
@@ -76,6 +78,14 @@ elif [ "$COMMAND" = "mradmin" ] \
   echo "You may find similar functionality with the \"yarn\" shell command."
   print_usage
   exit
+elif [ "$COMMAND" = "distcp" ] ; then
+  CLASS=org.apache.hadoop.tools.DistCp
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
+elif [ "$COMMAND" = "archive" ] ; then
+  CLASS=org.apache.hadoop.tools.HadoopArchives
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 else
   echo $COMMAND - invalid command
   print_usage
