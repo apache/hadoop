@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,6 +46,9 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 
 public class JobHistoryUtils {
   
@@ -109,6 +113,9 @@ public class JobHistoryUtils {
   public static final String TIMESTAMP_DIR_REGEX = "\\d{4}" + "\\" + File.separator +  "\\d{2}" + "\\" + File.separator + "\\d{2}";
   public static final Pattern TIMESTAMP_DIR_PATTERN = Pattern.compile(TIMESTAMP_DIR_REGEX);
   private static final String TIMESTAMP_DIR_FORMAT = "%04d" + File.separator + "%02d" + File.separator + "%02d";
+
+  private static final Splitter ADDR_SPLITTER = Splitter.on(':').trimResults();
+  private static final Joiner JOINER = Joiner.on("");
 
   private static final PathFilter CONF_FILTER = new PathFilter() {
     @Override
@@ -478,8 +485,16 @@ public class JobHistoryUtils {
   public static String getHistoryUrl(Configuration conf, ApplicationId appId) 
        throws UnknownHostException {
   //construct the history url for job
-    String hsAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+    String addr = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
         JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
+    Iterator<String> it = ADDR_SPLITTER.split(addr).iterator();
+    it.next(); // ignore the bind host
+    String port = it.next();
+    // Use hs address to figure out the host for webapp
+    addr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
+    String host = ADDR_SPLITTER.split(addr).iterator().next();
+    String hsAddress = JOINER.join(host, ":", port);
     InetSocketAddress address = NetUtils.createSocketAddr(
       hsAddress, JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT,
       JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
