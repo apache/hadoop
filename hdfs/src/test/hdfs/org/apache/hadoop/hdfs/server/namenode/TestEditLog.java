@@ -83,8 +83,8 @@ public class TestEditLog extends TestCase {
       for (int i = 0; i < numTransactions; i++) {
         INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
                             p, replication, blockSize, 0, "", "", null);
-        editLog.logOpenFile("/filename" + startIndex + i, inode);
-        editLog.logCloseFile("/filename" + startIndex + i, inode);
+        editLog.logOpenFile("/filename" + (startIndex + i), inode);
+        editLog.logCloseFile("/filename" + (startIndex + i), inode);
         editLog.logSync();
       }
     }
@@ -379,5 +379,4 @@ public class TestEditLog extends TestCase {
     originalImage.close();
     fsn.close();
   }
-
 }

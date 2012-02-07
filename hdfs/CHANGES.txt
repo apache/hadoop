@@ -12,6 +12,8 @@ Release 0.22.1 - Unreleased
 
     HDFS-2718. Optimize OP_ADD in edits loading. (shv)
 
+    HDFS-2886. CreateEditLogs should generate a realistic edit log. (shv)
+
   BUG FIXES
 
     HDFS-1910. NameNode should not save fsimage twice. (shv)

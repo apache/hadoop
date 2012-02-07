@@ -216,9 +216,7 @@ public class FSEditLogLoader {
                 path, permissions, blocks, replication,
                 mtime, atime, blockSize, clientName, clientMachine);
           } else {
-            fsDir.updateFile(oldFile,
-                path, permissions, blocks, replication,
-                mtime, atime, blockSize);
+            fsDir.updateFile(oldFile, path,  blocks, mtime, atime);
             if(opcode == Ops.OP_CLOSE) {  // OP_CLOSE
               assert oldFile.isUnderConstruction() : 
                 "File is not under construction: " + path;
