@@ -656,14 +656,13 @@ abstract public class Task implements Writable, Configurable {
         try {
           boolean taskFound = true; // whether TT knows about this task
           // sleep for a bit
-          try {
-            Thread.sleep(PROGRESS_INTERVAL);
-          } 
-          catch (InterruptedException e) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getTaskID() + " Progress/ping thread exiting " +
-                        "since it got interrupted");
+          synchronized(lock) {
+            if (taskDone.get()) {
+              break;
             }
+            lock.wait(PROGRESS_INTERVAL);
+          }
+          if (taskDone.get()) {
             break;
           }
 
@@ -721,7 +720,14 @@ abstract public class Task implements Writable, Configurable {
     }
     public void stopCommunicationThread() throws InterruptedException {
       if (pingThread != null) {
-        synchronized (lock) {
+        // Intent of the lock is to not send an interupt in the middle of an
+        // umbilical.ping or umbilical.statusUpdate
+        synchronized(lock) {
+        //Interrupt if sleeping. Otherwise wait for the RPC call to return.
+          lock.notify(); 
+        }
+
+        synchronized (lock) { 
           while (!done) {
             lock.wait();
           }
