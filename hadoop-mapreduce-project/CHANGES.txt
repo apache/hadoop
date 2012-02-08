@@ -51,6 +51,8 @@ Trunk (unreleased changes)
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
   BUG FIXES
+    MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
+
     MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
     (Dave Thompson via bobby)
 
