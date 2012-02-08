@@ -123,7 +123,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-7813. Fix test-patch to use proper numerical comparison when checking
    javadoc and findbugs warning counts. (Jonathan Eagles via tlipcon)
-   
+
+   HADOOP-7841. Run tests with non-secure random. (tlipcon)
+
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)
 
