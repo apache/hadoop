@@ -1,6 +1,16 @@
 Hadoop Change Log
 
-Release 0.23.1 - Unreleased
+Release 0.23.2 - UNRELEASED
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
 
