@@ -714,6 +714,9 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3823. Ensure counters are calculated only once after a job
     finishes. (Vinod Kumar Vavilapalli via sseth)
 
+    MAPREDUCE-3827. Changed Counters to use ConcurrentSkipListMap for
+    performance. (vinodkv via acmurthy)  
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
