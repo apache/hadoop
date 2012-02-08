@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -29,8 +32,8 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -42,13 +45,10 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  * Fine-grain testing of block files and locations after volume failure.
@@ -272,8 +272,7 @@ public class TestDataNodeVolumeFailure {
     String file = BlockReaderFactory.getFileName(targetAddr, 
         "test-blockpoolid",
         block.getBlockId());
-    BlockReader blockReader = 
-      BlockReaderFactory.newBlockReader(conf, s, file, block, lblock
+    BlockReaderFactory.newBlockReader(conf, s, file, block, lblock
         .getBlockToken(), 0, -1);
 
     // nothing - if it fails - it will throw and exception
@@ -370,7 +369,7 @@ public class TestDataNodeVolumeFailure {
         new FilenameFilter() {
           public boolean accept(File dir, String name) {
             return name.startsWith("blk_") &&
-            name.endsWith(FSDataset.METADATA_EXTENSION);
+            name.endsWith(DatanodeUtil.METADATA_EXTENSION);
           }
         }
     );

@@ -117,7 +117,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
@@ -556,11 +555,11 @@ public class DataNode extends Configured
     if (conf.getInt(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY,
                     DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT) < 0) {
       reason = "verification is turned off by configuration";
-    } else if (!(data instanceof FSDataset)) {
-      reason = "verifcation is supported only with FSDataset";
+    } else if ("SimulatedFSDataset".equals(data.getClass().getSimpleName())) {
+      reason = "verifcation is not supported by SimulatedFSDataset";
     } 
     if (reason == null) {
-      blockScanner = new DataBlockScanner(this, (FSDataset)data, conf);
+      blockScanner = new DataBlockScanner(this, data, conf);
       blockScanner.start();
     } else {
       LOG.info("Periodic Block Verification scan is disabled because " +
@@ -585,11 +584,11 @@ public class DataNode extends Configured
     if (conf.getInt(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 
                     DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT) < 0) {
       reason = "verification is turned off by configuration";
-    } else if (!(data instanceof FSDataset)) {
-      reason = "verification is supported only with FSDataset";
+    } else if ("SimulatedFSDataset".equals(data.getClass().getSimpleName())) {
+      reason = "verifcation is not supported by SimulatedFSDataset";
     } 
     if (reason == null) {
-      directoryScanner = new DirectoryScanner(this, (FSDataset) data, conf);
+      directoryScanner = new DirectoryScanner(this, data, conf);
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan is disabled because " +
@@ -2200,16 +2199,7 @@ public class DataNode extends Configured
    */
   @Override // DataNodeMXBean
   public String getVolumeInfo() {
-    final Map<String, Object> info = new HashMap<String, Object>();
-    Collection<VolumeInfo> volumes = ((FSDataset)this.data).getVolumeInfo();
-    for (VolumeInfo v : volumes) {
-      final Map<String, Object> innerInfo = new HashMap<String, Object>();
-      innerInfo.put("usedSpace", v.usedSpace);
-      innerInfo.put("freeSpace", v.freeSpace);
-      innerInfo.put("reservedSpace", v.reservedSpace);
-      info.put(v.directory, innerInfo);
-    }
-    return JSON.toString(info);
+    return JSON.toString(data.getVolumeInfoMap());
   }
   
   @Override // DataNodeMXBean

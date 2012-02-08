@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -35,8 +35,10 @@ import org.apache.hadoop.io.IOUtils;
  */
 @InterfaceAudience.Private
 abstract public class ReplicaInfo extends Block implements Replica {
-  private FSVolume volume;      // volume where the replica belongs
-  private File     dir;         // directory where block & meta files belong
+  /** volume where the replica belongs */
+  private FSVolumeInterface volume;
+  /** directory where block & meta files belong */
+  private File dir;
 
   /**
    * Constructor for a zero length replica
@@ -45,7 +47,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  ReplicaInfo(long blockId, long genStamp, FSVolume vol, File dir) {
+  ReplicaInfo(long blockId, long genStamp, FSVolumeInterface vol, File dir) {
     this( blockId, 0L, genStamp, vol, dir);
   }
   
@@ -55,7 +57,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  ReplicaInfo(Block block, FSVolume vol, File dir) {
+  ReplicaInfo(Block block, FSVolumeInterface vol, File dir) {
     this(block.getBlockId(), block.getNumBytes(), 
         block.getGenerationStamp(), vol, dir);
   }
@@ -69,7 +71,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @param dir directory path where block and meta files are located
    */
   ReplicaInfo(long blockId, long len, long genStamp,
-      FSVolume vol, File dir) {
+      FSVolumeInterface vol, File dir) {
     super(blockId, len, genStamp);
     this.volume = vol;
     this.dir = dir;
@@ -111,14 +113,14 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * Get the volume where this replica is located on disk
    * @return the volume where this replica is located on disk
    */
-  FSVolume getVolume() {
+  FSVolumeInterface getVolume() {
     return volume;
   }
   
   /**
    * Set the volume where this replica is located on disk
    */
-  void setVolume(FSVolume vol) {
+  void setVolume(FSVolumeInterface vol) {
     this.volume = vol;
   }
   
@@ -162,7 +164,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * be recovered (especially on Windows) on datanode restart.
    */
   private void unlinkFile(File file, Block b) throws IOException {
-    File tmpFile = DatanodeUtil.createTmpFile(b, FSDataset.getUnlinkTmpFile(file));
+    File tmpFile = DatanodeUtil.createTmpFile(b, DatanodeUtil.getUnlinkTmpFile(file));
     try {
       FileInputStream in = new FileInputStream(file);
       try {

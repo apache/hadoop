@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -33,14 +33,14 @@ public class TestRoundRobinVolumesPolicy {
   // Test the Round-Robin block-volume choosing algorithm.
   @Test
   public void testRR() throws Exception {
-    final List<FSVolume> volumes = new ArrayList<FSVolume>();
+    final List<FSVolumeInterface> volumes = new ArrayList<FSVolumeInterface>();
 
     // First volume, with 100 bytes of space.
-    volumes.add(Mockito.mock(FSVolume.class));
+    volumes.add(Mockito.mock(FSVolumeInterface.class));
     Mockito.when(volumes.get(0).getAvailable()).thenReturn(100L);
 
     // Second volume, with 200 bytes of space.
-    volumes.add(Mockito.mock(FSVolume.class));
+    volumes.add(Mockito.mock(FSVolumeInterface.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(200L);
 
     RoundRobinVolumesPolicy policy = ReflectionUtils.newInstance(
@@ -69,14 +69,14 @@ public class TestRoundRobinVolumesPolicy {
   @Test
   public void testRRPolicyExceptionMessage()
       throws Exception {
-    final List<FSVolume> volumes = new ArrayList<FSVolume>();
+    final List<FSVolumeInterface> volumes = new ArrayList<FSVolumeInterface>();
 
     // First volume, with 500 bytes of space.
-    volumes.add(Mockito.mock(FSVolume.class));
+    volumes.add(Mockito.mock(FSVolumeInterface.class));
     Mockito.when(volumes.get(0).getAvailable()).thenReturn(500L);
 
     // Second volume, with 600 bytes of space.
-    volumes.add(Mockito.mock(FSVolume.class));
+    volumes.add(Mockito.mock(FSVolumeInterface.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(600L);
 
     RoundRobinVolumesPolicy policy = new RoundRobinVolumesPolicy();

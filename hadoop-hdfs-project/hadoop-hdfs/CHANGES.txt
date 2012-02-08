@@ -2,6 +2,13 @@ Hadoop HDFS Change Log
 
 Release 0.23.2 - UNRELEASED
 
+  INCOMPATIBLE CHANGES
+
+    HDFS-2887. FSVolume, is a part of FSDatasetInterface implementation, should
+    not be referred outside FSDataset.  A new FSVolumeInterface is defined.
+    The BlockVolumeChoosingPolicy.chooseVolume(..) method signature is also
+    updated.  (szetszwo)
+
   NEW FEATURES
 
   IMPROVEMENTS

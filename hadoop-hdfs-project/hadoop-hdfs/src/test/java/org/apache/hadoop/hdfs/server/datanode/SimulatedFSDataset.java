@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -38,11 +40,10 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.BlockPoolSlice;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolumeSet;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
-import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -988,8 +989,33 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
   }
 
   @Override
-  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b)
-      throws IOException {
-    throw new IOException("getBlockLocalPathInfo not supported.");
+  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public String[] getBlockPoolList() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void checkAndUpdate(String bpid, long blockId, File diskFile,
+      File diskMetaFile, FSVolumeInterface vol) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<FSVolumeInterface> getVolumes() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<Block> getFinalizedBlocks(String bpid) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Map<String, Object> getVolumeInfoMap() {
+    throw new UnsupportedOperationException();
   }
 }

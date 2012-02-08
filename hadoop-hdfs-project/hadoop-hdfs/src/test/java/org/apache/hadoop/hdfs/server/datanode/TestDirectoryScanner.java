@@ -25,20 +25,20 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
-
-import junit.framework.TestCase;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 
 /**
  * Tests {@link DirectoryScanner} handling of differences
@@ -142,10 +142,10 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a block file in a random volume*/
   private long createBlockFile() throws IOException {
-    List<FSVolume> volumes = fds.volumes.getVolumes();
+    List<FSVolumeInterface> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes.get(index).getBlockPoolSlice(bpid).getFinalizedDir();
+    File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
     File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());
@@ -155,10 +155,10 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a metafile in a random volume*/
   private long createMetaFile() throws IOException {
-    List<FSVolume> volumes = fds.volumes.getVolumes();
+    List<FSVolumeInterface> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes.get(index).getBlockPoolSlice(bpid).getFinalizedDir();
+    File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
     File file = new File(finalizedDir, getMetaFile(id));
     if (file.createNewFile()) {
       LOG.info("Created metafile " + file.getName());
@@ -168,10 +168,10 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create block file and corresponding metafile in a rondom volume */
   private long createBlockMetaFile() throws IOException {
-    List<FSVolume> volumes = fds.volumes.getVolumes();
+    List<FSVolumeInterface> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes.get(index).getBlockPoolSlice(bpid).getFinalizedDir();
+    File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
     File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());

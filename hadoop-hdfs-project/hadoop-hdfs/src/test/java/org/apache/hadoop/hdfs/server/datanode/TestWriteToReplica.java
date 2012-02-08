@@ -140,7 +140,7 @@ public class TestWriteToReplica {
     ReplicasMap replicasMap = dataSet.volumeMap;
     FSVolume vol = dataSet.volumes.getNextVolume(0);
     ReplicaInfo replicaInfo = new FinalizedReplica(
-        blocks[FINALIZED].getLocalBlock(), vol, vol.getDir());
+        blocks[FINALIZED].getLocalBlock(), vol, vol.getCurrentDir().getParentFile());
     replicasMap.add(bpid, replicaInfo);
     replicaInfo.getBlockFile().createNewFile();
     replicaInfo.getMetaFile().createNewFile();
@@ -160,15 +160,15 @@ public class TestWriteToReplica {
         blocks[RWR].getLocalBlock(), vol, vol.createRbwFile(bpid,
             blocks[RWR].getLocalBlock()).getParentFile()));
     replicasMap.add(bpid, new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
-        .getLocalBlock(), vol, vol.getDir()), 2007));    
+        .getLocalBlock(), vol, vol.getCurrentDir().getParentFile()), 2007));    
     
     return blocks;
   }
   
   private void testAppend(String bpid, FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
-    FSVolume v = dataSet.volumeMap.get(bpid, blocks[FINALIZED].getLocalBlock())
-        .getVolume();
+    final FSVolume v = (FSVolume)dataSet.volumeMap.get(
+        bpid, blocks[FINALIZED].getLocalBlock()).getVolume();
     long available = v.getCapacity()-v.getDfsUsed();
     long expectedLen = blocks[FINALIZED].getNumBytes();
     try {
