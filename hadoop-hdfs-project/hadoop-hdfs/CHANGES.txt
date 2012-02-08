@@ -97,6 +97,8 @@ Trunk (unreleased changes)
     HDFS-2410. Further cleanup of hardcoded configuration keys and values.
     (suresh)
 
+    HDFS-2857. Cleanup BlockInfo class. (suresh)
+
     HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
     Move the support for multiple protocols to lower layer so that Writable,
     PB and Avro can all use it (Sanjay)
@@ -115,14 +117,8 @@ Trunk (unreleased changes)
     HDFS-2801. Provide a method in client side translators to check for a 
     methods supported in underlying protocol. (jitendra)
 
-    HDFS-2814 NamenodeMXBean does not account for svn revision in the version 
-    information. (Hitesh Shah via jitendra)
-
-    HDFS-2784. Update hftp and hdfs for host-based token support. 
-    (Kihwal Lee via jitendra)
-
-    HDFS-2785. Update webhdfs and httpfs for host-based token support.
-    (Robert Joseph Evans via jitendra)
+    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
+    (Uma Maheswara Rao G via eli)
 
     HDS-2895. Remove Writable wire protocol types and translators to
     complete transition to protocol buffers. (suresh)
@@ -229,9 +225,6 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2563. Some cleanup in BPOfferService. (todd)
 
-    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
-    (Uma Maheswara Rao G via eli)
-
     HDFS-2568. Use a set to manage child sockets in XceiverServer.
     (harsh via eli)
 
@@ -252,6 +245,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2604. Add a log message to show if WebHDFS is enabled and a
     configuration section in the forrest doc.  (szetszwo)
 
+    HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
+
     HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
 
     HDFS-2675. Reduce warning verbosity when double-closing edit logs
@@ -267,27 +262,23 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2710. Add HDFS tests related to HADOOP-7933. (sid via suresh)
 
-    HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)
-
-    HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be 
-    fetched. (tucu)
-
-    HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
-
     HDFS-2349. Corruption detected during block transfers between DNs
     should log a WARN instead of INFO. (harsh)
 
-    HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
+    HDFS-2729. Update BlockManager's comments regarding the invalid block
+    set (harsh)
 
-    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
+    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream
+    method (harsh)
 
     HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
 
-    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
+    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes.
+    (Sho Shimauchi via harsh)
 
     HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
 
-    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code (eli)
+    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code. (eli)
 
     HDFS-362.  FSEditLog should not writes long and short as UTF8, and should
     not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
@@ -298,11 +289,19 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2817. Combine the two TestSafeMode test suites. (todd)
 
-    HDFS-2818. Fix a missing space issue in HDFS webapps' title tags. (Devaraj K via harsh)
+    HDFS-2818. Fix a missing space issue in HDFS webapps' title tags.
+    (Devaraj K via harsh)
 
-    HDFS-2397. Undeprecate SecondaryNameNode (eli)
+    HDFS-2397. Undeprecate SecondaryNameNode. (eli)
 
-    HDFS-2857. Cleanup BlockInfo class. (suresh)
+    HDFS-2814 NamenodeMXBean does not account for svn revision in the version 
+    information. (Hitesh Shah via jitendra)
+
+    HDFS-2784. Update hftp and hdfs for host-based token support. 
+    (Kihwal Lee via jitendra)
+
+    HDFS-2785. Update webhdfs and httpfs for host-based token support.
+    (Robert Joseph Evans via jitendra)
 
     HDFS-2868. Expose xceiver counts via the DataNode MXBean. (harsh)
 
@@ -350,6 +349,11 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2596. TestDirectoryScanner doesn't test parallel scans. (eli)
 
+    HDFS-2606. webhdfs client filesystem impl must set the content-type 
+    header for create/append. (tucu)
+
+    HDFS-2614. hadoop dist tarball is missing hdfs headers. (tucu)
+ 
     HDFS-2653. DFSClient should cache whether addrs are non-local when
     short-circuiting is enabled. (eli)
 
@@ -361,20 +365,17 @@ Release 0.23.1 - UNRELEASED
     HDFS-2553. Fix BlockPoolSliceScanner spinning in a tight loop (Uma
     Maheswara Rao G via todd)
 
+    HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
+
     HDFS-2706. Use configuration for blockInvalidateLimit if it is set.
     (szetszwo)
-
-    HDFS-2606. webhdfs client filesystem impl must set the content-type 
-    header for create/append. (tucu)
-
-    HDFS-2658. HttpFS introduced 70 javadoc warnings. (tucu)
 
     HDFS-2646. Hadoop HttpFS introduced 4 findbug warnings. (tucu)
 
     HDFS-2657. TestHttpFSServer and TestServerWebApp are failing on trunk. 
     (tucu)
 
-    HttpFS server should check that upload requests have correct 
+    HDFS-2705. HttpFS server should check that upload requests have correct 
     content-type. (tucu)
 
     HDFS-2707. HttpFS should read the hadoop-auth secret from a file 
@@ -396,11 +397,14 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-442. dfsthroughput in test jar throws NPE (harsh)
 
-    HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk (revans2 via tucu)
+    HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk.
+    (revans2 via tucu)
 
-    HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class (revans2 via tucu)
+    HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class
+    (revans2 via tucu)
 
-    HDFS-2840. TestHostnameFilter should work with localhost or localhost.localdomain (tucu)
+    HDFS-2840. TestHostnameFilter should work with localhost or 
+    localhost.localdomain (tucu)
 
     HDFS-2791. If block report races with closing of file, replica is
     incorrectly marked corrupt. (todd)
@@ -1168,6 +1172,11 @@ Release 0.23.0 - 2011-11-01
 
     HDFS-2493. Remove reference to FSNamesystem in blockmanagement classes.
     (szetszwo)
+
+    HDFS-2294. Download of commons-daemon TAR should not be under target (tucu)
+
+    HDFS-2322. the build fails in Windows because commons-daemon TAR cannot be 
+    fetched. (tucu)
 
     HDFS-2436. Change FSNamesystem.setTimes(..) for allowing setting times on
     directories.  (Uma Maheswara Rao G via szetszwo)
