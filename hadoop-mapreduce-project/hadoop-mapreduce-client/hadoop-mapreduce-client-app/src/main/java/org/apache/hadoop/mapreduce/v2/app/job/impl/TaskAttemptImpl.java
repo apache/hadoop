@@ -27,9 +27,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -1079,14 +1081,14 @@ public abstract class TaskAttemptImpl implements
                 taskAttempt.attemptId, 
                 taskAttempt.resourceCapability));
       } else {
-        int i = 0;
-        String[] racks = new String[taskAttempt.dataLocalHosts.length];
+        Set<String> racks = new HashSet<String>(); 
         for (String host : taskAttempt.dataLocalHosts) {
-          racks[i++] = RackResolver.resolve(host).getNetworkLocation();
+          racks.add(RackResolver.resolve(host).getNetworkLocation());
         }
         taskAttempt.eventHandler.handle(new ContainerRequestEvent(
             taskAttempt.attemptId, taskAttempt.resourceCapability, taskAttempt
-                .resolveHosts(taskAttempt.dataLocalHosts), racks));
+                .resolveHosts(taskAttempt.dataLocalHosts), racks
+                .toArray(new String[racks.size()])));
       }
     }
   }

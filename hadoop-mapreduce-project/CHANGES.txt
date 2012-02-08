@@ -721,6 +721,10 @@ Release 0.23.1 - Unreleased
     the same FS scheme, instead of randomly using one. (Mahadev Konar via
     sseth)
 
+    MAPREDUCE-3834. Changed MR AM to not add the same rack entry multiple times
+    into the container request table when multiple hosts for a split happen to
+    be on the same rack. (Siddarth Seth via vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
