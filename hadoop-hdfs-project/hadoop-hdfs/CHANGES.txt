@@ -123,6 +123,9 @@ Trunk (unreleased changes)
     HDS-2895. Remove Writable wire protocol types and translators to
     complete transition to protocol buffers. (suresh)
 
+    HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
+    via jitendra)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
