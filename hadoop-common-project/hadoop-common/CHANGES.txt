@@ -121,6 +121,9 @@ Release 0.23.1 - Unreleased
    HADOOP-7811. TestUserGroupInformation#testGetServerSideGroups test fails in chroot.
    (Jonathan Eagles via mahadev)
 
+   HADOOP-7813. Fix test-patch to use proper numerical comparison when checking
+   javadoc and findbugs warning counts. (Jonathan Eagles via tlipcon)
+   
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)
 
