@@ -481,6 +481,14 @@
 </property>
 
 <property>
+  <name>ipc.client.connect.max.retries.on.timeouts</name>
+  <value>45</value>
+  <description>Indicates the number of retries a client will make on socket timeout
+               to establish a server connection.
+  </description>
+</property>
+
+<property>
   <name>ipc.server.listen.queue.size</name>
   <value>128</value>
   <description>Indicates the length of the listen queue for servers accepting

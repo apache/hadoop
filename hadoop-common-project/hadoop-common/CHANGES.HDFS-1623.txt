@@ -42,3 +42,6 @@ active during failover. (eli)
 
 HADOOP-7991. HA: the FailoverController should check the standby is
 ready before failing over. (eli)
+
+HADOOP-8038. Add 'ipc.client.connect.max.retries.on.timeouts' entry in
+core-default.xml file. (Uma Maheswara Rao G via atm)
