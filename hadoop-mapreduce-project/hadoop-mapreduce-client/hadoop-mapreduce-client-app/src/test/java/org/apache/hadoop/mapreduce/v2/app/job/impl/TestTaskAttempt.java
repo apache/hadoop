@@ -81,7 +81,39 @@ public class TestTaskAttempt{
     MRApp app = new FailingAttemptsMRApp(0, 1);
     testMRAppHistory(app);
   }
-  
+
+  @SuppressWarnings("rawtypes")
+  @Test
+  public void testSingleRackRequest() throws Exception {
+    TaskAttemptImpl.RequestContainerTransition rct =
+        new TaskAttemptImpl.RequestContainerTransition(false);
+
+    EventHandler eventHandler = mock(EventHandler.class);
+    String[] hosts = new String[3];
+    hosts[0] = "host1";
+    hosts[1] = "host2";
+    hosts[2] = "host3";
+    TaskSplitMetaInfo splitInfo =
+        new TaskSplitMetaInfo(hosts, 0, 128 * 1024 * 1024l);
+
+    TaskAttemptImpl mockTaskAttempt =
+        createMapTaskAttemptImplForTest(eventHandler, splitInfo);
+    TaskAttemptEvent mockTAEvent = mock(TaskAttemptEvent.class);
+
+    rct.transition(mockTaskAttempt, mockTAEvent);
+
+    ArgumentCaptor<Event> arg = ArgumentCaptor.forClass(Event.class);
+    verify(eventHandler, times(2)).handle(arg.capture());
+    if (!(arg.getAllValues().get(1) instanceof ContainerRequestEvent)) {
+      Assert.fail("Second Event not of type ContainerRequestEvent");
+    }
+    ContainerRequestEvent cre =
+        (ContainerRequestEvent) arg.getAllValues().get(1);
+    String[] requestedRacks = cre.getRacks();
+    //Only a single occurance of /DefaultRack
+    assertEquals(1, requestedRacks.length);
+  }
+ 
   @SuppressWarnings("rawtypes")
   @Test
   public void testHostResolveAttempt() throws Exception {
