@@ -44,9 +44,6 @@ Trunk (unreleased changes)
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
     client APIs cross MR1 and MR2 (Ahmed via tucu)
 
-    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
-    (tucu)
-
     HADOOP-7862   MR changes to work with HADOOP 7862: 
     Move the support for multiple protocols to lower layer so that Writable,
     PB and Avro can all use it (Sanjay)
@@ -133,6 +130,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
     has wrong configuration or permissions. (Hitesh Shah via vinodkv)
+
+    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR resolution.
+    (tucu)
 
     MAPREDUCE-3373. Hadoop scripts unconditionally source
     "$bin"/../libexec/hadoop-config.sh. (Bruno Mahé via tomwhite)
