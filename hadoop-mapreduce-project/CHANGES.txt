@@ -211,6 +211,8 @@ Release 0.23.1 - 2012-02-08
     acmurthy) 
 
   BUG FIXES
+    MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
+
     MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
     (Dave Thompson via bobby)
 
