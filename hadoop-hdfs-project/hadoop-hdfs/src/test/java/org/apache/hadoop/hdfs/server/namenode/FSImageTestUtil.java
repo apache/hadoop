@@ -440,7 +440,7 @@ public abstract class FSImageTestUtil {
   throws IOException {
     File currentDir = sd.getCurrentDir();
     List<EditLogFile> foundEditLogs 
-      = Lists.newArrayList(FileJournalManager.matchEditLogs(currentDir.listFiles()));
+      = Lists.newArrayList(FileJournalManager.matchEditLogs(currentDir));
     return Collections.max(foundEditLogs, EditLogFile.COMPARE_BY_START_TXID);
   }
 

@@ -316,6 +316,15 @@ public class TestFileJournalManager {
   }
 
   /**
+   * tests that passing an invalid dir to matchEditLogs throws IOException 
+   */
+  @Test(expected = IOException.class)
+  public void testMatchEditLogInvalidDirThrowsIOException() throws IOException {
+    File badDir = new File("does not exist");
+    FileJournalManager.matchEditLogs(badDir);
+  }
+  
+  /**
    * Make sure that we starting reading the correct op when we request a stream
    * with a txid in the middle of an edit log file.
    */

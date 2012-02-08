@@ -135,8 +135,7 @@ class FileJournalManager implements JournalManager {
    */
   List<RemoteEditLog> getRemoteEditLogs(long firstTxId) throws IOException {
     File currentDir = sd.getCurrentDir();
-    List<EditLogFile> allLogFiles = matchEditLogs(
-        FileUtil.listFiles(currentDir));
+    List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
     List<RemoteEditLog> ret = Lists.newArrayListWithCapacity(
         allLogFiles.size());
 
@@ -155,6 +154,20 @@ class FileJournalManager implements JournalManager {
     return ret;
   }
 
+  /**
+   * returns matching edit logs via the log directory. Simple helper function
+   * that lists the files in the logDir and calls matchEditLogs(File[])
+   * 
+   * @param logDir
+   *          directory to match edit logs in
+   * @return matched edit logs
+   * @throws IOException
+   *           IOException thrown for invalid logDir
+   */
+  static List<EditLogFile> matchEditLogs(File logDir) throws IOException {
+    return matchEditLogs(FileUtil.listFiles(logDir));
+  }
+  
   static List<EditLogFile> matchEditLogs(File[] filesInStorage) {
     List<EditLogFile> ret = Lists.newArrayList();
     for (File f : filesInStorage) {
@@ -278,7 +291,7 @@ class FileJournalManager implements JournalManager {
   synchronized public void recoverUnfinalizedSegments() throws IOException {
     File currentDir = sd.getCurrentDir();
     LOG.info("Recovering unfinalized segments in " + currentDir);
-    List<EditLogFile> allLogFiles = matchEditLogs(currentDir.listFiles());
+    List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
 
     for (EditLogFile elf : allLogFiles) {
       if (elf.getFile().equals(currentInProgress)) {
@@ -318,7 +331,7 @@ class FileJournalManager implements JournalManager {
 
   private List<EditLogFile> getLogFiles(long fromTxId) throws IOException {
     File currentDir = sd.getCurrentDir();
-    List<EditLogFile> allLogFiles = matchEditLogs(currentDir.listFiles());
+    List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
     List<EditLogFile> logFiles = Lists.newArrayList();
     
     for (EditLogFile elf : allLogFiles) {

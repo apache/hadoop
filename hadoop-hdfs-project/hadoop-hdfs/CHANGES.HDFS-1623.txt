@@ -180,3 +180,5 @@ HDFS-2733. Document HA configuration and CLI. (atm)
 HDFS-2794. Active NN may purge edit log files before standby NN has a chance to read them (todd)
 
 HDFS-2901. Improvements for SBN web UI - not show under-replicated/missing blocks. (Brandon Li via jitendra)
+
+HDFS-2905. HA: Standby NN NPE when shared edits dir is deleted. (Bikas Saha via jitendra)
