@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -326,14 +327,13 @@ abstract public class Task implements Writable, Configurable {
    *   the path.
    * @return a Statistics instance, or null if none is found for the scheme.
    */
-  protected static Statistics getFsStatistics(Path path, Configuration conf) throws IOException {
-    Statistics matchedStats = null;
+  protected static List<Statistics> getFsStatistics(Path path, Configuration conf) throws IOException {
+    List<Statistics> matchedStats = new ArrayList<FileSystem.Statistics>();
     path = path.getFileSystem(conf).makeQualified(path);
     String scheme = path.toUri().getScheme();
     for (Statistics stats : FileSystem.getAllStatistics()) {
       if (stats.getScheme().equals(scheme)) {
-        matchedStats = stats;
-        break;
+        matchedStats.add(stats);
       }
     }
     return matchedStats;
@@ -866,41 +866,53 @@ abstract public class Task implements Writable, Configurable {
    * system and only creates the counters when they are needed.
    */
   class FileSystemStatisticUpdater {
-    private FileSystem.Statistics stats;
+    private List<FileSystem.Statistics> stats;
     private Counters.Counter readBytesCounter, writeBytesCounter,
         readOpsCounter, largeReadOpsCounter, writeOpsCounter;
-    
-    FileSystemStatisticUpdater(FileSystem.Statistics stats) {
+    private String scheme;
+    FileSystemStatisticUpdater(List<FileSystem.Statistics> stats, String scheme) {
       this.stats = stats;
+      this.scheme = scheme;
     }
 
     void updateCounters() {
-      String scheme = stats.getScheme();
       if (readBytesCounter == null) {
         readBytesCounter = counters.findCounter(scheme,
             FileSystemCounter.BYTES_READ);
       }
-      readBytesCounter.setValue(stats.getBytesRead());
       if (writeBytesCounter == null) {
         writeBytesCounter = counters.findCounter(scheme,
             FileSystemCounter.BYTES_WRITTEN);
       }
-      writeBytesCounter.setValue(stats.getBytesWritten());
       if (readOpsCounter == null) {
         readOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.READ_OPS);
       }
-      readOpsCounter.setValue(stats.getReadOps());
       if (largeReadOpsCounter == null) {
         largeReadOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.LARGE_READ_OPS);
       }
-      largeReadOpsCounter.setValue(stats.getLargeReadOps());
       if (writeOpsCounter == null) {
         writeOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.WRITE_OPS);
       }
-      writeOpsCounter.setValue(stats.getWriteOps());
+      long readBytes = 0;
+      long writeBytes = 0;
+      long readOps = 0;
+      long largeReadOps = 0;
+      long writeOps = 0;
+      for (FileSystem.Statistics stat: stats) {
+        readBytes = readBytes + stat.getBytesRead();
+        writeBytes = writeBytes + stat.getBytesWritten();
+        readOps = readOps + stat.getReadOps();
+        largeReadOps = largeReadOps + stat.getLargeReadOps();
+        writeOps = writeOps + stat.getWriteOps();
+      }
+      readBytesCounter.setValue(readBytes);
+      writeBytesCounter.setValue(writeBytes);
+      readOpsCounter.setValue(readOps);
+      largeReadOpsCounter.setValue(largeReadOps);
+      writeOpsCounter.setValue(writeOps);
     }
   }
   
@@ -911,16 +923,28 @@ abstract public class Task implements Writable, Configurable {
      new HashMap<String, FileSystemStatisticUpdater>();
   
   private synchronized void updateCounters() {
+    Map<String, List<FileSystem.Statistics>> map = new 
+        HashMap<String, List<FileSystem.Statistics>>();
     for(Statistics stat: FileSystem.getAllStatistics()) {
       String uriScheme = stat.getScheme();
-      FileSystemStatisticUpdater updater = statisticUpdaters.get(uriScheme);
-      if(updater==null) {//new FileSystem has been found in the cache
-        updater = new FileSystemStatisticUpdater(stat);
-        statisticUpdaters.put(uriScheme, updater);
+      if (map.containsKey(uriScheme)) {
+        List<FileSystem.Statistics> list = map.get(uriScheme);
+        list.add(stat);
+      } else {
+        List<FileSystem.Statistics> list = new ArrayList<FileSystem.Statistics>();
+        list.add(stat);
+        map.put(uriScheme, list);
       }
-      updater.updateCounters();      
     }
-
+    for (Map.Entry<String, List<FileSystem.Statistics>> entry: map.entrySet()) {
+      FileSystemStatisticUpdater updater = statisticUpdaters.get(entry.getKey());
+      if(updater==null) {//new FileSystem has been found in the cache
+        updater = new FileSystemStatisticUpdater(entry.getValue(), entry.getKey());
+        statisticUpdaters.put(entry.getKey(), updater);
+      }
+      updater.updateCounters();
+    }
+    
     gcUpdater.incrementGcCounter();
     updateResourceCounters();
   }
