@@ -100,9 +100,6 @@ Trunk (unreleased changes)
     HADOOP-7998. CheckFileSystem does not correctly honor setVerifyChecksum
     (Daryn Sharp via bobby)
 
-    HADOOP-7851. Configuration.getClasses() never returns the default value. 
-                 (Uma Maheswara Rao G via amarrk)
-
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
     by Jersey (Alejandro Abdelnur via atm)
 
@@ -257,6 +254,9 @@ Release 0.23.1 - Unreleased
    javadoc and findbugs warning counts. (Jonathan Eagles via tlipcon)
 
    HADOOP-7841. Run tests with non-secure random. (tlipcon)
+
+    HADOOP-7851. Configuration.getClasses() never returns the default value. 
+                 (Uma Maheswara Rao G via amarrk)
 
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)
