@@ -717,6 +717,10 @@ Release 0.23.1 - Unreleased
     MAPREDUCE-3827. Changed Counters to use ConcurrentSkipListMap for
     performance. (vinodkv via acmurthy)  
 
+    MAPREDUCE-3822. Changed FS counter computation to use all occurences of
+    the same FS scheme, instead of randomly using one. (Mahadev Konar via
+    sseth)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
