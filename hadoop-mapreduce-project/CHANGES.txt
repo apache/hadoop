@@ -87,7 +87,17 @@ Trunk (unreleased changes)
     MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
     for HDFS-2895. (Suresh Srinivas via vinodkv)
 
-Release 0.23.1 - Unreleased
+Release 0.23.2 - UNRELEASED 
+
+  NEW FEATURES                                                                    
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
 
