@@ -71,8 +71,6 @@ Release 0.23.1 - UNRELEASED
     HDFS-2349. Corruption detected during block transfers between DNs
                should log a WARN instead of INFO. (harsh)
 
-    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
-
     HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
  
     HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
