@@ -24,8 +24,8 @@ import java.io.RandomAccessFile;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -53,7 +53,7 @@ class ReplicaInPipeline extends ReplicaInfo
    * @param state replica state
    */
     ReplicaInPipeline(long blockId, long genStamp, 
-        FSVolume vol, File dir) {
+        FSVolumeInterface vol, File dir) {
     this( blockId, 0L, genStamp, vol, dir, Thread.currentThread());
   }
 
@@ -65,7 +65,7 @@ class ReplicaInPipeline extends ReplicaInfo
    * @param writer a thread that is writing to this replica
    */
   ReplicaInPipeline(Block block, 
-      FSVolume vol, File dir, Thread writer) {
+      FSVolumeInterface vol, File dir, Thread writer) {
     this( block.getBlockId(), block.getNumBytes(), block.getGenerationStamp(),
         vol, dir, writer);
   }
@@ -80,7 +80,7 @@ class ReplicaInPipeline extends ReplicaInfo
    * @param writer a thread that is writing to this replica
    */
   ReplicaInPipeline(long blockId, long len, long genStamp,
-      FSVolume vol, File dir, Thread writer ) {
+      FSVolumeInterface vol, File dir, Thread writer ) {
     super( blockId, len, genStamp, vol, dir);
     this.bytesAcked = len;
     this.bytesOnDisk = len;

@@ -23,7 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 
 import java.io.IOException;
-import java.util.Collection;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.Assert;
@@ -81,11 +80,11 @@ public class TestDataNodeMultipleRegistrations {
 
       // check number of volumes in fsdataset
       DataNode dn = cluster.getDataNodes().get(0);
-      Collection<VolumeInfo> volInfos = ((FSDataset) dn.data).getVolumeInfo();
-      assertNotNull("No volumes in the fsdataset", volInfos);
+      final Map<String, Object> volInfos = dn.data.getVolumeInfoMap();
+      Assert.assertTrue("No volumes in the fsdataset", volInfos.size() > 0);
       int i = 0;
-      for (VolumeInfo vi : volInfos) {
-        LOG.info("vol " + i++ + ";dir=" + vi.directory + ";fs= " + vi.freeSpace);
+      for (Map.Entry<String, Object> e : volInfos.entrySet()) {
+        LOG.info("vol " + i++ + ") " + e.getKey() + ": " + e.getValue());
       }
       // number of volumes should be 2 - [data1, data2]
       assertEquals("number of volumes is wrong", 2, volInfos.size());
@@ -143,11 +142,11 @@ public class TestDataNodeMultipleRegistrations {
 
       // check number of vlumes in fsdataset
       DataNode dn = cluster.getDataNodes().get(0);
-      Collection<VolumeInfo> volInfos = ((FSDataset) dn.data).getVolumeInfo();
-      assertNotNull("No volumes in the fsdataset", volInfos);
+      final Map<String, Object> volInfos = dn.data.getVolumeInfoMap();
+      Assert.assertTrue("No volumes in the fsdataset", volInfos.size() > 0);
       int i = 0;
-      for (VolumeInfo vi : volInfos) {
-        LOG.info("vol " + i++ + ";dir=" + vi.directory + ";fs= " + vi.freeSpace);
+      for (Map.Entry<String, Object> e : volInfos.entrySet()) {
+        LOG.info("vol " + i++ + ") " + e.getKey() + ": " + e.getValue());
       }
       // number of volumes should be 2 - [data1, data2]
       assertEquals("number of volumes is wrong", 2, volInfos.size());

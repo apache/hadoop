@@ -751,7 +751,7 @@ public class DataStorage extends Storage {
     Matcher matcher = PRE_GENSTAMP_META_FILE_PATTERN.matcher(oldFileName); 
     if (matcher.matches()) {
       //return the current metadata file name
-      return FSDataset.getMetaFileName(matcher.group(1),
+      return DatanodeUtil.getMetaFileName(matcher.group(1),
           GenerationStamp.GRANDFATHER_GENERATION_STAMP); 
     }
     return oldFileName;
