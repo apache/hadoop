@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.0.1 - 2012.01.30
+Release 1.0.1 - 2012.02.08
 
   NEW FEATURES
 
@@ -20,6 +20,9 @@ Release 1.0.1 - 2012.01.30
 
     HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
     (todd via suresh)
+
+    HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for
+    downstream projects. (Alejandro Abdelnur via mattf)
 
   BUG FIXES
 
