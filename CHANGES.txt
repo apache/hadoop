@@ -155,7 +155,7 @@ Release 1.1.0 - unreleased
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
 
 
-Release 1.0.1 - 2012.01.30
+Release 1.0.1 - 2012.02.08
 
   NEW FEATURES
 
@@ -172,6 +172,9 @@ Release 1.0.1 - 2012.01.30
 
     HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
+
+    HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for
+    downstream projects. (Alejandro Abdelnur via mattf)
 
   BUG FIXES
 
