@@ -112,6 +112,9 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2868. Expose xceiver counts via the DataNode MXBean. (harsh)
 
+    HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal
+    Lee via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)

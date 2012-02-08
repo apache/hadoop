@@ -53,16 +53,28 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 public class DatanodeJspHelper {
   private static DFSClient getDFSClient(final UserGroupInformation user,
-                                        final InetSocketAddress addr,
+                                        final String addr,
                                         final Configuration conf
                                         ) throws IOException,
                                                  InterruptedException {
     return
       user.doAs(new PrivilegedExceptionAction<DFSClient>() {
         public DFSClient run() throws IOException {
-          return new DFSClient(addr, conf);
+          return new DFSClient(NetUtils.createSocketAddr(addr), conf);
         }
       });
+  }
+
+  /**
+   * Internal convenience method for canonicalizing host name.
+   * @param addr name:port or name 
+   * @return canonicalized host name
+   */
+  private static String canonicalize(String addr) {
+    // default port 1 is supplied to allow addr without port.
+    // the port will be ignored.
+    return NetUtils.createSocketAddr(addr, 1).getAddress()
+           .getCanonicalHostName();
   }
 
   private static final SimpleDateFormat lsDateFormat =
@@ -102,8 +114,7 @@ public class DatanodeJspHelper {
       return;
     }
     
-    InetSocketAddress namenodeAddress = DFSUtil.getSocketAddress(nnAddr);
-    DFSClient dfs = getDFSClient(ugi, namenodeAddress, conf);
+    DFSClient dfs = getDFSClient(ugi, nnAddr, conf);
     String target = dir;
     final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
@@ -125,8 +136,7 @@ public class DatanodeJspHelper {
           out.print("Empty file");
         } else {
           DatanodeInfo chosenNode = JspHelper.bestNode(firstBlock, conf);
-          String fqdn = InetAddress.getByName(chosenNode.getHost())
-              .getCanonicalHostName();
+          String fqdn = canonicalize(chosenNode.getHost());
           String datanodeAddr = chosenNode.getName();
           int datanodePort = Integer.parseInt(datanodeAddr.substring(
               datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
@@ -210,9 +220,8 @@ public class DatanodeJspHelper {
         JspHelper.addTableFooter(out);
       }
     }
-    String namenodeHost = namenodeAddress.getHostName();
     out.print("<br><a href=\"http://"
-        + InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":"
+        + canonicalize(nnAddr) + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
     dfs.close();
   }
@@ -282,8 +291,7 @@ public class DatanodeJspHelper {
     }
     long blockSize = Long.parseLong(blockSizeStr);
 
-    final InetSocketAddress namenodeAddress = DFSUtil.getSocketAddress(nnAddr);
-    final DFSClient dfs = getDFSClient(ugi, namenodeAddress, conf);
+    final DFSClient dfs = getDFSClient(ugi, nnAddr, conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     // Add the various links for looking at the file contents
@@ -305,8 +313,7 @@ public class DatanodeJspHelper {
       dfs.close();
       return;
     }
-    String fqdn = InetAddress.getByName(chosenNode.getHost())
-        .getCanonicalHostName();
+    String fqdn = canonicalize(chosenNode.getHost());
     String tailUrl = "http://" + fqdn + ":" + chosenNode.getInfoPort()
         + "/tail.jsp?filename=" + URLEncoder.encode(filename, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
@@ -345,9 +352,7 @@ public class DatanodeJspHelper {
     // generate a table and dump the info
     out.println("\n<table>");
     
-    String namenodeHost = namenodeAddress.getHostName();
-    String namenodeHostName = InetAddress.getByName(namenodeHost).getCanonicalHostName();
-    
+    String nnCanonicalName = canonicalize(nnAddr);
     for (LocatedBlock cur : blocks) {
       out.print("<tr>");
       final String blockidstring = Long.toString(cur.getBlock().getBlockId());
@@ -358,7 +363,7 @@ public class DatanodeJspHelper {
         String datanodeAddr = locs[j].getName();
         datanodePort = Integer.parseInt(datanodeAddr.substring(datanodeAddr
             .indexOf(':') + 1, datanodeAddr.length()));
-        fqdn = InetAddress.getByName(locs[j].getHost()).getCanonicalHostName();
+        fqdn = canonicalize(locs[j].getHost());
         String blockUrl = "http://" + fqdn + ":" + locs[j].getInfoPort()
             + "/browseBlock.jsp?blockId=" + blockidstring
             + "&blockSize=" + blockSize
@@ -370,7 +375,7 @@ public class DatanodeJspHelper {
             + JspHelper.getDelegationTokenUrlParam(tokenString)
             + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
 
-        String blockInfoUrl = "http://" + namenodeHostName + ":"
+        String blockInfoUrl = "http://" + nnCanonicalName + ":"
             + namenodeInfoPort
             + "/block_info_xml.jsp?blockId=" + blockidstring;
         out.print("<td>&nbsp</td><td><a href=\"" + blockUrl + "\">"
@@ -382,7 +387,7 @@ public class DatanodeJspHelper {
     out.println("</table>");
     out.print("<hr>");
     out.print("<br><a href=\"http://"
-        + InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":"
+        + nnCanonicalName + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
     dfs.close();
   }
@@ -419,8 +424,7 @@ public class DatanodeJspHelper {
       return;
     }
     
-    final DFSClient dfs = getDFSClient(ugi, 
-        DFSUtil.getSocketAddress(nnAddr), conf);
+    final DFSClient dfs = getDFSClient(ugi, nnAddr, conf);
 
     String bpid = null;
     Token<BlockTokenIdentifier> blockToken = BlockTokenSecretManager.DUMMY_TOKEN;
@@ -518,8 +522,7 @@ public class DatanodeJspHelper {
             String datanodeAddr = d.getName();
             nextDatanodePort = Integer.parseInt(datanodeAddr.substring(
                 datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
-            nextHost = InetAddress.getByName(d.getHost())
-                .getCanonicalHostName();
+            nextHost = d.getHost();
             nextPort = d.getInfoPort();
           }
         }
@@ -533,7 +536,7 @@ public class DatanodeJspHelper {
     }
     String nextUrl = null;
     if (nextBlockIdStr != null) {
-      nextUrl = "http://" + nextHost + ":" + nextPort
+      nextUrl = "http://" + canonicalize(nextHost) + ":" + nextPort
           + "/browseBlock.jsp?blockId=" + nextBlockIdStr
           + "&blockSize=" + nextBlockSize
           + "&startOffset=" + nextStartOffset
@@ -573,8 +576,7 @@ public class DatanodeJspHelper {
             String datanodeAddr = d.getName();
             prevDatanodePort = Integer.parseInt(datanodeAddr.substring(
                 datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
-            prevHost = InetAddress.getByName(d.getHost())
-                .getCanonicalHostName();
+            prevHost = d.getHost();
             prevPort = d.getInfoPort();
           }
         }
@@ -591,7 +593,7 @@ public class DatanodeJspHelper {
 
     String prevUrl = null;
     if (prevBlockIdStr != null) {
-      prevUrl = "http://" + prevHost + ":" + prevPort
+      prevUrl = "http://" + canonicalize(prevHost) + ":" + prevPort
           + "/browseBlock.jsp?blockId=" + prevBlockIdStr
           + "&blockSize=" + prevBlockSize
           + "&startOffset=" + prevStartOffset
@@ -669,8 +671,7 @@ public class DatanodeJspHelper {
           + "\">");
 
     // fetch the block from the datanode that has the last block for this file
-    final DFSClient dfs = getDFSClient(ugi, DFSUtil.getSocketAddress(nnAddr),
-        conf);
+    final DFSClient dfs = getDFSClient(ugi, nnAddr, conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     if (blocks == null || blocks.size() == 0) {
@@ -710,6 +711,6 @@ public class DatanodeJspHelper {
       final DataNode datanode, final Configuration conf,
       final UserGroupInformation ugi) throws IOException, InterruptedException {
     final String nnAddr = request.getParameter(JspHelper.NAMENODE_ADDRESS);
-    return getDFSClient(ugi, DFSUtil.getSocketAddress(nnAddr), conf);
+    return getDFSClient(ugi, nnAddr, conf);
   }
 }

@@ -1139,7 +1139,7 @@ public class DFSAdmin extends FsShell {
 
   private ClientDatanodeProtocol getDataNodeProxy(String datanode)
       throws IOException {
-    InetSocketAddress datanodeAddr = DFSUtil.getSocketAddress(datanode);
+    InetSocketAddress datanodeAddr = NetUtils.createSocketAddr(datanode);
     // Get the current configuration
     Configuration conf = getConf();
 
