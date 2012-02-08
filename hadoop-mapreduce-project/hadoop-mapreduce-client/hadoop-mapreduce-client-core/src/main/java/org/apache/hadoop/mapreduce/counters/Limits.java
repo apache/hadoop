@@ -42,11 +42,11 @@ public class Limits {
     return name.length() > maxLen ? name.substring(0, maxLen - 1) : name;
   }
 
-  public String filterCounterName(String name) {
+  public static String filterCounterName(String name) {
     return filterName(name, COUNTER_NAME_MAX);
   }
 
-  public String filterGroupName(String name) {
+  public static String filterGroupName(String name) {
     return filterName(name, GROUP_NAME_MAX);
   }
 
