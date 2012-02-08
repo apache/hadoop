@@ -89,6 +89,8 @@ Trunk (unreleased changes)
 
     HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
 
+    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
+
     HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
     (Hari Mankude via eli)
 
@@ -274,8 +276,6 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2349. Corruption detected during block transfers between DNs
     should log a WARN instead of INFO. (harsh)
-
-    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
 
     HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
 
