@@ -728,6 +728,9 @@ Release 0.23.1 - Unreleased
     into the container request table when multiple hosts for a split happen to
     be on the same rack. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3828. Ensure that urls in single-node mode are correct. (sseth
+    via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
