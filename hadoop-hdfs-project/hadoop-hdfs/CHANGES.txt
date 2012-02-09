@@ -197,8 +197,6 @@ Trunk (unreleased changes)
     HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
     (atm)
 
-    HDFS-2764. TestBackupNode is racy. (atm)
-
     HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
     via jitendra)
 
@@ -221,6 +219,7 @@ Release 0.23.2 - UNRELEASED
     HDFS-2923. Namenode IPC handler count uses the wrong configuration key
     (todd)
 
+    HDFS-2764. TestBackupNode is racy. (atm)
 
 Release 0.23.1 - 2012-02-08 
 
