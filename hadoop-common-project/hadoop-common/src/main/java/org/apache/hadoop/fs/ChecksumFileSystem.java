@@ -43,6 +43,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
   private int bytesPerChecksum = 512;
   private boolean verifyChecksum = true;
+  private boolean writeChecksum = true;
 
   public static double getApproxChkSumLength(long size) {
     return ChecksumFSOutputSummer.CHKSUM_AS_FRACTION * size;
@@ -67,6 +68,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     this.verifyChecksum = verifyChecksum;
   }
 
+  @Override
+  public void setWriteChecksum(boolean writeChecksum) {
+    this.writeChecksum = writeChecksum;
+  }
+  
   /** get the raw file system */
   public FileSystem getRawFileSystem() {
     return fs;
@@ -428,9 +434,20 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         throw new IOException("Mkdirs failed to create " + parent);
       }
     }
-    final FSDataOutputStream out = new FSDataOutputStream(
-        new ChecksumFSOutputSummer(this, f, overwrite, bufferSize, replication,
-            blockSize, progress), null);
+    final FSDataOutputStream out;
+    if (writeChecksum) {
+      out = new FSDataOutputStream(
+          new ChecksumFSOutputSummer(this, f, overwrite, bufferSize, replication,
+              blockSize, progress), null);
+    } else {
+      out = fs.create(f, permission, overwrite, bufferSize, replication,
+          blockSize, progress);
+      // remove the checksum file since we aren't writing one
+      Path checkFile = getChecksumFile(f);
+      if (fs.exists(checkFile)) {
+        fs.delete(checkFile, true);
+      }
+    }
     if (permission != null) {
       setPermission(f, permission);
     }

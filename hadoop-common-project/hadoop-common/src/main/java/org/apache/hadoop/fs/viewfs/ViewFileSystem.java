@@ -470,6 +470,15 @@ public class ViewFileSystem extends FileSystem {
     }
   }
   
+  @Override
+  public void setWriteChecksum(final boolean writeChecksum) { 
+    List<InodeTree.MountPoint<FileSystem>> mountPoints = 
+        fsState.getMountPoints();
+    for (InodeTree.MountPoint<FileSystem> mount : mountPoints) {
+      mount.target.targetFileSystem.setWriteChecksum(writeChecksum);
+    }
+  }
+
   public MountPoint[] getMountPoints() {
     List<InodeTree.MountPoint<FileSystem>> mountPoints = 
                   fsState.getMountPoints();
