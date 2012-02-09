@@ -12,6 +12,10 @@ Release 0.23.2 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
+    it back into HDFS, the put fails due to a CRC mismatch
+    (Daryn Sharp via bobby)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES

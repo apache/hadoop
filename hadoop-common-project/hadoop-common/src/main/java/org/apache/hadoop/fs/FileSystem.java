@@ -1937,6 +1937,15 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Set the write checksum flag. This is only applicable if the 
+   * corresponding FileSystem supports checksum. By default doesn't do anything.
+   * @param writeChecksum
+   */
+  public void setWriteChecksum(boolean writeChecksum) {
+    //doesn't do anything
+  }
+
+  /**
    * Return a list of file status objects that corresponds to the list of paths
    * excluding those non-existent paths.
    * 
