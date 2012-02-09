@@ -240,6 +240,13 @@ public class EditLogTailer {
   }
 
   /**
+   * @return timestamp (in msec) of when we last loaded a non-zero number of edits.
+   */
+  public long getLastLoadTimestamp() {
+    return lastLoadTimestamp;
+  }
+
+  /**
    * @return true if the configured log roll period has elapsed.
    */
   private boolean tooLongSinceLastLoad() {

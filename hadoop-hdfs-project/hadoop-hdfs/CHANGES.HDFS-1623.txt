@@ -184,3 +184,5 @@ HDFS-2901. Improvements for SBN web UI - not show under-replicated/missing block
 HDFS-2905. HA: Standby NN NPE when shared edits dir is deleted. (Bikas Saha via jitendra)
 
 HDFS-2579. Starting delegation token manager during safemode fails. (todd)
+
+HDFS-2510. Add HA-related metrics. (atm)

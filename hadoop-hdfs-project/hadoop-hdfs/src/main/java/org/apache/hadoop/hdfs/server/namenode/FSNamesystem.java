@@ -118,6 +118,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -4241,14 +4242,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return blockManager.getExcessBlocksCount();
   }
   
+  // HA-only metric
   @Metric
   public long getPostponedMisreplicatedBlocks() {
     return blockManager.getPostponedMisreplicatedBlocksCount();
   }
-  
+
+  // HA-only metric
   @Metric
   public int getPendingDataNodeMessageCount() {
     return blockManager.getPendingDataNodeMessageCount();
+  }
+  
+  // HA-only metric
+  @Metric
+  public String getHAState() {
+    return haContext.getState().toString();
+  }
+
+  // HA-only metric
+  @Metric
+  public long getMillisSinceLastLoadedEdits() {
+    if (isInStandbyState() && editLogTailer != null) {
+      return now() - editLogTailer.getLastLoadTimestamp();
+    } else {
+      return 0;
+    }
   }
   
   @Metric
