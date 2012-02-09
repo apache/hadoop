@@ -29,7 +29,6 @@
 
   <properties>
     <hadoop.component>tools</hadoop.component>
-    <is.hadoop.component>false</is.hadoop.component>
   </properties>
 
   <dependencies>
