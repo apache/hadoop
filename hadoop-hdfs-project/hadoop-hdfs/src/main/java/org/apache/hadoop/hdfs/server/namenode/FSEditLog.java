@@ -806,6 +806,14 @@ public class FSEditLog  {
   }
   
   /**
+   * Used only by tests.
+   */
+  @VisibleForTesting
+  public JournalSet getJournalSet() {
+    return journalSet;
+  }
+  
+  /**
    * Used only by unit tests.
    */
   @VisibleForTesting

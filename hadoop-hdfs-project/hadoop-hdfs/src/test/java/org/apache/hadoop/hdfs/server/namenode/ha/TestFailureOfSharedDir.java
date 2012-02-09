@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
 
@@ -129,7 +130,6 @@ public class TestFailureOfSharedDir {
     
     // The shared edits dir will automatically be marked required.
     MiniDFSCluster cluster = null;
-    int chmodSucceeded = -1;
     File sharedEditsDir = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
@@ -145,16 +145,15 @@ public class TestFailureOfSharedDir {
       assertTrue(fs.mkdirs(new Path("/test1")));
       
       // Blow away the shared edits dir.
+      Runtime mockRuntime = Mockito.mock(Runtime.class);
       URI sharedEditsUri = cluster.getSharedEditsDir(0, 1);
       sharedEditsDir = new File(sharedEditsUri);
-      chmodSucceeded = FileUtil.chmod(sharedEditsDir.getAbsolutePath(), "-w",
-          true);
-      if (chmodSucceeded != 0) {
-        LOG.error("Failed to remove write permissions on shared edits dir:"
-            + sharedEditsDir.getAbsolutePath());
-      }
+      assertEquals(0, FileUtil.chmod(sharedEditsDir.getAbsolutePath(), "-w",
+          true));
 
       NameNode nn0 = cluster.getNameNode(0);
+      nn0.getNamesystem().getFSImage().getEditLog().getJournalSet()
+          .setRuntimeForTesting(mockRuntime);
       try {
         // Make sure that subsequent operations on the NN fail.
         nn0.getRpcServer().rollEditLog();
@@ -163,6 +162,12 @@ public class TestFailureOfSharedDir {
         GenericTestUtils.assertExceptionContains(
             "Unable to start log segment 4: too few journals successfully started",
             ioe);
+        // By current policy the NN should exit upon this error.
+        // exit() should be called once, but since it is mocked, exit gets
+        // called once during FSEditsLog.endCurrentLogSegment() and then after
+        // that during FSEditsLog.startLogSegment(). So the check is atLeast(1)
+        Mockito.verify(mockRuntime, Mockito.atLeastOnce()).exit(
+            Mockito.anyInt());
         LOG.info("Got expected exception", ioe);
       }
       
@@ -179,7 +184,7 @@ public class TestFailureOfSharedDir {
             NNStorage.getInProgressEditsFileName(1));
       }
     } finally {
-      if (chmodSucceeded == 0) {
+      if (sharedEditsDir != null) {
         // without this test cleanup will fail
         FileUtil.chmod(sharedEditsDir.getAbsolutePath(), "+w", true);
       }

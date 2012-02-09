@@ -25,8 +25,10 @@ import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -34,8 +36,6 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-
-import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * Manages a collection of Journals. None of the methods are synchronized, it is
@@ -148,9 +148,15 @@ public class JournalSet implements JournalManager {
   
   private List<JournalAndStream> journals = Lists.newArrayList();
   final int minimumRedundantJournals;
+  private volatile Runtime runtime = Runtime.getRuntime();
   
   JournalSet(int minimumRedundantResources) {
     this.minimumRedundantJournals = minimumRedundantResources;
+  }
+  
+  @VisibleForTesting
+  public void setRuntimeForTesting(Runtime runtime) {
+    this.runtime = runtime;
   }
   
   @Override
@@ -323,6 +329,12 @@ public class JournalSet implements JournalManager {
           // continue on any of the other journals. Abort them to ensure that
           // retry behavior doesn't allow them to keep going in any way.
           abortAllJournals();
+          // the current policy is to shutdown the NN on errors to shared edits
+          // dir. There are many code paths to shared edits failures - syncs,
+          // roll of edits etc. All of them go through this common function 
+          // where the isRequired() check is made. Applying exit policy here 
+          // to catch all code paths.
+          runtime.exit(1);
           throw new IOException(msg);
         } else {
           LOG.error("Error: " + status + " failed for (journal " + jas + ")", t);
